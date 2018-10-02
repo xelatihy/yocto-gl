@@ -685,7 +685,6 @@ image<vec4f> load_image4f(const std::string& filename) {
         img = image<vec4f>{size, pixels};
         free(pixels);
     } else {
-        stbi_ldr_to_hdr_gamma(1);
         auto ncomp  = 0;
         auto pixels = (vec4f*)stbi_loadf(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
@@ -693,33 +692,31 @@ image<vec4f> load_image4f(const std::string& filename) {
             throw std::runtime_error("could not load image " + filename);
         img = image<vec4f>{size, pixels};
         free(pixels);
-        stbi_ldr_to_hdr_gamma(2.2f);
     }
     return img;
 }
 
 // Saves an hdr image.
 void save_image4f(const std::string& filename, const image<vec4f>& img) {
-    auto ext = get_extension(filename);
+    auto ext  = get_extension(filename);
+    auto img8 = (is_hdr_filename(filename)) ?
+                    image<vec4b>{} :
+                    float_to_byte(linear_to_srgb(img));
     if (ext == "png") {
-        auto pxl8 = float_to_byte(img);
         if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-                pxl8.data(), img.size().x * 4))
+                img8.data(), img.size().x * 4))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "jpg") {
-        auto pxl8 = float_to_byte(img);
         if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
-                pxl8.data(), 75))
+                img8.data(), 75))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "tga") {
-        auto pxl8 = float_to_byte(img);
         if (!stbi_write_tga(
-                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data()))
+                filename.c_str(), img.size().x, img.size().y, 4, img8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "bmp") {
-        auto pxl8 = float_to_byte(img);
         if (!stbi_write_bmp(
-                filename.c_str(), img.size().x, img.size().y, 4, pxl8.data()))
+                filename.c_str(), img.size().x, img.size().y, 4, img8.data()))
             throw std::runtime_error("could not save image " + filename);
     } else if (ext == "hdr") {
         if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
@@ -740,14 +737,107 @@ void save_image4f(const std::string& filename, const image<vec4f>& img) {
 
 // Loads an hdr image.
 image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
-    stbi_ldr_to_hdr_gamma(1);
     auto size   = zero2i;
     auto ncomp  = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
         data, data_size, &size.x, &size.y, &ncomp, 4);
-    stbi_ldr_to_hdr_gamma(2.2f);
     if (!pixels) throw std::runtime_error("could not decode image from memory");
     auto img = image<vec4f>{size, pixels};
+    delete pixels;
+    return img;
+}
+
+// Loads an hdr image.
+image<vec4b> load_image4b(const std::string& filename) {
+    auto ext  = get_extension(filename);
+    auto size = zero2i;
+    auto img  = image<vec4b>();
+    if (ext == "exr") {
+        auto pixels = (vec4f*)nullptr;
+        if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
+                nullptr) < 0)
+            throw std::runtime_error("could not load image " + filename);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+        auto imgf = image<vec4f>{size, pixels};
+        img       = float_to_byte(linear_to_srgb(imgf));
+        free(pixels);
+    } else if (ext == "pfm") {
+        auto ncomp  = 0;
+        auto pixels = (vec4f*)load_pfm(
+            filename.c_str(), &size.x, &size.y, &ncomp, 4);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+        auto imgf = image<vec4f>{size, pixels};
+        img       = float_to_byte(linear_to_srgb(imgf));
+        free(pixels);
+    } else if (ext == "hdr") {
+        auto ncomp  = 0;
+        auto pixels = (vec4b*)stbi_load(
+            filename.c_str(), &size.x, &size.y, &ncomp, 4);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+        img = image<vec4b>{size, pixels};
+        free(pixels);
+    } else {
+        auto ncomp  = 0;
+        auto pixels = (vec4b*)stbi_load(
+            filename.c_str(), &size.x, &size.y, &ncomp, 4);
+        if (!pixels)
+            throw std::runtime_error("could not load image " + filename);
+        img = image<vec4b>{size, pixels};
+        free(pixels);
+    }
+    return img;
+}
+
+// Saves an ldr image.
+void save_image4b(const std::string& filename, const image<vec4b>& img) {
+    auto ext = get_extension(filename);
+    if (ext == "png") {
+        if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+                img.data(), img.size().x * 4))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "jpg") {
+        if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
+                img.data(), 75))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "tga") {
+        if (!stbi_write_tga(
+                filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "bmp") {
+        if (!stbi_write_bmp(
+                filename.c_str(), img.size().x, img.size().y, 4, img.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "hdr") {
+        auto imgf = srgb_to_linear(byte_to_float(img));
+        if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+                (float*)imgf.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "pfm") {
+        auto imgf = srgb_to_linear(byte_to_float(img));
+        if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+                (float*)imgf.data()))
+            throw std::runtime_error("could not save image " + filename);
+    } else if (ext == "exr") {
+        auto imgf = srgb_to_linear(byte_to_float(img));
+        if (!SaveEXR((float*)imgf.data(), img.size().x, img.size().y, 4,
+                filename.c_str()))
+            throw std::runtime_error("could not save image " + filename);
+    } else {
+        throw std::runtime_error("unsupported image format " + ext);
+    }
+}
+
+// Loads an ldr image.
+image<vec4b> load_image4b_from_memory(const byte* data, int data_size) {
+    auto size   = zero2i;
+    auto ncomp  = 0;
+    auto pixels = (vec4b*)stbi_load_from_memory(
+        data, data_size, &size.x, &size.y, &ncomp, 4);
+    if (!pixels) throw std::runtime_error("could not decode image from memory");
+    auto img = image<vec4b>{size, pixels};
     delete pixels;
     return img;
 }
@@ -755,12 +845,13 @@ image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
-    float exposure, float gamma, bool filmic) {
-    if (is_hdr_filename(filename))
+    float exposure, bool filmic, bool srgb) {
+    if (is_hdr_filename(filename)) {
         save_image4f(filename, hdr);
-    else
-        save_image4f(
-            filename, tonemap_exposuregamma(hdr, exposure, gamma, filmic));
+    } else {
+        save_image4b(filename,
+            float_to_byte(tonemap_filmic(hdr, exposure, filmic, srgb)));
+    }
 }
 
 // Resize image.
@@ -878,12 +969,14 @@ void load_scene_textures(scene* scn, const std::string& dirname,
     bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->img.empty()) continue;
+        if (txt->path == "") continue;
+        if (!txt->imgf.empty() && !txt->imgb.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            txt->img = load_image4f(filename);
-            if (!is_hdr_filename(filename) && txt->gamma != 1) {
-                txt->img = gamma_to_linear(txt->img, txt->gamma);
+            if (is_hdr_filename(filename)) {
+                txt->imgf = load_image4f(filename);
+            } else {
+                txt->imgb = load_image4b(filename);
             }
         } catch (const std::exception&) {
             if (skip_missing) continue;
@@ -908,11 +1001,18 @@ void load_scene_textures(scene* scn, const std::string& dirname,
         auto has_opacity = std::unordered_map<texture*, bool>();
         for (auto& txt : scn->textures) {
             has_opacity[txt] = false;
-            for (auto& p : txt->img)
+            for (auto& p : txt->imgf) {
                 if (p.w < 0.999f) {
                     has_opacity[txt] = true;
                     break;
                 }
+            }
+            for (auto& p : txt->imgb) {
+                if (p.w < 255) {
+                    has_opacity[txt] = true;
+                    break;
+                }
+            }
         }
         for (auto& mat : scn->materials) {
             if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
@@ -926,16 +1026,13 @@ void save_scene_textures(
     const scene* scn, const std::string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
-        if (txt->img.empty()) continue;
+        if (txt->imgf.empty() && txt->imgb.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         try {
-            if (!txt->img.empty()) {
-                if (is_hdr_filename(filename) || txt->gamma == 1) {
-                    save_image4f(filename, txt->img);
-                } else {
-                    save_image4f(
-                        filename, linear_to_gamma(txt->img, txt->gamma));
-                }
+            if (is_hdr_filename(filename)) {
+                save_image4f(filename, txt->imgf);
+            } else {
+                save_image4b(filename, txt->imgb);
             }
         } catch (std::exception&) {
             if (skip_missing) continue;
@@ -1272,9 +1369,10 @@ void to_json(json& js, const texture& val) {
     if (val.path != def.path) js["path"] = val.path;
     if (val.clamp != def.clamp) js["clamp"] = val.clamp;
     if (val.scale != def.scale) js["scale"] = val.scale;
-    if (val.gamma != def.gamma) js["gamma"] = val.gamma;
+    if (val.srgb != def.srgb) js["srgb"] = val.srgb;
     if (val.path == "") {
-        if (!val.img.empty()) js["img"] = val.img;
+        if (!val.imgf.empty()) js["imgf"] = val.imgf;
+        if (!val.imgb.empty()) js["imgb"] = val.imgb;
     }
 }
 
@@ -1285,48 +1383,55 @@ void from_json_proc(const json& js, texture& val) {
     auto is_hdr = false;
     auto size   = js.value("size", vec2i{512, 512});
     if (type == "grid") {
-        val.img = make_grid_image4f(size, js.value("tile", 8),
-            js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
+        val.imgf = make_grid_image4f(size, js.value("tile", 8),
+            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val.img = make_checker_image4f(size, js.value("tile", 8),
-            js.value("c0", vec4f{0.5f, 0.5f, 0.5f, 1}),
+        val.imgf = make_checker_image4f(size, js.value("tile", 8),
+            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.img = make_bumpdimple_image4f(size, js.value("tile", 8));
+        val.imgf = make_bumpdimple_image4f(size, js.value("tile", 8));
     } else if (type == "uvramp") {
-        val.img = make_uvramp_image4f(size);
+        val.imgf = make_uvramp_image4f(size);
     } else if (type == "uvgrid") {
-        val.img = make_uvgrid_image4f(size);
+        val.imgf = make_uvgrid_image4f(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        val.img   = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
+        val.imgf  = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        val.gamma = 1;
         is_hdr    = true;
     } else if (type == "noise") {
-        val.img = make_noise_image4f(
+        val.imgf = make_noise_image4f(
             size, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        val.img = make_fbm_image4f(size, js.value("scale", 1.0f),
+        val.imgf = make_fbm_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val.img = make_ridge_image4f(size, js.value("scale", 1.0f),
+        val.imgf = make_ridge_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        val.img = make_turbulence_image4f(size, js.value("scale", 1.0f),
+        val.imgf = make_turbulence_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
     if (js.value("bump_to_normal", false)) {
-        val.img   = bump_to_normal_map(val.img, js.value("bump_scale", 1.0f));
-        val.gamma = 1;
+        val.imgf  = bump_to_normal_map(val.imgf, js.value("bump_scale", 1.0f));
+        val.srgb = false;
+    }
+    if (!is_hdr) {
+        if(val.srgb) {
+            val.imgb = float_to_byte(linear_to_srgb(val.imgf));
+        } else {
+            val.imgb = float_to_byte(val.imgf);
+        }
+        val.imgf = {};
     }
     if (val.path == "") {
         auto ext = (is_hdr) ? std::string("hdr") : std::string("png");
@@ -1341,8 +1446,9 @@ void from_json(const json& js, texture& val) {
     val.path              = js.value("path", def.path);
     val.clamp             = js.value("clamp", def.clamp);
     val.scale             = js.value("scale", def.scale);
-    val.gamma             = js.value("gamma", def.gamma);
-    val.img               = js.value("img", def.img);
+    val.srgb             = js.value("srgb", def.srgb);
+    val.imgf              = js.value("imgf", def.imgf);
+    val.imgb              = js.value("imgb", def.imgb);
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
 }
 
@@ -2611,7 +2717,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         txt->path  = info.path;
         txt->clamp = info.clamp;
         txt->scale = info.scale;
-        txt->gamma = (srgb && !is_hdr_filename(info.path)) ? 2.2f : 1.0f;
+        txt->srgb = srgb && !is_hdr_filename(info.path);
         scn->textures.push_back(txt);
         tmap[info.path] = txt;
 
@@ -3096,7 +3202,7 @@ scene* load_gltf_scene(
         txt->clamp = gsmp.value("wrapS", ""s) == "ClampToEdge" ||
                      gsmp.value("wrapT", ""s) == "ClampToEdge";
         txt->scale = gsmp.value("scale", 1.0f) * gsmp.value("strength", 1.0f);
-        txt->gamma = (srgb && !is_hdr_filename(txt->path)) ? 2.2f : 1.0f;
+        txt->srgb = srgb && !is_hdr_filename(txt->path);
         return txt;
     };
 
@@ -4826,10 +4932,11 @@ void serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
 void serialize_bin_object(texture* tex, FILE* fs, bool save) {
     serialize_bin_value(tex->name, fs, save);
     serialize_bin_value(tex->path, fs, save);
-    serialize_bin_value(tex->img, fs, save);
+    serialize_bin_value(tex->imgf, fs, save);
+    serialize_bin_value(tex->imgb, fs, save);
     serialize_bin_value(tex->clamp, fs, save);
     serialize_bin_value(tex->scale, fs, save);
-    serialize_bin_value(tex->gamma, fs, save);
+    serialize_bin_value(tex->srgb, fs, save);
     serialize_bin_value(tex->has_opacity, fs, save);
 }
 

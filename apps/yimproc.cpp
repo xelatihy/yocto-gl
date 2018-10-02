@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
     auto parser  = make_cmdline_parser(argc, argv, "Process images", "yimproc");
     auto tonemap = parse_arg(parser, "--tonemap,-t", false, "Tonemap image");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
+    auto srgb     = parse_arg(parser, "--srgb", true, "Tonemap to sRGB.");
     auto filmic   = parse_arg(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
     auto res_width = parse_arg(
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < img.size().y; j++)
             for (auto i = 0; i < img.size().x; i++)
-                img[{i, j}].w = luminance(alpha[{i, j}]);
+                img[{i, j}].w = mean(alpha[{i, j}]);
     }
 
     // resize
@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) img = tonemap_exposuregamma(img, exposure, gamma, filmic);
+    if (tonemap) img = tonemap_filmic(img, exposure, filmic, srgb);
 
     // save
     try {

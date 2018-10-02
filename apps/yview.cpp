@@ -338,10 +338,6 @@ static const char* fragment =
             vec4 rs_txt = (mat_rs_txt_on) ? texture(mat_rs_txt,texcoord) : vec4(1,1,1,1);
             vec4 op_txt = (mat_op_txt_on) ? texture(mat_op_txt,texcoord) : vec4(1,1,1,1);
 
-            ke_txt.xyz = pow(ke_txt.xyz, vec3(2.2));
-            kd_txt.xyz = pow(kd_txt.xyz, vec3(2.2));
-            ks_txt.xyz = pow(ks_txt.xyz, vec3(2.2));
-
             // get material color from textures and adjust values
             if(mat_type == 1) {
                 ke *= ke_txt.xyz;
@@ -628,7 +624,13 @@ draw_glstate* init_draw_state(glwindow* win) {
     state->gl_prog         = make_glprogram(vertex, fragment);
     state->txt_id[nullptr] = 0;
     for (auto txt : app->scn->textures) {
-        state->txt_id[txt] = make_gltexture(txt->img, true, true);
+        if (!txt->imgf.empty()) {
+            state->txt_id[txt] = make_gltexture(txt->imgf, true, true, true);
+        } else if (!txt->imgb.empty()) {
+            state->txt_id[txt] = make_gltexture(txt->imgb, txt->srgb, true, true);
+        } else {
+            printf("bad texture");
+        }
     }
     for (auto& shp : app->scn->shapes) {
         auto vbos = draw_glshape_vbos();

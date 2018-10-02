@@ -176,9 +176,11 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_inputtext_glwidget(win, "path", val->path);
     edited += draw_checkbox_glwidget(win, "clamp", val->clamp);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 1);
-    edited += draw_slider_glwidget(win, "gamma", val->gamma, 1, 2.2f);
+    edited += draw_checkbox_glwidget(win, "srgb", val->srgb);
     draw_imgui_label(
-        win, "img", "%d x %d", val->img.size().x, val->img.size().y);
+        win, "hdr", "%d x %d", val->imgf.size().x, val->imgf.size().y);
+    draw_imgui_label(
+        win, "ldr", "%d x %d", val->imgb.size().x, val->imgb.size().y);
     return edited;
 }
 

@@ -5,12 +5,83 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
+- images
+    - need to preserve color space to be able to properly work on images
+    - for now, focus on srgb primaries, but start porting other spaces too
+    - provide a way to view color spaces in yimview
+    - color spaces useful
+        - srgb / linear srgb
+        - rec2020 / linear rec2020 ?
+        - acescg, acescc, acescct
+        - some log space
+    - practical solution
+        - assume srgb, but still label all things clearly
+        - do proper srgb coversion
+        - imageio supports only srgb for now since the base library do not 
+          have access to color profiles
+            - check if we can gey access to profiles
+        - texture
+            - store image4f and image4b data
+        - opengl
+            - support floating point textures and srgb internal formats 
+        - imview
+            - this is to be defined
+            - problably, do two cases
+                - hdr images / linear with srgb primaries
+                - ldr image / non-linear with srgb primaries
+            - store images in their original form
+            - then either provide two separate editing pipelines
+            - in general, it feels that we should still have a similar pipeline
+              with carefully designed spaces, e.g. using log and always starting
+              from a linear representation -> still perform everything in 
+              floating point
+- yimview
+    - add grading
+        - check Filmic Worlds implementation
+        - check from Unity implementation
+        - add tonemapper data
+    - add mipmapping
+        - easy fix
+    - file in
+        - tinyDNG
+    - add histogram visualization
+    - focus on HDR toning, with LDR used as postprocess
+    - color correction in both sRGB or after
+- color grading
+    - schlick formula for bias/gain
+    - offset?
+    - LUTs
+    - tone curve
+        - from web?
+        - no implementation of Photoshop curve
+        - maybe try monotonic spline interpolation
+        - otherwise a simple Bezier with constraints
+        - use lookup tables for this
+- adding quads to shapes
+    - integration in sampling
+    - integration in intersection
+    - integration in interpolation
+- cleanup examples
+    - bent floor
+    - hair
+    - crane subdivs
+    - utah teapot
+    - bunny embed
+- BVH
+    - add all intersection
+    - add cutout to trace
+    - simplify build functions
+    - maybe put axis with internal
+    - simplify partition and nth_element function
+        - include wrapper functions
+
+## Cleanup
+
 - generic
     - to_string
     - vec: consider constructors/conversions
     - cmdline with to_string and parse
     - min, lerp, clamp
-- move ext files
 - path tracing with pbrt MIS
 - simple renderers for book
     - simple intersection
@@ -25,34 +96,12 @@ Please consider this to be just development notes and not any real planning.
 - direct with deltas
 - split apps
 
-## Next features
-
-- LUTs
-- tone curve
-    - from web?
-    - no implementation of Photoshop curve
-    - maybe try monotonic spline interpolation
-    - otherwise a simple Bezier with constraints
-    - use lookup tables for this
-
 ## Scene changes
 
 - simpler shapes functions
     - add functions on quads using embree parametrization
     - quad tangent field
     - add quads to shape
-- embree
-- yscene
-    - convert everything
-        - mcguire
-        - gltf
-
-## Examples
-
-- bent floor
-- crane subdivs
-- utah teapot
-- bunny embed
 
 ## Trace
 
@@ -125,20 +174,41 @@ Please consider this to be just development notes and not any real planning.
     - pbrt include parser
 - gltf exports
 
-## Test scenes: simplify shape generation
+## Additional Notes
 
-- bent floor
-- 0 roughness
+### Tonemapping and HDR
 
-## BVH
+- Frostbite HDR
+    - from "High Dynamic Range color grading and diksplay in Frostbite"
+    - Legacy:
+        - hdr/linear -> 
+          tonemap/linear -> 
+          srgb/non-linear[0-1] -> 
+          grading (lut) -> 
+          display
+    - Current
+        - hdr/linear ->
+          to lut space/non-linear -> 
+          grading (lut) -> 
+          to hdr/linear -> 
+          tonemap/non-linear for each output (srgb, hdr10) ->
+          display
+    - Lut space is PQ for now
+    - Consider doing it in ACES instead for more compatibility
+- COD HDR pipeline
+- Filmic Worlds
+    - 
+- ACES
+    - need to read more about this
+    - non exact diagram below, but very reasonable
+    - raw(non-linear encoding or linear exr) -> [input transform] ->
+      aces linear (acescg) -> [look modificartion transform] ->
+      aces non-linear (acescc or acescct) -> [color grading] ->
+      aces linear (acescg) -> [reference rendering transform] (filminc tone mapping) ->
+      aces linear -> [output tranform] ->
+      device-dependent color space
 
-- add cutout to trace
-- simplify build functions
-- maybe put axis with internal
-- simplify partition and nth_element function
-    - include wrapper functions
-
-## OpenMP
+### OpenMP
 
 On Apple Clang, you need to add several options to use OpenMP's front end
 instead of the standard driver option. This usually looks like
@@ -152,7 +222,7 @@ if /usr/local is not searched:
 For CMake, the following flags will cause the OpenMP::OpenMP_CXX target to
 be set up correctly:
   -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I/usr/local/opt/libomp/include" -DOpenMP_CXX_LIB_NAMES="omp" -DOpenMP_omp_LIBRARY=/usr/local/opt/libomp/lib/libomp.dylib
-
+#
 ## Book
 
 - apps
