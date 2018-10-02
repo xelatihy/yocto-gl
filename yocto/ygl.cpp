@@ -2998,6 +2998,26 @@ image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma) {
     return srgb;
 }
 
+// Conversion between linear and gamma-encoded images.
+image<vec4f> srgb_to_linear(const image<vec4f>& srgb) {
+    auto lin = image<vec4f>{srgb.size()};
+    for (auto j = 0; j < srgb.size().y; j++) {
+        for (auto i = 0; i < srgb.size().x; i++) {
+            lin[{i, j}] = srgb_to_linear(srgb[{i, j}]);
+        }
+    }
+    return lin;
+}
+image<vec4f> linear_to_srgb(const image<vec4f>& lin) {
+    auto srgb = image<vec4f>{lin.size()};
+    for (auto j = 0; j < srgb.size().y; j++) {
+        for (auto i = 0; i < srgb.size().x; i++) {
+            srgb[{i, j}] = linear_to_srgb(lin[{i, j}]);
+        }
+    }
+    return srgb;
+}
+
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
     auto fl = image<vec4f>{bt.size()};
@@ -3019,13 +3039,13 @@ image<vec4b> float_to_byte(const image<vec4f>& fl) {
 }
 
 // Tonemap image
-image<vec4f> tonemap_exposuregamma(
-    const image<vec4f>& hdr, float exposure, float gamma, bool filmic) {
+image<vec4f> tonemap_filmic(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
     auto ldr = image<vec4f>{hdr.size()};
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
-            ldr[{i, j}] = tonemap_exposuregamma(
-                hdr[{i, j}], exposure, gamma, filmic);
+            ldr[{i, j}] = tonemap_filmic(
+                hdr[{i, j}], exposure, filmic, srgb);
         }
     }
     return ldr;
@@ -3318,8 +3338,7 @@ image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le,
     return img;
 }
 
-// Make a noise image. Wrap works only if both width and height are powers
-// of two.
+// Make a noise image. Wrap works only if size is a power of two.
 image<vec4f> make_noise_image4f(const vec2i& size, float scale, bool wrap) {
     auto img    = image<vec4f>{size};
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
@@ -3336,8 +3355,7 @@ image<vec4f> make_noise_image4f(const vec2i& size, float scale, bool wrap) {
     return img;
 }
 
-// Make a noise image. Wrap works only if both width and height are powers
-// of two.
+// Make a noise image. Wrap works only if size is a power of two.
 image<vec4f> make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
     float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
@@ -3355,8 +3373,7 @@ image<vec4f> make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
     return img;
 }
 
-// Make a noise image. Wrap works only if both width and height are powers
-// of two.
+// Make a noise image. Wrap works only if size is a power of two.
 image<vec4f> make_ridge_image4f(const vec2i& size, float scale,
     float lacunarity, float gain, float offset, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
@@ -3375,8 +3392,7 @@ image<vec4f> make_ridge_image4f(const vec2i& size, float scale,
     return img;
 }
 
-// Make a noise image. Wrap works only if both width and height are powers
-// of two.
+// Make a noise image. Wrap works only if size is a power of two.
 image<vec4f> make_turbulence_image4f(const vec2i& size, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
@@ -3593,12 +3609,14 @@ std::vector<float> compute_shape_cdf(const shape* shp) {
 std::vector<float> compute_environment_cdf(const environment* env) {
     auto txt = env->ke_txt;
     if (!txt) return {};
-    auto elem_cdf = std::vector<float>(txt->img.size().x * txt->img.size().y);
-    if (!txt->img.empty()) {
+    auto size     = eval_texture_size(txt);
+    auto elem_cdf = std::vector<float>(size.x * size.y);
+    if (!txt->imgf.empty()) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
-            auto ij     = vec2i{i % txt->img.size().x, i / txt->img.size().x};
-            auto th     = (ij.y + 0.5f) * pif / txt->img.size().y;
-            elem_cdf[i] = max(xyz(txt->img[ij])) * sin(th);
+            auto ij     = vec2i{i % size.x, i / size.x};
+            auto th     = (ij.y + 0.5f) * pif / size.y;
+            auto val    = lookup_texture(txt, ij);
+            elem_cdf[i] = max(xyz(val)) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
     } else {
@@ -3739,7 +3757,8 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->img.empty()) errs.push_back("empty texture " + val->name);
+            if (val->imgf.empty() && val->imgb.empty())
+                errs.push_back("empty texture " + val->name);
         }
     };
 
@@ -3973,12 +3992,38 @@ vec3f eval_environment(const scene* scn, const vec3f& w) {
     return ke;
 }
 
+// Check texture size
+vec2i eval_texture_size(const texture* txt) {
+    if (!txt->imgf.empty()) {
+        return txt->imgf.size();
+    } else if (!txt->imgb.empty()) {
+        return txt->imgb.size();
+    } else {
+        return zero2i;
+    }
+}
+
+// Lookup a texture value
+vec4f lookup_texture(const texture* txt, const vec2i& ij) {
+    if (!txt->imgf.empty()) {
+        return txt->imgf[ij];
+    } else if (!txt->imgb.empty() && txt->srgb) {
+        return srgb_to_linear(byte_to_float(txt->imgb[ij]));
+    } else if (!txt->imgb.empty() && !txt->srgb) {
+        return byte_to_float(txt->imgb[ij]);
+    } else {
+        return zero4f;
+    }
+}
+
 // Evaluate a texture
 vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
-    if (!txt || txt->img.empty()) return {1, 1, 1, 1};
+    if (!txt) return {1, 1, 1, 1};
+    if (txt->imgf.empty() && txt->imgb.empty()) return {1, 1, 1, 1};
 
     // get image width/height
-    auto width = txt->img.size().x, height = txt->img.size().y;
+    auto size  = eval_texture_size(txt);
+    auto width = size.x, height = size.y;
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
@@ -4001,13 +4046,23 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     if (!txt->linear) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
-        return txt->img[{i, j}];
+        return lookup_texture(txt, {i, j});
     }
 
     // handle interpolation
-    return txt->img[{i, j}] * (1 - u) * (1 - v) +
-           txt->img[{i, jj}] * (1 - u) * v + txt->img[{ii, j}] * u * (1 - v) +
-           txt->img[{ii, jj}] * u * v;
+    return lookup_texture(txt, {i, j}) * (1 - u) * (1 - v) +
+           lookup_texture(txt, {i, jj}) * (1 - u) * v +
+           lookup_texture(txt, {ii, j}) * u * (1 - v) +
+           lookup_texture(txt, {ii, jj}) * u * v;
+}
+
+// Lookup a texture value
+float lookup_voltexture(const voltexture* txt, const vec3i& ijk) {
+    if (txt->vol.empty()) {
+        return txt->vol[ijk];
+    } else {
+        return 0;
+    }
 }
 
 // Evaluate a volume texture
@@ -4036,18 +4091,18 @@ float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         k = w < 0.5 ? k : min(k + 1, depth - 1);
-        return txt->vol[{i, j, k}];
+        return lookup_voltexture(txt, {i, j, k});
     }
 
     // trilinear interpolation
-    return txt->vol[{i, j, k}] * (1 - u) * (1 - v) * (1 - w) +
-           txt->vol[{ii, j, k}] * u * (1 - v) * (1 - w) +
-           txt->vol[{i, jj, k}] * (1 - u) * v * (1 - w) +
-           txt->vol[{i, j, kk}] * (1 - u) * (1 - v) * w +
-           txt->vol[{i, jj, kk}] * (1 - u) * v * w +
-           txt->vol[{ii, j, kk}] * u * (1 - v) * w +
-           txt->vol[{ii, jj, k}] * u * v * (1 - w) +
-           txt->vol[{ii, jj, kk}] * u * v * w;
+    return lookup_voltexture(txt, {i, j, k}) * (1 - u) * (1 - v) * (1 - w) +
+           lookup_voltexture(txt, {ii, j, k}) * u * (1 - v) * (1 - w) +
+           lookup_voltexture(txt, {i, jj, k}) * (1 - u) * v * (1 - w) +
+           lookup_voltexture(txt, {i, j, kk}) * (1 - u) * (1 - v) * w +
+           lookup_voltexture(txt, {i, jj, kk}) * (1 - u) * v * w +
+           lookup_voltexture(txt, {ii, j, kk}) * u * (1 - v) * w +
+           lookup_voltexture(txt, {ii, jj, k}) * u * v * (1 - w) +
+           lookup_voltexture(txt, {ii, jj, kk}) * u * v * w;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -4364,8 +4419,10 @@ void print_stats(const scene* scn) {
                    vert_texcoord * sizeof(vec3f) + vert_color * sizeof(vec4f) +
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
 
-    for (auto txt : scn->textures)
-        texel_hdr += txt->img.size().x * txt->img.size().y;
+    for (auto txt : scn->textures) {
+        texel_hdr += txt->imgf.size().x * txt->imgf.size().y;
+        texel_ldr += txt->imgb.size().x * txt->imgb.size().y;
+    }
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
     printf("num_cameras: %lld\n", num_cameras);
@@ -4645,13 +4702,14 @@ float sample_environment_pdf(const environment* env,
     const std::vector<float>& elem_cdf, const vec3f& i) {
     auto txt = env->ke_txt;
     if (!elem_cdf.empty() && txt) {
+        auto size     = eval_texture_size(txt);
         auto texcoord = eval_texcoord(env, i);
-        auto i        = (int)(texcoord.x * txt->img.size().x);
-        auto j        = (int)(texcoord.y * txt->img.size().y);
-        auto idx      = j * txt->img.size().x + i;
+        auto i        = (int)(texcoord.x * size.x);
+        auto j        = (int)(texcoord.y * size.y);
+        auto idx      = j * size.x + i;
         auto prob     = sample_discrete_pdf(elem_cdf, idx) / elem_cdf.back();
-        auto angle = (2 * pif / txt->img.size().x) * (pif / txt->img.size().y) *
-                     sin(pif * (j + 0.5f) / txt->img.size().y);
+        auto angle    = (2 * pif / size.x) * (pif / size.y) *
+                     sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
     } else {
         return 1 / (4 * pif);
@@ -4663,9 +4721,10 @@ vec3f sample_environment(const environment* env,
     const std::vector<float>& elem_cdf, float rel, const vec2f& ruv) {
     auto txt = env->ke_txt;
     if (!elem_cdf.empty() && txt) {
-        auto idx = sample_discrete(elem_cdf, rel);
-        auto u   = (idx % txt->img.size().x + 0.5f) / txt->img.size().x;
-        auto v   = (idx / txt->img.size().x + 0.5f) / txt->img.size().y;
+        auto idx  = sample_discrete(elem_cdf, rel);
+        auto size = eval_texture_size(txt);
+        auto u    = (idx % size.x + 0.5f) / size.x;
+        auto v    = (idx / size.x + 0.5f) / size.y;
         return eval_direction(env, {u, v});
     } else {
         return sample_sphere(ruv);
@@ -5806,9 +5865,9 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                     state->img[{i, j}] += trace_sample(
                         state, scn, bvh, lights, {i, j}, params);
                 state->img[{i, j}] /= state->sample + nbatch;
-                state->display[{i, j}] = tonemap_exposuregamma(
-                    state->img[{i, j}], params.exposure, params.gamma,
-                    params.filmic);
+                state->display[{i, j}] = tonemap_filmic(
+                    state->img[{i, j}], params.exposure,
+                    params.filmic, params.srgb);
             }
         }
     } else {
@@ -5823,9 +5882,9 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                             state->img[{i, j}] += trace_sample(
                                 state, scn, bvh, lights, {i, j}, params);
                         state->img[{i, j}] /= state->sample + nbatch;
-                        state->display[{i, j}] = tonemap_exposuregamma(
-                            state->img[{i, j}], params.exposure, params.gamma,
-                            params.filmic);
+                        state->display[{i, j}] = tonemap_filmic(
+                            state->img[{i, j}], params.exposure, 
+                            params.filmic, params.srgb);
                     }
                 }
             }));
@@ -5845,8 +5904,8 @@ void trace_async_start(trace_state* state, const scene* scn, const bvh_tree* bvh
         pparams.yresolution = state->img.size().y / params.preview_ratio;
         pparams.nsamples    = 1;
         auto pimg           = trace_image4f(scn, bvh, lights, pparams);
-        auto pdisplay       = tonemap_exposuregamma(
-            pimg, params.exposure, params.gamma, params.filmic);
+        auto pdisplay       = tonemap_filmic(
+            pimg, params.exposure, params.filmic, params.srgb);
         auto pwidth = pimg.size().x, pheight = pimg.size().y;
         for (auto j = 0; j < state->img.size().y; j++) {
             for (auto i = 0; i < state->img.size().x; i++) {
@@ -5872,9 +5931,9 @@ void trace_async_start(trace_state* state, const scene* scn, const bvh_tree* bvh
                         state->img[{i, j}] += trace_sample(
                             state, scn, bvh, lights, {i, j}, params);
                         state->img[{i, j}] /= s + 1;
-                        state->display[{i, j}] = tonemap_exposuregamma(
-                            state->img[{i, j}], params.exposure, params.gamma,
-                            params.filmic);
+                        state->display[{i, j}] = tonemap_filmic(
+                            state->img[{i, j}], params.exposure, 
+                            params.filmic, params.srgb);
                     }
                 }
             }

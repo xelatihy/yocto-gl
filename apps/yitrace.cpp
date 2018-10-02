@@ -100,7 +100,8 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_treenode_glwidget(win, "view settings")) {
             draw_slider_glwidget(win, "exposure", app->params.exposure, -5, 5);
-            draw_slider_glwidget(win, "gamma", app->params.gamma, 1, 3);
+            draw_checkbox_glwidget(win, "filmic", app->params.filmic);
+            draw_checkbox_glwidget(win, "srgb", app->params.srgb);
             draw_slider_glwidget(win, "zoom", app->imscale, 0.1, 10);
             draw_checkbox_glwidget(win, "zoom to fit", app->zoom_to_fit);
             continue_glwidgets_line(win);
@@ -142,9 +143,9 @@ void draw(glwindow* win) {
     center_image4f(app->imcenter, app->imscale, app->state->display.size(),
         win_size, app->zoom_to_fit);
     if (!app->gl_txt) {
-        app->gl_txt = make_gltexture(app->state->display, false, false);
+        app->gl_txt = make_gltexture(app->state->display, false, false, false);
     } else {
-        update_gltexture(app->gl_txt, app->state->display, false, false);
+        update_gltexture(app->gl_txt, app->state->display, false, false, false);
     }
     draw_glimage(app->gl_txt, app->state->display.size(), win_size,
         app->imcenter, app->imscale);

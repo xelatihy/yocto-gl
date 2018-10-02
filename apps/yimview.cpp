@@ -52,8 +52,8 @@ struct app_image {
 
     // tonemapping values
     float exposure = 0;
-    float gamma    = 2.2f;
     bool  filmic   = false;
+    bool  srgb     = true;
 
     // computation futures
     std::atomic<bool> load_done, display_done, stats_done, texture_done;
@@ -110,9 +110,9 @@ void update_display_image(app_image* img) {
                     for (auto j = tid; j < img->img.size().y; j += nthreads) {
                         if (img->display_stop) break;
                         for (auto i = 0; i < img->img.size().x; i++) {
-                            img->display[{i, j}] = tonemap_exposuregamma(
-                                img->img[{i, j}], img->exposure, img->gamma,
-                                img->filmic);
+                            img->display[{i, j}] = tonemap_filmic(
+                                img->img[{i, j}], img->exposure,
+                                img->filmic, img->srgb);
                         }
                     }
                 }));
@@ -122,14 +122,37 @@ void update_display_image(app_image* img) {
             for (auto j = 0; j < img->img.size().y; j++) {
                 if (img->display_stop) break;
                 for (auto i = 0; i < img->img.size().x; i++) {
-                    img->display[{i, j}] = tonemap_exposuregamma(
-                        img->img[{i, j}], img->exposure, img->gamma,
-                        img->filmic);
+                    img->display[{i, j}] = tonemap_filmic(
+                        img->img[{i, j}], img->exposure,
+                        img->filmic, img->srgb);
                 }
             }
         }
     } else {
-        img->display = img->img;
+        if (img->img.size().x * img->img.size().y > 1024 * 1024) {
+            auto nthreads = std::thread::hardware_concurrency();
+            auto threads  = std::vector<std::thread>();
+            for (auto tid = 0; tid < nthreads; tid++) {
+                threads.push_back(std::thread([img, tid, nthreads]() {
+                    for (auto j = tid; j < img->img.size().y; j += nthreads) {
+                        if (img->display_stop) break;
+                        for (auto i = 0; i < img->img.size().x; i++) {
+                            img->display[{i, j}] = linear_to_srgb(
+                                img->img[{i, j}]);
+                        }
+                    }
+                }));
+            }
+            for (auto& t : threads) t.join();
+        } else {
+            for (auto j = 0; j < img->img.size().y; j++) {
+                if (img->display_stop) break;
+                for (auto i = 0; i < img->img.size().x; i++) {
+                    img->display[{i, j}] = linear_to_srgb(
+                        img->img[{i, j}]);
+                }
+            }
+        }
     }
     img->display_done = true;
     if (!img->display_stop) {
@@ -176,8 +199,8 @@ void draw_glwidgets(glwindow* win) {
         draw_imgui_label(
             win, "size", "%d x %d ", img->img.size().x, img->img.size().y);
         edited += draw_slider_glwidget(win, "exposure", img->exposure, -5, 5);
-        edited += draw_slider_glwidget(win, "gamma", img->gamma, 1, 3);
         edited += draw_checkbox_glwidget(win, "filmic", img->filmic);
+        edited += draw_checkbox_glwidget(win, "srgb", img->srgb);
         if (edited) {
             if (img->display_thread.joinable()) {
                 img->display_stop = true;
@@ -230,9 +253,9 @@ void update(app_state* app) {
     for (auto img : app->imgs) {
         if (!img->display_done || img->texture_done) continue;
         if (!img->gl_txt) {
-            img->gl_txt = make_gltexture(img->display, false, false);
+            img->gl_txt = make_gltexture(img->display, false, false, true);
         } else {
-            update_gltexture(img->gl_txt, img->display, false, false);
+            update_gltexture(img->gl_txt, img->display, false, false, true);
         }
         img->texture_done = true;
     }
@@ -287,9 +310,9 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
-    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "display gamma");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "display exposure");
     auto filmic   = parse_arg(parser, "--filmic", false, "display filmic");
+    auto srgb     = parse_arg(parser, "--srgb", true, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     auto filenames = parse_args(
@@ -303,8 +326,8 @@ int main(int argc, char* argv[]) {
         img->name        = get_filename(filename);
         img->is_hdr      = is_hdr_filename(filename);
         img->exposure    = exposure;
-        img->gamma       = gamma;
         img->filmic      = filmic;
+        img->srgb        = srgb;
         img->load_thread = std::thread(load_image, img);
         app->imgs.push_back(img);
     }

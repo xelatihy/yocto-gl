@@ -170,14 +170,13 @@
 // Yocto/GL supports a very small set is color and image utilities including
 // color utilities, example image creation, tone mapping, image resizing, and
 // sunsky procedural images. Yocto/Image is written to support the need of a
-// minimal, but fully-featured, global illumination renderer, rather than the
-// need of generic image editing.
+// global illumination renderer, rather than the need of generic image editing.
 //
 // 0. load and save image with Yocto/GLIO
 // 1. create images with `image<T>` data structure
 // 2. resize images with `resize_image()`
-// 3. tonemap images with `tonemap_exposuregamma()` that support exposure/gamma
-//    with a filmic curve
+// 3. tonemap images with `tonemap_filmic()` that convert from linear HDR to 
+//    sRGB LDR with exposure and an optional filmic curve
 // 5. make various image examples with the `make_XXX_image4f()` functions
 // 6. create procedural sun-sky images with `make_sunsky_image4f()`
 //
@@ -863,6 +862,18 @@ inline T min(const vec3<T>& a) {
 template <typename T>
 inline T min(const vec4<T>& a) {
     return min(min(min(a.x, a.y), a.z), a.w);
+}
+template <typename T>
+inline T mean(const vec2<T>& a) {
+    return (a.x + a.y) / 2;
+}
+template <typename T>
+inline T mean(const vec3<T>& a) {
+    return (a.x + a.y + a.z) / 3;
+}
+template <typename T>
+inline T mean(const vec4<T>& a) {
+    return (a.x + a.y + a.z + a.w) / 4;
 }
 
 // Quaternion operatons represented as xi + yj + zk + w
@@ -2499,7 +2510,7 @@ inline vec4f byte_to_float(const vec4b& a) {
     return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
 
-// Conversion between linear and gamma-encoded images.
+// Conversion between linear and gamma-encoded colors.
 inline vec3f gamma_to_linear(const vec3f& srgb, float gamma = 2.2f) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
 }
@@ -2514,31 +2525,63 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
         lin.w};
 }
 
-// Approximate luminance estimate
-inline float luminance(const vec3f& a) { return (a.x + a.y + a.z) / 3; }
-inline float luminance(const vec4f& a) { return (a.x + a.y + a.z) / 3; }
+// sRGB non-linear curve
+inline float srgb_to_linear(float srgb) {
+    if(srgb <= 0.04045) {
+        return srgb / 12.92f;
+    } else {
+        return pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
+    }
+}
+inline float linear_to_srgb(float lin) {
+    if(lin <= 0.0031308f) {
+        return 12.92f * lin;
+    } else {
+        return (1+0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
+    }
+}
+
+// Conversion between linear and srgb colors.
+inline vec3f srgb_to_linear(const vec3f& srgb) {
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
+}
+inline vec3f linear_to_srgb(const vec3f& lin) {
+    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
+}
+inline vec4f srgb_to_linear(const vec4f& srgb) {
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z), srgb.w};
+}
+inline vec4f linear_to_srgb(const vec4f& lin) {
+    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
+        lin.w};
+}
+
+// Approximate luminance estimate for sRGB primaries (better relative luminance)
+inline float luminance(const vec3f& a) { return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z); }
+inline float luminance(const vec4f& a) { return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z); }
 
 // Fitted ACES tonemapping curve.
-inline float tonemap_filmic_curve(float hdr) {
+inline float tonemap_filmic(float hdr) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     // hdr *= 0.6; // brings it back to ACES range
     return (hdr * hdr * 2.51f + hdr * 0.03f) /
            (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
 }
 // Apply ACES fitted curve.
-inline vec4f tonemap_filmic_curve(const vec4f& hdr) {
-    return {tonemap_filmic_curve(hdr.x), tonemap_filmic_curve(hdr.y),
-        tonemap_filmic_curve(hdr.z), hdr.w};
+inline vec4f tonemap_filmic(const vec4f& hdr) {
+    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y),
+        tonemap_filmic(hdr.z), hdr.w};
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
 // an optional filmic curve.
-inline vec4f tonemap_exposuregamma(
-    const vec4f& hdr, float exposure, float gamma, bool filmic) {
+inline vec4f tonemap_filmic(
+    const vec4f& hdr, float exposure, bool filmic, bool srgb) {
     auto scale = pow(2.0f, exposure);
     auto ldr   = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
-    if (filmic) ldr = tonemap_filmic_curve(ldr);
-    return linear_to_gamma(ldr, gamma);
+    if (filmic) ldr = tonemap_filmic(ldr);
+    if (srgb) ldr = linear_to_srgb(ldr);
+    return ldr;
 }
 
 // Converts HSV to RGB.
@@ -2563,12 +2606,16 @@ image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma = 2.2f);
-image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma = 2.2f);
+image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma);
+image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma);
+
+// Conversion between linear and sRGB images.
+image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
+image<vec4f> linear_to_srgb(const image<vec4f>& lin);
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_exposuregamma(
-    const image<vec4f>& hdr, float exposure, float gamma, bool filmic);
+image<vec4f> tonemap_filmic(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
@@ -2582,10 +2629,10 @@ namespace ygl {
 
 // Make example images.
 image<vec4f> make_grid_image4f(const vec2i& size, int tile = 8,
-    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
+    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image<vec4f> make_checker_image4f(const vec2i& size, int tile = 8,
-    const vec4f& c0 = {0.5f, 0.5f, 0.5f, 1},
+    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image<vec4f> make_bumpdimple_image4f(const vec2i& size, int tile = 8);
 image<vec4f> make_ramp_image4f(
@@ -2765,11 +2812,12 @@ struct camera {
 struct texture {
     std::string  name        = "";     // name
     std::string  path        = "";     // file path
-    image<vec4f> img         = {};     // image
+    image<vec4f> imgf        = {};     // hdr image in linear color space
+    image<vec4b> imgb        = {};     // ldr image in srgb color space
     bool         clamp       = false;  // clamp textures coordinates
     bool         linear      = true;   // use bilinear interpolation
     float        scale       = 1;      // scale for occ, normal, bumps
-    float        gamma       = 2.2f;  // gamma correction for ldr textures in IO
+    bool         srgb        = true;   // gamma correction for ldr textures
     bool         has_opacity = false;  // check whether alpha != 0
 };
 
@@ -2830,17 +2878,17 @@ struct shape {
     std::string path = "";  // path for glTF buffers
 
     // primitives
-    std::vector<int>   points;     // points
-    std::vector<vec2i> lines;      // lines
-    std::vector<vec3i> triangles;  // triangles
+    std::vector<int>   points    = {};  // points
+    std::vector<vec2i> lines     = {};  // lines
+    std::vector<vec3i> triangles = {};  // triangles
 
     // vertex data
-    std::vector<vec3f> pos;       // positions
-    std::vector<vec3f> norm;      // normals/tangents
-    std::vector<vec2f> texcoord;  // texcoord coordinates
-    std::vector<vec4f> color;     // colors
-    std::vector<float> radius;    // radia for lines/points
-    std::vector<vec4f> tangsp;    // tangent space for triangles
+    std::vector<vec3f> pos      = {};  // positions
+    std::vector<vec3f> norm     = {};  // normals/tangents
+    std::vector<vec2f> texcoord = {};  // texcoord coordinates
+    std::vector<vec4f> color    = {};  // colors
+    std::vector<float> radius   = {};  // radia for lines/points
+    std::vector<vec4f> tangsp   = {};  // tangent space for triangles
 };
 
 // Subdivision surface.
@@ -2852,18 +2900,18 @@ struct subdiv {
     bool        compute_normals = true;  // faceted subdivision
 
     // primitives
-    std::vector<vec4i> quads_pos;       // quads for position
-    std::vector<vec4i> quads_texcoord;  // quads for texture coordinates
-    std::vector<vec4i> quads_color;     // quads for color
+    std::vector<vec4i> quads_pos      = {};  // quads for position
+    std::vector<vec4i> quads_texcoord = {};  // quads for texture coordinates
+    std::vector<vec4i> quads_color    = {};  // quads for color
 
     // creases
-    std::vector<vec3i> crease_pos;       // crease for position
-    std::vector<vec3i> crease_texcoord;  // crease for texture coordinates
+    std::vector<vec3i> crease_pos      = {};  // crease for position
+    std::vector<vec3i> crease_texcoord = {};  // crease for texture coordinates
 
     // vertex data
-    std::vector<vec3f> pos;       // positions
-    std::vector<vec2f> texcoord;  // texcoord coordinates
-    std::vector<vec4f> color;     // colors
+    std::vector<vec3f> pos      = {};  // positions
+    std::vector<vec2f> texcoord = {};  // texcoord coordinates
+    std::vector<vec4f> color    = {};  // colors
 };
 
 // Shape instance.
@@ -2909,12 +2957,12 @@ struct animation {
     std::string                     path  = "";  // path for glTF buffer
     std::string                     group = "";  // group
     animation_type                  type  = animation_type::linear;  // type
-    std::vector<float>              times;        // keyframe times
-    std::vector<vec3f>              translation;  // translation keyframes
-    std::vector<vec4f>              rotation;     // rotation keyframes
-    std::vector<vec3f>              scale;        // scale keyframes
-    std::vector<std::vector<float>> weights;      // morph weight keyframes
-    std::vector<node*>              targets;      // target nodes
+    std::vector<float>              times = {};        // keyframe times
+    std::vector<vec3f>              translation = {};  // translation keyframes
+    std::vector<vec4f>              rotation    = {};  // rotation keyframes
+    std::vector<vec3f>              scale       = {};  // scale keyframes
+    std::vector<std::vector<float>> weights     = {};  // morph weight keyframes
+    std::vector<node*>              targets     = {};  // target nodes
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -2925,7 +2973,7 @@ struct animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene {
-    std::string               name;               // name
+    std::string               name         = "";  // name
     std::vector<camera*>      cameras      = {};  // cameras
     std::vector<shape*>       shapes       = {};  // shapes
     std::vector<subdiv*>      subdivs      = {};  // subdivs
@@ -2934,9 +2982,8 @@ struct scene {
     std::vector<texture*>     textures     = {};  // textures
     std::vector<environment*> environments = {};  // environments
     std::vector<voltexture*>  voltextures  = {};  // volume textures
-
-    std::vector<node*>      nodes      = {};  // node hierarchy [optional]
-    std::vector<animation*> animations = {};  // animations [optional]
+    std::vector<node*>        nodes        = {};  // node hierarchy [optional]
+    std::vector<animation*>   animations   = {};  // animations [optional]
 
     // cleanup
     ~scene();
@@ -3015,7 +3062,7 @@ inline environment* make_sky_environment(
     auto txt    = new texture();
     txt->name   = name;
     txt->path   = "textures/" + name + ".hdr";
-    txt->img    = make_sunsky_image4f({1024, 512}, sun_angle);
+    txt->imgf   = make_sunsky_image4f({1024, 512}, sun_angle);
     auto env    = new environment();
     env->name   = name;
     env->ke     = {1, 1, 1};
@@ -3082,7 +3129,10 @@ vec3f eval_environment(const environment* env, const vec3f& i);
 vec3f eval_environment(const scene* scn, const vec3f& i);
 
 // Evaluate a texture.
+vec2i eval_texture_size(const texture* txt);
+vec4f lookup_texture(const texture* txt, const vec2i& ij);
 vec4f eval_texture(const texture* txt, const vec2f& texcoord);
+float lookup_voltexture(const voltexture* txt, const vec3i& ijk);
 float eval_voltexture(const voltexture* txt, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -3176,8 +3226,8 @@ struct trace_params {
     bool       noparallel    = false;  // serial or parallel execution
     int        preview_ratio = 8;      // preview ratio for asycn rendering
     float      exposure      = 0;      // tone mapping exposure
-    float      gamma         = 2.2f;   // tone mapping gamma
     bool       filmic        = false;  // tone mapping filmic
+    bool       srgb          = true;   // tone mapping to sRGB
     int        seed          = trace_default_seed;  // trace seed
 };
 

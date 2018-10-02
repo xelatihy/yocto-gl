@@ -34,9 +34,10 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process images", "ytonemap");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "Tonemap gamma.");
     auto filmic   = parse_arg(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto srgb   = parse_arg(
+        parser, "--srgb", true, "Tonemap uses sRGB encoding");
     auto output = parse_arg(
         parser, "--output,-o", "out.png", "output image filename", true);
     auto filename = parse_arg(
@@ -44,7 +45,7 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     auto hdr = load_image4f(filename);
-    auto ldr = tonemap_exposuregamma(hdr, exposure, gamma, filmic);
+    auto ldr = tonemap_filmic(hdr, exposure, filmic, srgb);
     save_image4f(output, ldr);
 
     // done

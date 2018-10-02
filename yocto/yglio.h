@@ -198,15 +198,20 @@ namespace ygl {
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const std::string& filename);
 
-// Loads/saves a 4 channel image.
+// Loads/saves a 4 channel float image in linear color space.
 image<vec4f> load_image4f(const std::string& filename);
 void         save_image4f(const std::string& filename, const image<vec4f>& img);
 image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 
+// Loads/saves a 4 channel byte image in sRGB color space.
+image<vec4b> load_image4b(const std::string& filename);
+void         save_image4b(const std::string& filename, const image<vec4b>& img);
+image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
+
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
-    float exposure = 0, float gamma = 2.2f, bool filmic = false);
+    float exposure = 0, bool filmic = false, bool srgb = true);
 
 }  // namespace ygl
 
