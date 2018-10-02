@@ -486,25 +486,26 @@ std::vector<std::string> parse_args(cmdline_parser& parser,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Split a string
+std::vector<std::string> split_string(const std::string& str) {
+    auto ret = std::vector<std::string>();
+    if (str.empty()) return ret;
+    auto lpos = (size_t)0;
+    while (lpos != str.npos) {
+        auto pos = str.find_first_of(" \t\n\r", lpos);
+        if (pos != str.npos) {
+            if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
+            lpos = pos + 1;
+        } else {
+            if (lpos < str.size()) ret.push_back(str.substr(lpos));
+            lpos = pos;
+        }
+    }
+    return ret;
+}
+
 // Pfm load
 float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
-    auto split = [](const std::string& str) {
-        auto ret = std::vector<std::string>();
-        if (str.empty()) return ret;
-        auto lpos = (size_t)0;
-        while (lpos != str.npos) {
-            auto pos = str.find_first_of(" \t\n\r", lpos);
-            if (pos != str.npos) {
-                if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
-                lpos = pos + 1;
-            } else {
-                if (lpos < str.size()) ret.push_back(str.substr(lpos));
-                lpos = pos;
-            }
-        }
-        return ret;
-    };
-
     auto f = fopen(filename, "rb");
     if (!f) return nullptr;
 
@@ -514,7 +515,7 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
 
     // read magic
     if (!fgets(buf, 256, f)) return nullptr;
-    toks = split(buf);
+    toks = split_string(buf);
     if (toks[0] == "Pf")
         *nc = 1;
     else if (toks[0] == "PF")
@@ -524,13 +525,13 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
 
     // read w, h
     if (!fgets(buf, 256, f)) return nullptr;
-    toks = split(buf);
+    toks = split_string(buf);
     *w   = atoi(toks[0].c_str());
     *h   = atoi(toks[1].c_str());
 
     // read scale
     if (!fgets(buf, 256, f)) return nullptr;
-    toks   = split(buf);
+    toks   = split_string(buf);
     auto s = atof(toks[0].c_str());
 
     // read the data (flip y)
