@@ -3774,7 +3774,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
                 throw std::runtime_error("could not open file " + filename);
             fwrite((char*)shp->pos.data(), 3 * 4, shp->pos.size(), fs);
             fwrite((char*)shp->norm.data(), 3 * 4, shp->norm.size(), fs);
-            fwrite((char*)shp->texcoord.data(), 2 * 4, shp->pos.size(), fs);
+            fwrite((char*)shp->texcoord.data(), 2 * 4, shp->texcoord.size(), fs);
             fwrite((char*)shp->color.data(), 4 * 4, shp->color.size(), fs);
             fwrite((char*)shp->radius.data(), 1 * 4, shp->radius.size(), fs);
             fwrite((char*)shp->lines.data(), 2 * 4, shp->lines.size(), fs);
