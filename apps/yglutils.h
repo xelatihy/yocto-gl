@@ -138,8 +138,14 @@ void end_glwidgets_frame(glwindow* win);
 
 bool begin_glwidgets_window(glwindow* win, const char* title);
 
-void draw_imgui_label(glwindow* win, const char* lbl, const std::string& txt);
-void draw_imgui_label(glwindow* win, const char* lbl, const char* fmt, ...);
+bool begin_header_glwidget(glwindow* win, const char* title);
+void end_header_glwidget(glwindow* win);
+
+void draw_label_glwidgets(glwindow* win, const char* lbl, const std::string& txt);
+void draw_label_glwidgets(glwindow* win, const char* lbl, const char* fmt, ...);
+
+bool begin_header_widget(glwindow* win, const char* label);
+void end_header_widget(glwindow* win);
 
 void draw_separator_glwidget(glwindow* win);
 void continue_glwidgets_line(glwindow* win);

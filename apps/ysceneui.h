@@ -177,9 +177,9 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_checkbox_glwidget(win, "clamp", val->clamp);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 1);
     edited += draw_checkbox_glwidget(win, "srgb", val->srgb);
-    draw_imgui_label(
+    draw_label_glwidgets(
         win, "hdr", "%d x %d", val->imgf.size().x, val->imgf.size().y);
-    draw_imgui_label(
+    draw_label_glwidgets(
         win, "ldr", "%d x %d", val->imgb.size().x, val->imgb.size().y);
     return edited;
 }
@@ -228,14 +228,14 @@ inline bool draw_glwidgets_scene_inspector(
     auto edited = 0;
     edited += draw_inputtext_glwidget(win, "name", val->name);
     edited += draw_inputtext_glwidget(win, "path", val->path);
-    draw_imgui_label(win, "lines", "%ld", val->lines.size());
-    draw_imgui_label(win, "triangles", "%ld", val->triangles.size());
-    draw_imgui_label(win, "pos", "%ld", val->pos.size());
-    draw_imgui_label(win, "norm", "%ld", val->norm.size());
-    draw_imgui_label(win, "texcoord", "%ld", val->texcoord.size());
-    draw_imgui_label(win, "color", "%ld", val->color.size());
-    draw_imgui_label(win, "radius", "%ld", val->radius.size());
-    draw_imgui_label(win, "tangsp", "%ld", val->tangsp.size());
+    draw_label_glwidgets(win, "lines", "%ld", val->lines.size());
+    draw_label_glwidgets(win, "triangles", "%ld", val->triangles.size());
+    draw_label_glwidgets(win, "pos", "%ld", val->pos.size());
+    draw_label_glwidgets(win, "norm", "%ld", val->norm.size());
+    draw_label_glwidgets(win, "texcoord", "%ld", val->texcoord.size());
+    draw_label_glwidgets(win, "color", "%ld", val->color.size());
+    draw_label_glwidgets(win, "radius", "%ld", val->radius.size());
+    draw_label_glwidgets(win, "tangsp", "%ld", val->tangsp.size());
     return edited;
 }
 
@@ -248,12 +248,12 @@ inline bool draw_glwidgets_scene_inspector(
     continue_glwidgets_line(win);
     edited += draw_checkbox_glwidget(
         win, "compute normals", val->compute_normals);
-    draw_imgui_label(win, "quads pos", "%ld", val->quads_pos.size());
-    draw_imgui_label(win, "quads texcoord", "%ld", val->quads_texcoord.size());
-    draw_imgui_label(win, "quads color", "%ld", val->quads_color.size());
-    draw_imgui_label(win, "pos", "%ld", val->pos.size());
-    draw_imgui_label(win, "texcoord", "%ld", val->texcoord.size());
-    draw_imgui_label(win, "color", "%ld", val->color.size());
+    draw_label_glwidgets(win, "quads pos", "%ld", val->quads_pos.size());
+    draw_label_glwidgets(win, "quads texcoord", "%ld", val->quads_texcoord.size());
+    draw_label_glwidgets(win, "quads color", "%ld", val->quads_color.size());
+    draw_label_glwidgets(win, "pos", "%ld", val->pos.size());
+    draw_label_glwidgets(win, "texcoord", "%ld", val->texcoord.size());
+    draw_label_glwidgets(win, "color", "%ld", val->color.size());
     return edited;
 }
 
@@ -314,12 +314,12 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_inputtext_glwidget(win, "group", val->group);
     // edited += draw_combobox_glwidget(win, "type", &val->type,
     // animation_type_names());
-    draw_imgui_label(win, "times", "%ld", val->times.size());
-    draw_imgui_label(win, "translation", "%ld", val->translation.size());
-    draw_imgui_label(win, "rotation", "%ld", val->rotation.size());
-    draw_imgui_label(win, "scale", "%ld", val->scale.size());
-    draw_imgui_label(win, "weights", "%ld", val->weights.size());
-    draw_imgui_label(win, "targets", "%ld", val->targets.size());
+    draw_label_glwidgets(win, "times", "%ld", val->times.size());
+    draw_label_glwidgets(win, "translation", "%ld", val->translation.size());
+    draw_label_glwidgets(win, "rotation", "%ld", val->rotation.size());
+    draw_label_glwidgets(win, "scale", "%ld", val->scale.size());
+    draw_label_glwidgets(win, "weights", "%ld", val->weights.size());
+    draw_label_glwidgets(win, "targets", "%ld", val->targets.size());
     return edited;
 }
 
@@ -327,9 +327,7 @@ inline bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
     scene* scn, void*& sel,
     std::vector<std::pair<std::string, void*>>& update_list, int height) {
     if (!scn) return false;
-    begin_child_glwidget(win, "scrolling scene tree", {0, height});
     draw_glwidgets_scene_tree(win, scn, sel);
-
     auto update_len = update_list.size();
 #if 0
     if (test_scn) {
@@ -351,8 +349,6 @@ inline bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
             test_scn->animations, sel, update_list);
     }
 #endif
-
-    end_child_glwidget(win);
     return update_list.size() != update_len;
 }
 

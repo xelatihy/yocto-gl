@@ -64,7 +64,7 @@ struct app_image {
     // viewing properties
     vec2f imcenter    = zero2f;
     float imscale     = 1;
-    bool  zoom_to_fit = true;
+    bool  zoom_to_fit = false;
 
     // cleanup and stop threads
     ~app_image() {
@@ -111,8 +111,8 @@ void update_display_image(app_image* img) {
                         if (img->display_stop) break;
                         for (auto i = 0; i < img->img.size().x; i++) {
                             img->display[{i, j}] = tonemap_filmic(
-                                img->img[{i, j}], img->exposure,
-                                img->filmic, img->srgb);
+                                img->img[{i, j}], img->exposure, img->filmic,
+                                img->srgb);
                         }
                     }
                 }));
@@ -122,9 +122,8 @@ void update_display_image(app_image* img) {
             for (auto j = 0; j < img->img.size().y; j++) {
                 if (img->display_stop) break;
                 for (auto i = 0; i < img->img.size().x; i++) {
-                    img->display[{i, j}] = tonemap_filmic(
-                        img->img[{i, j}], img->exposure,
-                        img->filmic, img->srgb);
+                    img->display[{i, j}] = tonemap_filmic(img->img[{i, j}],
+                        img->exposure, img->filmic, img->srgb);
                 }
             }
         }
@@ -148,8 +147,7 @@ void update_display_image(app_image* img) {
             for (auto j = 0; j < img->img.size().y; j++) {
                 if (img->display_stop) break;
                 for (auto i = 0; i < img->img.size().x; i++) {
-                    img->display[{i, j}] = linear_to_srgb(
-                        img->img[{i, j}]);
+                    img->display[{i, j}] = linear_to_srgb(img->img[{i, j}]);
                 }
             }
         }
@@ -179,56 +177,66 @@ void load_image(app_image* img) {
 }
 
 void draw_glwidgets(glwindow* win) {
-    auto app = (app_state*)get_user_pointer(win);
+    auto app    = (app_state*)get_user_pointer(win);
+    auto edited = false;
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yimview")) {
-        auto edited = 0;
-        edited += draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
         auto img = app->imgs.at(app->img_id);
-        draw_imgui_label(win, "filename", "%s", img->filename.c_str());
-        auto status = std::string();
-        if (img->error_msg != "")
-            status = "error: " + img->error_msg;
-        else if (!img->load_done)
-            status = "loading...";
-        else if (!img->display_done)
-            status = "displaying...";
-        else
-            status = "done";
-        draw_imgui_label(win, "status", status.c_str());
-        draw_imgui_label(
-            win, "size", "%d x %d ", img->img.size().x, img->img.size().y);
-        edited += draw_slider_glwidget(win, "exposure", img->exposure, -5, 5);
-        edited += draw_checkbox_glwidget(win, "filmic", img->filmic);
-        edited += draw_checkbox_glwidget(win, "srgb", img->srgb);
-        if (edited) {
-            if (img->display_thread.joinable()) {
-                img->display_stop = true;
-                img->display_thread.join();
+        if (begin_header_glwidget(win, "image")) {
+            draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
+            draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
+            auto status = std::string();
+            if (img->error_msg != "")
+                status = "error: " + img->error_msg;
+            else if (!img->load_done)
+                status = "loading...";
+            else if (!img->display_done)
+                status = "displaying...";
+            else
+                status = "done";
+            draw_label_glwidgets(win, "status", status.c_str());
+            draw_label_glwidgets(
+                win, "size", "%d x %d ", img->img.size().x, img->img.size().y);
+            draw_slider_glwidget(win, "zoom", img->imscale, 0.1, 10);
+            draw_checkbox_glwidget(win, "zoom to fit", img->zoom_to_fit);
+            end_header_glwidget(win);
+        }
+        if (begin_header_glwidget(win, "adjust")) {
+            edited += draw_slider_glwidget(
+                win, "exposure", img->exposure, -5, 5);
+            edited += draw_checkbox_glwidget(win, "filmic", img->filmic);
+            edited += draw_checkbox_glwidget(win, "srgb", img->srgb);
+            end_header_glwidget(win);
+        }
+        if (begin_header_glwidget(win, "inspect")) {
+            auto mouse_pos = get_glmouse_pos(win);
+            auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
+                {img->img.size().x, img->img.size().y});
+            draw_dragger_glwidget(win, "mouse", ij);
+            auto pixel = zero4f;
+            if (ij.x >= 0 && ij.x < img->img.size().x && ij.y >= 0 &&
+                ij.y < img->img.size().y) {
+                pixel = img->img[ij];
             }
-            img->display_stop   = false;
-            img->display_thread = std::thread(update_display_image, img);
+            draw_coloredit_glwidget(win, "pixel", pixel);
+            auto stats = (img->stats_done) ? img->stats : image_stats{};
+            draw_dragger_glwidget(win, "pxl min", stats.pxl_bounds.min);
+            draw_dragger_glwidget(win, "pxl max", stats.pxl_bounds.max);
+            draw_dragger_glwidget(win, "lum min", stats.lum_bounds.min);
+            draw_dragger_glwidget(win, "lum max", stats.lum_bounds.max);
+            end_header_glwidget(win);
         }
-        draw_slider_glwidget(win, "zoom", img->imscale, 0.1, 10);
-        draw_checkbox_glwidget(win, "zoom to fit", img->zoom_to_fit);
-        draw_separator_glwidget(win);
-        auto mouse_pos = get_glmouse_pos(win);
-        auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
-            {img->img.size().x, img->img.size().y});
-        draw_dragger_glwidget(win, "mouse", ij);
-        auto pixel = zero4f;
-        if (ij.x >= 0 && ij.x < img->img.size().x && ij.y >= 0 &&
-            ij.y < img->img.size().y) {
-            pixel = img->img[ij];
-        }
-        draw_coloredit_glwidget(win, "pixel", pixel);
-        auto stats = (img->stats_done) ? img->stats : image_stats{};
-        draw_dragger_glwidget(win, "pxl min", stats.pxl_bounds.min);
-        draw_dragger_glwidget(win, "pxl max", stats.pxl_bounds.max);
-        draw_dragger_glwidget(win, "lum min", stats.lum_bounds.min);
-        draw_dragger_glwidget(win, "lum max", stats.lum_bounds.max);
     }
     end_glwidgets_frame(win);
+    if (edited) {
+        auto img = app->imgs.at(app->img_id);
+        if (img->display_thread.joinable()) {
+            img->display_stop = true;
+            img->display_thread.join();
+        }
+        img->display_stop   = false;
+        img->display_thread = std::thread(update_display_image, img);
+    }
 }
 
 void draw(glwindow* win) {
@@ -264,15 +272,15 @@ void update(app_state* app) {
 void run_ui(app_state* app) {
     // window
     auto img      = app->imgs.at(app->img_id);
-    auto win_size = clamp(img->img.size(), 512, 1440);
+    auto win_size = vec2i{720 + 320, 720};
     auto win      = make_glwindow(win_size, "yimview", app, draw);
 
     // init widgets
     init_glwidgets(win);
 
     // center image
-    center_image4f(
-        img->imcenter, img->imscale, img->img.size(), win_size, false);
+    center_image4f(img->imcenter, img->imscale, img->img.size(), win_size,
+        img->img.size().x > win_size.x || img->img.size().y > win_size.y);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;

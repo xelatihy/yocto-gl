@@ -70,10 +70,13 @@ void draw_glwidgets(glwindow* win) {
     auto app = (app_state*)get_user_pointer(win);
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yitrace")) {
-        draw_imgui_label(win, "scene", app->filename);
-        draw_imgui_label(win, "image", "%d x %d @ %d", app->state->img.size().x,
-            app->state->img.size().y, app->state->sample);
-        if (begin_treenode_glwidget(win, "render settings")) {
+        if (begin_header_glwidget(win, "scene")) {
+            draw_label_glwidgets(win, "scene", app->filename);
+            end_header_glwidget(win);
+        }
+        if (begin_header_glwidget(win, "trace")) {
+            draw_label_glwidgets(win, "image", "%d x %d @ %d", app->state->img.size().x,
+                app->state->img.size().y, app->state->sample);
             auto cam_names = std::vector<std::string>();
             for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
             auto edited = 0;
@@ -92,13 +95,10 @@ void draw_glwidgets(glwindow* win) {
             edited += draw_slider_glwidget(
                 win, "pratio", app->params.preview_ratio, 1, 64);
             if (edited) app->update_list.push_back({"app", app});
-            draw_imgui_label(win, "time/sample", "%0.3lf",
+            draw_label_glwidgets(win, "time/sample", "%0.3lf",
                 (app->state->sample) ? (get_time() - app->trace_start) /
                                            (1000000000.0 * app->state->sample) :
                                        0.0);
-            end_treenode_glwidget(win);
-        }
-        if (begin_treenode_glwidget(win, "view settings")) {
             draw_slider_glwidget(win, "exposure", app->params.exposure, -5, 5);
             draw_checkbox_glwidget(win, "filmic", app->params.filmic);
             draw_checkbox_glwidget(win, "srgb", app->params.srgb);
@@ -118,17 +118,17 @@ void draw_glwidgets(glwindow* win) {
                 auto zero4f_ = zero4f;
                 draw_coloredit_glwidget(win, "pixel", zero4f_);
             }
-            end_treenode_glwidget(win);
+            end_header_glwidget(win);
         }
-        if (begin_treenode_glwidget(win, "scene tree")) {
+        if (begin_header_glwidget(win, "navigate")) {
             draw_glwidgets_scene_tree(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            end_treenode_glwidget(win);
+            end_header_glwidget(win);
         }
-        if (begin_treenode_glwidget(win, "scene object")) {
+        if (begin_header_glwidget(win, "inspec")) {
             draw_glwidgets_scene_inspector(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            end_treenode_glwidget(win);
+            end_header_glwidget(win);
         }
     }
     end_glwidgets_frame(win);
