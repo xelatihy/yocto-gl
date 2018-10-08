@@ -599,11 +599,20 @@ bool begin_glwidgets_window(glwindow* win, const char* title) {
     return ImGui::Begin(title);
 }
 
-void draw_imgui_label(glwindow* win, const char* lbl, const std::string& txt) {
+bool begin_header_glwidget(glwindow* win, const char* lbl) {
+    if(!ImGui::CollapsingHeader(lbl)) return false;
+    ImGui::PushID(lbl);
+    return true;
+}
+void end_header_glwidget(glwindow* win) {
+    ImGui::PopID();
+}
+
+void draw_label_glwidgets(glwindow* win, const char* lbl, const std::string& txt) {
     ImGui::LabelText(lbl, "%s", txt.c_str());
 }
 
-void draw_imgui_label(glwindow* win, const char* lbl, const char* fmt, ...) {
+void draw_label_glwidgets(glwindow* win, const char* lbl, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     ImGui::LabelTextV(lbl, fmt, args);

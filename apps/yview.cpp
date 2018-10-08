@@ -122,14 +122,11 @@ void draw(glwindow* win) {
 
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {
-        draw_imgui_label(win, "scene", "%s", app->filename.c_str());
-        if (app->time_range != zero2f) {
-            draw_slider_glwidget(
-                win, "time", app->time, app->time_range.x, app->time_range.y);
-            draw_inputtext_glwidget(win, "anim group", app->anim_group);
-            draw_checkbox_glwidget(win, "animate", app->animate);
+        if (begin_header_glwidget(win, "scene")) {
+            draw_label_glwidgets(win, "scene", "%s", app->filename.c_str());
+            end_header_glwidget(win);
         }
-        if (begin_treenode_glwidget(win, "render settings")) {
+        if (begin_header_glwidget(win, "view")) {
             draw_combobox_glwidget(win, "camera", cam, app->scn->cameras, false);
             draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
             draw_checkbox_glwidget(win, "eyelight", app->eyelight);
@@ -137,25 +134,28 @@ void draw(glwindow* win) {
             draw_checkbox_glwidget(win, "wireframe", app->wireframe);
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "edges", app->edges);
-            end_treenode_glwidget(win);
-        }
-        if (begin_treenode_glwidget(win, "view settings")) {
+            if (app->time_range != zero2f) {
+                draw_slider_glwidget(
+                    win, "time", app->time, app->time_range.x, app->time_range.y);
+                draw_inputtext_glwidget(win, "anim group", app->anim_group);
+                draw_checkbox_glwidget(win, "animate", app->animate);
+            }
             draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
             draw_slider_glwidget(win, "gamma", app->gamma, 0.1f, 4);
             draw_slider_glwidget(win, "near", app->near_plane, 0.01f, 1.0f);
             draw_slider_glwidget(win, "far", app->far_plane, 1000.0f, 10000.0f);
             draw_checkbox_glwidget(win, "fps", app->navigation_fps);
-            end_treenode_glwidget(win);
+            end_header_glwidget(win);
         }
-        if (begin_treenode_glwidget(win, "scene tree")) {
+        if (begin_header_glwidget(win, "navigate")) {
             draw_glwidgets_scene_tree(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            end_treenode_glwidget(win);
+            end_header_glwidget(win);
         }
-        if (begin_treenode_glwidget(win, "scene object")) {
+        if (begin_header_glwidget(win, "inspect")) {
             draw_glwidgets_scene_inspector(
                 win, "", app->scn, app->selection, app->update_list, 200);
-            end_treenode_glwidget(win);
+            end_header_glwidget(win);
         }
     }
     end_glwidgets_frame(win);
