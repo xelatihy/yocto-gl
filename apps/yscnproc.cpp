@@ -30,13 +30,15 @@
 #include "../yocto/yglio.h"
 using namespace ygl;
 
-void mkdir(const std::string& dir) {
+bool mkdir(const std::string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
-        return;
+        return true;
 #ifndef _MSC_VER
     system(("mkdir -p " + dir).c_str());
+    return true;
 #else
     system(("mkdir " + dir).c_str());
+    return true;
 #endif
 }
 
@@ -56,13 +58,8 @@ int main(int argc, char** argv) {
 
     // load scene
     auto scn = (scene*)nullptr;
-    try {
-        scn = load_scene(filename, !notextures);
-    } catch (const std::exception& e) {
-        printf("cannot load scene %s\n", filename.c_str());
-        printf("error: %s\n", e.what());
-        exit(1);
-    }
+    if (!load_scene(filename, scn, !notextures))
+        exit_error("cannot load scene %" + filename);
 
     // change texture names
     if (uniform_txt) {
@@ -88,21 +85,12 @@ int main(int argc, char** argv) {
     if (build_bvh) ygl::build_bvh(scn, false);
 
     // make a directory if needed
-    try {
-        mkdir(get_dirname(output));
-    } catch (const std::exception& e) {
-        printf("cannot create directory %s\n", get_dirname(output).c_str());
-        printf("error: %s\n", e.what());
-        exit(1);
-    }
+    if (!mkdir(get_dirname(output)))
+        exit_error("cannot create directory " + get_dirname(output));
+
     // save scene
-    try {
-        save_scene(output, scn);
-    } catch (const std::exception& e) {
-        printf("cannot save scene %s\n", output.c_str());
-        printf("error: %s\n", e.what());
-        exit(1);
-    }
+    if (!save_scene(output, scn, !notextures))
+        exit_error("cannot save scene %" + output);
 
     // done
     return 0;

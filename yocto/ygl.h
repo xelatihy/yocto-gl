@@ -175,7 +175,7 @@
 // 0. load and save image with Yocto/GLIO
 // 1. create images with `image<T>` data structure
 // 2. resize images with `resize_image()`
-// 3. tonemap images with `tonemap_filmic()` that convert from linear HDR to 
+// 3. tonemap images with `tonemap_filmic()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
 // 5. make various image examples with the `make_XXX_image4f()` functions
 // 6. create procedural sun-sky images with `make_sunsky_image4f()`
@@ -2527,29 +2527,31 @@ inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
 
 // sRGB non-linear curve
 inline float srgb_to_linear(float srgb) {
-    if(srgb <= 0.04045) {
+    if (srgb <= 0.04045) {
         return srgb / 12.92f;
     } else {
         return pow((srgb + 0.055f) / (1.0f + 0.055f), 2.4f);
     }
 }
 inline float linear_to_srgb(float lin) {
-    if(lin <= 0.0031308f) {
+    if (lin <= 0.0031308f) {
         return 12.92f * lin;
     } else {
-        return (1+0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
+        return (1 + 0.055f) * pow(lin, 1 / 2.4f) - 0.055f;
     }
 }
 
 // Conversion between linear and srgb colors.
 inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
+    return {
+        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
 }
 inline vec3f linear_to_srgb(const vec3f& lin) {
     return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z), srgb.w};
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
+        srgb_to_linear(srgb.z), srgb.w};
 }
 inline vec4f linear_to_srgb(const vec4f& lin) {
     return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
@@ -2557,8 +2559,12 @@ inline vec4f linear_to_srgb(const vec4f& lin) {
 }
 
 // Approximate luminance estimate for sRGB primaries (better relative luminance)
-inline float luminance(const vec3f& a) { return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z); }
-inline float luminance(const vec4f& a) { return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z); }
+inline float luminance(const vec3f& a) {
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
+}
+inline float luminance(const vec4f& a) {
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
+}
 
 // Fitted ACES tonemapping curve.
 inline float tonemap_filmic(float hdr) {
@@ -2569,8 +2575,8 @@ inline float tonemap_filmic(float hdr) {
 }
 // Apply ACES fitted curve.
 inline vec4f tonemap_filmic(const vec4f& hdr) {
-    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y),
-        tonemap_filmic(hdr.z), hdr.w};
+    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z),
+        hdr.w};
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
@@ -3042,6 +3048,7 @@ void add_missing_names(scene* scn);
 void add_missing_normals(scene* scn);
 void add_missing_tangent_space(scene* scn);
 void add_missing_materials(scene* scn);
+void add_missing_cameras(scene* scn);
 // Checks for validity of the scene.
 std::vector<std::string> validate(const scene* scn, bool skip_textures = false);
 

@@ -249,7 +249,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_checkbox_glwidget(
         win, "compute normals", val->compute_normals);
     draw_label_glwidgets(win, "quads pos", "%ld", val->quads_pos.size());
-    draw_label_glwidgets(win, "quads texcoord", "%ld", val->quads_texcoord.size());
+    draw_label_glwidgets(
+        win, "quads texcoord", "%ld", val->quads_texcoord.size());
     draw_label_glwidgets(win, "quads color", "%ld", val->quads_color.size());
     draw_label_glwidgets(win, "pos", "%ld", val->pos.size());
     draw_label_glwidgets(win, "texcoord", "%ld", val->texcoord.size());

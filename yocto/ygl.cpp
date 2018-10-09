@@ -3044,8 +3044,7 @@ image<vec4f> tonemap_filmic(
     auto ldr = image<vec4f>{hdr.size()};
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
-            ldr[{i, j}] = tonemap_filmic(
-                hdr[{i, j}], exposure, filmic, srgb);
+            ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
         }
     }
     return ldr;
@@ -3739,6 +3738,13 @@ void add_missing_materials(scene* scn) {
             scn->materials.push_back(mat);
         }
         ist->mat = mat;
+    }
+}
+
+// Add missing cameras.
+void add_missing_cameras(scene* scn) {
+    if (scn->cameras.empty()) {
+        scn->cameras.push_back(make_bbox_camera("<view>", compute_bbox(scn)));
     }
 }
 
@@ -5865,9 +5871,8 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                     state->img[{i, j}] += trace_sample(
                         state, scn, bvh, lights, {i, j}, params);
                 state->img[{i, j}] /= state->sample + nbatch;
-                state->display[{i, j}] = tonemap_filmic(
-                    state->img[{i, j}], params.exposure,
-                    params.filmic, params.srgb);
+                state->display[{i, j}] = tonemap_filmic(state->img[{i, j}],
+                    params.exposure, params.filmic, params.srgb);
             }
         }
     } else {
@@ -5883,8 +5888,8 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                                 state, scn, bvh, lights, {i, j}, params);
                         state->img[{i, j}] /= state->sample + nbatch;
                         state->display[{i, j}] = tonemap_filmic(
-                            state->img[{i, j}], params.exposure, 
-                            params.filmic, params.srgb);
+                            state->img[{i, j}], params.exposure, params.filmic,
+                            params.srgb);
                     }
                 }
             }));
@@ -5932,8 +5937,8 @@ void trace_async_start(trace_state* state, const scene* scn, const bvh_tree* bvh
                             state, scn, bvh, lights, {i, j}, params);
                         state->img[{i, j}] /= s + 1;
                         state->display[{i, j}] = tonemap_filmic(
-                            state->img[{i, j}], params.exposure, 
-                            params.filmic, params.srgb);
+                            state->img[{i, j}], params.exposure, params.filmic,
+                            params.srgb);
                     }
                 }
             }

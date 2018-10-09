@@ -123,14 +123,15 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     return pid;
 }
 
-uint make_gltexture(const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
+uint make_gltexture(
+    const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
     auto tid = (uint)0;
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
-    if(as_float) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.size().x, img.size().y, 0,
-            GL_RGBA, GL_FLOAT, img.data());
+    if (as_float) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.size().x, img.size().y,
+            0, GL_RGBA, GL_FLOAT, img.data());
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0,
             GL_RGBA, GL_FLOAT, img.data());
@@ -172,14 +173,15 @@ void update_gltexture(
     assert(glGetError() == GL_NO_ERROR);
 }
 
-uint make_gltexture(const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
+uint make_gltexture(
+    const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
     auto tid = (uint)0;
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
-    if(as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.size().x, img.size().y, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+    if (as_srgb) {
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.size().x,
+            img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, img.data());
@@ -600,15 +602,14 @@ bool begin_glwidgets_window(glwindow* win, const char* title) {
 }
 
 bool begin_header_glwidget(glwindow* win, const char* lbl) {
-    if(!ImGui::CollapsingHeader(lbl)) return false;
+    if (!ImGui::CollapsingHeader(lbl)) return false;
     ImGui::PushID(lbl);
     return true;
 }
-void end_header_glwidget(glwindow* win) {
-    ImGui::PopID();
-}
+void end_header_glwidget(glwindow* win) { ImGui::PopID(); }
 
-void draw_label_glwidgets(glwindow* win, const char* lbl, const std::string& txt) {
+void draw_label_glwidgets(
+    glwindow* win, const char* lbl, const std::string& txt) {
     ImGui::LabelText(lbl, "%s", txt.c_str());
 }
 

@@ -73,12 +73,7 @@ int main(int argc, char* argv[]) {
     auto scn = (scene*)nullptr;
     printf("loading scene %s\n", filename.c_str());
     auto load_start = get_time();
-    try {
-        scn = load_scene(filename);
-    } catch (const std::exception& e) {
-        printf("cannot load scene %s\nerror: %s\n", filename.c_str(), e.what());
-        exit(1);
-    }
+    if (!load_scene(filename, scn)) exit_error("cannot load scene " + filename);
     printf("loading in %s\n", format_duration(get_time() - load_start).c_str());
 
     // tesselate
@@ -124,7 +119,9 @@ int main(int argc, char* argv[]) {
             auto filename = replace_extension(imfilename,
                 std::to_string(state->sample) + "." + get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            save_tonemapped_image(filename, state->img, exposure, gamma, filmic);
+            if (!save_tonemapped_image(
+                    filename, state->img, exposure, gamma, filmic))
+                exit_error("cannot save image " + filename);
         }
     }
     printf("rendering image in %s\n",
@@ -132,7 +129,8 @@ int main(int argc, char* argv[]) {
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
+    if (!save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic))
+        exit_error("cannot save image " + imfilename);
 
     // cleanup
     delete state;

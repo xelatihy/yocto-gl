@@ -8,6 +8,12 @@
 // To speed up testing, we also support a binary format that is a dump of
 // the current scene. This format should not be use for archival though.
 //
+// We do not use exception as the API for returning errors, although they might
+// be used internally in the implementastion of the methods. In load functions,
+// as error is signaled by returning an empty object or a null pointer. In
+// save functions, errors are returned with the supplied boolean. In the future,
+// we will also provide return types with error codes.
+//
 // ## File Loading and Saving
 //
 // 1. manipulate paths withe path utilities
@@ -80,6 +86,16 @@
 #endif
 
 // -----------------------------------------------------------------------------
+// GENERAL UTILITIES FOR CLI APPLICATIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Exit to the console with an error.
+void exit_error(const std::string& msg);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // TIMER UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -121,6 +137,9 @@ std::string get_filename(const std::string& filename);
 // Replace extension.
 std::string replace_extension(
     const std::string& filename, const std::string& ext);
+
+// Check if a file can be opened for reading.
+bool exists_file(const std::string& filename);
 
 }  // namespace ygl
 
@@ -179,14 +198,17 @@ int parse_arge(cmdline_parser& parser, const std::string& name, int def,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Load a text file
-std::string load_text(const std::string& filename);
-// Save a text file
-void save_text(const std::string& filename, const std::string& str);
-// Load a binary file
+// Load/save a text file
+bool load_text(const std::string& filename, std::string& str);
+bool save_text(const std::string& filename, const std::string& str);
+
+// Load/save a binary file
+bool load_binary(const std::string& filename, std::vector<byte>& data);
+bool save_binary(const std::string& filename, const std::vector<byte>& data);
+
+// Load text/binary file with shorthand call. Returns empty values on error.
+std::string       load_text(const std::string& filename);
 std::vector<byte> load_binary(const std::string& filename);
-// Save a binary file
-void save_binary(const std::string& filename, const std::vector<byte>& data);
 
 }  // namespace ygl
 
@@ -199,18 +221,26 @@ namespace ygl {
 bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channel float image in linear color space.
-image<vec4f> load_image4f(const std::string& filename);
-void         save_image4f(const std::string& filename, const image<vec4f>& img);
-image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
+bool load_image4f(const std::string& filename, image<vec4f>& img);
+bool save_image4f(const std::string& filename, const image<vec4f>& img);
+bool load_image4f_from_memory(
+    const byte* data, int data_size, image<vec4f>& img);
 
 // Loads/saves a 4 channel byte image in sRGB color space.
+bool load_image4b(const std::string& filename, image<vec4b>& img);
+bool save_image4b(const std::string& filename, const image<vec4b>& img);
+bool load_image4b_from_memory(
+    const byte* data, int data_size, image<vec4b>& img);
+
+// Load 4 channel images with shortened api. Returns empty image on error;
+image<vec4f> load_image4f(const std::string& filename);
+image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 image<vec4b> load_image4b(const std::string& filename);
-void         save_image4b(const std::string& filename, const image<vec4b>& img);
 image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
+bool save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
     float exposure = 0, bool filmic = false, bool srgb = true);
 
 }  // namespace ygl
@@ -221,8 +251,11 @@ void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
 namespace ygl {
 
 // Loads/saves a 1 channel volume.
-volume<float> read_volume1f(const std::string& filename);
-void save_volume1f(const volume<float>& tex, const std::string& filename);
+bool load_volume1f(const std::string& filename, volume<float>& vol);
+bool save_volume1f(const std::string& filename, const volume<float>& vol);
+
+// Loads a 1 channel volume for shortened api.
+volume<float> load_volume1f(const std::string& filename);
 
 }  // namespace ygl
 
@@ -232,43 +265,58 @@ void save_volume1f(const volume<float>& tex, const std::string& filename);
 namespace ygl {
 
 // Load/save a scene in the supported formats.
-scene* load_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
-void   save_scene(const std::string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool load_scene(const std::string& filename, scene*& scn,
+    bool save_textures = true, bool skip_missing = true);
+bool save_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
-scene* load_json_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
-void   save_json_scene(const std::string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool load_json_scene(const std::string& filename, scene*& scn,
+    bool save_textures = true, bool skip_missing = true);
+bool save_json_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
-scene* load_obj_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true, bool split_shapes = true);
-void   save_obj_scene(const std::string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool load_obj_scene(const std::string& filename, scene*& scn,
+    bool save_textures = true, bool skip_missing = true,
+    bool split_shapes = true);
+bool save_obj_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
-scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
-void   save_gltf_scene(const std::string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool load_gltf_scene(const std::string& filename, scene*& scn,
+    bool save_textures = true, bool skip_missing = true);
+bool save_gltf_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
-void   save_pbrt_scene(const std::string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool load_pbrt_scene(const std::string& filename, scene*& scn,
+    bool save_textures = true, bool skip_missing = true);
+bool save_pbrt_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
+bool load_ybin_scene(const std::string& filename, scene*& scn,
+    bool save_textures = true, bool skip_missing = true);
+bool save_ybin_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
+
+// Load a scene in the supported formats using shortened API.
+scene* load_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
+scene* load_json_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
+scene* load_obj_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true, bool split_shapes = true);
+scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
+scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
 scene* load_ybin_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
-void   save_ybin_scene(const std::string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
 
@@ -278,35 +326,35 @@ void   save_ybin_scene(const std::string& filename, const scene* scn,
 namespace ygl {
 
 // Load/Save a mesh
-void load_mesh(const std::string& filename, std::vector<int>& points,
+bool load_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
     std::vector<float>& radius);
-void save_mesh(const std::string& filename, const std::vector<int>& points,
+bool save_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii = false);
 
 // Load/Save a ply mesh
-void load_ply_mesh(const std::string& filename, std::vector<int>& points,
+bool load_ply_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
     std::vector<float>& radius);
-void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
+bool save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii = false);
 
 // Load/Save an OBJ mesh
-void load_obj_mesh(const std::string& filename, std::vector<int>& points,
+bool load_obj_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, bool flip_texcoord = true);
-void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
+bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, bool flip_texcoord = true);
@@ -319,12 +367,12 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
 namespace ygl {
 
 // Load/Save a mesh
-void load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+bool load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, std::vector<vec4i>& quads_color,
     std::vector<vec4f>& color);
-void save_fvmesh(const std::string& filename,
+bool save_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
@@ -332,11 +380,11 @@ void save_fvmesh(const std::string& filename,
     const std::vector<vec4f>& color, bool ascii = false);
 
 // Load/Save an OBJ mesh
-void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+bool load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, bool flip_texcoord = true);
-void save_obj_fvmesh(const std::string& filename,
+bool save_obj_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
@@ -452,7 +500,7 @@ struct obj_callbacks {
 };
 
 // Load obj scene
-void load_obj(const std::string& filename, const obj_callbacks& cb,
+bool load_obj(const std::string& filename, const obj_callbacks& cb,
     bool flip_texcoord = true, bool flip_tr = true);
 
 }  // namespace ygl
@@ -486,6 +534,9 @@ struct ply_data {
 };
 
 // Load ply mesh
+bool load_ply(const std::string& filename, ply_data& ply);
+
+// Load ply mesh with shortened API. Returns empty object on error.
 ply_data load_ply(const std::string& filename);
 
 }  // namespace ygl

@@ -96,6 +96,19 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
+// GENERAL UTILITIES FOR CLI APPLICATIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Exit to the console with an error.
+void exit_error(const std::string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -187,50 +200,93 @@ std::string replace_extension(
     return filename.substr(0, pos) + "." + ext;
 }
 
+// Check if a file can be opened for reading.
+bool exists_file(const std::string& filename) {
+    auto f = fopen(filename.c_str(), "r");
+    if (!f) return false;
+    fclose(f);
+    return true;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF FILE READING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Object that holds a FILE* and calls fclose() when it gets out of scope
+struct fclose_guard {
+    fclose_guard(FILE* fs) : fs_{fs} {}
+    ~fclose_guard() { fclose(fs_); }
+    FILE* fs_ = nullptr;
+};
+
 // Load a text file
 std::string load_text(const std::string& filename) {
+    auto str = std::string();
+    if (!load_text(filename, str)) return {};
+    return str;
+}
+
+// Load a text file
+bool load_text(const std::string& filename, std::string& str) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    str     = {};
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) throw std::runtime_error("could not open file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     auto buf = std::vector<char>(fsize);
-    if (fread(buf.data(), 1, fsize, fs) != fsize)
-        throw std::runtime_error("problem reading " + filename);
+    if (fread(buf.data(), 1, fsize, fs) != fsize) return false;
     fclose(fs);
-    return {buf.begin(), buf.end()};
+    str = {buf.begin(), buf.end()};
+    return true;
 }
 
 // Save a text file
-void save_text(const std::string& filename, const std::string& str) {
+bool save_text(const std::string& filename, const std::string& str) {
     auto fs = fopen(filename.c_str(), "wt");
-    if (!fs) throw std::runtime_error("could not save " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
     fprintf(fs, "%s", str.c_str());
     fclose(fs);
+    return true;
 }
 
 // Load a binary file
 std::vector<byte> load_binary(const std::string& filename) {
+    auto data = std::vector<byte>();
+    if (!load_binary(filename, data)) return {};
+    return data;
+}
+
+// Load a binary file
+bool load_binary(const std::string& filename, std::vector<byte>& data) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    data    = {};
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) throw std::runtime_error("could not open file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
-    auto buf = std::vector<byte>(fsize);
-    if (fread((char*)buf.data(), 1, fsize, fs) != fsize)
-        throw std::runtime_error("problem reading " + filename);
+    data.resize(fsize);
+    if (fread((char*)data.data(), 1, fsize, fs) != fsize) return false;
     fclose(fs);
-    return buf;
+    return true;
 }
 
 // Save a binary file
-void save_binary(const std::string& filename, const std::vector<byte>& data) {
+bool save_binary(const std::string& filename, const std::vector<byte>& data) {
     auto fs = fopen(filename.c_str(), "wb");
-    if (!fs) throw std::runtime_error("could not save " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
     fwrite((char*)data.data(), 1, data.size(), fs);
     fclose(fs);
+    return true;
 }
 
 }  // namespace ygl
@@ -506,15 +562,16 @@ std::vector<std::string> split_string(const std::string& str) {
 
 // Pfm load
 float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
-    auto f = fopen(filename, "rb");
-    if (!f) return nullptr;
+    auto fs = fopen(filename, "rb");
+    if (!fs) return nullptr;
+    fclose_guard fs_{fs};
 
     // buffer
     char buf[256];
     auto toks = std::vector<std::string>();
 
     // read magic
-    if (!fgets(buf, 256, f)) return nullptr;
+    if (!fgets(buf, 256, fs)) return nullptr;
     toks = split_string(buf);
     if (toks[0] == "Pf")
         *nc = 1;
@@ -524,13 +581,13 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
         return nullptr;
 
     // read w, h
-    if (!fgets(buf, 256, f)) return nullptr;
+    if (!fgets(buf, 256, fs)) return nullptr;
     toks = split_string(buf);
     *w   = atoi(toks[0].c_str());
     *h   = atoi(toks[1].c_str());
 
     // read scale
-    if (!fgets(buf, 256, f)) return nullptr;
+    if (!fgets(buf, 256, fs)) return nullptr;
     toks   = split_string(buf);
     auto s = atof(toks[0].c_str());
 
@@ -540,14 +597,14 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     auto nrow    = (*w) * (*nc);
     auto pixels  = new float[nvalues];
     for (auto j = *h - 1; j >= 0; j--) {
-        if (fread(pixels + j * nrow, sizeof(float), nrow, f) != nrow) {
+        if (fread(pixels + j * nrow, sizeof(float), nrow, fs) != nrow) {
             delete[] pixels;
             return nullptr;
         }
     }
 
     // done reading
-    fclose(f);
+    fclose(fs);
 
     // endian conversion
     if (s > 0) {
@@ -622,28 +679,29 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
 
 // save pfm
 bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
-    auto f = fopen(filename, "wb");
-    if (!f) return false;
+    auto fs = fopen(filename, "wb");
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
-    fprintf(f, "%s\n", (nc == 1) ? "Pf" : "PF");
-    fprintf(f, "%d %d\n", w, h);
-    fprintf(f, "-1\n");
+    fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF");
+    fprintf(fs, "%d %d\n", w, h);
+    fprintf(fs, "-1\n");
     if (nc == 1 || nc == 3) {
-        fwrite(pixels, sizeof(float), w * h * nc, f);
+        fwrite(pixels, sizeof(float), w * h * nc, fs);
     } else {
         for (auto i = 0; i < w * h; i++) {
             auto vz = 0.0f;
             auto v  = pixels + i * nc;
-            fwrite(v + 0, sizeof(float), 1, f);
-            fwrite(v + 1, sizeof(float), 1, f);
+            fwrite(v + 0, sizeof(float), 1, fs);
+            fwrite(v + 1, sizeof(float), 1, fs);
             if (nc == 2)
-                fwrite(&vz, sizeof(float), 1, f);
+                fwrite(&vz, sizeof(float), 1, fs);
             else
-                fwrite(v + 2, sizeof(float), 1, f);
+                fwrite(v + 2, sizeof(float), 1, fs);
         }
     }
 
-    fclose(f);
+    fclose(fs);
 
     return true;
 }
@@ -656,201 +714,217 @@ bool is_hdr_filename(const std::string& filename) {
 
 // Loads an hdr image.
 image<vec4f> load_image4f(const std::string& filename) {
+    auto img = image<vec4f>{};
+    if (!load_image4f(filename, img)) return {};
+    return img;
+}
+
+// Loads an hdr image.
+bool load_image4f(const std::string& filename, image<vec4f>& img) {
     auto ext  = get_extension(filename);
     auto size = zero2i;
-    auto img  = image<vec4f>();
+    img       = {};
     if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
                 nullptr) < 0)
-            throw std::runtime_error("could not load image " + filename);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+            return false;
+        if (!pixels) return false;
         img = image<vec4f>{size, pixels};
         free(pixels);
+        return true;
     } else if (ext == "pfm") {
         auto ncomp  = 0;
         auto pixels = (vec4f*)load_pfm(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+        if (!pixels) return false;
         img = image<vec4f>{size, pixels};
         free(pixels);
+        return true;
     } else if (ext == "hdr") {
         auto ncomp  = 0;
         auto pixels = (vec4f*)stbi_loadf(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+        if (!pixels) return false;
         img = image<vec4f>{size, pixels};
         free(pixels);
+        return true;
     } else {
         auto ncomp  = 0;
         auto pixels = (vec4f*)stbi_loadf(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+        if (!pixels) return false;
         img = image<vec4f>{size, pixels};
         free(pixels);
+        return true;
     }
-    return img;
 }
 
 // Saves an hdr image.
-void save_image4f(const std::string& filename, const image<vec4f>& img) {
+bool save_image4f(const std::string& filename, const image<vec4f>& img) {
     auto ext  = get_extension(filename);
     auto img8 = (is_hdr_filename(filename)) ?
                     image<vec4b>{} :
                     float_to_byte(linear_to_srgb(img));
     if (ext == "png") {
-        if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-                img8.data(), img.size().x * 4))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img8.data(), img.size().x * 4);
     } else if (ext == "jpg") {
-        if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
-                img8.data(), 75))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_jpg(
+            filename.c_str(), img.size().x, img.size().y, 4, img8.data(), 75);
     } else if (ext == "tga") {
-        if (!stbi_write_tga(
-                filename.c_str(), img.size().x, img.size().y, 4, img8.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_tga(
+            filename.c_str(), img.size().x, img.size().y, 4, img8.data());
     } else if (ext == "bmp") {
-        if (!stbi_write_bmp(
-                filename.c_str(), img.size().x, img.size().y, 4, img8.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_bmp(
+            filename.c_str(), img.size().x, img.size().y, 4, img8.data());
     } else if (ext == "hdr") {
-        if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-                (float*)img.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data());
     } else if (ext == "pfm") {
-        if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-                (float*)img.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data());
     } else if (ext == "exr") {
-        if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-                filename.c_str()))
-            throw std::runtime_error("could not save image " + filename);
+        return SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+            filename.c_str());
     } else {
-        throw std::runtime_error("unsupported image format " + ext);
+        return false;
     }
 }
 
 // Loads an hdr image.
 image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
-    auto size   = zero2i;
-    auto ncomp  = 0;
-    auto pixels = (vec4f*)stbi_loadf_from_memory(
-        data, data_size, &size.x, &size.y, &ncomp, 4);
-    if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = image<vec4f>{size, pixels};
-    delete pixels;
+    auto img = image<vec4f>{};
+    if (!load_image4f_from_memory(data, data_size, img)) return {};
     return img;
 }
 
 // Loads an hdr image.
+bool load_image4f_from_memory(
+    const byte* data, int data_size, image<vec4f>& img) {
+    img         = {};
+    auto size   = zero2i;
+    auto ncomp  = 0;
+    auto pixels = (vec4f*)stbi_loadf_from_memory(
+        data, data_size, &size.x, &size.y, &ncomp, 4);
+    if (!pixels) return false;
+    img = image<vec4f>{size, pixels};
+    delete pixels;
+    return true;
+}
+
+// Loads an hdr image.
 image<vec4b> load_image4b(const std::string& filename) {
+    auto img = image<vec4b>{};
+    if (!load_image4b(filename, img)) return {};
+    return img;
+}
+
+// Loads an hdr image.
+bool load_image4b(const std::string& filename, image<vec4b>& img) {
+    img       = {};
     auto ext  = get_extension(filename);
     auto size = zero2i;
-    auto img  = image<vec4b>();
     if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
                 nullptr) < 0)
-            throw std::runtime_error("could not load image " + filename);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+            return false;
+        if (!pixels) return false;
         auto imgf = image<vec4f>{size, pixels};
         img       = float_to_byte(linear_to_srgb(imgf));
         free(pixels);
+        return true;
     } else if (ext == "pfm") {
         auto ncomp  = 0;
         auto pixels = (vec4f*)load_pfm(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+        if (!pixels) return false;
         auto imgf = image<vec4f>{size, pixels};
         img       = float_to_byte(linear_to_srgb(imgf));
         free(pixels);
+        return true;
     } else if (ext == "hdr") {
         auto ncomp  = 0;
         auto pixels = (vec4b*)stbi_load(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+        if (!pixels) return false;
         img = image<vec4b>{size, pixels};
         free(pixels);
+        return true;
     } else {
         auto ncomp  = 0;
         auto pixels = (vec4b*)stbi_load(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels)
-            throw std::runtime_error("could not load image " + filename);
+        if (!pixels) return false;
         img = image<vec4b>{size, pixels};
         free(pixels);
+        return true;
     }
-    return img;
 }
 
 // Saves an ldr image.
-void save_image4b(const std::string& filename, const image<vec4b>& img) {
+bool save_image4b(const std::string& filename, const image<vec4b>& img) {
     auto ext = get_extension(filename);
     if (ext == "png") {
-        if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-                img.data(), img.size().x * 4))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4);
     } else if (ext == "jpg") {
-        if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
-                img.data(), 75))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_jpg(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75);
     } else if (ext == "tga") {
-        if (!stbi_write_tga(
-                filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_tga(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data());
     } else if (ext == "bmp") {
-        if (!stbi_write_bmp(
-                filename.c_str(), img.size().x, img.size().y, 4, img.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_bmp(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data());
     } else if (ext == "hdr") {
         auto imgf = srgb_to_linear(byte_to_float(img));
-        if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-                (float*)imgf.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)imgf.data());
     } else if (ext == "pfm") {
         auto imgf = srgb_to_linear(byte_to_float(img));
-        if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-                (float*)imgf.data()))
-            throw std::runtime_error("could not save image " + filename);
+        return save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)imgf.data());
     } else if (ext == "exr") {
         auto imgf = srgb_to_linear(byte_to_float(img));
-        if (!SaveEXR((float*)imgf.data(), img.size().x, img.size().y, 4,
-                filename.c_str()))
-            throw std::runtime_error("could not save image " + filename);
+        return SaveEXR((float*)imgf.data(), img.size().x, img.size().y, 4,
+            filename.c_str());
     } else {
-        throw std::runtime_error("unsupported image format " + ext);
+        return false;
     }
 }
 
 // Loads an ldr image.
 image<vec4b> load_image4b_from_memory(const byte* data, int data_size) {
+    auto img = image<vec4b>{};
+    if (!load_image4b_from_memory(data, data_size, img)) return {};
+    return img;
+}
+
+// Loads an ldr image.
+bool load_image4b_from_memory(
+    const byte* data, int data_size, image<vec4b>& img) {
+    img         = {};
     auto size   = zero2i;
     auto ncomp  = 0;
     auto pixels = (vec4b*)stbi_load_from_memory(
         data, data_size, &size.x, &size.y, &ncomp, 4);
-    if (!pixels) throw std::runtime_error("could not decode image from memory");
-    auto img = image<vec4b>{size, pixels};
+    if (!pixels) return false;
+    img = image<vec4b>{size, pixels};
     delete pixels;
-    return img;
+    return true;
 }
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-void save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
+bool save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
     float exposure, bool filmic, bool srgb) {
     if (is_hdr_filename(filename)) {
-        save_image4f(filename, hdr);
+        return save_image4f(filename, hdr);
     } else {
-        save_image4b(filename,
-            float_to_byte(tonemap_filmic(hdr, exposure, filmic, srgb)));
+        auto ldr = float_to_byte(tonemap_filmic(hdr, exposure, filmic, srgb));
+        return save_image4b(filename, ldr);
     }
 }
 
@@ -880,29 +954,36 @@ namespace ygl {
 
 // Loads volume data from binary format.
 volume<float> load_volume1f(const std::string& filename) {
-    auto file = fopen(filename.c_str(), "r");
-    throw std::runtime_error("could not load volume " + filename);
-    auto size = zero3i;
-    if (fread(&size, sizeof(vec3i), 1, file) != 1)
-        throw std::runtime_error("problem reading " + filename);
-    auto vol   = volume<float>{size};
-    auto count = vol.size().x * vol.size().y * vol.size().z;
-    if (fread(vol.data(), sizeof(float), count, file) != count)
-        throw std::runtime_error("problem reading " + filename);
-    fclose(file);
+    auto vol = volume<float>();
     return vol;
 }
 
-// Saves volume data in binary format.
-void save_volume1f(const std::string& filename, const volume<float>& vol) {
-    auto file = fopen(filename.c_str(), "w");
-    if (!file) throw std::runtime_error("could not save " + filename);
-    auto size = vol.size();
-    fwrite(&size, sizeof(vec3i), 1, file);
+// Loads volume data from binary format.
+bool load_volume1f(const std::string& filename, volume<float>& vol) {
+    vol     = {};
+    auto fs = fopen(filename.c_str(), "r");
+    if (!fs) return false;
+    fclose_guard fs_{fs};
+    auto         size = zero3i;
+    if (fread(&size, sizeof(vec3i), 1, fs) != 1) return false;
+    vol        = volume<float>{size};
     auto count = vol.size().x * vol.size().y * vol.size().z;
-    if (fwrite(vol.data(), sizeof(float), count, file) != count)
-        throw std::runtime_error("problem saving " + filename);
-    fclose(file);
+    if (fread(vol.data(), sizeof(float), count, fs) != count) return false;
+    fclose(fs);
+    return true;
+}
+
+// Saves volume data in binary format.
+bool save_volume1f(const std::string& filename, const volume<float>& vol) {
+    auto fs = fopen(filename.c_str(), "w");
+    if (!fs) return false;
+    fclose_guard fs_{fs};
+    auto         size = vol.size();
+    fwrite(&size, sizeof(vec3i), 1, fs);
+    auto count = vol.size().x * vol.size().y * vol.size().z;
+    if (fwrite(vol.data(), sizeof(float), count, fs) != count) return false;
+    fclose(fs);
+    return true;
 }
 
 }  // namespace ygl
@@ -912,75 +993,74 @@ void save_volume1f(const std::string& filename, const volume<float>& vol) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// reset scene data pointer
+void reset_scene_data(scene*& scn) {
+    if (scn) delete scn;
+    scn = nullptr;
+}
+
 // Load a scene
 scene* load_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
-    auto ext = get_extension(filename);
     auto scn = (scene*)nullptr;
-    if (ext == "json" || ext == "JSON") {
-        scn = load_json_scene(filename, load_textures, skip_missing);
-    } else if (ext == "obj" || ext == "OBJ") {
-        scn = load_obj_scene(filename, load_textures, skip_missing);
-    } else if (ext == "gltf" || ext == "GLTF") {
-        scn = load_gltf_scene(filename, load_textures, skip_missing);
-    } else if (ext == "pbrt" || ext == "PBRT") {
-        scn = load_pbrt_scene(filename, load_textures, skip_missing);
-    } else if (ext == "ybin" || ext == "YBIN") {
-        scn = load_ybin_scene(filename, load_textures, skip_missing);
-    } else {
-        throw std::runtime_error("unsupported extension " + ext);
-    }
-    auto mat = (material*)nullptr;
-    for (auto ist : scn->instances) {
-        if (ist->mat) continue;
-        if (!mat) {
-            mat = make_default_material("<default>");
-            scn->materials.push_back(mat);
-        }
-        ist->mat = mat;
-    }
-    if (scn->cameras.empty()) {
-        scn->cameras.push_back(make_bbox_camera("<view>", compute_bbox(scn)));
-    }
-    add_missing_names(scn);
+    if (!load_scene(filename, scn, load_textures, skip_missing)) return nullptr;
     return scn;
 }
 
-// Save a scene
-void save_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool skip_missing) {
+// Load a scene
+bool load_scene(const std::string& filename, scene*& scn, bool load_textures,
+    bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
-        save_json_scene(filename, scn, save_textures, skip_missing);
+        return load_json_scene(filename, scn, load_textures, skip_missing);
     } else if (ext == "obj" || ext == "OBJ") {
-        save_obj_scene(filename, scn, save_textures, skip_missing);
+        return load_obj_scene(filename, scn, load_textures, skip_missing);
     } else if (ext == "gltf" || ext == "GLTF") {
-        save_gltf_scene(filename, scn, save_textures, skip_missing);
+        return load_gltf_scene(filename, scn, load_textures, skip_missing);
     } else if (ext == "pbrt" || ext == "PBRT") {
-        save_pbrt_scene(filename, scn, save_textures, skip_missing);
+        return load_pbrt_scene(filename, scn, load_textures, skip_missing);
     } else if (ext == "ybin" || ext == "YBIN") {
-        save_ybin_scene(filename, scn, save_textures, skip_missing);
+        return load_ybin_scene(filename, scn, load_textures, skip_missing);
     } else {
-        throw std::runtime_error("unsupported extension " + ext);
+        reset_scene_data(scn);
+        return false;
     }
 }
 
-void load_scene_textures(scene* scn, const std::string& dirname,
+// Save a scene
+bool save_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    auto ext = get_extension(filename);
+    if (ext == "json" || ext == "JSON") {
+        return save_json_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "obj" || ext == "OBJ") {
+        return save_obj_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "gltf" || ext == "GLTF") {
+        return save_gltf_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "pbrt" || ext == "PBRT") {
+        return save_pbrt_scene(filename, scn, save_textures, skip_missing);
+    } else if (ext == "ybin" || ext == "YBIN") {
+        return save_ybin_scene(filename, scn, save_textures, skip_missing);
+    } else {
+        return false;
+    }
+}
+
+bool load_scene_textures(scene* scn, const std::string& dirname,
     bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "") continue;
-        if (!txt->imgf.empty() && !txt->imgb.empty()) continue;
+        if (txt->path == "" || !txt->imgf.empty() || !txt->imgb.empty())
+            continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            if (is_hdr_filename(filename)) {
-                txt->imgf = load_image4f(filename);
-            } else {
-                txt->imgb = load_image4b(filename);
+        if (is_hdr_filename(filename)) {
+            if (!load_image4f(filename, txt->imgf)) {
+                if (!skip_missing) return false;
             }
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        } else {
+            if (!load_image4b(filename, txt->imgb)) {
+                if (!skip_missing) return false;
+            }
         }
     }
 
@@ -988,11 +1068,8 @@ void load_scene_textures(scene* scn, const std::string& dirname,
     for (auto txt : scn->voltextures) {
         if (txt->path == "" || !txt->vol.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            txt->vol = load_volume1f(filename);
-        } catch (const std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        if (!load_volume1f(filename, txt->vol)) {
+            if (!skip_missing) return false;
         }
     }
 
@@ -1019,24 +1096,26 @@ void load_scene_textures(scene* scn, const std::string& dirname,
                 mat->op_txt = mat->kd_txt;
         }
     }
+
+    // done
+    return true;
 }
 
 // helper to save textures
-void save_scene_textures(
+bool save_scene_textures(
     const scene* scn, const std::string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
         if (txt->imgf.empty() && txt->imgb.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            if (is_hdr_filename(filename)) {
-                save_image4f(filename, txt->imgf);
-            } else {
-                save_image4b(filename, txt->imgb);
+        if (is_hdr_filename(filename)) {
+            if (!save_image4f(filename, txt->imgf)) {
+                if (!skip_missing) return false;
             }
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        } else {
+            if (!save_image4b(filename, txt->imgb)) {
+                if (!skip_missing) return false;
+            }
         }
     }
 
@@ -1044,13 +1123,13 @@ void save_scene_textures(
     for (auto txt : scn->voltextures) {
         if (txt->vol.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
-        try {
-            if (!txt->vol.empty()) { save_volume1f(filename, txt->vol); }
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        if (!save_volume1f(filename, txt->vol)) {
+            if (!skip_missing) return false;
         }
     }
+
+    // done
+    return true;
 }
 
 }  // namespace ygl
@@ -1172,15 +1251,32 @@ namespace ygl {
 // Json alias
 using json = nlohmann::json;
 
+// forward declaration
+bool load_json(const std::string& filename, json& js);
+
 // Load a JSON object
 json load_json(const std::string& filename) {
-    auto txt = load_text(filename);
-    return json::parse(txt.begin(), txt.end());
+    auto js = json();
+    if (!load_json(filename, js)) return false;
+    return js;
+}
+
+// Load a JSON object
+bool load_json(const std::string& filename, json& js) {
+    js       = {};
+    auto txt = std::string();
+    if (!load_text(filename, txt)) return false;
+    try {
+        js = json::parse(txt.begin(), txt.end());
+        return true;
+    } catch (...) { return false; }
 }
 
 // Save a JSON object
-void save_json(const std::string& filename, const json& js) {
-    save_text(filename, js.dump(4));
+bool save_json(const std::string& filename, const json& js) {
+    try {
+        return save_text(filename, js.dump(4));
+    } catch (...) { return false; }
 }
 
 template <typename T>
@@ -1398,10 +1494,10 @@ void from_json_proc(const json& js, texture& val) {
         val.imgf = make_uvgrid_image4f(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        val.imgf  = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
+        val.imgf = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        is_hdr    = true;
+        is_hdr   = true;
     } else if (type == "noise") {
         val.imgf = make_noise_image4f(
             size, js.value("scale", 1.0f), js.value("wrap", true));
@@ -1422,11 +1518,11 @@ void from_json_proc(const json& js, texture& val) {
         throw std::runtime_error("unknown texture type " + type);
     }
     if (js.value("bump_to_normal", false)) {
-        val.imgf  = bump_to_normal_map(val.imgf, js.value("bump_scale", 1.0f));
+        val.imgf = bump_to_normal_map(val.imgf, js.value("bump_scale", 1.0f));
         val.srgb = false;
     }
     if (!is_hdr) {
-        if(val.srgb) {
+        if (val.srgb) {
             val.imgb = float_to_byte(linear_to_srgb(val.imgf));
         } else {
             val.imgb = float_to_byte(val.imgf);
@@ -1446,7 +1542,7 @@ void from_json(const json& js, texture& val) {
     val.path              = js.value("path", def.path);
     val.clamp             = js.value("clamp", def.clamp);
     val.scale             = js.value("scale", def.scale);
-    val.srgb             = js.value("srgb", def.srgb);
+    val.srgb              = js.value("srgb", def.srgb);
     val.imgf              = js.value("imgf", def.imgf);
     val.imgb              = js.value("imgb", def.imgb);
     if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
@@ -2078,12 +2174,26 @@ void from_json_proc(const json& js, scene& val) {
     }
 }
 
-// Load a scene in the builtin JSON format.
+// Load a scene
 scene* load_json_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
-    // load json
-    auto scn = new scene();
-    auto js  = load_json(filename);
+    auto scn = (scene*)nullptr;
+    if (!load_json_scene(filename, scn, load_textures, skip_missing))
+        return nullptr;
+    return scn;
+}
+
+// Load a scene in the builtin JSON format.
+bool load_json_scene(const std::string& filename, scene*& scn,
+    bool load_textures, bool skip_missing) {
+    // reset
+    reset_scene_data(scn);
+    // initialize
+    scn = new scene();
+
+    // load jsonz
+    auto js = json();
+    if (!load_json(filename, js)) return false;
 
     // parse json scene
     scn->name = js.value("name", ""s);
@@ -2182,61 +2292,63 @@ scene* load_json_scene(
 
     // load meshes
     auto dirname = get_dirname(filename);
-    for (auto& shp : scn->shapes) {
+    for (auto shp : scn->shapes) {
         if (shp->path == "" || !shp->pos.empty()) continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
-        try {
-            load_mesh(filename, shp->points, shp->lines, shp->triangles,
-                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        if (!load_mesh(filename, shp->points, shp->lines, shp->triangles,
+                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius)) {
+            if (!skip_missing) return false;
         }
     }
 
     // load suddivs
-    for (auto& sbd : scn->subdivs) {
+    for (auto sbd : scn->subdivs) {
         if (sbd->path == "" || !sbd->pos.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + sbd->path);
-        try {
-            auto quads_norm = std::vector<vec4i>();
-            auto norm       = std::vector<vec3f>();
-            load_fvmesh(filename, sbd->quads_pos, sbd->pos, quads_norm, norm,
+        auto filename   = normalize_path(dirname + "/" + sbd->path);
+        auto quads_norm = std::vector<vec4i>();
+        auto norm       = std::vector<vec3f>();
+        if (!load_fvmesh(filename, sbd->quads_pos, sbd->pos, quads_norm, norm,
                 sbd->quads_texcoord, sbd->texcoord, sbd->quads_color,
-                sbd->color);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+                sbd->color)) {
+            if (!skip_missing) return false;
         }
     }
 
-    // update data
+    // skip textures
+    if (load_textures) {
+        if (!load_scene_textures(scn, dirname, skip_missing, false))
+            return false;
+    }
+
+    // fix scene
+    if (scn->name == "") scn->name = get_filename(filename);
+    add_missing_cameras(scn);
+    add_missing_materials(scn);
+    add_missing_names(scn);
     update_transforms(scn);
 
-    // skip textures
-    if (load_textures) load_scene_textures(scn, dirname, skip_missing, false);
-
-    return scn;
+    // done
+    return true;
 }
 
 // Save a scene in the builtin JSON format.
-void save_json_scene(const std::string& filename, const scene* scn,
+bool save_json_scene(const std::string& filename, const scene* scn,
     bool save_textures, bool skip_missing) {
     // save json
-    auto js = json(scn);
-    save_json(filename, js);
+    auto js = json();
+    try {
+        js = json(scn);
+    } catch (...) { return false; }
+    if (!save_json(filename, js)) return false;
 
     // save meshes
     auto dirname = get_dirname(filename);
     for (auto& shp : scn->shapes) {
         if (shp->path == "") continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
-        try {
-            save_mesh(filename, shp->points, shp->lines, shp->triangles,
-                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        if (!save_mesh(filename, shp->points, shp->lines, shp->triangles,
+                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius)) {
+            if (!skip_missing) return false;
         }
     }
 
@@ -2244,18 +2356,20 @@ void save_json_scene(const std::string& filename, const scene* scn,
     for (auto& sbd : scn->subdivs) {
         if (sbd->path == "") continue;
         auto filename = normalize_path(dirname + "/" + sbd->path);
-        try {
-            save_fvmesh(filename, sbd->quads_pos, sbd->pos, {}, {},
+        if (!save_fvmesh(filename, sbd->quads_pos, sbd->pos, {}, {},
                 sbd->quads_texcoord, sbd->texcoord, sbd->quads_color,
-                sbd->color);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+                sbd->color)) {
+            if (!skip_missing) return false;
         }
     }
 
     // skip textures
-    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
+    if (save_textures) {
+        if (!save_scene_textures(scn, dirname, skip_missing)) return false;
+    }
+
+    // done
+    return true;
 }
 
 }  // namespace ygl
@@ -2412,11 +2526,12 @@ inline obj_texture_info parse_obj_texture_info(char*& s) {
 }
 
 // Load obj materials
-void load_mtl(
+bool load_mtl(
     const std::string& filename, const obj_callbacks& cb, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw std::runtime_error("could not open filename " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // currently parsed material
     auto mat   = obj_material();
@@ -2507,13 +2622,17 @@ void load_mtl(
 
     // clone
     fclose(fs);
+
+    // done
+    return true;
 }
 
 // Load obj extensions
-void load_objx(const std::string& filename, const obj_callbacks& cb) {
+bool load_objx(const std::string& filename, const obj_callbacks& cb) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw std::runtime_error("could not open filename " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // read the file line by line
     char buf[4096];
@@ -2551,14 +2670,18 @@ void load_objx(const std::string& filename, const obj_callbacks& cb) {
 
     // close file
     fclose(fs);
+
+    // done
+    return true;
 }
 
 // Load obj scene
-void load_obj(const std::string& filename, const obj_callbacks& cb,
+bool load_obj(const std::string& filename, const obj_callbacks& cb,
     bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
-    if (!fs) throw std::runtime_error("could not open filename " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -2613,28 +2736,44 @@ void load_obj(const std::string& filename, const obj_callbacks& cb,
             auto mtlname = parse_string(ss);
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
-            load_mtl(mtlpath, cb, flip_tr);
+            if (!load_mtl(mtlpath, cb, flip_tr)) {
+                fclose(fs);
+                return false;
+            }
         } else {
             // unused
         }
     }
 
-    // parse extensions if presents
-    auto extname = replace_extension(filename, "objx");
-    auto f       = fopen(extname.c_str(), "rt");
-    if (f) {
-        fclose(f);
-        load_objx(extname, cb);
-    }
-
     // close file
     fclose(fs);
+
+    // parse extensions if presents
+    auto extname    = replace_extension(filename, "objx");
+    auto ext_exists = exists_file(extname);
+    if (ext_exists) {
+        if (!load_objx(extname, cb)) return false;
+    }
+
+    // done
+    return true;
+}
+
+// Load a scene
+scene* load_obj_scene(const std::string& filename, bool load_textures,
+    bool skip_missing, bool split_shapes) {
+    auto scn = (scene*)nullptr;
+    if (!load_obj_scene(
+            filename, scn, load_textures, skip_missing, split_shapes))
+        return nullptr;
+    return scn;
 }
 
 // Loads an OBJ
-scene* load_obj_scene(const std::string& filename, bool load_textures,
-    bool skip_missing, bool split_shapes) {
-    auto scn = new scene();
+bool load_obj_scene(const std::string& filename, scene*& scn,
+    bool load_textures, bool skip_missing, bool split_shapes) {
+    reset_scene_data(scn);
+    scn = new scene();
 
     // splitting policy
     auto split_material  = split_shapes;
@@ -2717,7 +2856,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         txt->path  = info.path;
         txt->clamp = info.clamp;
         txt->scale = info.scale;
-        txt->srgb = srgb && !is_hdr_filename(info.path);
+        txt->srgb  = srgb && !is_hdr_filename(info.path);
         scn->textures.push_back(txt);
         tmap[info.path] = txt;
 
@@ -2850,7 +2989,7 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
     };
 
     // Parse obj
-    load_obj(filename, cb);
+    if (!load_obj(filename, cb)) return false;
 
     // cleanup empty
     // TODO: delete unused
@@ -2869,23 +3008,30 @@ scene* load_obj_scene(const std::string& filename, bool load_textures,
         idx--;
     }
 
-    // fix scene
-    scn->name = get_filename(filename);
-    add_missing_materials(scn);
-
     // load textures
     auto dirname = get_dirname(filename);
-    if (load_textures) load_scene_textures(scn, dirname, skip_missing, true);
+    if (load_textures) {
+        if (!load_scene_textures(scn, dirname, skip_missing, false))
+            return false;
+    }
+
+    // fix scene
+    scn->name = get_filename(filename);
+    add_missing_cameras(scn);
+    add_missing_materials(scn);
+    add_missing_names(scn);
+    update_transforms(scn);
 
     // done
-    return scn;
+    return true;
 }
 
-void save_mtl(
+bool save_mtl(
     const std::string& filename, const scene* scn, bool flip_tr = true) {
     // open
     auto fs = fopen(filename.c_str(), "wt");
-    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // for each material, dump all the values
     for (auto mat : scn->materials) {
@@ -2938,12 +3084,14 @@ void save_mtl(
 
     // done
     fclose(fs);
+    return true;
 }
 
-void save_objx(const std::string& filename, const scene* scn) {
+bool save_objx(const std::string& filename, const scene* scn) {
     // scene
     auto fs = fopen(filename.c_str(), "wt");
-    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // cameras
     for (auto cam : scn->cameras) {
@@ -2968,6 +3116,7 @@ void save_objx(const std::string& filename, const scene* scn) {
 
     // done
     fclose(fs);
+    return true;
 }
 
 std::string to_string(const obj_vertex& v) {
@@ -2981,11 +3130,12 @@ std::string to_string(const obj_vertex& v) {
     return s;
 }
 
-void save_obj(
+bool save_obj(
     const std::string& filename, const scene* scn, bool flip_texcoord = true) {
     // scene
     auto fs = fopen(filename.c_str(), "wt");
-    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // material library
     if (!scn->materials.empty()) {
@@ -3101,19 +3251,28 @@ void save_obj(
     }
 
     fclose(fs);
+    return true;
 }
 
-void save_obj_scene(const std::string& filename, const scene* scn,
+bool save_obj_scene(const std::string& filename, const scene* scn,
     bool save_textures, bool skip_missing) {
-    save_obj(filename, scn, true);
-    if (!scn->materials.empty())
-        save_mtl(replace_extension(filename, ".mtl"), scn, true);
-    if (!scn->cameras.empty() || !scn->environments.empty())
-        save_objx(replace_extension(filename, ".objx"), scn);
+    if (!save_obj(filename, scn, true)) return false;
+    if (!scn->materials.empty()) {
+        if (!save_mtl(replace_extension(filename, ".mtl"), scn, true))
+            return false;
+    }
+    if (!scn->cameras.empty() || !scn->environments.empty()) {
+        if (!save_objx(replace_extension(filename, ".objx"), scn)) return false;
+    }
 
     // skip textures if needed
     auto dirname = get_dirname(filename);
-    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
+    if (save_textures) {
+        if (!save_scene_textures(scn, dirname, skip_missing)) return false;
+    }
+
+    // done
+    return true;
 }
 
 }  // namespace ygl
@@ -3133,12 +3292,14 @@ static bool startswith(const std::string& str, const std::string& substr) {
 // Load a scene
 scene* load_gltf_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
-    auto gltf = load_json(filename);
-    auto scn  = new scene();
+    auto scn = (scene*)nullptr;
+    if (!load_gltf_scene(filename, scn, load_textures, skip_missing))
+        return nullptr;
+    return scn;
+}
 
-    // prepare parsing
-    auto dirname = get_dirname(filename);
-
+// convert gltf to scene
+bool gltf_to_scene(scene* scn, const json& gltf, const std::string& dirname) {
     // convert textures
     if (gltf.count("images")) {
         for (auto iid = 0; iid < gltf.at("images").size(); iid++) {
@@ -3164,25 +3325,17 @@ scene* load_gltf_scene(
             if (startswith(uri, "data:")) {
                 // assume it is base64 and find ','
                 auto pos = uri.find(',');
-                if (pos == uri.npos) {
-                    throw std::runtime_error("could not decode base64 data");
-                }
+                if (pos == uri.npos) { return false; }
                 // decode
                 auto data_char = base64_decode(uri.substr(pos + 1));
                 data           = std::vector<unsigned char>(
                     (unsigned char*)data_char.c_str(),
                     (unsigned char*)data_char.c_str() + data_char.length());
             } else {
-                data = load_binary(normalize_path(dirname + "/" + uri));
-                if (data.empty()) {
-                    throw std::runtime_error(
-                        "could not load binary file " +
-                        normalize_path(dirname + "/" + uri));
-                }
+                auto filename = normalize_path(dirname + "/" + uri);
+                if (!load_binary(filename, data)) return false;
             }
-            if (gbuf.value("byteLength", -1) != data.size()) {
-                throw std::runtime_error("mismatched buffer size");
-            }
+            if (gbuf.value("byteLength", -1) != data.size()) { return false; }
         }
     }
 
@@ -3202,7 +3355,7 @@ scene* load_gltf_scene(
         txt->clamp = gsmp.value("wrapS", ""s) == "ClampToEdge" ||
                      gsmp.value("wrapT", ""s) == "ClampToEdge";
         txt->scale = gsmp.value("scale", 1.0f) * gsmp.value("strength", 1.0f);
-        txt->srgb = srgb && !is_hdr_filename(txt->path);
+        txt->srgb  = srgb && !is_hdr_filename(txt->path);
         return txt;
     };
 
@@ -3631,10 +3784,7 @@ scene* load_gltf_scene(
                         }
 #endif
                         } break;
-                        default: {
-                            throw std::runtime_error(
-                                "should not have gotten here");
-                        }
+                        default: { return false; }
                     }
                     sampler_map[{gchannel.at("sampler").get<int>(), path}] =
                         (int)scn->animations.size();
@@ -3649,11 +3799,40 @@ scene* load_gltf_scene(
         }
     }
 
-    // compute transforms and bbox
-    update_transforms(scn, 0);
+    return true;
+}
 
-    // fix elements
+// Load a scene
+bool load_gltf_scene(const std::string& filename, scene*& scn,
+    bool load_textures, bool skip_missing) {
+    // reset
+    reset_scene_data(scn);
+
+    // initialization
+    scn = new scene();
+
+    // convert json
+    auto js = json();
+    if (!load_json(filename, js)) return false;
+    try {
+        if (!gltf_to_scene(scn, js, get_dirname(filename))) return false;
+    } catch (...) { return false; }
+
+    // load textures
+    auto dirname = get_dirname(filename);
+    if (load_textures) {
+        if (!load_scene_textures(scn, dirname, skip_missing, false))
+            return false;
+    }
+
+    // fix scene
+    scn->name = get_filename(filename);
+    add_missing_cameras(scn);
     add_missing_materials(scn);
+    add_missing_names(scn);
+    update_transforms(scn);
+
+    // fix cameras
     auto bbox = compute_bbox(scn);
     for (auto cam : scn->cameras) {
         auto center = (bbox.min + bbox.max) / 2;
@@ -3661,18 +3840,16 @@ scene* load_gltf_scene(
         if (dist > 0) cam->focus = dist;
     }
 
-    // skip textures if needed
-    if (load_textures) load_scene_textures(scn, dirname, skip_missing, true);
-
     // done
-    return scn;
+    return true;
 }
 
-// Save gltf json
-void save_gltf_scene(const std::string& filename, const scene* scn,
-    bool save_textures, bool skip_missing) {
+// convert gltf scene to json
+bool scene_to_gltf(const scene* scn, json& js) {
+    // init to emprt object
+    js = json::object();
+
     // start creating json
-    auto js                = json::object();
     js["asset"]["version"] = "2.0";
 
     // prepare top level nodes
@@ -3865,8 +4042,37 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         }
     }
 
-    // save
-    save_json(filename, js);
+    // done
+    return true;
+}
+
+// save gltf mesh
+bool save_gltf_mesh(const std::string& filename, const shape* shp) {
+    auto fs = fopen(filename.c_str(), "wb");
+    if (!fs) return false;
+    fclose_guard fs_{fs};
+
+    fwrite((char*)shp->pos.data(), 3 * 4, shp->pos.size(), fs);
+    fwrite((char*)shp->norm.data(), 3 * 4, shp->norm.size(), fs);
+    fwrite((char*)shp->texcoord.data(), 2 * 4, shp->texcoord.size(), fs);
+    fwrite((char*)shp->color.data(), 4 * 4, shp->color.size(), fs);
+    fwrite((char*)shp->radius.data(), 1 * 4, shp->radius.size(), fs);
+    fwrite((char*)shp->lines.data(), 2 * 4, shp->lines.size(), fs);
+    fwrite((char*)shp->triangles.data(), 3 * 4, shp->triangles.size(), fs);
+
+    fclose(fs);
+    return true;
+}
+
+// Save gltf json
+bool save_gltf_scene(const std::string& filename, const scene* scn,
+    bool save_textures, bool skip_missing) {
+    // save json
+    auto js = json();
+    try {
+        if (!scene_to_gltf(scn, js)) return false;
+    } catch (...) { return false; }
+    if (!save_json(filename, js)) return false;
 
     // meshes
     auto dirname = get_dirname(filename);
@@ -3874,27 +4080,18 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
         if (shp->path == "") continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
         filename      = replace_extension(filename, ".bin");
-        try {
-            auto fs = fopen(filename.c_str(), "wb");
-            if (!fs)
-                throw std::runtime_error("could not open file " + filename);
-            fwrite((char*)shp->pos.data(), 3 * 4, shp->pos.size(), fs);
-            fwrite((char*)shp->norm.data(), 3 * 4, shp->norm.size(), fs);
-            fwrite((char*)shp->texcoord.data(), 2 * 4, shp->texcoord.size(), fs);
-            fwrite((char*)shp->color.data(), 4 * 4, shp->color.size(), fs);
-            fwrite((char*)shp->radius.data(), 1 * 4, shp->radius.size(), fs);
-            fwrite((char*)shp->lines.data(), 2 * 4, shp->lines.size(), fs);
-            fwrite(
-                (char*)shp->triangles.data(), 3 * 4, shp->triangles.size(), fs);
-            fclose(fs);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        if (!save_gltf_mesh(filename, shp)) {
+            if (!skip_missing) return false;
         }
     }
 
-    // skip textures if necessary
-    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
+    // save textures
+    if (save_textures) {
+        if (!save_scene_textures(scn, dirname, skip_missing)) return false;
+    }
+
+    // done
+    return true;
 }
 
 }  // namespace ygl
@@ -3905,7 +4102,7 @@ void save_gltf_scene(const std::string& filename, const scene* scn,
 namespace ygl {
 
 // convert pbrt to json
-json pbrt_to_json(const std::string& filename) {
+bool pbrt_to_json(const std::string& filename, json& js) {
     auto split = [](const std::string& str) {
         auto ret = std::vector<std::string>();
         if (str.empty()) return ret;
@@ -3988,24 +4185,28 @@ json pbrt_to_json(const std::string& filename) {
         if (tokens[i][0] == ']') i++;
     };
 
-    auto f = fopen(filename.c_str(), "rt");
-    if (!f) throw std::runtime_error("could not open filename " + filename);
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) return false;
+    fclose_guard fs_{fs};
+
     auto pbrt = std::string();
     char buf[4096];
-    while (fgets(buf, 4096, f)) {
+    while (fgets(buf, 4096, fs)) {
         auto line = std::string(buf);
         if (line.find('#') == line.npos)
             pbrt += line + "\n";
         else
             pbrt += line.substr(0, line.find('#')) + "\n";
     }
-    fclose(f);
-    auto re     = std::regex("\"(\\w+)\\s+(\\w+)\"");
-    pbrt        = std::regex_replace(pbrt, re, "\"$1|$2\"");
-    pbrt        = std::regex_replace(pbrt, std::regex("\\["), " [ ");
-    pbrt        = std::regex_replace(pbrt, std::regex("\\]"), " ] ");
+    fclose(fs);
+
+    auto re = std::regex("\"(\\w+)\\s+(\\w+)\"");
+    pbrt    = std::regex_replace(pbrt, re, "\"$1|$2\"");
+    pbrt    = std::regex_replace(pbrt, std::regex("\\["), " [ ");
+    pbrt    = std::regex_replace(pbrt, std::regex("\\]"), " ] ");
+    js      = json::array();
+
     auto tokens = split(pbrt);
-    auto js     = json::array();
     auto i      = 0;
     while (i < tokens.size()) {
         if (!is_cmd(tokens, i)) throw std::runtime_error("command expected");
@@ -4046,14 +4247,31 @@ json pbrt_to_json(const std::string& filename) {
     }
     // auto fstr = std::fstream(filename + ".json");
     // fstr << js;
-    return js;
+    return true;
+}
+
+// Load a scene
+scene* load_pbrt_scene(
+    const std::string& filename, bool load_textures, bool skip_missing) {
+    auto scn = (scene*)nullptr;
+    if (!load_pbrt_scene(filename, scn, load_textures, skip_missing))
+        return nullptr;
+    return scn;
 }
 
 // load pbrt scenes
-scene* load_pbrt_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    auto js      = pbrt_to_json(filename);
-    auto dirname = get_dirname(filename);
+bool load_pbrt_scene(const std::string& filename, scene*& scn,
+    bool load_textures, bool skip_missing) {
+    // reset
+    reset_scene_data(scn);
+
+    // convert to json
+    auto js = json();
+    try {
+        if (!pbrt_to_json(filename, js)) return false;
+    } catch (...) { return false; }
+
+    auto dirname_ = get_dirname(filename);
 
     struct stack_item {
         frame3f   frame     = identity_frame3f;
@@ -4064,7 +4282,7 @@ scene* load_pbrt_scene(
     };
 
     // parse
-    auto scn   = new scene();
+    scn        = new scene();
     auto stack = std::vector<stack_item>();
     stack.push_back(stack_item());
     auto txt_map = std::map<std::string, texture*>();
@@ -4164,7 +4382,8 @@ scene* load_pbrt_scene(
         return {get_vec3f(js), nullptr};
     };
 
-    auto                                          use_hierarchy = false;
+    auto use_hierarchy = false;
+
     std::map<std::string, std::vector<instance*>> objects;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<std::string>();
@@ -4181,7 +4400,7 @@ scene* load_pbrt_scene(
         if (cmd == "Integrator" || cmd == "Sampler" || cmd == "PixelFilter") {
         } else if (cmd == "Transform") {
             stack.back().frame = get_mat4f(jcmd.at("values"));
-        } else if (cmd == "ConcatTransform") {
+        } else if (cmd == " ConcatTransform") {
             stack.back().frame = stack.back().frame * get_mat4f(jcmd.at("value"
                                                                         "s"));
         } else if (cmd == "Scale") {
@@ -4373,9 +4592,10 @@ scene* load_pbrt_scene(
                 auto filename = jcmd.at("filename").get<std::string>();
                 shp->name     = get_filename(filename);
                 shp->path     = filename;
-                load_ply_mesh(dirname + "/" + filename, shp->points, shp->lines,
-                    shp->triangles, shp->pos, shp->norm, shp->texcoord,
-                    shp->color, shp->radius);
+                if (!load_ply_mesh(dirname_ + "/" + filename, shp->points,
+                        shp->lines, shp->triangles, shp->pos, shp->norm,
+                        shp->texcoord, shp->color, shp->radius))
+                    return false;
             } else if (type == "trianglemesh") {
                 shp->name = "mesh" + std::to_string(sid++);
                 shp->path = "models/" + shp->name + ".ply";
@@ -4540,19 +4760,28 @@ scene* load_pbrt_scene(
         }
     }
 
-    // update data
-    update_transforms(scn);
+    // load textures
+    auto dirname = get_dirname(filename);
+    if (load_textures) {
+        if (!load_scene_textures(scn, dirname, skip_missing, false))
+            return false;
+    }
 
-    // skip textures
-    if (load_textures) load_scene_textures(scn, dirname, skip_missing, false);
+    // fix scene
+    scn->name = get_filename(filename);
+    add_missing_cameras(scn);
+    add_missing_materials(scn);
+    add_missing_names(scn);
+    update_transforms(scn);
 
     return scn;
 }
 
 // Convert a scene to pbrt format
-void save_pbrt(const std::string& filename, const scene* scn) {
-    auto f = fopen(filename.c_str(), "wt");
-    if (!f) throw std::runtime_error("cannot save file " + filename);
+bool save_pbrt(const std::string& filename, const scene* scn) {
+    auto fs = fopen(filename.c_str(), "wt");
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
 #if 0
 WorldBegin
@@ -4589,27 +4818,27 @@ WorldEnd
     auto from = cam->frame.o;
     auto to   = cam->frame.o - cam->frame.z;
     auto up   = cam->frame.y;
-    fprintf(f, "LookAt %g %g %g %g %g %g %g %g %g\n", from.x, from.y, from.z,
+    fprintf(fs, "LookAt %g %g %g %g %g %g %g %g %g\n", from.x, from.y, from.z,
         to.x, to.y, to.z, up.x, up.y, up.z);
-    fprintf(f, "Camera \"perspective\" \"float fov\" %g\n",
+    fprintf(fs, "Camera \"perspective\" \"float fov\" %g\n",
         eval_camera_fovy(cam) * 180 / pif);
 
     // save renderer
-    fprintf(f, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    fprintf(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
-    fprintf(f, "Integrator \"path\"\n");
-    fprintf(f,
+    fprintf(fs, "Integrator \"path\"\n");
+    fprintf(fs,
         "Film \"image\" \"string filename\" [\"%s\"] "
         "\"integer xresolution\" [%d] \"integer yresolution\" [%d]\n",
         replace_extension(filename, "exr").c_str(), eval_image_size(cam, 512).x,
         eval_image_size(cam, 512).y);
 
     // start world
-    fprintf(f, "WorldBegin\n");
+    fprintf(fs, "WorldBegin\n");
 
     // convert textures
     for (auto txt : scn->textures) {
-        fprintf(f,
+        fprintf(fs,
             "Texture \"%s\" \"spectrum\" \"imagemap\" "
             "\"string filename\" [\"%s\"]\n",
             txt->name.c_str(), txt->path.c_str());
@@ -4617,66 +4846,72 @@ WorldEnd
 
     // convert materials
     for (auto mat : scn->materials) {
-        fprintf(f, "MakeNamedMaterial \"%s\" ", mat->name.c_str());
-        fprintf(f, "\"string type\" \"%s\" ", "uber");
+        fprintf(fs, "MakeNamedMaterial \"%s\" ", mat->name.c_str());
+        fprintf(fs, "\"string type\" \"%s\" ", "uber");
         if (mat->kd_txt)
-            fprintf(f, "\"texture Kd\" [\"%s\"] ", mat->kd_txt->name.c_str());
+            fprintf(fs, "\"texture Kd\" [\"%s\"] ", mat->kd_txt->name.c_str());
         else
             fprintf(
-                f, "\"rgb Kd\" [%g %g %g] ", mat->kd.x, mat->kd.y, mat->kd.z);
+                fs, "\"rgb Kd\" [%g %g %g] ", mat->kd.x, mat->kd.y, mat->kd.z);
         if (mat->ks_txt)
-            fprintf(f, "\"texture Ks\" [\"%s\"] ", mat->ks_txt->name.c_str());
+            fprintf(fs, "\"texture Ks\" [\"%s\"] ", mat->ks_txt->name.c_str());
         else
             fprintf(
-                f, "\"rgb Ks\" [%g %g %g] ", mat->ks.x, mat->ks.y, mat->ks.z);
-        fprintf(f, "\"float roughness\" [%g] ", mat->rs);
-        fprintf(f, "\n");
+                fs, "\"rgb Ks\" [%g %g %g] ", mat->ks.x, mat->ks.y, mat->ks.z);
+        fprintf(fs, "\"float roughness\" [%g] ", mat->rs);
+        fprintf(fs, "\n");
     }
 
     // convert instances
     for (auto ist : scn->instances) {
-        fprintf(f, "AttributeBegin\n");
-        fprintf(f, "TransformBegin\n");
+        fprintf(fs, "AttributeBegin\n");
+        fprintf(fs, "TransformBegin\n");
         auto m = frame_to_mat(ist->frame);
-        fprintf(f, "ConcatTransform [");
-        for (auto i = 0; i < 16; i++) fprintf(f, " %g", (&m.x.x)[i]);
-        fprintf(f, "]\n");
+        fprintf(fs, "ConcatTransform [");
+        for (auto i = 0; i < 16; i++) fprintf(fs, " %g", (&m.x.x)[i]);
+        fprintf(fs, "]\n");
         if (ist->mat->ke != zero3f)
-            fprintf(f, "AreaLightSource \"diffuse\" \"rgb L\" [ %g %g %g ]\n",
+            fprintf(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ %g %g %g ]\n",
                 ist->mat->ke.x, ist->mat->ke.y, ist->mat->ke.z);
-        fprintf(f, "NamedMaterial \"%s\"\n", ist->mat->name.c_str());
-        fprintf(f, "Shape \"plymesh\" \"string filename\" [\"%s\"]\n",
+        fprintf(fs, "NamedMaterial \"%s\"\n", ist->mat->name.c_str());
+        fprintf(fs, "Shape \"plymesh\" \"string filename\" [\"%s\"]\n",
             ist->shp->path.c_str());
-        fprintf(f, "TransformEnd\n");
-        fprintf(f, "AttributeEnd\n");
+        fprintf(fs, "TransformEnd\n");
+        fprintf(fs, "AttributeEnd\n");
     }
 
     // end world
-    fprintf(f, "WorldEnd\n");
+    fprintf(fs, "WorldEnd\n");
+
+    // done
+    fclose(fs);
+    return true;
 }
 
 // Save a pbrt scene
-void save_pbrt_scene(const std::string& filename, const scene* scn,
+bool save_pbrt_scene(const std::string& filename, const scene* scn,
     bool save_textures, bool skip_missing) {
     // save json
-    save_pbrt(filename, scn);
+    if (!save_pbrt(filename, scn)) return false;
 
     // save meshes
     auto dirname = get_dirname(filename);
     for (auto& shp : scn->shapes) {
         if (shp->path == "") continue;
         auto filename = normalize_path(dirname + "/" + shp->path);
-        try {
-            save_mesh(filename, shp->points, shp->lines, shp->triangles,
-                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius);
-        } catch (std::exception&) {
-            if (skip_missing) continue;
-            throw;
+        if (!save_mesh(filename, shp->points, shp->lines, shp->triangles,
+                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius)) {
+            if (!skip_missing) return false;
         }
     }
 
     // skip textures
-    if (save_textures) save_scene_textures(scn, dirname, skip_missing);
+    if (save_textures) {
+        if (!save_scene_textures(scn, dirname, skip_missing)) return false;
+    }
+
+    // done
+    return true;
 }
 
 // Attempt to fix pbrt z-up.
@@ -4706,139 +4941,137 @@ namespace ygl {
 
 // Serialize type or struct with no allocated resource
 template <typename T>
-void serialize_bin_value(T& val, FILE* fs, bool save) {
+bool serialize_bin_value(T& val, FILE* fs, bool save) {
     if (save) {
-        if (fwrite(&val, sizeof(T), 1, fs) != 1)
-            throw std::runtime_error("error saving file");
-        ;
+        if (fwrite(&val, sizeof(T), 1, fs) != 1) return false;
+        return true;
     } else {
-        if (fread(&val, sizeof(T), 1, fs) != 1)
-            throw std::runtime_error("error reading file");
-        ;
+        if (fread(&val, sizeof(T), 1, fs) != 1) return false;
+        return false;
     }
 }
 
 // Serialize std::vector
 template <typename T>
-void serialize_bin_value(std::vector<T>& vec, FILE* fs, bool save) {
+bool serialize_bin_value(std::vector<T>& vec, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        serialize_bin_value(count, fs, true);
-        if (fwrite(vec.data(), sizeof(T), count, fs) != count)
-            throw std::runtime_error("error saving file");
-        ;
+        if (!serialize_bin_value(count, fs, save)) return false;
+        if (fwrite(vec.data(), sizeof(T), count, fs) != count) return false;
+        return true;
     } else {
         auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
+        if (!serialize_bin_value(count, fs, save)) return false;
         vec = std::vector<T>(count);
-        if (fread(vec.data(), sizeof(T), count, fs) != count)
-            throw std::runtime_error("error reading file");
-        ;
+        if (fread(vec.data(), sizeof(T), count, fs) != count) return false;
+        return true;
     }
 }
 
 // Serialize std::string
-void serialize_bin_value(std::string& vec, FILE* fs, bool save) {
+bool serialize_bin_value(std::string& vec, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        serialize_bin_value(count, fs, true);
-        if (fwrite(vec.data(), sizeof(char), count, fs) != count)
-            throw std::runtime_error("error saving file");
-        ;
+        if (!serialize_bin_value(count, fs, save)) return false;
+        if (fwrite(vec.data(), sizeof(char), count, fs) != count) return false;
+        return true;
     } else {
         auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
+        if (!serialize_bin_value(count, fs, save)) return false;
         vec = std::string(count, ' ');
         if (fread((void*)vec.data(), sizeof(char), count, fs) != count)
-            throw std::runtime_error("error reading file");
+            return false;
+        return true;
     }
 }
 
 // Serialize image
 template <typename T>
-void serialize_bin_value(image<T>& img, FILE* fs, bool save) {
+bool serialize_bin_value(image<T>& img, FILE* fs, bool save) {
     if (save) {
         auto size = (vec2i)img.size();
-        serialize_bin_value(size, fs, true);
+        if (!serialize_bin_value(size, fs, save)) return false;
         auto count = size.x * size.y;
-        if (fwrite(img.data(), sizeof(T), count, fs) != count)
-            throw std::runtime_error("error saving file");
-        ;
+        if (fwrite(img.data(), sizeof(T), count, fs) != count) return false;
+        return true;
     } else {
         auto size = zero2i;
-        serialize_bin_value(size, fs, false);
+        if (!serialize_bin_value(size, fs, save)) return false;
         auto count = size.x * size.y;
         img        = image<T>(size);
-        if (fread(img.data(), sizeof(T), count, fs) != count)
-            throw std::runtime_error("error reading file");
-        ;
+        if (fread(img.data(), sizeof(T), count, fs) != count) return false;
+        return true;
     }
 }
 
 // Serialize image
 template <typename T>
-void serialize_bin_value(volume<T>& vol, FILE* fs, bool save) {
+bool serialize_bin_value(volume<T>& vol, FILE* fs, bool save) {
     if (save) {
         auto size = (vec3i)vol.size();
-        serialize_bin_value(size, fs, true);
+        if (!serialize_bin_value(size, fs, save)) return false;
         auto count = size.x * size.y * size.z;
-        if (fwrite(vol.data(), sizeof(T), count, fs) != count)
-            throw std::runtime_error("error saving file");
-        ;
+        if (fwrite(vol.data(), sizeof(T), count, fs) != count) return false;
+        return true;
     } else {
         auto size = zero3i;
-        serialize_bin_value(size, fs, false);
+        if (!serialize_bin_value(size, fs, save)) return false;
         auto count = size.x * size.y * size.z;
         vol        = volume<T>(size);
-        if (fread(vol.data(), sizeof(T), count, fs) != count)
-            throw std::runtime_error("error reading file");
-        ;
+        if (fread(vol.data(), sizeof(T), count, fs) != count) return false;
+        return true;
     }
 }
 
 // Serialize std::vector of pointers
 template <typename T>
-void serialize_bin_object(std::vector<T*>& vec, FILE* fs, bool save) {
+bool serialize_bin_object(std::vector<T*>& vec, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        serialize_bin_value(count, fs, true);
-        for (auto i = 0; i < vec.size(); ++i)
-            serialize_bin_object(vec[i], fs, true);
+        if (!serialize_bin_value(count, fs, true)) return false;
+        for (auto i = 0; i < vec.size(); ++i) {
+            if (!serialize_bin_object(vec[i], fs, true)) return false;
+        }
+        return true;
     } else {
         auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
+        if (!serialize_bin_value(count, fs, false)) return false;
         vec = std::vector<T*>(count);
         for (auto i = 0; i < vec.size(); ++i) {
             vec[i] = new T();
-            serialize_bin_object(vec[i], fs, false);
+            if (!serialize_bin_object(vec[i], fs, false)) return false;
         }
+        return true;
     }
 }
 
 // Serialize std::vector of pointers
 template <typename T>
-void serialize_bin_object(
+bool serialize_bin_object(
     std::vector<T*>& vec, const scene* scn, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        serialize_bin_value(count, fs, true);
-        for (auto i = 0; i < vec.size(); ++i)
-            serialize_bin_object(vec[i], scn, fs, true);
+        if (!serialize_bin_value(count, fs, true)) return false;
+        for (auto i = 0; i < vec.size(); ++i) {
+            if (!serialize_bin_object(vec[i], scn, fs, true)) return false;
+        }
+        return true;
     } else {
         auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
+        if (!serialize_bin_value(count, fs, false)) return false;
         vec = std::vector<T*>(count);
         for (auto i = 0; i < vec.size(); ++i) {
             vec[i] = new T();
-            serialize_bin_object(vec[i], scn, fs, false);
+            if (!serialize_bin_object(vec[i], scn, fs, false)) return false;
         }
+        return true;
     }
 }
 
 // Serialize a pointer. It is saved as an integer index (handle) of the array of
 // pointers vec. On loading, the handle is converted back into a pointer.
 template <typename T>
-void serialize_bin_handle(
+bool serialize_bin_handle(
     T*& val, const std::vector<T*>& vec, FILE* fs, bool save) {
     if (save) {
         auto handle = -1;
@@ -4847,182 +5080,218 @@ void serialize_bin_handle(
                 handle = i;
                 break;
             }
-        serialize_bin_value(handle, fs, true);
+        if (!serialize_bin_value(handle, fs, true)) return false;
+        return true;
     } else {
         auto handle = -1;
-        serialize_bin_value(handle, fs, false);
+        if (!serialize_bin_value(handle, fs, false)) return false;
         val = (handle == -1) ? nullptr : vec[handle];
+        return true;
     }
 }
 
 // Serialize a pointer. It is saved as an integer index (handle) of the array of
 // pointers vec. On loading, the handle is converted back into a pointer.
 template <typename T>
-void serialize_bin_handle(
+bool serialize_bin_handle(
     std::vector<T*>& vals, const std::vector<T*>& vec_, FILE* fs, bool save) {
     if (save) {
         auto count = (size_t)vals.size();
-        serialize_bin_value(count, fs, true);
-        for (auto i = 0; i < vals.size(); ++i)
-            serialize_bin_handle(vals[i], vec_, fs, true);
+        if (!serialize_bin_value(count, fs, true)) return false;
+        for (auto i = 0; i < vals.size(); ++i) {
+            if (!serialize_bin_handle(vals[i], vec_, fs, true)) return false;
+        }
     } else {
         auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
+        if (!serialize_bin_value(count, fs, false)) return false;
         vals = std::vector<T*>(count);
         for (auto i = 0; i < vals.size(); ++i) {
-            serialize_bin_handle(vals[i], vec_, fs, false);
+            if (!serialize_bin_handle(vals[i], vec_, fs, false)) return false;
         }
     }
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-void serialize_bin_object(camera* cam, FILE* fs, bool save) {
-    serialize_bin_value(cam->name, fs, save);
-    serialize_bin_value(cam->frame, fs, save);
-    serialize_bin_value(cam->ortho, fs, save);
-    serialize_bin_value(cam->film, fs, save);
-    serialize_bin_value(cam->focal, fs, save);
-    serialize_bin_value(cam->focus, fs, save);
-    serialize_bin_value(cam->aperture, fs, save);
+bool serialize_bin_object(camera* cam, FILE* fs, bool save) {
+    if (!serialize_bin_value(cam->name, fs, save)) return false;
+    if (!serialize_bin_value(cam->frame, fs, save)) return false;
+    if (!serialize_bin_value(cam->ortho, fs, save)) return false;
+    if (!serialize_bin_value(cam->film, fs, save)) return false;
+    if (!serialize_bin_value(cam->focal, fs, save)) return false;
+    if (!serialize_bin_value(cam->focus, fs, save)) return false;
+    if (!serialize_bin_value(cam->aperture, fs, save)) return false;
+    return true;
 }
 
-void serialize_bin_object(bvh_tree* bvh, FILE* fs, bool save) {
-    serialize_bin_value(bvh->pos, fs, save);
-    serialize_bin_value(bvh->radius, fs, save);
-    serialize_bin_value(bvh->points, fs, save);
-    serialize_bin_value(bvh->lines, fs, save);
-    serialize_bin_value(bvh->triangles, fs, save);
-    serialize_bin_value(bvh->quads, fs, save);
-    serialize_bin_value(bvh->nodes, fs, save);
-    serialize_bin_value(bvh->instances, fs, save);
-    serialize_bin_object(bvh->shape_bvhs, fs, save);
-    serialize_bin_value(bvh->nodes, fs, save);
+bool serialize_bin_object(bvh_tree* bvh, FILE* fs, bool save) {
+    if (!serialize_bin_value(bvh->pos, fs, save)) return false;
+    if (!serialize_bin_value(bvh->radius, fs, save)) return false;
+    if (!serialize_bin_value(bvh->points, fs, save)) return false;
+    if (!serialize_bin_value(bvh->lines, fs, save)) return false;
+    if (!serialize_bin_value(bvh->triangles, fs, save)) return false;
+    if (!serialize_bin_value(bvh->quads, fs, save)) return false;
+    if (!serialize_bin_value(bvh->nodes, fs, save)) return false;
+    if (!serialize_bin_value(bvh->instances, fs, save)) return false;
+    if (!serialize_bin_object(bvh->shape_bvhs, fs, save)) return false;
+    if (!serialize_bin_value(bvh->nodes, fs, save)) return false;
+    return true;
 }
 
-void serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
-    serialize_bin_value(shp->name, fs, save);
-    serialize_bin_value(shp->path, fs, save);
-    serialize_bin_value(shp->points, fs, save);
-    serialize_bin_value(shp->lines, fs, save);
-    serialize_bin_value(shp->triangles, fs, save);
-    serialize_bin_value(shp->pos, fs, save);
-    serialize_bin_value(shp->norm, fs, save);
-    serialize_bin_value(shp->texcoord, fs, save);
-    serialize_bin_value(shp->color, fs, save);
-    serialize_bin_value(shp->radius, fs, save);
-    serialize_bin_value(shp->tangsp, fs, save);
+bool serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
+    if (!serialize_bin_value(shp->name, fs, save)) return false;
+    if (!serialize_bin_value(shp->path, fs, save)) return false;
+    if (!serialize_bin_value(shp->points, fs, save)) return false;
+    if (!serialize_bin_value(shp->lines, fs, save)) return false;
+    if (!serialize_bin_value(shp->triangles, fs, save)) return false;
+    if (!serialize_bin_value(shp->pos, fs, save)) return false;
+    if (!serialize_bin_value(shp->norm, fs, save)) return false;
+    if (!serialize_bin_value(shp->texcoord, fs, save)) return false;
+    if (!serialize_bin_value(shp->color, fs, save)) return false;
+    if (!serialize_bin_value(shp->radius, fs, save)) return false;
+    if (!serialize_bin_value(shp->tangsp, fs, save)) return false;
+    return true;
 }
 
-void serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
-    serialize_bin_value(sbd->name, fs, save);
-    serialize_bin_value(sbd->path, fs, save);
-    serialize_bin_value(sbd->level, fs, save);
-    serialize_bin_value(sbd->catmull_clark, fs, save);
-    serialize_bin_value(sbd->compute_normals, fs, save);
-    serialize_bin_value(sbd->quads_pos, fs, save);
-    serialize_bin_value(sbd->quads_texcoord, fs, save);
-    serialize_bin_value(sbd->quads_color, fs, save);
-    serialize_bin_value(sbd->crease_pos, fs, save);
-    serialize_bin_value(sbd->crease_texcoord, fs, save);
-    serialize_bin_value(sbd->pos, fs, save);
-    serialize_bin_value(sbd->texcoord, fs, save);
-    serialize_bin_value(sbd->color, fs, save);
+bool serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
+    if (!serialize_bin_value(sbd->name, fs, save)) return false;
+    if (!serialize_bin_value(sbd->path, fs, save)) return false;
+    if (!serialize_bin_value(sbd->level, fs, save)) return false;
+    if (!serialize_bin_value(sbd->catmull_clark, fs, save)) return false;
+    if (!serialize_bin_value(sbd->compute_normals, fs, save)) return false;
+    if (!serialize_bin_value(sbd->quads_pos, fs, save)) return false;
+    if (!serialize_bin_value(sbd->quads_texcoord, fs, save)) return false;
+    if (!serialize_bin_value(sbd->quads_color, fs, save)) return false;
+    if (!serialize_bin_value(sbd->crease_pos, fs, save)) return false;
+    if (!serialize_bin_value(sbd->crease_texcoord, fs, save)) return false;
+    if (!serialize_bin_value(sbd->pos, fs, save)) return false;
+    if (!serialize_bin_value(sbd->texcoord, fs, save)) return false;
+    if (!serialize_bin_value(sbd->color, fs, save)) return false;
+    return true;
 }
 
-void serialize_bin_object(texture* tex, FILE* fs, bool save) {
-    serialize_bin_value(tex->name, fs, save);
-    serialize_bin_value(tex->path, fs, save);
-    serialize_bin_value(tex->imgf, fs, save);
-    serialize_bin_value(tex->imgb, fs, save);
-    serialize_bin_value(tex->clamp, fs, save);
-    serialize_bin_value(tex->scale, fs, save);
-    serialize_bin_value(tex->srgb, fs, save);
-    serialize_bin_value(tex->has_opacity, fs, save);
+bool serialize_bin_object(texture* tex, FILE* fs, bool save) {
+    if (!serialize_bin_value(tex->name, fs, save)) return false;
+    if (!serialize_bin_value(tex->path, fs, save)) return false;
+    if (!serialize_bin_value(tex->imgf, fs, save)) return false;
+    if (!serialize_bin_value(tex->imgb, fs, save)) return false;
+    if (!serialize_bin_value(tex->clamp, fs, save)) return false;
+    if (!serialize_bin_value(tex->scale, fs, save)) return false;
+    if (!serialize_bin_value(tex->srgb, fs, save)) return false;
+    if (!serialize_bin_value(tex->has_opacity, fs, save)) return false;
+    return true;
 }
 
-void serialize_bin_object(voltexture* tex, FILE* fs, bool save) {
-    serialize_bin_value(tex->name, fs, save);
-    serialize_bin_value(tex->path, fs, save);
-    serialize_bin_value(tex->vol, fs, save);
-    serialize_bin_value(tex->clamp, fs, save);
+bool serialize_bin_object(voltexture* tex, FILE* fs, bool save) {
+    if (!serialize_bin_value(tex->name, fs, save)) return false;
+    if (!serialize_bin_value(tex->path, fs, save)) return false;
+    if (!serialize_bin_value(tex->vol, fs, save)) return false;
+    if (!serialize_bin_value(tex->clamp, fs, save)) return false;
+    return true;
 }
 
-void serialize_bin_object(
+bool serialize_bin_object(
     environment* env, const scene* scn, FILE* fs, bool save) {
-    serialize_bin_value(env->name, fs, save);
-    serialize_bin_value(env->frame, fs, save);
-    serialize_bin_value(env->ke, fs, save);
-    serialize_bin_handle(env->ke_txt, scn->textures, fs, save);
+    if (!serialize_bin_value(env->name, fs, save)) return false;
+    if (!serialize_bin_value(env->frame, fs, save)) return false;
+    if (!serialize_bin_value(env->ke, fs, save)) return false;
+    if (!serialize_bin_handle(env->ke_txt, scn->textures, fs, save))
+        return false;
+    return true;
 }
 
-void serialize_bin_object(material* mat, const scene* scn, FILE* fs, bool save) {
-    serialize_bin_value(mat->name, fs, save);
-    serialize_bin_value(mat->base_metallic, fs, save);
-    serialize_bin_value(mat->gltf_textures, fs, save);
-    serialize_bin_value(mat->double_sided, fs, save);
-    serialize_bin_value(mat->ke, fs, save);
-    serialize_bin_value(mat->kd, fs, save);
-    serialize_bin_value(mat->ks, fs, save);
-    serialize_bin_value(mat->kt, fs, save);
-    serialize_bin_value(mat->rs, fs, save);
-    serialize_bin_value(mat->op, fs, save);
-    serialize_bin_value(mat->fresnel, fs, save);
-    serialize_bin_value(mat->refract, fs, save);
-    serialize_bin_handle(mat->ke_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->kd_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->ks_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->kt_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->rs_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->op_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->occ_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->bump_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->disp_txt, scn->textures, fs, save);
-    serialize_bin_handle(mat->norm_txt, scn->textures, fs, save);
-    serialize_bin_value(mat->ve, fs, save);
-    serialize_bin_value(mat->va, fs, save);
-    serialize_bin_value(mat->vd, fs, save);
-    serialize_bin_value(mat->vg, fs, save);
-    serialize_bin_handle(mat->vd_txt, scn->voltextures, fs, save);
+bool serialize_bin_object(material* mat, const scene* scn, FILE* fs, bool save) {
+    if (!serialize_bin_value(mat->name, fs, save)) return false;
+    if (!serialize_bin_value(mat->base_metallic, fs, save)) return false;
+    if (!serialize_bin_value(mat->gltf_textures, fs, save)) return false;
+    if (!serialize_bin_value(mat->double_sided, fs, save)) return false;
+    if (!serialize_bin_value(mat->ke, fs, save)) return false;
+    if (!serialize_bin_value(mat->kd, fs, save)) return false;
+    if (!serialize_bin_value(mat->ks, fs, save)) return false;
+    if (!serialize_bin_value(mat->kt, fs, save)) return false;
+    if (!serialize_bin_value(mat->rs, fs, save)) return false;
+    if (!serialize_bin_value(mat->op, fs, save)) return false;
+    if (!serialize_bin_value(mat->fresnel, fs, save)) return false;
+    if (!serialize_bin_value(mat->refract, fs, save)) return false;
+    if (!serialize_bin_handle(mat->ke_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->kd_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->ks_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->kt_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->rs_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->op_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->occ_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->bump_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->disp_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_handle(mat->norm_txt, scn->textures, fs, save))
+        return false;
+    if (!serialize_bin_value(mat->ve, fs, save)) return false;
+    if (!serialize_bin_value(mat->va, fs, save)) return false;
+    if (!serialize_bin_value(mat->vd, fs, save)) return false;
+    if (!serialize_bin_value(mat->vg, fs, save)) return false;
+    if (!serialize_bin_handle(mat->vd_txt, scn->voltextures, fs, save))
+        return false;
+    return true;
 };
 
-void serialize_bin_object(instance* ist, const scene* scn, FILE* fs, bool save) {
-    serialize_bin_value(ist->name, fs, save);
-    serialize_bin_value(ist->frame, fs, save);
-    serialize_bin_handle(ist->shp, scn->shapes, fs, save);
-    serialize_bin_handle(ist->mat, scn->materials, fs, save);
-    serialize_bin_handle(ist->sbd, scn->subdivs, fs, save);
+bool serialize_bin_object(instance* ist, const scene* scn, FILE* fs, bool save) {
+    if (!serialize_bin_value(ist->name, fs, save)) return false;
+    if (!serialize_bin_value(ist->frame, fs, save)) return false;
+    if (!serialize_bin_handle(ist->shp, scn->shapes, fs, save)) return false;
+    if (!serialize_bin_handle(ist->mat, scn->materials, fs, save)) return false;
+    if (!serialize_bin_handle(ist->sbd, scn->subdivs, fs, save)) return false;
+    return true;
 };
 
-void serialize_scene(scene* scn, FILE* fs, bool save) {
-    serialize_bin_value(scn->name, fs, save);
-    serialize_bin_object(scn->cameras, fs, save);
-    serialize_bin_object(scn->shapes, scn, fs, save);
-    serialize_bin_object(scn->subdivs, fs, save);
-    serialize_bin_object(scn->textures, fs, save);
-    serialize_bin_object(scn->voltextures, fs, save);
-    serialize_bin_object(scn->materials, scn, fs, save);
-    serialize_bin_object(scn->instances, scn, fs, save);
-    serialize_bin_object(scn->environments, scn, fs, save);
+bool serialize_scene(scene* scn, FILE* fs, bool save) {
+    if (!serialize_bin_value(scn->name, fs, save)) return false;
+    if (!serialize_bin_object(scn->cameras, fs, save)) return false;
+    if (!serialize_bin_object(scn->shapes, scn, fs, save)) return false;
+    if (!serialize_bin_object(scn->subdivs, fs, save)) return false;
+    if (!serialize_bin_object(scn->textures, fs, save)) return false;
+    if (!serialize_bin_object(scn->voltextures, fs, save)) return false;
+    if (!serialize_bin_object(scn->materials, scn, fs, save)) return false;
+    if (!serialize_bin_object(scn->instances, scn, fs, save)) return false;
+    if (!serialize_bin_object(scn->environments, scn, fs, save)) return false;
+    return true;
 }
 
 // Load/save a binary dump useful for very fast scene IO.
 scene* load_ybin_scene(
     const std::string& filename, bool load_textures, bool skip_missing) {
-    auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) throw std::runtime_error("could not open file " + filename);
-    auto scn = new scene();
-    serialize_scene(scn, fs, false);
-    fclose(fs);
+    auto scn = (scene*)nullptr;
+    if (!load_ybin_scene(filename, scn, skip_missing)) return nullptr;
     return scn;
 }
 
 // Load/save a binary dump useful for very fast scene IO.
-void save_ybin_scene(const std::string& filename, const scene* scn,
+bool load_ybin_scene(const std::string& filename, scene*& scn,
+    bool load_textures, bool skip_missing) {
+    auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) return true;
+    fclose_guard fs_{fs};
+    scn = new scene();
+    if (!serialize_scene(scn, fs, false)) return false;
+    fclose(fs);
+    return false;
+}
+
+// Load/save a binary dump useful for very fast scene IO.
+bool save_ybin_scene(const std::string& filename, const scene* scn,
     bool save_textures, bool skip_missing) {
     auto fs = fopen(filename.c_str(), "wb");
-    if (!fs) throw std::runtime_error("could not open file " + filename);
-    serialize_scene((scene*)scn, fs, true);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
+    if (!serialize_scene((scene*)scn, fs, true)) return false;
     fclose(fs);
+    return true;
 }
 
 }  // namespace ygl
@@ -5032,37 +5301,56 @@ void save_ybin_scene(const std::string& filename, const scene* scn,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Reset mesh data
+void reset_mesh_data(std::vector<int>& points, std::vector<vec2i>& lines,
+    std::vector<vec3i>& triangles, std::vector<vec3f>& pos,
+    std::vector<vec3f>& norm, std::vector<vec2f>& texcoord,
+    std::vector<vec4f>& color, std::vector<float>& radius) {
+    points    = {};
+    lines     = {};
+    triangles = {};
+    pos       = {};
+    norm      = {};
+    texcoord  = {};
+    color     = {};
+    radius    = {};
+}
+
 // Load ply mesh
-void load_mesh(const std::string& filename, std::vector<int>& points,
+bool load_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
     std::vector<float>& radius) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        load_ply_mesh(filename, points, lines, triangles, pos, norm, texcoord,
-            color, radius);
+        return load_ply_mesh(filename, points, lines, triangles, pos, norm,
+            texcoord, color, radius);
     } else if (ext == "obj" || ext == "OBJ") {
-        load_obj_mesh(filename, points, lines, triangles, pos, norm, texcoord);
+        return load_obj_mesh(
+            filename, points, lines, triangles, pos, norm, texcoord);
     } else {
-        throw std::runtime_error("unsupported mesh extensions " + ext);
+        reset_mesh_data(
+            points, lines, triangles, pos, norm, texcoord, color, radius);
+        return false;
     }
 }
 
 // Save ply mesh
-void save_mesh(const std::string& filename, const std::vector<int>& points,
+bool save_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        save_ply_mesh(filename, points, lines, triangles, pos, norm, texcoord,
-            color, radius, ascii);
+        return save_ply_mesh(filename, points, lines, triangles, pos, norm,
+            texcoord, color, radius, ascii);
     } else if (ext == "obj" || ext == "OBJ") {
-        save_obj_mesh(filename, points, lines, triangles, pos, norm, texcoord);
+        return save_obj_mesh(
+            filename, points, lines, triangles, pos, norm, texcoord);
     } else {
-        throw std::runtime_error("unsupported mesh extensions " + ext);
+        return false;
     }
 }
 
@@ -5079,12 +5367,23 @@ void normalize_ply_line(char* s) {
 
 // Load ply mesh
 ply_data load_ply(const std::string& filename) {
+    auto ply = ply_data{};
+    if (!load_ply(filename, ply)) return {};
+    return ply;
+}
+
+// Load ply mesh
+bool load_ply(const std::string& filename, ply_data& ply) {
+    // clear
+    ply = {};
+
+    // open file
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) throw std::runtime_error("could not open file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // parse header
     auto ascii = false;
-    auto ply   = ply_data();
     char line[4096];
     while (fgets(line, sizeof(line), fs)) {
         normalize_ply_line(line);
@@ -5095,8 +5394,7 @@ ply_data load_ply(const std::string& filename) {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
             auto fmt = parse_string(ss);
-            if (fmt != "ascii" && fmt != "binary_little_endian")
-                throw std::runtime_error("format not supported");
+            if (fmt != "ascii" && fmt != "binary_little_endian") return false;
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
             auto elem  = ply_element();
@@ -5121,7 +5419,7 @@ ply_data load_ply(const std::string& filename) {
             } else if (type == "int") {
                 prop.type = ply_type::ply_int;
             } else {
-                throw std::runtime_error("unsupported ply type");
+                return false;
             }
             prop.name = parse_string(ss);
             prop.scalars.resize(ply.elements.back().count);
@@ -5131,7 +5429,7 @@ ply_data load_ply(const std::string& filename) {
         } else if (cmd == "end_header") {
             break;
         } else {
-            throw std::runtime_error("command not supported " + cmd);
+            return false;
         }
     }
 
@@ -5140,8 +5438,7 @@ ply_data load_ply(const std::string& filename) {
         for (auto vid = 0; vid < elem.count; vid++) {
             auto ss = (char*)nullptr;
             if (ascii) {
-                if (!fgets(line, sizeof(line), fs))
-                    throw std::runtime_error("error reading ply");
+                if (!fgets(line, sizeof(line), fs)) return false;
                 ss = line;
             }
             for (auto pid = 0; pid < elem.properties.size(); pid++) {
@@ -5151,9 +5448,7 @@ ply_data load_ply(const std::string& filename) {
                     if (ascii) {
                         v = parse_float(ss);
                     } else {
-                        if (fread((char*)&v, 4, 1, fs) != 1)
-                            throw std::runtime_error(
-                                "problem reading " + filename);
+                        if (fread((char*)&v, 4, 1, fs) != 1) return false;
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_int) {
@@ -5161,9 +5456,7 @@ ply_data load_ply(const std::string& filename) {
                     if (ascii) {
                         v = parse_int(ss);
                     } else {
-                        if (fread((char*)&v, 4, 1, fs) != 1)
-                            throw std::runtime_error(
-                                "problem reading " + filename);
+                        if (fread((char*)&v, 4, 1, fs) != 1) return false;
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_uchar) {
@@ -5172,9 +5465,7 @@ ply_data load_ply(const std::string& filename) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (fread((char*)&vc, 1, 1, fs) != 1)
-                            throw std::runtime_error(
-                                "problem reading " + filename);
+                        if (fread((char*)&vc, 1, 1, fs) != 1) return false;
                     }
                     prop.scalars[vid] = vc / 255.0f;
                 } else if (prop.type == ply_type::ply_int_list) {
@@ -5183,9 +5474,7 @@ ply_data load_ply(const std::string& filename) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (fread((char*)&vc, 1, 1, fs) != 1)
-                            throw std::runtime_error(
-                                "problem reading " + filename);
+                        if (fread((char*)&vc, 1, 1, fs) != 1) return false;
                     }
                     prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
@@ -5193,11 +5482,10 @@ ply_data load_ply(const std::string& filename) {
                             prop.lists[vid][i] = parse_int(ss);
                         } else {
                             if (fread((char*)&prop.lists[vid][i], 4, 1, fs) != 1)
-                                throw std::runtime_error(
-                                    "problem reading " + filename);
+                                return false;
                         }
                 } else {
-                    throw std::runtime_error("unsupported ply type");
+                    return false;
                 }
             }
         }
@@ -5205,26 +5493,22 @@ ply_data load_ply(const std::string& filename) {
 
     fclose(fs);
 
-    return ply;
+    return true;
 }
 
 // Load ply mesh
-void load_ply_mesh(const std::string& filename, std::vector<int>& points,
+bool load_ply_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
     std::vector<float>& radius) {
-    // clear data
-    pos.clear();
-    norm.clear();
-    texcoord.clear();
-    color.clear();
-    radius.clear();
-    points.clear();
-    lines.clear();
-    triangles.clear();
+    // clear
+    reset_mesh_data(
+        points, lines, triangles, pos, norm, texcoord, color, radius);
 
-    auto ply = load_ply(filename);
+    // load ply
+    auto ply = ply_data{};
+    if (!load_ply(filename, ply)) return false;
 
     // copy vertex data
     for (auto& elem : ply.elements) {
@@ -5272,16 +5556,20 @@ void load_ply_mesh(const std::string& filename, std::vector<int>& points,
             }
         }
     }
+
+    // done
+    return true;
 }
 
 // Save ply mesh
-void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
+bool save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii) {
     auto fs = fopen(filename.c_str(), "wb");
-    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
 
     // header
     fprintf(fs, "ply\n");
@@ -5363,19 +5651,21 @@ void save_ply_mesh(const std::string& filename, const std::vector<int>& points,
 
     // done
     fclose(fs);
+
+    // done
+    return true;
 }
 
 // Load ply mesh
-void load_obj_mesh(const std::string& filename, std::vector<int>& points,
+bool load_obj_mesh(const std::string& filename, std::vector<int>& points,
     std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
     std::vector<vec3f>& pos, std::vector<vec3f>& norm,
     std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    pos.clear();
-    norm.clear();
-    texcoord.clear();
-    points.clear();
-    lines.clear();
-    triangles.clear();
+    // clear
+    auto color  = std::vector<vec4f>{};
+    auto radius = std::vector<float>{};
+    reset_mesh_data(
+        points, lines, triangles, pos, norm, texcoord, color, radius);
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -5421,16 +5711,18 @@ void load_obj_mesh(const std::string& filename, std::vector<int>& points,
     };
 
     // load obj
-    load_obj(filename, cb, flip_texcoord);
+    return load_obj(filename, cb, flip_texcoord);
 }
 
 // Load ply mesh
-void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
+bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
     auto fs = fopen(filename.c_str(), "wt");
-    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
+
     for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
     for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
     for (auto& t : texcoord)
@@ -5447,7 +5739,9 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
         fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
             to_string(vert(l.y)).c_str());
     for (auto& p : points) fprintf(fs, "p %s\n", to_string(vert(p)).c_str());
+
     fclose(fs);
+    return true;
 }
 
 }  // namespace ygl
@@ -5457,23 +5751,40 @@ void save_obj_mesh(const std::string& filename, const std::vector<int>& points,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Reset mesh data
+void reset_fvmesh_data(std::vector<vec4i>& quads_pos, std::vector<vec3f>& pos,
+    std::vector<vec4i>& quads_norm, std::vector<vec3f>& norm,
+    std::vector<vec4i>& quads_texcoord, std::vector<vec2f>& texcoord,
+    std::vector<vec4i>& quads_color, std::vector<vec4f>& color) {
+    quads_pos      = {};
+    pos            = {};
+    quads_norm     = {};
+    norm           = {};
+    quads_texcoord = {};
+    texcoord       = {};
+    quads_color    = {};
+    color          = {};
+}
+
 // Load mesh
-void load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+bool load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, std::vector<vec4i>& quads_color,
     std::vector<vec4f>& color) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        load_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
+        return load_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
             quads_texcoord, texcoord);
     } else {
-        throw std::runtime_error("unsupported mesh extensions " + ext);
+        reset_fvmesh_data(quads_pos, pos, quads_norm, norm, quads_texcoord,
+            texcoord, quads_color, color);
+        return false;
     }
 }
 
 // Save mesh
-void save_fvmesh(const std::string& filename,
+bool save_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
@@ -5481,24 +5792,23 @@ void save_fvmesh(const std::string& filename,
     const std::vector<vec4f>& color, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        save_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
+        return save_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
             quads_texcoord, texcoord);
     } else {
-        throw std::runtime_error("unsupported mesh extensions " + ext);
+        return false;
     }
 }
 
 // Load obj mesh
-void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
+bool load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
     std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
     std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    pos.clear();
-    norm.clear();
-    texcoord.clear();
-    quads_pos.clear();
-    quads_norm.clear();
-    quads_texcoord.clear();
+    // clear
+    std::vector<vec4i> quads_color;
+    std::vector<vec4f> color;
+    reset_fvmesh_data(quads_pos, pos, quads_norm, norm, quads_texcoord,
+        texcoord, quads_color, color);
 
     // obj vertex
     auto opos      = std::deque<vec3f>();
@@ -5585,17 +5895,19 @@ void load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     };
 
     // load obj
-    load_obj(filename, cb, flip_texcoord);
+    return load_obj(filename, cb, flip_texcoord);
 }
 
 // Load ply mesh
-void save_obj_fvmesh(const std::string& filename,
+bool save_obj_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
     auto fs = fopen(filename.c_str(), "wt");
-    if (!fs) throw std::runtime_error("cannot save file " + filename);
+    if (!fs) return false;
+    fclose_guard fs_{fs};
+
     for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
     for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
     for (auto& t : texcoord)
@@ -5622,7 +5934,9 @@ void save_obj_fvmesh(const std::string& filename,
                 to_string(vert(qp.y, qt.y, qn.y)).c_str(),
                 to_string(vert(qp.z, qt.z, qn.z)).c_str());
     }
+
     fclose(fs);
+    return true;
 }
 
 }  // namespace ygl

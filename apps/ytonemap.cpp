@@ -36,8 +36,7 @@ int main(int argc, char* argv[]) {
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
     auto filmic   = parse_arg(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto srgb   = parse_arg(
-        parser, "--srgb", true, "Tonemap uses sRGB encoding");
+    auto srgb = parse_arg(parser, "--srgb", true, "Tonemap uses sRGB encoding");
     auto output = parse_arg(
         parser, "--output,-o", "out.png", "output image filename", true);
     auto filename = parse_arg(
