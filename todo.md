@@ -5,12 +5,6 @@ Please consider this to be just development notes and not any real planning.
 
 ## Next features
 
-- io without exception in the interface
-    - load/save that take error code as param
-    - eventually we witch to std::expected
-- add back texture info
-    - helps mapping from files
-    - helps with reuse of volume textures
 - images
     - need to preserve color space to be able to properly work on images
     - for now, focus on srgb primaries, but start porting other spaces too
