@@ -131,12 +131,8 @@ int main(int argc, char* argv[]) {
     cb.material = [&](auto&) { nmaterials += 1; };
 
     // parse and write
-    try {
-        load_obj(filename, cb, false, false);
-    } catch (std::exception& e) {
-        printf("could not load obj %s\nerror: %s\n", filename.c_str(), e.what());
-        exit(1);
-    }
+    if (!load_obj(filename, cb, false, false))
+        exit_error("could not load obj " + filename);
 
     // print info
     if (print_info) {

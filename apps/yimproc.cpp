@@ -157,17 +157,14 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = image<vec4f>();
-    try {
-        img = load_image4f(filename);
-    } catch (std::exception& e) {
-        printf("cannot load image %s\n", filename.c_str());
-        printf("error: %s\n", e.what());
-        exit(1);
-    }
+    if (!load_image4f(filename, img))
+        exit_error("cannot load image " + filename);
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = load_image4f(alpha_filename);
+        auto alpha = image<vec4f>();
+        if (!load_image4f(alpha_filename, alpha))
+            exit_error("cannot load image " + alpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
             printf("bad image size\n");
             exit(1);
@@ -179,7 +176,9 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = load_image4f(coloralpha_filename);
+        auto alpha = image<vec4f>();
+        if (!load_image4f(coloralpha_filename, alpha))
+            exit_error("cannot load image " + coloralpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
             printf("bad image size\n");
             exit(1);
@@ -203,13 +202,7 @@ int main(int argc, char* argv[]) {
     if (tonemap) img = tonemap_filmic(img, exposure, filmic, srgb);
 
     // save
-    try {
-        save_image4f(output, img);
-    } catch (std::exception& e) {
-        printf("cannot save image %s\n", output.c_str());
-        printf("error: %s\n", e.what());
-        exit(1);
-    }
+    if (!save_image4f(output, img)) exit_error("cannot save image " + output);
 
     // done
     return 0;

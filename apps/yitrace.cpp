@@ -75,8 +75,9 @@ void draw_glwidgets(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "trace")) {
-            draw_label_glwidgets(win, "image", "%d x %d @ %d", app->state->img.size().x,
-                app->state->img.size().y, app->state->sample);
+            draw_label_glwidgets(win, "image", "%d x %d @ %d",
+                app->state->img.size().x, app->state->img.size().y,
+                app->state->sample);
             auto cam_names = std::vector<std::string>();
             for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
             auto edited = 0;
@@ -288,13 +289,8 @@ int main(int argc, char* argv[]) {
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     auto load_start = get_time();
-    try {
-        app->scn = load_scene(app->filename);
-    } catch (const std::exception& e) {
-        printf("cannot load scene %s\n", app->filename.c_str());
-        printf("error: %s\n", e.what());
-        exit(1);
-    }
+    if (!load_scene(app->filename, app->scn))
+        exit_error("cannot load scene " + app->filename);
     if (!quiet)
         printf("loading in %s\n",
             format_duration(get_time() - load_start).c_str());

@@ -135,8 +135,8 @@ void draw(glwindow* win) {
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "edges", app->edges);
             if (app->time_range != zero2f) {
-                draw_slider_glwidget(
-                    win, "time", app->time, app->time_range.x, app->time_range.y);
+                draw_slider_glwidget(win, "time", app->time, app->time_range.x,
+                    app->time_range.y);
                 draw_inputtext_glwidget(win, "anim group", app->anim_group);
                 draw_checkbox_glwidget(win, "animate", app->animate);
             }
@@ -627,7 +627,8 @@ draw_glstate* init_draw_state(glwindow* win) {
         if (!txt->imgf.empty()) {
             state->txt_id[txt] = make_gltexture(txt->imgf, true, true, true);
         } else if (!txt->imgb.empty()) {
-            state->txt_id[txt] = make_gltexture(txt->imgb, txt->srgb, true, true);
+            state->txt_id[txt] = make_gltexture(
+                txt->imgb, txt->srgb, true, true);
         } else {
             printf("bad texture");
         }
@@ -775,13 +776,8 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
-    try {
-        app->scn = load_scene(app->filename);
-    } catch (const std::exception& e) {
-        printf("cannot load scene %s\n", app->filename.c_str());
-        printf("error: %s\n", e.what());
-        exit(1);
-    }
+    if (!load_scene(app->filename, app->scn))
+        exit_error("cannot load scene " + app->filename);
 
     // tesselate
     if (!quiet) printf("tesselating scene elements\n");
@@ -792,10 +788,6 @@ int main(int argc, char* argv[]) {
     if (double_sided) {
         for (auto mat : app->scn->materials) mat->double_sided = true;
     }
-    if (app->scn->cameras.empty())
-        app->scn->cameras.push_back(
-            make_bbox_camera("<view>", compute_bbox(app->scn)));
-    add_missing_names(app->scn);
     for (auto& err : validate(app->scn)) printf("warning: %s\n", err.c_str());
 
     // animation

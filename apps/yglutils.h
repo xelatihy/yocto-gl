@@ -47,11 +47,13 @@ void set_glwireframe(bool enabled);
 uint make_glprogram(const char* vertex, const char* fragment);
 void bind_glprogram(uint pid);
 
-uint make_gltexture(const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
+uint make_gltexture(
+    const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
 void update_gltexture(
     int tid, const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
 
-uint make_gltexture(const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
+uint make_gltexture(
+    const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
 void update_gltexture(
     int tid, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
 
@@ -141,7 +143,8 @@ bool begin_glwidgets_window(glwindow* win, const char* title);
 bool begin_header_glwidget(glwindow* win, const char* title);
 void end_header_glwidget(glwindow* win);
 
-void draw_label_glwidgets(glwindow* win, const char* lbl, const std::string& txt);
+void draw_label_glwidgets(
+    glwindow* win, const char* lbl, const std::string& txt);
 void draw_label_glwidgets(glwindow* win, const char* lbl, const char* fmt, ...);
 
 bool begin_header_widget(glwindow* win, const char* label);
