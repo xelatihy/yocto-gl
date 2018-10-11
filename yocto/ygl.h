@@ -2590,15 +2590,6 @@ inline vec4f tonemap_filmic(
     return ldr;
 }
 
-// Apply lift-gamma-gain color correction.
-inline vec3f apply_lift_gamma_gain(const vec3f& col) { }
-
-// Apply saturation (set in range [0-1]).
-inline vec3f apply_saturation(const vec3f& col, float saturation) { }
-
-// Apply s-shaped contrast using Schlick formulation as gain.
-inline vec3f apply_contrast(const vec3f& col, float contrast) { }
-
 // Converts HSV to RGB.
 vec3f hsv_to_rgb(const vec3f& hsv);
 vec3f rgb_to_hsv(const vec3f& rgb);
