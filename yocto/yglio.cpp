@@ -96,32 +96,10 @@ using namespace std::string_literals;
 #endif
 
 // -----------------------------------------------------------------------------
-// GENERAL UTILITIES FOR CLI APPLICATIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Exit to the console with an error.
-void exit_error(const std::string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Converts a string from printf formats. Unsafe: works only for short strings.
-std::string format_str(const char* fmt, ...) {
-    char    buf[4096];
-    va_list args;
-    va_start(args, fmt);
-    vsprintf(buf, fmt, args);
-    va_end(args);
-    return buf;
-}
 // Format duration string from nanoseconds
 std::string format_duration(int64_t duration) {
     auto elapsed = duration / 1000000;  // milliseconds
@@ -3035,51 +3013,34 @@ bool save_mtl(
 
     // for each material, dump all the values
     for (auto mat : scn->materials) {
-        fprintf(fs, "newmtl %s\n", mat->name.c_str());
-        fprintf(fs, "  illum 2\n");
-        if (mat->ke != zero3f)
-            fprintf(fs, "  Ke %g %g %g\n", mat->ke.x, mat->ke.y, mat->ke.z);
-        if (mat->kd != zero3f)
-            fprintf(fs, "  Kd %g %g %g\n", mat->kd.x, mat->kd.y, mat->kd.z);
-        if (mat->ks != zero3f)
-            fprintf(fs, "  Ks %g %g %g\n", mat->ks.x, mat->ks.y, mat->ks.z);
-        if (mat->kt != zero3f)
-            fprintf(fs, "  Kt %g %g %g\n", mat->kt.x, mat->kt.y, mat->kt.z);
+        print(fs, "newmtl {}\n", mat->name);
+        print(fs, "  illum 2\n");
+        if (mat->ke != zero3f) print(fs, "  Ke {}\n", mat->ke);
+        if (mat->kd != zero3f) print(fs, "  Kd {}\n", mat->kd);
+        if (mat->ks != zero3f) print(fs, "  Ks {}\n", mat->ks);
+        if (mat->kt != zero3f) print(fs, "  Kt {}\n", mat->kt);
         if (mat->rs != 1.0f)
-            fprintf(fs, "  Ns %d\n",
+            print(fs, "  Ns {}\n",
                 (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f));
-        if (mat->op != 1.0f) fprintf(fs, "  d %g\n", mat->op);
-        if (mat->rs != -1.0f) fprintf(fs, "  Pr %g\n", mat->rs);
-        if (mat->ke_txt)
-            fprintf(fs, "  map_Ke %s\n", mat->ke_txt->path.c_str());
-        if (mat->kd_txt)
-            fprintf(fs, "  map_Kd %s\n", mat->kd_txt->path.c_str());
-        if (mat->ks_txt)
-            fprintf(fs, "  map_Ks %s\n", mat->ks_txt->path.c_str());
-        if (mat->kt_txt)
-            fprintf(fs, "  map_Kt %s\n", mat->kt_txt->path.c_str());
+        if (mat->op != 1.0f) print(fs, "  d {}\n", mat->op);
+        if (mat->rs != -1.0f) print(fs, "  Pr {}\n", mat->rs);
+        if (mat->ke_txt) print(fs, "  map_Ke {}\n", mat->ke_txt->path);
+        if (mat->kd_txt) print(fs, "  map_Kd {}\n", mat->kd_txt->path);
+        if (mat->ks_txt) print(fs, "  map_Ks {}\n", mat->ks_txt->path);
+        if (mat->kt_txt) print(fs, "  map_Kt {}\n", mat->kt_txt->path);
         if (mat->op_txt && mat->op_txt != mat->kd_txt)
-            fprintf(fs, "  map_d  %s\n", mat->op_txt->path.c_str());
-        if (mat->rs_txt)
-            fprintf(fs, "  map_Pr %s\n", mat->rs_txt->path.c_str());
-        if (mat->occ_txt)
-            fprintf(fs, "  map_occ %s\n", mat->occ_txt->path.c_str());
-        if (mat->bump_txt)
-            fprintf(fs, "  map_bump %s\n", mat->bump_txt->path.c_str());
-        if (mat->disp_txt)
-            fprintf(fs, "  map_disp %s\n", mat->disp_txt->path.c_str());
-        if (mat->norm_txt)
-            fprintf(fs, "  map_norm %s\n", mat->norm_txt->path.c_str());
-        if (mat->ve != zero3f)
-            fprintf(fs, "  Ve %g %g %g\n", mat->ve.x, mat->ve.y, mat->ve.z);
-        if (mat->vd != zero3f)
-            fprintf(fs, "  Vd %g %g %g\n", mat->vd.x, mat->vd.y, mat->vd.z);
-        if (mat->va != zero3f)
-            fprintf(fs, "  Va %g %g %g\n", mat->va.x, mat->va.y, mat->va.z);
-        if (mat->vg != 0) fprintf(fs, "  Vg %g\n", mat->vg);
-        if (mat->vd_txt)
-            fprintf(fs, "  map_Vd %s\n", mat->vd_txt->path.c_str());
-        fprintf(fs, "\n");
+            print(fs, "  map_d  {}\n", mat->op_txt->path);
+        if (mat->rs_txt) print(fs, "  map_Pr {}\n", mat->rs_txt->path);
+        if (mat->occ_txt) print(fs, "  map_occ {}\n", mat->occ_txt->path);
+        if (mat->bump_txt) print(fs, "  map_bump {}\n", mat->bump_txt->path);
+        if (mat->disp_txt) print(fs, "  map_disp {}\n", mat->disp_txt->path);
+        if (mat->norm_txt) print(fs, "  map_norm {}\n", mat->norm_txt->path);
+        if (mat->ve != zero3f) print(fs, "  Ve {}\n", mat->ve);
+        if (mat->vd != zero3f) print(fs, "  Vd {}\n", mat->vd);
+        if (mat->va != zero3f) print(fs, "  Va {}\n", mat->va);
+        if (mat->vg != 0) print(fs, "  Vg {}\n", mat->vg);
+        if (mat->vd_txt) print(fs, "  map_Vd {}\n", mat->vd_txt->path);
+        print(fs, "\n");
     }
 
     // done
@@ -3095,23 +3056,14 @@ bool save_objx(const std::string& filename, const scene* scn) {
 
     // cameras
     for (auto cam : scn->cameras) {
-        fprintf(fs, "c %s %d %g %g %g %g %g ", cam->name.c_str(),
-            (int)cam->ortho, cam->film.x, cam->film.y, cam->focal, cam->focus,
-            cam->aperture);
-        fprintf(fs, "%g %g %g %g %g %g %g %g %g %g %g %g\n", cam->frame.x.x,
-            cam->frame.x.y, cam->frame.x.z, cam->frame.y.x, cam->frame.y.y,
-            cam->frame.y.z, cam->frame.z.x, cam->frame.z.y, cam->frame.z.z,
-            cam->frame.o.x, cam->frame.o.y, cam->frame.o.z);
+        print(fs, "c {} {} {} {} {} {} {}\n", cam->name, (int)cam->ortho,
+            cam->film, cam->focal, cam->focus, cam->aperture, cam->frame);
     }
 
     // environments
     for (auto env : scn->environments) {
-        fprintf(fs, "e %s %g %g %g %s ", env->name.c_str(), env->ke.x, env->ke.y,
-            env->ke.z, ((env->ke_txt) ? env->ke_txt->path.c_str() : "\"\""));
-        fprintf(fs, "%g %g %g %g %g %g %g %g %g %g %g %g\n", env->frame.x.x,
-            env->frame.x.y, env->frame.x.z, env->frame.y.x, env->frame.y.y,
-            env->frame.y.z, env->frame.z.x, env->frame.z.y, env->frame.z.z,
-            env->frame.o.x, env->frame.o.y, env->frame.o.z);
+        print(fs, "e {} {} {} {}\n", env->name.c_str(), env->ke,
+            ((env->ke_txt) ? env->ke_txt->path.c_str() : "\"\""), env->frame);
     }
 
     // done
@@ -3140,35 +3092,31 @@ bool save_obj(
     // material library
     if (!scn->materials.empty()) {
         auto mtlname = replace_extension(get_filename(filename), "mtl");
-        fprintf(fs, "mtllib %s\n", mtlname.c_str());
+        print(fs, "mtllib {}\n", mtlname);
     }
 
     // shapes
     auto offset = obj_vertex{0, 0, 0};
     for (auto ist : scn->instances) {
         if (!ist->sbd) {
-            fprintf(fs, "o %s\n", ist->name.c_str());
-            if (ist->mat) fprintf(fs, "usemtl %s\n", ist->mat->name.c_str());
+            print(fs, "o {}\n", ist->name);
+            if (ist->mat) print(fs, "usemtl {}\n", ist->mat->name);
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->shp->pos)
-                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
-                for (auto& n : ist->shp->norm)
-                    fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+                for (auto& p : ist->shp->pos) print(fs, "v {}\n", p);
+                for (auto& n : ist->shp->norm) print(fs, "vn {}\n", n);
                 for (auto& t : ist->shp->texcoord)
-                    fprintf(
-                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+                    print(fs, "vt {}\n",
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
                 for (auto& pp : ist->shp->pos) {
-                    auto p = transform_point(ist->frame, pp);
-                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                    print(fs, "v {}\n", transform_point(ist->frame, pp));
                 }
                 for (auto& nn : ist->shp->norm) {
-                    auto n = transform_direction(ist->frame, nn);
-                    fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+                    print(fs, "vn {}\n", transform_direction(ist->frame, nn));
                 }
                 for (auto& t : ist->shp->texcoord)
-                    fprintf(
-                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+                    print(fs, "vt {}\n",
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
             auto mask = obj_vertex{1, ist->shp->texcoord.empty() ? 0 : 1,
                 ist->shp->norm.empty() ? 0 : 1};
@@ -3178,33 +3126,32 @@ bool save_obj(
                     (i + offset.norm + 1) * mask.norm};
             };
             for (auto& t : ist->shp->triangles) {
-                fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
-                    to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+                print(fs, "f {} {} {}\n", to_string(vert(t.x)),
+                    to_string(vert(t.y)), to_string(vert(t.z)));
             }
             for (auto& l : ist->shp->lines) {
-                fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
-                    to_string(vert(l.y)).c_str());
+                print(fs, "l {} {}\n", to_string(vert(l.x)),
+                    to_string(vert(l.y)));
             }
             offset.pos += ist->shp->pos.size();
             offset.texcoord += ist->shp->texcoord.size();
             offset.norm += ist->shp->norm.size();
         } else {
-            fprintf(fs, "o %s\n", ist->name.c_str());
-            if (ist->mat) fprintf(fs, "usemtl %s\n", ist->mat->name.c_str());
+            print(fs, "o {}\n", ist->name);
+            if (ist->mat) print(fs, "usemtl {}\n", ist->mat->name);
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->sbd->pos)
-                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                for (auto& p : ist->sbd->pos) print(fs, "v {}\n", p);
                 for (auto& t : ist->sbd->texcoord)
-                    fprintf(
-                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+                    print(fs, "vt {}\n",
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
                 for (auto& pp : ist->sbd->pos) {
                     auto p = transform_point(ist->frame, pp);
-                    fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
+                    print(fs, "v {}\n", p);
                 }
                 for (auto& t : ist->sbd->texcoord)
-                    fprintf(
-                        fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+                    print(fs, "vt {}\n",
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
             if (!ist->sbd->texcoord.empty()) {
                 auto vert = [offset](int ip, int it) {
@@ -3215,16 +3162,14 @@ bool save_obj(
                     auto qp = ist->sbd->quads_pos[i];
                     auto qt = ist->sbd->quads_texcoord[i];
                     if (qp.z == qp.w) {
-                        fprintf(fs, "f %s %s %s\n",
-                            to_string(vert(qp.x, qt.x)).c_str(),
-                            to_string(vert(qp.y, qt.y)).c_str(),
-                            to_string(vert(qp.z, qt.z)).c_str());
+                        print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
+                            to_string(vert(qp.y, qt.y)),
+                            to_string(vert(qp.z, qt.z)));
                     } else {
-                        fprintf(fs, "f %s %s %s %s\n",
-                            to_string(vert(qp.x, qt.x)).c_str(),
-                            to_string(vert(qp.y, qt.y)).c_str(),
-                            to_string(vert(qp.z, qt.z)).c_str(),
-                            to_string(vert(qp.w, qt.w)).c_str());
+                        print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qt.x)),
+                            to_string(vert(qp.y, qt.y)),
+                            to_string(vert(qp.z, qt.z)),
+                            to_string(vert(qp.w, qt.w)));
                     }
                 }
             } else {
@@ -3233,15 +3178,12 @@ bool save_obj(
                 };
                 for (auto& q : ist->sbd->quads_pos) {
                     if (q.z == q.w) {
-                        fprintf(fs, "f %s %s %s\n", to_string(vert(q.x)).c_str(),
-                            to_string(vert(q.y)).c_str(),
-                            to_string(vert(q.z)).c_str());
+                        print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                            to_string(vert(q.y)), to_string(vert(q.z)));
                     } else {
-                        fprintf(fs, "f %s %s %s %s\n",
-                            to_string(vert(q.x)).c_str(),
-                            to_string(vert(q.y)).c_str(),
-                            to_string(vert(q.z)).c_str(),
-                            to_string(vert(q.w)).c_str());
+                        print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                            to_string(vert(q.y)), to_string(vert(q.z)),
+                            to_string(vert(q.w)));
                     }
                 }
             }
@@ -4818,70 +4760,64 @@ WorldEnd
     auto from = cam->frame.o;
     auto to   = cam->frame.o - cam->frame.z;
     auto up   = cam->frame.y;
-    fprintf(fs, "LookAt %g %g %g %g %g %g %g %g %g\n", from.x, from.y, from.z,
-        to.x, to.y, to.z, up.x, up.y, up.z);
-    fprintf(fs, "Camera \"perspective\" \"float fov\" %g\n",
+    print(fs, "LookAt {} {} {}\n", from, to, up);
+    print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         eval_camera_fovy(cam) * 180 / pif);
 
     // save renderer
-    fprintf(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    print(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
-    fprintf(fs, "Integrator \"path\"\n");
-    fprintf(fs,
-        "Film \"image\" \"string filename\" [\"%s\"] "
-        "\"integer xresolution\" [%d] \"integer yresolution\" [%d]\n",
-        replace_extension(filename, "exr").c_str(), eval_image_size(cam, 512).x,
+    print(fs, "Integrator \"path\"\n");
+    print(fs,
+        "Film \"image\" \"string filename\" [\"{}\"] "
+        "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
+        replace_extension(filename, "exr"), eval_image_size(cam, 512).x,
         eval_image_size(cam, 512).y);
 
     // start world
-    fprintf(fs, "WorldBegin\n");
+    print(fs, "WorldBegin\n");
 
     // convert textures
     for (auto txt : scn->textures) {
-        fprintf(fs,
-            "Texture \"%s\" \"spectrum\" \"imagemap\" "
-            "\"string filename\" [\"%s\"]\n",
-            txt->name.c_str(), txt->path.c_str());
+        print(fs,
+            "Texture \"{}\" \"spectrum\" \"imagemap\" "
+            "\"string filename\" [\"{}\"]\n",
+            txt->name, txt->path);
     }
 
     // convert materials
     for (auto mat : scn->materials) {
-        fprintf(fs, "MakeNamedMaterial \"%s\" ", mat->name.c_str());
-        fprintf(fs, "\"string type\" \"%s\" ", "uber");
+        print(fs, "MakeNamedMaterial \"{}\" ", mat->name);
+        print(fs, "\"string type\" \"{}\" ", "uber");
         if (mat->kd_txt)
-            fprintf(fs, "\"texture Kd\" [\"%s\"] ", mat->kd_txt->name.c_str());
+            print(fs, "\"texture Kd\" [\"{}\"] ", mat->kd_txt->name);
         else
-            fprintf(
-                fs, "\"rgb Kd\" [%g %g %g] ", mat->kd.x, mat->kd.y, mat->kd.z);
+            print(fs, "\"rgb Kd\" [{}] ", mat->kd);
         if (mat->ks_txt)
-            fprintf(fs, "\"texture Ks\" [\"%s\"] ", mat->ks_txt->name.c_str());
+            print(fs, "\"texture Ks\" [\"{}\"] ", mat->ks_txt->name);
         else
-            fprintf(
-                fs, "\"rgb Ks\" [%g %g %g] ", mat->ks.x, mat->ks.y, mat->ks.z);
-        fprintf(fs, "\"float roughness\" [%g] ", mat->rs);
-        fprintf(fs, "\n");
+            print(fs, "\"rgb Ks\" [{}] ", mat->ks);
+        print(fs, "\"float roughness\" [{}] ", mat->rs);
+        print(fs, "\n");
     }
 
     // convert instances
     for (auto ist : scn->instances) {
-        fprintf(fs, "AttributeBegin\n");
-        fprintf(fs, "TransformBegin\n");
-        auto m = frame_to_mat(ist->frame);
-        fprintf(fs, "ConcatTransform [");
-        for (auto i = 0; i < 16; i++) fprintf(fs, " %g", (&m.x.x)[i]);
-        fprintf(fs, "]\n");
+        print(fs, "AttributeBegin\n");
+        print(fs, "TransformBegin\n");
+        print(fs, "ConcatTransform [{}]\n", frame_to_mat(ist->frame));
         if (ist->mat->ke != zero3f)
-            fprintf(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ %g %g %g ]\n",
-                ist->mat->ke.x, ist->mat->ke.y, ist->mat->ke.z);
-        fprintf(fs, "NamedMaterial \"%s\"\n", ist->mat->name.c_str());
-        fprintf(fs, "Shape \"plymesh\" \"string filename\" [\"%s\"]\n",
+            print(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ {} ]\n",
+                ist->mat->ke);
+        print(fs, "NamedMaterial \"{}\"\n", ist->mat->name);
+        print(fs, "Shape \"plymesh\" \"string filename\" [\"{}\"]\n",
             ist->shp->path.c_str());
-        fprintf(fs, "TransformEnd\n");
-        fprintf(fs, "AttributeEnd\n");
+        print(fs, "TransformEnd\n");
+        print(fs, "AttributeEnd\n");
     }
 
     // end world
-    fprintf(fs, "WorldEnd\n");
+    print(fs, "WorldEnd\n");
 
     // done
     fclose(fs);
@@ -5572,57 +5508,50 @@ bool save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     fclose_guard fs_{fs};
 
     // header
-    fprintf(fs, "ply\n");
+    print(fs, "ply\n");
     if (ascii)
-        fprintf(fs, "format ascii 1.0\n");
+        print(fs, "format ascii 1.0\n");
     else
-        fprintf(fs, "format binary_little_endian 1.0\n");
-    fprintf(fs, "element vertex %d\n", (int)pos.size());
+        print(fs, "format binary_little_endian 1.0\n");
+    print(fs, "element vertex {}\n", (int)pos.size());
     if (!pos.empty())
-        fprintf(fs, "property float x\nproperty float y\nproperty float z\n");
+        print(fs, "property float x\nproperty float y\nproperty float z\n");
     if (!norm.empty())
-        fprintf(fs,
+        print(fs,
             "property float nx\nproperty float ny\nproperty float "
             "nz\n");
-    if (!texcoord.empty()) fprintf(fs, "property float u\nproperty float v\n");
+    if (!texcoord.empty()) print(fs, "property float u\nproperty float v\n");
     if (!color.empty())
-        fprintf(fs,
+        print(fs,
             "property float red\nproperty float green\nproperty float "
             "blue\nproperty float alpha\n");
-    if (!radius.empty()) fprintf(fs, "property float radius\n");
+    if (!radius.empty()) print(fs, "property float radius\n");
     if (!triangles.empty()) {
-        fprintf(fs, "element face %d\n", (int)triangles.size());
-        fprintf(fs, "property list uchar int vertex_indices\n");
+        print(fs, "element face {}\n", (int)triangles.size());
+        print(fs, "property list uchar int vertex_indices\n");
     }
     if (!lines.empty()) {
-        fprintf(fs, "element line %d\n", (int)lines.size());
-        fprintf(fs, "property list uchar int vertex_indices\n");
+        print(fs, "element line {}\n", (int)lines.size());
+        print(fs, "property list uchar int vertex_indices\n");
     }
-    fprintf(fs, "end_header\n");
+    print(fs, "end_header\n");
 
     // body
     if (ascii) {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty())
-                fprintf(fs, "%g %g %g ", pos[i].x, pos[i].y, pos[i].z);
-            if (!norm.empty())
-                fprintf(fs, "%g %g %g ", norm[i].x, norm[i].y, norm[i].z);
-            if (!texcoord.empty())
-                fprintf(fs, "%g %g ", texcoord[i].x, texcoord[i].y);
-            if (!color.empty())
-                fprintf(fs, "%g %g %g %g ", color[i].x, color[i].y, color[i].z,
-                    color[i].w);
-            if (!radius.empty()) fprintf(fs, "%g ", radius[i]);
-            fprintf(fs, "\n");
+            if (!pos.empty()) print(fs, "{} ", pos[i]);
+            if (!norm.empty()) print(fs, "{} ", norm[i]);
+            if (!texcoord.empty()) print(fs, "{} ", texcoord[i]);
+            if (!color.empty()) print(fs, "{} ", color[i]);
+            if (!radius.empty()) print(fs, "{} ", radius[i]);
+            print(fs, "\n");
         }
 
         // write face data
         for (auto i = 0; i < triangles.size(); i++)
-            fprintf(fs, "3 %d %d %d\n", triangles[i].x, triangles[i].y,
-                triangles[i].z);
-        for (auto i = 0; i < lines.size(); i++)
-            fprintf(fs, "2 %d %d\n", lines[i].x, lines[i].y);
+            print(fs, "3 {}\n", triangles[i]);
+        for (auto i = 0; i < lines.size(); i++) print(fs, "2 {}\n", lines[i]);
     } else {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
@@ -5723,22 +5652,22 @@ bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     if (!fs) return false;
     fclose_guard fs_{fs};
 
-    for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
-    for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+    for (auto& p : pos) print(fs, "v {}\n", p);
+    for (auto& n : norm) print(fs, "vn {}\n", n);
     for (auto& t : texcoord)
-        fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+        print(fs, "vt {}\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
     auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int i) {
         return obj_vertex{
             (i + 1) * mask.pos, (i + 1) * mask.texcoord, (i + 1) * mask.norm};
     };
     for (auto& t : triangles)
-        fprintf(fs, "f %s %s %s\n", to_string(vert(t.x)).c_str(),
+        print(fs, "f {}\n", to_string(vert(t.x)).c_str(),
             to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
     for (auto& l : lines)
-        fprintf(fs, "l %s %s\n", to_string(vert(l.x)).c_str(),
+        print(fs, "l {}\n", to_string(vert(l.x)).c_str(),
             to_string(vert(l.y)).c_str());
-    for (auto& p : points) fprintf(fs, "p %s\n", to_string(vert(p)).c_str());
+    for (auto& p : points) print(fs, "p {}\n", to_string(vert(p)).c_str());
 
     fclose(fs);
     return true;

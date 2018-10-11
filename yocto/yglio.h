@@ -80,18 +80,49 @@
 
 #include <array>
 #include <chrono>
+#include <cstdio>
+#include <cstdlib>
 
 #ifndef YGL_FASTPARSE
 #define YGL_FASTPARSE 1
 #endif
 
 // -----------------------------------------------------------------------------
-// GENERAL UTILITIES FOR CLI APPLICATIONS
+// STRING/TIME UTILITIES FOR CLI APPLICATIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Formats a string `fmt` with values taken from `args`. Uses `{}` as
+// placeholder.
+template <typename... Args>
+inline std::string format(const std::string& fmt, const Args&... args);
+
+// Converts to string.
+template <typename T>
+inline std::string to_string(const T& val) {
+    return format("{}", val);
+}
+
+// Prints a formatted string to stdout or file.
+template <typename... Args>
+inline bool print(FILE* fs, const std::string& fmt, const Args&... args);
+template <typename... Args>
+inline bool print(const std::string& fmt, const Args&... args) {
+    return print(stdout, fmt, args...);
+}
+
+// Parse a list of space separated values.
+template <typename... Args>
+inline bool parse(const std::string& str, const Args&... args);
+template <typename... Args>
+inline bool parse(FILE* fs, const Args&... args);
+
 // Exit to the console with an error.
-void exit_error(const std::string& msg);
+template <typename... Args>
+inline void exit_error(const std::string& fmt, const Args&... args) {
+    print(fmt + "\n", args...);
+    exit(1);
+}
 
 }  // namespace ygl
 
@@ -112,8 +143,6 @@ inline int64_t get_time() {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Converts a string from printf formats. Unsafe: works only for short strings.
-std::string format_str(const char* fmt, ...);
 // Format duration string from nanoseconds
 std::string format_duration(int64_t duration);
 // Format a large integer number in human readable form
@@ -538,6 +567,287 @@ bool load_ply(const std::string& filename, ply_data& ply);
 
 // Load ply mesh with shortened API. Returns empty object on error.
 ply_data load_ply(const std::string& filename);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Prints basic types to string
+inline bool _print(std::string& str, const std::string& val) {
+    str += val;
+    return true;
+}
+inline bool _print(std::string& str, const char* val) {
+    str += val;
+    return true;
+}
+inline bool _print(std::string& str, int val) {
+    str += std::to_string(val);
+    return true;
+}
+inline bool _print(std::string& str, float val) {
+    str += std::to_string(val);
+    return true;
+}
+inline bool _print(std::string& str, double val) {
+    str += std::to_string(val);
+    return true;
+}
+
+// Prints basic types to stream
+inline bool _print(FILE* fs, const std::string& val) {
+    return fprintf(fs, "%s", val.c_str()) >= 0;
+}
+inline bool _print(FILE* fs, const char* val) {
+    return fprintf(fs, "%s", val) >= 0;
+}
+inline bool _print(FILE* fs, int val) { return fprintf(fs, "%d", val) >= 0; }
+inline bool _print(FILE* fs, float val) { return fprintf(fs, "%f", val) >= 0; }
+inline bool _print(FILE* fs, double val) {
+    return fprintf(fs, "%lf", val) >= 0;
+}
+
+// Print compound types
+template <typename Archive, typename T, size_t N>
+inline bool _print(Archive& ar, const std::array<T, N>& val) {
+    for (auto i = 0; i < N; i++) {
+        if (i) _print(ar, " ");
+        if (!_print(ar, val[i])) return false;
+    }
+    return true;
+}
+// Data acess
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const vec2<T>& v) {
+    return _print(ar, (std::array<T, 2>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const vec3<T>& v) {
+    return _print(ar, (std::array<T, 3>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const vec4<T>& v) {
+    return _print(ar, (std::array<T, 4>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const mat2<T>& v) {
+    return _print(ar, (std::array<T, 4>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const mat3<T>& v) {
+    return _print(ar, (std::array<T, 9>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const mat4<T>& v) {
+    return _print(ar, (std::array<T, 16>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const frame2<T>& v) {
+    return _print(ar, (std::array<T, 6>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const frame3<T>& v) {
+    return _print(ar, (std::array<T, 12>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const bbox1<T>& v) {
+    return _print(ar, (std::array<T, 1>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const bbox2<T>& v) {
+    return _print(ar, (std::array<T, 4>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const bbox3<T>& v) {
+    return _print(ar, (std::array<T, 6>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const bbox4<T>& v) {
+    return _print(ar, (std::array<T, 8>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const ray2<T>& v) {
+    return _print(ar, (std::array<T, 6>&)v);
+}
+template <typename Archive, typename T>
+inline bool _print(Archive& ar, const ray3<T>& v) {
+    return _print(ar, (std::array<T, 8>&)v);
+}
+
+// Prints a string.
+template <typename Archive>
+inline bool _print_next(Archive& ar, const std::string& fmt) {
+    return _print(ar, fmt);
+}
+template <typename Archive, typename Arg, typename... Args>
+inline bool _print_next(
+    Archive& ar, const std::string& fmt, const Arg& arg, const Args&... args) {
+    auto pos = fmt.find("{}");
+    if (pos == std::string::npos) return _print(ar, fmt);
+    if (!_print(ar, fmt.substr(0, pos))) return false;
+    if (!_print(ar, arg)) return false;
+    return _print_next(ar, fmt.substr(pos + 2), args...);
+}
+
+// Formats a string `fmt` with values taken from `args`. Uses `{}` as
+// placeholder.
+template <typename... Args>
+inline std::string format(const std::string& fmt, const Args&... args) {
+    auto str = std::string();
+    _print_next(str, fmt, args...);
+    return str;
+}
+
+// Prints a string.
+template <typename... Args>
+inline bool print(FILE* fs, const std::string& fmt, const Args&... args) {
+    return _print_next(fs, fmt, args...);
+}
+
+// Prints basic types to string
+inline bool _parse(char*& str, std::string& val) {
+    auto n = 0;
+    char buf[4096];
+    if (sscanf(str, "%4095s%n", buf, &n) != 1) return false;
+    val = buf;
+    str += n;
+    return true;
+}
+inline bool _parse(char*& str, int& val) {
+    auto n = 0;
+    if (sscanf(str, "%d%n", &val, &n) != 1) return false;
+    str += n;
+    return true;
+}
+inline bool _parse(char*& str, float& val) {
+    auto n = 0;
+    if (sscanf(str, "%f%n", &val, &n) != 1) return false;
+    str += n;
+    return true;
+}
+inline bool _parse(char*& str, double& val) {
+    auto n = 0;
+    if (sscanf(str, "%lf%n", &val, &n) != 1) return false;
+    str += n;
+    return true;
+}
+
+// Prints basic types to stream
+inline bool _parse(FILE* fs, std::string& val) {
+    char buf[4096];
+    if (fscanf(fs, "%4095s", buf) != 1) return false;
+    val = buf;
+    return true;
+}
+inline bool _parse(FILE* fs, int& val) { return fscanf(fs, "%d", &val) == 1; }
+inline bool _parse(FILE* fs, float& val) { return fscanf(fs, "%f", &val) == 1; }
+inline bool _parse(FILE* fs, double& val) {
+    return fscanf(fs, "%lf", &val) == 1;
+}
+
+// Print compound types
+template <typename Archive, typename T, size_t N>
+inline bool _parse(Archive& ar, std::array<T, N>& val) {
+    for (auto i = 0; i < N; i++) {
+        if (!_parse(ar, val[i])) return false;
+    }
+    return true;
+}
+// Data acess
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, vec2<T>& v) {
+    return _parse(ar, (std::array<T, 2>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, vec3<T>& v) {
+    return _parse(ar, (std::array<T, 3>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, vec4<T>& v) {
+    return _parse(ar, (std::array<T, 4>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, mat2<T>& v) {
+    return _parse(ar, (std::array<T, 4>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, mat3<T>& v) {
+    return _parse(ar, (std::array<T, 9>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, mat4<T>& v) {
+    return _parse(ar, (std::array<T, 16>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, frame2<T>& v) {
+    return _parse(ar, (std::array<T, 6>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, frame3<T>& v) {
+    return _parse(ar, (std::array<T, 12>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, bbox1<T>& v) {
+    return _parse(ar, (std::array<T, 1>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, bbox2<T>& v) {
+    return _parse(ar, (std::array<T, 4>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, bbox3<T>& v) {
+    return _parse(ar, (std::array<T, 6>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, bbox4<T>& v) {
+    return _parse(ar, (std::array<T, 8>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, ray2<T>& v) {
+    return _parse(ar, (std::array<T, 6>&)v);
+}
+template <typename Archive, typename T>
+inline bool _parse(Archive& ar, ray3<T>& v) {
+    return _parse(ar, (std::array<T, 8>&)v);
+}
+
+// Prints a string.
+template <typename Archive>
+inline bool _parse_next(Archive& ar, const std::string& fmt) {
+    return _parse(ar, fmt);
+}
+template <typename Archive, typename Arg, typename... Args>
+inline bool _parse_next(
+    Archive& ar, const std::string& fmt, const Arg& arg, const Args&... args) {
+    auto pos = fmt.find("{}");
+    if (pos == std::string::npos) return _print(ar, fmt);
+    if (!_print(ar, fmt.substr(0, pos))) return false;
+    if (!_print(ar, arg)) return false;
+    return _print_next(ar, fmt.substr(pos + 2), args...);
+}
+
+// Returns trus if this is white space
+inline bool _is_whitespace(const char* str) {
+    while (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') str++;
+    return *str == 0;
+}
+
+// Parse a list of space separated values.
+template <typename... Args>
+inline bool parse(const std::string& str, const Args&... args) {
+    auto str_ = str.c_str();
+    if (!_parse_next(str_, args...)) return false;
+    return _is_whitespace(str_);
+}
+
+// Parse a list of space separated values.
+template <typename... Args>
+inline bool parse(FILE* fs, const Args&... args) {
+    return _parse_next(fs, args...);
+}
 
 }  // namespace ygl
 
