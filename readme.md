@@ -30,7 +30,7 @@ Features include:
 - support for loading and saving Wavefront OBJ and Khronos glTF
 - fast, hackable, proprietary JSON format
 
-The current version is 0.6.0.
+The current version is 0.6.1.
 
 Yocto/GL is written in C++14 and compiles on OSX (clang from Xcode 9+),
 Linux (gcc 6+, clang 6+) and Windows (MSVC 2015, MSVC 2017). For compilation
