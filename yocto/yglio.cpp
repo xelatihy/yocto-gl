@@ -446,9 +446,9 @@ std::string parse_arg(cmdline_parser& parser, const std::string& name,
 }
 int parse_arg(cmdline_parser& parser, const std::string& name, int def,
     const std::string& usage, bool req) {
-    auto vals = parse_string(parser, name, std::to_string(def), usage, req, {});
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
     auto val  = def;
-    if (sscanf(vals.c_str(), "%d", &val) != 1) {
+    if (!parse(vals, val)) {
         parser.error += "bad value for " + name;
         return def;
     }
@@ -456,9 +456,9 @@ int parse_arg(cmdline_parser& parser, const std::string& name, int def,
 }
 float parse_arg(cmdline_parser& parser, const std::string& name, float def,
     const std::string& usage, bool req) {
-    auto vals = parse_string(parser, name, std::to_string(def), usage, req, {});
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
     auto val  = def;
-    if (sscanf(vals.c_str(), "%f", &val) != 1) {
+    if (!parse(vals, val)) {
         parser.error += "bad value for " + name;
         return def;
     }
@@ -466,10 +466,9 @@ float parse_arg(cmdline_parser& parser, const std::string& name, float def,
 }
 vec2f parse_arg(cmdline_parser& parser, const std::string& name,
     const vec2f& def, const std::string& usage, bool req) {
-    auto vals = parse_string(parser, name,
-        std::to_string(def.x) + " " + std::to_string(def.y), usage, req, {});
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
     auto val  = def;
-    if (sscanf(vals.c_str(), "%f %f", &val.x, &val.y) != 2) {
+    if (!parse(vals, val)) {
         parser.error += "bad value for " + name;
         return def;
     }
@@ -477,12 +476,9 @@ vec2f parse_arg(cmdline_parser& parser, const std::string& name,
 }
 vec3f parse_arg(cmdline_parser& parser, const std::string& name,
     const vec3f& def, const std::string& usage, bool req) {
-    auto vals = parse_string(parser, name,
-        std::to_string(def.x) + " " + std::to_string(def.y) + " " +
-            std::to_string(def.z),
-        usage, req, {});
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
     auto val  = def;
-    if (sscanf(vals.c_str(), "%f %f %f", &val.x, &val.y, &val.z) != 3) {
+    if (!parse(vals, val)) {
         parser.error += "bad value for " + name;
         return def;
     }
