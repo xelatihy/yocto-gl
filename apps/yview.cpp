@@ -516,7 +516,7 @@ void draw_glshape(const draw_glstate* state, const shape* shp,
     }
     if (!shp->lines.empty()) {
         set_gluniform(state->gl_prog, "elem_type", 2);
-        draw_glpoints(vbos.gl_lines, shp->lines.size());
+        draw_gllines(vbos.gl_lines, shp->lines.size());
     }
     if (!shp->triangles.empty()) {
         set_gluniform(state->gl_prog, "elem_type", 3);
