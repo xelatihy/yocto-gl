@@ -30,7 +30,7 @@ matrix:
         # sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
         # packages: ['g++-7', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
         sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-        packages: ['g++-7', 'ninja-build', 'cmake']
+        packages: ['g++-7', 'ninja-build']
 
   - os: linux
     compiler: clang
@@ -42,7 +42,7 @@ matrix:
         # sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
         # packages: ['g++-6', 'clang-5.0', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
         sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-        packages: ['g++-7', 'clang-5.0', 'ninja-build', 'cmake']
+        packages: ['g++-7', 'clang-5.0', 'ninja-build']
 
   - os: linux
     compiler: gcc
@@ -54,7 +54,7 @@ matrix:
         # sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
         # packages: ['g++-7', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
         sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-        packages: ['g++-8', 'ninja-build', 'cmake']
+        packages: ['g++-8', 'ninja-build']
 
 branches:
   only:
