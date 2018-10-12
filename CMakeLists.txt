@@ -1,11 +1,11 @@
-cmake_minimum_required (VERSION 3.5)
+cmake_minimum_required (VERSION 3.10)
 
 project (yocto-gl)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
 option(YOCTO_EMBREE "Use Intel's Embree raytracer" OFF)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
