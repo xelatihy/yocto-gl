@@ -656,6 +656,177 @@ std::vector<std::string> parse_args(cmdline_parser& parser,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// JSON UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Json alias
+using json = nlohmann::json;
+
+// Load a JSON object
+json load_json(const std::string& filename) {
+    auto txt = load_text(filename);
+    if (txt.empty()) return {};
+    try {
+        return json::parse(txt.begin(), txt.end());
+    } catch (...) {
+        log_io_error("could not parse json {}", filename);
+        return {};
+    }
+}
+
+// Save a JSON object
+bool save_json(const std::string& filename, const json& js) {
+    auto str = ""s;
+    try {
+        str = js.dump(4);
+    } catch (...) {
+        log_io_error("could not dump json {}", filename);
+        return false;
+    }
+    return save_text(filename, str);
+}
+
+template <typename T>
+inline void to_json(json& js, const vec2<T>& val) {
+    js = std::array<T, 2>{{val.x, val.y}};
+}
+template <typename T>
+inline void from_json(const json& js, vec2<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const vec3<T>& val) {
+    js = std::array<T, 3>{{val.x, val.y, val.z}};
+}
+template <typename T>
+inline void from_json(const json& js, vec3<T>& val) {
+    auto vala = js.get<std::array<T, 3>>();
+    val       = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const vec4<T>& val) {
+    js = std::array<T, 4>{{val.x, val.y, val.z, val.w}};
+}
+template <typename T>
+inline void from_json(const json& js, vec4<T>& val) {
+    auto vala = js.get<std::array<T, 4>>();
+    val       = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const frame2<T>& val) {
+    js = std::array<vec2<T>, 3>{{val.x, val.y, val.o}};
+}
+template <typename T>
+inline void from_json(const json& js, frame2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 3>>();
+    val       = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const frame3<T>& val) {
+    js = std::array<vec3<T>, 4>{{val.x, val.y, val.z, val.o}};
+}
+template <typename T>
+inline void from_json(const json& js, frame3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 4>>();
+    val       = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const mat2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.x, val.y}};
+}
+template <typename T>
+inline void from_json(const json& js, mat2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const mat3<T>& val) {
+    js = std::array<vec3<T>, 3>{{val.x, val.y, val.z}};
+}
+template <typename T>
+inline void from_json(const json& js, mat3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 3>>();
+    val       = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const mat4<T>& val) {
+    js = std::array<vec4<T>, 4>{{val.x, val.y, val.z, val.w}};
+}
+template <typename T>
+inline void from_json(const json& js, mat4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 4>>();
+    val       = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const bbox1<T>& val) {
+    js = std::array<T, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox1<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox3<T>& val) {
+    js = std::array<vec3<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox4<T>& val) {
+    js = std::array<vec4<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+
+template <typename T>
+inline void to_json(json& js, const image<T>& val) {
+    js         = json::object();
+    js["size"] = val.size();
+    js["data"] = data_vector(val);
+}
+template <typename T>
+inline void from_json(const json& js, image<T>& val) {
+    auto size = js.at("size").get<vec2i>();
+    auto data = js.at("data").get<std::vector<T>>();
+    val       = image<T>{size, data.data()};
+}
+template <typename T>
+inline void to_json(json& js, const volume<T>& val) {
+    js         = json::object();
+    js["size"] = val.size();
+    js["data"] = data_vector(val);
+}
+template <typename T>
+inline void from_json(const json& js, volume<T>& val) {
+    auto size = js.at("size").get<vec3i>();
+    auto data = js.at("data").get<std::vector<T>>();
+    val       = volume<T>{size, data.data()};
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -1374,177 +1545,6 @@ std::string base64_decode(std::string const& encoded_string) {
     }
 
     return ret;
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// JSON UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Json alias
-using json = nlohmann::json;
-
-// Load a JSON object
-json load_json(const std::string& filename) {
-    auto txt = load_text(filename);
-    if (txt.empty()) return {};
-    try {
-        return json::parse(txt.begin(), txt.end());
-    } catch (...) {
-        log_io_error("could not parse json {}", filename);
-        return {};
-    }
-}
-
-// Save a JSON object
-bool save_json(const std::string& filename, const json& js) {
-    auto str = ""s;
-    try {
-        str = js.dump(4);
-    } catch (...) {
-        log_io_error("could not dump json {}", filename);
-        return false;
-    }
-    return save_text(filename, str);
-}
-
-template <typename T>
-inline void to_json(json& js, const vec2<T>& val) {
-    js = std::array<T, 2>{{val.x, val.y}};
-}
-template <typename T>
-inline void from_json(const json& js, vec2<T>& val) {
-    auto vala = js.get<std::array<T, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const vec3<T>& val) {
-    js = std::array<T, 3>{{val.x, val.y, val.z}};
-}
-template <typename T>
-inline void from_json(const json& js, vec3<T>& val) {
-    auto vala = js.get<std::array<T, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const vec4<T>& val) {
-    js = std::array<T, 4>{{val.x, val.y, val.z, val.w}};
-}
-template <typename T>
-inline void from_json(const json& js, vec4<T>& val) {
-    auto vala = js.get<std::array<T, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-template <typename T>
-inline void to_json(json& js, const frame2<T>& val) {
-    js = std::array<vec2<T>, 3>{{val.x, val.y, val.o}};
-}
-template <typename T>
-inline void from_json(const json& js, frame2<T>& val) {
-    auto vala = js.get<std::array<vec2<T>, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const frame3<T>& val) {
-    js = std::array<vec3<T>, 4>{{val.x, val.y, val.z, val.o}};
-}
-template <typename T>
-inline void from_json(const json& js, frame3<T>& val) {
-    auto vala = js.get<std::array<vec3<T>, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-template <typename T>
-inline void to_json(json& js, const mat2<T>& val) {
-    js = std::array<vec2<T>, 2>{{val.x, val.y}};
-}
-template <typename T>
-inline void from_json(const json& js, mat2<T>& val) {
-    auto vala = js.get<std::array<vec2<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const mat3<T>& val) {
-    js = std::array<vec3<T>, 3>{{val.x, val.y, val.z}};
-}
-template <typename T>
-inline void from_json(const json& js, mat3<T>& val) {
-    auto vala = js.get<std::array<vec3<T>, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const mat4<T>& val) {
-    js = std::array<vec4<T>, 4>{{val.x, val.y, val.z, val.w}};
-}
-template <typename T>
-inline void from_json(const json& js, mat4<T>& val) {
-    auto vala = js.get<std::array<vec4<T>, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-template <typename T>
-inline void to_json(json& js, const bbox1<T>& val) {
-    js = std::array<T, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox1<T>& val) {
-    auto vala = js.get<std::array<T, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const bbox2<T>& val) {
-    js = std::array<vec2<T>, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox2<T>& val) {
-    auto vala = js.get<std::array<vec2<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const bbox3<T>& val) {
-    js = std::array<vec3<T>, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox3<T>& val) {
-    auto vala = js.get<std::array<vec3<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const bbox4<T>& val) {
-    js = std::array<vec4<T>, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox4<T>& val) {
-    auto vala = js.get<std::array<vec4<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-
-template <typename T>
-inline void to_json(json& js, const image<T>& val) {
-    js         = json::object();
-    js["size"] = val.size();
-    js["data"] = data_vector(val);
-}
-template <typename T>
-inline void from_json(const json& js, image<T>& val) {
-    auto size = js.at("size").get<vec2i>();
-    auto data = js.at("data").get<std::vector<T>>();
-    val       = image<T>{size, data.data()};
-}
-template <typename T>
-inline void to_json(json& js, const volume<T>& val) {
-    js         = json::object();
-    js["size"] = val.size();
-    js["data"] = data_vector(val);
-}
-template <typename T>
-inline void from_json(const json& js, volume<T>& val) {
-    auto size = js.at("size").get<vec3i>();
-    auto data = js.at("data").get<std::vector<T>>();
-    val       = volume<T>{size, data.data()};
 }
 
 }  // namespace ygl
