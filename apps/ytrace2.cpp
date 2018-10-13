@@ -64,7 +64,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     printf("loading scene %s\n", filename.c_str());
     auto scn = load_scene(filename);
-    if(!scn) {
+    if (!scn) {
         printf("could not load %s\n", filename.c_str());
         exit(1);
     }

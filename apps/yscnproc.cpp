@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 
     // load scene
     auto scn = load_scene(filename, !notextures);
-    if(!scn) log_fatal("cannot load scene %" + filename);
+    if (!scn) log_fatal("cannot load scene %" + filename);
 
     // change texture names
     if (uniform_txt) {

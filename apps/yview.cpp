@@ -777,8 +777,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     if (!quiet) log_info("loading scene ", app->filename);
     app->scn = load_scene(app->filename);
-    if(!app->scn)
-        log_fatal("cannot load scene {}", app->filename);
+    if (!app->scn) log_fatal("cannot load scene {}", app->filename);
 
     // tesselate
     if (!quiet) log_info("tesselating scene elements\n");
