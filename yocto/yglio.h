@@ -226,16 +226,12 @@ int parse_arge(cmdline_parser& parser, const std::string& name, int def,
 namespace ygl {
 
 // Load/save a text file
-bool load_text(const std::string& filename, std::string& str);
+std::string       load_text(const std::string& filename);
 bool save_text(const std::string& filename, const std::string& str);
 
 // Load/save a binary file
-bool load_binary(const std::string& filename, std::vector<byte>& data);
-bool save_binary(const std::string& filename, const std::vector<byte>& data);
-
-// Load text/binary file with shorthand call. Returns empty values on error.
-std::string       load_text(const std::string& filename);
 std::vector<byte> load_binary(const std::string& filename);
+bool save_binary(const std::string& filename, const std::vector<byte>& data);
 
 }  // namespace ygl
 
@@ -248,22 +244,18 @@ namespace ygl {
 bool is_hdr_filename(const std::string& filename);
 
 // Loads/saves a 4 channel float image in linear color space.
-bool load_image4f(const std::string& filename, image<vec4f>& img);
+image<vec4f> load_image4f(const std::string& filename);
 bool save_image4f(const std::string& filename, const image<vec4f>& img);
-bool load_image4f_from_memory(
-    const byte* data, int data_size, image<vec4f>& img);
+image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 
 // Loads/saves a 4 channel byte image in sRGB color space.
-bool load_image4b(const std::string& filename, image<vec4b>& img);
+image<vec4b> load_image4b(const std::string& filename);
 bool save_image4b(const std::string& filename, const image<vec4b>& img);
 bool load_image4b_from_memory(
     const byte* data, int data_size, image<vec4b>& img);
+image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
 
 // Load 4 channel images with shortened api. Returns empty image on error;
-image<vec4f> load_image4f(const std::string& filename);
-image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
-image<vec4b> load_image4b(const std::string& filename);
-image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
@@ -278,11 +270,8 @@ bool save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
 namespace ygl {
 
 // Loads/saves a 1 channel volume.
-bool load_volume1f(const std::string& filename, volume<float>& vol);
-bool save_volume1f(const std::string& filename, const volume<float>& vol);
-
-// Loads a 1 channel volume for shortened api.
 volume<float> load_volume1f(const std::string& filename);
+bool save_volume1f(const std::string& filename, const volume<float>& vol);
 
 }  // namespace ygl
 
@@ -292,58 +281,43 @@ volume<float> load_volume1f(const std::string& filename);
 namespace ygl {
 
 // Load/save a scene in the supported formats.
-bool load_scene(const std::string& filename, scene*& scn,
-    bool save_textures = true, bool skip_missing = true);
+scene* load_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
 bool save_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
-bool load_json_scene(const std::string& filename, scene*& scn,
-    bool save_textures = true, bool skip_missing = true);
+scene* load_json_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
 bool save_json_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
-bool load_obj_scene(const std::string& filename, scene*& scn,
-    bool save_textures = true, bool skip_missing = true,
-    bool split_shapes = true);
+scene* load_obj_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true, bool split_shapes = true);
 bool save_obj_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
-bool load_gltf_scene(const std::string& filename, scene*& scn,
-    bool save_textures = true, bool skip_missing = true);
+scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
 bool save_gltf_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-bool load_pbrt_scene(const std::string& filename, scene*& scn,
-    bool save_textures = true, bool skip_missing = true);
+scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
+    bool skip_missing = true);
 bool save_pbrt_scene(const std::string& filename, const scene* scn,
     bool save_textures = true, bool skip_missing = true);
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
-bool load_ybin_scene(const std::string& filename, scene*& scn,
-    bool save_textures = true, bool skip_missing = true);
-bool save_ybin_scene(const std::string& filename, const scene* scn,
-    bool save_textures = true, bool skip_missing = true);
-
-// Load a scene in the supported formats using shortened API.
-scene* load_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
-scene* load_json_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
-scene* load_obj_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true, bool split_shapes = true);
-scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
-scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
-    bool skip_missing = true);
 scene* load_ybin_scene(const std::string& filename, bool load_textures = true,
     bool skip_missing = true);
+bool save_ybin_scene(const std::string& filename, const scene* scn,
+    bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
 
@@ -527,7 +501,7 @@ struct obj_callbacks {
 };
 
 // Load obj scene
-bool load_obj(const std::string& filename, const obj_callbacks& cb,
+bool load_obj(const std::string& filename, const obj_callbacks& cb, bool skip_missing = true,
     bool flip_texcoord = true, bool flip_tr = true);
 
 }  // namespace ygl
@@ -561,9 +535,6 @@ struct ply_data {
 };
 
 // Load ply mesh
-bool load_ply(const std::string& filename, ply_data& ply);
-
-// Load ply mesh with shortened API. Returns empty object on error.
 ply_data load_ply(const std::string& filename);
 
 }  // namespace ygl

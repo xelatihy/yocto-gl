@@ -57,9 +57,8 @@ int main(int argc, char** argv) {
     check_cmdline(parser);
 
     // load scene
-    auto scn = (scene*)nullptr;
-    if (!load_scene(filename, scn, !notextures))
-        exit_error("cannot load scene %" + filename);
+    auto scn = load_scene(filename, !notextures);
+    if(!scn) exit_error("cannot load scene %" + filename);
 
     // change texture names
     if (uniform_txt) {

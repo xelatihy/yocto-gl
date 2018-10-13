@@ -156,15 +156,13 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // load
-    auto img = image<vec4f>();
-    if (!load_image4f(filename, img))
-        exit_error("cannot load image " + filename);
+    auto img = load_image4f(filename);
+    if(img.empty()) exit_error("cannot load image " + filename);
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = image<vec4f>();
-        if (!load_image4f(alpha_filename, alpha))
-            exit_error("cannot load image " + alpha_filename);
+        auto alpha = load_image4f(alpha_filename);
+        if(alpha.empty()) exit_error("cannot load image " + alpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
             printf("bad image size\n");
             exit(1);
@@ -176,9 +174,8 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = image<vec4f>();
-        if (!load_image4f(coloralpha_filename, alpha))
-            exit_error("cannot load image " + coloralpha_filename);
+        auto alpha = load_image4f(coloralpha_filename);
+        if(alpha.empty()) exit_error("cannot load image " + coloralpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
             printf("bad image size\n");
             exit(1);

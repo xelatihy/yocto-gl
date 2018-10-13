@@ -70,10 +70,10 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    auto scn = (scene*)nullptr;
     printf("loading scene %s\n", filename.c_str());
     auto load_start = get_time();
-    if (!load_scene(filename, scn)) exit_error("cannot load scene " + filename);
+    auto scn = load_scene(filename);
+    if(!scn) exit_error("cannot load scene " + filename);
     printf("loading in %s\n", format_duration(get_time() - load_start).c_str());
 
     // tesselate
