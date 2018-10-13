@@ -795,7 +795,8 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
 }
 
 // save pfm
-bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
+bool save_pfm(
+    const char* filename, int w, int h, int nc, const float* pixels) {
     auto fs = fopen(filename, "wb");
     if (!fs) return false;
 
@@ -822,6 +823,31 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
     return true;
 }
 
+// load pfm image
+image<vec4f> load_pfm_image4f(const std::string& filename) {
+    auto ncomp  = 0;
+    auto size   = zero2i;
+    auto pixels = (vec4f*)load_pfm(
+        filename.c_str(), &size.x, &size.y, &ncomp, 4);
+    if (!pixels) {
+        log_io_error("error loadinv image {}", filename);
+        return {};
+    }
+    auto img = image<vec4f>{size, pixels};
+    delete[] pixels;
+    return img;
+}
+
+// save a pfm image
+bool save_pfm_image4f(const std::string& filename, const image<vec4f>& img) {
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+
 // check hdr extensions
 bool is_hdr_filename(const std::string& filename) {
     auto ext = get_extension(filename);
@@ -830,9 +856,9 @@ bool is_hdr_filename(const std::string& filename) {
 
 // Loads an hdr image.
 image<vec4f> load_image4f(const std::string& filename) {
-    auto ext  = get_extension(filename);
-    auto size = zero2i;
-    if (ext == "exr") {
+    auto ext = get_extension(filename);
+    if (ext == "exr" || ext == "EXR") {
+        auto size   = zero2i;
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
                 nullptr) < 0)
@@ -841,15 +867,10 @@ image<vec4f> load_image4f(const std::string& filename) {
         auto img = image<vec4f>{size, pixels};
         free(pixels);
         return img;
-    } else if (ext == "pfm") {
-        auto ncomp  = 0;
-        auto pixels = (vec4f*)load_pfm(
-            filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return {};
-        auto img = image<vec4f>{size, pixels};
-        free(pixels);
-        return img;
-    } else if (ext == "hdr") {
+    } else if (ext == "pfm" || ext == "PFM") {
+        return load_pfm_image4f(filename);
+    } else if (ext == "hdr" || ext == "HDR") {
+        auto size   = zero2i;
         auto ncomp  = 0;
         auto pixels = (vec4f*)stbi_loadf(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
@@ -858,6 +879,7 @@ image<vec4f> load_image4f(const std::string& filename) {
         free(pixels);
         return img;
     } else {
+        auto size   = zero2i;
         auto ncomp  = 0;
         auto pixels = (vec4f*)stbi_loadf(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
@@ -890,8 +912,7 @@ bool save_image4f(const std::string& filename, const image<vec4f>& img) {
         return stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data());
     } else if (ext == "pfm") {
-        return save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data());
+        return save_pfm_image4f(filename, img);
     } else if (ext == "exr") {
         return SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str());
