@@ -72,8 +72,8 @@ int main(int argc, char* argv[]) {
     // scene loading
     log_info("loading scene {}", filename);
     auto load_start = get_time();
-    auto scn = load_scene(filename);
-    if(!scn) log_fatal("cannot load scene " + filename);
+    auto scn        = load_scene(filename);
+    if (!scn) log_fatal("cannot load scene " + filename);
     log_info("loading in {}", format_duration(get_time() - load_start).c_str());
 
     // tesselate
@@ -94,8 +94,8 @@ int main(int argc, char* argv[]) {
     log_info("building bvh");
     auto bvh_start = get_time();
     auto bvh       = build_bvh(scn, true, embree);
-    log_info("building bvh in {}",
-        format_duration(get_time() - bvh_start).c_str());
+    log_info(
+        "building bvh in {}", format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     log_info("initializing lights");

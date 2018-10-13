@@ -163,8 +163,8 @@ void update_display_image(app_image* img) {
 void load_image(app_image* img) {
     auto start     = get_time();
     img->error_msg = "";
-    img->img = load_image4f(img->filename);
-    if(img->img.empty()) img->error_msg = "cannot load image";
+    img->img       = load_image4f(img->filename);
+    if (img->img.empty()) img->error_msg = "cannot load image";
     img->load_done = true;
     img->display   = img->img;
     printf("load: %s\n", format_duration(get_time() - start).c_str());
