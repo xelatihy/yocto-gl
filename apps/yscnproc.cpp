@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
 
     // load scene
     auto scn = load_scene(filename, !notextures);
-    if(!scn) exit_error("cannot load scene %" + filename);
+    if(!scn) log_fatal("cannot load scene %" + filename);
 
     // change texture names
     if (uniform_txt) {
@@ -85,11 +85,11 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     if (!mkdir(get_dirname(output)))
-        exit_error("cannot create directory " + get_dirname(output));
+        log_fatal("cannot create directory " + get_dirname(output));
 
     // save scene
     if (!save_scene(output, scn, !notextures))
-        exit_error("cannot save scene %" + output);
+        log_fatal("cannot save scene %" + output);
 
     // done
     return 0;

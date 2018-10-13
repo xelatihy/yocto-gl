@@ -291,7 +291,7 @@ int main(int argc, char* argv[]) {
     auto load_start = get_time();
     app->scn = load_scene(app->filename);
     if(!app->scn)
-        exit_error("cannot load scene " + app->filename);
+        log_fatal("cannot load scene " + app->filename);
     if (!quiet)
         printf("loading in %s\n",
             format_duration(get_time() - load_start).c_str());
