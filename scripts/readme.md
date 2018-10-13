@@ -10,5 +10,5 @@ For example, to build just run `./scripts/release.sh`.
 - `release.sh`: build in release mode
 - `xcode.sh`: run cmake and launch xcode on it
 - `format.sh`: run clang-format on the repo
-- `deprecated.py`: script not used often containing deprecated functionality 
+- `_deprecated.py`: script not used often containing deprecated functionality 
     that has not been ported yet
