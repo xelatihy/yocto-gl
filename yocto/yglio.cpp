@@ -1156,6 +1156,7 @@ scene* load_scene(
     } else if (ext == "ybin" || ext == "YBIN") {
         return load_ybin_scene(filename, load_textures, skip_missing);
     } else {
+        log_io_error("unsupported scene format {}", ext);
         return nullptr;
     }
 }
@@ -1175,6 +1176,7 @@ bool save_scene(const std::string& filename, const scene* scn,
     } else if (ext == "ybin" || ext == "YBIN") {
         return save_ybin_scene(filename, scn, save_textures, skip_missing);
     } else {
+        log_io_error("unsupported scene format {}", ext);
         return false;
     }
 }
@@ -5732,17 +5734,17 @@ bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     for (auto& p : pos) print(fs, "v {}\n", p);
     for (auto& n : norm) print(fs, "vn {}\n", n);
     for (auto& t : texcoord)
-        print(fs, "vt {}\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+        print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
     auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int i) {
         return obj_vertex{
             (i + 1) * mask.pos, (i + 1) * mask.texcoord, (i + 1) * mask.norm};
     };
     for (auto& t : triangles)
-        print(fs, "f {}\n", to_string(vert(t.x)).c_str(),
+        print(fs, "f {} {} {}\n", to_string(vert(t.x)).c_str(),
             to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
     for (auto& l : lines)
-        print(fs, "l {}\n", to_string(vert(l.x)).c_str(),
+        print(fs, "l {} {}\n", to_string(vert(l.x)).c_str(),
             to_string(vert(l.y)).c_str());
     for (auto& p : points) print(fs, "p {}\n", to_string(vert(p)).c_str());
 
@@ -5784,6 +5786,7 @@ bool load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     } else {
         reset_fvmesh_data(quads_pos, pos, quads_norm, norm, quads_texcoord,
             texcoord, quads_color, color);
+        log_io_error("unsupported mesh format {}", ext);
         return false;
     }
 }
@@ -5800,6 +5803,7 @@ bool save_fvmesh(const std::string& filename,
         return save_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
             quads_texcoord, texcoord);
     } else {
+        log_io_error("unsupported mesh format {}", ext);
         return false;
     }
 }
