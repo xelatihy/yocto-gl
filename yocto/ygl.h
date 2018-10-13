@@ -2482,16 +2482,20 @@ struct image {
     T*                    data() { return _data.data(); }
     const T*              data() const { return _data.data(); }
     T*                    begin() { return _data.data(); }
-    T*                    end() { return _data.data() + _data.size(); }
     const T*              begin() const { return _data.data(); }
+    T*                    end() { return _data.data() + _data.size(); }
     const T*              end() const { return _data.data() + _data.size(); }
-    const std::vector<T>& dataref() const { return _data; }
 
     // private data
-   private:
     vec2i          _size = {0, 0};
     std::vector<T> _data = {};
 };
+
+// Data access
+template<typename T>
+std::vector<T>& data_vector(image<T>& img) { return img._data; }
+template<typename T>
+const std::vector<T>& data_vector(const image<T>& img) { return img._data; }
 
 }  // namespace ygl
 
@@ -2771,16 +2775,22 @@ struct volume {
     T*                    data() { return _data.data(); }
     const T*              data() const { return _data.data(); }
     T*                    begin() { return _data.data(); }
-    T*                    end() { return _data.data() + _data.size(); }
     const T*              begin() const { return _data.data(); }
+    T*                    end() { return _data.data() + _data.size(); }
     const T*              end() const { return _data.data() + _data.size(); }
-    const std::vector<T>& dataref() const { return _data; }
+    std::vector<T>& data_vector() { return _data; }
+    const std::vector<T>& data_vector() const { return _data; }
 
     // private data
-   private:
     vec3i          _size = {0, 0};
     std::vector<T> _data = {};
 };
+
+// Data access
+template<typename T>
+std::vector<T>& data_vector(volume<T>& vol) { return vol._data; }
+template<typename T>
+const std::vector<T>& data_vector(const volume<T>& vol) { return vol._data; }
 
 }  // namespace ygl
 

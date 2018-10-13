@@ -70,67 +70,67 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    printf("loading scene %s\n", filename.c_str());
+    log_info("loading scene {}", filename);
     auto load_start = get_time();
     auto scn = load_scene(filename);
-    if(!scn) exit_error("cannot load scene " + filename);
-    printf("loading in %s\n", format_duration(get_time() - load_start).c_str());
+    if(!scn) log_fatal("cannot load scene " + filename);
+    log_info("loading in {}", format_duration(get_time() - load_start).c_str());
 
     // tesselate
-    printf("tesselating scene elements\n");
+    log_info("tesselating scene elements");
     tesselate_subdivs(scn);
 
     // add components
-    printf("adding scene elements\n");
+    log_info("adding scene elements");
     if (add_skyenv && scn->environments.empty()) {
         scn->environments.push_back(make_sky_environment("sky"));
         scn->textures.push_back(scn->environments.back()->ke_txt);
     }
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;
-    for (auto& err : validate(scn)) printf("warning: %s\n", err.c_str());
+    for (auto& err : validate(scn)) log_error("warning: {}", err);
 
     // build bvh
-    printf("building bvh\n");
+    log_info("building bvh");
     auto bvh_start = get_time();
     auto bvh       = build_bvh(scn, true, embree);
-    printf("building bvh in %s\n",
+    log_info("building bvh in {}",
         format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
-    printf("initializing lights\n");
+    log_info("initializing lights");
     auto lights = make_trace_lights(scn, params);
 
     // initialize rendering objects
-    printf("initializing tracer data\n");
+    log_info("initializing tracer data");
     auto state = make_trace_state(scn, params);
 
     // render
-    printf("rendering image\n");
+    log_info("rendering image");
     auto render_start = get_time();
     auto done         = false;
     while (!done) {
-        printf("rendering sample %04d/%04d\n", state->sample, params.nsamples);
+        log_info("rendering sample {}/{}", state->sample, params.nsamples);
         auto block_start = get_time();
         done             = trace_samples(state, scn, bvh, lights, params);
-        printf("rendering block in %s\n",
+        log_info("rendering block in {}",
             format_duration(get_time() - block_start).c_str());
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 std::to_string(state->sample) + "." + get_extension(imfilename));
-            printf("saving image %s\n", filename.c_str());
+            log_info("saving image {}", filename.c_str());
             if (!save_tonemapped_image(
                     filename, state->img, exposure, gamma, filmic))
-                exit_error("cannot save image " + filename);
+                log_fatal("cannot save image " + filename);
         }
     }
-    printf("rendering image in %s\n",
+    log_info("rendering image in {}",
         format_duration(get_time() - render_start).c_str());
 
     // save image
-    printf("saving image %s\n", imfilename.c_str());
+    log_info("saving image {}", imfilename.c_str());
     if (!save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic))
-        exit_error("cannot save image " + imfilename);
+        log_fatal("cannot save image " + imfilename);
 
     // cleanup
     delete state;

@@ -64,7 +64,10 @@ int main(int argc, char* argv[]) {
     // scene loading
     printf("loading scene %s\n", filename.c_str());
     auto scn = load_scene(filename);
-    if(!scn) exit_error("cannot load scene " + filename);
+    if(!scn) {
+        printf("could not load %s\n", filename.c_str());
+        exit(1);
+    }
 
     // tesselate
     printf("tesselating scene elements\n");

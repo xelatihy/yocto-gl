@@ -124,6 +124,37 @@ std::string format_num(uint64_t num) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF LOGGING UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Logging configutation
+auto _log_console = true;
+auto _log_filestream = (FILE*)nullptr;
+
+// Logs a message
+void log_message(const char* lbl, const char* msg) {
+    if(_log_console) {
+        printf("%s\n", msg);
+        fflush(stdout);
+    }
+    if(_log_filestream) {
+        fprintf(_log_filestream, "%s %s\n", lbl, msg);
+        fflush(_log_filestream);
+    }
+}
+
+// Configure the logging
+void set_log_console(bool enabled) { _log_console = enabled; }
+void set_log_file(const std::string& filename, bool append) {
+    if(_log_filestream) { fclose(_log_filestream); _log_filestream = nullptr; }
+    if(filename.empty()) return;
+    _log_filestream = fopen(filename.c_str(), append ? "at" : "wt");
+}
+
+} // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -193,60 +224,184 @@ bool exists_file(const std::string& filename) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Object that holds a FILE* and calls fclose() when it gets out of scope
-struct fclose_guard {
-    fclose_guard(FILE* fs) : fs_{fs} {}
-    ~fclose_guard() { fclose(fs_); }
-    FILE* fs_ = nullptr;
+// log io error
+template<typename ... Args>
+void log_io_error(const std::string& fmt, const Args& ... args) {
+    log_error(fmt, args...);
+}
+
+// File stream wrapper
+struct file_stream {
+    std::string filename = "";
+    std::string mode = "";
+    FILE* fs = nullptr;
+
+    file_stream() = default;
+    file_stream(const file_stream&) = delete;
+    file_stream& operator=(const file_stream&) = delete;
+    
+    ~file_stream() {
+        if(fs) { fclose(fs); fs = nullptr; }
+    }
+
+    operator bool() const { return fs; }
 };
+
+// Opens a file
+file_stream open(const std::string& filename, const std::string& mode) {
+    auto fs = fopen(filename.c_str(), mode.c_str());
+    if(!fs) {
+        log_io_error("cannot open {}", filename);
+        return {};
+    }
+    return {filename, mode, fs};
+}
+
+// Close a file
+bool close(file_stream& fs) {
+    if(!fs) {
+        log_io_error("cannot close {}", fs.filename);
+        return false;
+    }
+    fclose(fs.fs);
+    fs.fs = nullptr;
+    return true;
+}
+
+// Gets the length of a file
+size_t get_length(file_stream& fs) {
+    if(!fs) return 0;
+    fseek(fs.fs, 0, SEEK_END);
+    auto fsize = ftell(fs.fs);
+    fseek(fs.fs, 0, SEEK_SET);
+    return fsize;
+}
+
+// Print to file
+bool write_text(file_stream& fs, const std::string& str) {
+    if(!fs) return false;
+    if(fprintf(fs.fs, "%s", str.c_str()) < 0) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Write to file
+template<typename T>
+bool write_value(file_stream& fs, const T& val) {
+    if(!fs) return false;
+    if(fwrite(&val, sizeof(T), 1, fs.fs) != 1) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Write to file
+template<typename T>
+bool write_values(file_stream& fs, const std::vector<T>& vals) {
+    if(!fs) return false;
+    if(fwrite(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+    
+// Write to file
+bool write_values(file_stream& fs, const std::string& vals) {
+    if(!fs) return false;
+    if(fwrite(vals.data(), 1, vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+    
+// Print shortcut
+template<typename ... Args>
+bool print(file_stream& fs, const std::string& fmt, const Args& ... args) {
+    if(!fs) return false;
+    return write_text(fs, format(fmt, args...));
+}
+
+// Read binary data to fill the whole buffer
+bool read_line(file_stream& fs, std::string& val) {
+    if(!fs) return false;
+    // TODO: make lkne as large as possible
+    val = "";
+    char buf[4096];
+    if(!fgets(buf, 4096, fs.fs)) return false;
+    val = std::string(buf);
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+template<typename T>
+bool read_value(file_stream& fs, T& val) {
+    if(!fs) return false;
+    if (fread(&val, sizeof(T), 1, fs.fs) != 1) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+template<typename T>
+bool read_values(file_stream& fs, std::vector<T>& vals) {
+    if(!fs) return false;
+    if (fread(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+bool read_values(file_stream& fs, std::string& vals) {
+    if(!fs) return false;
+    if (fread(vals.data(), 1, vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
 
 // Load a text file
 std::string load_text(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = fopen(filename.c_str(), "rb");
+    auto fs = open(filename, "rb");
     if (!fs) return {};
-    fclose_guard fs_{fs};
-    fseek(fs, 0, SEEK_END);
-    auto fsize = ftell(fs);
-    fseek(fs, 0, SEEK_SET);
-    auto buf = std::vector<char>(fsize);
-    if (fread(buf.data(), 1, fsize, fs) != fsize) return {};
-    fclose(fs);
+    auto buf = std::vector<char>(get_length(fs));
+    if (!read_values(fs, buf)) return {};
     return std::string{buf.begin(), buf.end()};
 }
 
 // Save a text file
 bool save_text(const std::string& filename, const std::string& str) {
-    auto fs = fopen(filename.c_str(), "wt");
+    auto fs = open(filename, "wt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
-    fprintf(fs, "%s", str.c_str());
-    fclose(fs);
+    if(!write_text(fs, str)) return false;
     return true;
 }
 
 // Load a binary file
 std::vector<byte> load_binary(const std::string& filename) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = fopen(filename.c_str(), "rb");
+    auto fs = open(filename, "rb");
     if (!fs) return {};
-    fclose_guard fs_{fs};
-    fseek(fs, 0, SEEK_END);
-    auto fsize = ftell(fs);
-    fseek(fs, 0, SEEK_SET);
-    auto data = std::vector<byte>(fsize);
-    if (fread((char*)data.data(), 1, fsize, fs) != fsize) return {};
-    fclose(fs);
+    auto data = std::vector<byte>(get_length(fs));
+    if (!read_values(fs, data)) return {};
     return data;
 }
 
 // Save a binary file
 bool save_binary(const std::string& filename, const std::vector<byte>& data) {
-    auto fs = fopen(filename.c_str(), "wb");
+    auto fs = open(filename.c_str(), "wb");
     if (!fs) return false;
-    fclose_guard fs_{fs};
-    fwrite((char*)data.data(), 1, data.size(), fs);
-    fclose(fs);
+    if(!write_values(fs, data)) return false;
     return true;
 }
 
@@ -521,7 +676,6 @@ std::vector<std::string> split_string(const std::string& str) {
 float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     auto fs = fopen(filename, "rb");
     if (!fs) return nullptr;
-    fclose_guard fs_{fs};
 
     // buffer
     char buf[256];
@@ -638,7 +792,6 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
 bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
     auto fs = fopen(filename, "wb");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF");
     fprintf(fs, "%d %d\n", w, h);
@@ -879,28 +1032,21 @@ namespace ygl {
 
 // Loads volume data from binary format.
 volume<float> load_volume1f(const std::string& filename) {
-    auto fs = fopen(filename.c_str(), "r");
+    auto fs = open(filename, "r");
     if (!fs) return {};
-    fclose_guard fs_{fs};
     auto         size = zero3i;
-    if (fread(&size, sizeof(vec3i), 1, fs) != 1) return {};
+    if (!read_value(fs, size)) return {};
     auto vol        = volume<float>{size};
-    auto count = vol.size().x * vol.size().y * vol.size().z;
-    if (fread(vol.data(), sizeof(float), count, fs) != count) return {};
-    fclose(fs);
+    if (!read_values(fs, data_vector(vol))) return {};
     return vol;
 }
 
 // Saves volume data in binary format.
 bool save_volume1f(const std::string& filename, const volume<float>& vol) {
-    auto fs = fopen(filename.c_str(), "w");
+    auto fs = open(filename, "w");
     if (!fs) return false;
-    fclose_guard fs_{fs};
-    auto         size = vol.size();
-    fwrite(&size, sizeof(vec3i), 1, fs);
-    auto count = vol.size().x * vol.size().y * vol.size().z;
-    if (fwrite(vol.data(), sizeof(float), count, fs) != count) return false;
-    fclose(fs);
+    if(!write_value(fs, vol.size())) return false;
+    if(!write_values(fs, data_vector(vol))) return false;
     return true;
 }
 
@@ -1160,15 +1306,22 @@ json load_json(const std::string& filename) {
     if(txt.empty()) return {};
     try {
         return json::parse(txt.begin(), txt.end());
-        return true;
-    } catch (...) { return {}; }
+    } catch (...) {
+        log_io_error("could not parse json {}", filename);
+        return {};
+    }
 }
 
 // Save a JSON object
 bool save_json(const std::string& filename, const json& js) {
+    auto str = ""s;
     try {
-        return save_text(filename, js.dump(4));
-    } catch (...) { return false; }
+        str = js.dump(4);
+    } catch (...) { 
+        log_io_error("could not dump json {}", filename);
+        return false; 
+    }
+    return save_text(filename, str);
 }
 
 template <typename T>
@@ -1287,7 +1440,7 @@ template <typename T>
 inline void to_json(json& js, const image<T>& val) {
     js         = json::object();
     js["size"] = val.size();
-    js["data"] = val.dataref();
+    js["data"] = data_vector(val);
 }
 template <typename T>
 inline void from_json(const json& js, image<T>& val) {
@@ -1299,7 +1452,7 @@ template <typename T>
 inline void to_json(json& js, const volume<T>& val) {
     js         = json::object();
     js["size"] = val.size();
-    js["data"] = val.dataref();
+    js["data"] = data_vector(val);
 }
 template <typename T>
 inline void from_json(const json& js, volume<T>& val) {
@@ -2065,17 +2218,9 @@ void from_json_proc(const json& js, scene& val) {
         }
     }
 }
-
-// Load a scene in the builtin JSON format.
-scene* load_json_scene(const std::string& filename, 
-    bool load_textures, bool skip_missing) {
-    // initialize
-    auto scn = new scene();
-
-    // load jsonz
-    auto js = load_json(filename);
-    if(js.empty()) return nullptr;
-
+    
+// Json to scene
+bool json_to_scene(scene* scn, const json& js) {
     // parse json scene
     scn->name = js.value("name", ""s);
     for (auto& j : js.value("cameras", json::array())) {
@@ -2169,6 +2314,31 @@ scene* load_json_scene(const std::string& filename,
         fix_ref(tmap, scn->textures, mat->bump_txt);
         fix_ref(tmap, scn->textures, mat->disp_txt);
         fix_ref(vmap, scn->voltextures, mat->vd_txt);
+    }
+    
+    // done
+    return true;
+}
+
+// Load a scene in the builtin JSON format.
+scene* load_json_scene(const std::string& filename, 
+    bool load_textures, bool skip_missing) {
+    // initialize
+    auto scn = new scene();
+
+    // load jsonz
+    auto js = load_json(filename);
+    if(js.empty()) return nullptr;
+
+    // deserialize json
+    try {
+        if(!json_to_scene(scn, js)) {
+            log_io_error("could not deserialize json {}", filename);
+            return nullptr;
+        }
+    } catch(...) {
+        log_io_error("could not deserialize json {}", filename);
+        return nullptr;
     }
 
     // load meshes
@@ -2410,18 +2580,20 @@ inline obj_texture_info parse_obj_texture_info(char*& s) {
 bool load_mtl(
     const std::string& filename, const obj_callbacks& cb, bool flip_tr) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
+    auto fs = open(filename, "rt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     // currently parsed material
     auto mat   = obj_material();
     auto first = true;
 
     // read the file line by line
+    auto line = ""s;
     char buf[4096];
-    while (fgets(buf, 4096, fs)) {
+    while (read_line(fs, line)) {
         // line
+        assert(line.size() < 4096);
+        memcpy(buf, line.c_str(), line.size()+1);
         normalize_obj_line(buf);
         auto ss = buf;
 
@@ -2501,9 +2673,6 @@ bool load_mtl(
     // issue current material
     if (!first && cb.material) cb.material(mat);
 
-    // clone
-    fclose(fs);
-
     // done
     return true;
 }
@@ -2511,14 +2680,15 @@ bool load_mtl(
 // Load obj extensions
 bool load_objx(const std::string& filename, const obj_callbacks& cb) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
+    auto fs = open(filename, "rt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     // read the file line by line
     char buf[4096];
-    while (fgets(buf, 4096, fs)) {
+    auto line = ""s;
+    while (read_line(fs, line)) {
         // line
+        memcpy(buf, line.c_str(), line.size()+1);
         normalize_obj_line(buf);
         auto ss = buf;
 
@@ -2549,20 +2719,16 @@ bool load_objx(const std::string& filename, const obj_callbacks& cb) {
         }
     }
 
-    // close file
-    fclose(fs);
-
     // done
     return true;
 }
 
 // Load obj scene
 bool load_obj(const std::string& filename, const obj_callbacks& cb, 
-    bool skip_missing, bool flip_texcoord, bool flip_tr) {
+    bool geometry_only, bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // open file
-    auto fs = fopen(filename.c_str(), "rt");
+    auto fs = open(filename, "rt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -2570,8 +2736,10 @@ bool load_obj(const std::string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     char buf[4096];
-    while (fgets(buf, 4096, fs)) {
-        // prepare to parse
+    auto line = ""s;
+    while (read_line(fs, line)) {
+        // line
+        memcpy(buf, line.c_str(), line.size()+1);
         normalize_obj_line(buf);
         auto ss = buf;
 
@@ -2614,28 +2782,25 @@ bool load_obj(const std::string& filename, const obj_callbacks& cb,
         } else if (cmd == "s") {
             if (cb.smoothing) cb.smoothing(parse_string(ss));
         } else if (cmd == "mtllib") {
+            if(geometry_only) continue;
             auto mtlname = parse_string(ss);
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
             if (!load_mtl(mtlpath, cb, flip_tr)) {
-                if(!skip_missing) {
-                    fclose(fs);
-                    return false;
-                }
+                if(!skip_missing) return false;
             }
         } else {
             // unused
         }
     }
 
-    // close file
-    fclose(fs);
-
     // parse extensions if presents
-    auto extname    = replace_extension(filename, "objx");
-    auto ext_exists = exists_file(extname);
-    if (ext_exists) {
-        if (!load_objx(extname, cb)) return false;
+    if(!geometry_only) {
+        auto extname    = replace_extension(filename, "objx");
+        auto ext_exists = exists_file(extname);
+        if (ext_exists) {
+            if (!load_objx(extname, cb)) return false;
+        }
     }
 
     // done
@@ -2861,7 +3026,7 @@ scene* load_obj_scene(const std::string& filename,
     };
 
     // Parse obj
-    if (!load_obj(filename, cb, skip_missing)) return nullptr;
+    if (!load_obj(filename, cb, false, skip_missing)) return nullptr;
 
     // cleanup empty
     // TODO: delete unused
@@ -2901,9 +3066,8 @@ scene* load_obj_scene(const std::string& filename,
 bool save_mtl(
     const std::string& filename, const scene* scn, bool flip_tr = true) {
     // open
-    auto fs = fopen(filename.c_str(), "wt");
+    auto fs = open(filename, "wt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     // for each material, dump all the values
     for (auto mat : scn->materials) {
@@ -2938,15 +3102,13 @@ bool save_mtl(
     }
 
     // done
-    fclose(fs);
     return true;
 }
 
 bool save_objx(const std::string& filename, const scene* scn) {
     // scene
-    auto fs = fopen(filename.c_str(), "wt");
+    auto fs = open(filename, "wt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     // cameras
     for (auto cam : scn->cameras) {
@@ -2961,7 +3123,6 @@ bool save_objx(const std::string& filename, const scene* scn) {
     }
 
     // done
-    fclose(fs);
     return true;
 }
 
@@ -2979,9 +3140,8 @@ std::string to_string(const obj_vertex& v) {
 bool save_obj(
     const std::string& filename, const scene* scn, bool flip_texcoord = true) {
     // scene
-    auto fs = fopen(filename.c_str(), "wt");
+    auto fs = open(filename, "wt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     // material library
     if (!scn->materials.empty()) {
@@ -3086,7 +3246,6 @@ bool save_obj(
         }
     }
 
-    fclose(fs);
     return true;
 }
 
@@ -3873,19 +4032,17 @@ bool scene_to_gltf(const scene* scn, json& js) {
 
 // save gltf mesh
 bool save_gltf_mesh(const std::string& filename, const shape* shp) {
-    auto fs = fopen(filename.c_str(), "wb");
+    auto fs = open(filename, "wb");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
-    fwrite((char*)shp->pos.data(), 3 * 4, shp->pos.size(), fs);
-    fwrite((char*)shp->norm.data(), 3 * 4, shp->norm.size(), fs);
-    fwrite((char*)shp->texcoord.data(), 2 * 4, shp->texcoord.size(), fs);
-    fwrite((char*)shp->color.data(), 4 * 4, shp->color.size(), fs);
-    fwrite((char*)shp->radius.data(), 1 * 4, shp->radius.size(), fs);
-    fwrite((char*)shp->lines.data(), 2 * 4, shp->lines.size(), fs);
-    fwrite((char*)shp->triangles.data(), 3 * 4, shp->triangles.size(), fs);
+    if(!write_values(fs, shp->pos)) return false;
+    if(!write_values(fs, shp->norm)) return false;
+    if(!write_values(fs, shp->texcoord)) return false;
+    if(!write_values(fs, shp->color)) return false;
+    if(!write_values(fs, shp->radius)) return false;
+    if(!write_values(fs, shp->lines)) return false;
+    if(!write_values(fs, shp->triangles)) return false;
 
-    fclose(fs);
     return true;
 }
 
@@ -4010,20 +4167,17 @@ bool pbrt_to_json(const std::string& filename, json& js) {
         if (tokens[i][0] == ']') i++;
     };
 
-    auto fs = fopen(filename.c_str(), "rt");
+    auto fs = open(filename, "rt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
-    auto pbrt = std::string();
-    char buf[4096];
-    while (fgets(buf, 4096, fs)) {
-        auto line = std::string(buf);
+    auto pbrt = ""s;
+    auto line = ""s;
+    while (read_line(fs, line)) {
         if (line.find('#') == line.npos)
             pbrt += line + "\n";
         else
             pbrt += line.substr(0, line.find('#')) + "\n";
     }
-    fclose(fs);
 
     auto re = std::regex("\"(\\w+)\\s+(\\w+)\"");
     pbrt    = std::regex_replace(pbrt, re, "\"$1|$2\"");
@@ -4593,9 +4747,8 @@ scene* load_pbrt_scene(const std::string& filename,
 
 // Convert a scene to pbrt format
 bool save_pbrt(const std::string& filename, const scene* scn) {
-    auto fs = fopen(filename.c_str(), "wt");
+    auto fs = open(filename, "wt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
 #if 0
 WorldBegin
@@ -4692,7 +4845,6 @@ WorldEnd
     print(fs, "WorldEnd\n");
 
     // done
-    fclose(fs);
     return true;
 }
 
@@ -4749,91 +4901,84 @@ namespace ygl {
 
 // Serialize type or struct with no allocated resource
 template <typename T>
-bool serialize_bin_value(T& val, FILE* fs, bool save) {
+bool serialize_bin_value(T& val, file_stream& fs, bool save) {
     if (save) {
-        if (fwrite(&val, sizeof(T), 1, fs) != 1) return false;
-        return true;
+        return write_value(fs, val);
     } else {
-        if (fread(&val, sizeof(T), 1, fs) != 1) return false;
-        return false;
+        return read_value(fs, val);
     }
 }
 
 // Serialize std::vector
 template <typename T>
-bool serialize_bin_value(std::vector<T>& vec, FILE* fs, bool save) {
+bool serialize_bin_value(std::vector<T>& vec, file_stream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        if (!serialize_bin_value(count, fs, save)) return false;
-        if (fwrite(vec.data(), sizeof(T), count, fs) != count) return false;
+        if (!write_value(fs, count)) return false;
+        if (!write_values(fs, vec)) return false;
         return true;
     } else {
         auto count = (size_t)0;
-        if (!serialize_bin_value(count, fs, save)) return false;
+        if (!read_value(fs, count)) return false;
         vec = std::vector<T>(count);
-        if (fread(vec.data(), sizeof(T), count, fs) != count) return false;
+        if (!read_values(fs, vec)) return false;
         return true;
     }
 }
 
 // Serialize std::string
-bool serialize_bin_value(std::string& vec, FILE* fs, bool save) {
+bool serialize_bin_value(std::string& vec, file_stream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        if (!serialize_bin_value(count, fs, save)) return false;
-        if (fwrite(vec.data(), sizeof(char), count, fs) != count) return false;
+        if (!write_value(fs, count)) return false;
+        if (!write_values(fs, vec)) return false;
         return true;
     } else {
         auto count = (size_t)0;
-        if (!serialize_bin_value(count, fs, save)) return false;
+        if (!read_value(fs, count)) return false;
         vec = std::string(count, ' ');
-        if (fread((void*)vec.data(), sizeof(char), count, fs) != count)
-            return false;
+        if (!read_values(fs, vec)) return false;
         return true;
     }
 }
 
 // Serialize image
 template <typename T>
-bool serialize_bin_value(image<T>& img, FILE* fs, bool save) {
+bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
     if (save) {
         auto size = (vec2i)img.size();
-        if (!serialize_bin_value(size, fs, save)) return false;
-        auto count = size.x * size.y;
-        if (fwrite(img.data(), sizeof(T), count, fs) != count) return false;
+        if (!write_value(fs, size)) return false;
+        if (!write_values(fs, data_vector(img))) return false;
         return true;
     } else {
         auto size = zero2i;
-        if (!serialize_bin_value(size, fs, save)) return false;
-        auto count = size.x * size.y;
+        if (!read_value(fs, size)) return false;
         img        = image<T>(size);
-        if (fread(img.data(), sizeof(T), count, fs) != count) return false;
+        if (!read_values(fs, data_vector(img))) return false;
         return true;
     }
 }
 
 // Serialize image
 template <typename T>
-bool serialize_bin_value(volume<T>& vol, FILE* fs, bool save) {
+bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
     if (save) {
         auto size = (vec3i)vol.size();
-        if (!serialize_bin_value(size, fs, save)) return false;
-        auto count = size.x * size.y * size.z;
-        if (fwrite(vol.data(), sizeof(T), count, fs) != count) return false;
+        if (!write_value(fs, size)) return false;
+        if (!write_values(fs, data_vector(vol))) return false;
         return true;
     } else {
         auto size = zero3i;
-        if (!serialize_bin_value(size, fs, save)) return false;
-        auto count = size.x * size.y * size.z;
+        if (!read_value(fs, size)) return false;
         vol        = volume<T>(size);
-        if (fread(vol.data(), sizeof(T), count, fs) != count) return false;
+        if (!read_values(fs, data_vector(vol))) return false;
         return true;
     }
 }
 
 // Serialize std::vector of pointers
 template <typename T>
-bool serialize_bin_object(std::vector<T*>& vec, FILE* fs, bool save) {
+bool serialize_bin_object(std::vector<T*>& vec, file_stream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4856,7 +5001,7 @@ bool serialize_bin_object(std::vector<T*>& vec, FILE* fs, bool save) {
 // Serialize std::vector of pointers
 template <typename T>
 bool serialize_bin_object(
-    std::vector<T*>& vec, const scene* scn, FILE* fs, bool save) {
+    std::vector<T*>& vec, const scene* scn, file_stream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4880,7 +5025,7 @@ bool serialize_bin_object(
 // pointers vec. On loading, the handle is converted back into a pointer.
 template <typename T>
 bool serialize_bin_handle(
-    T*& val, const std::vector<T*>& vec, FILE* fs, bool save) {
+    T*& val, const std::vector<T*>& vec, file_stream& fs, bool save) {
     if (save) {
         auto handle = -1;
         for (auto i = 0; i < vec.size(); ++i)
@@ -4902,7 +5047,7 @@ bool serialize_bin_handle(
 // pointers vec. On loading, the handle is converted back into a pointer.
 template <typename T>
 bool serialize_bin_handle(
-    std::vector<T*>& vals, const std::vector<T*>& vec_, FILE* fs, bool save) {
+    std::vector<T*>& vals, const std::vector<T*>& vec_, file_stream& fs, bool save) {
     if (save) {
         auto count = (size_t)vals.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4920,7 +5065,7 @@ bool serialize_bin_handle(
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-bool serialize_bin_object(camera* cam, FILE* fs, bool save) {
+bool serialize_bin_object(camera* cam, file_stream& fs, bool save) {
     if (!serialize_bin_value(cam->name, fs, save)) return false;
     if (!serialize_bin_value(cam->frame, fs, save)) return false;
     if (!serialize_bin_value(cam->ortho, fs, save)) return false;
@@ -4931,7 +5076,7 @@ bool serialize_bin_object(camera* cam, FILE* fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_tree* bvh, FILE* fs, bool save) {
+bool serialize_bin_object(bvh_tree* bvh, file_stream& fs, bool save) {
     if (!serialize_bin_value(bvh->pos, fs, save)) return false;
     if (!serialize_bin_value(bvh->radius, fs, save)) return false;
     if (!serialize_bin_value(bvh->points, fs, save)) return false;
@@ -4945,7 +5090,7 @@ bool serialize_bin_object(bvh_tree* bvh, FILE* fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
+bool serialize_bin_object(shape* shp, const scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(shp->name, fs, save)) return false;
     if (!serialize_bin_value(shp->path, fs, save)) return false;
     if (!serialize_bin_value(shp->points, fs, save)) return false;
@@ -4960,7 +5105,7 @@ bool serialize_bin_object(shape* shp, const scene* scn, FILE* fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
+bool serialize_bin_object(subdiv* sbd, file_stream& fs, bool save) {
     if (!serialize_bin_value(sbd->name, fs, save)) return false;
     if (!serialize_bin_value(sbd->path, fs, save)) return false;
     if (!serialize_bin_value(sbd->level, fs, save)) return false;
@@ -4977,7 +5122,7 @@ bool serialize_bin_object(subdiv* sbd, FILE* fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(texture* tex, FILE* fs, bool save) {
+bool serialize_bin_object(texture* tex, file_stream& fs, bool save) {
     if (!serialize_bin_value(tex->name, fs, save)) return false;
     if (!serialize_bin_value(tex->path, fs, save)) return false;
     if (!serialize_bin_value(tex->imgf, fs, save)) return false;
@@ -4989,7 +5134,7 @@ bool serialize_bin_object(texture* tex, FILE* fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(voltexture* tex, FILE* fs, bool save) {
+bool serialize_bin_object(voltexture* tex, file_stream& fs, bool save) {
     if (!serialize_bin_value(tex->name, fs, save)) return false;
     if (!serialize_bin_value(tex->path, fs, save)) return false;
     if (!serialize_bin_value(tex->vol, fs, save)) return false;
@@ -4998,7 +5143,7 @@ bool serialize_bin_object(voltexture* tex, FILE* fs, bool save) {
 }
 
 bool serialize_bin_object(
-    environment* env, const scene* scn, FILE* fs, bool save) {
+    environment* env, const scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(env->name, fs, save)) return false;
     if (!serialize_bin_value(env->frame, fs, save)) return false;
     if (!serialize_bin_value(env->ke, fs, save)) return false;
@@ -5007,7 +5152,7 @@ bool serialize_bin_object(
     return true;
 }
 
-bool serialize_bin_object(material* mat, const scene* scn, FILE* fs, bool save) {
+bool serialize_bin_object(material* mat, const scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(mat->name, fs, save)) return false;
     if (!serialize_bin_value(mat->base_metallic, fs, save)) return false;
     if (!serialize_bin_value(mat->gltf_textures, fs, save)) return false;
@@ -5049,7 +5194,7 @@ bool serialize_bin_object(material* mat, const scene* scn, FILE* fs, bool save) 
     return true;
 };
 
-bool serialize_bin_object(instance* ist, const scene* scn, FILE* fs, bool save) {
+bool serialize_bin_object(instance* ist, const scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(ist->name, fs, save)) return false;
     if (!serialize_bin_value(ist->frame, fs, save)) return false;
     if (!serialize_bin_handle(ist->shp, scn->shapes, fs, save)) return false;
@@ -5058,7 +5203,7 @@ bool serialize_bin_object(instance* ist, const scene* scn, FILE* fs, bool save) 
     return true;
 };
 
-bool serialize_scene(scene* scn, FILE* fs, bool save) {
+bool serialize_scene(scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(scn->name, fs, save)) return false;
     if (!serialize_bin_object(scn->cameras, fs, save)) return false;
     if (!serialize_bin_object(scn->shapes, scn, fs, save)) return false;
@@ -5074,23 +5219,19 @@ bool serialize_scene(scene* scn, FILE* fs, bool save) {
 // Load/save a binary dump useful for very fast scene IO.
 scene* load_ybin_scene(const std::string& filename,
     bool load_textures, bool skip_missing) {
-    auto fs = fopen(filename.c_str(), "rb");
+    auto fs = open(filename, "rb");
     if (!fs) return nullptr;
-    fclose_guard fs_{fs};
     auto scn = new scene();
     if (!serialize_scene(scn, fs, false)) return nullptr;
-    fclose(fs);
     return scn;
 }
 
 // Load/save a binary dump useful for very fast scene IO.
 bool save_ybin_scene(const std::string& filename, const scene* scn,
     bool save_textures, bool skip_missing) {
-    auto fs = fopen(filename.c_str(), "wb");
+    auto fs = open(filename, "wb");
     if (!fs) return false;
-    fclose_guard fs_{fs};
     if (!serialize_scene((scene*)scn, fs, true)) return false;
-    fclose(fs);
     return true;
 }
 
@@ -5168,17 +5309,18 @@ void normalize_ply_line(char* s) {
 // Load ply mesh
 ply_data load_ply(const std::string& filename) {
     // open file
-    auto fs = fopen(filename.c_str(), "rb");
+    auto fs = open(filename, "rb");
     if (!fs) return {};
-    fclose_guard fs_{fs};
 
     // parse header
     auto ply = ply_data();
     auto ascii = false;
-    char line[4096];
-    while (fgets(line, sizeof(line), fs)) {
-        normalize_ply_line(line);
-        auto ss  = line;
+    char buf[4096];
+    auto line = ""s;
+    while (read_line(fs, line)) {
+        memcpy(buf, line.c_str(), line.size()+1);
+        normalize_ply_line(buf);
+        auto ss  = buf;
         auto cmd = parse_string(ss);
         if (cmd == "") continue;
         if (cmd == "ply") {
@@ -5229,8 +5371,9 @@ ply_data load_ply(const std::string& filename) {
         for (auto vid = 0; vid < elem.count; vid++) {
             auto ss = (char*)nullptr;
             if (ascii) {
-                if (!fgets(line, sizeof(line), fs)) return {};
-                ss = line;
+                if (!read_line(fs, line)) return {};
+                memcpy(buf, line.c_str(), line.size()+1);
+                ss = buf;
             }
             for (auto pid = 0; pid < elem.properties.size(); pid++) {
                 auto& prop = elem.properties[pid];
@@ -5239,7 +5382,7 @@ ply_data load_ply(const std::string& filename) {
                     if (ascii) {
                         v = parse_float(ss);
                     } else {
-                        if (fread((char*)&v, 4, 1, fs) != 1) return {};
+                        if (!read_value(fs, v)) return {};
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_int) {
@@ -5247,7 +5390,7 @@ ply_data load_ply(const std::string& filename) {
                     if (ascii) {
                         v = parse_int(ss);
                     } else {
-                        if (fread((char*)&v, 4, 1, fs) != 1) return {};
+                        if (!read_value(fs, v)) return {};
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_uchar) {
@@ -5256,7 +5399,7 @@ ply_data load_ply(const std::string& filename) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (fread((char*)&vc, 1, 1, fs) != 1) return {};
+                        if (!read_value(fs, vc)) return {};
                     }
                     prop.scalars[vid] = vc / 255.0f;
                 } else if (prop.type == ply_type::ply_int_list) {
@@ -5265,14 +5408,14 @@ ply_data load_ply(const std::string& filename) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (fread((char*)&vc, 1, 1, fs) != 1) return {};
+                        if (!read_value(fs, vc)) return {};
                     }
                     prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
                         if (ascii) {
                             prop.lists[vid][i] = parse_int(ss);
                         } else {
-                            if (fread((char*)&prop.lists[vid][i], 4, 1, fs) != 1)
+                            if (!read_value(fs, prop.lists[vid][i]))
                                 return {};
                         }
                 } else {
@@ -5281,8 +5424,6 @@ ply_data load_ply(const std::string& filename) {
             }
         }
     }
-
-    fclose(fs);
 
     return ply;
 }
@@ -5299,7 +5440,10 @@ bool load_ply_mesh(const std::string& filename, std::vector<int>& points,
 
     // load ply
     auto ply = load_ply(filename);
-    if(ply.elements.empty()) return false;
+    if(ply.elements.empty()) {
+        log_io_error("empty ply file {}", filename);
+        return false;
+    }
 
     // copy vertex data
     for (auto& elem : ply.elements) {
@@ -5358,9 +5502,8 @@ bool save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
     const std::vector<float>& radius, bool ascii) {
-    auto fs = fopen(filename.c_str(), "wb");
+    auto fs = open(filename, "wb");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     // header
     print(fs, "ply\n");
@@ -5410,31 +5553,28 @@ bool save_ply_mesh(const std::string& filename, const std::vector<int>& points,
     } else {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) fwrite((char*)&pos[i], 1, sizeof(pos[i]), fs);
-            if (!norm.empty()) fwrite((char*)&norm[i], 1, sizeof(norm[i]), fs);
+            if (!pos.empty()) write_value(fs, pos[i]);
+            if (!norm.empty()) write_value(fs, norm[i]);
             if (!texcoord.empty())
-                fwrite((char*)&texcoord[i], 1, sizeof(texcoord[i]), fs);
+                write_value(fs, texcoord[i]);
             if (!color.empty())
-                fwrite((char*)&color[i], 1, sizeof(color[i]), fs);
+                write_value(fs, color[i]);
             if (!radius.empty())
-                fwrite((char*)&radius[i], 1, sizeof(radius[i]), fs);
+                write_value(fs, radius[i]);
         }
 
         // write face data
         for (auto i = 0; i < triangles.size(); i++) {
             auto n = (byte)3;
-            fwrite((char*)&n, 1, sizeof(n), fs);
-            fwrite((char*)&triangles[i], 1, sizeof(triangles[i]), fs);
+            write_value(fs, n);
+            write_value(fs, triangles[i]);
         }
         for (auto i = 0; i < lines.size(); i++) {
-            auto n = (byte)3;
-            fwrite((char*)&n, 1, sizeof(n), fs);
-            fwrite((char*)&lines[i], 1, sizeof(lines[i]), fs);
+            auto n = (byte)2;
+            write_value(fs, n);
+            write_value(fs, lines[i]);
         }
     }
-
-    // done
-    fclose(fs);
 
     // done
     return true;
@@ -5495,7 +5635,7 @@ bool load_obj_mesh(const std::string& filename, std::vector<int>& points,
     };
 
     // load obj
-    return load_obj(filename, cb, flip_texcoord);
+    return load_obj(filename, cb, true, true, flip_texcoord);
 }
 
 // Load ply mesh
@@ -5503,9 +5643,8 @@ bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
     const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
     const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    auto fs = fopen(filename.c_str(), "wt");
+    auto fs = open(filename, "wt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
     for (auto& p : pos) print(fs, "v {}\n", p);
     for (auto& n : norm) print(fs, "vn {}\n", n);
@@ -5524,7 +5663,6 @@ bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
             to_string(vert(l.y)).c_str());
     for (auto& p : points) print(fs, "p {}\n", to_string(vert(p)).c_str());
 
-    fclose(fs);
     return true;
 }
 
@@ -5679,7 +5817,7 @@ bool load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     };
 
     // load obj
-    return load_obj(filename, cb, flip_texcoord);
+    return load_obj(filename, cb, true, true, flip_texcoord);
 }
 
 // Load ply mesh
@@ -5688,14 +5826,13 @@ bool save_obj_fvmesh(const std::string& filename,
     const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
     const std::vector<vec4i>& quads_texcoord,
     const std::vector<vec2f>& texcoord, bool flip_texcoord) {
-    auto fs = fopen(filename.c_str(), "wt");
+    auto fs = open(filename, "wt");
     if (!fs) return false;
-    fclose_guard fs_{fs};
 
-    for (auto& p : pos) fprintf(fs, "v %g %g %g\n", p.x, p.y, p.z);
-    for (auto& n : norm) fprintf(fs, "vn %g %g %g\n", n.x, n.y, n.z);
+    for (auto& p : pos) print(fs, "v {}\n", p);
+    for (auto& n : norm) print(fs, "vn {}\n", n);
     for (auto& t : texcoord)
-        fprintf(fs, "vt %g %g\n", t.x, (flip_texcoord) ? 1 - t.y : t.y);
+        print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
     auto mask = obj_vertex{1, texcoord.empty() ? 0 : 1, norm.empty() ? 0 : 1};
     auto vert = [mask](int pif, int ti, int ni) {
         return obj_vertex{(pif + 1) * mask.pos, (ti + 1) * mask.texcoord,
@@ -5707,19 +5844,18 @@ bool save_obj_fvmesh(const std::string& filename,
                                             vec4i{-1, -1, -1, -1};
         auto qn = !quads_norm.empty() ? quads_norm.at(i) : vec4i{-1, -1, -1, -1};
         if (qp.z != qp.w)
-            fprintf(fs, "f %s %s %s %s\n",
+            print(fs, "f {} {} {} {}\n",
                 to_string(vert(qp.x, qt.x, qn.x)).c_str(),
                 to_string(vert(qp.y, qt.y, qn.y)).c_str(),
                 to_string(vert(qp.z, qt.z, qn.z)).c_str(),
                 to_string(vert(qp.w, qt.w, qn.w)).c_str());
         else
-            fprintf(fs, "f %s %s %s\n",
+            print(fs, "f {} {} {}\n",
                 to_string(vert(qp.x, qt.x, qn.x)).c_str(),
                 to_string(vert(qp.y, qt.y, qn.y)).c_str(),
                 to_string(vert(qp.z, qt.z, qn.z)).c_str());
     }
 
-    fclose(fs);
     return true;
 }
 

@@ -775,21 +775,21 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    if (!quiet) printf("loading scene %s\n", app->filename.c_str());
+    if (!quiet) log_info("loading scene ", app->filename);
     app->scn = load_scene(app->filename);
     if(!app->scn)
-        exit_error("cannot load scene " + app->filename);
+        log_fatal("cannot load scene {}", app->filename);
 
     // tesselate
-    if (!quiet) printf("tesselating scene elements\n");
+    if (!quiet) log_info("tesselating scene elements\n");
     tesselate_subdivs(app->scn);
 
     // add components
-    if (!quiet) printf("adding scene elements\n");
+    if (!quiet) log_info("adding scene elements\n");
     if (double_sided) {
         for (auto mat : app->scn->materials) mat->double_sided = true;
     }
-    for (auto& err : validate(app->scn)) printf("warning: %s\n", err.c_str());
+    for (auto& err : validate(app->scn)) log_error(err);
 
     // animation
     auto time_range = compute_animation_range(app->scn);

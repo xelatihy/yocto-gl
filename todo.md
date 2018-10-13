@@ -8,7 +8,11 @@ Please consider this to be just development notes and not any real planning.
 - io
     - logging errors but returns always
     - io returns values always and logs errors
+    - image functions return std::vector<>
     - save functions return booleans
+    - string_views in parsing obj/mtl/objx
+    - string_views in parsing everything
+    - cmdline uses templates
 - images
     - need to preserve color space to be able to properly work on images
     - for now, focus on srgb primaries, but start porting other spaces too

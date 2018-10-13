@@ -115,12 +115,24 @@ inline bool parse(const std::string& str, Args&... args);
 template <typename... Args>
 inline bool parse(FILE* fs, Args&... args);
 
-// Exit to the console with an error.
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// LOGGING UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Log info/error/fatal message
 template <typename... Args>
-inline void exit_error(const std::string& fmt, const Args&... args) {
-    print(fmt + "\n", args...);
-    exit(1);
-}
+inline void log_info(const std::string& fmt, const Args&... args);
+template <typename... Args>
+inline void log_error(const std::string& fmt, const Args&... args);
+template <typename... Args>
+inline void log_fatal(const std::string& fmt, const Args&... args);
+
+// Setup logging
+void set_log_console(bool enabled);
+void set_log_file(const std::string& filename, bool append = false);
 
 }  // namespace ygl
 
@@ -501,7 +513,8 @@ struct obj_callbacks {
 };
 
 // Load obj scene
-bool load_obj(const std::string& filename, const obj_callbacks& cb, bool skip_missing = true,
+bool load_obj(const std::string& filename, const obj_callbacks& cb, 
+    bool geometry_only = false, bool skip_missing = true,
     bool flip_texcoord = true, bool flip_tr = true);
 
 }  // namespace ygl
@@ -866,6 +879,31 @@ inline bool parse(const std::string& str, Args&... args) {
 template <typename... Args>
 inline bool parse(FILE* fs, Args&... args) {
     return _parse_next(fs, args...);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF LOGGING UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Logs a message
+void log_message(const char* lbl, const char* msg);
+
+// Log info/error/fatal message
+template <typename... Args>
+inline void log_info(const std::string& fmt, const Args&... args) {
+    log_message("INFO ", format(fmt, args ...).c_str());
+}
+template <typename... Args>
+inline void log_error(const std::string& fmt, const Args&... args) {
+    log_message("ERROR", format(fmt, args ...).c_str());
+}
+template <typename... Args>
+inline void log_fatal(const std::string& fmt, const Args&... args) {
+    log_message("FATAL", format(fmt, args ...).c_str());
+    exit(1);
 }
 
 }  // namespace ygl

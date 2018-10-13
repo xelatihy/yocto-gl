@@ -157,14 +157,14 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = load_image4f(filename);
-    if(img.empty()) exit_error("cannot load image " + filename);
+    if(img.empty()) log_fatal("cannot load image " + filename);
 
     // set alpha
     if (alpha_filename != "") {
         auto alpha = load_image4f(alpha_filename);
-        if(alpha.empty()) exit_error("cannot load image " + alpha_filename);
+        if(alpha.empty()) log_fatal("cannot load image " + alpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
-            printf("bad image size\n");
+            log_fatal("bad image size\n");
             exit(1);
         }
         for (auto j = 0; j < img.size().y; j++)
@@ -175,9 +175,9 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = load_image4f(coloralpha_filename);
-        if(alpha.empty()) exit_error("cannot load image " + coloralpha_filename);
+        if(alpha.empty()) log_fatal("cannot load image " + coloralpha_filename);
         if (img.size().x != alpha.size().x || img.size().y != alpha.size().y) {
-            printf("bad image size\n");
+            log_fatal("bad image size\n");
             exit(1);
         }
         for (auto j = 0; j < img.size().y; j++)
@@ -199,7 +199,7 @@ int main(int argc, char* argv[]) {
     if (tonemap) img = tonemap_filmic(img, exposure, filmic, srgb);
 
     // save
-    if (!save_image4f(output, img)) exit_error("cannot save image " + output);
+    if (!save_image4f(output, img)) log_fatal("cannot save image " + output);
 
     // done
     return 0;
