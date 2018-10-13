@@ -12,4 +12,5 @@ for filename in glob.glob('tests/*.json'):
         os.system(f'mkdir tests/{ext}/{basename}')
         os.system(f'mkdir tests/{ext}/{basename}/textures')
         os.system(f'mkdir tests/{ext}/{basename}/meshes')
+        os.system(f'mkdir tests/{ext}/{basename}/models')
         os.system(f'./bin/yscnproc {opts} -o tests/{ext}/{basename}/{basename}.{ext} {filename}')
