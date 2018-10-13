@@ -776,7 +776,8 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
-    if (!load_scene(app->filename, app->scn))
+    app->scn = load_scene(app->filename);
+    if(!app->scn)
         exit_error("cannot load scene " + app->filename);
 
     // tesselate

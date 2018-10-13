@@ -202,26 +202,17 @@ struct fclose_guard {
 
 // Load a text file
 std::string load_text(const std::string& filename) {
-    auto str = std::string();
-    if (!load_text(filename, str)) return {};
-    return str;
-}
-
-// Load a text file
-bool load_text(const std::string& filename, std::string& str) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    str     = {};
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) return false;
+    if (!fs) return {};
     fclose_guard fs_{fs};
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
     auto buf = std::vector<char>(fsize);
-    if (fread(buf.data(), 1, fsize, fs) != fsize) return false;
+    if (fread(buf.data(), 1, fsize, fs) != fsize) return {};
     fclose(fs);
-    str = {buf.begin(), buf.end()};
-    return true;
+    return std::string{buf.begin(), buf.end()};
 }
 
 // Save a text file
@@ -236,25 +227,17 @@ bool save_text(const std::string& filename, const std::string& str) {
 
 // Load a binary file
 std::vector<byte> load_binary(const std::string& filename) {
-    auto data = std::vector<byte>();
-    if (!load_binary(filename, data)) return {};
-    return data;
-}
-
-// Load a binary file
-bool load_binary(const std::string& filename, std::vector<byte>& data) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    data    = {};
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) return false;
+    if (!fs) return {};
     fclose_guard fs_{fs};
     fseek(fs, 0, SEEK_END);
     auto fsize = ftell(fs);
     fseek(fs, 0, SEEK_SET);
-    data.resize(fsize);
-    if (fread((char*)data.data(), 1, fsize, fs) != fsize) return false;
+    auto data = std::vector<byte>(fsize);
+    if (fread((char*)data.data(), 1, fsize, fs) != fsize) return {};
     fclose(fs);
-    return true;
+    return data;
 }
 
 // Save a binary file
@@ -688,49 +671,41 @@ bool is_hdr_filename(const std::string& filename) {
 
 // Loads an hdr image.
 image<vec4f> load_image4f(const std::string& filename) {
-    auto img = image<vec4f>{};
-    if (!load_image4f(filename, img)) return {};
-    return img;
-}
-
-// Loads an hdr image.
-bool load_image4f(const std::string& filename, image<vec4f>& img) {
     auto ext  = get_extension(filename);
     auto size = zero2i;
-    img       = {};
     if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
                 nullptr) < 0)
-            return false;
-        if (!pixels) return false;
-        img = image<vec4f>{size, pixels};
+            return {};
+        if (!pixels) return {};
+        auto img = image<vec4f>{size, pixels};
         free(pixels);
-        return true;
+        return img;
     } else if (ext == "pfm") {
         auto ncomp  = 0;
         auto pixels = (vec4f*)load_pfm(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return false;
-        img = image<vec4f>{size, pixels};
+        if (!pixels) return {};
+        auto img = image<vec4f>{size, pixels};
         free(pixels);
-        return true;
+        return img;
     } else if (ext == "hdr") {
         auto ncomp  = 0;
         auto pixels = (vec4f*)stbi_loadf(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return false;
-        img = image<vec4f>{size, pixels};
+        if (!pixels) return {};
+        auto img = image<vec4f>{size, pixels};
         free(pixels);
-        return true;
+        return img;
     } else {
         auto ncomp  = 0;
         auto pixels = (vec4f*)stbi_loadf(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return false;
-        img = image<vec4f>{size, pixels};
+        if (!pixels) return {};
+        auto img = image<vec4f>{size, pixels};
         free(pixels);
-        return true;
+        return img;
     }
 }
 
@@ -767,73 +742,57 @@ bool save_image4f(const std::string& filename, const image<vec4f>& img) {
 }
 
 // Loads an hdr image.
-image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
-    auto img = image<vec4f>{};
-    if (!load_image4f_from_memory(data, data_size, img)) return {};
-    return img;
-}
-
-// Loads an hdr image.
-bool load_image4f_from_memory(
-    const byte* data, int data_size, image<vec4f>& img) {
-    img         = {};
+image<vec4f> load_image4f_from_memory(
+    const byte* data, int data_size) {
     auto size   = zero2i;
     auto ncomp  = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
         data, data_size, &size.x, &size.y, &ncomp, 4);
-    if (!pixels) return false;
-    img = image<vec4f>{size, pixels};
+    if (!pixels) return {};
+    auto img = image<vec4f>{size, pixels};
     delete pixels;
-    return true;
+    return {};
 }
 
 // Loads an hdr image.
 image<vec4b> load_image4b(const std::string& filename) {
-    auto img = image<vec4b>{};
-    if (!load_image4b(filename, img)) return {};
-    return img;
-}
-
-// Loads an hdr image.
-bool load_image4b(const std::string& filename, image<vec4b>& img) {
-    img       = {};
     auto ext  = get_extension(filename);
     auto size = zero2i;
     if (ext == "exr") {
         auto pixels = (vec4f*)nullptr;
         if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
                 nullptr) < 0)
-            return false;
-        if (!pixels) return false;
+            return {};
+        if (!pixels) return {};
         auto imgf = image<vec4f>{size, pixels};
-        img       = float_to_byte(linear_to_srgb(imgf));
+        auto img       = float_to_byte(linear_to_srgb(imgf));
         free(pixels);
-        return true;
+        return img;
     } else if (ext == "pfm") {
         auto ncomp  = 0;
         auto pixels = (vec4f*)load_pfm(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return false;
+        if (!pixels) return {};
         auto imgf = image<vec4f>{size, pixels};
-        img       = float_to_byte(linear_to_srgb(imgf));
+        auto img       = float_to_byte(linear_to_srgb(imgf));
         free(pixels);
-        return true;
+        return img;
     } else if (ext == "hdr") {
         auto ncomp  = 0;
         auto pixels = (vec4b*)stbi_load(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return false;
-        img = image<vec4b>{size, pixels};
+        if (!pixels) return {};
+        auto img = image<vec4b>{size, pixels};
         free(pixels);
-        return true;
+        return img;
     } else {
         auto ncomp  = 0;
         auto pixels = (vec4b*)stbi_load(
             filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return false;
-        img = image<vec4b>{size, pixels};
+        if (!pixels) return {};
+        auto img = image<vec4b>{size, pixels};
         free(pixels);
-        return true;
+        return img;
     }
 }
 
@@ -870,24 +829,16 @@ bool save_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 
 // Loads an ldr image.
-image<vec4b> load_image4b_from_memory(const byte* data, int data_size) {
-    auto img = image<vec4b>{};
-    if (!load_image4b_from_memory(data, data_size, img)) return {};
-    return img;
-}
-
-// Loads an ldr image.
-bool load_image4b_from_memory(
-    const byte* data, int data_size, image<vec4b>& img) {
-    img         = {};
+image<vec4b> load_image4b_from_memory(
+    const byte* data, int data_size) {
     auto size   = zero2i;
     auto ncomp  = 0;
     auto pixels = (vec4b*)stbi_load_from_memory(
         data, data_size, &size.x, &size.y, &ncomp, 4);
-    if (!pixels) return false;
-    img = image<vec4b>{size, pixels};
+    if (!pixels) return {};
+    auto img = image<vec4b>{size, pixels};
     delete pixels;
-    return true;
+    return img;
 }
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
@@ -928,23 +879,16 @@ namespace ygl {
 
 // Loads volume data from binary format.
 volume<float> load_volume1f(const std::string& filename) {
-    auto vol = volume<float>();
-    return vol;
-}
-
-// Loads volume data from binary format.
-bool load_volume1f(const std::string& filename, volume<float>& vol) {
-    vol     = {};
     auto fs = fopen(filename.c_str(), "r");
-    if (!fs) return false;
+    if (!fs) return {};
     fclose_guard fs_{fs};
     auto         size = zero3i;
-    if (fread(&size, sizeof(vec3i), 1, fs) != 1) return false;
-    vol        = volume<float>{size};
+    if (fread(&size, sizeof(vec3i), 1, fs) != 1) return {};
+    auto vol        = volume<float>{size};
     auto count = vol.size().x * vol.size().y * vol.size().z;
-    if (fread(vol.data(), sizeof(float), count, fs) != count) return false;
+    if (fread(vol.data(), sizeof(float), count, fs) != count) return {};
     fclose(fs);
-    return true;
+    return vol;
 }
 
 // Saves volume data in binary format.
@@ -967,37 +911,22 @@ bool save_volume1f(const std::string& filename, const volume<float>& vol) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// reset scene data pointer
-void reset_scene_data(scene*& scn) {
-    if (scn) delete scn;
-    scn = nullptr;
-}
-
 // Load a scene
-scene* load_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    auto scn = (scene*)nullptr;
-    if (!load_scene(filename, scn, load_textures, skip_missing)) return nullptr;
-    return scn;
-}
-
-// Load a scene
-bool load_scene(const std::string& filename, scene*& scn, bool load_textures,
+scene* load_scene(const std::string& filename, bool load_textures,
     bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
-        return load_json_scene(filename, scn, load_textures, skip_missing);
+        return load_json_scene(filename, load_textures, skip_missing);
     } else if (ext == "obj" || ext == "OBJ") {
-        return load_obj_scene(filename, scn, load_textures, skip_missing);
+        return load_obj_scene(filename, load_textures, skip_missing);
     } else if (ext == "gltf" || ext == "GLTF") {
-        return load_gltf_scene(filename, scn, load_textures, skip_missing);
+        return load_gltf_scene(filename, load_textures, skip_missing);
     } else if (ext == "pbrt" || ext == "PBRT") {
-        return load_pbrt_scene(filename, scn, load_textures, skip_missing);
+        return load_pbrt_scene(filename, load_textures, skip_missing);
     } else if (ext == "ybin" || ext == "YBIN") {
-        return load_ybin_scene(filename, scn, load_textures, skip_missing);
+        return load_ybin_scene(filename, load_textures, skip_missing);
     } else {
-        reset_scene_data(scn);
-        return false;
+        return nullptr;
     }
 }
 
@@ -1028,13 +957,12 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
             continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
-            if (!load_image4f(filename, txt->imgf)) {
-                if (!skip_missing) return false;
-            }
+            txt->imgf = load_image4f(filename);
         } else {
-            if (!load_image4b(filename, txt->imgb)) {
+            txt->imgb = load_image4b(filename);
+        }
+        if (txt->imgf.empty() && txt->imgb.empty()) {
                 if (!skip_missing) return false;
-            }
         }
     }
 
@@ -1042,7 +970,8 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
     for (auto txt : scn->voltextures) {
         if (txt->path == "" || !txt->vol.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
-        if (!load_volume1f(filename, txt->vol)) {
+        txt->vol = load_volume1f(filename);
+        if(txt->vol.empty()) {
             if (!skip_missing) return false;
         }
     }
@@ -1225,25 +1154,14 @@ namespace ygl {
 // Json alias
 using json = nlohmann::json;
 
-// forward declaration
-bool load_json(const std::string& filename, json& js);
-
 // Load a JSON object
 json load_json(const std::string& filename) {
-    auto js = json();
-    if (!load_json(filename, js)) return false;
-    return js;
-}
-
-// Load a JSON object
-bool load_json(const std::string& filename, json& js) {
-    js       = {};
-    auto txt = std::string();
-    if (!load_text(filename, txt)) return false;
+    auto txt = load_text(filename);
+    if(txt.empty()) return {};
     try {
-        js = json::parse(txt.begin(), txt.end());
+        return json::parse(txt.begin(), txt.end());
         return true;
-    } catch (...) { return false; }
+    } catch (...) { return {}; }
 }
 
 // Save a JSON object
@@ -2148,26 +2066,15 @@ void from_json_proc(const json& js, scene& val) {
     }
 }
 
-// Load a scene
-scene* load_json_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    auto scn = (scene*)nullptr;
-    if (!load_json_scene(filename, scn, load_textures, skip_missing))
-        return nullptr;
-    return scn;
-}
-
 // Load a scene in the builtin JSON format.
-bool load_json_scene(const std::string& filename, scene*& scn,
+scene* load_json_scene(const std::string& filename, 
     bool load_textures, bool skip_missing) {
-    // reset
-    reset_scene_data(scn);
     // initialize
-    scn = new scene();
+    auto scn = new scene();
 
     // load jsonz
-    auto js = json();
-    if (!load_json(filename, js)) return false;
+    auto js = load_json(filename);
+    if(js.empty()) return nullptr;
 
     // parse json scene
     scn->name = js.value("name", ""s);
@@ -2271,7 +2178,7 @@ bool load_json_scene(const std::string& filename, scene*& scn,
         auto filename = normalize_path(dirname + "/" + shp->path);
         if (!load_mesh(filename, shp->points, shp->lines, shp->triangles,
                 shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius)) {
-            if (!skip_missing) return false;
+            if (!skip_missing) return nullptr;
         }
     }
 
@@ -2284,14 +2191,14 @@ bool load_json_scene(const std::string& filename, scene*& scn,
         if (!load_fvmesh(filename, sbd->quads_pos, sbd->pos, quads_norm, norm,
                 sbd->quads_texcoord, sbd->texcoord, sbd->quads_color,
                 sbd->color)) {
-            if (!skip_missing) return false;
+            if (!skip_missing) return nullptr;
         }
     }
 
     // skip textures
     if (load_textures) {
         if (!load_scene_textures(scn, dirname, skip_missing, false))
-            return false;
+            return nullptr;
     }
 
     // fix scene
@@ -2302,7 +2209,7 @@ bool load_json_scene(const std::string& filename, scene*& scn,
     update_transforms(scn);
 
     // done
-    return true;
+    return scn;
 }
 
 // Save a scene in the builtin JSON format.
@@ -2650,8 +2557,8 @@ bool load_objx(const std::string& filename, const obj_callbacks& cb) {
 }
 
 // Load obj scene
-bool load_obj(const std::string& filename, const obj_callbacks& cb,
-    bool flip_texcoord, bool flip_tr) {
+bool load_obj(const std::string& filename, const obj_callbacks& cb, 
+    bool skip_missing, bool flip_texcoord, bool flip_tr) {
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) return false;
@@ -2711,8 +2618,10 @@ bool load_obj(const std::string& filename, const obj_callbacks& cb,
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
             if (!load_mtl(mtlpath, cb, flip_tr)) {
-                fclose(fs);
-                return false;
+                if(!skip_missing) {
+                    fclose(fs);
+                    return false;
+                }
             }
         } else {
             // unused
@@ -2733,21 +2642,10 @@ bool load_obj(const std::string& filename, const obj_callbacks& cb,
     return true;
 }
 
-// Load a scene
-scene* load_obj_scene(const std::string& filename, bool load_textures,
-    bool skip_missing, bool split_shapes) {
-    auto scn = (scene*)nullptr;
-    if (!load_obj_scene(
-            filename, scn, load_textures, skip_missing, split_shapes))
-        return nullptr;
-    return scn;
-}
-
 // Loads an OBJ
-bool load_obj_scene(const std::string& filename, scene*& scn,
+scene* load_obj_scene(const std::string& filename, 
     bool load_textures, bool skip_missing, bool split_shapes) {
-    reset_scene_data(scn);
-    scn = new scene();
+    auto scn = new scene();
 
     // splitting policy
     auto split_material  = split_shapes;
@@ -2963,7 +2861,7 @@ bool load_obj_scene(const std::string& filename, scene*& scn,
     };
 
     // Parse obj
-    if (!load_obj(filename, cb)) return false;
+    if (!load_obj(filename, cb, skip_missing)) return nullptr;
 
     // cleanup empty
     // TODO: delete unused
@@ -2986,7 +2884,7 @@ bool load_obj_scene(const std::string& filename, scene*& scn,
     auto dirname = get_dirname(filename);
     if (load_textures) {
         if (!load_scene_textures(scn, dirname, skip_missing, false))
-            return false;
+            return nullptr;
     }
 
     // fix scene
@@ -2997,7 +2895,7 @@ bool load_obj_scene(const std::string& filename, scene*& scn,
     update_transforms(scn);
 
     // done
-    return true;
+    return scn;
 }
 
 bool save_mtl(
@@ -3227,15 +3125,6 @@ static bool startswith(const std::string& str, const std::string& substr) {
     return true;
 }
 
-// Load a scene
-scene* load_gltf_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    auto scn = (scene*)nullptr;
-    if (!load_gltf_scene(filename, scn, load_textures, skip_missing))
-        return nullptr;
-    return scn;
-}
-
 // convert gltf to scene
 bool gltf_to_scene(scene* scn, const json& gltf, const std::string& dirname) {
     // convert textures
@@ -3271,7 +3160,8 @@ bool gltf_to_scene(scene* scn, const json& gltf, const std::string& dirname) {
                     (unsigned char*)data_char.c_str() + data_char.length());
             } else {
                 auto filename = normalize_path(dirname + "/" + uri);
-                if (!load_binary(filename, data)) return false;
+                data = load_binary(filename);
+                if(data.empty()) return false;
             }
             if (gbuf.value("byteLength", -1) != data.size()) { return false; }
         }
@@ -3741,26 +3631,23 @@ bool gltf_to_scene(scene* scn, const json& gltf, const std::string& dirname) {
 }
 
 // Load a scene
-bool load_gltf_scene(const std::string& filename, scene*& scn,
+scene* load_gltf_scene(const std::string& filename,
     bool load_textures, bool skip_missing) {
-    // reset
-    reset_scene_data(scn);
-
     // initialization
-    scn = new scene();
+    auto scn = new scene();
 
     // convert json
-    auto js = json();
-    if (!load_json(filename, js)) return false;
+    auto js = load_json(filename);
+    if(js.empty()) return nullptr;
     try {
-        if (!gltf_to_scene(scn, js, get_dirname(filename))) return false;
-    } catch (...) { return false; }
+        if (!gltf_to_scene(scn, js, get_dirname(filename))) return nullptr;
+    } catch (...) { return nullptr; }
 
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
         if (!load_scene_textures(scn, dirname, skip_missing, false))
-            return false;
+            return nullptr;
     }
 
     // fix scene
@@ -3779,7 +3666,7 @@ bool load_gltf_scene(const std::string& filename, scene*& scn,
     }
 
     // done
-    return true;
+    return scn;
 }
 
 // convert gltf scene to json
@@ -4188,26 +4075,14 @@ bool pbrt_to_json(const std::string& filename, json& js) {
     return true;
 }
 
-// Load a scene
-scene* load_pbrt_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    auto scn = (scene*)nullptr;
-    if (!load_pbrt_scene(filename, scn, load_textures, skip_missing))
-        return nullptr;
-    return scn;
-}
-
 // load pbrt scenes
-bool load_pbrt_scene(const std::string& filename, scene*& scn,
+scene* load_pbrt_scene(const std::string& filename, 
     bool load_textures, bool skip_missing) {
-    // reset
-    reset_scene_data(scn);
-
     // convert to json
     auto js = json();
     try {
-        if (!pbrt_to_json(filename, js)) return false;
-    } catch (...) { return false; }
+        if (!pbrt_to_json(filename, js)) return nullptr;
+    } catch (...) { return nullptr; }
 
     auto dirname_ = get_dirname(filename);
 
@@ -4220,9 +4095,10 @@ bool load_pbrt_scene(const std::string& filename, scene*& scn,
     };
 
     // parse
-    scn        = new scene();
+    auto scn        = new scene();
     auto stack = std::vector<stack_item>();
     stack.push_back(stack_item());
+    
     auto txt_map = std::map<std::string, texture*>();
     auto mat_map = std::map<std::string, material*>();
     auto mid     = 0;
@@ -4533,7 +4409,7 @@ bool load_pbrt_scene(const std::string& filename, scene*& scn,
                 if (!load_ply_mesh(dirname_ + "/" + filename, shp->points,
                         shp->lines, shp->triangles, shp->pos, shp->norm,
                         shp->texcoord, shp->color, shp->radius))
-                    return false;
+                    return nullptr;
             } else if (type == "trianglemesh") {
                 shp->name = "mesh" + std::to_string(sid++);
                 shp->path = "models/" + shp->name + ".ply";
@@ -4702,7 +4578,7 @@ bool load_pbrt_scene(const std::string& filename, scene*& scn,
     auto dirname = get_dirname(filename);
     if (load_textures) {
         if (!load_scene_textures(scn, dirname, skip_missing, false))
-            return false;
+            return nullptr;
     }
 
     // fix scene
@@ -5196,23 +5072,15 @@ bool serialize_scene(scene* scn, FILE* fs, bool save) {
 }
 
 // Load/save a binary dump useful for very fast scene IO.
-scene* load_ybin_scene(
-    const std::string& filename, bool load_textures, bool skip_missing) {
-    auto scn = (scene*)nullptr;
-    if (!load_ybin_scene(filename, scn, skip_missing)) return nullptr;
-    return scn;
-}
-
-// Load/save a binary dump useful for very fast scene IO.
-bool load_ybin_scene(const std::string& filename, scene*& scn,
+scene* load_ybin_scene(const std::string& filename,
     bool load_textures, bool skip_missing) {
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) return true;
+    if (!fs) return nullptr;
     fclose_guard fs_{fs};
-    scn = new scene();
-    if (!serialize_scene(scn, fs, false)) return false;
+    auto scn = new scene();
+    if (!serialize_scene(scn, fs, false)) return nullptr;
     fclose(fs);
-    return false;
+    return scn;
 }
 
 // Load/save a binary dump useful for very fast scene IO.
@@ -5299,22 +5167,13 @@ void normalize_ply_line(char* s) {
 
 // Load ply mesh
 ply_data load_ply(const std::string& filename) {
-    auto ply = ply_data{};
-    if (!load_ply(filename, ply)) return {};
-    return ply;
-}
-
-// Load ply mesh
-bool load_ply(const std::string& filename, ply_data& ply) {
-    // clear
-    ply = {};
-
     // open file
     auto fs = fopen(filename.c_str(), "rb");
-    if (!fs) return false;
+    if (!fs) return {};
     fclose_guard fs_{fs};
 
     // parse header
+    auto ply = ply_data();
     auto ascii = false;
     char line[4096];
     while (fgets(line, sizeof(line), fs)) {
@@ -5326,7 +5185,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
             auto fmt = parse_string(ss);
-            if (fmt != "ascii" && fmt != "binary_little_endian") return false;
+            if (fmt != "ascii" && fmt != "binary_little_endian") return {};
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
             auto elem  = ply_element();
@@ -5351,7 +5210,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
             } else if (type == "int") {
                 prop.type = ply_type::ply_int;
             } else {
-                return false;
+                return {};
             }
             prop.name = parse_string(ss);
             prop.scalars.resize(ply.elements.back().count);
@@ -5361,7 +5220,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
         } else if (cmd == "end_header") {
             break;
         } else {
-            return false;
+            return {};
         }
     }
 
@@ -5370,7 +5229,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
         for (auto vid = 0; vid < elem.count; vid++) {
             auto ss = (char*)nullptr;
             if (ascii) {
-                if (!fgets(line, sizeof(line), fs)) return false;
+                if (!fgets(line, sizeof(line), fs)) return {};
                 ss = line;
             }
             for (auto pid = 0; pid < elem.properties.size(); pid++) {
@@ -5380,7 +5239,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
                     if (ascii) {
                         v = parse_float(ss);
                     } else {
-                        if (fread((char*)&v, 4, 1, fs) != 1) return false;
+                        if (fread((char*)&v, 4, 1, fs) != 1) return {};
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_int) {
@@ -5388,7 +5247,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
                     if (ascii) {
                         v = parse_int(ss);
                     } else {
-                        if (fread((char*)&v, 4, 1, fs) != 1) return false;
+                        if (fread((char*)&v, 4, 1, fs) != 1) return {};
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_uchar) {
@@ -5397,7 +5256,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (fread((char*)&vc, 1, 1, fs) != 1) return false;
+                        if (fread((char*)&vc, 1, 1, fs) != 1) return {};
                     }
                     prop.scalars[vid] = vc / 255.0f;
                 } else if (prop.type == ply_type::ply_int_list) {
@@ -5406,7 +5265,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (fread((char*)&vc, 1, 1, fs) != 1) return false;
+                        if (fread((char*)&vc, 1, 1, fs) != 1) return {};
                     }
                     prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
@@ -5414,10 +5273,10 @@ bool load_ply(const std::string& filename, ply_data& ply) {
                             prop.lists[vid][i] = parse_int(ss);
                         } else {
                             if (fread((char*)&prop.lists[vid][i], 4, 1, fs) != 1)
-                                return false;
+                                return {};
                         }
                 } else {
-                    return false;
+                    return {};
                 }
             }
         }
@@ -5425,7 +5284,7 @@ bool load_ply(const std::string& filename, ply_data& ply) {
 
     fclose(fs);
 
-    return true;
+    return ply;
 }
 
 // Load ply mesh
@@ -5439,8 +5298,8 @@ bool load_ply_mesh(const std::string& filename, std::vector<int>& points,
         points, lines, triangles, pos, norm, texcoord, color, radius);
 
     // load ply
-    auto ply = ply_data{};
-    if (!load_ply(filename, ply)) return false;
+    auto ply = load_ply(filename);
+    if(ply.elements.empty()) return false;
 
     // copy vertex data
     for (auto& elem : ply.elements) {
