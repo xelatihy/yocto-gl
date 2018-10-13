@@ -822,6 +822,154 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
     return true;
 }
 
+// load pfm image
+image<vec4f> load_pfm_image4f(const std::string& filename) {
+    auto ncomp  = 0;
+    auto size   = zero2i;
+    auto pixels = (vec4f*)load_pfm(
+        filename.c_str(), &size.x, &size.y, &ncomp, 4);
+    if (!pixels) {
+        log_io_error("error loading image {}", filename);
+        return {};
+    }
+    auto img = image<vec4f>{size, pixels};
+    delete[] pixels;
+    return img;
+}
+bool save_pfm_image4f(const std::string& filename, const image<vec4f>& img) {
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+
+// load exr image weith tiny exr
+image<vec4f> load_exr_image4f(const std::string& filename) {
+        auto size   = zero2i;
+        auto pixels = (vec4f*)nullptr;
+        if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
+                nullptr) < 0) {
+        log_io_error("error loading image {}", filename);
+        return {};
+        }
+        if (!pixels) {
+        log_io_error("error loading image {}", filename);
+        return {};
+        }
+        auto img = image<vec4f>{size, pixels};
+        free(pixels);
+        return img;
+}
+bool save_exr_image4f(const std::string& filename, const image<vec4f>& img) {
+    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+            filename.c_str())) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+
+// load an image using stbi library
+image<vec4b> load_stb_image4b(const std::string& filename) {
+    auto size   = zero2i;
+    auto ncomp  = 0;
+    auto pixels = (vec4b*)stbi_load(
+        filename.c_str(), &size.x, &size.y, &ncomp, 4);
+    if (!pixels) {
+        log_io_error("error loading image {}", filename);
+        return {};
+    }
+    auto img = image<vec4b>{size, pixels};
+    free(pixels);
+    return img;
+}
+image<vec4f> load_stb_image4f(const std::string& filename) {
+    auto size   = zero2i;
+    auto ncomp  = 0;
+    auto pixels = (vec4f*)stbi_loadf(
+        filename.c_str(), &size.x, &size.y, &ncomp, 4);
+    if (!pixels) {
+        log_io_error("error loading image {}", filename);
+        return {};
+    }
+    auto img = image<vec4f>{size, pixels};
+    free(pixels);
+    return img;
+}
+
+// save an image with stbi
+bool save_png_image4b(const std::string& filename, const image<vec4b>& img) {
+    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4)) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+bool save_jpg_image4b(const std::string& filename, const image<vec4b>& img) {
+    if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), 75)) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+bool save_tga_image4b(const std::string& filename, const image<vec4b>& img) {
+    if (!stbi_write_tga(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data())) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+bool save_bmp_image4b(const std::string& filename, const image<vec4b>& img) {
+    if (!stbi_write_bmp(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data())) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+bool save_hdr_image4f(const std::string& filename, const image<vec4f>& img) {
+    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
+        log_io_error("error saving image {}", filename);
+        return false;
+    }
+    return true;
+}
+
+// load an image using stbi library
+image<vec4b> load_stb_image4b_from_memory(const byte* data, int data_size) {
+    auto size   = zero2i;
+    auto ncomp  = 0;
+    auto pixels = (vec4b*)stbi_load_from_memory(
+        data, data_size, &size.x, &size.y, &ncomp, 4);
+    if (!pixels) {
+        log_io_error("error loading in-memory image");
+        return {};
+    }
+    auto img = image<vec4b>{size, pixels};
+    free(pixels);
+    return img;
+}
+image<vec4f> load_stbi_image4f_from_memory(const byte* data, int data_size) {
+    auto size   = zero2i;
+    auto ncomp  = 0;
+    auto pixels = (vec4f*)stbi_loadf_from_memory(
+        data, data_size, &size.x, &size.y, &ncomp, 4);
+    if (!pixels) {
+        log_io_error("error loading in-memory image {}");
+        return {};
+    }
+    auto img = image<vec4f>{size, pixels};
+    free(pixels);
+    return img;
+}
+
+
 // check hdr extensions
 bool is_hdr_filename(const std::string& filename) {
     auto ext = get_extension(filename);
@@ -830,172 +978,104 @@ bool is_hdr_filename(const std::string& filename) {
 
 // Loads an hdr image.
 image<vec4f> load_image4f(const std::string& filename) {
-    auto ext  = get_extension(filename);
-    auto size = zero2i;
-    if (ext == "exr") {
-        auto pixels = (vec4f*)nullptr;
-        if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
-                nullptr) < 0)
-            return {};
-        if (!pixels) return {};
-        auto img = image<vec4f>{size, pixels};
-        free(pixels);
-        return img;
-    } else if (ext == "pfm") {
-        auto ncomp  = 0;
-        auto pixels = (vec4f*)load_pfm(
-            filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return {};
-        auto img = image<vec4f>{size, pixels};
-        free(pixels);
-        return img;
-    } else if (ext == "hdr") {
-        auto ncomp  = 0;
-        auto pixels = (vec4f*)stbi_loadf(
-            filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return {};
-        auto img = image<vec4f>{size, pixels};
-        free(pixels);
-        return img;
+    auto ext = get_extension(filename);
+    if (ext == "exr" || ext == "EXR") {
+        return load_exr_image4f(filename);
+    } else if (ext == "pfm" || ext == "PFM") {
+        return load_pfm_image4f(filename);
+    } else if (ext == "hdr" || ext == "HDR") {
+        return load_stb_image4f(filename);
+    } else if (ext == "png" || ext == "PNG") {
+        return srgb_to_linear(byte_to_float(load_stb_image4b(filename)));
+    } else if (ext == "jpg" || ext == "JPG") {
+        return srgb_to_linear(byte_to_float(load_stb_image4b(filename)));
+    } else if (ext == "tga" || ext == "TGA") {
+        return srgb_to_linear(byte_to_float(load_stb_image4b(filename)));
+    } else if (ext == "bmp" || ext == "BMP") {
+        return srgb_to_linear(byte_to_float(load_stb_image4b(filename)));
     } else {
-        auto ncomp  = 0;
-        auto pixels = (vec4f*)stbi_loadf(
-            filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return {};
-        auto img = image<vec4f>{size, pixels};
-        free(pixels);
-        return img;
+        log_io_error("unsupported image format {}", ext);
+        return {};
     }
 }
 
 // Saves an hdr image.
 bool save_image4f(const std::string& filename, const image<vec4f>& img) {
     auto ext  = get_extension(filename);
-    auto img8 = (is_hdr_filename(filename)) ?
-                    image<vec4b>{} :
-                    float_to_byte(linear_to_srgb(img));
-    if (ext == "png") {
-        return stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img8.data(), img.size().x * 4);
-    } else if (ext == "jpg") {
-        return stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img8.data(), 75);
-    } else if (ext == "tga") {
-        return stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img8.data());
-    } else if (ext == "bmp") {
-        return stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img8.data());
-    } else if (ext == "hdr") {
-        return stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data());
-    } else if (ext == "pfm") {
-        return save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data());
-    } else if (ext == "exr") {
-        return SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-            filename.c_str());
+    if (ext == "png" || ext == "PNG") {
+        return save_png_image4b(filename, float_to_byte(linear_to_srgb(img)));
+    } else if (ext == "jpg" || ext == "JPG") {
+        return save_jpg_image4b(filename, float_to_byte(linear_to_srgb(img)));
+    } else if (ext == "tga" || ext == "TGA") {
+        return save_tga_image4b(filename, float_to_byte(linear_to_srgb(img)));
+    } else if (ext == "bmp" || ext == "BMP") {
+        return save_bmp_image4b(filename, float_to_byte(linear_to_srgb(img)));
+    } else if (ext == "hdr" || ext == "HDR") {
+        return save_hdr_image4f(filename, img);
+    } else if (ext == "pfm" || ext == "PFM") {
+        return save_pfm_image4f(filename, img);
+    } else if (ext == "exr" || ext == "EXR") {
+        return save_exr_image4f(filename, img);
     } else {
+        log_io_error("unsupported image format {}", ext);
         return false;
     }
 }
 
 // Loads an hdr image.
 image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
-    auto size   = zero2i;
-    auto ncomp  = 0;
-    auto pixels = (vec4f*)stbi_loadf_from_memory(
-        data, data_size, &size.x, &size.y, &ncomp, 4);
-    if (!pixels) return {};
-    auto img = image<vec4f>{size, pixels};
-    delete pixels;
-    return {};
+    return load_stbi_image4f_from_memory(data, data_size);
 }
 
 // Loads an hdr image.
 image<vec4b> load_image4b(const std::string& filename) {
     auto ext  = get_extension(filename);
-    auto size = zero2i;
-    if (ext == "exr") {
-        auto pixels = (vec4f*)nullptr;
-        if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
-                nullptr) < 0)
-            return {};
-        if (!pixels) return {};
-        auto imgf = image<vec4f>{size, pixels};
-        auto img  = float_to_byte(linear_to_srgb(imgf));
-        free(pixels);
-        return img;
-    } else if (ext == "pfm") {
-        auto ncomp  = 0;
-        auto pixels = (vec4f*)load_pfm(
-            filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return {};
-        auto imgf = image<vec4f>{size, pixels};
-        auto img  = float_to_byte(linear_to_srgb(imgf));
-        free(pixels);
-        return img;
-    } else if (ext == "hdr") {
-        auto ncomp  = 0;
-        auto pixels = (vec4b*)stbi_load(
-            filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return {};
-        auto img = image<vec4b>{size, pixels};
-        free(pixels);
-        return img;
+    if (ext == "exr" || ext == "EXR") {
+        return float_to_byte(linear_to_srgb(load_exr_image4f(filename)));
+    } else if (ext == "pfm" || ext == "PFM") {
+        return float_to_byte(linear_to_srgb(load_pfm_image4f(filename)));
+    } else if (ext == "hdr" || ext == "HDR") {
+        return float_to_byte(linear_to_srgb(load_stb_image4f(filename)));
+    } else if (ext == "png" || ext == "PNG") {
+        return load_stb_image4b(filename);
+    } else if (ext == "jpg" || ext == "JPG") {
+        return load_stb_image4b(filename);
+    } else if (ext == "tga" || ext == "TGA") {
+        return load_stb_image4b(filename);
+    } else if (ext == "bmp" || ext == "BMP") {
+        return load_stb_image4b(filename);
     } else {
-        auto ncomp  = 0;
-        auto pixels = (vec4b*)stbi_load(
-            filename.c_str(), &size.x, &size.y, &ncomp, 4);
-        if (!pixels) return {};
-        auto img = image<vec4b>{size, pixels};
-        free(pixels);
-        return img;
+        log_io_error("unsupported image format {}", ext);
+        return {};
     }
 }
 
 // Saves an ldr image.
 bool save_image4b(const std::string& filename, const image<vec4b>& img) {
     auto ext = get_extension(filename);
-    if (ext == "png") {
-        return stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4);
-    } else if (ext == "jpg") {
-        return stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75);
-    } else if (ext == "tga") {
-        return stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data());
-    } else if (ext == "bmp") {
-        return stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data());
-    } else if (ext == "hdr") {
-        auto imgf = srgb_to_linear(byte_to_float(img));
-        return stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)imgf.data());
-    } else if (ext == "pfm") {
-        auto imgf = srgb_to_linear(byte_to_float(img));
-        return save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)imgf.data());
-    } else if (ext == "exr") {
-        auto imgf = srgb_to_linear(byte_to_float(img));
-        return SaveEXR((float*)imgf.data(), img.size().x, img.size().y, 4,
-            filename.c_str());
+    if (ext == "png" || ext == "PNG") {
+        return save_png_image4b(filename, img);
+    } else if (ext == "jpg" || ext == "JPG") {
+        return save_jpg_image4b(filename, img);
+    } else if (ext == "tga" || ext == "TGA") {
+        return save_tga_image4b(filename, img);
+    } else if (ext == "bmp" || ext == "BMP") {
+        return save_bmp_image4b(filename, img);
+    } else if (ext == "hdr" || ext == "HDR") {
+        return save_hdr_image4f(filename, srgb_to_linear(byte_to_float(img)));
+    } else if (ext == "pfm" || ext == "PFM") {
+        return save_pfm_image4f(filename, srgb_to_linear(byte_to_float(img)));
+    } else if (ext == "exr" || ext == "EXR") {
+        return save_exr_image4f(filename, srgb_to_linear(byte_to_float(img)));
     } else {
+        log_io_error("unsupported image format {}", ext);
         return false;
     }
 }
 
 // Loads an ldr image.
 image<vec4b> load_image4b_from_memory(const byte* data, int data_size) {
-    auto size   = zero2i;
-    auto ncomp  = 0;
-    auto pixels = (vec4b*)stbi_load_from_memory(
-        data, data_size, &size.x, &size.y, &ncomp, 4);
-    if (!pixels) return {};
-    auto img = image<vec4b>{size, pixels};
-    delete pixels;
-    return img;
+    return load_stb_image4b_from_memory(data, data_size);
 }
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
