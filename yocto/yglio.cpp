@@ -1156,6 +1156,7 @@ scene* load_scene(
     } else if (ext == "ybin" || ext == "YBIN") {
         return load_ybin_scene(filename, load_textures, skip_missing);
     } else {
+        log_io_error("unsupported scene format {}", ext);
         return nullptr;
     }
 }
@@ -1175,6 +1176,7 @@ bool save_scene(const std::string& filename, const scene* scn,
     } else if (ext == "ybin" || ext == "YBIN") {
         return save_ybin_scene(filename, scn, save_textures, skip_missing);
     } else {
+        log_io_error("unsupported scene format {}", ext);
         return false;
     }
 }
@@ -5784,6 +5786,7 @@ bool load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
     } else {
         reset_fvmesh_data(quads_pos, pos, quads_norm, norm, quads_texcoord,
             texcoord, quads_color, color);
+        log_io_error("unsupported mesh format {}", ext);
         return false;
     }
 }
@@ -5800,6 +5803,7 @@ bool save_fvmesh(const std::string& filename,
         return save_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
             quads_texcoord, texcoord);
     } else {
+        log_io_error("unsupported mesh format {}", ext);
         return false;
     }
 }
