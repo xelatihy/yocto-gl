@@ -131,8 +131,7 @@ int main(int argc, char* argv[]) {
     cb.material = [&](auto&) { nmaterials += 1; };
 
     // parse and write
-    if (!load_obj(filename, cb))
-        log_fatal("could not load obj " + filename);
+    if (!load_obj(filename, cb)) log_fatal("could not load obj " + filename);
 
     // print info
     if (print_info) {
