@@ -2479,9 +2479,9 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
-    int width = 0; // image width
-    int height = 0; // image height
-    vector<T> pixels    = {}; // image pixels
+    int       width  = 0;   // image width
+    int       height = 0;   // image height
+    vector<T> pixels = {};  // image pixels
 
     // constructors
     image() : width{0}, height{0}, pixels() {}
@@ -2492,14 +2492,14 @@ struct image {
 };
 
 // Element access.
-template<typename T>
+template <typename T>
 inline T& pixel_at(image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
-} 
-template<typename T>
+}
+template <typename T>
 inline const T& pixel_at(const image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
-} 
+}
 
 }  // namespace ygl
 
@@ -2649,8 +2649,8 @@ image<vec4f> make_checker_image4f(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image<vec4f> make_bumpdimple_image4f(int width, int height, int tile = 8);
-image<vec4f> make_ramp_image4f(
-    int width, int height, const vec4f& c0, const vec4f& c1, float srgb = false);
+image<vec4f> make_ramp_image4f(int width, int height, const vec4f& c0,
+    const vec4f& c1, float srgb = false);
 image<vec4f> make_gammaramp_image4f(int width, int height);
 image<vec4f> make_uvramp_image4f(int width, int height);
 image<vec4f> make_uvgrid_image4f(
@@ -2665,9 +2665,9 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image4f(int width, int height, const vec3f& le = {1, 1, 1},
-    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
-    float lheight = pif / 16);
+image<vec4f> make_lights_image4f(int width, int height,
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+    float lwidth = pif / 16, float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 image<vec4f> make_noise_image4f(
@@ -2752,10 +2752,10 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
-    int width = 0; // volume width
-    int height = 0; // volume height
-    int depth = 0; // volume height
-    vector<T> voxels    = {}; // volume voxels
+    int       width  = 0;   // volume width
+    int       height = 0;   // volume height
+    int       depth  = 0;   // volume height
+    vector<T> voxels = {};  // volume voxels
 
     // constructors
     volume() : width{0}, height{0}, depth{0}, voxels() {}
@@ -2766,11 +2766,11 @@ struct volume {
 };
 
 // Element access
-template<typename T>
+template <typename T>
 T& voxel_at(volume<T>& vol, int i, int j, int k) {
-    return vol.voxels[k * vol.width* vol.height + j * vol.width + i];
+    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
-template<typename T>
+template <typename T>
 const T& voxel_at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
@@ -2783,8 +2783,8 @@ const T& voxel_at(const volume<T>& vol, int i, int j, int k) {
 namespace ygl {
 
 // make a simple example volume
-volume<float> make_test_volume1f(int width, int height, int depth,
-    float scale = 10, float exponent = 6);
+volume<float> make_test_volume1f(
+    int width, int height, int depth, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 

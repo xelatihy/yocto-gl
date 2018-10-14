@@ -132,7 +132,7 @@ gltexture make_gltexture(
             GL_RGBA, GL_FLOAT, img.pixels.data());
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0,
-            GL_RGBA, GL_FLOAT,img.pixels.data());
+            GL_RGBA, GL_FLOAT, img.pixels.data());
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -178,8 +178,8 @@ gltexture make_gltexture(
     glGenTextures(1, &txt.tid);
     glBindTexture(GL_TEXTURE_2D, txt.tid);
     if (as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.width, img.height,
-            0, GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.width, img.height, 0,
+            GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());

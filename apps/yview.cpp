@@ -651,10 +651,10 @@ draw_glstate* init_draw_state(glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto cam   = app->scn->cameras.at(app->camid);
-    auto width = clamp(eval_image_size(cam, app->resolution).x, 256, 1440),
+    auto cam    = app->scn->cameras.at(app->camid);
+    auto width  = clamp(eval_image_size(cam, app->resolution).x, 256, 1440),
          height = clamp(eval_image_size(cam, app->resolution).y, 256, 1440);
-    auto win   = make_glwindow(width, height, "yview", app, draw);
+    auto win    = make_glwindow(width, height, "yview", app, draw);
 
     // init widget
     init_glwidgets(win);

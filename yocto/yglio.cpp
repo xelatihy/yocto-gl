@@ -798,33 +798,33 @@ inline void from_json(const json& js, bbox4<T>& val) {
 
 template <typename T>
 inline void to_json(json& js, const image<T>& val) {
-    js         = json::object();
-    js["width"] = val.width;
+    js           = json::object();
+    js["width"]  = val.width;
     js["height"] = val.height;
     js["pixels"] = val.pixels;
 }
 template <typename T>
 inline void from_json(const json& js, image<T>& val) {
-    auto width = js.at("width").get<int>();
+    auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<T>>();
-    val       = image<T>{width, height, pixels.data()};
+    val         = image<T>{width, height, pixels.data()};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& val) {
-    js         = json::object();
-    js["width"] = val.width;
+    js           = json::object();
+    js["width"]  = val.width;
     js["height"] = val.height;
-    js["depth"] = val.depth;
+    js["depth"]  = val.depth;
     js["voxels"] = val.voxels;
 }
 template <typename T>
 inline void from_json(const json& js, volume<T>& val) {
-    auto width = js.at("width").get<int>();
+    auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
-    auto depth = js.at("depth").get<int>();
+    auto depth  = js.at("depth").get<int>();
     auto voxels = js.at("voxels").get<vector<T>>();
-    val       = volume<T>{width, height, depth, voxels.data()};
+    val         = volume<T>{width, height, depth, voxels.data()};
 }
 
 }  // namespace ygl
@@ -998,9 +998,8 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 
 // load pfm image
 image<vec4f> load_pfm_image4f(const string& filename) {
-    auto width = 0, height = 0, ncomp  = 0;
-    auto pixels = (vec4f*)load_pfm(
-        filename.c_str(), &width, &height, &ncomp, 4);
+    auto width = 0, height = 0, ncomp = 0;
+    auto pixels = (vec4f*)load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading image {}", filename);
         return {};
@@ -1010,8 +1009,8 @@ image<vec4f> load_pfm_image4f(const string& filename) {
     return img;
 }
 bool save_pfm_image4f(const string& filename, const image<vec4f>& img) {
-    if (!save_pfm(
-            filename.c_str(), img.width, img.height, 4, (float*)img.pixels.data())) {
+    if (!save_pfm(filename.c_str(), img.width, img.height, 4,
+            (float*)img.pixels.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1036,8 +1035,8 @@ image<vec4f> load_exr_image4f(const string& filename) {
     return img;
 }
 bool save_exr_image4f(const string& filename, const image<vec4f>& img) {
-    if (!SaveEXR(
-            (float*)img.pixels.data(), img.width, img.height, 4, filename.c_str())) {
+    if (!SaveEXR((float*)img.pixels.data(), img.width, img.height, 4,
+            filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1046,7 +1045,7 @@ bool save_exr_image4f(const string& filename, const image<vec4f>& img) {
 
 // load an image using stbi library
 image<vec4b> load_stb_image4b(const string& filename) {
-    auto width = 0, height = 0, ncomp  = 0;
+    auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4b*)stbi_load(
         filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
@@ -1058,7 +1057,7 @@ image<vec4b> load_stb_image4b(const string& filename) {
     return img;
 }
 image<vec4f> load_stb_image4f(const string& filename) {
-    auto width = 0, height = 0, ncomp  = 0;
+    auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf(
         filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
@@ -1072,16 +1071,16 @@ image<vec4f> load_stb_image4f(const string& filename) {
 
 // save an image with stbi
 bool save_png_image4b(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), img.width, img.height, 4, img.pixels.data(),
-            img.width * 4)) {
+    if (!stbi_write_png(filename.c_str(), img.width, img.height, 4,
+            img.pixels.data(), img.width * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_jpg_image4b(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.width, img.height, 4, img.pixels.data(), 75)) {
+    if (!stbi_write_jpg(filename.c_str(), img.width, img.height, 4,
+            img.pixels.data(), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1104,8 +1103,8 @@ bool save_bmp_image4b(const string& filename, const image<vec4b>& img) {
     return true;
 }
 bool save_hdr_image4f(const string& filename, const image<vec4f>& img) {
-    if (!stbi_write_hdr(
-            filename.c_str(), img.width, img.height, 4, (float*)img.pixels.data())) {
+    if (!stbi_write_hdr(filename.c_str(), img.width, img.height, 4,
+            (float*)img.pixels.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1114,7 +1113,7 @@ bool save_hdr_image4f(const string& filename, const image<vec4f>& img) {
 
 // load an image using stbi library
 image<vec4b> load_stb_image4b_from_memory(const byte* data, int data_size) {
-    auto width = 0, height = 0, ncomp  = 0;
+    auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4b*)stbi_load_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
@@ -1126,7 +1125,7 @@ image<vec4b> load_stb_image4b_from_memory(const byte* data, int data_size) {
     return img;
 }
 image<vec4f> load_stbi_image4f_from_memory(const byte* data, int data_size) {
-    auto width = 0, height = 0, ncomp  = 0;
+    auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
@@ -1261,16 +1260,13 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 // Resize image.
 image<vec4f> resize_image(const image<vec4f>& img, int width, int height) {
     if (!width && !height) throw runtime_error("bad image size");
-    if (!width)
-        width = (int)round(img.width * (height / (float)img.height));
-    if (!height)
-        height = (int)round(img.height * (width / (float)img.width));
+    if (!width) width = (int)round(img.width * (height / (float)img.height));
+    if (!height) height = (int)round(img.height * (width / (float)img.width));
     auto res_img = image<vec4f>{width, height};
     stbir_resize_float_generic((float*)img.pixels.data(), img.width, img.height,
-        sizeof(vec4f) * img.width, (float*)res_img.pixels.data(), width,
-        height, sizeof(vec4f) * width, 4, 3, 0,
-        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
-        nullptr);
+        sizeof(vec4f) * img.width, (float*)res_img.pixels.data(), width, height,
+        sizeof(vec4f) * width, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
+        STBIR_COLORSPACE_LINEAR, nullptr);
     return res_img;
 }
 
@@ -1353,7 +1349,9 @@ bool load_scene_textures(
     scene* scn, const string& dirname, bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->imgf.pixels.empty() || !txt->imgb.pixels.empty()) continue;
+        if (txt->path == "" || !txt->imgf.pixels.empty() ||
+            !txt->imgb.pixels.empty())
+            continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
             txt->imgf = load_image4f(filename);
@@ -1791,44 +1789,46 @@ bool apply_json_procedural(const json& js, texture* val, const scene* scn) {
     auto type = js.value("type", ""s);
     if (type == "") return true;
     auto is_hdr = false;
-    auto width   = js.value("width", 512);
-    auto height   = js.value("height", 512);
+    auto width  = js.value("width", 512);
+    auto height = js.value("height", 512);
     if (type == "grid") {
-        val->imgf = make_grid_image4f(width, height,js.value("tile", 8),
+        val->imgf = make_grid_image4f(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val->imgf = make_checker_image4f(width, height,js.value("tile", 8),
+        val->imgf = make_checker_image4f(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val->imgf = make_bumpdimple_image4f(width, height,js.value("tile", 8));
+        val->imgf = make_bumpdimple_image4f(width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
         val->imgf = make_uvramp_image4f(width, height);
     } else if (type == "uvgrid") {
         val->imgf = make_uvgrid_image4f(width, height);
     } else if (type == "sky") {
         if (width < height * 2) width = height * 2;
-        val->imgf = make_sunsky_image4f(width, height,js.value("sun_angle", pif / 4),
-            js.value("turbidity", 3.0f), js.value("has_sun", false),
+        val->imgf = make_sunsky_image4f(width, height,
+            js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
+            js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr    = true;
     } else if (type == "noise") {
         val->imgf = make_noise_image4f(
-            width, height,js.value("scale", 1.0f), js.value("wrap", true));
+            width, height, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        val->imgf = make_fbm_image4f(width, height,js.value("scale", 1.0f),
+        val->imgf = make_fbm_image4f(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val->imgf = make_ridge_image4f(width, height,js.value("scale", 1.0f),
+        val->imgf = make_ridge_image4f(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        val->imgf = make_turbulence_image4f(width, height,js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
+        val->imgf = make_turbulence_image4f(width, height,
+            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f), js.value("octaves", 6),
+            js.value("wrap", true));
     } else {
         throw runtime_error("unknown texture type " + type);
     }
@@ -1884,12 +1884,12 @@ bool apply_json_procedural(const json& js, voltexture* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
-    auto width = js.value("width", 512);
+    auto width  = js.value("width", 512);
     auto height = js.value("height", 512);
-    auto depth = js.value("depth", 512);
+    auto depth  = js.value("depth", 512);
     if (type == "test_volume") {
-        val->vol = make_test_volume1f(
-            width, height, depth, js.value("scale", 10.0f), js.value("exponent", 6.0f));
+        val->vol = make_test_volume1f(width, height, depth,
+            js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         throw runtime_error("unknown texture type " + type);
     }

@@ -2971,20 +2971,16 @@ namespace ygl {
 image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma) {
     if (gamma == 1) return srgb;
     auto lin = image<vec4f>{srgb.width, srgb.height};
-    for (auto j = 0; j < srgb.height; j++) {
-        for (auto i = 0; i < srgb.width; i++) {
-            pixel_at(lin, i, j) = gamma_to_linear(pixel_at(srgb, i, j), gamma);
-        }
+    for (auto idx = 0; idx < srgb.width * srgb.height; idx++) {
+        lin.pixels[idx] = gamma_to_linear(srgb.pixels[idx], gamma);
     }
     return lin;
 }
 image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma) {
     if (gamma == 1) return lin;
     auto srgb = image<vec4f>{lin.width, lin.height};
-    for (auto j = 0; j < srgb.height; j++) {
-        for (auto i = 0; i < srgb.width; i++) {
-            pixel_at(srgb, i, j) = linear_to_gamma(pixel_at(lin, i, j), gamma);
-        }
+    for (auto idx = 0; idx < srgb.width * srgb.height; idx++) {
+        srgb.pixels[idx] = linear_to_gamma(lin.pixels[idx], gamma);
     }
     return srgb;
 }
@@ -2992,19 +2988,15 @@ image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma) {
 // Conversion between linear and gamma-encoded images.
 image<vec4f> srgb_to_linear(const image<vec4f>& srgb) {
     auto lin = image<vec4f>{srgb.width, srgb.height};
-    for (auto j = 0; j < srgb.height; j++) {
-        for (auto i = 0; i < srgb.width; i++) {
-            pixel_at(lin, i, j) = srgb_to_linear(pixel_at(srgb, i, j));
-        }
+    for (auto idx = 0; idx < srgb.width * srgb.height; idx++) {
+        lin.pixels[idx] = srgb_to_linear(srgb.pixels[idx]);
     }
     return lin;
 }
 image<vec4f> linear_to_srgb(const image<vec4f>& lin) {
     auto srgb = image<vec4f>{lin.width, lin.height};
-    for (auto j = 0; j < srgb.height; j++) {
-        for (auto i = 0; i < srgb.width; i++) {
-            pixel_at(srgb, i, j) = linear_to_srgb(pixel_at(lin, i, j));
-        }
+    for (auto idx = 0; idx < srgb.width * srgb.height; idx++) {
+        srgb.pixels[idx] = linear_to_srgb(lin.pixels[idx]);
     }
     return srgb;
 }
@@ -3012,19 +3004,15 @@ image<vec4f> linear_to_srgb(const image<vec4f>& lin) {
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt) {
     auto fl = image<vec4f>{bt.width, bt.height};
-    for (auto j = 0; j < bt.height; j++) {
-        for (auto i = 0; i < bt.width; i++) {
-            pixel_at(fl, i, j) = byte_to_float(pixel_at(bt, i, j));
-        }
+    for (auto idx = 0; idx < fl.width * fl.height; idx++) {
+        fl.pixels[idx] = byte_to_float(bt.pixels[idx]);
     }
     return fl;
 }
 image<vec4b> float_to_byte(const image<vec4f>& fl) {
     auto bt = image<vec4b>{fl.width, fl.height};
-    for (auto j = 0; j < fl.height; j++) {
-        for (auto i = 0; i < fl.width; i++) {
-            pixel_at(bt, i, j) = float_to_byte(pixel_at(fl, i, j));
-        }
+    for (auto idx = 0; idx < fl.width * fl.height; idx++) {
+        bt.pixels[idx] = float_to_byte(fl.pixels[idx]);
     }
     return bt;
 }
@@ -3033,10 +3021,9 @@ image<vec4b> float_to_byte(const image<vec4f>& fl) {
 image<vec4f> tonemap_filmic(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
     auto ldr = image<vec4f>{hdr.width, hdr.height};
-    for (auto j = 0; j < hdr.height; j++) {
-        for (auto i = 0; i < hdr.width; i++) {
-            pixel_at(ldr, i, j) = tonemap_filmic(pixel_at(hdr, i, j), exposure, filmic, srgb);
-        }
+    for (auto idx = 0; idx < hdr.width * hdr.height; idx++) {
+        ldr.pixels[idx] = tonemap_filmic(
+            hdr.pixels[idx], exposure, filmic, srgb);
     }
     return ldr;
 }
@@ -3070,7 +3057,7 @@ image<vec4f> make_checker_image4f(
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto c      = (i / tile + j / tile) % 2 == 0;
+            auto c              = (i / tile + j / tile) % 2 == 0;
             pixel_at(img, i, j) = (c) ? c0 : c1;
         }
     }
@@ -3101,7 +3088,7 @@ image<vec4f> make_ramp_image4f(
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto u      = (float)i / (float)img.width;
+            auto u              = (float)i / (float)img.width;
             pixel_at(img, i, j) = c0 * (1 - u) + c1 * u;
         }
     }
@@ -3128,15 +3115,16 @@ image<vec4f> make_uvramp_image4f(int width, int height) {
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            pixel_at(img, i, j) = {i / (float)(img.width - 1),
-                j / (float)(img.height - 1), 0, 1};
+            pixel_at(img, i, j) = {
+                i / (float)(img.width - 1), j / (float)(img.height - 1), 0, 1};
         }
     }
     return img;
 }
 
 // Make a uv colored grid
-image<vec4f> make_uvgrid_image4f(int width, int height, int tiles, bool colored) {
+image<vec4f> make_uvgrid_image4f(
+    int width, int height, int tiles, bool colored) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
@@ -3170,7 +3158,8 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
             auto i1 = (i + 1) % img.width, j1 = (j + 1) % img.height;
-            auto p00 = pixel_at(img, i, j), p10 = pixel_at(img, i1, j), p01 = pixel_at(img, i, j1);
+            auto p00 = pixel_at(img, i, j), p10 = pixel_at(img, i1, j),
+                 p01 = pixel_at(img, i, j1);
             auto g00 = (p00.x + p00.y + p00.z) / 3;
             auto g01 = (p01.x + p01.y + p01.z) / 3;
             auto g10 = (p10.x + p10.y + p10.z) / 3;
@@ -3279,8 +3268,8 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
             auto phi = 2 * pif * (float(i + 0.5f) / img.width);
             auto w   = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma  = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
-            auto col    = sky(theta, gamma) + sun(theta, gamma);
+            auto gamma          = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
+            auto col            = sky(theta, gamma) + sun(theta, gamma);
             pixel_at(img, i, j) = {col.x, col.y, col.z, 1};
         }
     }
@@ -3335,8 +3324,8 @@ image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
         for (auto i = 0; i < img.width; i++) {
             auto p = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} *
                      scale;
-            auto g      = perlin_noise(p, wrap3i);
-            g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            auto g              = perlin_noise(p, wrap3i);
+            g                   = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             pixel_at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -3344,8 +3333,8 @@ image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_fbm_image4f(int width, int height, float scale, float lacunarity,
-    float gain, int octaves, bool wrap) {
+image<vec4f> make_fbm_image4f(int width, int height, float scale,
+    float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
     for (auto j = 0; j < img.height; j++) {
@@ -3371,7 +3360,7 @@ image<vec4f> make_ridge_image4f(int width, int height, float scale,
                      scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
-            g           = clamp(g, 0.0f, 1.0f);
+            g                   = clamp(g, 0.0f, 1.0f);
             pixel_at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -3389,7 +3378,7 @@ image<vec4f> make_turbulence_image4f(int width, int height, float scale,
                      scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
-            g           = clamp(g, 0.0f, 1.0f);
+            g                   = clamp(g, 0.0f, 1.0f);
             pixel_at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -4008,7 +3997,8 @@ vec4f lookup_texture(const texture* txt, int i, int j) {
 // Evaluate a texture
 vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     if (!txt) return {1, 1, 1, 1};
-    if (txt->imgf.pixels.empty() && txt->imgb.pixels.empty()) return {1, 1, 1, 1};
+    if (txt->imgf.pixels.empty() && txt->imgb.pixels.empty())
+        return {1, 1, 1, 1};
 
     // get image width/height
     auto size  = eval_texture_size(txt);
@@ -4266,7 +4256,8 @@ vec3f eval_transmission(const material* vol, const vec3f& from,
         if (t >= dist) break;
         pos += dir * step;
         auto density = vol->vd * eval_voltexture(vol->vd_txt, pos);
-        tr *= 1.0f - max(0.0f, element_at(density, channel) / element_at(vd, channel));
+        tr *= 1.0f -
+              max(0.0f, element_at(density, channel) / element_at(vd, channel));
     }
     return {tr, tr, tr};
 }
@@ -4999,8 +4990,10 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
     // evaluated. transmission[i] = exp(-dist * vd[i]) pdf             =
     // exp(-dist * vd[channel])
     int i = (ch + 1) % 3, j = (ch + 2) % 3;
-    element_at(weight, i) = exp(-dist * (element_at(vd, i) - element_at(vd, ch)));
-    element_at(weight, j) = exp(-dist * (element_at(vd, j) - element_at(vd, ch)));
+    element_at(weight, i) = exp(
+        -dist * (element_at(vd, i) - element_at(vd, ch)));
+    element_at(weight, j) = exp(
+        -dist * (element_at(vd, j) - element_at(vd, ch)));
     return weight;
 }
 
@@ -5054,7 +5047,7 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
             element_at(weight, ch) *= 3;
             element_at(weight, (ch + 1) % 3) = 0;
             element_at(weight, (ch + 2) % 3) = 0;
-            single_channel           = true;
+            single_channel                   = true;
         }
 
         // TODO: FIXME REMOVING BBOX
@@ -5746,10 +5739,10 @@ vec4f trace_sample(trace_state* state, const scene* scn, const bvh_tree* bvh,
     _trace_npaths += 1;
     auto  cam = scn->cameras.at(params.camid);
     auto& rng = pixel_at(state->rng, i, j);
-    auto  ray = eval_camera_ray(
-        cam, {i, j}, {state->img.width, state->img.height}, rand2f(rng), rand2f(rng));
-    auto hit = false;
-    auto l   = trace_func(
+    auto  ray = eval_camera_ray(cam, {i, j},
+        {state->img.width, state->img.height}, rand2f(rng), rand2f(rng));
+    auto  hit = false;
+    auto  l   = trace_func(
         scn, bvh, lights, params.tracer, ray, rng, params.nbounces, &hit);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         printf("NaN detected\n");
@@ -5854,8 +5847,9 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                     pixel_at(state->img, i, j) += trace_sample(
                         state, scn, bvh, lights, i, j, params);
                 pixel_at(state->img, i, j) /= state->sample + nbatch;
-                pixel_at(state->display, i, j) = tonemap_filmic(pixel_at(state->img, i, j),
-                    params.exposure, params.filmic, params.srgb);
+                pixel_at(state->display, i, j) = tonemap_filmic(
+                    pixel_at(state->img, i, j), params.exposure, params.filmic,
+                    params.srgb);
             }
         }
     } else {
@@ -5871,8 +5865,8 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                                 state, scn, bvh, lights, i, j, params);
                         pixel_at(state->img, i, j) /= state->sample + nbatch;
                         pixel_at(state->display, i, j) = tonemap_filmic(
-                            pixel_at(state->img, i, j), params.exposure, params.filmic,
-                            params.srgb);
+                            pixel_at(state->img, i, j), params.exposure,
+                            params.filmic, params.srgb);
                     }
                 }
             }));
@@ -5898,7 +5892,7 @@ void trace_async_start(trace_state* state, const scene* scn, const bvh_tree* bvh
         for (auto j = 0; j < state->img.height; j++) {
             for (auto i = 0; i < state->img.width; i++) {
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
-                     pj  = clamp(j / params.preview_ratio, 0, pheight - 1);
+                     pj = clamp(j / params.preview_ratio, 0, pheight - 1);
                 pixel_at(state->img, i, j)     = pixel_at(pimg, pi, pj);
                 pixel_at(state->display, i, j) = pixel_at(pdisplay, pi, pj);
             }
@@ -5920,8 +5914,8 @@ void trace_async_start(trace_state* state, const scene* scn, const bvh_tree* bvh
                             state, scn, bvh, lights, i, j, params);
                         pixel_at(state->img, i, j) /= s + 1;
                         pixel_at(state->display, i, j) = tonemap_filmic(
-                            pixel_at(state->img, i, j), params.exposure, params.filmic,
-                            params.srgb);
+                            pixel_at(state->img, i, j), params.exposure,
+                            params.filmic, params.srgb);
                     }
                 }
             }

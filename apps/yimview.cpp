@@ -111,8 +111,9 @@ void update_display_async(app_image* img) {
                 for (auto j = tid; j < img->img.height; j += nthreads) {
                     if (img->display_stop) break;
                     for (auto i = 0; i < img->img.width; i++) {
-                         pixel_at(img->display, i, j) = tonemap_filmic( pixel_at(img->img, i, j),
-                            img->exposure, img->filmic, img->srgb);
+                        pixel_at(img->display, i, j) = tonemap_filmic(
+                            pixel_at(img->img, i, j), img->exposure,
+                            img->filmic, img->srgb);
                     }
                 }
             }));
@@ -122,8 +123,9 @@ void update_display_async(app_image* img) {
         for (auto j = 0; j < img->img.height; j++) {
             if (img->display_stop) break;
             for (auto i = 0; i < img->img.width; i++) {
-                 pixel_at(img->display, i, j) = tonemap_filmic(
-                     pixel_at(img->img, i, j), img->exposure, img->filmic, img->srgb);
+                pixel_at(img->display, i, j) = tonemap_filmic(
+                    pixel_at(img->img, i, j), img->exposure, img->filmic,
+                    img->srgb);
             }
         }
     }
@@ -223,8 +225,8 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij        = get_image_coords(
-                mouse_pos, img->imcenter, img->imscale, {img->img.width, img->img.height});
+            auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
+                {img->img.width, img->img.height});
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 &&
@@ -261,10 +263,11 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
-        center_image4f(img->imcenter, img->imscale, {img->display.width, img->display.height},
-            win_size, img->zoom_to_fit);
-        draw_glimage(img->gl_txt, {img->display.width, img->display.height}, win_size,
-            img->imcenter, img->imscale);
+        center_image4f(img->imcenter, img->imscale,
+            {img->display.width, img->display.height}, win_size,
+            img->zoom_to_fit);
+        draw_glimage(img->gl_txt, {img->display.width, img->display.height},
+            win_size, img->imcenter, img->imscale);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -289,16 +292,17 @@ void drop_callback(glwindow* win, const vector<string>& paths) {
 
 void run_ui(app_state* app) {
     // window
-    auto img      = app->imgs.at(app->img_id);
+    auto img   = app->imgs.at(app->img_id);
     auto width = 720 + 320, height = 720;
-    auto win      = make_glwindow(720 + 320, 720, "yimview", app, draw);
+    auto win = make_glwindow(720 + 320, 720, "yimview", app, draw);
     set_drop_callback(win, drop_callback);
 
     // init widgets
     init_glwidgets(win);
 
     // center image
-    center_image4f(img->imcenter, img->imscale, {img->img.width, img->img.height}, {width, height},
+    center_image4f(img->imcenter, img->imscale,
+        {img->img.width, img->img.height}, {width, height},
         img->img.width > width || img->img.height > height);
 
     // window values

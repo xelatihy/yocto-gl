@@ -161,7 +161,8 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (alpha_filename != "") {
         auto alpha = load_image4f(alpha_filename);
-        if (alpha.pixels.empty()) log_fatal("cannot load image " + alpha_filename);
+        if (alpha.pixels.empty())
+            log_fatal("cannot load image " + alpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
@@ -174,7 +175,8 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = load_image4f(coloralpha_filename);
-        if (alpha.pixels.empty()) log_fatal("cannot load image " + coloralpha_filename);
+        if (alpha.pixels.empty())
+            log_fatal("cannot load image " + coloralpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
