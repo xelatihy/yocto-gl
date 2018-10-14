@@ -212,8 +212,9 @@ inline T      parse_arg(cmdline_parser& parser, const string& name, T def,
 inline string parse_arg(cmdline_parser& parser, const string& name,
     const char* def, const string& usage, bool req = false);
 // Parse all arguments left on the command line.
-inline vector<string> parse_args(cmdline_parser& parser, const string& name,
-    const vector<string>& def, const string& usage, bool req = false);
+template<typename T>
+inline vector<T> parse_args(cmdline_parser& parser, const string& name,
+    const vector<T>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template<typename T>
 inline T parse_arge(cmdline_parser& parser, const string& name, T def,
@@ -1039,8 +1040,9 @@ inline T parse_argument(cmdline_parser& parser, const string& name, const T def,
 }
 
 // Parse all left argument strings. Name should not start with "--" or "-".
-inline vector<string> parse_strings(cmdline_parser& parser, const string& name,
-    const vector<string>& def, const string& usage, bool req) {
+template<typename T>
+inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
+    const vector<T>& def, const string& usage, bool req) {
     auto defs = string();
     for (auto& d : def) defs += " " + d;
     parser.usage_arg += get_option_usage(name, "", usage, defs, {});
@@ -1096,9 +1098,10 @@ inline T parse_arge(cmdline_parser& parser, const string& name, T def,
 }
 
 // Parser an argument
-inline vector<string> parse_args(cmdline_parser& parser, const string& name,
-    const vector<string>& def, const string& usage, bool req) {
-    return parse_strings(parser, name, def, usage, req);
+template<typename T>
+inline vector<T> parse_args(cmdline_parser& parser, const string& name,
+    const vector<T>& def, const string& usage, bool req) {
+    return parse_arguments(parser, name, def, usage, req);
 }
 
 // Override to avoid issues with const char
