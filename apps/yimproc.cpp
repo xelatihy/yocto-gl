@@ -156,13 +156,13 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = load_image4f(filename);
-    if (empty(img)) log_fatal("cannot load image " + filename);
+    if (img.pixels.empty()) log_fatal("cannot load image " + filename);
 
     // set alpha
     if (alpha_filename != "") {
         auto alpha = load_image4f(alpha_filename);
-        if (empty(alpha)) log_fatal("cannot load image " + alpha_filename);
-        if (extents(img) != extents(alpha)) {
+        if (alpha.pixels.empty()) log_fatal("cannot load image " + alpha_filename);
+        if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
         }
@@ -174,8 +174,8 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = load_image4f(coloralpha_filename);
-        if (empty(alpha)) log_fatal("cannot load image " + coloralpha_filename);
-        if (extents(img) != extents(alpha)) {
+        if (alpha.pixels.empty()) log_fatal("cannot load image " + coloralpha_filename);
+        if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
         }
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
 
     // resize
     if (res_width || res_height) {
-        img = resize_image(img, {res_width, res_height});
+        img = resize_image(img, res_width, res_height);
     }
 
     // bilateral

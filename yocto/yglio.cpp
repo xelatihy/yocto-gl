@@ -1353,24 +1353,24 @@ bool load_scene_textures(
     scene* scn, const string& dirname, bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !empty(txt->imgf) || !empty(txt->imgb)) continue;
+        if (txt->path == "" || !txt->imgf.pixels.empty() || !txt->imgb.pixels.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
             txt->imgf = load_image4f(filename);
         } else {
             txt->imgb = load_image4b(filename);
         }
-        if (empty(txt->imgf) && empty(txt->imgb)) {
+        if (txt->imgf.pixels.empty() && txt->imgb.pixels.empty()) {
             if (!skip_missing) return false;
         }
     }
 
     // load volumes
     for (auto txt : scn->voltextures) {
-        if (txt->path == "" || !empty(txt->vol)) continue;
+        if (txt->path == "" || !txt->vol.voxels.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         txt->vol      = load_volume1f(filename);
-        if (empty(txt->vol)) {
+        if (txt->vol.voxels.empty()) {
             if (!skip_missing) return false;
         }
     }
@@ -1408,7 +1408,7 @@ bool save_scene_textures(
     const scene* scn, const string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
-        if (empty(txt->imgf) && empty(txt->imgb)) continue;
+        if (txt->imgf.pixels.empty() && txt->imgb.pixels.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
             if (!save_image4f(filename, txt->imgf)) {
@@ -1423,7 +1423,7 @@ bool save_scene_textures(
 
     // save volumes
     for (auto txt : scn->voltextures) {
-        if (empty(txt->vol)) continue;
+        if (txt->vol.voxels.empty()) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (!save_volume1f(filename, txt->vol)) {
             if (!skip_missing) return false;
@@ -1874,7 +1874,7 @@ bool dump_json_object(json& js, const voltexture* val, const scene* scn) {
     if (!dump_json_value(js, val->path, "path", def.path)) return false;
     if (!dump_json_value(js, val->clamp, "clamp", def.clamp)) return false;
     if (val->path == "") {
-        if (!empty(val->vol)) js["vol"] = val->vol;
+        if (!val->vol.voxels.empty()) js["vol"] = val->vol;
     }
     return true;
 }

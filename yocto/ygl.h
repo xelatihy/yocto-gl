@@ -2509,28 +2509,6 @@ inline const T& at(const image<T>& img, const vec2i& ij) {
     return img.pixels[ij.y * img.width + ij.x];
 } 
 
-// Size
-template <typename T>
-int width(const image<T>& img) {
-    return img.width;
-}
-template <typename T>
-int height(const image<T>& img) {
-    return img.height;
-}
-template <typename T>
-vec2i extents(const image<T>& img) {
-    return {img.width, img.height};
-}
-template <typename T>
-size_t size(const image<T>& img) {
-    return img.data.size();
-}
-template <typename T>
-bool empty(const image<T>& img) {
-    return img.pixels.empty();
-}
-
 // Data access
 template <typename T>
 T* data(image<T>& img) {
@@ -2698,7 +2676,7 @@ image<vec4f> tonemap_filmic(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
+image<vec4f> resize_image(const image<vec4f>& img, int width, int height);
 
 }  // namespace ygl
 
@@ -2847,32 +2825,6 @@ T& at(volume<T>& vol, int i, int j, int k) {
 template<typename T>
 const T& at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
-}
-
-// Size
-template <typename T>
-int width(const volume<T>& vol) {
-    return vol.width;
-}
-template <typename T>
-int height(const volume<T>& vol) {
-    return vol.height;
-}
-template <typename T>
-int depth(const volume<T>& vol) {
-    return vol.depth;
-}
-template <typename T>
-vec3i extents(const volume<T>& vol) {
-    return {vol.width, vol.height, vol.depth};
-}
-template <typename T>
-size_t size(const volume<T>& vol) {
-    return vol.voxels.size();
-}
-template <typename T>
-bool empty(const volume<T>& vol) {
-    return vol.voxels.empty();
 }
 
 // Data access

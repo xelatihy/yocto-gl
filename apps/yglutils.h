@@ -140,7 +140,7 @@ void draw_glimage(const gltexture& txt, vec2i imsize, vec2i winsize,
 
 struct glwindow;
 
-glwindow* make_glwindow(const vec2i& size, const char* title,
+glwindow* make_glwindow(int width, int height, const char* title,
     void* user_pointer, function<void(glwindow*)> refresh_cb);
 void      delete_glwindow(glwindow* win);
 

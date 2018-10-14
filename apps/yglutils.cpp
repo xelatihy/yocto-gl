@@ -139,7 +139,7 @@ gltexture make_gltexture(
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -161,7 +161,7 @@ void update_gltexture(gltexture& txt, const image<vec4f>& img, bool as_float,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -189,7 +189,7 @@ gltexture make_gltexture(
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -211,7 +211,7 @@ void update_gltexture(gltexture& txt, const image<vec4b>& img, bool as_srgb,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -504,7 +504,7 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     }
 }
 
-glwindow* make_glwindow(const vec2i& size, const char* title,
+glwindow* make_glwindow(int width, int height, const char* title,
     void* user_pointer, std::function<void(glwindow*)> refresh_cb) {
     // init glfw
     if (!glfwInit()) throw runtime_error("cannot open glwindow");
@@ -517,7 +517,7 @@ glwindow* make_glwindow(const vec2i& size, const char* title,
 
     // create window
     auto win = make_unique<glwindow>();
-    win->win = glfwCreateWindow(size.x, size.y, title, nullptr, nullptr);
+    win->win = glfwCreateWindow(width, height, title, nullptr, nullptr);
     if (!win->win) return {};
     glfwMakeContextCurrent(win->win);
     glfwSwapInterval(1);  // Enable vsync
