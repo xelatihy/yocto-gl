@@ -1550,7 +1550,7 @@ namespace ygl {
 
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
-    return a.extents == b.extents && a.data == b.data;
+    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
 }
 template <typename T>
 bool operator==(const volume<T>& a, const volume<T>& b) {

@@ -2479,56 +2479,48 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
+    int width = 0; // image width
+    int height = 0; // image height
+    vector<T> pixels    = {}; // image pixels
+
     // constructors
-    image() : extents{0, 0}, data() {}
+    image() : width{0}, height{0}, pixels() {}
     image(const vec2i& wh, const T& v = T{})
-        : extents{wh}, data(wh.x * wh.y, v) {}
+        : width{wh.x}, height{wh.y}, pixels(wh.x * wh.y, v) {}
     image(const vec2i& wh, const T* v)
-        : extents{wh}, data(v, v + wh.x * wh.y) {}
-
-    // pixel access
-    // T& operator[](const vec2i& ij) { return data[ij.y * extents.x + ij.x]; }
-    // const T& operator[](const vec2i& ij) const {
-    //     return data[ij.y * extents.x + ij.x];
-    // }
-    // T& at(int i, int j) { return data.at(j * extents.x + i); }
-    // const T& at(int i, int j) const { return data.at(j * extents.x + i); }
-
-    // private data
-    vec2i     extents = {0, 0};
-    vector<T> data    = {};
+        : width{wh.x}, height{wh.y}, pixels(v, v + wh.x * wh.y) {}
 };
 
 // Element access.
 template<typename T>
 inline T& at(image<T>& img, int i, int j) {
-    return img.data[j * img.extents.x + i];
+    return img.pixels[j * img.width + i];
 } 
 template<typename T>
 inline const T& at(const image<T>& img, int i, int j) {
-    return img.data[j * img.extents.x + i];
+    return img.pixels[j * img.width + i];
 } 
 template<typename T>
 inline T& at(image<T>& img, const vec2i& ij) {
-    return img.data[ij.y * img.extents.x + ij.x];
+    return img.pixels[ij.y * img.width + ij.x];
 } 
 template<typename T>
 inline const T& at(const image<T>& img, const vec2i& ij) {
-    return img.data[ij.y * img.extents.x + ij.x];
+    return img.pixels[ij.y * img.width + ij.x];
 } 
 
 // Size
 template <typename T>
 int width(const image<T>& img) {
-    return img.extents.x;
+    return img.width;
 }
 template <typename T>
 int height(const image<T>& img) {
-    return img.extents.y;
+    return img.height;
 }
 template <typename T>
 vec2i extents(const image<T>& img) {
-    return img.extents;
+    return {img.width, img.height};
 }
 template <typename T>
 size_t size(const image<T>& img) {
@@ -2536,43 +2528,43 @@ size_t size(const image<T>& img) {
 }
 template <typename T>
 bool empty(const image<T>& img) {
-    return img.data.empty();
+    return img.pixels.empty();
 }
 
 // Data access
 template <typename T>
 T* data(image<T>& img) {
-    return img.data.data();
+    return img.pixels.data();
 }
 template <typename T>
 const T* data(const image<T>& img) {
-    return img.data.data();
+    return img.pixels.data();
 }
 template <typename T>
 vector<T>& data_vector(image<T>& img) {
-    return img.data;
+    return img.pixels;
 }
 template <typename T>
 const vector<T>& data_vector(const image<T>& img) {
-    return img.data;
+    return img.pixels;
 }
 
 // Iteration
 template <typename T>
 T* begin(image<T>& img) {
-    return img.data.data();
+    return img.pixels.data();
 }
 template <typename T>
 const T* begin(const image<T>& img) {
-    return img.data.data();
+    return img.pixels.data();
 }
 template <typename T>
 T* end(image<T>& img) {
-    return img.data.data() + img.data.size();
+    return img.pixels.data() + img.pixels.size();
 }
 template <typename T>
 const T* end(const image<T>& img) {
-    return img.data.data() + img.data.size();
+    return img.pixels.data() + img.pixels.size();
 }
 
 }  // namespace ygl
@@ -2826,107 +2818,97 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
+    int width = 0; // volume width
+    int height = 0; // volume height
+    int depth = 0; // volume height
+    vector<T> voxels    = {}; // volume voxels
+
     // constructors
-    volume() : extents{0, 0}, data() {}
+    volume() : width{0}, height{0}, depth{0}, voxels() {}
     volume(const vec3i& size, const T& v = T{})
-        : extents{size}, data(size.x * size.y, v) {}
+        : width{size.x}, height{size.y}, depth{size.z}, voxels(size.x * size.y * size.z, v) {}
     volume(const vec3i& size, const T* v)
-        : extents{size}, data(v, v + size.x * size.y * size.z) {}
-
-    // pixel access
-    // T& operator[](const vec3i& ijk) {
-    //     return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
-    // }
-    // const T& operator[](const vec3i& ijk) const {
-    //     return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
-    // }
-    // T& at(int i, int j) { return data.at(ij.z * extents.x * extents.y + j *
-    // extents.x + i); } const T& at(int i, int j) const { return data.at(ij.z *
-    // extents.x * extents.y + j * extents.x + i); }
-
-    // private data
-    vec3i     extents = {0, 0};
-    vector<T> data    = {};
+        : width{size.x}, height{size.y}, depth{size.z}, voxels(v, v + size.x * size.y * size.z) {}
 };
 
 // Element access
 template<typename T>
 T& at(volume<T>& vol, const vec3i& ijk) {
-    return vol.data[ijk.z * vol.extents.x * vol.extents.y + ijk.y * vol.extents.x + ijk.x];
+    return vol.data[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
 }
 template<typename T>
 const T& at(const volume<T>& vol, const vec3i& ijk) {
-    return vol.data[ijk.z * vol.extents.x * vol.extents.y + ijk.y * vol.extents.x + ijk.x];
+    return vol.voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
 }
 template<typename T>
 T& at(volume<T>& vol, int i, int j, int k) {
-    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
+    return vol.voxels[k * vol.width* vol.height + j * vol.width + i];
 }
 template<typename T>
 const T& at(const volume<T>& vol, int i, int j, int k) {
-    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
+    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 
 // Size
 template <typename T>
 int width(const volume<T>& vol) {
-    return vol.extents.x;
+    return vol.width;
 }
 template <typename T>
 int height(const volume<T>& vol) {
-    return vol.extents.y;
+    return vol.height;
 }
 template <typename T>
 int depth(const volume<T>& vol) {
-    return vol.extents.z;
+    return vol.depth;
 }
 template <typename T>
 vec3i extents(const volume<T>& vol) {
-    return vol.extents;
+    return {vol.width, vol.height, vol.depth};
 }
 template <typename T>
 size_t size(const volume<T>& vol) {
-    return vol.data.size();
+    return vol.voxels.size();
 }
 template <typename T>
 bool empty(const volume<T>& vol) {
-    return vol.data.empty();
+    return vol.voxels.empty();
 }
 
 // Data access
 template <typename T>
 T* data(volume<T>& vol) {
-    return vol.data.data();
+    return vol.voxels.data();
 }
 template <typename T>
 const T* data(const volume<T>& vol) {
-    return vol.data.data();
+    return vol.voxels.data();
 }
 template <typename T>
 vector<T>& data_vector(volume<T>& vol) {
-    return vol.data;
+    return vol.voxels;
 }
 template <typename T>
 const vector<T>& data_vector(const volume<T>& vol) {
-    return vol.data;
+    return vol.voxels;
 }
 
 // Iteration
 template <typename T>
 T* begin(volume<T>& vol) {
-    return vol.data.data();
+    return vol.voxels.data();
 }
 template <typename T>
 const T* begin(const volume<T>& vol) {
-    return vol.data.data();
+    return vol.voxels.data();
 }
 template <typename T>
 T* end(volume<T>& vol) {
-    return vol.data.data() + vol.data.size();
+    return vol.voxels.data() + vol.voxels.size();
 }
 template <typename T>
 const T* end(const volume<T>& vol) {
-    return vol.data.data() + vol.data.size();
+    return vol.voxels.data() + vol.voxels.size();
 }
 
 }  // namespace ygl
