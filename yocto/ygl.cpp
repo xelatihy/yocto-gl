@@ -5742,12 +5742,12 @@ vec3f trace_func(const scene* scn, const bvh_tree* bvh,
 
 // Trace a single sample
 vec4f trace_sample(trace_state* state, const scene* scn, const bvh_tree* bvh,
-    const trace_lights* lights, const vec2i& ij, const trace_params& params) {
+    const trace_lights* lights, int i, int j, const trace_params& params) {
     _trace_npaths += 1;
     auto  cam = scn->cameras.at(params.camid);
-    auto& rng = pixel_at(state->rng, ij.x, ij.y);
+    auto& rng = pixel_at(state->rng, i, j);
     auto  ray = eval_camera_ray(
-        cam, ij, {state->img.width, state->img.height}, rand2f(rng), rand2f(rng));
+        cam, {i, j}, {state->img.width, state->img.height}, rand2f(rng), rand2f(rng));
     auto hit = false;
     auto l   = trace_func(
         scn, bvh, lights, params.tracer, ray, rng, params.nbounces, &hit);
@@ -5816,7 +5816,7 @@ image<vec4f> trace_image4f(const scene* scn, const bvh_tree* bvh,
             for (auto i = 0; i < state->img.width; i++) {
                 for (auto s = 0; s < params.nsamples; s++)
                     pixel_at(state->img, i, j) += trace_sample(
-                        state, scn, bvh, lights, {i, j}, params);
+                        state, scn, bvh, lights, i, j, params);
                 pixel_at(state->img, i, j) /= params.nsamples;
             }
         }
@@ -5829,7 +5829,7 @@ image<vec4f> trace_image4f(const scene* scn, const bvh_tree* bvh,
                     for (auto i = 0; i < state->img.width; i++) {
                         for (auto s = 0; s < params.nsamples; s++)
                             pixel_at(state->img, i, j) += trace_sample(
-                                state, scn, bvh, lights, {i, j}, params);
+                                state, scn, bvh, lights, i, j, params);
                         pixel_at(state->img, i, j) /= params.nsamples;
                     }
                 }
@@ -5852,7 +5852,7 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                 pixel_at(state->img, i, j) *= state->sample;
                 for (auto s = 0; s < nbatch; s++)
                     pixel_at(state->img, i, j) += trace_sample(
-                        state, scn, bvh, lights, {i, j}, params);
+                        state, scn, bvh, lights, i, j, params);
                 pixel_at(state->img, i, j) /= state->sample + nbatch;
                 pixel_at(state->display, i, j) = tonemap_filmic(pixel_at(state->img, i, j),
                     params.exposure, params.filmic, params.srgb);
@@ -5868,7 +5868,7 @@ bool trace_samples(trace_state* state, const scene* scn, const bvh_tree* bvh,
                         pixel_at(state->img, i, j) *= state->sample;
                         for (auto s = 0; s < nbatch; s++)
                             pixel_at(state->img, i, j) += trace_sample(
-                                state, scn, bvh, lights, {i, j}, params);
+                                state, scn, bvh, lights, i, j, params);
                         pixel_at(state->img, i, j) /= state->sample + nbatch;
                         pixel_at(state->display, i, j) = tonemap_filmic(
                             pixel_at(state->img, i, j), params.exposure, params.filmic,
@@ -5917,7 +5917,7 @@ void trace_async_start(trace_state* state, const scene* scn, const bvh_tree* bvh
                         if (state->stop) return;
                         pixel_at(state->img, i, j) *= s;
                         pixel_at(state->img, i, j) += trace_sample(
-                            state, scn, bvh, lights, {i, j}, params);
+                            state, scn, bvh, lights, i, j, params);
                         pixel_at(state->img, i, j) /= s + 1;
                         pixel_at(state->display, i, j) = tonemap_filmic(
                             pixel_at(state->img, i, j), params.exposure, params.filmic,
