@@ -289,6 +289,7 @@
 #include <cstring>
 #include <functional>  // for std::hash
 #include <limits>
+#include <map>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -310,13 +311,27 @@ using std::exp;
 using std::exp2;
 using std::fabs;
 using std::floor;
+using std::fmod;
+using std::get;
 using std::isfinite;
 using std::log;
 using std::pow;
 using std::round;
 using std::sin;
 using std::sqrt;
+using std::swap;
 using std::tan;
+
+using std::atomic;
+using std::function;
+using std::map;
+using std::runtime_error;
+using std::string;
+using std::thread;
+using std::tie;
+using std::tuple;
+using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 using byte = unsigned char;
@@ -1695,7 +1710,7 @@ inline mat4<T> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-inline std::pair<vec3<T>, T> rotation_axisangle(const vec4<T>& quat) {
+inline tuple<vec3<T>, T> rotation_axisangle(const vec4<T>& quat) {
     return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T>
@@ -1883,14 +1898,14 @@ inline int sample_index(int size, float r) {
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const std::vector<float>& cdf, float r) {
+inline int sample_discrete(const vector<float>& cdf, float r) {
     r        = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const std::vector<float>& cdf, int idx) {
+inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -1951,7 +1966,7 @@ inline float quad_area(
 }
 
 // Triangle tangent and bitangent from uv
-inline std::pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline tuple<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
@@ -2020,128 +2035,123 @@ inline T interpolate_bezier_derivative(
 namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-std::vector<vec3f> compute_tangents(
-    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos);
-std::vector<vec3f> compute_normals(
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos);
-std::vector<vec3f> compute_normals(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos);
+vector<vec3f> compute_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& pos);
+vector<vec3f> compute_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos);
+vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& pos);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-std::vector<vec4f> compute_tangent_space(const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord);
+vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord);
 
 // Apply skinning to vertex position and normals.
-std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_skinning(
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec4f>& weights, const std::vector<vec4i>& joints,
-    const std::vector<frame3f>& xforms);
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-std::pair<std::vector<vec3f>, std::vector<vec3f>> compute_matrix_skinning(
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec4f>& weights, const std::vector<vec4i>& joints,
-    const std::vector<mat4f>& xforms);
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms);
 
 // Dictionary to store edge information.
-using edge_map = std::unordered_map<vec2i, vec2i>;
+using edge_map = unordered_map<vec2i, vec2i>;
 
 // Initialize an edge map with elements.
-edge_map make_edge_map(const std::vector<vec3i>& triangles);
-edge_map make_edge_map(const std::vector<vec4i>& quads);
+edge_map make_edge_map(const vector<vec3i>& triangles);
+edge_map make_edge_map(const vector<vec4i>& quads);
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge);
 // Get the edge index / insertion count
 int get_edge_index(const edge_map& emap, const vec2i& edge);
 int get_edge_count(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
-std::vector<vec2i> get_edges(const edge_map& emap);
-std::vector<vec2i> get_boundary(const edge_map& emap);
+vector<vec2i> get_edges(const edge_map& emap);
+vector<vec2i> get_boundary(const edge_map& emap);
 
 // Create an array of edges.
-inline std::vector<vec2i> get_edges(const std::vector<vec3i>& triangles) {
+inline vector<vec2i> get_edges(const vector<vec3i>& triangles) {
     return get_edges(make_edge_map(triangles));
 }
-inline std::vector<vec2i> get_edges(const std::vector<vec4i>& quads) {
+inline vector<vec2i> get_edges(const vector<vec4i>& quads) {
     return get_edges(make_edge_map(quads));
 }
 
 // Convert quads to triangles
-std::vector<vec3i> convert_quads_to_triangles(const std::vector<vec4i>& quads);
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-std::vector<vec3i> convert_quads_to_triangles(
-    const std::vector<vec4i>& quads, int row_length);
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length);
 
 // Convert beziers to lines using 3 lines for each bezier.
-std::vector<vec2i> convert_bezier_to_lines(const std::vector<vec4i>& beziers);
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
-void convert_face_varying(std::vector<vec4i>& qquads, std::vector<vec3f>& qpos,
-    std::vector<vec3f>& qnorm, std::vector<vec2f>& qtexcoord,
-    std::vector<vec4f>& qcolor, const std::vector<vec4i>& quads_pos,
-    const std::vector<vec4i>& quads_norm,
-    const std::vector<vec4i>& quads_texcoord,
-    const std::vector<vec4i>& quads_color, const std::vector<vec3f>& pos,
-    const std::vector<vec3f>& norm, const std::vector<vec2f>& texcoord,
-    const std::vector<vec4f>& color);
+void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
+    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
+    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
+    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, const vector<vec4f>& color);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-std::pair<std::vector<vec2i>, std::vector<T>> subdivide_lines(
-    const std::vector<vec2i>& lines, const std::vector<T>& vert);
+tuple<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-std::pair<std::vector<vec3i>, std::vector<T>> subdivide_triangles(
-    const std::vector<vec3i>& triangles, const std::vector<T>& vert);
+tuple<vector<vec3i>, vector<T>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-std::pair<std::vector<vec4i>, std::vector<T>> subdivide_quads(
-    const std::vector<vec4i>& quads, const std::vector<T>& vert);
+tuple<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-std::pair<std::vector<vec4i>, std::vector<T>> subdivide_beziers(
-    const std::vector<vec4i>& beziers, const std::vector<T>& vert);
+tuple<vector<vec4i>, vector<T>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-std::pair<std::vector<vec4i>, std::vector<T>> subdivide_catmullclark(
-    const std::vector<vec4i>& quads, const std::vector<T>& vert,
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<T>& vert,
     bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-std::pair<std::vector<vec3f>, std::vector<int>> weld_vertices(
-    const std::vector<vec3f>& pos, float threshold);
-std::pair<std::vector<vec3i>, std::vector<vec3f>> weld_triangles(
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos,
-    float threshold);
-std::pair<std::vector<vec4i>, std::vector<vec3f>> weld_quads(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos,
-    float threshold);
+tuple<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& pos, float threshold);
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos, float threshold);
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(
+    const vector<vec4i>& quads, const vector<vec3f>& pos, float threshold);
 
 // Pick a point in a point set uniformly.
 inline int sample_points(int npoints, float re) {
     return sample_index(npoints, re);
 }
-inline std::vector<float> sample_points_cdf(int npoints) {
-    auto cdf = std::vector<float>(npoints);
+inline vector<float> sample_points_cdf(int npoints) {
+    auto cdf = vector<float>(npoints);
     for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
     return cdf;
 }
-inline int sample_points(const std::vector<float>& cdf, float re) {
+inline int sample_points(const vector<float>& cdf, float re) {
     return sample_discrete(cdf, re);
 }
 
 // Pick a point on lines uniformly.
-inline std::vector<float> sample_lines_cdf(
-    const std::vector<vec2i>& lines, const std::vector<vec3f>& pos) {
-    auto cdf = std::vector<float>(lines.size());
+inline vector<float> sample_lines_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& pos) {
+    auto cdf = vector<float>(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
         auto w = line_length(pos[l.x], pos[l.y]);
@@ -2149,15 +2159,15 @@ inline std::vector<float> sample_lines_cdf(
     }
     return cdf;
 }
-inline std::pair<int, float> sample_lines(
-    const std::vector<float>& cdf, float re, float ru) {
+inline tuple<int, float> sample_lines(
+    const vector<float>& cdf, float re, float ru) {
     return {sample_discrete(cdf, re), ru};
 }
 
 // Pick a point on a triangle mesh uniformly.
-inline std::vector<float> sample_triangles_cdf(
-    const std::vector<vec3i>& triangles, const std::vector<vec3f>& pos) {
-    auto cdf = std::vector<float>(triangles.size());
+inline vector<float> sample_triangles_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
+    auto cdf = vector<float>(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
         auto w = triangle_area(pos[t.x], pos[t.y], pos[t.z]);
@@ -2165,15 +2175,15 @@ inline std::vector<float> sample_triangles_cdf(
     }
     return cdf;
 }
-inline std::pair<int, vec2f> sample_triangles(
-    const std::vector<float>& cdf, float re, const vec2f& ruv) {
+inline tuple<int, vec2f> sample_triangles(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
 
 // Pick a point on a quad mesh uniformly.
-inline std::vector<float> sample_quads_cdf(
-    const std::vector<vec4i>& quads, const std::vector<vec3f>& pos) {
-    auto cdf = std::vector<float>(quads.size());
+inline vector<float> sample_quads_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& pos) {
+    auto cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
         auto w = quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
@@ -2181,17 +2191,17 @@ inline std::vector<float> sample_quads_cdf(
     }
     return cdf;
 }
-inline std::pair<int, vec2f> sample_quads(
-    const std::vector<float>& cdf, float re, const vec2f& ruv) {
+inline tuple<int, vec2f> sample_quads(
+    const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), ruv};
 }
 
 // Samples a set of points over a triangle mesh uniformly. Returns pos, norm
 // and texcoord of the sampled points.
-std::tuple<std::vector<vec3f>, std::vector<vec3f>, std::vector<vec2f>>
-sample_triangles_points(const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, int npoints, int seed = 7);
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    int seed = 7);
 
 }  // namespace ygl
 
@@ -2305,23 +2315,23 @@ struct bvh_instance {
 // call `build_bvh()`.
 struct bvh_tree {
     // data for shape BVH
-    std::vector<vec3f> pos;        // Positions for shape BVHs.
-    std::vector<float> radius;     // Radius for shape BVHs.
-    std::vector<int>   points;     // Points for shape BVHs.
-    std::vector<vec2i> lines;      // Lines for shape BVHs.
-    std::vector<vec3i> triangles;  // Triangles for shape BVHs.
-    std::vector<vec4i> quads;      // Quads for shape BVHs.
+    vector<vec3f> pos;        // Positions for shape BVHs.
+    vector<float> radius;     // Radius for shape BVHs.
+    vector<int>   points;     // Points for shape BVHs.
+    vector<vec2i> lines;      // Lines for shape BVHs.
+    vector<vec3i> triangles;  // Triangles for shape BVHs.
+    vector<vec4i> quads;      // Quads for shape BVHs.
 
     // data for instance BVH
-    std::vector<bvh_instance> instances;   // instances
-    std::vector<bvh_tree*>    shape_bvhs;  // shape bvhs
+    vector<bvh_instance> instances;   // instances
+    vector<bvh_tree*>    shape_bvhs;  // shape bvhs
 
     // optional application specific data to key from a pointer to internal ids
-    std::unordered_map<void*, int> instance_ids;
-    std::unordered_map<void*, int> shape_ids;
+    unordered_map<void*, int> instance_ids;
+    unordered_map<void*, int> shape_ids;
 
     // bvh nodes
-    std::vector<bvh_node> nodes;  // Internal nodes.
+    vector<bvh_node> nodes;  // Internal nodes.
 
     // Embree opaque data
     void* embree_bvh = nullptr;
@@ -2363,27 +2373,27 @@ namespace ygl {
 
 // Shape data returned by make_<shape> functions.
 struct make_shape_data {
-    std::vector<vec3f> pos;       // positions
-    std::vector<vec3f> norm;      // normals/tangents
-    std::vector<vec2f> texcoord;  // texture coordinates
-    std::vector<float> radius;    // radius for lines and points
+    vector<vec3f> pos;       // positions
+    vector<vec3f> norm;      // normals/tangents
+    vector<vec2f> texcoord;  // texture coordinates
+    vector<float> radius;    // radius for lines and points
 
-    std::vector<int>   points;     // points
-    std::vector<vec2i> lines;      // lines
-    std::vector<vec3i> triangles;  // triangles
-    std::vector<vec4i> quads;      // quads
-    std::vector<vec4i> beziers;    // beziers
+    vector<int>   points;     // points
+    vector<vec2i> lines;      // lines
+    vector<vec3i> triangles;  // triangles
+    vector<vec4i> quads;      // quads
+    vector<vec4i> beziers;    // beziers
 };
 
 // Shape data returned by make_fv<shape> functions.
 struct make_fvshape_data {
-    std::vector<vec3f> pos;       // positions
-    std::vector<vec3f> norm;      // normals/tangents
-    std::vector<vec2f> texcoord;  // texture coordinates
+    vector<vec3f> pos;       // positions
+    vector<vec3f> norm;      // normals/tangents
+    vector<vec2f> texcoord;  // texture coordinates
 
-    std::vector<vec4i> quads_pos;       // facevarying quads for pos
-    std::vector<vec4i> quads_norm;      // facevarying quads for norm
-    std::vector<vec4i> quads_texcoord;  // facevarying quads for texcoord
+    vector<vec4i> quads_pos;       // facevarying quads for pos
+    vector<vec4i> quads_norm;      // facevarying quads for norm
+    vector<vec4i> quads_texcoord;  // facevarying quads for texcoord
 };
 
 // Make examples shapes that are not watertight (besides quads).
@@ -2439,8 +2449,7 @@ make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
     float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle(
-    std::vector<vec4i>& beziers, std::vector<vec3f>& pos);
+make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -2448,15 +2457,14 @@ make_shape_data make_bezier_circle(
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_data make_hair(const vec2i& steps,
-    const std::vector<vec3i>& striangles, const std::vector<vec3f>& spos,
-    const std::vector<vec3f>& snorm, const std::vector<vec2f>& stexcoord,
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
-    const vec2f& rotation = zero2f, int seed = 7);
+make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
+    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
-make_shape_data merge_shape_data(const std::vector<make_shape_data>& shapes);
+make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
 
 }  // namespace ygl
 
@@ -2484,8 +2492,8 @@ struct image {
     // const T& at(int i, int j) const { return data.at(j * extents.x + i); }
 
     // private data
-    vec2i          extents = {0, 0};
-    std::vector<T> data    = {};
+    vec2i     extents = {0, 0};
+    vector<T> data    = {};
 };
 
 // Size
@@ -2520,11 +2528,11 @@ const T* data(const image<T>& img) {
     return img.data.data();
 }
 template <typename T>
-std::vector<T>& data_vector(image<T>& img) {
+vector<T>& data_vector(image<T>& img) {
     return img.data;
 }
 template <typename T>
-const std::vector<T>& data_vector(const image<T>& img) {
+const vector<T>& data_vector(const image<T>& img) {
     return img.data;
 }
 
@@ -2733,8 +2741,7 @@ image<vec4f> make_turbulence_image4f(const vec2i& size, float scale = 1,
 namespace ygl {
 
 // Find the first keyframe value that is greater than the argument.
-inline int eval_keyframed_index(
-    const std::vector<float>& times, const float& time) {
+inline int eval_keyframed_index(const vector<float>& times, const float& time) {
     for (auto i = 0; i < times.size(); i++)
         if (times[i] > time) return i;
     return (int)times.size();
@@ -2743,7 +2750,7 @@ inline int eval_keyframed_index(
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
 inline T eval_keyframed_step(
-    const std::vector<float>& times, const std::vector<T>& vals, float time) {
+    const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2753,8 +2760,8 @@ inline T eval_keyframed_step(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f eval_keyframed_slerp(const std::vector<float>& times,
-    const std::vector<vec4f>& vals, float time) {
+inline vec4f eval_keyframed_slerp(
+    const vector<float>& times, const vector<vec4f>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2766,7 +2773,7 @@ inline vec4f eval_keyframed_slerp(const std::vector<float>& times,
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
 inline T eval_keyframed_linear(
-    const std::vector<float>& times, const std::vector<T>& vals, float time) {
+    const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2778,7 +2785,7 @@ inline T eval_keyframed_linear(
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
 inline T eval_keyframed_bezier(
-    const std::vector<float>& times, const std::vector<T>& vals, float time) {
+    const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2817,8 +2824,8 @@ struct volume {
     // extents.x * extents.y + j * extents.x + i); }
 
     // private data
-    vec3i          extents = {0, 0};
-    std::vector<T> data    = {};
+    vec3i     extents = {0, 0};
+    vector<T> data    = {};
 };
 
 // Size
@@ -2877,11 +2884,11 @@ const T* data(const volume<T>& vol) {
     return vol.data.data();
 }
 template <typename T>
-std::vector<T>& data_vector(volume<T>& vol) {
+vector<T>& data_vector(volume<T>& vol) {
     return vol.data;
 }
 template <typename T>
-const std::vector<T>& data_vector(const volume<T>& vol) {
+const vector<T>& data_vector(const volume<T>& vol) {
     return vol.data;
 }
 
@@ -2926,19 +2933,19 @@ struct bvh_tree;
 
 // Camera.
 struct camera {
-    std::string name     = "";                // name
-    frame3f     frame    = identity_frame3f;  // transform frame
-    bool        ortho    = false;             // orthographic
-    vec2f       film     = {0.036f, 0.024f};  // film size (default: 35mm)
-    float       focal    = 0.050f;            // focal length (defaut: 50 mm)
-    float       focus    = maxf;  // focal distance (default: infinite)
-    float       aperture = 0;     // lens aperture
+    string  name     = "";                // name
+    frame3f frame    = identity_frame3f;  // transform frame
+    bool    ortho    = false;             // orthographic
+    vec2f   film     = {0.036f, 0.024f};  // film size (default: 35mm)
+    float   focal    = 0.050f;            // focal length (defaut: 50 mm)
+    float   focus    = maxf;              // focal distance (default: infinite)
+    float   aperture = 0;                 // lens aperture
 };
 
 // Texture containing either an LDR or HDR image.
 struct texture {
-    std::string  name        = "";     // name
-    std::string  path        = "";     // file path
+    string       name        = "";     // name
+    string       path        = "";     // file path
     image<vec4f> imgf        = {};     // hdr image in linear color space
     image<vec4b> imgb        = {};     // ldr image in srgb color space
     bool         clamp       = false;  // clamp textures coordinates
@@ -2950,8 +2957,8 @@ struct texture {
 
 // Volumetric texture containing either an HDR image.
 struct voltexture {
-    std::string   name   = "";     // name
-    std::string   path   = "";     // file path
+    string        name   = "";     // name
+    string        path   = "";     // file path
     volume<float> vol    = {};     // volume
     bool          clamp  = false;  // clamp textures coordinates
     bool          linear = true;   // use trilinear interpolation
@@ -2961,10 +2968,10 @@ struct voltexture {
 // For surfaces, uses a microfacet model with thin sheet transmission.
 // The model is based on glTF for compatibility and adapted to OBJ.
 struct material {
-    std::string name          = "";     // name
-    bool        base_metallic = false;  // base-metallic parametrization
-    bool        gltf_textures = false;  // glTF packed textures
-    bool        double_sided  = false;  // double sided rendering
+    string name          = "";     // name
+    bool   base_metallic = false;  // base-metallic parametrization
+    bool   gltf_textures = false;  // glTF packed textures
+    bool   double_sided  = false;  // double sided rendering
 
     // base values
     vec3f ke      = {0, 0, 0};  // emission color
@@ -3001,78 +3008,78 @@ struct material {
 // Shape data represented as an indexed meshes of elements.
 // May contain either tringles, lines or a set of vertices.
 struct shape {
-    std::string name = "";  // name
-    std::string path = "";  // path for glTF buffers
+    string name = "";  // name
+    string path = "";  // path for glTF buffers
 
     // primitives
-    std::vector<int>   points    = {};  // points
-    std::vector<vec2i> lines     = {};  // lines
-    std::vector<vec3i> triangles = {};  // triangles
+    vector<int>   points    = {};  // points
+    vector<vec2i> lines     = {};  // lines
+    vector<vec3i> triangles = {};  // triangles
 
     // vertex data
-    std::vector<vec3f> pos      = {};  // positions
-    std::vector<vec3f> norm     = {};  // normals/tangents
-    std::vector<vec2f> texcoord = {};  // texcoord coordinates
-    std::vector<vec4f> color    = {};  // colors
-    std::vector<float> radius   = {};  // radia for lines/points
-    std::vector<vec4f> tangsp   = {};  // tangent space for triangles
+    vector<vec3f> pos      = {};  // positions
+    vector<vec3f> norm     = {};  // normals/tangents
+    vector<vec2f> texcoord = {};  // texcoord coordinates
+    vector<vec4f> color    = {};  // colors
+    vector<float> radius   = {};  // radia for lines/points
+    vector<vec4f> tangsp   = {};  // tangent space for triangles
 };
 
 // Subdivision surface.
 struct subdiv {
-    std::string name            = "";    // name
-    std::string path            = "";    // path for glTF buffers
-    int         level           = 0;     // subdivision level
-    bool        catmull_clark   = true;  // catmull clark subdiv
-    bool        compute_normals = true;  // faceted subdivision
+    string name            = "";    // name
+    string path            = "";    // path for glTF buffers
+    int    level           = 0;     // subdivision level
+    bool   catmull_clark   = true;  // catmull clark subdiv
+    bool   compute_normals = true;  // faceted subdivision
 
     // primitives
-    std::vector<vec4i> quads_pos      = {};  // quads for position
-    std::vector<vec4i> quads_texcoord = {};  // quads for texture coordinates
-    std::vector<vec4i> quads_color    = {};  // quads for color
+    vector<vec4i> quads_pos      = {};  // quads for position
+    vector<vec4i> quads_texcoord = {};  // quads for texture coordinates
+    vector<vec4i> quads_color    = {};  // quads for color
 
     // creases
-    std::vector<vec3i> crease_pos      = {};  // crease for position
-    std::vector<vec3i> crease_texcoord = {};  // crease for texture coordinates
+    vector<vec3i> crease_pos      = {};  // crease for position
+    vector<vec3i> crease_texcoord = {};  // crease for texture coordinates
 
     // vertex data
-    std::vector<vec3f> pos      = {};  // positions
-    std::vector<vec2f> texcoord = {};  // texcoord coordinates
-    std::vector<vec4f> color    = {};  // colors
+    vector<vec3f> pos      = {};  // positions
+    vector<vec2f> texcoord = {};  // texcoord coordinates
+    vector<vec4f> color    = {};  // colors
 };
 
 // Shape instance.
 struct instance {
-    std::string name  = "";                // name
-    frame3f     frame = identity_frame3f;  // transform frame
-    shape*      shp   = nullptr;           // shape
-    material*   mat   = nullptr;           // material
-    subdiv*     sbd   = nullptr;           // subdivision shape
+    string    name  = "";                // name
+    frame3f   frame = identity_frame3f;  // transform frame
+    shape*    shp   = nullptr;           // shape
+    material* mat   = nullptr;           // material
+    subdiv*   sbd   = nullptr;           // subdivision shape
 };
 
 // Environment map.
 struct environment {
-    std::string name   = "";                // name
-    frame3f     frame  = identity_frame3f;  // transform frame
-    vec3f       ke     = {0, 0, 0};         // emission color
-    texture*    ke_txt = nullptr;           // emission texture
+    string   name   = "";                // name
+    frame3f  frame  = identity_frame3f;  // transform frame
+    vec3f    ke     = {0, 0, 0};         // emission color
+    texture* ke_txt = nullptr;           // emission texture
 };
 
 // Node in a transform hierarchy.
 struct node {
-    std::string        name        = "";                // name
-    node*              parent      = nullptr;           // parent
-    frame3f            local       = identity_frame3f;  // transform frame
-    vec3f              translation = {0, 0, 0};         // translation
-    vec4f              rotation    = {0, 0, 0, 1};      // rotation
-    vec3f              scale       = {1, 1, 1};         // scale
-    std::vector<float> weights     = {};                // morph weights
-    camera*            cam         = nullptr;           // camera
-    instance*          ist         = nullptr;           // instance
-    environment*       env         = nullptr;           // environment
+    string        name        = "";                // name
+    node*         parent      = nullptr;           // parent
+    frame3f       local       = identity_frame3f;  // transform frame
+    vec3f         translation = {0, 0, 0};         // translation
+    vec4f         rotation    = {0, 0, 0, 1};      // rotation
+    vec3f         scale       = {1, 1, 1};         // scale
+    vector<float> weights     = {};                // morph weights
+    camera*       cam         = nullptr;           // camera
+    instance*     ist         = nullptr;           // instance
+    environment*  env         = nullptr;           // environment
 
     // compute properties
-    std::vector<node*> children = {};  // child nodes
+    vector<node*> children = {};  // child nodes
 };
 
 // Keyframe type.
@@ -3080,16 +3087,16 @@ enum struct animation_type { linear, step, bezier };
 
 // Keyframe data.
 struct animation {
-    std::string                     name  = "";  // name
-    std::string                     path  = "";  // path for glTF buffer
-    std::string                     group = "";  // group
-    animation_type                  type  = animation_type::linear;  // type
-    std::vector<float>              times = {};        // keyframe times
-    std::vector<vec3f>              translation = {};  // translation keyframes
-    std::vector<vec4f>              rotation    = {};  // rotation keyframes
-    std::vector<vec3f>              scale       = {};  // scale keyframes
-    std::vector<std::vector<float>> weights     = {};  // morph weight keyframes
-    std::vector<node*>              targets     = {};  // target nodes
+    string                name        = "";  // name
+    string                path        = "";  // path for glTF buffer
+    string                group       = "";  // group
+    animation_type        type        = animation_type::linear;  // type
+    vector<float>         times       = {};  // keyframe times
+    vector<vec3f>         translation = {};  // translation keyframes
+    vector<vec4f>         rotation    = {};  // rotation keyframes
+    vector<vec3f>         scale       = {};  // scale keyframes
+    vector<vector<float>> weights     = {};  // morph weight keyframes
+    vector<node*>         targets     = {};  // target nodes
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -3100,17 +3107,17 @@ struct animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene {
-    std::string               name         = "";  // name
-    std::vector<camera*>      cameras      = {};  // cameras
-    std::vector<shape*>       shapes       = {};  // shapes
-    std::vector<subdiv*>      subdivs      = {};  // subdivs
-    std::vector<instance*>    instances    = {};  // instances
-    std::vector<material*>    materials    = {};  // materials
-    std::vector<texture*>     textures     = {};  // textures
-    std::vector<environment*> environments = {};  // environments
-    std::vector<voltexture*>  voltextures  = {};  // volume textures
-    std::vector<node*>        nodes        = {};  // node hierarchy [optional]
-    std::vector<animation*>   animations   = {};  // animations [optional]
+    string               name         = "";  // name
+    vector<camera*>      cameras      = {};  // cameras
+    vector<shape*>       shapes       = {};  // shapes
+    vector<subdiv*>      subdivs      = {};  // subdivs
+    vector<instance*>    instances    = {};  // instances
+    vector<material*>    materials    = {};  // materials
+    vector<texture*>     textures     = {};  // textures
+    vector<environment*> environments = {};  // environments
+    vector<voltexture*>  voltextures  = {};  // volume textures
+    vector<node*>        nodes        = {};  // node hierarchy [optional]
+    vector<animation*>   animations   = {};  // animations [optional]
 
     // cleanup
     ~scene();
@@ -3139,20 +3146,19 @@ namespace ygl {
 
 // Update node transforms.
 void update_transforms(
-    scene* scn, float time = 0, const std::string& anim_group = "");
+    scene* scn, float time = 0, const string& anim_group = "");
 // Compute animation range.
-vec2f compute_animation_range(
-    const scene* scn, const std::string& anim_group = "");
+vec2f compute_animation_range(const scene* scn, const string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
 bbox3f compute_bbox(const shape* shp);
 bbox3f compute_bbox(const scene* scn);
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-std::vector<float> compute_shape_cdf(const shape* shp);
+vector<float> compute_shape_cdf(const shape* shp);
 // Generate a distribution for sampling an environment texture uniformly
 // based on angle and texture intensity.
-std::vector<float> compute_environment_cdf(const environment* env);
+vector<float> compute_environment_cdf(const environment* env);
 
 // Updates/refits bvh.
 bvh_tree* build_bvh(const shape* shp, bool high_quality, bool embree = false);
@@ -3171,13 +3177,13 @@ void add_missing_tangent_space(scene* scn);
 void add_missing_materials(scene* scn);
 void add_missing_cameras(scene* scn);
 // Checks for validity of the scene.
-std::vector<std::string> validate(const scene* scn, bool skip_textures = false);
+vector<string> validate(const scene* scn, bool skip_textures = false);
 
 // make camera
-camera* make_bbox_camera(const std::string& name, const bbox3f& bbox,
+camera* make_bbox_camera(const string& name, const bbox3f& bbox,
     const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
 // make default material
-inline material* make_default_material(const std::string& name) {
+inline material* make_default_material(const string& name) {
     auto mat  = new material();
     mat->name = name;
     mat->kd   = {0.2f, 0.2f, 0.2f};
@@ -3186,7 +3192,7 @@ inline material* make_default_material(const std::string& name) {
 
 // Add a sky environment
 inline environment* make_sky_environment(
-    const std::string& name, float sun_angle = pif / 4) {
+    const string& name, float sun_angle = pif / 4) {
     auto txt    = new texture();
     txt->name   = name;
     txt->path   = "textures/" + name + ".hdr";
@@ -3337,10 +3343,10 @@ enum struct trace_type {
     debug_roughness,    // debug - roughness
 };
 
-const auto trace_type_names = std::vector<std::string>{"path", "volpath",
-    "direct", "environment", "eyelight", "path_nomis", "path_naive",
-    "direct_nomis", "debug_normal", "debug_albedo", "debug_texcoord",
-    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
+const auto trace_type_names = vector<string>{"path", "volpath", "direct",
+    "environment", "eyelight", "path_nomis", "path_naive", "direct_nomis",
+    "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
+    "debug_diffuse", "debug_specular", "debug_roughness"};
 
 // Trace options
 struct trace_params {
@@ -3361,10 +3367,10 @@ struct trace_params {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    std::vector<instance*>    lights;        // instance lights
-    std::vector<environment*> environments;  // environments lights
-    std::unordered_map<shape*, std::vector<float>> shape_cdf;      // shape cdfs
-    std::unordered_map<environment*, std::vector<float>> env_cdf;  // env cdfs
+    vector<instance*>                    lights;         // instance lights
+    vector<environment*>                 environments;   // environments lights
+    unordered_map<shape*, vector<float>> shape_cdf;      // shape cdfs
+    unordered_map<environment*, vector<float>> env_cdf;  // env cdfs
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
@@ -3373,12 +3379,12 @@ struct trace_state {
     image<vec4f> display = {};  // image tone mapped for display
 
     // internal data used during rendering
-    image<vec4f>             acc     = {};  // accumulation buffer
-    image<int>               samples = {};  // samples per pixel
-    image<rng_state>         rng     = {};  // random number generators
-    int                      sample  = 0;   // current sample being rendered
-    std::vector<std::thread> threads;       // threads used during rendering
-    bool                     stop = false;  // stop flag for threads
+    image<vec4f>     acc     = {};  // accumulation buffer
+    image<int>       samples = {};  // samples per pixel
+    image<rng_state> rng     = {};  // random number generators
+    int              sample  = 0;   // current sample being rendered
+    vector<thread>   threads;       // threads used during rendering
+    bool             stop = false;  // stop flag for threads
 };
 
 // Initialize lights.
@@ -3406,8 +3412,8 @@ void trace_async_stop(trace_state* state);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
-std::pair<uint64_t, uint64_t> get_trace_stats();
-void                          reset_trace_stats();
+tuple<uint64_t, uint64_t> get_trace_stats();
+void                      reset_trace_stats();
 
 }  // namespace ygl
 

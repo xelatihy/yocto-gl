@@ -30,7 +30,7 @@
 #include "../yocto/yglio.h"
 using namespace ygl;
 
-std::string to_string(const obj_vertex& v) {
+string to_string(const obj_vertex& v) {
     auto s = std::to_string(v.pos);
     if (v.texcoord) {
         s += "/" + std::to_string(v.texcoord);
@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
         fprintf(fs, "vt %6g %6g\n", v.x, v.y);
         ntexcoord += 1;
     };
-    cb.face = [&](const std::vector<obj_vertex>& verts) {
+    cb.face = [&](const vector<obj_vertex>& verts) {
         fprintf(fs, "f");
         for (auto v : verts) fprintf(fs, " %s", to_string(v).c_str());
         fprintf(fs, "\n");
@@ -99,33 +99,33 @@ int main(int argc, char* argv[]) {
         if (verts.size() == 4) nquads += 1;
         if (verts.size() > 4) npolys += 1;
     };
-    cb.line = [&](const std::vector<obj_vertex>& verts) {
+    cb.line = [&](const vector<obj_vertex>& verts) {
         fprintf(fs, "l");
         for (auto v : verts) fprintf(fs, " %s", to_string(v).c_str());
         fprintf(fs, "\n");
         nplines += 1;
         nlines += (int)verts.size() - 1;
     };
-    cb.point = [&](const std::vector<obj_vertex>& verts) {
+    cb.point = [&](const vector<obj_vertex>& verts) {
         fprintf(fs, "p");
         for (auto v : verts) fprintf(fs, " %s", to_string(v).c_str());
         fprintf(fs, "\n");
         nppoints += 1;
         npoints += (int)verts.size();
     };
-    cb.object = [&](const std::string& name) {
+    cb.object = [&](const string& name) {
         fprintf(fs, "o %s\n", name.c_str());
         nobjects += 1;
     };
-    cb.group = [&](const std::string& name) {
+    cb.group = [&](const string& name) {
         fprintf(fs, "g %s\n", name.c_str());
         ngroups += 1;
     };
-    cb.usemtl = [&](const std::string& name) {
+    cb.usemtl = [&](const string& name) {
         fprintf(fs, "usemtl %s\n", name.c_str());
         nusemtl += 1;
     };
-    cb.mtllib = [&](const std::string& name) {
+    cb.mtllib = [&](const string& name) {
         fprintf(fs, "mtllib %s\n", name.c_str());
     };
     cb.material = [&](auto&) { nmaterials += 1; };

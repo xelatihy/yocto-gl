@@ -30,7 +30,7 @@
 #include "../yocto/yglio.h"
 using namespace ygl;
 
-bool mkdir(const std::string& dir) {
+bool mkdir(const string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
         return true;
 #ifndef _MSC_VER

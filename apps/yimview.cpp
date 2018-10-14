@@ -38,9 +38,9 @@ struct image_stats {
 
 struct app_image {
     // original data
-    std::string  filename;  // filename
-    std::string  outname;   // output filename for display
-    std::string  name;
+    string       filename;  // filename
+    string       outname;   // output filename for display
+    string       name;
     image<vec4f> img;
     bool         is_hdr = false;
 
@@ -57,10 +57,10 @@ struct app_image {
     bool  srgb     = true;
 
     // computation futures
-    std::atomic<bool> load_done, display_done, stats_done, texture_done;
-    std::thread       load_thread, display_thread, stats_thread, save_thread;
-    std::atomic<bool> display_stop;
-    std::string       error_msg = "";
+    atomic<bool> load_done, display_done, stats_done, texture_done;
+    thread       load_thread, display_thread, stats_thread, save_thread;
+    atomic<bool> display_stop;
+    string       error_msg = "";
 
     // viewing properties
     vec2f imcenter    = zero2f;
@@ -79,8 +79,8 @@ struct app_image {
 
 struct app_state {
     // images
-    std::vector<app_image*> imgs;
-    int                     img_id = 0;
+    vector<app_image*> imgs;
+    int                img_id = 0;
 
     ~app_state() {
         for (auto img : imgs) delete img;
@@ -104,10 +104,10 @@ void update_display_async(app_image* img) {
     img->display_done = false;
     img->texture_done = false;
     if (width(img->img) * height(img->img) > 1024 * 1024) {
-        auto nthreads = std::thread::hardware_concurrency();
-        auto threads  = std::vector<std::thread>();
+        auto nthreads = thread::hardware_concurrency();
+        auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(std::thread([img, tid, nthreads]() {
+            threads.push_back(thread([img, tid, nthreads]() {
                 for (auto j = tid; j < height(img->img); j += nthreads) {
                     if (img->display_stop) break;
                     for (auto i = 0; i < width(img->img); i++) {
@@ -148,13 +148,13 @@ void load_image_async(app_image* img) {
     img->display   = img->img;
     printf("load: %s\n", format_duration(get_time() - start).c_str());
     fflush(stdout);
-    img->display_thread = std::thread(update_display_async, img);
-    img->stats_thread   = std::thread(update_stats_async, img);
+    img->display_thread = thread(update_display_async, img);
+    img->stats_thread   = thread(update_stats_async, img);
 }
 
 // save an image
 void save_image_async(app_image* img) {
-    if(is_hdr_filename(img->outname)) {
+    if (is_hdr_filename(img->outname)) {
         if (!save_image4b(img->outname, float_to_byte(img->display))) {
             img->error_msg = "error saving image";
         }
@@ -166,9 +166,8 @@ void save_image_async(app_image* img) {
 }
 
 // add a new image
-void add_new_image(app_state* app, const std::string& filename,
-    const std::string& outname, float exposure = 0, bool filmic = false,
-    bool srgb = true) {
+void add_new_image(app_state* app, const string& filename, const string& outname,
+    float exposure = 0, bool filmic = false, bool srgb = true) {
     auto img      = new app_image();
     img->filename = filename;
     img->outname  = (outname == "") ?
@@ -179,7 +178,7 @@ void add_new_image(app_state* app, const std::string& filename,
     img->exposure    = exposure;
     img->filmic      = filmic;
     img->srgb        = srgb;
-    img->load_thread = std::thread(load_image_async, img);
+    img->load_thread = thread(load_image_async, img);
     app->imgs.push_back(img);
     app->img_id = (int)app->imgs.size() - 1;
 }
@@ -196,10 +195,10 @@ void draw_glwidgets(glwindow* win) {
             draw_textinput_glwidget(win, "outname", img->outname);
             if (draw_button_glwidget(win, "save display")) {
                 if (img->display_done) {
-                    img->save_thread = std::thread(save_image_async, img);
+                    img->save_thread = thread(save_image_async, img);
                 }
             }
-            auto status = std::string();
+            auto status = string();
             if (img->error_msg != "")
                 status = "error: " + img->error_msg;
             else if (!img->load_done)
@@ -250,7 +249,7 @@ void draw_glwidgets(glwindow* win) {
         }
         if (img->save_thread.joinable()) img->save_thread.join();
         img->display_stop   = false;
-        img->display_thread = std::thread(update_display_async, img);
+        img->display_thread = thread(update_display_async, img);
     }
 }
 
@@ -345,7 +344,7 @@ int main(int argc, char* argv[]) {
     //     parser, "--quiet,-q", false, "Print only errors messages");
     auto outfilename = parse_arg(parser, "--out,-o", ""s, "image out filename");
     auto filenames   = parse_args(
-        parser, "images", std::vector<std::string>{}, "image filenames", true);
+        parser, "images", vector<string>{}, "image filenames", true);
     check_cmdline(parser);
 
     // loading images

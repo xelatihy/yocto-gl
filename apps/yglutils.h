@@ -57,14 +57,14 @@ uint make_gltexture(
 void update_gltexture(
     int tid, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
 
-uint make_glarraybuffer(const std::vector<float>& buf, bool dynamic = false);
-uint make_glarraybuffer(const std::vector<vec2f>& buf, bool dynamic = false);
-uint make_glarraybuffer(const std::vector<vec3f>& buf, bool dynamic = false);
-uint make_glarraybuffer(const std::vector<vec4f>& buf, bool dynamic = false);
+uint make_glarraybuffer(const vector<float>& buf, bool dynamic = false);
+uint make_glarraybuffer(const vector<vec2f>& buf, bool dynamic = false);
+uint make_glarraybuffer(const vector<vec3f>& buf, bool dynamic = false);
+uint make_glarraybuffer(const vector<vec4f>& buf, bool dynamic = false);
 
-uint make_glelementbuffer(const std::vector<int>& buf, bool dynamic = false);
-uint make_glelementbuffer(const std::vector<vec2i>& buf, bool dynamic = false);
-uint make_glelementbuffer(const std::vector<vec3i>& buf, bool dynamic = false);
+uint make_glelementbuffer(const vector<int>& buf, bool dynamic = false);
+uint make_glelementbuffer(const vector<vec2i>& buf, bool dynamic = false);
+uint make_glelementbuffer(const vector<vec3i>& buf, bool dynamic = false);
 
 int get_gluniform_location(uint pid, const char* name);
 
@@ -146,8 +146,7 @@ bool begin_glwidgets_window(glwindow* win, const char* title);
 bool begin_header_glwidget(glwindow* win, const char* title);
 void end_header_glwidget(glwindow* win);
 
-void draw_label_glwidgets(
-    glwindow* win, const char* lbl, const std::string& txt);
+void draw_label_glwidgets(glwindow* win, const char* lbl, const string& txt);
 void draw_label_glwidgets(glwindow* win, const char* lbl, const char* fmt, ...);
 
 bool begin_header_widget(glwindow* win, const char* label);
@@ -158,7 +157,7 @@ void continue_glwidgets_line(glwindow* win);
 
 bool draw_button_glwidget(glwindow* win, const char* lbl);
 
-bool draw_textinput_glwidget(glwindow* win, const char* lbl, std::string& val);
+bool draw_textinput_glwidget(glwindow* win, const char* lbl, string& val);
 bool draw_slider_glwidget(
     glwindow* win, const char* lbl, float& val, float min, float max);
 bool draw_slider_glwidget(
@@ -208,28 +207,27 @@ bool begin_selectabletreenode_glwidget(
 void begin_selectabletreeleaf_glwidget(
     glwindow* win, const char* lbl, void*& selection, void* content);
 
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, int& idx, const vector<string>& labels);
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, string& val, const vector<string>& labels);
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
-    const std::vector<std::string>& labels);
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, std::string& val,
-    const std::vector<std::string>& labels);
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
-    const std::vector<void*>& vals, const char* (*label)(void*));
+    const vector<void*>& vals, const char* (*label)(void*));
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
-    const std::vector<void*>& vals, const char* (*label)(void*),
-    bool                      include_null);
+    const vector<void*>& vals, const char* (*label)(void*), bool include_null);
 
 template <typename T>
 bool draw_combobox_glwidget(
-    glwindow* win, const char* lbl, int& idx, const std::vector<T*>& vals) {
-    return draw_combobox_glwidget(win, lbl, idx, (const std::vector<void*>&)vals,
+    glwindow* win, const char* lbl, int& idx, const vector<T*>& vals) {
+    return draw_combobox_glwidget(win, lbl, idx, (const vector<void*>&)vals,
         [](void* val) { return ((T*)val)->name.c_str(); });
 }
 
 template <typename T>
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, T*& val,
-    const std::vector<T*>& vals, bool include_null) {
+    const vector<T*>& vals, bool include_null) {
     return draw_combobox_glwidget(win, lbl, (void*&)val,
-        (const std::vector<void*>&)vals,
+        (const vector<void*>&)vals,
         [](void* val) { return ((T*)val)->name.c_str(); }, include_null);
 }
 

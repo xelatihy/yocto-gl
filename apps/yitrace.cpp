@@ -38,8 +38,8 @@ struct app_state {
     bvh_tree* bvh = nullptr;
 
     // rendering params
-    std::string  filename   = "scene.json";
-    std::string  imfilename = "out.obj";
+    string       filename   = "scene.json";
+    string       imfilename = "out.obj";
     trace_params params     = {};
 
     // rendering state
@@ -47,16 +47,16 @@ struct app_state {
     trace_lights* lights = nullptr;
 
     // view image
-    vec2f                                      imcenter     = zero2f;
-    float                                      imscale      = 1;
-    bool                                       zoom_to_fit  = true;
-    bool                                       widgets_open = false;
-    void*                                      selection    = nullptr;
-    std::vector<std::pair<std::string, void*>> update_list;
-    bool                                       navigation_fps = false;
-    bool                                       quiet          = false;
-    int64_t                                    trace_start    = 0;
-    uint                                       gl_txt         = 0;
+    vec2f                        imcenter     = zero2f;
+    float                        imscale      = 1;
+    bool                         zoom_to_fit  = true;
+    bool                         widgets_open = false;
+    void*                        selection    = nullptr;
+    vector<tuple<string, void*>> update_list;
+    bool                         navigation_fps = false;
+    bool                         quiet          = false;
+    int64_t                      trace_start    = 0;
+    uint                         gl_txt         = 0;
 
     ~app_state() {
         if (scn) delete scn;
@@ -78,7 +78,7 @@ void draw_glwidgets(glwindow* win) {
             draw_label_glwidgets(win, "image", "%d x %d @ %d",
                 width(app->state->img), height(app->state->img),
                 app->state->sample);
-            auto cam_names = std::vector<std::string>();
+            auto cam_names = vector<string>();
             for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
             auto edited = 0;
             edited += draw_combobox_glwidget(
@@ -163,17 +163,17 @@ bool update(app_state* app) {
 
     // update BVH
     for (auto& sel : app->update_list) {
-        if (sel.first == "shape") {
+        if (get<0>(sel) == "shape") {
             for (auto sid = 0; sid < app->scn->shapes.size(); sid++) {
-                if (app->scn->shapes[sid] == sel.second) {
-                    refit_bvh((shape*)sel.second, app->bvh->shape_bvhs[sid]);
+                if (app->scn->shapes[sid] == get<1>(sel)) {
+                    refit_bvh((shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
                     break;
                 }
             }
             refit_bvh(app->scn, app->bvh);
         }
-        if (sel.first == "instance") { refit_bvh(app->scn, app->bvh); }
-        if (sel.first == "node") {
+        if (get<0>(sel) == "instance") { refit_bvh(app->scn, app->bvh); }
+        if (get<0>(sel) == "node") {
             update_transforms(app->scn, 0);
             refit_bvh(app->scn, app->bvh);
         }

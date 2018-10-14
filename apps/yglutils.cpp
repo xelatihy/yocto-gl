@@ -83,8 +83,7 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(vid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("shader not compiled\n\n") + errbuf);
+        throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -96,8 +95,7 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(fid, 10000, 0, errbuf);
-        throw std::runtime_error(
-            std::string("shader not compiled\n\n") + errbuf);
+        throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -111,12 +109,12 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetProgramiv(pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(std::string("program not linked\n\n") + errbuf);
+        throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     glGetProgramiv(pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(std::string("program not linked\n\n") + errbuf);
+        throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -224,7 +222,7 @@ void update_gltexture(
 }
 
 template <typename T>
-uint make_glarraybuffer_impl(const std::vector<T>& buf, bool dynamic) {
+uint make_glarraybuffer_impl(const vector<T>& buf, bool dynamic) {
     auto bid = (uint)0;
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &bid);
@@ -235,21 +233,21 @@ uint make_glarraybuffer_impl(const std::vector<T>& buf, bool dynamic) {
     return bid;
 }
 
-uint make_glarraybuffer(const std::vector<float>& buf, bool dynamic) {
+uint make_glarraybuffer(const vector<float>& buf, bool dynamic) {
     return make_glarraybuffer_impl(buf, dynamic);
 }
-uint make_glarraybuffer(const std::vector<vec2f>& buf, bool dynamic) {
+uint make_glarraybuffer(const vector<vec2f>& buf, bool dynamic) {
     return make_glarraybuffer_impl(buf, dynamic);
 }
-uint make_glarraybuffer(const std::vector<vec3f>& buf, bool dynamic) {
+uint make_glarraybuffer(const vector<vec3f>& buf, bool dynamic) {
     return make_glarraybuffer_impl(buf, dynamic);
 }
-uint make_glarraybuffer(const std::vector<vec4f>& buf, bool dynamic) {
+uint make_glarraybuffer(const vector<vec4f>& buf, bool dynamic) {
     return make_glarraybuffer_impl(buf, dynamic);
 }
 
 template <typename T>
-uint make_glelementbuffer_impl(const std::vector<T>& buf, bool dynamic) {
+uint make_glelementbuffer_impl(const vector<T>& buf, bool dynamic) {
     auto bid = (uint)0;
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &bid);
@@ -260,13 +258,13 @@ uint make_glelementbuffer_impl(const std::vector<T>& buf, bool dynamic) {
     return bid;
 }
 
-uint make_glelementbuffer(const std::vector<int>& buf, bool dynamic) {
+uint make_glelementbuffer(const vector<int>& buf, bool dynamic) {
     return make_glelementbuffer_impl(buf, dynamic);
 }
-uint make_glelementbuffer(const std::vector<vec2i>& buf, bool dynamic) {
+uint make_glelementbuffer(const vector<vec2i>& buf, bool dynamic) {
     return make_glelementbuffer_impl(buf, dynamic);
 }
-uint make_glelementbuffer(const std::vector<vec3i>& buf, bool dynamic) {
+uint make_glelementbuffer(const vector<vec3i>& buf, bool dynamic) {
     return make_glelementbuffer_impl(buf, dynamic);
 }
 
@@ -464,9 +462,9 @@ void draw_glimage(
         )";
         gl_prog     = make_glprogram(vert, frag);
         gl_texcoord = make_glarraybuffer(
-            std::vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+            vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
         gl_triangles = make_glelementbuffer(
-            std::vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+            vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     }
 
     // draw
@@ -484,7 +482,7 @@ void draw_glimage(
 glwindow* make_glwindow(const vec2i& size, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*)) {
     // init glfw
-    if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
+    if (!glfwInit()) throw runtime_error("cannot open glwindow");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -502,7 +500,7 @@ glwindow* make_glwindow(const vec2i& size, const char* title,
     glfwSetWindowUserPointer(win, user_pointer);
 
     // init gl extensions
-    if (!gladLoadGL()) throw std::runtime_error("cannot initialize glad");
+    if (!gladLoadGL()) throw runtime_error("cannot initialize glad");
 
     return win;
 }
@@ -617,8 +615,7 @@ bool draw_button_glwidget(glwindow* win, const char* lbl) {
     return ImGui::Button(lbl);
 }
 
-void draw_label_glwidgets(
-    glwindow* win, const char* lbl, const std::string& txt) {
+void draw_label_glwidgets(glwindow* win, const char* lbl, const string& txt) {
     ImGui::LabelText(lbl, "%s", txt.c_str());
 }
 
@@ -633,7 +630,7 @@ void draw_separator_glwidget(glwindow* win) { ImGui::Separator(); }
 
 void continue_glwidgets_line(glwindow* win) { ImGui::SameLine(); }
 
-bool draw_textinput_glwidget(glwindow* win, const char* lbl, std::string& val) {
+bool draw_textinput_glwidget(glwindow* win, const char* lbl, string& val) {
     char buf[4096];
     auto num = 0;
     for (auto c : val) buf[num++] = c;
@@ -748,8 +745,8 @@ void begin_selectabletreeleaf_glwidget(
     if (ImGui::IsItemClicked()) selection = content;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& val,
-    const std::vector<std::string>& labels) {
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, int& val, const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, labels[val].c_str())) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -762,8 +759,8 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& val,
     return val != old_val;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, std::string& val,
-    const std::vector<std::string>& labels) {
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, string& val, const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, val.c_str())) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -778,7 +775,7 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, std::string& val,
 }
 
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
-    const std::vector<void*>& vals, const char* (*label)(void*)) {
+    const vector<void*>& vals, const char* (*label)(void*)) {
     if (!ImGui::BeginCombo(lbl, label(vals.at(idx)))) return false;
     auto old_idx = idx;
     for (auto i = 0; i < vals.size(); i++) {
@@ -792,8 +789,7 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
 }
 
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
-    const std::vector<void*>& vals, const char* (*label)(void*),
-    bool                      include_null) {
+    const vector<void*>& vals, const char* (*label)(void*), bool include_null) {
     if (!ImGui::BeginCombo(lbl, (val) ? label(val) : "<none>")) return false;
     auto old_val = val;
     if (include_null) {
