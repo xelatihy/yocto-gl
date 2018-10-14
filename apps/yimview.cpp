@@ -86,7 +86,7 @@ struct app_state {
 };
 
 // compute min/max
-void update_image_stats(app_image* img) {
+void update_stats_async(app_image* img) {
     img->stats_done       = false;
     img->stats.pxl_bounds = invalid_bbox4f;
     img->stats.lum_bounds = invalid_bbox1f;
@@ -97,7 +97,7 @@ void update_image_stats(app_image* img) {
     img->stats_done = true;
 }
 
-void update_display_image(app_image* img) {
+void update_display_async(app_image* img) {
     auto start        = get_time();
     img->display_done = false;
     img->texture_done = false;
@@ -160,8 +160,12 @@ void update_display_image(app_image* img) {
 }
 
 // load image
-void load_image(app_image* img) {
+void load_image_async(app_image* img) {
     auto start     = get_time();
+    img->load_done = false;
+    img->stats_done = false;
+    img->display_done = false;
+    img->texture_done = false;
     img->error_msg = "";
     img->img       = load_image4f(img->filename);
     if (empty(img->img)) img->error_msg = "cannot load image";
@@ -169,8 +173,8 @@ void load_image(app_image* img) {
     img->display   = img->img;
     printf("load: %s\n", format_duration(get_time() - start).c_str());
     fflush(stdout);
-    img->display_thread = std::thread(update_display_image, img);
-    img->stats_thread   = std::thread(update_image_stats, img);
+    img->display_thread = std::thread(update_display_async, img);
+    img->stats_thread   = std::thread(update_stats_async, img);
 }
 
 void draw_glwidgets(glwindow* win) {
@@ -232,7 +236,7 @@ void draw_glwidgets(glwindow* win) {
             img->display_thread.join();
         }
         img->display_stop   = false;
-        img->display_thread = std::thread(update_display_image, img);
+        img->display_thread = std::thread(update_display_async, img);
     }
 }
 
@@ -332,13 +336,10 @@ int main(int argc, char* argv[]) {
         img->exposure    = exposure;
         img->filmic      = filmic;
         img->srgb        = srgb;
-        img->load_thread = std::thread(load_image, img);
+        img->load_thread = std::thread(load_image_async, img);
         app->imgs.push_back(img);
     }
     app->img_id = 0;
-
-    // wait a bit to see if the first image gets loaded
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // run ui
     run_ui(app);
