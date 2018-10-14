@@ -317,6 +317,7 @@ using std::round;
 using std::sin;
 using std::sqrt;
 using std::tan;
+using namespace std::string_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;

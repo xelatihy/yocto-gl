@@ -628,7 +628,7 @@ void draw_separator_glwidget(glwindow* win) { ImGui::Separator(); }
 
 void continue_glwidgets_line(glwindow* win) { ImGui::SameLine(); }
 
-bool draw_inputtext_glwidget(glwindow* win, const char* lbl, std::string& val) {
+bool draw_textinput_glwidgets(glwindow* win, const char* lbl, std::string& val) {
     char buf[4096];
     auto num = 0;
     for (auto c : val) buf[num++] = c;
