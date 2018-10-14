@@ -107,7 +107,7 @@ void draw_glwidgets(glwindow* win) {
             if (ij.x >= 0 && ij.x < width(app->state->img) && ij.y >= 0 &&
                 ij.y < height(app->state->img)) {
                 draw_coloredit_glwidget(
-                    win, "pixel", app->state->img[{ij.x, ij.y}]);
+                    win, "pixel", at(app->state->img, ij));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_glwidget(win, "pixel", zero4f_);

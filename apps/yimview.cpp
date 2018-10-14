@@ -111,7 +111,7 @@ void update_display_async(app_image* img) {
                 for (auto j = tid; j < height(img->img); j += nthreads) {
                     if (img->display_stop) break;
                     for (auto i = 0; i < width(img->img); i++) {
-                        img->display[{i, j}] = tonemap_filmic(img->img[{i, j}],
+                         at(img->display, i, j) = tonemap_filmic( at(img->img, i, j),
                             img->exposure, img->filmic, img->srgb);
                     }
                 }
@@ -122,8 +122,8 @@ void update_display_async(app_image* img) {
         for (auto j = 0; j < height(img->img); j++) {
             if (img->display_stop) break;
             for (auto i = 0; i < width(img->img); i++) {
-                img->display[{i, j}] = tonemap_filmic(
-                    img->img[{i, j}], img->exposure, img->filmic, img->srgb);
+                 at(img->display, i, j) = tonemap_filmic(
+                     at(img->img, i, j), img->exposure, img->filmic, img->srgb);
             }
         }
     }
@@ -229,7 +229,7 @@ void draw_glwidgets(glwindow* win) {
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < width(img->img) && ij.y >= 0 &&
                 ij.y < height(img->img)) {
-                pixel = img->img[ij];
+                pixel = at(img->img, ij);
             }
             draw_coloredit_glwidget(win, "pixel", pixel);
             auto stats = (img->stats_done) ? img->stats : image_stats{};

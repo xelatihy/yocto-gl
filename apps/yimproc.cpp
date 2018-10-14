@@ -82,19 +82,19 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= width(img) || jj >= height(img)) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto rgb = at(img, i, j) - at(img, i, j);
                     auto w   = (float)exp(-dot(uv, uv) * sw) *
                              (float)exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat = features[fi][{i, j}] -
-                                    features[fi][{ii, jj}];
+                        auto feat = at(features[fi], i, j) -
+                                    at(features[fi], i, j);
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
-                    av += w * img[{ii, jj}];
+                    av += w * at(img, ii, jj);
                     aw += w;
                 }
             }
-            filtered[{i, j}] = av / aw;
+            at(filtered, i, j) = av / aw;
         }
     }
     return filtered;
@@ -116,13 +116,13 @@ image<vec4f> filter_bilateral(
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= width(img) || jj >= height(img)) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto rgb = at(img, i, j) - at(img, ii, jj);
                     auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
-                    av += w * img[{ii, jj}];
+                    av += w * at(img, ii, jj);
                     aw += w;
                 }
             }
-            filtered[{i, j}] = av / aw;
+            at(filtered, i, j) = av / aw;
         }
     }
     return filtered;
@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < height(img); j++)
             for (auto i = 0; i < width(img); i++)
-                img[{i, j}].w = alpha[{i, j}].w;
+                at(img, i, j).w = at(alpha, i, j).w;
     }
 
     // set alpha
@@ -181,7 +181,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < height(img); j++)
             for (auto i = 0; i < width(img); i++)
-                img[{i, j}].w = mean(alpha[{i, j}]);
+                at(img, i, j).w = mean(at(alpha, i, j));
     }
 
     // resize

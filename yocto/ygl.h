@@ -2487,10 +2487,10 @@ struct image {
         : extents{wh}, data(v, v + wh.x * wh.y) {}
 
     // pixel access
-    T& operator[](const vec2i& ij) { return data[ij.y * extents.x + ij.x]; }
-    const T& operator[](const vec2i& ij) const {
-        return data[ij.y * extents.x + ij.x];
-    }
+    // T& operator[](const vec2i& ij) { return data[ij.y * extents.x + ij.x]; }
+    // const T& operator[](const vec2i& ij) const {
+    //     return data[ij.y * extents.x + ij.x];
+    // }
     // T& at(int i, int j) { return data.at(j * extents.x + i); }
     // const T& at(int i, int j) const { return data.at(j * extents.x + i); }
 
@@ -2498,6 +2498,24 @@ struct image {
     vec2i     extents = {0, 0};
     vector<T> data    = {};
 };
+
+// Element access.
+template<typename T>
+inline T& at(image<T>& img, int i, int j) {
+    return img.data[j * img.extents.x + i];
+} 
+template<typename T>
+inline const T& at(const image<T>& img, int i, int j) {
+    return img.data[j * img.extents.x + i];
+} 
+template<typename T>
+inline T& at(image<T>& img, const vec2i& ij) {
+    return img.data[ij.y * img.extents.x + ij.x];
+} 
+template<typename T>
+inline const T& at(const image<T>& img, const vec2i& ij) {
+    return img.data[ij.y * img.extents.x + ij.x];
+} 
 
 // Size
 template <typename T>
@@ -2816,12 +2834,12 @@ struct volume {
         : extents{size}, data(v, v + size.x * size.y * size.z) {}
 
     // pixel access
-    T& operator[](const vec3i& ijk) {
-        return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
-    }
-    const T& operator[](const vec3i& ijk) const {
-        return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
-    }
+    // T& operator[](const vec3i& ijk) {
+    //     return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
+    // }
+    // const T& operator[](const vec3i& ijk) const {
+    //     return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
+    // }
     // T& at(int i, int j) { return data.at(ij.z * extents.x * extents.y + j *
     // extents.x + i); } const T& at(int i, int j) const { return data.at(ij.z *
     // extents.x * extents.y + j * extents.x + i); }
@@ -2830,6 +2848,24 @@ struct volume {
     vec3i     extents = {0, 0};
     vector<T> data    = {};
 };
+
+// Element access
+template<typename T>
+T& at(volume<T>& vol, const vec3i& ijk) {
+    return vol.data[ijk.z * vol.extents.x * vol.extents.y + ijk.y * vol.extents.x + ijk.x];
+}
+template<typename T>
+const T& at(const volume<T>& vol, const vec3i& ijk) {
+    return vol.data[ijk.z * vol.extents.x * vol.extents.y + ijk.y * vol.extents.x + ijk.x];
+}
+template<typename T>
+T& at(volume<T>& vol, int i, int j, int k) {
+    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
+}
+template<typename T>
+const T& at(const volume<T>& vol, int i, int j, int k) {
+    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
+}
 
 // Size
 template <typename T>
@@ -2855,26 +2891,6 @@ size_t size(const volume<T>& vol) {
 template <typename T>
 bool empty(const volume<T>& vol) {
     return vol.data.empty();
-}
-
-// Element access
-template <typename T>
-T& at(volume<T>& vol, const vec3i& ijk) {
-    return vol.data[ijk.z * vol.extents.x * vol.extents.y +
-                    ijk.y * vol.extents.x + ijk.x];
-}
-template <typename T>
-const T& at(const volume<T>& vol, const vec3i& ijk) {
-    return vol.data[ijk.z * vol.extents.x * vol.extents.y +
-                    ijk.y * vol.extents.x + ijk.x];
-}
-template <typename T>
-T& at(volume<T>& vol, int i, int j, int k) {
-    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
-}
-template <typename T>
-const T& at(const volume<T>& vol, int i, int j, int k) {
-    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
 }
 
 // Data access
