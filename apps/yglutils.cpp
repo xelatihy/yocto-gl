@@ -83,7 +83,7 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(vid, 10000, 0, errbuf);
-        throw std::runtime_error(
+        throw runtime_error(
             string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
@@ -96,7 +96,7 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(fid, 10000, 0, errbuf);
-        throw std::runtime_error(
+        throw runtime_error(
             string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
@@ -111,12 +111,12 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetProgramiv(pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(string("program not linked\n\n") + errbuf);
+        throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     glGetProgramiv(pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(pid, 10000, 0, errbuf);
-        throw std::runtime_error(string("program not linked\n\n") + errbuf);
+        throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -484,7 +484,7 @@ void draw_glimage(
 glwindow* make_glwindow(const vec2i& size, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*)) {
     // init glfw
-    if (!glfwInit()) throw std::runtime_error("cannot open glwindow");
+    if (!glfwInit()) throw runtime_error("cannot open glwindow");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -502,7 +502,7 @@ glwindow* make_glwindow(const vec2i& size, const char* title,
     glfwSetWindowUserPointer(win, user_pointer);
 
     // init gl extensions
-    if (!gladLoadGL()) throw std::runtime_error("cannot initialize glad");
+    if (!gladLoadGL()) throw runtime_error("cannot initialize glad");
 
     return win;
 }

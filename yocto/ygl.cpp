@@ -904,7 +904,7 @@ pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     float threshold) {
     auto vid            = vector<int>();
     auto wpos           = vector<vec3f>();
-    std::tie(wpos, vid) = weld_vertices(pos, threshold);
+    tie(wpos, vid) = weld_vertices(pos, threshold);
     auto wtriangles     = vector<vec3i>();
     for (auto t : triangles) {
         t.x = vid[t.x];
@@ -919,7 +919,7 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(
     float threshold) {
     auto vid            = vector<int>();
     auto wpos           = vector<vec3f>();
-    std::tie(wpos, vid) = weld_vertices(pos, threshold);
+    tie(wpos, vid) = weld_vertices(pos, threshold);
     auto wquads         = vector<vec4i>();
     for (auto q : quads) {
         q.x = vid[q.x];
@@ -946,7 +946,7 @@ sample_triangles_points(const vector<vec3i>& triangles,
     for (auto i = 0; i < npoints; i++) {
         auto ei          = 0;
         auto uv          = zero2f;
-        std::tie(ei, uv) = sample_triangles(
+        tie(ei, uv) = sample_triangles(
             cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
         auto t         = triangles[ei];
         sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], uv);
@@ -1390,7 +1390,7 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                                 }) -
                             prims.data());
                 if (mid == start || mid == end)
-                    throw std::runtime_error("bad build");
+                    throw runtime_error("bad build");
             } else {
                 // split along largest
                 auto largest_axis = 0;
@@ -1530,7 +1530,7 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
             node.bbox += transform_bbox(ist.frame, sbvh->nodes[0].bbox);
         }
     } else {
-        throw std::runtime_error("empty bvh");
+        throw runtime_error("empty bvh");
     }
 }
 
@@ -1572,9 +1572,9 @@ void build_embree_bvh(bvh_tree* bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (!bvh->points.empty()) {
-        throw std::runtime_error("embree does not support points");
+        throw runtime_error("embree does not support points");
     } else if (!bvh->lines.empty()) {
-        throw std::runtime_error("not yet implemented");
+        throw runtime_error("not yet implemented");
     } else if (!bvh->triangles.empty()) {
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -1589,7 +1589,7 @@ void build_embree_bvh(bvh_tree* bvh) {
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!bvh->quads.empty()) {
-        throw std::runtime_error("not yet implemented");
+        throw runtime_error("not yet implemented");
     } else if (!bvh->instances.empty()) {
         for (auto iid = 0; iid < bvh->instances.size(); iid++) {
             auto ist         = bvh->instances[iid];
@@ -1608,7 +1608,7 @@ void build_embree_bvh(bvh_tree* bvh) {
 }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
 void refit_embree_bvh(bvh_tree* bvh) {
-    throw std::runtime_error("not yet implemented");
+    throw runtime_error("not yet implemented");
 }
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
@@ -1642,7 +1642,7 @@ void refit_embree_bvh(bvh_tree* bvh) { return refit_bvh(bvh); }
 // Intersect BVH using Embree
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
-    throw std::runtime_error("this should not have been called");
+    throw runtime_error("this should not have been called");
 }
 #endif
 
@@ -1748,7 +1748,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 }
             }
         } else {
-            throw std::runtime_error("empty bvh");
+            throw runtime_error("empty bvh");
         }
 
         // check for early exit
@@ -1838,7 +1838,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 }
             }
         } else {
-            throw std::runtime_error("empty bvh");
+            throw runtime_error("empty bvh");
         }
 
         // check for early exit
@@ -2235,7 +2235,7 @@ make_shape_data make_geodesic_sphere(
     shp.pos               = pos;
     shp.triangles         = triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        std::tie(shp.triangles, shp.pos) = subdivide_triangles(
+        tie(shp.triangles, shp.pos) = subdivide_triangles(
             shp.triangles, shp.pos);
     }
     for (auto& p : shp.pos) p = normalize(p) * size / 2;
@@ -2249,7 +2249,7 @@ make_fvshape_data make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube(steps, size, uvsize, false);
     auto fvshp = make_fvshape_data{};
-    std::tie(fvshp.quads_pos, fvshp.pos) = weld_quads(qshp.quads, qshp.pos,
+    tie(fvshp.quads_pos, fvshp.pos) = weld_quads(qshp.quads, qshp.pos,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     fvshp.quads_norm                     = qshp.quads;
@@ -2817,7 +2817,7 @@ make_shape_data make_hair(const vec2i& steps,
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
-    std::tie(bpos, bnorm, btexcoord) = sample_triangles_points(
+    tie(bpos, bnorm, btexcoord) = sample_triangles_points(
         striangles, spos, snorm, stexcoord, steps.y, seed);
 
     auto rng  = make_rng(seed, 3);
@@ -3478,10 +3478,10 @@ void tesselate_subdiv(const subdiv* sbd, shape* shp) {
     auto texcoord       = sbd->texcoord;
     auto color          = sbd->color;
     for (auto l = 0; l < sbd->level; l++) {
-        std::tie(quads_pos, pos) = subdivide_catmullclark(quads_pos, pos);
-        std::tie(quads_texcoord, texcoord) = subdivide_catmullclark(
+        tie(quads_pos, pos) = subdivide_catmullclark(quads_pos, pos);
+        tie(quads_texcoord, texcoord) = subdivide_catmullclark(
             quads_texcoord, texcoord, true);
-        std::tie(quads_color, color) = subdivide_catmullclark(
+        tie(quads_color, color) = subdivide_catmullclark(
             quads_color, color);
     }
     auto norm = vector<vec3f>();
@@ -3516,7 +3516,7 @@ void update_transforms(
             case animation_type::bezier:
                 val = eval_keyframed_bezier(anm->times, anm->translation, time);
                 break;
-            default: throw std::runtime_error("should not have been here");
+            default: throw runtime_error("should not have been here");
         }
         for (auto target : anm->targets) target->translation = val;
     }
@@ -3594,7 +3594,7 @@ vector<float> compute_shape_cdf(const shape* shp) {
     } else if (!shp->pos.empty()) {
         return sample_points_cdf(shp->pos.size());
     } else {
-        throw std::runtime_error("empty shape not supported");
+        throw runtime_error("empty shape not supported");
     }
 }
 
@@ -3613,7 +3613,7 @@ vector<float> compute_environment_cdf(const environment* env) {
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
     } else {
-        throw std::runtime_error("empty texture");
+        throw runtime_error("empty texture");
     }
     return elem_cdf;
 }
@@ -3717,7 +3717,7 @@ void add_missing_tangent_space(scene* scn) {
             ist->shp->tangsp = compute_tangent_space(ist->shp->triangles,
                 ist->shp->pos, ist->shp->norm, ist->shp->texcoord);
         } else {
-            throw std::runtime_error("type not supported");
+            throw runtime_error("type not supported");
         }
     }
 }
@@ -5325,7 +5325,7 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
             auto& elem_cdf     = lights->shape_cdf.at(lgt->shp);
             auto  eid          = 0;
             auto  euv          = zero2f;
-            std::tie(eid, euv) = sample_shape(
+            tie(eid, euv) = sample_shape(
                 lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
             auto lp   = eval_pos(lgt, eid, euv);
             auto i    = normalize(lp - p);
@@ -5459,7 +5459,7 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
         auto& elem_cdf     = lights->shape_cdf.at(lgt->shp);
         auto  eid          = 0;
         auto  euv          = zero2f;
-        std::tie(eid, euv) = sample_shape(
+        tie(eid, euv) = sample_shape(
             lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
         auto lp   = eval_pos(lgt, eid, euv);
         auto i    = normalize(lp - p);
@@ -5746,7 +5746,7 @@ vec3f trace_func(const scene* scn, const bvh_tree* bvh,
         case trace_type::debug_roughness:
             return trace_debug_roughness(
                 scn, bvh, lights, ray, rng, nbounces, hit);
-        default: throw std::runtime_error("should not have gotten here");
+        default: throw runtime_error("should not have gotten here");
     }
     return zero3f;
 }
@@ -6074,7 +6074,7 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-float integrate_func_base(std::function<float(float)> f, float a, float b,
+float integrate_func_base(function<float(float)> f, float a, float b,
     int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
@@ -6086,7 +6086,7 @@ float integrate_func_base(std::function<float(float)> f, float a, float b,
     return integral;
 }
 
-float integrate_func_stratified(std::function<float(float)> f, float a, float b,
+float integrate_func_stratified(function<float(float)> f, float a, float b,
     int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
@@ -6098,8 +6098,8 @@ float integrate_func_stratified(std::function<float(float)> f, float a, float b,
     return integral;
 }
 
-float integrate_func_importance(std::function<float(float)> f,
-    std::function<float(float)> pdf, std::function<float(float)> warp,
+float integrate_func_importance(function<float(float)> f,
+    function<float(float)> pdf, function<float(float)> warp,
     int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
@@ -6121,9 +6121,9 @@ float integrate_func_importance(std::function<float(float)> f,
 // auto f = [](double x) { return sin(x); }
 // auto a = 0.0, b = (double)M_PI;
 // auto expected = (double)M_PI;
-void print_integrate_func_test(std::function<float(float)> f, float a, float b,
-    float expected, int nsamples, std::function<float(float)> pdf,
-    std::function<float(float)> warp) {
+void print_integrate_func_test(function<float(float)> f, float a, float b,
+    float expected, int nsamples, function<float(float)> pdf,
+    function<float(float)> warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
@@ -6139,7 +6139,7 @@ void print_integrate_func_test(std::function<float(float)> f, float a, float b,
     }
 }
 
-float integrate_func2_base(std::function<float(vec2f)> f, vec2f a, vec2f b,
+float integrate_func2_base(function<float(vec2f)> f, vec2f a, vec2f b,
     int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
@@ -6151,7 +6151,7 @@ float integrate_func2_base(std::function<float(vec2f)> f, vec2f a, vec2f b,
     return integral;
 }
 
-float integrate_func2_stratified(std::function<float(vec2f)> f, vec2f a,
+float integrate_func2_stratified(function<float(vec2f)> f, vec2f a,
     vec2f b, int nsamples, rng_state& rng) {
     auto integral  = 0.0f;
     auto nsamples2 = (int)sqrt(nsamples);
@@ -6167,8 +6167,8 @@ float integrate_func2_stratified(std::function<float(vec2f)> f, vec2f a,
     return integral;
 }
 
-float integrate_func2_importance(std::function<float(vec2f)> f,
-    std::function<float(vec2f)> pdf, std::function<vec2f(vec2f)> warp,
+float integrate_func2_importance(function<float(vec2f)> f,
+    function<float(vec2f)> pdf, function<vec2f(vec2f)> warp,
     int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
@@ -6186,9 +6186,9 @@ float integrate_func2_importance(std::function<float(vec2f)> f,
 // auto a = 0.0, b = 1.0;
 // auto expected = 3.0 / 4.0;
 // auto nsamples = 10000
-void print_integrate_func2_test(std::function<float(vec2f)> f, vec2f a, vec2f b,
-    float expected, int nsamples, std::function<float(vec2f)> pdf,
-    std::function<vec2f(vec2f)> warp) {
+void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
+    float expected, int nsamples, function<float(vec2f)> pdf,
+    function<vec2f(vec2f)> warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {

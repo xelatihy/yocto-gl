@@ -167,10 +167,10 @@ string normalize_path(const string& filename_) {
     for (auto& c : filename)
         if (c == '\\') c = '/';
     if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/')
-        throw std::runtime_error("no absolute paths");
+        throw runtime_error("no absolute paths");
     if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
         filename[3] == '/')
-        throw std::runtime_error("no absolute paths");
+        throw runtime_error("no absolute paths");
     auto pos = (size_t)0;
     while ((pos = filename.find("//")) != filename.npos)
         filename = filename.substr(0, pos) + filename.substr(pos + 1);
@@ -1263,7 +1263,7 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 // Resize image.
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
     auto size = size_;
-    if (!size.x && !size.y) throw std::runtime_error("bad image size");
+    if (!size.x && !size.y) throw runtime_error("bad image size");
     if (!size.x)
         size.x = (int)round(width(img) * (size.y / (float)height(img)));
     if (!size.y)
@@ -1835,7 +1835,7 @@ bool apply_json_procedural(const json& js, texture* val, const scene* scn) {
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
-        throw std::runtime_error("unknown texture type " + type);
+        throw runtime_error("unknown texture type " + type);
     }
     if (js.value("bump_to_normal", false)) {
         val->imgf = bump_to_normal_map(val->imgf, js.value("bump_scale", 1.0f));
@@ -1894,7 +1894,7 @@ bool apply_json_procedural(const json& js, voltexture* val, const scene* scn) {
         val->vol = make_test_volume1f(
             size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
-        throw std::runtime_error("unknown texture type " + type);
+        throw runtime_error("unknown texture type " + type);
     }
     if (val->path == "") {
         auto ext  = string("vol");
@@ -2124,7 +2124,7 @@ bool apply_json_procedural(const json& js, shape* val, const scene* scn) {
     } else if (type == "suzanne") {
         shp = make_suzanne(js.value("size", 2.0f), true);
     } else {
-        throw std::runtime_error("unknown shape type " + type);
+        throw runtime_error("unknown shape type " + type);
     }
     if (js.value("flipyz", false)) {
         for (auto& p : shp.pos) p = {p.x, p.z, p.y};
@@ -2209,7 +2209,7 @@ bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
         shp.quads_pos = qshp.quads;
         shp.pos       = qshp.pos;
     } else {
-        throw std::runtime_error("unknown shape type " + type);
+        throw runtime_error("unknown shape type " + type);
     }
     val->quads_pos      = shp.quads_pos;
     val->pos            = shp.pos;
@@ -2494,7 +2494,7 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
         auto pos                      = vector<vec3f>();
         auto norm                     = vector<vec3f>();
         auto texcoord                 = vector<vec2f>();
-        std::tie(pos, norm, texcoord) = sample_triangles_points(
+        tie(pos, norm, texcoord) = sample_triangles_points(
             base->shp->triangles, base->shp->pos, base->shp->norm,
             base->shp->texcoord, num, seed);
 
@@ -3107,7 +3107,7 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         if (matname != "") {
             auto it = mmap.find(matname);
             if (it == mmap.end())
-                throw std::runtime_error("missing material " + matname);
+                throw runtime_error("missing material " + matname);
             ist->mat = it->second;
         }
         vert_map.clear();
@@ -3783,7 +3783,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                         // points
                         printf("points not supported\n");
                     } else {
-                        throw std::runtime_error("unknown primitive type");
+                        throw runtime_error("unknown primitive type");
                     }
                 } else {
                     auto indices = accessor_values(
@@ -3832,7 +3832,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                         // points
                         printf("points not supported\n");
                     } else {
-                        throw std::runtime_error("unknown primitive type");
+                        throw runtime_error("unknown primitive type");
                     }
                 }
                 auto mat = (gprim.count("material")) ?
@@ -4349,7 +4349,7 @@ bool pbrt_to_json(const string& filename, json& js) {
     };
     auto parse_string = [](const vector<string>& tokens,
                             int&                           i) -> string {
-        if (tokens[i][0] != '"') throw std::runtime_error("string expected");
+        if (tokens[i][0] != '"') throw runtime_error("string expected");
         auto tok = tokens[i++];
         tok      = tok.substr(1, tok.size() - 2);
         if (tok.find('|') != tok.npos) tok = tok.substr(tok.find('|') + 1);
@@ -4374,7 +4374,7 @@ bool pbrt_to_json(const string& filename, json& js) {
                 i++;
                 if (!list) break;
             } else {
-                if (!first && !list) throw std::runtime_error("bad params");
+                if (!first && !list) throw runtime_error("bad params");
                 js.push_back(atof(tokens[i].c_str()));
                 i++;
                 if (!list) break;
@@ -4422,7 +4422,7 @@ bool pbrt_to_json(const string& filename, json& js) {
     auto tokens = split(pbrt);
     auto i      = 0;
     while (i < tokens.size()) {
-        if (!is_cmd(tokens, i)) throw std::runtime_error("command expected");
+        if (!is_cmd(tokens, i)) throw runtime_error("command expected");
         auto& tok   = tokens[i++];
         auto  jcmd  = json::object();
         jcmd["cmd"] = tok;
@@ -4454,7 +4454,7 @@ bool pbrt_to_json(const string& filename, json& js) {
                    tok == "AttributeEnd" || tok == "TransformEnd" ||
                    tok == "ObjectEnd" || tok == "ReverseOrientation") {
         } else {
-            throw std::runtime_error("unsupported command " + tok);
+            throw runtime_error("unsupported command " + tok);
         }
         js.push_back(jcmd);
     }
@@ -4691,18 +4691,18 @@ scene* load_pbrt_scene(
                     type = jcmd.at("type").get<string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
-                        std::tie(mat->kd, mat->kd_txt) = get_scaled_texture(
+                        tie(mat->kd, mat->kd_txt) = get_scaled_texture(
                             jcmd.at("Kd"));
                     if (jcmd.count("Ks"))
-                        std::tie(mat->ks, mat->ks_txt) = get_scaled_texture(
+                        tie(mat->ks, mat->ks_txt) = get_scaled_texture(
                             jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        std::tie(mat->kt, mat->kt_txt) = get_scaled_texture(
+                        tie(mat->kt, mat->kt_txt) = get_scaled_texture(
                             jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op              = vec3f{0, 0, 0};
                         auto op_txt          = (texture*)nullptr;
-                        std::tie(op, op_txt) = get_scaled_texture(
+                        tie(op, op_txt) = get_scaled_texture(
                             jcmd.at("opacity"));
                         mat->op     = (op.x + op.y + op.z) / 3;
                         mat->op_txt = op_txt;
@@ -4711,7 +4711,7 @@ scene* load_pbrt_scene(
                 } else if (type == "matte") {
                     mat->kd = {1, 1, 1};
                     if (jcmd.count("Kd"))
-                        std::tie(mat->kd, mat->kd_txt) = get_scaled_texture(
+                        tie(mat->kd, mat->kd_txt) = get_scaled_texture(
                             jcmd.at("Kd"));
                     mat->rs = 1;
                 } else if (type == "mirror") {
@@ -4725,21 +4725,21 @@ scene* load_pbrt_scene(
                     mat->rs  = 0;
                 } else if (type == "substrate") {
                     if (jcmd.count("Kd"))
-                        std::tie(mat->kd, mat->kd_txt) = get_scaled_texture(
+                        tie(mat->kd, mat->kd_txt) = get_scaled_texture(
                             jcmd.at("Kd"));
                     mat->ks = {0.04f, 0.04f, 0.04f};
                     if (jcmd.count("Ks"))
-                        std::tie(mat->ks, mat->ks_txt) = get_scaled_texture(
+                        tie(mat->ks, mat->ks_txt) = get_scaled_texture(
                             jcmd.at("Ks"));
                     mat->rs = 0;
                 } else if (type == "glass") {
                     mat->ks = {0.04f, 0.04f, 0.04f};
                     mat->kt = {1, 1, 1};
                     if (jcmd.count("Ks"))
-                        std::tie(mat->ks, mat->ks_txt) = get_scaled_texture(
+                        tie(mat->ks, mat->ks_txt) = get_scaled_texture(
                             jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        std::tie(mat->kt, mat->kt_txt) = get_scaled_texture(
+                        tie(mat->kt, mat->kt_txt) = get_scaled_texture(
                             jcmd.at("Kt"));
                     mat->rs = 0;
                 } else if (type == "mix") {
@@ -5578,9 +5578,9 @@ ply_data load_ply(const string& filename) {
                 auto count_type = parse_string(ss);
                 auto elem_type  = parse_string(ss);
                 if (count_type != "uchar" && count_type != "uint8")
-                    throw std::runtime_error("unsupported ply list type");
+                    throw runtime_error("unsupported ply list type");
                 if (elem_type != "int")
-                    throw std::runtime_error("unsupported ply list type");
+                    throw runtime_error("unsupported ply list type");
                 prop.type = ply_type::ply_int_list;
             } else if (type == "float") {
                 prop.type = ply_type::ply_float;

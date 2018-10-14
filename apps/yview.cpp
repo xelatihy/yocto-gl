@@ -720,7 +720,7 @@ void run_ui(app_state* app) {
 unordered_map<string, unordered_map<string, string>>
 load_ini(const string& filename) {
     auto f = fopen(filename.c_str(), "rt");
-    if (!f) throw std::runtime_error("cannot open " + filename);
+    if (!f) throw runtime_error("cannot open " + filename);
     auto ret       = unordered_map<string,
         unordered_map<string, string>>();
     auto cur_group = string();
@@ -733,7 +733,7 @@ load_ini(const string& filename) {
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
         if (line.front() == '[') {
-            if (line.back() != ']') throw std::runtime_error("bad INI format");
+            if (line.back() != ']') throw runtime_error("bad INI format");
             cur_group      = line.substr(1, line.length() - 2);
             ret[cur_group] = {};
         } else if (line.find('=') != line.npos) {
@@ -741,7 +741,7 @@ load_ini(const string& filename) {
             auto val            = line.substr(line.find('=') + 1);
             ret[cur_group][var] = val;
         } else {
-            throw std::runtime_error("bad INI format");
+            throw runtime_error("bad INI format");
         }
     }
 

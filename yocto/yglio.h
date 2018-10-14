@@ -496,20 +496,20 @@ struct obj_environment {
 
 // Obj callbacks
 struct obj_callbacks {
-    std::function<void(const vec3f&)>                   vert        = {};
-    std::function<void(const vec3f&)>                   norm        = {};
-    std::function<void(const vec2f&)>                   texcoord    = {};
-    std::function<void(const vector<obj_vertex>&)> face        = {};
-    std::function<void(const vector<obj_vertex>&)> line        = {};
-    std::function<void(const vector<obj_vertex>&)> point       = {};
-    std::function<void(const string& name)>        object      = {};
-    std::function<void(const string& name)>        group       = {};
-    std::function<void(const string& name)>        usemtl      = {};
-    std::function<void(const string& name)>        smoothing   = {};
-    std::function<void(const string& name)>        mtllib      = {};
-    std::function<void(const obj_material&)>            material    = {};
-    std::function<void(const obj_camera&)>              camera      = {};
-    std::function<void(const obj_environment&)>         environmnet = {};
+    function<void(const vec3f&)>                   vert        = {};
+    function<void(const vec3f&)>                   norm        = {};
+    function<void(const vec2f&)>                   texcoord    = {};
+    function<void(const vector<obj_vertex>&)> face        = {};
+    function<void(const vector<obj_vertex>&)> line        = {};
+    function<void(const vector<obj_vertex>&)> point       = {};
+    function<void(const string& name)>        object      = {};
+    function<void(const string& name)>        group       = {};
+    function<void(const string& name)>        usemtl      = {};
+    function<void(const string& name)>        smoothing   = {};
+    function<void(const string& name)>        mtllib      = {};
+    function<void(const obj_material&)>            material    = {};
+    function<void(const obj_camera&)>              camera      = {};
+    function<void(const obj_environment&)>         environmnet = {};
 };
 
 // Load obj scene

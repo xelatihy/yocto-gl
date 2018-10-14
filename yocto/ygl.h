@@ -325,6 +325,10 @@ using std::map;
 using std::unordered_map;
 using std::thread;
 using std::pair;
+using std::tie;
+using std::tuple;
+using std::function;
+using std::runtime_error;
 using namespace std::string_literals;
 
 using byte = unsigned char;
