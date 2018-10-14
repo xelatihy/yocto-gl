@@ -431,11 +431,11 @@ const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Access component by index.
 template <typename T>
-inline const T& at(const vec3<T>& v, int i) {
+inline const T& element_at(const vec3<T>& v, int i) {
     return *(&v.x + i);
 }
 template <typename T>
-inline T& at(vec3<T>& v, int i) {
+inline T& element_at(vec3<T>& v, int i) {
     return *(&v.x + i);
 }
 
@@ -2493,19 +2493,19 @@ struct image {
 
 // Element access.
 template<typename T>
-inline T& at(image<T>& img, int i, int j) {
+inline T& pixel_at(image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 } 
 template<typename T>
-inline const T& at(const image<T>& img, int i, int j) {
+inline const T& pixel_at(const image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 } 
 template<typename T>
-inline T& at(image<T>& img, const vec2i& ij) {
+inline T& pixel_at(image<T>& img, const vec2i& ij) {
     return img.pixels[ij.y * img.width + ij.x];
 } 
 template<typename T>
-inline const T& at(const image<T>& img, const vec2i& ij) {
+inline const T& pixel_at(const image<T>& img, const vec2i& ij) {
     return img.pixels[ij.y * img.width + ij.x];
 } 
 
@@ -2775,19 +2775,19 @@ struct volume {
 
 // Element access
 template<typename T>
-T& at(volume<T>& vol, const vec3i& ijk) {
+T& voxel_at(volume<T>& vol, const vec3i& ijk) {
     return vol.data[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
 }
 template<typename T>
-const T& at(const volume<T>& vol, const vec3i& ijk) {
+const T& voxel_at(const volume<T>& vol, const vec3i& ijk) {
     return vol.voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
 }
 template<typename T>
-T& at(volume<T>& vol, int i, int j, int k) {
+T& voxel_at(volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width* vol.height + j * vol.width + i];
 }
 template<typename T>
-const T& at(const volume<T>& vol, int i, int j, int k) {
+const T& voxel_at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 
