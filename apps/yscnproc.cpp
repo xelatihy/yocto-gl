@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
         parser, "--notextures", false, "Disable textures.");
     auto uniform_txt = parse_arg(
         parser, "--uniform-txt", false, "uniform texture formats");
+    auto build_bvh = parse_arg(parser, "--build-bvh", false, "build bvh");
     auto output    = parse_arg(
         parser, "--output,-o", "out.json", "output scene", true);
     auto filename = parse_arg(
@@ -56,7 +57,7 @@ int main(int argc, char** argv) {
     check_cmdline(parser);
 
     // load scene
-    auto scn = unique_ptr<scene>{load_scene(filename, !notextures)};
+    auto scn = load_scene(filename, !notextures);
     if (!scn) log_fatal("cannot load scene %" + filename);
 
     // change texture names
@@ -79,12 +80,15 @@ int main(int argc, char** argv) {
         }
     }
 
+    // build bvh
+    if (build_bvh) ygl::build_bvh(scn, false);
+
     // make a directory if needed
     if (!mkdir(get_dirname(output)))
         log_fatal("cannot create directory " + get_dirname(output));
 
     // save scene
-    if (!save_scene(output, scn.get(), !notextures))
+    if (!save_scene(output, scn, !notextures))
         log_fatal("cannot save scene %" + output);
 
     // done
