@@ -364,10 +364,9 @@ vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
 }
 
 // Apply skinning
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms) {
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
     auto skinned_pos  = vector<vec3f>(pos.size());
     auto skinned_norm = vector<vec3f>(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
@@ -520,13 +519,11 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
 void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
-    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord,
-    vector<vec4f>& qcolor, const vector<vec4i>& quads_pos,
-    const vector<vec4i>& quads_norm,
-    const vector<vec4i>& quads_texcoord,
-    const vector<vec4i>& quads_color, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord,
-    const vector<vec4f>& color) {
+    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
+    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
+    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, const vector<vec4f>& color) {
     // make faces unique
     unordered_map<vec4i, int> vert_map;
     qquads = vector<vec4i>(quads_pos.size());
@@ -754,8 +751,7 @@ template tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
 // Subdivide catmullclark.
 template <typename T>
 tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<T>& vert,
-    bool lock_boundary) {
+    const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
     // get edges
     auto emap     = make_edge_map(quads);
     auto edges    = get_edges(emap);
@@ -900,12 +896,11 @@ tuple<vector<vec3f>, vector<int>> weld_vertices(
     return {wpos, vid};
 }
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    float threshold) {
-    auto vid            = vector<int>();
-    auto wpos           = vector<vec3f>();
-    tie(wpos, vid) = weld_vertices(pos, threshold);
-    auto wtriangles     = vector<vec3i>();
+    const vector<vec3i>& triangles, const vector<vec3f>& pos, float threshold) {
+    auto vid        = vector<int>();
+    auto wpos       = vector<vec3f>();
+    tie(wpos, vid)  = weld_vertices(pos, threshold);
+    auto wtriangles = vector<vec3i>();
     for (auto t : triangles) {
         t.x = vid[t.x];
         t.y = vid[t.y];
@@ -915,12 +910,11 @@ tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
     return {wtriangles, wpos};
 }
 tuple<vector<vec4i>, vector<vec3f>> weld_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& pos,
-    float threshold) {
-    auto vid            = vector<int>();
-    auto wpos           = vector<vec3f>();
+    const vector<vec4i>& quads, const vector<vec3f>& pos, float threshold) {
+    auto vid       = vector<int>();
+    auto wpos      = vector<vec3f>();
     tie(wpos, vid) = weld_vertices(pos, threshold);
-    auto wquads         = vector<vec4i>();
+    auto wquads    = vector<vec4i>();
     for (auto q : quads) {
         q.x = vid[q.x];
         q.y = vid[q.y];
@@ -934,18 +928,18 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
-sample_triangles_points(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, int npoints, int seed) {
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    int seed) {
     auto sampled_pos      = vector<vec3f>(npoints);
     auto sampled_norm     = vector<vec3f>(npoints);
     auto sampled_texcoord = vector<vec2f>(npoints);
     auto cdf              = sample_triangles_cdf(triangles, pos);
     auto rng              = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto ei          = 0;
-        auto uv          = zero2f;
+        auto ei     = 0;
+        auto uv     = zero2f;
         tie(ei, uv) = sample_triangles(
             cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
         auto t         = triangles[ei];
@@ -1316,8 +1310,8 @@ struct bvh_prim {
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
-    int start, int end, bool high_quality) {
+int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
+    int end, bool high_quality) {
     // add a new node
     auto nodeid = (int)nodes.size();
     nodes.push_back({});
@@ -2222,11 +2216,11 @@ make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
 make_shape_data make_geodesic_sphere(
     int tesselation, float size, bool as_triangles) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
-    const float X         = 0.525731112119133606f;
-    const float Z         = 0.850650808352039932f;
-    static auto pos       = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z},
-        {-X, 0.0, -Z}, {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X},
-        {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+    const float X   = 0.525731112119133606f;
+    const float Z   = 0.850650808352039932f;
+    static auto pos = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
+        {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
+        {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
     static auto triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5},
         {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2},
         {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1},
@@ -2247,22 +2241,22 @@ make_shape_data make_geodesic_sphere(
 // coordinates.
 make_fvshape_data make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshp  = make_cube(steps, size, uvsize, false);
-    auto fvshp = make_fvshape_data{};
+    auto qshp                       = make_cube(steps, size, uvsize, false);
+    auto fvshp                      = make_fvshape_data{};
     tie(fvshp.quads_pos, fvshp.pos) = weld_quads(qshp.quads, qshp.pos,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    fvshp.quads_norm                     = qshp.quads;
-    fvshp.norm                           = qshp.norm;
-    fvshp.quads_texcoord                 = qshp.quads;
-    fvshp.texcoord                       = qshp.texcoord;
+    fvshp.quads_norm                = qshp.quads;
+    fvshp.norm                      = qshp.norm;
+    fvshp.quads_texcoord            = qshp.quads;
+    fvshp.texcoord                  = qshp.texcoord;
     return fvshp;
 }
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.
 make_shape_data make_suzanne(float size, bool as_triangles) {
-    static auto suzanne_pos = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
+    static auto suzanne_pos       = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
         {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
         {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
         {-0.546875, 0.0546875, 0.578125}, {0.3515625, -0.0234375, 0.6171875},
@@ -2517,27 +2511,27 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {-1.0390625, -0.0859375, -0.4921875}, {0.7890625, -0.125, -0.328125},
         {-0.7890625, -0.125, -0.328125}, {0.859375, 0.3828125, -0.3828125},
         {-0.859375, 0.3828125, -0.3828125}};
-    static auto suzanne_triangles = vector<vec3i>{{60, 64, 48},
-        {49, 65, 61}, {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61},
-        {60, 56, 58}, {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54},
-        {55, 53, 61}, {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61},
-        {224, 228, 226}, {227, 229, 225}, {72, 283, 73}, {73, 284, 72},
-        {341, 347, 383}, {384, 348, 342}, {299, 345, 343}, {344, 346, 300},
-        {323, 379, 351}, {352, 380, 324}, {441, 443, 445}, {446, 444, 442},
-        {463, 491, 465}, {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
-    static auto suzanne_quads     = vector<vec4i>{{46, 0, 2, 44},
-        {3, 1, 47, 45}, {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4},
-        {7, 9, 3, 5}, {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8},
-        {15, 13, 11, 9}, {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16},
-        {19, 21, 15, 17}, {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20},
-        {27, 25, 23, 21}, {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28},
-        {31, 33, 27, 29}, {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32},
-        {39, 37, 35, 33}, {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40},
-        {43, 45, 39, 41}, {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48},
-        {51, 37, 47, 49}, {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52},
-        {55, 25, 35, 53}, {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56},
-        {59, 13, 23, 57}, {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62},
-        {65, 1, 11, 63}, {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
+    static auto suzanne_triangles = vector<vec3i>{{60, 64, 48}, {49, 65, 61},
+        {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61}, {60, 56, 58},
+        {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54}, {55, 53, 61},
+        {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61}, {224, 228, 226},
+        {227, 229, 225}, {72, 283, 73}, {73, 284, 72}, {341, 347, 383},
+        {384, 348, 342}, {299, 345, 343}, {344, 346, 300}, {323, 379, 351},
+        {352, 380, 324}, {441, 443, 445}, {446, 444, 442}, {463, 491, 465},
+        {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
+    static auto suzanne_quads = vector<vec4i>{{46, 0, 2, 44}, {3, 1, 47, 45},
+        {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4}, {7, 9, 3, 5},
+        {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8}, {15, 13, 11, 9},
+        {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16}, {19, 21, 15, 17},
+        {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20}, {27, 25, 23, 21},
+        {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28}, {31, 33, 27, 29},
+        {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32}, {39, 37, 35, 33},
+        {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40}, {43, 45, 39, 41},
+        {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48}, {51, 37, 47, 49},
+        {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52}, {55, 25, 35, 53},
+        {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56}, {59, 13, 23, 57},
+        {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62}, {65, 1, 11, 63},
+        {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
         {175, 174, 89, 90}, {86, 171, 173, 88}, {174, 172, 87, 89},
         {84, 169, 171, 86}, {172, 170, 85, 87}, {82, 167, 169, 84},
         {170, 168, 83, 85}, {80, 165, 167, 82}, {168, 166, 81, 83},
@@ -2701,10 +2695,9 @@ make_shape_data make_cube(const vec3f& size, bool as_triangles) {
         {+1, -1, +1}};
     static auto cube_quads   = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
         {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
-    static auto cube_quad_uv = vector<vec2f>{
-        {0, 0}, {1, 0}, {1, 1}, {0, 1}};
-    auto shp = make_shape_data();
-    shp.pos  = cube_pos;
+    static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
+    auto        shp          = make_shape_data();
+    shp.pos                  = cube_pos;
     for (auto& p : shp.pos) p *= size / 2;
     if (!as_triangles) {
         shp.quads = cube_quads;
@@ -2796,8 +2789,8 @@ make_shape_data make_point(float point_radius) {
 // Make a bezier circle. Returns bezier, pos.
 make_shape_data make_bezier_circle(float size) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
-    const auto  c          = 0.551915024494f;
-    static auto circle_pos = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
+    const auto  c              = 0.551915024494f;
+    static auto circle_pos     = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
         {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
         {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
     static auto circle_beziers = vector<vec4i>{
@@ -2809,11 +2802,10 @@ make_shape_data make_bezier_circle(float size) {
 }
 
 // Make a hair ball around a shape
-make_shape_data make_hair(const vec2i& steps,
-    const vector<vec3i>& striangles, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
+make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
+    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
@@ -3478,11 +3470,10 @@ void tesselate_subdiv(const subdiv* sbd, shape* shp) {
     auto texcoord       = sbd->texcoord;
     auto color          = sbd->color;
     for (auto l = 0; l < sbd->level; l++) {
-        tie(quads_pos, pos) = subdivide_catmullclark(quads_pos, pos);
+        tie(quads_pos, pos)           = subdivide_catmullclark(quads_pos, pos);
         tie(quads_texcoord, texcoord) = subdivide_catmullclark(
             quads_texcoord, texcoord, true);
-        tie(quads_color, color) = subdivide_catmullclark(
-            quads_color, color);
+        tie(quads_color, color) = subdivide_catmullclark(quads_color, color);
     }
     auto norm = vector<vec3f>();
     if (sbd->compute_normals) norm = compute_normals(quads_pos, pos);
@@ -3500,8 +3491,7 @@ void tesselate_subdivs(scene* scn) {
 }
 
 // Update animation transforms
-void update_transforms(
-    animation* anm, float time, const string& anim_group) {
+void update_transforms(animation* anm, float time, const string& anim_group) {
     if (anim_group != "" && anim_group != anm->group) return;
 
     if (!anm->translation.empty()) {
@@ -3775,8 +3765,8 @@ vector<string> validate(const scene* scn, bool skip_textures) {
 }
 
 // add missing camera
-camera* make_bbox_camera(const string& name, const bbox3f& bbox,
-    const vec2f& film, float focal) {
+camera* make_bbox_camera(
+    const string& name, const bbox3f& bbox, const vec2f& film, float focal) {
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
     auto bbox_size   = bbox.max - bbox.min;
     auto bbox_msize  = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
@@ -3865,8 +3855,7 @@ vec4f eval_elem_tangsp(const shape* shp, int ei) {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(
-    const shape* shp, const vector<T>& vals, int ei, const vec2f& uv) {
+T eval_elem(const shape* shp, const vector<T>& vals, int ei, const vec2f& uv) {
     if (vals.empty()) return {};
     if (!shp->triangles.empty()) {
         auto t = shp->triangles[ei];
@@ -4232,8 +4221,8 @@ bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv) {
 bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
-tuple<int, vec2f> sample_shape(const shape* shp,
-    const vector<float>& elem_cdf, float re, const vec2f& ruv) {
+tuple<int, vec2f> sample_shape(const shape* shp, const vector<float>& elem_cdf,
+    float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elem_cdf.empty()) return {};
     if (!shp->triangles.empty()) {
@@ -4698,8 +4687,8 @@ float sample_delta_brdf_pdf(
 }
 
 // Sample pdf for an environment.
-float sample_environment_pdf(const environment* env,
-    const vector<float>& elem_cdf, const vec3f& i) {
+float sample_environment_pdf(
+    const environment* env, const vector<float>& elem_cdf, const vec3f& i) {
     auto txt = env->ke_txt;
     if (!elem_cdf.empty() && txt) {
         auto size     = eval_texture_size(txt);
@@ -4717,8 +4706,8 @@ float sample_environment_pdf(const environment* env,
 }
 
 // Picks a point on an environment.
-vec3f sample_environment(const environment* env,
-    const vector<float>& elem_cdf, float rel, const vec2f& ruv) {
+vec3f sample_environment(const environment* env, const vector<float>& elem_cdf,
+    float rel, const vec2f& ruv) {
     auto txt = env->ke_txt;
     if (!elem_cdf.empty() && txt) {
         auto idx  = sample_discrete(elem_cdf, rel);
@@ -5320,12 +5309,12 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 
         // direct
         if (!is_delta_bsdf(f) && !lights->lights.empty()) {
-            auto  lgt          = lights->lights[sample_index(
+            auto  lgt      = lights->lights[sample_index(
                 lights->lights.size(), rand1f(rng))];
-            auto& elem_cdf     = lights->shape_cdf.at(lgt->shp);
-            auto  eid          = 0;
-            auto  euv          = zero2f;
-            tie(eid, euv) = sample_shape(
+            auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+            auto  eid      = 0;
+            auto  euv      = zero2f;
+            tie(eid, euv)  = sample_shape(
                 lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
             auto lp   = eval_pos(lgt, eid, euv);
             auto i    = normalize(lp - p);
@@ -5456,10 +5445,10 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
     if (!is_delta_bsdf(f) && !lights->lights.empty()) {
         auto lgt =
             lights->lights[sample_index(lights->lights.size(), rand1f(rng))];
-        auto& elem_cdf     = lights->shape_cdf.at(lgt->shp);
-        auto  eid          = 0;
-        auto  euv          = zero2f;
-        tie(eid, euv) = sample_shape(
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        auto  eid      = 0;
+        auto  euv      = zero2f;
+        tie(eid, euv)  = sample_shape(
             lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
         auto lp   = eval_pos(lgt, eid, euv);
         auto i    = normalize(lp - p);
@@ -6074,8 +6063,8 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-float integrate_func_base(function<float(float)> f, float a, float b,
-    int nsamples, rng_state& rng) {
+float integrate_func_base(
+    function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand1f(rng);
@@ -6086,8 +6075,8 @@ float integrate_func_base(function<float(float)> f, float a, float b,
     return integral;
 }
 
-float integrate_func_stratified(function<float(float)> f, float a, float b,
-    int nsamples, rng_state& rng) {
+float integrate_func_stratified(
+    function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = (i + rand1f(rng)) / nsamples;
@@ -6099,8 +6088,8 @@ float integrate_func_stratified(function<float(float)> f, float a, float b,
 }
 
 float integrate_func_importance(function<float(float)> f,
-    function<float(float)> pdf, function<float(float)> warp,
-    int nsamples, rng_state& rng) {
+    function<float(float)> pdf, function<float(float)> warp, int nsamples,
+    rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand1f(rng);
@@ -6139,8 +6128,8 @@ void print_integrate_func_test(function<float(float)> f, float a, float b,
     }
 }
 
-float integrate_func2_base(function<float(vec2f)> f, vec2f a, vec2f b,
-    int nsamples, rng_state& rng) {
+float integrate_func2_base(
+    function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand2f(rng);
@@ -6151,8 +6140,8 @@ float integrate_func2_base(function<float(vec2f)> f, vec2f a, vec2f b,
     return integral;
 }
 
-float integrate_func2_stratified(function<float(vec2f)> f, vec2f a,
-    vec2f b, int nsamples, rng_state& rng) {
+float integrate_func2_stratified(
+    function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral  = 0.0f;
     auto nsamples2 = (int)sqrt(nsamples);
     for (auto i = 0; i < nsamples2; i++) {
@@ -6168,8 +6157,8 @@ float integrate_func2_stratified(function<float(vec2f)> f, vec2f a,
 }
 
 float integrate_func2_importance(function<float(vec2f)> f,
-    function<float(vec2f)> pdf, function<vec2f(vec2f)> warp,
-    int nsamples, rng_state& rng) {
+    function<float(vec2f)> pdf, function<vec2f(vec2f)> warp, int nsamples,
+    rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand2f(rng);

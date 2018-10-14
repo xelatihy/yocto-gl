@@ -58,8 +58,8 @@
 
 #include <cstdlib>
 #include <deque>
-#include <regex>
 #include <map>
+#include <regex>
 
 #include <array>
 #include <climits>
@@ -202,8 +202,7 @@ string get_filename(const string& filename_) {
 }
 
 // Replace extension.
-string replace_extension(
-    const string& filename_, const string& ext_) {
+string replace_extension(const string& filename_, const string& ext_) {
     auto filename = normalize_path(filename_);
     auto ext      = normalize_path(ext_);
     if (ext.at(0) == '.') ext = ext.substr(1);
@@ -237,7 +236,7 @@ void log_io_error(const string& fmt, const Args&... args) {
 struct file_stream {
     string filename = "";
     string mode     = "";
-    FILE*       fs       = nullptr;
+    FILE*  fs       = nullptr;
 
     file_stream()                   = default;
     file_stream(const file_stream&) = delete;
@@ -447,8 +446,7 @@ vector<string> get_option_names(const string& name_) {
 
 // add help
 string get_option_usage(const string& name, const string& var,
-    const string& usage, const string& def_,
-    const vector<string>& choices) {
+    const string& usage, const string& def_, const vector<string>& choices) {
     auto def = def_;
     if (def != "") def = "[" + def + "]";
     auto namevar = name;
@@ -481,8 +479,8 @@ void print_cmdline_usage(const cmdline_parser& parser) {
 }
 
 // forward declaration
-bool parse_flag(cmdline_parser& parser, const string& name, bool def,
-    const string& usage);
+bool parse_flag(
+    cmdline_parser& parser, const string& name, bool def, const string& usage);
 
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser) {
@@ -499,8 +497,8 @@ void check_cmdline(cmdline_parser& parser) {
 }
 
 // Parse a flag. Name should start with either "--" or "-".
-bool parse_flag(cmdline_parser& parser, const string& name, bool def,
-    const string& usage) {
+bool parse_flag(
+    cmdline_parser& parser, const string& name, bool def, const string& usage) {
     parser.usage_opt += get_option_usage(name, "", usage, "", {});
     if (parser.error != "") return def;
     auto names = get_option_names(name);
@@ -576,16 +574,16 @@ string parse_string(cmdline_parser& parser, const string& name,
 
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
-bool parse_arg(cmdline_parser& parser, const string& name, bool def,
-    const string& usage) {
+bool parse_arg(
+    cmdline_parser& parser, const string& name, bool def, const string& usage) {
     return parse_flag(parser, name, def, usage);
 }
-string parse_arg(cmdline_parser& parser, const string& name,
-    const string& def, const string& usage, bool req) {
+string parse_arg(cmdline_parser& parser, const string& name, const string& def,
+    const string& usage, bool req) {
     return parse_string(parser, name, def, usage, req, {});
 }
-string parse_arg(cmdline_parser& parser, const string& name,
-    const char* def, const string& usage, bool req) {
+string parse_arg(cmdline_parser& parser, const string& name, const char* def,
+    const string& usage, bool req) {
     return parse_string(parser, name, def, usage, req, {});
 }
 int parse_arg(cmdline_parser& parser, const string& name, int def,
@@ -608,8 +606,8 @@ float parse_arg(cmdline_parser& parser, const string& name, float def,
     }
     return val;
 }
-vec2f parse_arg(cmdline_parser& parser, const string& name,
-    const vec2f& def, const string& usage, bool req) {
+vec2f parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
+    const string& usage, bool req) {
     auto vals = parse_string(parser, name, to_string(def), usage, req, {});
     auto val  = def;
     if (!parse(vals, val)) {
@@ -618,8 +616,8 @@ vec2f parse_arg(cmdline_parser& parser, const string& name,
     }
     return val;
 }
-vec3f parse_arg(cmdline_parser& parser, const string& name,
-    const vec3f& def, const string& usage, bool req) {
+vec3f parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
+    const string& usage, bool req) {
     auto vals = parse_string(parser, name, to_string(def), usage, req, {});
     auto val  = def;
     if (!parse(vals, val)) {
@@ -635,9 +633,8 @@ int parse_arge(cmdline_parser& parser, const string& name, int def,
 }
 
 // Parser an argument
-vector<string> parse_args(cmdline_parser& parser,
-    const string& name, const vector<string>& def,
-    const string& usage, bool req) {
+vector<string> parse_args(cmdline_parser& parser, const string& name,
+    const vector<string>& def, const string& usage, bool req) {
     auto defs = string();
     for (auto& d : def) defs += " " + d;
     parser.usage_arg += get_option_usage(name, "", usage, defs, {});
@@ -1332,8 +1329,8 @@ scene* load_scene(
 }
 
 // Save a scene
-bool save_scene(const string& filename, const scene* scn,
-    bool save_textures, bool skip_missing) {
+bool save_scene(const string& filename, const scene* scn, bool save_textures,
+    bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return save_json_scene(filename, scn, save_textures, skip_missing);
@@ -1351,8 +1348,8 @@ bool save_scene(const string& filename, const scene* scn,
     }
 }
 
-bool load_scene_textures(scene* scn, const string& dirname,
-    bool skip_missing, bool assign_opacity) {
+bool load_scene_textures(
+    scene* scn, const string& dirname, bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
         if (txt->path == "" || !empty(txt->imgf) || !empty(txt->imgb)) continue;
@@ -1444,14 +1441,13 @@ bool save_scene_textures(
 namespace ygl {
 
 // Encode in base64
-string base64_encode(
-    unsigned char const* bytes_to_encode, unsigned int in_len) {
+string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
     static const string base64_chars =
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
         "abcdefghijklmnopqrstuvwxyz"
         "0123456789+/";
 
-    string   ret;
+    string        ret;
     int           i = 0;
     int           j = 0;
     unsigned char char_array_3[3];
@@ -1506,7 +1502,7 @@ string base64_decode(string const& encoded_string) {
     int           j      = 0;
     int           in_    = 0;
     unsigned char char_array_4[4], char_array_3[3];
-    string   ret;
+    string        ret;
 
     while (in_len-- && (encoded_string[in_] != '=') &&
            is_base64(encoded_string[in_])) {
@@ -1610,8 +1606,7 @@ bool dump_json_objref(
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objref(
-    json& js, const vector<T*>& val, const vector<T*>& refs) {
+bool dump_json_objref(json& js, const vector<T*>& val, const vector<T*>& refs) {
     js = json::array();
     for (auto v : val) {
         js.push_back({});
@@ -1622,8 +1617,8 @@ bool dump_json_objref(
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objref(json& js, const vector<T*>& val, const char* name,
-    const vector<T*>& refs) {
+bool dump_json_objref(
+    json& js, const vector<T*>& val, const char* name, const vector<T*>& refs) {
     if (val.empty()) return true;
     return dump_json_objref(js[name], val, refs);
 }
@@ -1656,8 +1651,7 @@ bool parse_json_objref(
 
 // Dumps a json value
 template <typename T>
-bool parse_json_objref(
-    const json& js, vector<T*>& val, const vector<T*>& refs) {
+bool parse_json_objref(const json& js, vector<T*>& val, const vector<T*>& refs) {
     if (!js.is_array()) return false;
     for (auto& j : js) {
         val.push_back(nullptr);
@@ -1668,8 +1662,8 @@ bool parse_json_objref(
 
 // Dumps a json value
 template <typename T>
-bool parse_json_objref(const json& js, vector<T*>& val, const char* name,
-    const vector<T*>& refs) {
+bool parse_json_objref(
+    const json& js, vector<T*>& val, const char* name, const vector<T*>& refs) {
     if (!js.count(name)) return true;
     val = {};
     return parse_json_objref(js.at(name), val, refs);
@@ -1705,8 +1699,7 @@ bool dump_json_objarray(
 
 // Dumps a json value
 template <typename T>
-bool parse_json_objarray(
-    const json& js, vector<T*>& val, const scene* scn) {
+bool parse_json_objarray(const json& js, vector<T*>& val, const scene* scn) {
     if (!js.is_array()) return false;
     for (auto& j : js) {
         val.push_back(new T());
@@ -2491,12 +2484,11 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
             parse_json_object(j, ists.back(), scn);
         }
 
-        auto pos                      = vector<vec3f>();
-        auto norm                     = vector<vec3f>();
-        auto texcoord                 = vector<vec2f>();
-        tie(pos, norm, texcoord) = sample_triangles_points(
-            base->shp->triangles, base->shp->pos, base->shp->norm,
-            base->shp->texcoord, num, seed);
+        auto pos                 = vector<vec3f>();
+        auto norm                = vector<vec3f>();
+        auto texcoord            = vector<vec2f>();
+        tie(pos, norm, texcoord) = sample_triangles_points(base->shp->triangles,
+            base->shp->pos, base->shp->norm, base->shp->texcoord, num, seed);
 
         auto nmap = unordered_map<instance*, int>();
         for (auto ist : ists) nmap[ist] = 0;
@@ -2735,7 +2727,7 @@ inline double parse_double(char*& s) {
     if (exponent) val *= std::pow(10.0, (double)exponent);
     return val;
 }
-inline float       parse_float(char*& s) { return (float)parse_double(s); }
+inline float  parse_float(char*& s) { return (float)parse_double(s); }
 inline string parse_string(char*& s) {
     if (!*s) return "";
     char buf[4096];
@@ -2811,8 +2803,7 @@ inline obj_texture_info parse_obj_texture_info(char*& s) {
 }
 
 // Load obj materials
-bool load_mtl(
-    const string& filename, const obj_callbacks& cb, bool flip_tr) {
+bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
     // open file
     auto fs = open(filename, "rt");
     if (!fs) return false;
@@ -3086,8 +3077,8 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         }
     };
     auto add_instance = [&](scene* scn, const string& objname,
-                            const string& matname,
-                            const string& groupname, bool smoothing) {
+                            const string& matname, const string& groupname,
+                            bool smoothing) {
         if (scn->instances.empty() || objname != scn->instances.back()->name ||
             !is_instance_empty(scn->instances.back())) {
             auto ist = new instance();
@@ -3297,8 +3288,7 @@ scene* load_obj_scene(const string& filename, bool load_textures,
     return scn;
 }
 
-bool save_mtl(
-    const string& filename, const scene* scn, bool flip_tr = true) {
+bool save_mtl(const string& filename, const scene* scn, bool flip_tr = true) {
     // open
     auto fs = open(filename, "wt");
     if (!fs) return false;
@@ -3548,8 +3538,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                 if (pos == uri.npos) { return false; }
                 // decode
                 auto data_char = base64_decode(uri.substr(pos + 1));
-                data           = vector<unsigned char>(
-                    (unsigned char*)data_char.c_str(),
+                data = vector<unsigned char>((unsigned char*)data_char.c_str(),
                     (unsigned char*)data_char.c_str() + data_char.length());
             } else {
                 auto filename = normalize_path(dirname + "/" + uri);
@@ -3656,8 +3645,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
             compSize = 4;
         }
         if (!stride) stride = compSize * ncomp;
-        auto vals = vector<std::array<double, 4>>(
-            count, {{0.0, 0.0, 0.0, 1.0}});
+        auto vals = vector<std::array<double, 4>>(count, {{0.0, 0.0, 0.0, 1.0}});
         for (auto i = 0; i < count; i++) {
             auto d = data + offset + i * stride;
             for (auto c = 0; c < ncomp; c++) {
@@ -4172,8 +4160,8 @@ bool scene_to_gltf(const scene* scn, json& js) {
         bjs["uri"]        = replace_extension(shp->path, ".bin");
         auto mat_it       = shape_mats.find(shp);
         if (mat_it != shape_mats.end()) pjs["material"] = mat_it->second;
-        auto add_accessor = [&js, &bjs, bid](int count, string type,
-                                bool indices = false) {
+        auto add_accessor = [&js, &bjs, bid](
+                                int count, string type, bool indices = false) {
             auto bytes = count * 4;
             if (type == "VEC2") bytes *= 2;
             if (type == "VEC3") bytes *= 3;
@@ -4347,8 +4335,7 @@ bool pbrt_to_json(const string& filename, json& js) {
         return tok[0] == '-' || tok[0] == '+' || tok[0] == '.' ||
                std::isdigit(tok[0]);
     };
-    auto parse_string = [](const vector<string>& tokens,
-                            int&                           i) -> string {
+    auto parse_string = [](const vector<string>& tokens, int& i) -> string {
         if (tokens[i][0] != '"') throw runtime_error("string expected");
         auto tok = tokens[i++];
         tok      = tok.substr(1, tok.size() - 2);
@@ -4391,8 +4378,8 @@ bool pbrt_to_json(const string& filename, json& js) {
             if (js.at(name).size() == 1) { js.at(name) = js.at(name).at(0); }
         }
     };
-    auto parse_param_numbers = [&](const vector<string>& tokens,
-                                   int& i, json& js) -> void {
+    auto parse_param_numbers = [&](const vector<string>& tokens, int& i,
+                                   json& js) -> void {
         js["values"] = json::array();
         if (tokens[i][0] == '[') i++;
         while (is_number(tokens, i)) {
@@ -4577,10 +4564,9 @@ scene* load_pbrt_scene(
         return vals;
     };
 
-    auto get_scaled_texture =
-        [&txt_map, &get_vec3f](const json& js) -> tuple<vec3f, texture*> {
-        if (js.is_string())
-            return {{1, 1, 1}, txt_map.at(js.get<string>())};
+    auto get_scaled_texture = [&txt_map, &get_vec3f](
+                                  const json& js) -> tuple<vec3f, texture*> {
+        if (js.is_string()) return {{1, 1, 1}, txt_map.at(js.get<string>())};
         return {get_vec3f(js), nullptr};
     };
 
@@ -4687,8 +4673,7 @@ scene* load_pbrt_scene(
                     mat_map[mat->name] = mat;
                 }
                 auto type = "uber"s;
-                if (jcmd.count("type"))
-                    type = jcmd.at("type").get<string>();
+                if (jcmd.count("type")) type = jcmd.at("type").get<string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
                         tie(mat->kd, mat->kd_txt) = get_scaled_texture(
@@ -4700,8 +4685,8 @@ scene* load_pbrt_scene(
                         tie(mat->kt, mat->kt_txt) = get_scaled_texture(
                             jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
-                        auto op              = vec3f{0, 0, 0};
-                        auto op_txt          = (texture*)nullptr;
+                        auto op         = vec3f{0, 0, 0};
+                        auto op_txt     = (texture*)nullptr;
                         tie(op, op_txt) = get_scaled_texture(
                             jcmd.at("opacity"));
                         mat->op     = (op.x + op.y + op.z) / 3;
@@ -5280,8 +5265,8 @@ bool serialize_bin_handle(
 // Serialize a pointer. It is saved as an integer index (handle) of the array of
 // pointers vec. On loading, the handle is converted back into a pointer.
 template <typename T>
-bool serialize_bin_handle(vector<T*>& vals, const vector<T*>& vec_,
-    file_stream& fs, bool save) {
+bool serialize_bin_handle(
+    vector<T*>& vals, const vector<T*>& vec_, file_stream& fs, bool save) {
     if (save) {
         auto count = (size_t)vals.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -5481,9 +5466,8 @@ namespace ygl {
 
 // Reset mesh data
 void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord,
-    vector<vec4f>& color, vector<float>& radius) {
+    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
+    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius) {
     points    = {};
     lines     = {};
     triangles = {};
@@ -5495,11 +5479,9 @@ void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
 }
 
 // Load ply mesh
-bool load_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles,
-    vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color,
-    vector<float>& radius) {
+bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
+    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
         return load_ply_mesh(filename, points, lines, triangles, pos, norm,
@@ -5666,9 +5648,8 @@ ply_data load_ply(const string& filename) {
 
 // Load ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles,
-    vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
     vector<float>& radius) {
     // clear
     reset_mesh_data(
@@ -5815,9 +5796,8 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 
 // Load ply mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles,
-    vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, bool flip_texcoord) {
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord) {
     // clear
     auto color  = vector<vec4f>{};
     auto radius = vector<float>{};
@@ -5923,10 +5903,9 @@ void reset_fvmesh_data(vector<vec4i>& quads_pos, vector<vec3f>& pos,
 
 // Load mesh
 bool load_fvmesh(const string& filename, vector<vec4i>& quads_pos,
-    vector<vec3f>& pos, vector<vec4i>& quads_norm,
-    vector<vec3f>& norm, vector<vec4i>& quads_texcoord,
-    vector<vec2f>& texcoord, vector<vec4i>& quads_color,
-    vector<vec4f>& color) {
+    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
+    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
+    vector<vec4i>& quads_color, vector<vec4f>& color) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
         return load_obj_fvmesh(filename, quads_pos, pos, quads_norm, norm,
@@ -5940,10 +5919,9 @@ bool load_fvmesh(const string& filename, vector<vec4i>& quads_pos,
 }
 
 // Save mesh
-bool save_fvmesh(const string& filename,
-    const vector<vec4i>& quads_pos, const vector<vec3f>& pos,
-    const vector<vec4i>& quads_norm, const vector<vec3f>& norm,
-    const vector<vec4i>& quads_texcoord,
+bool save_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
+    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
+    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
     const vector<vec2f>& texcoord, const vector<vec4i>& quads_color,
     const vector<vec4f>& color, bool ascii) {
     auto ext = get_extension(filename);
@@ -5958,9 +5936,8 @@ bool save_fvmesh(const string& filename,
 
 // Load obj mesh
 bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_pos,
-    vector<vec3f>& pos, vector<vec4i>& quads_norm,
-    vector<vec3f>& norm, vector<vec4i>& quads_texcoord,
-    vector<vec2f>& texcoord, bool flip_texcoord) {
+    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
+    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord, bool flip_texcoord) {
     // clear
     vector<vec4i> quads_color;
     vector<vec4f> color;
@@ -6056,10 +6033,9 @@ bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_pos,
 }
 
 // Load ply mesh
-bool save_obj_fvmesh(const string& filename,
-    const vector<vec4i>& quads_pos, const vector<vec3f>& pos,
-    const vector<vec4i>& quads_norm, const vector<vec3f>& norm,
-    const vector<vec4i>& quads_texcoord,
+bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
+    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
+    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
     const vector<vec2f>& texcoord, bool flip_texcoord) {
     auto fs = open(filename, "wt");
     if (!fs) return false;

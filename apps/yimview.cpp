@@ -38,9 +38,9 @@ struct image_stats {
 
 struct app_image {
     // original data
-    string  filename;  // filename
-    string  outname;   // output filename for display
-    string  name;
+    string       filename;  // filename
+    string       outname;   // output filename for display
+    string       name;
     image<vec4f> img;
     bool         is_hdr = false;
 
@@ -80,7 +80,7 @@ struct app_image {
 struct app_state {
     // images
     vector<app_image*> imgs;
-    int                     img_id = 0;
+    int                img_id = 0;
 
     ~app_state() {
         for (auto img : imgs) delete img;
@@ -154,7 +154,7 @@ void load_image_async(app_image* img) {
 
 // save an image
 void save_image_async(app_image* img) {
-    if(is_hdr_filename(img->outname)) {
+    if (is_hdr_filename(img->outname)) {
         if (!save_image4b(img->outname, float_to_byte(img->display))) {
             img->error_msg = "error saving image";
         }
@@ -166,9 +166,8 @@ void save_image_async(app_image* img) {
 }
 
 // add a new image
-void add_new_image(app_state* app, const string& filename,
-    const string& outname, float exposure = 0, bool filmic = false,
-    bool srgb = true) {
+void add_new_image(app_state* app, const string& filename, const string& outname,
+    float exposure = 0, bool filmic = false, bool srgb = true) {
     auto img      = new app_image();
     img->filename = filename;
     img->outname  = (outname == "") ?

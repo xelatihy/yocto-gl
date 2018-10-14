@@ -323,8 +323,8 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
-    scene* scn, void*& sel,
-    vector<tuple<string, void*>>& update_list, int height) {
+    scene* scn, void*& sel, vector<tuple<string, void*>>& update_list,
+    int height) {
     if (!scn) return false;
     draw_glwidgets_scene_tree(win, scn, sel);
     auto update_len = update_list.size();
@@ -351,9 +351,9 @@ inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
     return update_list.size() != update_len;
 }
 
-inline bool draw_glwidgets_scene_inspector(glwindow* win,
-    const string& lbl, scene* scn, void*& sel,
-    vector<tuple<string, void*>>& update_list, int height) {
+inline bool draw_glwidgets_scene_inspector(glwindow* win, const string& lbl,
+    scene* scn, void*& sel, vector<tuple<string, void*>>& update_list,
+    int height) {
     if (!scn || !sel) return false;
     begin_child_glwidget(win, "scrolling scene inspector", {0, height});
 

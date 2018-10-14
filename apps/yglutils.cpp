@@ -83,8 +83,7 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(vid, 10000, 0, errbuf);
-        throw runtime_error(
-            string("shader not compiled\n\n") + errbuf);
+        throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -96,8 +95,7 @@ uint make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(fid, 10000, 0, errbuf);
-        throw runtime_error(
-            string("shader not compiled\n\n") + errbuf);
+        throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -617,8 +615,7 @@ bool draw_button_glwidget(glwindow* win, const char* lbl) {
     return ImGui::Button(lbl);
 }
 
-void draw_label_glwidgets(
-    glwindow* win, const char* lbl, const string& txt) {
+void draw_label_glwidgets(glwindow* win, const char* lbl, const string& txt) {
     ImGui::LabelText(lbl, "%s", txt.c_str());
 }
 
@@ -748,8 +745,8 @@ void begin_selectabletreeleaf_glwidget(
     if (ImGui::IsItemClicked()) selection = content;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& val,
-    const vector<string>& labels) {
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, int& val, const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, labels[val].c_str())) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -762,8 +759,8 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& val,
     return val != old_val;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, string& val,
-    const vector<string>& labels) {
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, string& val, const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, val.c_str())) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -792,8 +789,7 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
 }
 
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
-    const vector<void*>& vals, const char* (*label)(void*),
-    bool                      include_null) {
+    const vector<void*>& vals, const char* (*label)(void*), bool include_null) {
     if (!ImGui::BeginCombo(lbl, (val) ? label(val) : "<none>")) return false;
     auto old_val = val;
     if (include_null) {

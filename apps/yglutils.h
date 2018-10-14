@@ -146,8 +146,7 @@ bool begin_glwidgets_window(glwindow* win, const char* title);
 bool begin_header_glwidget(glwindow* win, const char* title);
 void end_header_glwidget(glwindow* win);
 
-void draw_label_glwidgets(
-    glwindow* win, const char* lbl, const string& txt);
+void draw_label_glwidgets(glwindow* win, const char* lbl, const string& txt);
 void draw_label_glwidgets(glwindow* win, const char* lbl, const char* fmt, ...);
 
 bool begin_header_widget(glwindow* win, const char* label);
@@ -208,15 +207,14 @@ bool begin_selectabletreenode_glwidget(
 void begin_selectabletreeleaf_glwidget(
     glwindow* win, const char* lbl, void*& selection, void* content);
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
-    const vector<string>& labels);
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, string& val,
-    const vector<string>& labels);
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, int& idx, const vector<string>& labels);
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, string& val, const vector<string>& labels);
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
     const vector<void*>& vals, const char* (*label)(void*));
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
-    const vector<void*>& vals, const char* (*label)(void*),
-    bool                      include_null);
+    const vector<void*>& vals, const char* (*label)(void*), bool include_null);
 
 template <typename T>
 bool draw_combobox_glwidget(

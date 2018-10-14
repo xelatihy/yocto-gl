@@ -174,8 +174,7 @@ string get_extension(const string& filename);
 // Get filename without directory.
 string get_filename(const string& filename);
 // Replace extension.
-string replace_extension(
-    const string& filename, const string& ext);
+string replace_extension(const string& filename, const string& ext);
 
 // Check if a file can be opened for reading.
 bool exists_file(const string& filename);
@@ -190,16 +189,16 @@ namespace ygl {
 // Command line parser data. All data should be considered private.
 struct cmdline_parser {
     vector<string> args      = {};  // command line arguments
-    string              usage_cmd = "";  // program name
-    string              usage_hlp = "";  // program help
-    string              usage_opt = "";  // options help
-    string              usage_arg = "";  // arguments help
-    string              error     = "";  // current parse error
+    string         usage_cmd = "";  // program name
+    string         usage_hlp = "";  // program help
+    string         usage_opt = "";  // options help
+    string         usage_arg = "";  // arguments help
+    string         error     = "";  // current parse error
 };
 
 // Initialize a command line parser.
-cmdline_parser make_cmdline_parser(int argc, char** argv,
-    const string& usage, const string& cmd = "");
+cmdline_parser make_cmdline_parser(
+    int argc, char** argv, const string& usage, const string& cmd = "");
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser);
 
@@ -207,28 +206,26 @@ void check_cmdline(cmdline_parser& parser);
 // Options's names starts with "--" or "-", otherwise they are arguments.
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
-bool  parse_arg(cmdline_parser& parser, const string& name, bool def,
-     const string& usage);
-int   parse_arg(cmdline_parser& parser, const string& name, int def,
-      const string& usage, bool req = false);
-float parse_arg(cmdline_parser& parser, const string& name, float def,
+bool parse_arg(
+    cmdline_parser& parser, const string& name, bool def, const string& usage);
+int    parse_arg(cmdline_parser& parser, const string& name, int def,
+       const string& usage, bool req = false);
+float  parse_arg(cmdline_parser& parser, const string& name, float def,
+     const string& usage, bool req = false);
+vec2f  parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
+     const string& usage, bool req = false);
+vec3f  parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
+     const string& usage, bool req = false);
+string parse_arg(cmdline_parser& parser, const string& name, const string& def,
     const string& usage, bool req = false);
-vec2f parse_arg(cmdline_parser& parser, const string& name,
-    const vec2f& def, const string& usage, bool req = false);
-vec3f parse_arg(cmdline_parser& parser, const string& name,
-    const vec3f& def, const string& usage, bool req = false);
-string parse_arg(cmdline_parser& parser, const string& name,
-    const string& def, const string& usage, bool req = false);
-string parse_arg(cmdline_parser& parser, const string& name,
-    const char* def, const string& usage, bool req = false);
+string parse_arg(cmdline_parser& parser, const string& name, const char* def,
+    const string& usage, bool req = false);
 // Parse all arguments left on the command line.
-vector<string> parse_args(cmdline_parser& parser,
-    const string& name, const vector<string>& def,
-    const string& usage, bool req = false);
+vector<string> parse_args(cmdline_parser& parser, const string& name,
+    const vector<string>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 int parse_arge(cmdline_parser& parser, const string& name, int def,
-    const string& usage, const vector<string>& labels,
-    bool req = false);
+    const string& usage, const vector<string>& labels, bool req = false);
 
 }  // namespace ygl
 
@@ -239,11 +236,11 @@ namespace ygl {
 
 // Load/save a text file
 string load_text(const string& filename);
-bool        save_text(const string& filename, const string& str);
+bool   save_text(const string& filename, const string& str);
 
 // Load/save a binary file
 vector<byte> load_binary(const string& filename);
-bool save_binary(const string& filename, const vector<byte>& data);
+bool         save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace ygl
 
@@ -283,7 +280,7 @@ namespace ygl {
 
 // Loads/saves a 1 channel volume.
 volume<float> load_volume1f(const string& filename);
-bool save_volume1f(const string& filename, const volume<float>& vol);
+bool          save_volume1f(const string& filename, const volume<float>& vol);
 
 }  // namespace ygl
 
@@ -339,11 +336,9 @@ bool   save_ybin_scene(const string& filename, const scene* scn,
 namespace ygl {
 
 // Load/Save a mesh
-bool load_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles,
-    vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color,
-    vector<float>& radius);
+bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
+    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius);
 bool save_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
@@ -352,9 +347,8 @@ bool save_mesh(const string& filename, const vector<int>& points,
 
 // Load/Save a ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles,
-    vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
     vector<float>& radius);
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
@@ -364,9 +358,8 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 
 // Load/Save an OBJ mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles,
-    vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, bool flip_texcoord = true);
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord = true);
 bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
@@ -381,26 +374,23 @@ namespace ygl {
 
 // Load/Save a mesh
 bool load_fvmesh(const string& filename, vector<vec4i>& quads_pos,
-    vector<vec3f>& pos, vector<vec4i>& quads_norm,
-    vector<vec3f>& norm, vector<vec4i>& quads_texcoord,
-    vector<vec2f>& texcoord, vector<vec4i>& quads_color,
-    vector<vec4f>& color);
-bool save_fvmesh(const string& filename,
-    const vector<vec4i>& quads_pos, const vector<vec3f>& pos,
-    const vector<vec4i>& quads_norm, const vector<vec3f>& norm,
-    const vector<vec4i>& quads_texcoord,
+    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
+    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
+    vector<vec4i>& quads_color, vector<vec4f>& color);
+bool save_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
+    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
+    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
     const vector<vec2f>& texcoord, const vector<vec4i>& quads_color,
     const vector<vec4f>& color, bool ascii = false);
 
 // Load/Save an OBJ mesh
 bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_pos,
-    vector<vec3f>& pos, vector<vec4i>& quads_norm,
-    vector<vec3f>& norm, vector<vec4i>& quads_texcoord,
-    vector<vec2f>& texcoord, bool flip_texcoord = true);
-bool save_obj_fvmesh(const string& filename,
-    const vector<vec4i>& quads_pos, const vector<vec3f>& pos,
-    const vector<vec4i>& quads_norm, const vector<vec3f>& norm,
-    const vector<vec4i>& quads_texcoord,
+    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
+    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
+    bool flip_texcoord = true);
+bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
+    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
+    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
     const vector<vec2f>& texcoord, bool flip_texcoord = true);
 
 }  // namespace ygl
@@ -420,8 +410,8 @@ struct obj_vertex {
 // Obj texture information.
 struct obj_texture_info {
     string path  = "";     // file path
-    bool        clamp = false;  // clamp to edge
-    float       scale = 1;      // scale for bump/displacement
+    bool   clamp = false;  // clamp to edge
+    float  scale = 1;      // scale for bump/displacement
     // Properties not explicitly handled.
     unordered_map<string, vector<float>> props;
 };
@@ -429,7 +419,7 @@ struct obj_texture_info {
 // Obj material.
 struct obj_material {
     string name;       // name
-    int         illum = 0;  // MTL illum mode
+    int    illum = 0;  // MTL illum mode
 
     // base values
     vec3f ke  = {0, 0, 0};  // emission color
@@ -476,19 +466,19 @@ struct obj_material {
 
 // Obj camera [extension].
 struct obj_camera {
-    string name;                         // name
-    frame3f     frame    = identity_frame3f;  // transform
-    bool        ortho    = false;             // orthographic
-    vec2f       film     = {0.036f, 0.024f};  // film size (default to 35mm)
-    float       focal    = 0.050f;            // focal length
-    float       aspect   = 16.0f / 9.0f;      // aspect ratio
-    float       aperture = 0;                 // lens aperture
-    float       focus    = maxf;              // focus distance
+    string  name;                         // name
+    frame3f frame    = identity_frame3f;  // transform
+    bool    ortho    = false;             // orthographic
+    vec2f   film     = {0.036f, 0.024f};  // film size (default to 35mm)
+    float   focal    = 0.050f;            // focal length
+    float   aspect   = 16.0f / 9.0f;      // aspect ratio
+    float   aperture = 0;                 // lens aperture
+    float   focus    = maxf;              // focus distance
 };
 
 // Obj environment [extension].
 struct obj_environment {
-    string      name;                      // name
+    string           name;                      // name
     frame3f          frame = identity_frame3f;  // transform
     vec3f            ke    = zero3f;            // emission color
     obj_texture_info ke_txt;                    // emission texture
@@ -496,9 +486,9 @@ struct obj_environment {
 
 // Obj callbacks
 struct obj_callbacks {
-    function<void(const vec3f&)>                   vert        = {};
-    function<void(const vec3f&)>                   norm        = {};
-    function<void(const vec2f&)>                   texcoord    = {};
+    function<void(const vec3f&)>              vert        = {};
+    function<void(const vec3f&)>              norm        = {};
+    function<void(const vec2f&)>              texcoord    = {};
     function<void(const vector<obj_vertex>&)> face        = {};
     function<void(const vector<obj_vertex>&)> line        = {};
     function<void(const vector<obj_vertex>&)> point       = {};
@@ -507,9 +497,9 @@ struct obj_callbacks {
     function<void(const string& name)>        usemtl      = {};
     function<void(const string& name)>        smoothing   = {};
     function<void(const string& name)>        mtllib      = {};
-    function<void(const obj_material&)>            material    = {};
-    function<void(const obj_camera&)>              camera      = {};
-    function<void(const obj_environment&)>         environmnet = {};
+    function<void(const obj_material&)>       material    = {};
+    function<void(const obj_camera&)>         camera      = {};
+    function<void(const obj_environment&)>    environmnet = {};
 };
 
 // Load obj scene
@@ -530,7 +520,7 @@ enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
 // ply property
 struct ply_property {
     string                     name    = "";
-    ply_type                        type    = ply_type::ply_float;
+    ply_type                   type    = ply_type::ply_float;
     vector<float>              scalars = {};
     vector<std::array<int, 8>> lists   = {};
 };
@@ -538,7 +528,7 @@ struct ply_property {
 // ply element
 struct ply_element {
     string               name       = "";
-    int                       count      = 0;
+    int                  count      = 0;
     vector<ply_property> properties = {};
 };
 
@@ -710,8 +700,8 @@ inline bool print_next(string& str, const string& fmt) {
     return print_value(str, fmt);
 }
 template <typename Arg, typename... Args>
-inline bool print_next(string& str, const string& fmt, const Arg& arg,
-    const Args&... args) {
+inline bool print_next(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
     auto pos = fmt.find("{}");
     if (pos == string::npos) return print_value(str, fmt);
     if (!print_value(str, fmt.substr(0, pos))) return false;

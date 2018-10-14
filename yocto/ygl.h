@@ -289,12 +289,12 @@
 #include <cstring>
 #include <functional>  // for std::hash
 #include <limits>
+#include <map>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <map>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -311,27 +311,27 @@ using std::exp;
 using std::exp2;
 using std::fabs;
 using std::floor;
+using std::fmod;
+using std::get;
 using std::isfinite;
 using std::log;
 using std::pow;
 using std::round;
 using std::sin;
 using std::sqrt;
-using std::tan;
-using std::fmod;
 using std::swap;
-using std::get;
+using std::tan;
 
-using std::string;
-using std::vector;
+using std::atomic;
+using std::function;
 using std::map;
-using std::unordered_map;
+using std::runtime_error;
+using std::string;
 using std::thread;
 using std::tie;
 using std::tuple;
-using std::function;
-using std::runtime_error;
-using std::atomic;
+using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 using byte = unsigned char;
@@ -2052,10 +2052,9 @@ vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
     const vector<vec2f>& texcoord);
 
 // Apply skinning to vertex position and normals.
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms);
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
 tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& pos, const vector<vec3f>& norm,
@@ -2098,13 +2097,11 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
 void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
-    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord,
-    vector<vec4f>& qcolor, const vector<vec4i>& quads_pos,
-    const vector<vec4i>& quads_norm,
-    const vector<vec4i>& quads_texcoord,
-    const vector<vec4i>& quads_color, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord,
-    const vector<vec4f>& color);
+    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
+    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
+    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, const vector<vec4f>& color);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
@@ -2134,11 +2131,9 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
 tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& pos, float threshold);
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    float threshold);
+    const vector<vec3i>& triangles, const vector<vec3f>& pos, float threshold);
 tuple<vector<vec4i>, vector<vec3f>> weld_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& pos,
-    float threshold);
+    const vector<vec4i>& quads, const vector<vec3f>& pos, float threshold);
 
 // Pick a point in a point set uniformly.
 inline int sample_points(int npoints, float re) {
@@ -2203,10 +2198,10 @@ inline tuple<int, vec2f> sample_quads(
 
 // Samples a set of points over a triangle mesh uniformly. Returns pos, norm
 // and texcoord of the sampled points.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
-sample_triangles_points(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, int npoints, int seed = 7);
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    int seed = 7);
 
 }  // namespace ygl
 
@@ -2454,8 +2449,7 @@ make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
     float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle(
-    vector<vec4i>& beziers, vector<vec3f>& pos);
+make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -2463,12 +2457,11 @@ make_shape_data make_bezier_circle(
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_data make_hair(const vec2i& steps,
-    const vector<vec3i>& striangles, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
-    const vec2f& rotation = zero2f, int seed = 7);
+make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
+    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
 make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
@@ -2499,7 +2492,7 @@ struct image {
     // const T& at(int i, int j) const { return data.at(j * extents.x + i); }
 
     // private data
-    vec2i          extents = {0, 0};
+    vec2i     extents = {0, 0};
     vector<T> data    = {};
 };
 
@@ -2748,8 +2741,7 @@ image<vec4f> make_turbulence_image4f(const vec2i& size, float scale = 1,
 namespace ygl {
 
 // Find the first keyframe value that is greater than the argument.
-inline int eval_keyframed_index(
-    const vector<float>& times, const float& time) {
+inline int eval_keyframed_index(const vector<float>& times, const float& time) {
     for (auto i = 0; i < times.size(); i++)
         if (times[i] > time) return i;
     return (int)times.size();
@@ -2768,8 +2760,8 @@ inline T eval_keyframed_step(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f eval_keyframed_slerp(const vector<float>& times,
-    const vector<vec4f>& vals, float time) {
+inline vec4f eval_keyframed_slerp(
+    const vector<float>& times, const vector<vec4f>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2832,7 +2824,7 @@ struct volume {
     // extents.x * extents.y + j * extents.x + i); }
 
     // private data
-    vec3i          extents = {0, 0};
+    vec3i     extents = {0, 0};
     vector<T> data    = {};
 };
 
@@ -2941,19 +2933,19 @@ struct bvh_tree;
 
 // Camera.
 struct camera {
-    string name     = "";                // name
-    frame3f     frame    = identity_frame3f;  // transform frame
-    bool        ortho    = false;             // orthographic
-    vec2f       film     = {0.036f, 0.024f};  // film size (default: 35mm)
-    float       focal    = 0.050f;            // focal length (defaut: 50 mm)
-    float       focus    = maxf;  // focal distance (default: infinite)
-    float       aperture = 0;     // lens aperture
+    string  name     = "";                // name
+    frame3f frame    = identity_frame3f;  // transform frame
+    bool    ortho    = false;             // orthographic
+    vec2f   film     = {0.036f, 0.024f};  // film size (default: 35mm)
+    float   focal    = 0.050f;            // focal length (defaut: 50 mm)
+    float   focus    = maxf;              // focal distance (default: infinite)
+    float   aperture = 0;                 // lens aperture
 };
 
 // Texture containing either an LDR or HDR image.
 struct texture {
-    string  name        = "";     // name
-    string  path        = "";     // file path
+    string       name        = "";     // name
+    string       path        = "";     // file path
     image<vec4f> imgf        = {};     // hdr image in linear color space
     image<vec4b> imgb        = {};     // ldr image in srgb color space
     bool         clamp       = false;  // clamp textures coordinates
@@ -2965,8 +2957,8 @@ struct texture {
 
 // Volumetric texture containing either an HDR image.
 struct voltexture {
-    string   name   = "";     // name
-    string   path   = "";     // file path
+    string        name   = "";     // name
+    string        path   = "";     // file path
     volume<float> vol    = {};     // volume
     bool          clamp  = false;  // clamp textures coordinates
     bool          linear = true;   // use trilinear interpolation
@@ -2977,9 +2969,9 @@ struct voltexture {
 // The model is based on glTF for compatibility and adapted to OBJ.
 struct material {
     string name          = "";     // name
-    bool        base_metallic = false;  // base-metallic parametrization
-    bool        gltf_textures = false;  // glTF packed textures
-    bool        double_sided  = false;  // double sided rendering
+    bool   base_metallic = false;  // base-metallic parametrization
+    bool   gltf_textures = false;  // glTF packed textures
+    bool   double_sided  = false;  // double sided rendering
 
     // base values
     vec3f ke      = {0, 0, 0};  // emission color
@@ -3037,9 +3029,9 @@ struct shape {
 struct subdiv {
     string name            = "";    // name
     string path            = "";    // path for glTF buffers
-    int         level           = 0;     // subdivision level
-    bool        catmull_clark   = true;  // catmull clark subdiv
-    bool        compute_normals = true;  // faceted subdivision
+    int    level           = 0;     // subdivision level
+    bool   catmull_clark   = true;  // catmull clark subdiv
+    bool   compute_normals = true;  // faceted subdivision
 
     // primitives
     vector<vec4i> quads_pos      = {};  // quads for position
@@ -3058,33 +3050,33 @@ struct subdiv {
 
 // Shape instance.
 struct instance {
-    string name  = "";                // name
-    frame3f     frame = identity_frame3f;  // transform frame
-    shape*      shp   = nullptr;           // shape
-    material*   mat   = nullptr;           // material
-    subdiv*     sbd   = nullptr;           // subdivision shape
+    string    name  = "";                // name
+    frame3f   frame = identity_frame3f;  // transform frame
+    shape*    shp   = nullptr;           // shape
+    material* mat   = nullptr;           // material
+    subdiv*   sbd   = nullptr;           // subdivision shape
 };
 
 // Environment map.
 struct environment {
-    string name   = "";                // name
-    frame3f     frame  = identity_frame3f;  // transform frame
-    vec3f       ke     = {0, 0, 0};         // emission color
-    texture*    ke_txt = nullptr;           // emission texture
+    string   name   = "";                // name
+    frame3f  frame  = identity_frame3f;  // transform frame
+    vec3f    ke     = {0, 0, 0};         // emission color
+    texture* ke_txt = nullptr;           // emission texture
 };
 
 // Node in a transform hierarchy.
 struct node {
     string        name        = "";                // name
-    node*              parent      = nullptr;           // parent
-    frame3f            local       = identity_frame3f;  // transform frame
-    vec3f              translation = {0, 0, 0};         // translation
-    vec4f              rotation    = {0, 0, 0, 1};      // rotation
-    vec3f              scale       = {1, 1, 1};         // scale
+    node*         parent      = nullptr;           // parent
+    frame3f       local       = identity_frame3f;  // transform frame
+    vec3f         translation = {0, 0, 0};         // translation
+    vec4f         rotation    = {0, 0, 0, 1};      // rotation
+    vec3f         scale       = {1, 1, 1};         // scale
     vector<float> weights     = {};                // morph weights
-    camera*            cam         = nullptr;           // camera
-    instance*          ist         = nullptr;           // instance
-    environment*       env         = nullptr;           // environment
+    camera*       cam         = nullptr;           // camera
+    instance*     ist         = nullptr;           // instance
+    environment*  env         = nullptr;           // environment
 
     // compute properties
     vector<node*> children = {};  // child nodes
@@ -3095,16 +3087,16 @@ enum struct animation_type { linear, step, bezier };
 
 // Keyframe data.
 struct animation {
-    string                     name  = "";  // name
-    string                     path  = "";  // path for glTF buffer
-    string                     group = "";  // group
-    animation_type                  type  = animation_type::linear;  // type
-    vector<float>              times = {};        // keyframe times
-    vector<vec3f>              translation = {};  // translation keyframes
-    vector<vec4f>              rotation    = {};  // rotation keyframes
-    vector<vec3f>              scale       = {};  // scale keyframes
+    string                name        = "";  // name
+    string                path        = "";  // path for glTF buffer
+    string                group       = "";  // group
+    animation_type        type        = animation_type::linear;  // type
+    vector<float>         times       = {};  // keyframe times
+    vector<vec3f>         translation = {};  // translation keyframes
+    vector<vec4f>         rotation    = {};  // rotation keyframes
+    vector<vec3f>         scale       = {};  // scale keyframes
     vector<vector<float>> weights     = {};  // morph weight keyframes
-    vector<node*>              targets     = {};  // target nodes
+    vector<node*>         targets     = {};  // target nodes
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -3156,8 +3148,7 @@ namespace ygl {
 void update_transforms(
     scene* scn, float time = 0, const string& anim_group = "");
 // Compute animation range.
-vec2f compute_animation_range(
-    const scene* scn, const string& anim_group = "");
+vec2f compute_animation_range(const scene* scn, const string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
 bbox3f compute_bbox(const shape* shp);
@@ -3352,10 +3343,10 @@ enum struct trace_type {
     debug_roughness,    // debug - roughness
 };
 
-const auto trace_type_names = vector<string>{"path", "volpath",
-    "direct", "environment", "eyelight", "path_nomis", "path_naive",
-    "direct_nomis", "debug_normal", "debug_albedo", "debug_texcoord",
-    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
+const auto trace_type_names = vector<string>{"path", "volpath", "direct",
+    "environment", "eyelight", "path_nomis", "path_naive", "direct_nomis",
+    "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
+    "debug_diffuse", "debug_specular", "debug_roughness"};
 
 // Trace options
 struct trace_params {
@@ -3376,8 +3367,8 @@ struct trace_params {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<instance*>    lights;        // instance lights
-    vector<environment*> environments;  // environments lights
+    vector<instance*>                    lights;         // instance lights
+    vector<environment*>                 environments;   // environments lights
     unordered_map<shape*, vector<float>> shape_cdf;      // shape cdfs
     unordered_map<environment*, vector<float>> env_cdf;  // env cdfs
 };
@@ -3388,12 +3379,12 @@ struct trace_state {
     image<vec4f> display = {};  // image tone mapped for display
 
     // internal data used during rendering
-    image<vec4f>             acc     = {};  // accumulation buffer
-    image<int>               samples = {};  // samples per pixel
-    image<rng_state>         rng     = {};  // random number generators
-    int                      sample  = 0;   // current sample being rendered
-    vector<thread> threads;       // threads used during rendering
-    bool                     stop = false;  // stop flag for threads
+    image<vec4f>     acc     = {};  // accumulation buffer
+    image<int>       samples = {};  // samples per pixel
+    image<rng_state> rng     = {};  // random number generators
+    int              sample  = 0;   // current sample being rendered
+    vector<thread>   threads;       // threads used during rendering
+    bool             stop = false;  // stop flag for threads
 };
 
 // Initialize lights.
@@ -3422,7 +3413,7 @@ void trace_async_stop(trace_state* state);
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
 tuple<uint64_t, uint64_t> get_trace_stats();
-void                          reset_trace_stats();
+void                      reset_trace_stats();
 
 }  // namespace ygl
 

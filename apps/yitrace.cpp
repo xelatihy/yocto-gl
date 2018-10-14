@@ -38,8 +38,8 @@ struct app_state {
     bvh_tree* bvh = nullptr;
 
     // rendering params
-    string  filename   = "scene.json";
-    string  imfilename = "out.obj";
+    string       filename   = "scene.json";
+    string       imfilename = "out.obj";
     trace_params params     = {};
 
     // rendering state
@@ -47,16 +47,16 @@ struct app_state {
     trace_lights* lights = nullptr;
 
     // view image
-    vec2f                                      imcenter     = zero2f;
-    float                                      imscale      = 1;
-    bool                                       zoom_to_fit  = true;
-    bool                                       widgets_open = false;
-    void*                                      selection    = nullptr;
+    vec2f                        imcenter     = zero2f;
+    float                        imscale      = 1;
+    bool                         zoom_to_fit  = true;
+    bool                         widgets_open = false;
+    void*                        selection    = nullptr;
     vector<tuple<string, void*>> update_list;
-    bool                                       navigation_fps = false;
-    bool                                       quiet          = false;
-    int64_t                                    trace_start    = 0;
-    uint                                       gl_txt         = 0;
+    bool                         navigation_fps = false;
+    bool                         quiet          = false;
+    int64_t                      trace_start    = 0;
+    uint                         gl_txt         = 0;
 
     ~app_state() {
         if (scn) delete scn;

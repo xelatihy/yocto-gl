@@ -117,8 +117,7 @@ image<vec4f> filter_bilateral(
                     if (ii >= width(img) || jj >= height(img)) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
-                    auto w   = exp(-dot(uv, uv) * sw) *
-                             exp(-dot(rgb, rgb) * rw);
+                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
                     av += w * img[{ii, jj}];
                     aw += w;
                 }

@@ -38,7 +38,7 @@ struct draw_glshape_vbos {
 };
 
 struct draw_glstate {
-    unsigned int                                        gl_prog = 0;
+    unsigned int                                   gl_prog = 0;
     unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
     unordered_map<const texture*, unsigned int>    txt_id;
 };
@@ -52,28 +52,28 @@ struct app_state {
     string filename    = "scene.json";  // scene name
     string imfilename  = "out.png";     // output image
     string outfilename = "scene.json";  // save scene name
-    int         camid       = 0;             // camera id
-    int         resolution  = 512;           // image resolution
-    bool        wireframe   = false;         // wireframe drawing
-    bool        edges       = false;         // draw edges
-    float       edge_offset = 0.01f;         // offset for edges
-    bool        eyelight    = false;         // camera light mode
-    float       exposure    = 0;             // exposure
-    float       gamma       = 2.2f;          // gamma
-    vec3f       ambient     = {0, 0, 0};     // ambient lighting
-    float       near_plane  = 0.01f;         // near plane
-    float       far_plane   = 10000.0f;      // far plane
+    int    camid       = 0;             // camera id
+    int    resolution  = 512;           // image resolution
+    bool   wireframe   = false;         // wireframe drawing
+    bool   edges       = false;         // draw edges
+    float  edge_offset = 0.01f;         // offset for edges
+    bool   eyelight    = false;         // camera light mode
+    float  exposure    = 0;             // exposure
+    float  gamma       = 2.2f;          // gamma
+    vec3f  ambient     = {0, 0, 0};     // ambient lighting
+    float  near_plane  = 0.01f;         // near plane
+    float  far_plane   = 10000.0f;      // far plane
 
     draw_glstate* state = nullptr;
 
-    bool                                       widgets_open   = false;
-    bool                                       navigation_fps = false;
-    void*                                      selection      = nullptr;
+    bool                         widgets_open   = false;
+    bool                         navigation_fps = false;
+    void*                        selection      = nullptr;
     vector<tuple<string, void*>> update_list;
-    float                                      time       = 0;
-    string                                anim_group = "";
-    vec2f                                      time_range = zero2f;
-    bool                                       animate    = false;
+    float                        time       = 0;
+    string                       anim_group = "";
+    vec2f                        time_range = zero2f;
+    bool                         animate    = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -717,12 +717,11 @@ void run_ui(app_state* app) {
 }
 
 // Load INI file. The implementation does not handle escaping.
-unordered_map<string, unordered_map<string, string>>
-load_ini(const string& filename) {
+unordered_map<string, unordered_map<string, string>> load_ini(
+    const string& filename) {
     auto f = fopen(filename.c_str(), "rt");
     if (!f) throw runtime_error("cannot open " + filename);
-    auto ret       = unordered_map<string,
-        unordered_map<string, string>>();
+    auto ret       = unordered_map<string, unordered_map<string, string>>();
     auto cur_group = string();
     ret[""]        = {};
 
