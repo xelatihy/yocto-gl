@@ -1597,71 +1597,71 @@ bool parse_json_value(const json& js, T& val, const char* name, const T& def) {
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objref(json& js, T* val) {
+bool dump_json_objref(json& js, T* val, const std::vector<T*>& refs) {
     return dump_json_value(js, val ? val->name : ""s);
 }
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objref(json& js, T* val, const char* name) {
+bool dump_json_objref(json& js, T* val, const char* name, const std::vector<T*>& refs) {
     if (!val) return true;
-    return dump_json_objref(js[name], val);
+    return dump_json_objref(js[name], val, refs);
 }
 
-    // Dumps a json value
-    template <typename T>
-    bool dump_json_objref(json& js, const std::vector<T*>& val) {
-        js = json::array();
-        for(auto v : val) {
-            js.push_back({});
-            if(!dump_json_objref(js.back(), v)) return false;
-        }
-        return true;
-    }
-    
-    // Dumps a json value
-    template <typename T>
-    bool dump_json_objref(json& js, const std::vector<T*>& val, const char* name) {
-        if (val.empty()) return true;
-        return dump_json_objref(js[name], val);
-    }
-    
-    // Dumps a json value
-    template <typename T>
-    bool parse_json_objref(const json& js, T*& val) {
-        if(!js.is_string()) return false;
-        auto name = ""s;
-        if(!parse_json_value(js, name)) return false;
-        val = new T();
-        val->name = name;
-        return true;
-    }
-    
-    // Dumps a json value
-    template <typename T>
-    bool parse_json_objref(const json& js, T*& val, const char* name) {
-        if (!js.count(name)) return true;
-        val = nullptr;
-        return parse_json_objref(js.at(name), val);
-    }
-    
 // Dumps a json value
 template <typename T>
-    bool parse_json_objref(const json& js, std::vector<T*>& val) {
-    if(!js.is_array()) return false;
-        for(auto& j : js) {
-            val.push_back(nullptr);
-            if(!parse_json_objref(j, val.back())) return false;
-        }
+bool dump_json_objref(json& js, const std::vector<T*>& val, const std::vector<T*>& refs) {
+    js = json::array();
+    for (auto v : val) {
+        js.push_back({});
+        if (!dump_json_objref(js.back(), v, refs)) return false;
+    }
     return true;
 }
 
 // Dumps a json value
 template <typename T>
-bool parse_json_objref(const json& js, std::vector<T*>& val, const char* name) {
+bool dump_json_objref(json& js, const std::vector<T*>& val, const char* name, const std::vector<T*>& refs) {
+    if (val.empty()) return true;
+    return dump_json_objref(js[name], val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, T*& val, const std::vector<T*>& refs) {
+    if (!js.is_string()) return false;
+    auto name = ""s;
+    if (!parse_json_value(js, name)) return false;
+    val       = new T();
+    val->name = name;
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, T*& val, const char* name, const std::vector<T*>& refs) {
+    if (!js.count(name)) return true;
+    val = nullptr;
+    return parse_json_objref(js.at(name), val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, std::vector<T*>& val, const std::vector<T*>& refs) {
+    if (!js.is_array()) return false;
+    for (auto& j : js) {
+        val.push_back(nullptr);
+        if (!parse_json_objref(j, val.back(), refs)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, std::vector<T*>& val, const char* name, const std::vector<T*>& refs) {
     if (!js.count(name)) return true;
     val = {};
-    return parse_json_objref(js.at(name), val);
+    return parse_json_objref(js.at(name), val, refs);
 }
 
 // Starts a json object
@@ -1675,29 +1675,29 @@ bool parse_json_objbegin(const json& js) { return js.is_object(); }
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objarray(json& js, const std::vector<T*>& val) {
+bool dump_json_objarray(json& js, const std::vector<T*>& val, const scene* scn) {
     js = json::array();
     for (auto& v : val) {
         js.push_back({});
-        if (!dump_json_object(js.back(), v)) return false;
+        if (!dump_json_object(js.back(), v, scn)) return false;
     }
     return true;
 }
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objarray(json& js, const std::vector<T*>& val, const char* name) {
+bool dump_json_objarray(json& js, const std::vector<T*>& val, const char* name, const scene* scn) {
     if (val.empty()) return true;
-    return dump_json_objarray(js[name], val);
+    return dump_json_objarray(js[name], val, scn);
 }
 
 // Dumps a json value
 template <typename T>
-bool parse_json_objarray(const json& js, std::vector<T*>& val) {
+bool parse_json_objarray(const json& js, std::vector<T*>& val, const scene* scn) {
     if (!js.is_array()) return false;
     for (auto& j : js) {
         val.push_back(new T());
-        if (!parse_json_object(j, val.back())) return false;
+        if (!parse_json_object(j, val.back(), scn)) return false;
     }
     return true;
 }
@@ -1705,21 +1705,21 @@ bool parse_json_objarray(const json& js, std::vector<T*>& val) {
 // Dumps a json value
 template <typename T>
 bool parse_json_objarray(
-    const json& js, std::vector<T*>& val, const char* name) {
+    const json& js, std::vector<T*>& val, const char* name, const scene* scn) {
     if (!js.count(name)) return true;
     val = {};
-    return parse_json_objarray(js.at(name), val);
+    return parse_json_objarray(js.at(name), val, scn);
 }
 
 // Parses and applied a JSON procedural
 template <typename T>
-bool parse_json_procedural(const json& js, T* val, const char* name) {
+bool parse_json_procedural(const json& js, T* val, const char* name, const scene* scn) {
     if (!js.count(name)) return true;
-    return apply_json_procedural(js.at(name), val);
+    return apply_json_procedural(js.at(name), val, scn);
 }
 
 // Procedural commands for cameras
-bool apply_json_procedural(const json& js, camera* val) {
+bool apply_json_procedural(const json& js, camera* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from") || js.count("to")) {
         auto from  = js.value("from", zero3f);
@@ -1732,7 +1732,7 @@ bool apply_json_procedural(const json& js, camera* val) {
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const camera* val) {
+bool dump_json_object(json& js, const camera* val, const scene* scn) {
     static const auto def = camera();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -1747,7 +1747,7 @@ bool dump_json_object(json& js, const camera* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, camera* val) {
+bool parse_json_object(const json& js, camera* val, const scene* scn) {
     static const auto def = camera();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -1757,12 +1757,12 @@ bool parse_json_object(const json& js, camera* val) {
     if (!parse_json_value(js, val->focus, "focus", def.focus)) return false;
     if (!parse_json_value(js, val->aperture, "aperture", def.aperture))
         return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const texture* val) {
+bool dump_json_object(json& js, const texture* val, const scene* scn) {
     static const auto def = texture();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -1778,7 +1778,7 @@ bool dump_json_object(json& js, const texture* val) {
 }
 
 // Procedural commands for textures
-bool apply_json_procedural(const json& js, texture* val) {
+bool apply_json_procedural(const json& js, texture* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -1843,7 +1843,7 @@ bool apply_json_procedural(const json& js, texture* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, texture* val) {
+bool parse_json_object(const json& js, texture* val, const scene* scn) {
     static const auto def = texture();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -1853,12 +1853,12 @@ bool parse_json_object(const json& js, texture* val) {
     if (!parse_json_value(js, val->srgb, "srgb", def.srgb)) return false;
     if (!parse_json_value(js, val->imgf, "imgf", def.imgf)) return false;
     if (!parse_json_value(js, val->imgb, "imgb", def.imgb)) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const voltexture* val) {
+bool dump_json_object(json& js, const voltexture* val, const scene* scn) {
     static const auto def = voltexture();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -1871,7 +1871,7 @@ bool dump_json_object(json& js, const voltexture* val) {
 }
 
 // Procedural commands for textures
-bool apply_json_procedural(const json& js, voltexture* val) {
+bool apply_json_procedural(const json& js, voltexture* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -1890,18 +1890,18 @@ bool apply_json_procedural(const json& js, voltexture* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, voltexture* val) {
+bool parse_json_object(const json& js, voltexture* val, const scene* scn) {
     static const auto def = voltexture();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->path, "path", def.path)) return false;
     if (!parse_json_value(js, val->vol, "vol", def.vol)) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const material* val) {
+bool dump_json_object(json& js, const material* val, const scene* scn) {
     static const auto def = material();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -1921,28 +1921,28 @@ bool dump_json_object(json& js, const material* val) {
         return false;
     if (!dump_json_value(js, val->refract, "refract", def.refract))
         return false;
-    if(!dump_json_objref(js, val->ke_txt, "ke_txt")) return false;
-    if(!dump_json_objref(js, val->kd_txt, "kd_txt")) return false;
-    if(!dump_json_objref(js, val->ks_txt, "ks_txt")) return false;
-    if(!dump_json_objref(js, val->kt_txt, "kt_txt")) return false;
-    if(!dump_json_objref(js, val->rs_txt, "rs_txt")) return false;
-    if(!dump_json_objref(js, val->op_txt, "op_txt")) return false;
-    if(!dump_json_objref(js, val->occ_txt, "occ_txt")) return false;
-    if(!dump_json_objref(js, val->bump_txt, "bump_txt")) return false;
-    if(!dump_json_objref(js, val->disp_txt, "disp_txt")) return false;
-    if(!dump_json_objref(js, val->norm_txt, "norm_txt")) return false;
-    if(!dump_json_objref(js, val->vd_txt, "vd_txt")) return false;
+    if (!dump_json_objref(js, val->ke_txt, "ke_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->kd_txt, "kd_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->ks_txt, "ks_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->kt_txt, "kt_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->rs_txt, "rs_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->op_txt, "op_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->occ_txt, "occ_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->bump_txt, "bump_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->disp_txt, "disp_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->norm_txt, "norm_txt", scn->textures)) return false;
+    if (!dump_json_objref(js, val->vd_txt, "vd_txt", scn->voltextures)) return false;
     return true;
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(const json& js, material* val) {
+bool apply_json_procedural(const json& js, material* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     return true;
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, material* val) {
+bool parse_json_object(const json& js, material* val, const scene* scn) {
     static const auto def = material();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -1969,23 +1969,23 @@ bool parse_json_object(const json& js, material* val) {
         return false;
     if (!parse_json_value(js, val->refract, "refract", def.refract))
         return false;
-    if (!parse_json_objref(js, val->ke_txt, "ke_txt")) return false;
-    if (!parse_json_objref(js, val->kd_txt, "kd_txt")) return false;
-    if (!parse_json_objref(js, val->ks_txt, "ks_txt")) return false;
-    if (!parse_json_objref(js, val->kt_txt, "kt_txt")) return false;
-    if (!parse_json_objref(js, val->rs_txt, "rs_txt")) return false;
-    if (!parse_json_objref(js, val->op_txt, "op_txt")) return false;
-    if (!parse_json_objref(js, val->occ_txt, "occ_txt")) return false;
-    if (!parse_json_objref(js, val->bump_txt, "bump_txt")) return false;
-    if (!parse_json_objref(js, val->disp_txt, "disp_txt")) return false;
-    if (!parse_json_objref(js, val->norm_txt, "norm_txt")) return false;
-    if (!parse_json_objref(js, val->vd_txt, "vd_txt")) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_objref(js, val->ke_txt, "ke_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->kd_txt, "kd_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->ks_txt, "ks_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->kt_txt, "kt_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->rs_txt, "rs_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->op_txt, "op_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->occ_txt, "occ_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->bump_txt, "bump_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->disp_txt, "disp_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->norm_txt, "norm_txt", scn->textures)) return false;
+    if (!parse_json_objref(js, val->vd_txt, "vd_txt", scn->voltextures)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const shape* val) {
+bool dump_json_object(json& js, const shape* val, const scene* scn) {
     static const auto def = shape();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -2010,7 +2010,7 @@ bool dump_json_object(json& js, const shape* val) {
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(const json& js, shape* val) {
+bool apply_json_procedural(const json& js, shape* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -2105,7 +2105,7 @@ bool apply_json_procedural(const json& js, shape* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, shape* val) {
+bool parse_json_object(const json& js, shape* val, const scene* scn) {
     static const auto def = shape();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -2121,12 +2121,12 @@ bool parse_json_object(const json& js, shape* val) {
     if (!parse_json_value(js, val->color, "color", def.color)) return false;
     if (!parse_json_value(js, val->radius, "radius", def.radius)) return false;
     if (!parse_json_value(js, val->tangsp, "tangsp", def.tangsp)) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const subdiv* val) {
+bool dump_json_object(json& js, const subdiv* val, const scene* scn) {
     static const auto def = subdiv();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -2152,7 +2152,7 @@ bool dump_json_object(json& js, const subdiv* val) {
 }
 
 // Procedural commands for subdivs
-bool apply_json_procedural(const json& js, subdiv* val) {
+bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -2183,7 +2183,7 @@ bool apply_json_procedural(const json& js, subdiv* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, subdiv* val) {
+bool parse_json_object(const json& js, subdiv* val, const scene* scn) {
     static const auto def = subdiv();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -2206,24 +2206,24 @@ bool parse_json_object(const json& js, subdiv* val) {
     if (!parse_json_value(js, val->texcoord, "texcoord", def.texcoord))
         return false;
     if (!parse_json_value(js, val->color, "color", def.color)) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const instance* val) {
+bool dump_json_object(json& js, const instance* val, const scene* scn) {
     static const auto def = instance();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if(!dump_json_objref(js, val->shp, "shp")) return false;
-    if(!dump_json_objref(js, val->mat, "mat")) return false;
-    if(!dump_json_objref(js, val->sbd, "sbd")) return false;
+    if (!dump_json_objref(js, val->shp, "shp", scn->shapes)) return false;
+    if (!dump_json_objref(js, val->mat, "mat", scn->materials)) return false;
+    if (!dump_json_objref(js, val->sbd, "sbd", scn->subdivs)) return false;
     return true;
 }
 
 // Procedural commands for instances
-bool apply_json_procedural(const json& js, instance* val) {
+bool apply_json_procedural(const json& js, instance* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from")) {
         auto from  = js.value("from", zero3f);
@@ -2242,20 +2242,20 @@ bool apply_json_procedural(const json& js, instance* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, instance* val) {
+bool parse_json_object(const json& js, instance* val, const scene* scn) {
     static const auto def = instance();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!parse_json_objref(js, val->shp, "shp")) return false;
-    if (!parse_json_objref(js, val->sbd, "sbd")) return false;
-    if (!parse_json_objref(js, val->mat, "mat")) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_objref(js, val->shp, "shp", scn->shapes)) return false;
+    if (!parse_json_objref(js, val->sbd, "sbd", scn->subdivs)) return false;
+    if (!parse_json_objref(js, val->mat, "mat", scn->materials)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const environment* val) {
+bool dump_json_object(json& js, const environment* val, const scene* scn) {
     static const auto def = environment();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -2266,7 +2266,7 @@ bool dump_json_object(json& js, const environment* val) {
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(const json& js, environment* val) {
+bool apply_json_procedural(const json& js, environment* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
@@ -2276,19 +2276,19 @@ bool apply_json_procedural(const json& js, environment* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, environment* val) {
+bool parse_json_object(const json& js, environment* val, const scene* scn) {
     static const auto def = environment();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!parse_json_value(js, val->ke, "ke", def.ke)) return false;
-    if (!parse_json_objref(js, val->ke_txt, "ke_txt")) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_objref(js, val->ke_txt, "ke_txt", scn->textures)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const node* val) {
+bool dump_json_object(json& js, const node* val, const scene* scn) {
     static const auto def = node();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -2300,15 +2300,15 @@ bool dump_json_object(json& js, const node* val) {
     if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
     if (!dump_json_value(js, val->weights, "weights", def.weights))
         return false;
-    if(!dump_json_objref(js, val->parent, "parent")) return false;
-    if(!dump_json_objref(js, val->cam, "cam")) return false;
-    if(!dump_json_objref(js, val->ist, "ist")) return false;
-    if(!dump_json_objref(js, val->env, "env")) return false;
+    if (!dump_json_objref(js, val->parent, "parent", scn->nodes)) return false;
+    if (!dump_json_objref(js, val->cam, "cam", scn->cameras)) return false;
+    if (!dump_json_objref(js, val->ist, "ist", scn->instances)) return false;
+    if (!dump_json_objref(js, val->env, "env", scn->environments)) return false;
     return true;
 }
 
 // Procedural commands for nodes
-bool apply_json_procedural(const json& js, node* val) {
+bool apply_json_procedural(const json& js, node* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from")) {
         auto from  = js.value("from", zero3f);
@@ -2320,7 +2320,7 @@ bool apply_json_procedural(const json& js, node* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, node* val) {
+bool parse_json_object(const json& js, node* val, const scene* scn) {
     static const auto def = node();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -2332,11 +2332,11 @@ bool parse_json_object(const json& js, node* val) {
     if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
     if (!parse_json_value(js, val->weights, "weights", def.weights))
         return false;
-    if (!parse_json_objref(js, val->parent, "parent")) return false;
-    if (!parse_json_objref(js, val->ist, "ist")) return false;
-    if (!parse_json_objref(js, val->cam, "cam")) return false;
-    if (!parse_json_objref(js, val->env, "env")) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_objref(js, val->parent, "parent", scn->nodes)) return false;
+    if (!parse_json_objref(js, val->ist, "ist", scn->instances)) return false;
+    if (!parse_json_objref(js, val->cam, "cam", scn->cameras)) return false;
+    if (!parse_json_objref(js, val->env, "env", scn->environments)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
@@ -2367,7 +2367,7 @@ bool parse_json_value(const json& js, animation_type& val) {
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const animation* val) {
+bool dump_json_object(json& js, const animation* val, const scene* scn) {
     static const auto def = animation();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -2382,12 +2382,12 @@ bool dump_json_object(json& js, const animation* val) {
             return false;
         if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
     }
-    if (!dump_json_objref(js, val->targets, "targets")) return false;
+    if (!dump_json_objref(js, val->targets, "targets", scn->nodes)) return false;
     return true;
 }
 
 // Procedural commands for animations
-bool apply_json_procedural(const json& js, animation* val) {
+bool apply_json_procedural(const json& js, animation* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation_axisangle")) {
         for (auto& j : js.at("rotation_axisangle")) {
@@ -2398,7 +2398,7 @@ bool apply_json_procedural(const json& js, animation* val) {
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, animation* val) {
+bool parse_json_object(const json& js, animation* val, const scene* scn) {
     static const auto def = animation();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -2411,26 +2411,26 @@ bool parse_json_object(const json& js, animation* val) {
     if (!parse_json_value(js, val->rotation, "rotation", def.rotation))
         return false;
     if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
-    if (!parse_json_objref(js, val->targets, "targets")) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_objref(js, val->targets, "targets", scn->nodes)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const scene* val) {
+bool dump_json_object(json& js, const scene* val, const scene* scn) {
     static const auto def = scene();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_objarray(js, val->cameras, "cameras")) return false;
-    if (!dump_json_objarray(js, val->textures, "textures")) return false;
-    if (!dump_json_objarray(js, val->materials, "materials")) return false;
-    if (!dump_json_objarray(js, val->shapes, "shapes")) return false;
-    if (!dump_json_objarray(js, val->subdivs, "subdivs")) return false;
-    if (!dump_json_objarray(js, val->instances, "instances")) return false;
-    if (!dump_json_objarray(js, val->environments, "environments"))
+    if (!dump_json_objarray(js, val->cameras, "cameras", scn)) return false;
+    if (!dump_json_objarray(js, val->textures, "textures", scn)) return false;
+    if (!dump_json_objarray(js, val->materials, "materials", scn)) return false;
+    if (!dump_json_objarray(js, val->shapes, "shapes", scn)) return false;
+    if (!dump_json_objarray(js, val->subdivs, "subdivs", scn)) return false;
+    if (!dump_json_objarray(js, val->instances, "instances", scn)) return false;
+    if (!dump_json_objarray(js, val->environments, "environments", scn))
         return false;
-    if (!dump_json_objarray(js, val->nodes, "nodes")) return false;
-    if (!dump_json_objarray(js, val->animations, "animations")) return false;
+    if (!dump_json_objarray(js, val->nodes, "nodes", scn)) return false;
+    if (!dump_json_objarray(js, val->animations, "animations", scn)) return false;
     return true;
 }
 
@@ -2443,18 +2443,18 @@ static std::unordered_map<std::string, T*> make_named_map(
 };
 
 // Procedural commands for scenes
-bool apply_json_procedural(const json& js, scene* val) {
+bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("random_instances")) {
         auto& jjs  = js.at("random_instances");
         auto  num  = jjs.value("num", 100);
         auto  seed = jjs.value("seed", 13);
         auto  base = new instance();
-        parse_json_object(jjs.at("base"), base);
+        parse_json_object(jjs.at("base"), base, scn);
         auto ists = std::vector<instance*>();
         for (auto& j : jjs.at("instances")) {
             ists.push_back(new instance());
-            parse_json_object(j, ists.back());
+            parse_json_object(j, ists.back(), scn);
         }
 
         auto pos                      = std::vector<vec3f>();
@@ -2484,22 +2484,22 @@ bool apply_json_procedural(const json& js, scene* val) {
 }
 
 // Json to scene
-bool parse_json_object(const json& js, scene* val) {
+bool parse_json_object(const json& js, scene* val, const scene* scn) {
     static const auto def = scene();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_objarray(js, val->cameras, "cameras")) return false;
-    if (!parse_json_objarray(js, val->textures, "textures")) return false;
-    if (!parse_json_objarray(js, val->voltextures, "voltextures")) return false;
-    if (!parse_json_objarray(js, val->materials, "materials")) return false;
-    if (!parse_json_objarray(js, val->shapes, "shapes")) return false;
-    if (!parse_json_objarray(js, val->subdivs, "subdivs")) return false;
-    if (!parse_json_objarray(js, val->instances, "instances")) return false;
-    if (!parse_json_objarray(js, val->environments, "environments"))
+    if (!parse_json_objarray(js, val->cameras, "cameras", scn)) return false;
+    if (!parse_json_objarray(js, val->textures, "textures", scn)) return false;
+    if (!parse_json_objarray(js, val->voltextures, "voltextures", scn)) return false;
+    if (!parse_json_objarray(js, val->materials, "materials", scn)) return false;
+    if (!parse_json_objarray(js, val->shapes, "shapes", scn)) return false;
+    if (!parse_json_objarray(js, val->subdivs, "subdivs", scn)) return false;
+    if (!parse_json_objarray(js, val->instances, "instances", scn)) return false;
+    if (!parse_json_objarray(js, val->environments, "environments", scn))
         return false;
-    if (!parse_json_objarray(js, val->nodes, "nodes")) return false;
-    if (!parse_json_objarray(js, val->animations, "animations")) return false;
-    if (!parse_json_procedural(js, val, "!!proc")) return false;
+    if (!parse_json_objarray(js, val->nodes, "nodes", scn)) return false;
+    if (!parse_json_objarray(js, val->animations, "animations", scn)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
 
     // fix references
     auto cmap    = make_named_map(val->cameras);
@@ -2554,6 +2554,13 @@ bool parse_json_object(const json& js, scene* val) {
 
     // done
     return true;
+}
+
+bool dump_json_object(json& js, const scene* val) {
+    return dump_json_object(js, val, val);
+}
+bool parse_json_object(const json& js, scene* val) {
+    return parse_json_object(js, val, val);
 }
 
 // Load a scene in the builtin JSON format.
