@@ -72,13 +72,13 @@ int main(int argc, char* argv[]) {
     // scene loading
     log_info("loading scene {}", filename);
     auto load_start = get_time();
-    auto scn        = load_scene(filename);
+    auto scn        = unique_ptr<scene>{load_scene(filename)};
     if (!scn) log_fatal("cannot load scene " + filename);
     log_info("loading in {}", format_duration(get_time() - load_start).c_str());
 
     // tesselate
     log_info("tesselating scene elements");
-    tesselate_subdivs(scn);
+    tesselate_subdivs(scn.get());
 
     // add components
     log_info("adding scene elements");
@@ -88,22 +88,22 @@ int main(int argc, char* argv[]) {
     }
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;
-    for (auto& err : validate(scn)) log_error("warning: {}", err);
+    for (auto& err : validate(scn.get())) log_error("warning: {}", err);
 
     // build bvh
     log_info("building bvh");
     auto bvh_start = get_time();
-    auto bvh       = build_bvh(scn, true, embree);
+    auto bvh       = unique_ptr<bvh_tree>{build_bvh(scn.get(), true, embree)};
     log_info(
         "building bvh in {}", format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     log_info("initializing lights");
-    auto lights = make_trace_lights(scn, params);
+    auto lights = unique_ptr<trace_lights>{make_trace_lights(scn.get(), params)};
 
     // initialize rendering objects
     log_info("initializing tracer data");
-    auto state = make_trace_state(scn, params);
+    auto state = unique_ptr<trace_state>{make_trace_state(scn.get(), params)};
 
     // render
     log_info("rendering image");
@@ -112,7 +112,8 @@ int main(int argc, char* argv[]) {
     while (!done) {
         log_info("rendering sample {}/{}", state->sample, params.nsamples);
         auto block_start = get_time();
-        done             = trace_samples(state, scn, bvh, lights, params);
+        done             = trace_samples(
+            state.get(), scn.get(), bvh.get(), lights.get(), params);
         log_info("rendering block in {}",
             format_duration(get_time() - block_start).c_str());
         if (save_batch) {
@@ -131,12 +132,6 @@ int main(int argc, char* argv[]) {
     log_info("saving image {}", imfilename.c_str());
     if (!save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic))
         log_fatal("cannot save image " + imfilename);
-
-    // cleanup
-    delete state;
-    delete scn;
-    delete bvh;
-    delete lights;
 
     // done
     return 0;
