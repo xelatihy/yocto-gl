@@ -2372,6 +2372,13 @@ struct make_shape_data {
     std::vector<vec3i> triangles;  // triangles
     std::vector<vec4i> quads;      // quads
     std::vector<vec4i> beziers;    // beziers
+};
+
+// Shape data returned by make_fv<shape> functions.
+struct make_fvshape_data {
+    std::vector<vec3f> pos;       // positions
+    std::vector<vec3f> norm;      // normals/tangents
+    std::vector<vec2f> texcoord;  // texture coordinates
 
     std::vector<vec4i> quads_pos;       // facevarying quads for pos
     std::vector<vec4i> quads_norm;      // facevarying quads for norm
@@ -2417,7 +2424,7 @@ make_shape_data make_suzanne(float size, bool as_triangles);
 make_shape_data make_cube(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_shape_data make_fvcube(
+make_fvshape_data make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.

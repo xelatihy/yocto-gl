@@ -2245,17 +2245,18 @@ make_shape_data make_geodesic_sphere(
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-make_shape_data make_fvcube(
+make_fvshape_data make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto shp                         = make_cube(steps, size, uvsize, false);
-    shp.quads_pos                    = shp.quads;
-    shp.quads_norm                   = shp.quads_pos;
-    shp.quads_texcoord               = shp.quads_pos;
-    std::tie(shp.quads_pos, shp.pos) = weld_quads(shp.quads_pos, shp.pos,
+    auto qshp                         = make_cube(steps, size, uvsize, false);
+    auto fvshp = make_fvshape_data{};
+    std::tie(fvshp.quads_pos, fvshp.pos) = weld_quads(qshp.quads, qshp.pos,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    shp.quads.clear();
-    return shp;
+    fvshp.quads_norm                   = qshp.quads;
+    fvshp.norm = qshp.norm;
+    fvshp.quads_texcoord               = qshp.quads;
+    fvshp.texcoord = qshp.texcoord;
+    return fvshp;
 }
 
 // Make a suzanne monkey model for testing. Note that some quads are
@@ -2871,8 +2872,6 @@ make_shape_data make_hair(const vec2i& steps,
 make_shape_data merge_shape_data(const std::vector<make_shape_data>& shapes) {
     auto shp = make_shape_data();
     for (auto& sshp : shapes) {
-        if (!sshp.quads_pos.empty())
-            throw std::runtime_error("face varying not supported");
         auto nverts = (int)shp.pos.size();
         for (auto& v : sshp.points) shp.points.push_back(v + nverts);
         for (auto& v : sshp.lines)
