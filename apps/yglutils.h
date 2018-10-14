@@ -116,7 +116,8 @@ glwindow* make_glwindow(const vec2i& size, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*));
 void      delete_glwindow(glwindow* win);
 
-void set_drop_callback(glwindow* win, void (*callback)(glwindow* win, int num, const char** paths));
+void set_drop_callback(glwindow* win,
+    void (*callback)(glwindow* win, int num, const char** paths));
 
 void* get_user_pointer(glwindow* win);
 

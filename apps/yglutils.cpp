@@ -130,8 +130,8 @@ uint make_gltexture(
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_float) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width(img), height(img),
-            0, GL_RGBA, GL_FLOAT, data(img));
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width(img), height(img), 0,
+            GL_RGBA, GL_FLOAT, data(img));
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(img), height(img), 0,
             GL_RGBA, GL_FLOAT, data(img));
@@ -180,8 +180,8 @@ uint make_gltexture(
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width(img),
-            height(img), 0, GL_RGBA, GL_UNSIGNED_BYTE, data(img));
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width(img), height(img),
+            0, GL_RGBA, GL_UNSIGNED_BYTE, data(img));
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(img), height(img), 0,
             GL_RGBA, GL_UNSIGNED_BYTE, data(img));
@@ -514,7 +514,8 @@ void delete_glwindow(glwindow* win) {
 
 void* get_user_pointer(glwindow* win) { return glfwGetWindowUserPointer(win); }
 
-void set_drop_callback(glwindow* win, void (*callback)(glwindow* win, int num, const char** paths)) {
+void set_drop_callback(glwindow* win,
+    void (*callback)(glwindow* win, int num, const char** paths)) {
     glfwSetDropCallback(win, callback);
 }
 

@@ -38,8 +38,8 @@ struct image_stats {
 
 struct app_image {
     // original data
-    std::string  filename;      // filename
-    std::string  outname;    // output filename for display
+    std::string  filename;  // filename
+    std::string  outname;   // output filename for display
     std::string  name;
     image<vec4f> img;
     bool         is_hdr = false;
@@ -111,9 +111,8 @@ void update_display_async(app_image* img) {
                 for (auto j = tid; j < height(img->img); j += nthreads) {
                     if (img->display_stop) break;
                     for (auto i = 0; i < width(img->img); i++) {
-                        img->display[{i, j}] = tonemap_filmic(
-                            img->img[{i, j}], img->exposure, img->filmic,
-                            img->srgb);
+                        img->display[{i, j}] = tonemap_filmic(img->img[{i, j}],
+                            img->exposure, img->filmic, img->srgb);
                     }
                 }
             }));
@@ -123,8 +122,8 @@ void update_display_async(app_image* img) {
         for (auto j = 0; j < height(img->img); j++) {
             if (img->display_stop) break;
             for (auto i = 0; i < width(img->img); i++) {
-                img->display[{i, j}] = tonemap_filmic(img->img[{i, j}],
-                    img->exposure, img->filmic, img->srgb);
+                img->display[{i, j}] = tonemap_filmic(
+                    img->img[{i, j}], img->exposure, img->filmic, img->srgb);
             }
         }
     }
@@ -137,13 +136,13 @@ void update_display_async(app_image* img) {
 
 // load image
 void load_image_async(app_image* img) {
-    auto start     = get_time();
-    img->load_done = false;
-    img->stats_done = false;
+    auto start        = get_time();
+    img->load_done    = false;
+    img->stats_done   = false;
     img->display_done = false;
     img->texture_done = false;
-    img->error_msg = "";
-    img->img       = load_image4f(img->filename);
+    img->error_msg    = "";
+    img->img          = load_image4f(img->filename);
     if (empty(img->img)) img->error_msg = "cannot load image";
     img->load_done = true;
     img->display   = img->img;
@@ -155,24 +154,28 @@ void load_image_async(app_image* img) {
 
 // save an image
 void save_image_async(app_image* img) {
-    if(!save_image4f(img->outname, img->display)) {
+    if (!save_image4f(img->outname, img->display)) {
         img->error_msg = "error saving image";
     }
 }
 
 // add a new image
-void add_new_image(app_state* app, const std::string& filename, const std::string& outname, float exposure = 0, bool filmic = false, bool srgb = true) {
-    auto img         = new app_image();
-    img->filename    = filename;
-    img->outname  = (outname == "") ? replace_extension(filename, ".display.png") : outname;
+void add_new_image(app_state* app, const std::string& filename,
+    const std::string& outname, float exposure = 0, bool filmic = false,
+    bool srgb = true) {
+    auto img      = new app_image();
+    img->filename = filename;
+    img->outname  = (outname == "") ?
+                       replace_extension(filename, ".display.png") :
+                       outname;
     img->name        = get_filename(filename);
     img->is_hdr      = is_hdr_filename(filename);
-    img->exposure = exposure;
-    img->filmic = filmic;
-    img->srgb = srgb;
+    img->exposure    = exposure;
+    img->filmic      = filmic;
+    img->srgb        = srgb;
     img->load_thread = std::thread(load_image_async, img);
     app->imgs.push_back(img);
-    app->img_id = (int)app->imgs.size()-1;
+    app->img_id = (int)app->imgs.size() - 1;
 }
 
 void draw_glwidgets(glwindow* win) {
@@ -185,8 +188,8 @@ void draw_glwidgets(glwindow* win) {
             draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
             draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
             draw_textinput_glwidget(win, "outname", img->outname);
-            if(draw_button_glwidget(win, "save display")) {
-                if(img->display_done) { 
+            if (draw_button_glwidget(win, "save display")) {
+                if (img->display_done) {
                     img->save_thread = std::thread(save_image_async, img);
                 }
             }
@@ -215,8 +218,8 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
-                extents(img->img));
+            auto ij        = get_image_coords(
+                mouse_pos, img->imcenter, img->imscale, extents(img->img));
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < width(img->img) && ij.y >= 0 &&
@@ -253,10 +256,10 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
-        center_image4f(img->imcenter, img->imscale, extents(img->display), win_size,
-            img->zoom_to_fit);
-        draw_glimage(img->gl_txt, extents(img->display),
-            win_size, img->imcenter, img->imscale);
+        center_image4f(img->imcenter, img->imscale, extents(img->display),
+            win_size, img->zoom_to_fit);
+        draw_glimage(img->gl_txt, extents(img->display), win_size,
+            img->imcenter, img->imscale);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -276,9 +279,7 @@ void update(app_state* app) {
 
 void drop_callback(glwindow* win, int num, const char** paths) {
     auto app = (app_state*)get_user_pointer(win);
-    for(auto i = 0; i < num; i ++) {
-        add_new_image(app, paths[i], "");
-    }
+    for (auto i = 0; i < num; i++) { add_new_image(app, paths[i], ""); }
 }
 
 void run_ui(app_state* app) {
@@ -337,12 +338,13 @@ int main(int argc, char* argv[]) {
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     auto outfilename = parse_arg(parser, "--out,-o", ""s, "image out filename");
-    auto filenames = parse_args(
+    auto filenames   = parse_args(
         parser, "images", std::vector<std::string>{}, "image filenames", true);
     check_cmdline(parser);
 
     // loading images
-    for (auto filename : filenames) add_new_image(app, filename, outfilename, exposure, filmic, srgb);
+    for (auto filename : filenames)
+        add_new_image(app, filename, outfilename, exposure, filmic, srgb);
     app->img_id = 0;
 
     // run ui
