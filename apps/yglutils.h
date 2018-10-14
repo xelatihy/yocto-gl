@@ -44,8 +44,18 @@ void set_glviewport(const vec2i& size);
 
 void set_glwireframe(bool enabled);
 
-uint make_glprogram(const char* vertex, const char* fragment);
-void bind_glprogram(uint pid);
+struct glprogram {
+    uint pid = 0;
+    uint vid = 0;
+    uint fid = 0;
+    uint vao = 0;
+
+    operator bool() const { return (bool)pid; }
+};
+
+glprogram make_glprogram(const char* vertex, const char* fragment);
+void bind_glprogram(glprogram& pid);
+void unbind_glprogram();
 
 uint make_gltexture(
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
@@ -66,7 +76,7 @@ uint make_glelementbuffer(const vector<int>& buf, bool dynamic = false);
 uint make_glelementbuffer(const vector<vec2i>& buf, bool dynamic = false);
 uint make_glelementbuffer(const vector<vec3i>& buf, bool dynamic = false);
 
-int get_gluniform_location(uint pid, const char* name);
+int get_gluniform_location(const glprogram& prog, const char* name);
 
 void set_gluniform(int loc, int val);
 void set_gluniform(int loc, const vec2i& val);
@@ -80,17 +90,17 @@ void set_gluniform(int loc, const mat4f& val);
 void set_gluniform(int loc, const frame3f& val);
 
 template <typename T>
-inline void set_gluniform(uint pid, const char* var, const T& val) {
-    set_gluniform(get_gluniform_location(pid, var), val);
+inline void set_gluniform(const glprogram& prog, const char* var, const T& val) {
+    set_gluniform(get_gluniform_location(prog, var), val);
 }
 
 void set_gluniform_texture(int loc, uint tid, int unit);
-void set_gluniform_texture(uint pid, const char* var, uint tid, int unit);
+void set_gluniform_texture(glprogram& prog, const char* var, uint tid, int unit);
 void set_gluniform_texture(int loc, int loc_on, uint tid, int unit);
 void set_gluniform_texture(
-    uint pid, const char* var, const char* var_on, uint tid, int unit);
+    glprogram& prog, const char* var, const char* var_on, uint tid, int unit);
 
-int get_glvertexattrib_location(uint pid, const char* name);
+int get_glvertexattrib_location(const glprogram& prog, const char* name);
 
 void set_glvertexattrib(int loc, int bid, float val);
 void set_glvertexattrib(int loc, int bid, const vec2f& val);
@@ -99,8 +109,8 @@ void set_glvertexattrib(int loc, int bid, const vec4f& val);
 
 template <typename T>
 inline void set_glvertexattrib(
-    uint pid, const char* var, uint bid, const T& val) {
-    set_glvertexattrib(get_glvertexattrib_location(pid, var), bid, val);
+   const glprogram& prog, const char* var, uint bid, const T& val) {
+    set_glvertexattrib(get_glvertexattrib_location(prog, var), bid, val);
 }
 
 void draw_glpoints(uint bid, int num);

@@ -64,12 +64,12 @@ void set_glwireframe(bool enabled) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-uint make_glprogram(const char* vertex, const char* fragment) {
-    uint vid = 0, fid = 0, vao = 0;
+glprogram make_glprogram(const char* vertex, const char* fragment) {
+    auto prog = glprogram();
 
     assert(glGetError() == GL_NO_ERROR);
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    glGenVertexArrays(1, &prog.vao);
+    glBindVertexArray(prog.vao);
     assert(glGetError() == GL_NO_ERROR);
 
     int  errflags;
@@ -77,48 +77,48 @@ uint make_glprogram(const char* vertex, const char* fragment) {
 
     // create vertex
     assert(glGetError() == GL_NO_ERROR);
-    vid = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vid, 1, &vertex, NULL);
-    glCompileShader(vid);
-    glGetShaderiv(vid, GL_COMPILE_STATUS, &errflags);
+    prog.vid = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(prog.vid, 1, &vertex, NULL);
+    glCompileShader(prog.vid);
+    glGetShaderiv(prog.vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(vid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog.vid, 10000, 0, errbuf);
         throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create fragment
     assert(glGetError() == GL_NO_ERROR);
-    fid = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fid, 1, &fragment, NULL);
-    glCompileShader(fid);
-    glGetShaderiv(fid, GL_COMPILE_STATUS, &errflags);
+    prog.fid = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(prog.fid, 1, &fragment, NULL);
+    glCompileShader(prog.fid);
+    glGetShaderiv(prog.fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(fid, 10000, 0, errbuf);
+        glGetShaderInfoLog(prog.fid, 10000, 0, errbuf);
         throw runtime_error(string("shader not compiled\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create program
     assert(glGetError() == GL_NO_ERROR);
-    auto pid = glCreateProgram();
-    glAttachShader(pid, vid);
-    glAttachShader(pid, fid);
-    glLinkProgram(pid);
-    glValidateProgram(pid);
-    glGetProgramiv(pid, GL_LINK_STATUS, &errflags);
+    prog.pid = glCreateProgram();
+    glAttachShader(prog.pid, prog.vid);
+    glAttachShader(prog.pid, prog.fid);
+    glLinkProgram(prog.pid);
+    glValidateProgram(prog.pid);
+    glGetProgramiv(prog.pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
         throw runtime_error(string("program not linked\n\n") + errbuf);
     }
-    glGetProgramiv(pid, GL_VALIDATE_STATUS, &errflags);
+    glGetProgramiv(prog.pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
         throw runtime_error(string("program not linked\n\n") + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
-    return pid;
+    return prog;
 }
 
 uint make_gltexture(
@@ -268,10 +268,11 @@ uint make_glelementbuffer(const vector<vec3i>& buf, bool dynamic) {
     return make_glelementbuffer_impl(buf, dynamic);
 }
 
-void bind_glprogram(uint pid) { glUseProgram(pid); }
+void bind_glprogram(glprogram& prog) { glUseProgram(prog.pid); }
+void unbind_glprogram() { glUseProgram(0); }
 
-int get_gluniform_location(uint pid, const char* name) {
-    return glGetUniformLocation(pid, name);
+int get_gluniform_location(const glprogram& prog, const char* name) {
+    return glGetUniformLocation(prog.pid, name);
 }
 
 void set_gluniform(int loc, int val) {
@@ -342,8 +343,8 @@ void set_gluniform_texture(int loc, uint tid, int unit) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(uint pid, const char* var, uint tid, int unit) {
-    set_gluniform_texture(glGetUniformLocation(pid, var), tid, unit);
+void set_gluniform_texture(glprogram& prog, const char* var, uint tid, int unit) {
+    set_gluniform_texture(get_gluniform_location(prog, var), tid, unit);
 }
 
 void set_gluniform_texture(int loc, int loc_on, uint tid, int unit) {
@@ -360,13 +361,13 @@ void set_gluniform_texture(int loc, int loc_on, uint tid, int unit) {
 }
 
 void set_gluniform_texture(
-    uint pid, const char* var, const char* var_on, uint tid, int unit) {
-    set_gluniform_texture(glGetUniformLocation(pid, var),
-        glGetUniformLocation(pid, var_on), tid, unit);
+    glprogram& prog, const char* var, const char* var_on, uint tid, int unit) {
+    set_gluniform_texture(get_gluniform_location(prog, var),
+        get_gluniform_location(prog, var_on), tid, unit);
 }
 
-int get_glvertexattrib_location(uint pid, const char* name) {
-    return glGetAttribLocation(pid, name);
+int get_glvertexattrib_location(const glprogram& prog, const char* name) {
+    return glGetAttribLocation(prog.pid, name);
 }
 
 void set_glvertexattrib(int loc, int bid, float val) {
@@ -434,7 +435,8 @@ void draw_gltriangles(uint bid, int num) {
 
 void draw_glimage(
     uint gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale) {
-    static uint gl_prog = 0, gl_texcoord = 0, gl_triangles = 0;
+    static glprogram gl_prog = {};
+    static uint gl_texcoord = 0, gl_triangles = 0;
 
     // initialization
     if (!gl_prog) {
@@ -476,7 +478,7 @@ void draw_glimage(
     set_gluniform(gl_prog, "imscale", imscale);
     set_glvertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
     draw_gltriangles(gl_triangles, 2);
-    bind_glprogram(0);
+    unbind_glprogram();
 }
 
 struct glwindow {

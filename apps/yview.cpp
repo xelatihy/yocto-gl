@@ -38,7 +38,7 @@ struct draw_glshape_vbos {
 };
 
 struct draw_glstate {
-    unsigned int                                   gl_prog = 0;
+    glprogram                                   gl_prog = {};
     unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
     unordered_map<const texture*, unsigned int>    txt_id;
 };
@@ -76,7 +76,7 @@ struct app_state {
     bool                         animate    = false;
 };
 
-void draw_glscene(const draw_glstate* state, const scene* scn,
+void draw_glscene(draw_glstate* state, const scene* scn,
     const camera* cam, const vec2i& viewport_size, const void* highlighted,
     bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
     float near_plane, float far_plane);
@@ -465,7 +465,7 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(const draw_glstate* state, const shape* shp,
+void draw_glshape(draw_glstate* state, const shape* shp,
     const material* mat, const mat4f& xform, bool highlighted, bool eyelight,
     bool edges) {
     set_gluniform(state->gl_prog, "shape_xform", xform);
@@ -539,7 +539,7 @@ void draw_glshape(const draw_glstate* state, const shape* shp,
 }
 
 // Display a scene
-void draw_glscene(const draw_glstate* state, const scene* scn,
+void draw_glscene(draw_glstate* state, const scene* scn,
     const camera* cam, const vec2i& viewport_size, const void* highlighted,
     bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
     float near_plane, float far_plane) {
@@ -608,7 +608,7 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
             eyelight, edges);
     }
 
-    bind_glprogram(0);
+    unbind_glprogram();
     if (wireframe) set_glwireframe(false);
 }
 
