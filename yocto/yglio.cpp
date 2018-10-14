@@ -656,6 +656,177 @@ std::vector<std::string> parse_args(cmdline_parser& parser,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// JSON UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Json alias
+using json = nlohmann::json;
+
+// Load a JSON object
+json load_json(const std::string& filename) {
+    auto txt = load_text(filename);
+    if (txt.empty()) return {};
+    try {
+        return json::parse(txt.begin(), txt.end());
+    } catch (...) {
+        log_io_error("could not parse json {}", filename);
+        return {};
+    }
+}
+
+// Save a JSON object
+bool save_json(const std::string& filename, const json& js) {
+    auto str = ""s;
+    try {
+        str = js.dump(4);
+    } catch (...) {
+        log_io_error("could not dump json {}", filename);
+        return false;
+    }
+    return save_text(filename, str);
+}
+
+template <typename T>
+inline void to_json(json& js, const vec2<T>& val) {
+    js = std::array<T, 2>{{val.x, val.y}};
+}
+template <typename T>
+inline void from_json(const json& js, vec2<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const vec3<T>& val) {
+    js = std::array<T, 3>{{val.x, val.y, val.z}};
+}
+template <typename T>
+inline void from_json(const json& js, vec3<T>& val) {
+    auto vala = js.get<std::array<T, 3>>();
+    val       = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const vec4<T>& val) {
+    js = std::array<T, 4>{{val.x, val.y, val.z, val.w}};
+}
+template <typename T>
+inline void from_json(const json& js, vec4<T>& val) {
+    auto vala = js.get<std::array<T, 4>>();
+    val       = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const frame2<T>& val) {
+    js = std::array<vec2<T>, 3>{{val.x, val.y, val.o}};
+}
+template <typename T>
+inline void from_json(const json& js, frame2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 3>>();
+    val       = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const frame3<T>& val) {
+    js = std::array<vec3<T>, 4>{{val.x, val.y, val.z, val.o}};
+}
+template <typename T>
+inline void from_json(const json& js, frame3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 4>>();
+    val       = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const mat2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.x, val.y}};
+}
+template <typename T>
+inline void from_json(const json& js, mat2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const mat3<T>& val) {
+    js = std::array<vec3<T>, 3>{{val.x, val.y, val.z}};
+}
+template <typename T>
+inline void from_json(const json& js, mat3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 3>>();
+    val       = {vala[0], vala[1], vala[2]};
+}
+template <typename T>
+inline void to_json(json& js, const mat4<T>& val) {
+    js = std::array<vec4<T>, 4>{{val.x, val.y, val.z, val.w}};
+}
+template <typename T>
+inline void from_json(const json& js, mat4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 4>>();
+    val       = {vala[0], vala[1], vala[2], vala[3]};
+}
+
+template <typename T>
+inline void to_json(json& js, const bbox1<T>& val) {
+    js = std::array<T, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox1<T>& val) {
+    auto vala = js.get<std::array<T, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox2<T>& val) {
+    js = std::array<vec2<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox2<T>& val) {
+    auto vala = js.get<std::array<vec2<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox3<T>& val) {
+    js = std::array<vec3<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox3<T>& val) {
+    auto vala = js.get<std::array<vec3<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+template <typename T>
+inline void to_json(json& js, const bbox4<T>& val) {
+    js = std::array<vec4<T>, 2>{{val.min, val.max}};
+}
+template <typename T>
+inline void from_json(const json& js, bbox4<T>& val) {
+    auto vala = js.get<std::array<vec4<T>, 2>>();
+    val       = {vala[0], vala[1]};
+}
+
+template <typename T>
+inline void to_json(json& js, const image<T>& val) {
+    js         = json::object();
+    js["size"] = val.size();
+    js["data"] = data_vector(val);
+}
+template <typename T>
+inline void from_json(const json& js, image<T>& val) {
+    auto size = js.at("size").get<vec2i>();
+    auto data = js.at("data").get<std::vector<T>>();
+    val       = image<T>{size, data.data()};
+}
+template <typename T>
+inline void to_json(json& js, const volume<T>& val) {
+    js         = json::object();
+    js["size"] = val.size();
+    js["data"] = data_vector(val);
+}
+template <typename T>
+inline void from_json(const json& js, volume<T>& val) {
+    auto size = js.at("size").get<vec3i>();
+    auto data = js.at("data").get<std::vector<T>>();
+    val       = volume<T>{size, data.data()};
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -847,20 +1018,20 @@ bool save_pfm_image4f(const std::string& filename, const image<vec4f>& img) {
 
 // load exr image weith tiny exr
 image<vec4f> load_exr_image4f(const std::string& filename) {
-        auto size   = zero2i;
-        auto pixels = (vec4f*)nullptr;
-        if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(),
-                nullptr) < 0) {
+    auto size   = zero2i;
+    auto pixels = (vec4f*)nullptr;
+    if (LoadEXR((float**)&pixels, &size.x, &size.y, filename.c_str(), nullptr) <
+        0) {
         log_io_error("error loading image {}", filename);
         return {};
-        }
-        if (!pixels) {
+    }
+    if (!pixels) {
         log_io_error("error loading image {}", filename);
         return {};
-        }
-        auto img = image<vec4f>{size, pixels};
-        free(pixels);
-        return img;
+    }
+    auto img = image<vec4f>{size, pixels};
+    free(pixels);
+    return img;
 }
 bool save_exr_image4f(const std::string& filename, const image<vec4f>& img) {
     if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
@@ -909,24 +1080,24 @@ bool save_png_image4b(const std::string& filename, const image<vec4b>& img) {
     return true;
 }
 bool save_jpg_image4b(const std::string& filename, const image<vec4b>& img) {
-    if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), 75)) {
+    if (!stbi_write_jpg(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_tga_image4b(const std::string& filename, const image<vec4b>& img) {
-    if (!stbi_write_tga(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data())) {
+    if (!stbi_write_tga(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_bmp_image4b(const std::string& filename, const image<vec4b>& img) {
-    if (!stbi_write_bmp(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data())) {
+    if (!stbi_write_bmp(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -969,7 +1140,6 @@ image<vec4f> load_stbi_image4f_from_memory(const byte* data, int data_size) {
     return img;
 }
 
-
 // check hdr extensions
 bool is_hdr_filename(const std::string& filename) {
     auto ext = get_extension(filename);
@@ -1001,7 +1171,7 @@ image<vec4f> load_image4f(const std::string& filename) {
 
 // Saves an hdr image.
 bool save_image4f(const std::string& filename, const image<vec4f>& img) {
-    auto ext  = get_extension(filename);
+    auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         return save_png_image4b(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "jpg" || ext == "JPG") {
@@ -1029,7 +1199,7 @@ image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
 
 // Loads an hdr image.
 image<vec4b> load_image4b(const std::string& filename) {
-    auto ext  = get_extension(filename);
+    auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
         return float_to_byte(linear_to_srgb(load_exr_image4f(filename)));
     } else if (ext == "pfm" || ext == "PFM") {
@@ -1379,465 +1549,508 @@ std::string base64_decode(std::string const& encoded_string) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// JSON UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Json alias
-using json = nlohmann::json;
-
-// Load a JSON object
-json load_json(const std::string& filename) {
-    auto txt = load_text(filename);
-    if (txt.empty()) return {};
-    try {
-        return json::parse(txt.begin(), txt.end());
-    } catch (...) {
-        log_io_error("could not parse json {}", filename);
-        return {};
-    }
-}
-
-// Save a JSON object
-bool save_json(const std::string& filename, const json& js) {
-    auto str = ""s;
-    try {
-        str = js.dump(4);
-    } catch (...) {
-        log_io_error("could not dump json {}", filename);
-        return false;
-    }
-    return save_text(filename, str);
-}
-
-template <typename T>
-inline void to_json(json& js, const vec2<T>& val) {
-    js = std::array<T, 2>{{val.x, val.y}};
-}
-template <typename T>
-inline void from_json(const json& js, vec2<T>& val) {
-    auto vala = js.get<std::array<T, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const vec3<T>& val) {
-    js = std::array<T, 3>{{val.x, val.y, val.z}};
-}
-template <typename T>
-inline void from_json(const json& js, vec3<T>& val) {
-    auto vala = js.get<std::array<T, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const vec4<T>& val) {
-    js = std::array<T, 4>{{val.x, val.y, val.z, val.w}};
-}
-template <typename T>
-inline void from_json(const json& js, vec4<T>& val) {
-    auto vala = js.get<std::array<T, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-template <typename T>
-inline void to_json(json& js, const frame2<T>& val) {
-    js = std::array<vec2<T>, 3>{{val.x, val.y, val.o}};
-}
-template <typename T>
-inline void from_json(const json& js, frame2<T>& val) {
-    auto vala = js.get<std::array<vec2<T>, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const frame3<T>& val) {
-    js = std::array<vec3<T>, 4>{{val.x, val.y, val.z, val.o}};
-}
-template <typename T>
-inline void from_json(const json& js, frame3<T>& val) {
-    auto vala = js.get<std::array<vec3<T>, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-template <typename T>
-inline void to_json(json& js, const mat2<T>& val) {
-    js = std::array<vec2<T>, 2>{{val.x, val.y}};
-}
-template <typename T>
-inline void from_json(const json& js, mat2<T>& val) {
-    auto vala = js.get<std::array<vec2<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const mat3<T>& val) {
-    js = std::array<vec3<T>, 3>{{val.x, val.y, val.z}};
-}
-template <typename T>
-inline void from_json(const json& js, mat3<T>& val) {
-    auto vala = js.get<std::array<vec3<T>, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const mat4<T>& val) {
-    js = std::array<vec4<T>, 4>{{val.x, val.y, val.z, val.w}};
-}
-template <typename T>
-inline void from_json(const json& js, mat4<T>& val) {
-    auto vala = js.get<std::array<vec4<T>, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-template <typename T>
-inline void to_json(json& js, const bbox1<T>& val) {
-    js = std::array<T, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox1<T>& val) {
-    auto vala = js.get<std::array<T, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const bbox2<T>& val) {
-    js = std::array<vec2<T>, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox2<T>& val) {
-    auto vala = js.get<std::array<vec2<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const bbox3<T>& val) {
-    js = std::array<vec3<T>, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox3<T>& val) {
-    auto vala = js.get<std::array<vec3<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const bbox4<T>& val) {
-    js = std::array<vec4<T>, 2>{{val.min, val.max}};
-}
-template <typename T>
-inline void from_json(const json& js, bbox4<T>& val) {
-    auto vala = js.get<std::array<vec4<T>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-
-template <typename T>
-inline void to_json(json& js, const image<T>& val) {
-    js         = json::object();
-    js["size"] = val.size();
-    js["data"] = data_vector(val);
-}
-template <typename T>
-inline void from_json(const json& js, image<T>& val) {
-    auto size = js.at("size").get<vec2i>();
-    auto data = js.at("data").get<std::vector<T>>();
-    val       = image<T>{size, data.data()};
-}
-template <typename T>
-inline void to_json(json& js, const volume<T>& val) {
-    js         = json::object();
-    js["size"] = val.size();
-    js["data"] = data_vector(val);
-}
-template <typename T>
-inline void from_json(const json& js, volume<T>& val) {
-    auto size = js.at("size").get<vec3i>();
-    auto data = js.at("data").get<std::vector<T>>();
-    val       = volume<T>{size, data.data()};
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // BUILTIN JSON FORMAT
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Serialize struct
-void to_json(json& js, const camera& val) {
-    static const auto def = camera();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.frame != def.frame) js["frame"] = val.frame;
-    if (val.ortho != def.ortho) js["ortho"] = val.ortho;
-    if (val.film != def.film) js["film"] = val.film;
-    if (val.focal != def.focal) js["focal"] = val.focal;
-    if (val.focus != def.focus) js["focus"] = val.focus;
-    if (val.aperture != def.aperture) js["aperture"] = val.aperture;
+template <typename T>
+bool operator==(const image<T>& a, const image<T>& b) {
+    return a.size() == b.size() && data_vector(a) == data_vector(b);
+}
+template <typename T>
+bool operator==(const volume<T>& a, const volume<T>& b) {
+    return a.size() == b.size() && data_vector(a) == data_vector(b);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_value(json& js, const T& val) {
+    try {
+        js = val;
+        return true;
+    } catch (...) { return false; }
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_value(json& js, const T& val, const char* name, const T& def) {
+    if (val == def) return true;
+    return dump_json_value(js[name], val);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_value(const json& js, T& val) {
+    try {
+        val = js.get<T>();
+        return true;
+    } catch (...) { return false; }
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_value(const json& js, T& val, const char* name, const T& def) {
+    if (!js.count(name)) return true;
+    val = def;
+    return parse_json_value(js.at(name), val);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, T* val, const std::vector<T*>& refs) {
+    return dump_json_value(js, val ? val->name : ""s);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(
+    json& js, T* val, const char* name, const std::vector<T*>& refs) {
+    if (!val) return true;
+    return dump_json_objref(js[name], val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(
+    json& js, const std::vector<T*>& val, const std::vector<T*>& refs) {
+    js = json::array();
+    for (auto v : val) {
+        js.push_back({});
+        if (!dump_json_objref(js.back(), v, refs)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, const std::vector<T*>& val, const char* name,
+    const std::vector<T*>& refs) {
+    if (val.empty()) return true;
+    return dump_json_objref(js[name], val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, T*& val, const std::vector<T*>& refs) {
+    if (!js.is_string()) return false;
+    auto name = ""s;
+    if (!parse_json_value(js, name)) return false;
+    val = nullptr;
+    for (auto ref : refs) {
+        if (ref->name == name) {
+            val = ref;
+            break;
+        }
+    }
+    if (!val) return false;
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(
+    const json& js, T*& val, const char* name, const std::vector<T*>& refs) {
+    if (!js.count(name)) return true;
+    val = nullptr;
+    return parse_json_objref(js.at(name), val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(
+    const json& js, std::vector<T*>& val, const std::vector<T*>& refs) {
+    if (!js.is_array()) return false;
+    for (auto& j : js) {
+        val.push_back(nullptr);
+        if (!parse_json_objref(j, val.back(), refs)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, std::vector<T*>& val, const char* name,
+    const std::vector<T*>& refs) {
+    if (!js.count(name)) return true;
+    val = {};
+    return parse_json_objref(js.at(name), val, refs);
+}
+
+// Starts a json object
+bool dump_json_objbegin(json& js) {
+    js = json::object();
+    return true;
+}
+
+// Starts a json object
+bool parse_json_objbegin(const json& js) { return js.is_object(); }
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objarray(json& js, const std::vector<T*>& val, const scene* scn) {
+    js = json::array();
+    for (auto& v : val) {
+        js.push_back({});
+        if (!dump_json_object(js.back(), v, scn)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objarray(
+    json& js, const std::vector<T*>& val, const char* name, const scene* scn) {
+    if (val.empty()) return true;
+    return dump_json_objarray(js[name], val, scn);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objarray(
+    const json& js, std::vector<T*>& val, const scene* scn) {
+    if (!js.is_array()) return false;
+    for (auto& j : js) {
+        val.push_back(new T());
+        if (!parse_json_object(j, val.back(), scn)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objarray(
+    const json& js, std::vector<T*>& val, const char* name, const scene* scn) {
+    if (!js.count(name)) return true;
+    val = {};
+    return parse_json_objarray(js.at(name), val, scn);
+}
+
+// Parses and applied a JSON procedural
+template <typename T>
+bool parse_json_procedural(
+    const json& js, T* val, const char* name, const scene* scn) {
+    if (!js.count(name)) return true;
+    return apply_json_procedural(js.at(name), val, scn);
 }
 
 // Procedural commands for cameras
-void from_json_proc(const json& js, camera& val) {
+bool apply_json_procedural(const json& js, camera* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     if (js.count("from") || js.count("to")) {
-        auto from = js.value("from", zero3f);
-        auto to   = js.value("to", zero3f);
-        auto up   = js.value("up", vec3f{0, 1, 0});
-        val.frame = lookat_frame(from, to, up);
-        val.focus = length(from - to);
+        auto from  = js.value("from", zero3f);
+        auto to    = js.value("to", zero3f);
+        auto up    = js.value("up", vec3f{0, 1, 0});
+        val->frame = lookat_frame(from, to, up);
+        val->focus = length(from - to);
     }
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, camera& val) {
+bool dump_json_object(json& js, const camera* val, const scene* scn) {
     static const auto def = camera();
-    val.name              = js.value("name", def.name);
-    val.frame             = js.value("frame", def.frame);
-    val.film              = js.value("film", def.film);
-    val.focal             = js.value("focal", def.focal);
-    val.focus             = js.value("focus", def.focus);
-    val.aperture          = js.value("aperture", def.aperture);
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
+    if (!dump_json_value(js, val->ortho, "ortho", def.ortho)) return false;
+    if (!dump_json_value(js, val->film, "film", def.film)) return false;
+    if (!dump_json_value(js, val->focal, "focal", def.focal)) return false;
+    if (!dump_json_value(js, val->focus, "focus", def.focus)) return false;
+    if (!dump_json_value(js, val->aperture, "aperture", def.aperture))
+        return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const texture& val) {
+bool parse_json_object(const json& js, camera* val, const scene* scn) {
+    static const auto def = camera();
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
+    if (!parse_json_value(js, val->film, "film", def.film)) return false;
+    if (!parse_json_value(js, val->focal, "focal", def.focal)) return false;
+    if (!parse_json_value(js, val->focus, "focus", def.focus)) return false;
+    if (!parse_json_value(js, val->aperture, "aperture", def.aperture))
+        return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
+}
+
+// Serialize struct
+bool dump_json_object(json& js, const texture* val, const scene* scn) {
     static const auto def = texture();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.path != def.path) js["path"] = val.path;
-    if (val.clamp != def.clamp) js["clamp"] = val.clamp;
-    if (val.scale != def.scale) js["scale"] = val.scale;
-    if (val.srgb != def.srgb) js["srgb"] = val.srgb;
-    if (val.path == "") {
-        if (!val.imgf.empty()) js["imgf"] = val.imgf;
-        if (!val.imgb.empty()) js["imgb"] = val.imgb;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->path, "path", def.path)) return false;
+    if (!dump_json_value(js, val->clamp, "clamp", def.clamp)) return false;
+    if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
+    if (!dump_json_value(js, val->srgb, "srgb", def.srgb)) return false;
+    if (val->path == "") {
+        if (!dump_json_value(js, val->imgf, "imgf", def.imgf)) return false;
+        if (!dump_json_value(js, val->imgb, "imgb", def.imgb)) return false;
     }
+    return true;
 }
 
 // Procedural commands for textures
-void from_json_proc(const json& js, texture& val) {
+bool apply_json_procedural(const json& js, texture* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
-    if (type == "") return;
+    if (type == "") return true;
     auto is_hdr = false;
     auto size   = js.value("size", vec2i{512, 512});
     if (type == "grid") {
-        val.imgf = make_grid_image4f(size, js.value("tile", 8),
+        val->imgf = make_grid_image4f(size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val.imgf = make_checker_image4f(size, js.value("tile", 8),
+        val->imgf = make_checker_image4f(size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.imgf = make_bumpdimple_image4f(size, js.value("tile", 8));
+        val->imgf = make_bumpdimple_image4f(size, js.value("tile", 8));
     } else if (type == "uvramp") {
-        val.imgf = make_uvramp_image4f(size);
+        val->imgf = make_uvramp_image4f(size);
     } else if (type == "uvgrid") {
-        val.imgf = make_uvgrid_image4f(size);
+        val->imgf = make_uvgrid_image4f(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        val.imgf = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
+        val->imgf = make_sunsky_image4f(size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        is_hdr   = true;
+        is_hdr    = true;
     } else if (type == "noise") {
-        val.imgf = make_noise_image4f(
+        val->imgf = make_noise_image4f(
             size, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        val.imgf = make_fbm_image4f(size, js.value("scale", 1.0f),
+        val->imgf = make_fbm_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val.imgf = make_ridge_image4f(size, js.value("scale", 1.0f),
+        val->imgf = make_ridge_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        val.imgf = make_turbulence_image4f(size, js.value("scale", 1.0f),
+        val->imgf = make_turbulence_image4f(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
     if (js.value("bump_to_normal", false)) {
-        val.imgf = bump_to_normal_map(val.imgf, js.value("bump_scale", 1.0f));
-        val.srgb = false;
+        val->imgf = bump_to_normal_map(val->imgf, js.value("bump_scale", 1.0f));
+        val->srgb = false;
     }
     if (!is_hdr) {
-        if (val.srgb) {
-            val.imgb = float_to_byte(linear_to_srgb(val.imgf));
+        if (val->srgb) {
+            val->imgb = float_to_byte(linear_to_srgb(val->imgf));
         } else {
-            val.imgb = float_to_byte(val.imgf);
+            val->imgb = float_to_byte(val->imgf);
         }
-        val.imgf = {};
+        val->imgf = {};
     }
-    if (val.path == "") {
-        auto ext = (is_hdr) ? std::string("hdr") : std::string("png");
-        val.path = "textures/" + val.name + "." + ext;
+    if (val->path == "") {
+        auto ext  = (is_hdr) ? std::string("hdr") : std::string("png");
+        val->path = "textures/" + val->name + "." + ext;
     }
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, texture& val) {
+bool parse_json_object(const json& js, texture* val, const scene* scn) {
     static const auto def = texture();
-    val.name              = js.value("name", def.name);
-    val.path              = js.value("path", def.path);
-    val.clamp             = js.value("clamp", def.clamp);
-    val.scale             = js.value("scale", def.scale);
-    val.srgb              = js.value("srgb", def.srgb);
-    val.imgf              = js.value("imgf", def.imgf);
-    val.imgb              = js.value("imgb", def.imgb);
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->clamp, "clamp", def.clamp)) return false;
+    if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
+    if (!parse_json_value(js, val->srgb, "srgb", def.srgb)) return false;
+    if (!parse_json_value(js, val->imgf, "imgf", def.imgf)) return false;
+    if (!parse_json_value(js, val->imgb, "imgb", def.imgb)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const voltexture& val) {
+bool dump_json_object(json& js, const voltexture* val, const scene* scn) {
     static const auto def = voltexture();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.path != def.path) js["path"] = val.path;
-    if (val.clamp != def.clamp) js["clamp"] = val.clamp;
-    if (val.path == "") {
-        if (!val.vol.empty()) js["vol"] = val.vol;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->path, "path", def.path)) return false;
+    if (!dump_json_value(js, val->clamp, "clamp", def.clamp)) return false;
+    if (val->path == "") {
+        if (!val->vol.empty()) js["vol"] = val->vol;
     }
+    return true;
 }
 
 // Procedural commands for textures
-void from_json_proc(const json& js, voltexture& val) {
+bool apply_json_procedural(const json& js, voltexture* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
-    if (type == "") return;
+    if (type == "") return true;
     auto size = js.value("size", vec3i{512, 512, 512});
     if (type == "test_volume") {
-        val.vol = make_test_volume1f(
+        val->vol = make_test_volume1f(
             size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         throw std::runtime_error("unknown texture type " + type);
     }
-    if (val.path == "") {
-        auto ext = std::string("vol");
-        val.path = "textures/" + val.name + "." + ext;
+    if (val->path == "") {
+        auto ext  = std::string("vol");
+        val->path = "textures/" + val->name + "." + ext;
     }
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, voltexture& val) {
+bool parse_json_object(const json& js, voltexture* val, const scene* scn) {
     static const auto def = voltexture();
-    val.name              = js.value("name", def.name);
-    val.path              = js.value("path", def.path);
-    val.vol               = js.value("vol", def.vol);
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->vol, "vol", def.vol)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const material& val) {
+bool dump_json_object(json& js, const material* val, const scene* scn) {
     static const auto def = material();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.base_metallic != def.base_metallic)
-        js["base_metallic"] = val.base_metallic;
-    if (val.gltf_textures != def.gltf_textures)
-        js["gltf_textures"] = val.gltf_textures;
-    if (val.double_sided != def.double_sided)
-        js["double_sided"] = val.double_sided;
-    if (val.ke != def.ke) js["ke"] = val.ke;
-    if (val.kd != def.kd) js["kd"] = val.kd;
-    if (val.ks != def.ks) js["ks"] = val.ks;
-    if (val.kt != def.kt) js["kt"] = val.kt;
-    if (val.rs != def.rs) js["rs"] = val.rs;
-    if (val.op != def.op) js["op"] = val.op;
-    if (val.fresnel != def.fresnel) js["fresnel"] = val.fresnel;
-    if (val.refract != def.refract) js["refract"] = val.refract;
-    if (val.ke_txt != def.ke_txt) js["ke_txt"] = val.ke_txt->name;
-    if (val.kd_txt != def.kd_txt) js["kd_txt"] = val.kd_txt->name;
-    if (val.ks_txt != def.ks_txt) js["ks_txt"] = val.ks_txt->name;
-    if (val.kt_txt != def.kt_txt) js["kt_txt"] = val.kt_txt->name;
-    if (val.rs_txt != def.rs_txt) js["rs_txt"] = val.rs_txt->name;
-    if (val.op_txt != def.op_txt) js["op_txt"] = val.op_txt->name;
-    if (val.occ_txt != def.occ_txt) js["occ_txt"] = val.occ_txt->name;
-    if (val.bump_txt != def.bump_txt) js["bump_txt"] = val.bump_txt->name;
-    if (val.disp_txt != def.disp_txt) js["disp_txt"] = val.disp_txt->name;
-    if (val.norm_txt != def.norm_txt) js["norm_txt"] = val.norm_txt->name;
-    if (val.vd_txt != def.vd_txt) js["vd_txt"] = val.vd_txt->name;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (val->base_metallic != def.base_metallic)
+        js["base_metallic"] = val->base_metallic;
+    if (val->gltf_textures != def.gltf_textures)
+        js["gltf_textures"] = val->gltf_textures;
+    if (val->double_sided != def.double_sided)
+        js["double_sided"] = val->double_sided;
+    if (!dump_json_value(js, val->ke, "ke", def.ke)) return false;
+    if (!dump_json_value(js, val->kd, "kd", def.kd)) return false;
+    if (!dump_json_value(js, val->ks, "ks", def.ks)) return false;
+    if (!dump_json_value(js, val->kt, "kt", def.kt)) return false;
+    if (!dump_json_value(js, val->rs, "rs", def.rs)) return false;
+    if (!dump_json_value(js, val->op, "op", def.op)) return false;
+    if (!dump_json_value(js, val->fresnel, "fresnel", def.fresnel))
+        return false;
+    if (!dump_json_value(js, val->refract, "refract", def.refract))
+        return false;
+    if (!dump_json_objref(js, val->ke_txt, "ke_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->kd_txt, "kd_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->ks_txt, "ks_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->kt_txt, "kt_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->rs_txt, "rs_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->op_txt, "op_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->occ_txt, "occ_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->bump_txt, "bump_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->disp_txt, "disp_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->norm_txt, "norm_txt", scn->textures))
+        return false;
+    if (!dump_json_objref(js, val->vd_txt, "vd_txt", scn->voltextures))
+        return false;
+    return true;
 }
 
 // Procedural commands for materials
-void from_json_proc(const json& js, material& val) {}
-
-// Serialize struct
-void from_json(const json& js, material& val) {
-    static const auto def = material();
-    val.name              = js.value("name", def.name);
-    val.base_metallic     = js.value("base_metallic", def.base_metallic);
-    val.gltf_textures     = js.value("gltf_textures", def.gltf_textures);
-    val.double_sided      = js.value("double_sided", def.double_sided);
-    val.ke                = js.value("ke", def.ke);
-    val.kd                = js.value("kd", def.kd);
-    val.ks                = js.value("ks", def.ks);
-    val.kt                = js.value("kt", def.kt);
-    val.rs                = js.value("rs", def.rs);
-    val.op                = js.value("op", def.op);
-    val.ve                = js.value("ve", def.ve);
-    val.va                = js.value("va", def.va);
-    val.vd                = js.value("vd", def.vd);
-    val.vg                = js.value("vg", def.vg);
-    val.fresnel           = js.value("fresnel", def.fresnel);
-    val.refract           = js.value("refract", def.refract);
-    if (js.count("ke_txt")) {
-        val.ke_txt       = new texture();
-        val.ke_txt->name = js.at("ke_txt").get<std::string>();
-    }
-    if (js.count("kd_txt")) {
-        val.kd_txt       = new texture();
-        val.kd_txt->name = js.at("kd_txt").get<std::string>();
-    }
-    if (js.count("ks_txt")) {
-        val.ks_txt       = new texture();
-        val.ks_txt->name = js.at("ks_txt").get<std::string>();
-    }
-    if (js.count("kt_txt")) {
-        val.kt_txt       = new texture();
-        val.kt_txt->name = js.at("kt_txt").get<std::string>();
-    }
-    if (js.count("rs_txt")) {
-        val.rs_txt       = new texture();
-        val.rs_txt->name = js.at("rs_txt").get<std::string>();
-    }
-    if (js.count("op_txt")) {
-        val.op_txt       = new texture();
-        val.op_txt->name = js.at("op_txt").get<std::string>();
-    }
-    if (js.count("occ_txt")) {
-        val.occ_txt       = new texture();
-        val.occ_txt->name = js.at("occ_txt").get<std::string>();
-    }
-    if (js.count("bump_txt")) {
-        val.bump_txt       = new texture();
-        val.bump_txt->name = js.at("bump_txt").get<std::string>();
-    }
-    if (js.count("disp_txt")) {
-        val.disp_txt       = new texture();
-        val.disp_txt->name = js.at("disp_txt").get<std::string>();
-    }
-    if (js.count("norm_txt")) {
-        val.norm_txt       = new texture();
-        val.norm_txt->name = js.at("norm_txt").get<std::string>();
-    }
-    if (js.count("vd_txt")) {
-        val.vd_txt       = new voltexture();
-        val.vd_txt->name = js.at("vd_txt").get<std::string>();
-    }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+bool apply_json_procedural(const json& js, material* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const shape& val) {
+bool parse_json_object(const json& js, material* val, const scene* scn) {
+    static const auto def = material();
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(
+            js, val->base_metallic, "base_metallic", def.base_metallic))
+        return false;
+    if (!parse_json_value(
+            js, val->gltf_textures, "gltf_textures", def.gltf_textures))
+        return false;
+    if (!parse_json_value(
+            js, val->double_sided, "double_sided", def.double_sided))
+        return false;
+    if (!parse_json_value(js, val->ke, "ke", def.ke)) return false;
+    if (!parse_json_value(js, val->kd, "kd", def.kd)) return false;
+    if (!parse_json_value(js, val->ks, "ks", def.ks)) return false;
+    if (!parse_json_value(js, val->kt, "kt", def.kt)) return false;
+    if (!parse_json_value(js, val->rs, "rs", def.rs)) return false;
+    if (!parse_json_value(js, val->op, "op", def.op)) return false;
+    if (!parse_json_value(js, val->ve, "ve", def.ve)) return false;
+    if (!parse_json_value(js, val->va, "va", def.va)) return false;
+    if (!parse_json_value(js, val->vd, "vd", def.vd)) return false;
+    if (!parse_json_value(js, val->vg, "vg", def.vg)) return false;
+    if (!parse_json_value(js, val->fresnel, "fresnel", def.fresnel))
+        return false;
+    if (!parse_json_value(js, val->refract, "refract", def.refract))
+        return false;
+    if (!parse_json_objref(js, val->ke_txt, "ke_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->kd_txt, "kd_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->ks_txt, "ks_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->kt_txt, "kt_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->rs_txt, "rs_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->op_txt, "op_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->occ_txt, "occ_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->bump_txt, "bump_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->disp_txt, "disp_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->norm_txt, "norm_txt", scn->textures))
+        return false;
+    if (!parse_json_objref(js, val->vd_txt, "vd_txt", scn->voltextures))
+        return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
+}
+
+// Serialize struct
+bool dump_json_object(json& js, const shape* val, const scene* scn) {
     static const auto def = shape();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.path != def.path) js["path"] = val.path;
-    if (val.path == "") {
-        if (val.points != def.points) js["points"] = val.points;
-        if (val.lines != def.lines) js["lines"] = val.lines;
-        if (val.triangles != def.triangles) js["triangles"] = val.triangles;
-        if (val.pos != def.pos) js["pos"] = val.pos;
-        if (val.norm != def.norm) js["norm"] = val.norm;
-        if (val.texcoord != def.texcoord) js["texcoord"] = val.texcoord;
-        if (val.color != def.color) js["color"] = val.color;
-        if (val.radius != def.radius) js["radius"] = val.radius;
-        if (val.tangsp != def.tangsp) js["tangsp"] = val.tangsp;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->path, "path", def.path)) return false;
+    if (val->path == "") {
+        if (!dump_json_value(js, val->points, "points", def.points))
+            return false;
+        if (!dump_json_value(js, val->lines, "lines", def.lines)) return false;
+        if (!dump_json_value(js, val->triangles, "triangles", def.triangles))
+            return false;
+        if (!dump_json_value(js, val->pos, "pos", def.pos)) return false;
+        if (!dump_json_value(js, val->norm, "norm", def.norm)) return false;
+        if (!dump_json_value(js, val->texcoord, "texcoord", def.texcoord))
+            return false;
+        if (!dump_json_value(js, val->color, "color", def.color)) return false;
+        if (!dump_json_value(js, val->radius, "radius", def.radius))
+            return false;
+        if (!dump_json_value(js, val->tangsp, "tangsp", def.tangsp))
+            return false;
     }
+    return true;
 }
 
 // Procedural commands for materials
-void from_json_proc(const json& js, shape& val) {
+bool apply_json_procedural(const json& js, shape* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
-    if (type == "") return;
+    if (type == "") return true;
     auto shp = make_shape_data();
     if (type == "quad") {
         shp = make_quad(js.value("steps", vec2i{1, 1}),
@@ -1918,59 +2131,68 @@ void from_json_proc(const json& js, shape& val) {
         for (auto& p : shp.pos) p = {p.x, p.z, p.y};
         for (auto& n : shp.norm) n = {n.x, n.z, n.y};
     }
-    val.points    = shp.points;
-    val.lines     = shp.lines;
-    val.triangles = shp.triangles;
-    val.pos       = shp.pos;
-    val.norm      = shp.norm;
-    val.texcoord  = shp.texcoord;
-    val.radius    = shp.radius;
-    if (val.path == "") val.path = "meshes/" + val.name + ".ply";
+    val->points    = shp.points;
+    val->lines     = shp.lines;
+    val->triangles = shp.triangles;
+    val->pos       = shp.pos;
+    val->norm      = shp.norm;
+    val->texcoord  = shp.texcoord;
+    val->radius    = shp.radius;
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, shape& val) {
+bool parse_json_object(const json& js, shape* val, const scene* scn) {
     static const auto def = shape();
-    val.name              = js.value("name", def.name);
-    val.path              = js.value("path", def.path);
-    val.points            = js.value("points", def.points);
-    val.lines             = js.value("lines", def.lines);
-    val.triangles         = js.value("triangles", def.triangles);
-    val.pos               = js.value("pos", def.pos);
-    val.norm              = js.value("norm", def.norm);
-    val.texcoord          = js.value("texcoord", def.texcoord);
-    val.color             = js.value("color", def.color);
-    val.radius            = js.value("radius", def.radius);
-    val.tangsp            = js.value("tangsp", def.tangsp);
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->points, "points", def.points)) return false;
+    if (!parse_json_value(js, val->lines, "lines", def.lines)) return false;
+    if (!parse_json_value(js, val->triangles, "triangles", def.triangles))
+        return false;
+    if (!parse_json_value(js, val->pos, "pos", def.pos)) return false;
+    if (!parse_json_value(js, val->norm, "norm", def.norm)) return false;
+    if (!parse_json_value(js, val->texcoord, "texcoord", def.texcoord))
+        return false;
+    if (!parse_json_value(js, val->color, "color", def.color)) return false;
+    if (!parse_json_value(js, val->radius, "radius", def.radius)) return false;
+    if (!parse_json_value(js, val->tangsp, "tangsp", def.tangsp)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const subdiv& val) {
+bool dump_json_object(json& js, const subdiv* val, const scene* scn) {
     static const auto def = subdiv();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.path != def.path) js["path"] = val.path;
-    if (val.level != def.level) js["level"] = val.level;
-    if (val.catmull_clark != def.catmull_clark)
-        js["catmull_clark"] = val.catmull_clark;
-    if (val.compute_normals != def.compute_normals)
-        js["compute_normals"] = val.compute_normals;
-    if (val.path == "") {
-        if (val.quads_pos != def.quads_pos) js["quads_pos"] = val.quads_pos;
-        if (val.quads_texcoord != def.quads_texcoord)
-            js["quads_texcoord"] = val.quads_texcoord;
-        if (val.quads_color != def.quads_color)
-            js["quads_color"] = val.quads_color;
-        if (val.pos != def.pos) js["pos"] = val.pos;
-        if (val.texcoord != def.texcoord) js["texcoord"] = val.texcoord;
-        if (val.color != def.color) js["color"] = val.color;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->path, "path", def.path)) return false;
+    if (!dump_json_value(js, val->level, "level", def.level)) return false;
+    if (val->catmull_clark != def.catmull_clark)
+        js["catmull_clark"] = val->catmull_clark;
+    if (val->compute_normals != def.compute_normals)
+        js["compute_normals"] = val->compute_normals;
+    if (val->path == "") {
+        if (!dump_json_value(js, val->quads_pos, "quads_pos", def.quads_pos))
+            return false;
+        if (val->quads_texcoord != def.quads_texcoord)
+            js["quads_texcoord"] = val->quads_texcoord;
+        if (val->quads_color != def.quads_color)
+            js["quads_color"] = val->quads_color;
+        if (!dump_json_value(js, val->pos, "pos", def.pos)) return false;
+        if (!dump_json_value(js, val->texcoord, "texcoord", def.texcoord))
+            return false;
+        if (!dump_json_value(js, val->color, "color", def.color)) return false;
     }
+    return true;
 }
 
 // Procedural commands for subdivs
-void from_json_proc(const json& js, subdiv& val) {
+bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
-    if (type == "") return;
+    if (type == "") return true;
     auto shp = make_shape_data();
     if (type == "cube") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
@@ -1989,296 +2211,284 @@ void from_json_proc(const json& js, subdiv& val) {
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
-    val.quads_pos      = shp.quads_pos;
-    val.pos            = shp.pos;
-    val.quads_texcoord = shp.quads_texcoord;
-    val.texcoord       = shp.texcoord;
-    if (val.path == "") val.path = "meshes/" + val.name + ".obj";
+    val->quads_pos      = shp.quads_pos;
+    val->pos            = shp.pos;
+    val->quads_texcoord = shp.quads_texcoord;
+    val->texcoord       = shp.texcoord;
+    if (val->path == "") val->path = "meshes/" + val->name + ".obj";
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, subdiv& val) {
+bool parse_json_object(const json& js, subdiv* val, const scene* scn) {
     static const auto def = subdiv();
-    val.name              = js.value("name", def.name);
-    val.path              = js.value("path", def.path);
-    val.level             = js.value("level", def.level);
-    val.catmull_clark     = js.value("catmull_clark", def.catmull_clark);
-    val.compute_normals   = js.value("compute_normals", def.compute_normals);
-    val.quads_pos         = js.value("quads_pos", def.quads_pos);
-    val.quads_texcoord    = js.value("quads_texcoord", def.quads_texcoord);
-    val.quads_color       = js.value("quads_color", def.quads_color);
-    val.pos               = js.value("pos", def.pos);
-    val.texcoord          = js.value("texcoord", def.texcoord);
-    val.color             = js.value("color", def.color);
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->level, "level", def.level)) return false;
+    if (!parse_json_value(
+            js, val->catmull_clark, "catmull_clark", def.catmull_clark))
+        return false;
+    if (!parse_json_value(
+            js, val->compute_normals, "compute_normals", def.compute_normals))
+        return false;
+    if (!parse_json_value(js, val->quads_pos, "quads_pos", def.quads_pos))
+        return false;
+    if (!parse_json_value(
+            js, val->quads_texcoord, "quads_texcoord", def.quads_texcoord))
+        return false;
+    if (!parse_json_value(js, val->quads_color, "quads_color", def.quads_color))
+        return false;
+    if (!parse_json_value(js, val->pos, "pos", def.pos)) return false;
+    if (!parse_json_value(js, val->texcoord, "texcoord", def.texcoord))
+        return false;
+    if (!parse_json_value(js, val->color, "color", def.color)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const instance& val) {
+bool dump_json_object(json& js, const instance* val, const scene* scn) {
     static const auto def = instance();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.frame != def.frame) js["frame"] = val.frame;
-    if (val.shp != def.shp) js["shp"] = val.shp->name;
-    if (val.mat != def.mat) js["mat"] = val.mat->name;
-    if (val.sbd != def.sbd) js["sbd"] = val.sbd->name;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
+    if (!dump_json_objref(js, val->shp, "shp", scn->shapes)) return false;
+    if (!dump_json_objref(js, val->mat, "mat", scn->materials)) return false;
+    if (!dump_json_objref(js, val->sbd, "sbd", scn->subdivs)) return false;
+    return true;
 }
 
 // Procedural commands for instances
-void from_json_proc(const json& js, instance& val) {
+bool apply_json_procedural(const json& js, instance* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     if (js.count("from")) {
-        auto from = js.value("from", zero3f);
-        auto to   = js.value("to", zero3f);
-        auto up   = js.value("up", vec3f{0, 1, 0});
-        val.frame = lookat_frame(from, to, up, true);
+        auto from  = js.value("from", zero3f);
+        auto to    = js.value("to", zero3f);
+        auto up    = js.value("up", vec3f{0, 1, 0});
+        val->frame = lookat_frame(from, to, up, true);
     }
     if (js.count("translation") || js.count("rotation") || js.count("scale")) {
         auto translation = js.value("translation", zero3f);
         auto rotation    = js.value("rotation", zero4f);
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
-        val.frame = translation_frame(translation) * scaling_frame(scaling) *
-                    rotation_frame(xyz(rotation), rotation.w);
+        val->frame = translation_frame(translation) * scaling_frame(scaling) *
+                     rotation_frame(xyz(rotation), rotation.w);
     }
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, instance& val) {
+bool parse_json_object(const json& js, instance* val, const scene* scn) {
     static const auto def = instance();
-    val.name              = js.value("name", def.name);
-    val.frame             = js.value("frame", def.frame);
-    if (js.count("shp")) {
-        val.shp       = new shape();
-        val.shp->name = js.at("shp").get<std::string>();
-    }
-    if (js.count("mat")) {
-        val.mat       = new material();
-        val.mat->name = js.at("mat").get<std::string>();
-    }
-    if (js.count("sbd")) {
-        val.sbd       = new subdiv();
-        val.sbd->name = js.at("sbd").get<std::string>();
-    }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
+    if (!parse_json_objref(js, val->shp, "shp", scn->shapes)) return false;
+    if (!parse_json_objref(js, val->sbd, "sbd", scn->subdivs)) return false;
+    if (!parse_json_objref(js, val->mat, "mat", scn->materials)) return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const environment& val) {
+bool dump_json_object(json& js, const environment* val, const scene* scn) {
     static const auto def = environment();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.frame != def.frame) js["frame"] = val.frame;
-    if (val.ke != def.ke) js["ke"] = val.ke;
-    if (val.ke_txt != def.ke_txt) js["ke_txt"]["name"] = val.ke_txt->name;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
+    if (!dump_json_value(js, val->ke, "ke", def.ke)) return false;
+    if (val->ke_txt != def.ke_txt) js["ke_txt"]["name"] = val->ke_txt->name;
+    return true;
 }
 
 // Procedural commands for materials
-void from_json_proc(const json& js, environment& val) {
+bool apply_json_procedural(const json& js, environment* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
-        val.frame     = rotation_frame(xyz(rotation), rotation.w);
+        val->frame    = rotation_frame(xyz(rotation), rotation.w);
     }
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, environment& val) {
+bool parse_json_object(const json& js, environment* val, const scene* scn) {
     static const auto def = environment();
-    val.name              = js.value("name", def.name);
-    val.frame             = js.value("frame", def.frame);
-    val.ke                = js.value("ke", def.ke);
-    if (js.count("ke_txt")) {
-        val.ke_txt       = new texture();
-        val.ke_txt->name = js.at("ke_txt").get<std::string>();
-    }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
+    if (!parse_json_value(js, val->ke, "ke", def.ke)) return false;
+    if (!parse_json_objref(js, val->ke_txt, "ke_txt", scn->textures))
+        return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const node& val) {
+bool dump_json_object(json& js, const node* val, const scene* scn) {
     static const auto def = node();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.local != def.local) js["local"] = val.local;
-    if (val.translation != def.translation) js["translation"] = val.translation;
-    if (val.rotation != def.rotation) js["rotation"] = val.rotation;
-    if (val.scale != def.scale) js["scale"] = val.scale;
-    if (val.weights != def.weights) js["weights"] = val.weights;
-    if (val.parent != def.parent) js["parent"] = val.parent->name;
-    if (val.cam != def.cam) js["cam"] = val.cam->name;
-    if (val.ist != def.ist) js["ist"] = val.ist->name;
-    if (val.env != def.env) js["env"] = val.env->name;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->local, "local", def.local)) return false;
+    if (!dump_json_value(js, val->translation, "translation", def.translation))
+        return false;
+    if (!dump_json_value(js, val->rotation, "rotation", def.rotation))
+        return false;
+    if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
+    if (!dump_json_value(js, val->weights, "weights", def.weights))
+        return false;
+    if (!dump_json_objref(js, val->parent, "parent", scn->nodes)) return false;
+    if (!dump_json_objref(js, val->cam, "cam", scn->cameras)) return false;
+    if (!dump_json_objref(js, val->ist, "ist", scn->instances)) return false;
+    if (!dump_json_objref(js, val->env, "env", scn->environments)) return false;
+    return true;
 }
 
 // Procedural commands for nodes
-void from_json_proc(const json& js, node& val) {
+bool apply_json_procedural(const json& js, node* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     if (js.count("from")) {
-        auto from = js.value("from", zero3f);
-        auto to   = js.value("to", zero3f);
-        auto up   = js.value("up", vec3f{0, 1, 0});
-        val.local = lookat_frame(from, to, up, true);
+        auto from  = js.value("from", zero3f);
+        auto to    = js.value("to", zero3f);
+        auto up    = js.value("up", vec3f{0, 1, 0});
+        val->local = lookat_frame(from, to, up, true);
     }
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, node& val) {
+bool parse_json_object(const json& js, node* val, const scene* scn) {
     static const auto def = node();
-    val.name              = js.value("name", def.name);
-    val.local             = js.value("local", def.local);
-    val.translation       = js.value("translation", def.translation);
-    val.rotation          = js.value("rotation", def.rotation);
-    val.scale             = js.value("scale", def.scale);
-    val.weights           = js.value("weights", def.weights);
-    if (js.count("parent")) {
-        val.parent       = new node();
-        val.parent->name = js.at("parent").get<std::string>();
-    }
-    if (js.count("cam")) {
-        val.cam       = new camera();
-        val.cam->name = js.at("cam").get<std::string>();
-    }
-    if (js.count("ist")) {
-        val.ist       = new instance();
-        val.ist->name = js.at("ist").get<std::string>();
-    }
-    if (js.count("env")) {
-        val.env       = new environment();
-        val.env->name = js.at("env").get<std::string>();
-    }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->local, "local", def.local)) return false;
+    if (!parse_json_value(js, val->translation, "translation", def.translation))
+        return false;
+    if (!parse_json_value(js, val->rotation, "rotation", def.rotation))
+        return false;
+    if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
+    if (!parse_json_value(js, val->weights, "weights", def.weights))
+        return false;
+    if (!parse_json_objref(js, val->parent, "parent", scn->nodes)) return false;
+    if (!parse_json_objref(js, val->ist, "ist", scn->instances)) return false;
+    if (!parse_json_objref(js, val->cam, "cam", scn->cameras)) return false;
+    if (!parse_json_objref(js, val->env, "env", scn->environments))
+        return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize enum
-void to_json(json& js, const animation_type& val) {
+bool dump_json_value(json& js, const animation_type& val) {
     static auto names = std::map<animation_type, std::string>{
         {animation_type::linear, "linear"},
         {animation_type::step, "step"},
         {animation_type::bezier, "bezier"},
     };
-    js = names.at(val);
+    auto vals = names.at(val);
+    return dump_json_value(js, vals);
 }
 
 // Serialize enum
-void from_json(const json& js, animation_type& val) {
+bool parse_json_value(const json& js, animation_type& val) {
     static auto names = std::map<std::string, animation_type>{
         {"linear", animation_type::linear},
         {"step", animation_type::step},
         {"bezier", animation_type::bezier},
     };
-    val = names.at(js.get<std::string>());
+    auto vals = ""s;
+    if (!parse_json_value(js, vals)) return false;
+    try {
+        val = names.at(js.get<std::string>());
+    } catch (...) { return false; }
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const animation& val) {
+bool dump_json_object(json& js, const animation* val, const scene* scn) {
     static const auto def = animation();
-    if (val.name != def.name) js["name"] = val.name;
-    if (val.path != def.path) js["path"] = val.path;
-    if (val.group != def.group) js["group"] = val.group;
-    if (val.type != def.type) js["type"] = val.type;
-    if (val.path == "") {
-        if (val.times != def.times) js["times"] = val.times;
-        if (val.translation != def.translation)
-            js["translation"] = val.translation;
-        if (val.rotation != def.rotation) js["rotation"] = val.rotation;
-        if (val.scale != def.scale) js["scale"] = val.scale;
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_value(js, val->path, "path", def.path)) return false;
+    if (!dump_json_value(js, val->group, "group", def.group)) return false;
+    if (!dump_json_value(js, val->type, "type", def.type)) return false;
+    if (val->path == "") {
+        if (!dump_json_value(js, val->times, "times", def.times)) return false;
+        if (val->translation != def.translation)
+            js["translation"] = val->translation;
+        if (!dump_json_value(js, val->rotation, "rotation", def.rotation))
+            return false;
+        if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
     }
-    if (val.targets != def.targets) {
-        js["targets"] = json::array();
-        for (auto v : val.targets) js["targets"].push_back(v->name);
-    }
+    if (!dump_json_objref(js, val->targets, "targets", scn->nodes))
+        return false;
+    return true;
 }
 
 // Procedural commands for animations
-void from_json_proc(const json& js, animation& val) {
+bool apply_json_procedural(const json& js, animation* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation_axisangle")) {
         for (auto& j : js.at("rotation_axisangle")) {
-            val.rotation.push_back(rotation_quat(j.get<vec4f>()));
+            val->rotation.push_back(rotation_quat(j.get<vec4f>()));
         }
     }
+    return true;
 }
 
 // Serialize struct
-void from_json(const json& js, animation& val) {
+bool parse_json_object(const json& js, animation* val, const scene* scn) {
     static const auto def = animation();
-    val.name              = js.value("name", def.name);
-    val.path              = js.value("path", def.path);
-    val.group             = js.value("group", def.group);
-    val.type              = js.value("type", def.type);
-    val.times             = js.value("times", def.times);
-    val.translation       = js.value("translation", def.translation);
-    val.rotation          = js.value("rotation", def.rotation);
-    val.scale             = js.value("scale", def.scale);
-    for (auto& j : js.value("targets", json::array())) {
-        val.targets.push_back(new node());
-        val.targets.back()->name = j.get<std::string>();
-    }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), val);
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->group, "group", def.group)) return false;
+    if (!parse_json_value(js, val->type, "type", def.type)) return false;
+    if (!parse_json_value(js, val->times, "times", def.times)) return false;
+    if (!parse_json_value(js, val->translation, "translation", def.translation))
+        return false;
+    if (!parse_json_value(js, val->rotation, "rotation", def.rotation))
+        return false;
+    if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
+    if (!parse_json_objref(js, val->targets, "targets", scn->nodes))
+        return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
+    return true;
 }
 
 // Serialize struct
-void to_json(json& js, const scene& val) {
+bool dump_json_object(json& js, const scene* val, const scene* scn) {
     static const auto def = scene();
-    if (val.name != def.name) js["name"] = val.name;
-    if (!val.cameras.empty()) {
-        js["cameras"] = json::array();
-        for (auto v : val.cameras) js["cameras"].push_back(json(*v));
-    }
-    if (!val.textures.empty()) {
-        js["textures"] = json::array();
-        for (auto v : val.textures) js["textures"].push_back(json(*v));
-    }
-    if (!val.materials.empty()) {
-        js["materials"] = json::array();
-        for (auto v : val.materials) js["materials"].push_back(json(*v));
-    }
-    if (!val.shapes.empty()) {
-        js["shapes"] = json::array();
-        for (auto v : val.shapes) js["shapes"].push_back(json(*v));
-    }
-    if (!val.subdivs.empty()) {
-        js["subdivs"] = json::array();
-        for (auto v : val.subdivs) js["subdivs"].push_back(json(*v));
-    }
-    if (!val.instances.empty()) {
-        js["instances"] = json::array();
-        for (auto v : val.instances) js["instances"].push_back(json(*v));
-    }
-    if (!val.environments.empty()) {
-        js["environments"] = json::array();
-        for (auto v : val.environments) js["environments"].push_back(json(*v));
-    }
-    if (!val.nodes.empty()) {
-        js["nodes"] = json::array();
-        for (auto v : val.nodes) js["nodes"].push_back(json(*v));
-    }
-    if (!val.animations.empty()) {
-        js["animations"] = json::array();
-        for (auto v : val.animations) js["animations"].push_back(*v);
-    }
+    if (!dump_json_objbegin(js)) return false;
+    if (!dump_json_value(js, val->name, "name", def.name)) return false;
+    if (!dump_json_objarray(js, val->cameras, "cameras", scn)) return false;
+    if (!dump_json_objarray(js, val->textures, "textures", scn)) return false;
+    if (!dump_json_objarray(js, val->materials, "materials", scn)) return false;
+    if (!dump_json_objarray(js, val->shapes, "shapes", scn)) return false;
+    if (!dump_json_objarray(js, val->subdivs, "subdivs", scn)) return false;
+    if (!dump_json_objarray(js, val->instances, "instances", scn)) return false;
+    if (!dump_json_objarray(js, val->environments, "environments", scn))
+        return false;
+    if (!dump_json_objarray(js, val->nodes, "nodes", scn)) return false;
+    if (!dump_json_objarray(js, val->animations, "animations", scn))
+        return false;
+    return true;
 }
-void to_json(json& js, const scene* val) {
-    if (!val) {
-        js = json();
-        return;
-    }
-    to_json(js, *val);
-}
-
-template <typename T>
-static std::unordered_map<std::string, T*> make_named_map(
-    const std::vector<T*>& elems) {
-    auto map = std::unordered_map<std::string, T*>();
-    for (auto elem : elems) map[elem->name] = elem;
-    return map;
-};
 
 // Procedural commands for scenes
-void from_json_proc(const json& js, scene& val) {
+bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
+    if (!parse_json_objbegin(js)) return false;
     if (js.count("random_instances")) {
         auto& jjs  = js.at("random_instances");
         auto  num  = jjs.value("num", 100);
         auto  seed = jjs.value("seed", 13);
         auto  base = new instance();
-        from_json(jjs.at("base"), *base);
+        parse_json_object(jjs.at("base"), base, scn);
         auto ists = std::vector<instance*>();
         for (auto& j : jjs.at("instances")) {
             ists.push_back(new instance());
-            from_json(j, *ists.back());
+            parse_json_object(j, ists.back(), scn);
         }
 
         auto pos                      = std::vector<vec3f>();
@@ -2294,116 +2504,48 @@ void from_json_proc(const json& js, scene& val) {
         for (auto i = 0; i < num; i++) {
             auto ist = ists.at(rand1i(rng, (int)ists.size() - 1));
             nmap[ist] += 1;
-            val.instances.push_back(new instance());
-            val.instances.back()->name  = ist->name + std::to_string(nmap[ist]);
-            val.instances.back()->frame = base->frame *
-                                          translation_frame(pos[i]) * ist->frame;
-            val.instances.back()->shp = ist->shp;
-            val.instances.back()->mat = ist->mat;
-            val.instances.back()->sbd = ist->sbd;
+            val->instances.push_back(new instance());
+            val->instances.back()->name = ist->name + std::to_string(nmap[ist]);
+            val->instances.back()->frame = base->frame *
+                                           translation_frame(pos[i]) *
+                                           ist->frame;
+            val->instances.back()->shp = ist->shp;
+            val->instances.back()->mat = ist->mat;
+            val->instances.back()->sbd = ist->sbd;
         }
     }
+    return true;
 }
 
 // Json to scene
-bool json_to_scene(scene* scn, const json& js) {
-    // parse json scene
-    scn->name = js.value("name", ""s);
-    for (auto& j : js.value("cameras", json::array())) {
-        scn->cameras.push_back(new camera());
-        from_json(j, *scn->cameras.back());
-    }
-    for (auto& j : js.value("textures", json::array())) {
-        scn->textures.push_back(new texture());
-        from_json(j, *scn->textures.back());
-    }
-    for (auto& j : js.value("materials", json::array())) {
-        scn->materials.push_back(new material());
-        from_json(j, *scn->materials.back());
-    }
-    for (auto& j : js.value("shapes", json::array())) {
-        scn->shapes.push_back(new shape());
-        from_json(j, *scn->shapes.back());
-    }
-    for (auto& j : js.value("subdivs", json::array())) {
-        scn->subdivs.push_back(new subdiv());
-        from_json(j, *scn->subdivs.back());
-    }
-    for (auto& j : js.value("instances", json::array())) {
-        scn->instances.push_back(new instance());
-        from_json(j, *scn->instances.back());
-    }
-    for (auto& j : js.value("environments", json::array())) {
-        scn->environments.push_back(new environment());
-        from_json(j, *scn->environments.back());
-    }
-    for (auto& j : js.value("voltextures", json::array())) {
-        scn->voltextures.push_back(new voltexture());
-        from_json(j, *scn->voltextures.back());
-    }
-    for (auto& j : js.value("nodes", json::array())) {
-        scn->nodes.push_back(new node());
-        from_json(j, *scn->nodes.back());
-    }
-    for (auto& j : js.value("animations", json::array())) {
-        scn->animations.push_back(new animation());
-        from_json(j, *scn->animations.back());
-    }
-    if (js.count("!!proc")) from_json_proc(js.at("!!proc"), *scn);
-
-    // fix references
-    auto cmap    = make_named_map(scn->cameras);
-    auto tmap    = make_named_map(scn->textures);
-    auto vmap    = make_named_map(scn->voltextures);
-    auto mmap    = make_named_map(scn->materials);
-    auto smap    = make_named_map(scn->shapes);
-    auto rmap    = make_named_map(scn->subdivs);
-    auto imap    = make_named_map(scn->instances);
-    auto emap    = make_named_map(scn->environments);
-    auto nmap    = make_named_map(scn->nodes);
-    auto fix_ref = [](auto& map, auto& elems, auto& ref) {
-        if (!ref) return;
-        auto name = ref->name;
-        if (map.find(ref->name) != map.end()) {
-            ref = map.at(name);
-        } else {
-            map[ref->name] = ref;
-            elems.push_back(ref);
-        }
-    };
-    for (auto anm : scn->animations) {
-        for (auto& nde : anm->targets) fix_ref(nmap, scn->nodes, nde);
-    }
-    for (auto nde : scn->nodes) {
-        fix_ref(nmap, scn->nodes, nde->parent);
-        fix_ref(cmap, scn->cameras, nde->cam);
-        fix_ref(imap, scn->instances, nde->ist);
-        fix_ref(emap, scn->environments, nde->env);
-    }
-    for (auto env : scn->environments) {
-        fix_ref(tmap, scn->textures, env->ke_txt);
-    }
-    for (auto ist : scn->instances) {
-        fix_ref(mmap, scn->materials, ist->mat);
-        fix_ref(smap, scn->shapes, ist->shp);
-        fix_ref(rmap, scn->subdivs, ist->sbd);
-    }
-    for (auto mat : scn->materials) {
-        fix_ref(tmap, scn->textures, mat->ke_txt);
-        fix_ref(tmap, scn->textures, mat->kd_txt);
-        fix_ref(tmap, scn->textures, mat->ks_txt);
-        fix_ref(tmap, scn->textures, mat->kt_txt);
-        fix_ref(tmap, scn->textures, mat->op_txt);
-        fix_ref(tmap, scn->textures, mat->rs_txt);
-        fix_ref(tmap, scn->textures, mat->occ_txt);
-        fix_ref(tmap, scn->textures, mat->norm_txt);
-        fix_ref(tmap, scn->textures, mat->bump_txt);
-        fix_ref(tmap, scn->textures, mat->disp_txt);
-        fix_ref(vmap, scn->voltextures, mat->vd_txt);
-    }
-
-    // done
+bool parse_json_object(const json& js, scene* val, const scene* scn) {
+    static const auto def = scene();
+    if (!parse_json_objbegin(js)) return false;
+    if (!parse_json_value(js, val->name, "name", def.name)) return false;
+    if (!parse_json_objarray(js, val->cameras, "cameras", scn)) return false;
+    if (!parse_json_objarray(js, val->textures, "textures", scn)) return false;
+    if (!parse_json_objarray(js, val->voltextures, "voltextures", scn))
+        return false;
+    if (!parse_json_objarray(js, val->materials, "materials", scn))
+        return false;
+    if (!parse_json_objarray(js, val->shapes, "shapes", scn)) return false;
+    if (!parse_json_objarray(js, val->subdivs, "subdivs", scn)) return false;
+    if (!parse_json_objarray(js, val->instances, "instances", scn))
+        return false;
+    if (!parse_json_objarray(js, val->environments, "environments", scn))
+        return false;
+    if (!parse_json_objarray(js, val->nodes, "nodes", scn)) return false;
+    if (!parse_json_objarray(js, val->animations, "animations", scn))
+        return false;
+    if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
+}
+
+bool dump_json_object(json& js, const scene* val) {
+    return dump_json_object(js, val, val);
+}
+bool parse_json_object(const json& js, scene* val) {
+    return parse_json_object(js, val, val);
 }
 
 // Load a scene in the builtin JSON format.
@@ -2418,7 +2560,7 @@ scene* load_json_scene(
 
     // deserialize json
     try {
-        if (!json_to_scene(scn, js)) {
+        if (!parse_json_object(js, scn)) {
             log_io_error("could not deserialize json {}", filename);
             return nullptr;
         }
@@ -2474,8 +2616,14 @@ bool save_json_scene(const std::string& filename, const scene* scn,
     // save json
     auto js = json();
     try {
-        js = json(scn);
-    } catch (...) { return false; }
+        if (!dump_json_object(js, scn)) {
+            log_io_error("could not serialize json {}", filename);
+            return false;
+        }
+    } catch (...) {
+        log_io_error("could not serialize json {}", filename);
+        return false;
+    }
     if (!save_json(filename, js)) return false;
 
     // save meshes
