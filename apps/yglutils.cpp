@@ -130,18 +130,18 @@ uint make_gltexture(
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_float) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.size().x, img.size().y,
-            0, GL_RGBA, GL_FLOAT, img.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width(img), height(img),
+            0, GL_RGBA, GL_FLOAT, data(img));
     } else {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0,
-            GL_RGBA, GL_FLOAT, img.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(img), height(img), 0,
+            GL_RGBA, GL_FLOAT, data(img));
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -156,14 +156,14 @@ void update_gltexture(
     int tid, const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, tid);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-        GL_FLOAT, img.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width(img), height(img), GL_RGBA,
+        GL_FLOAT, data(img));
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -180,18 +180,18 @@ uint make_gltexture(
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.size().x,
-            img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width(img),
+            height(img), 0, GL_RGBA, GL_UNSIGNED_BYTE, data(img));
     } else {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(img), height(img), 0,
+            GL_RGBA, GL_UNSIGNED_BYTE, data(img));
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -206,14 +206,14 @@ void update_gltexture(
     int tid, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, tid);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-        GL_UNSIGNED_BYTE, img.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width(img), height(img), GL_RGBA,
+        GL_UNSIGNED_BYTE, data(img));
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);

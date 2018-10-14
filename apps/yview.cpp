@@ -624,9 +624,9 @@ draw_glstate* init_draw_state(glwindow* win) {
     state->gl_prog         = make_glprogram(vertex, fragment);
     state->txt_id[nullptr] = 0;
     for (auto txt : app->scn->textures) {
-        if (!txt->imgf.empty()) {
+        if (!empty(txt->imgf)) {
             state->txt_id[txt] = make_gltexture(txt->imgf, true, true, true);
-        } else if (!txt->imgb.empty()) {
+        } else if (!empty(txt->imgb)) {
             state->txt_id[txt] = make_gltexture(
                 txt->imgb, txt->srgb, true, true);
         } else {
