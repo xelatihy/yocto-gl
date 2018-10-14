@@ -612,6 +612,10 @@ bool begin_header_glwidget(glwindow* win, const char* lbl) {
 }
 void end_header_glwidget(glwindow* win) { ImGui::PopID(); }
 
+bool draw_button_glwidget(glwindow* win, const char* lbl) {
+    return ImGui::Button(lbl);
+}
+
 void draw_label_glwidgets(
     glwindow* win, const char* lbl, const std::string& txt) {
     ImGui::LabelText(lbl, "%s", txt.c_str());
@@ -628,7 +632,7 @@ void draw_separator_glwidget(glwindow* win) { ImGui::Separator(); }
 
 void continue_glwidgets_line(glwindow* win) { ImGui::SameLine(); }
 
-bool draw_textinput_glwidgets(glwindow* win, const char* lbl, std::string& val) {
+bool draw_textinput_glwidget(glwindow* win, const char* lbl, std::string& val) {
     char buf[4096];
     auto num = 0;
     for (auto c : val) buf[num++] = c;

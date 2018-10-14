@@ -155,7 +155,9 @@ void end_header_widget(glwindow* win);
 void draw_separator_glwidget(glwindow* win);
 void continue_glwidgets_line(glwindow* win);
 
-bool draw_textinput_glwidgets(glwindow* win, const char* lbl, std::string& val);
+bool draw_button_glwidget(glwindow* win, const char* lbl);
+
+bool draw_textinput_glwidget(glwindow* win, const char* lbl, std::string& val);
 bool draw_slider_glwidget(
     glwindow* win, const char* lbl, float& val, float min, float max);
 bool draw_slider_glwidget(

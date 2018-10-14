@@ -58,7 +58,7 @@ struct app_image {
 
     // computation futures
     std::atomic<bool> load_done, display_done, stats_done, texture_done;
-    std::thread       load_thread, display_thread, stats_thread;
+    std::thread       load_thread, display_thread, stats_thread, save_thread;
     std::atomic<bool> display_stop;
     std::string       error_msg = "";
 
@@ -73,6 +73,7 @@ struct app_image {
         if (load_thread.joinable()) load_thread.join();
         if (display_thread.joinable()) display_thread.join();
         if (stats_thread.joinable()) stats_thread.join();
+        if (save_thread.joinable()) save_thread.join();
     }
 };
 
@@ -152,6 +153,13 @@ void load_image_async(app_image* img) {
     img->stats_thread   = std::thread(update_stats_async, img);
 }
 
+// save an image
+void save_image_async(app_image* img) {
+    if(!save_image4f(img->outname, img->display)) {
+        img->error_msg = "error saving image";
+    }
+}
+
 // add a new image
 void add_new_image(app_state* app, const std::string& filename, const std::string& outname, float exposure = 0, bool filmic = false, bool srgb = true) {
     auto img         = new app_image();
@@ -176,7 +184,12 @@ void draw_glwidgets(glwindow* win) {
         if (begin_header_glwidget(win, "image")) {
             draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
             draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
-            draw_textinput_glwidgets(win, "outname", img->outname);
+            draw_textinput_glwidget(win, "outname", img->outname);
+            if(draw_button_glwidget(win, "save display")) {
+                if(img->display_done) { 
+                    img->save_thread = std::thread(save_image_async, img);
+                }
+            }
             auto status = std::string();
             if (img->error_msg != "")
                 status = "error: " + img->error_msg;
@@ -226,6 +239,7 @@ void draw_glwidgets(glwindow* win) {
             img->display_stop = true;
             img->display_thread.join();
         }
+        if (img->save_thread.joinable()) img->save_thread.join();
         img->display_stop   = false;
         img->display_thread = std::thread(update_display_async, img);
     }
