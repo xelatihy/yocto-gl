@@ -514,6 +514,10 @@ void delete_glwindow(glwindow* win) {
 
 void* get_user_pointer(glwindow* win) { return glfwGetWindowUserPointer(win); }
 
+void set_drop_callback(glwindow* win, void (*callback)(glwindow* win, int num, const char** paths)) {
+    glfwSetDropCallback(win, callback);
+}
+
 vec2i get_glframebuffer_size(glwindow* win) {
     auto size = zero2i;
     glfwGetFramebufferSize(win, &size.x, &size.y);

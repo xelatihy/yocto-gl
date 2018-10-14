@@ -177,6 +177,20 @@ void load_image_async(app_image* img) {
     img->stats_thread   = std::thread(update_stats_async, img);
 }
 
+// add a new image
+void add_new_image(app_state* app, const std::string& filename, float exposure = 0, bool filmic = false, bool srgb = true) {
+    auto img         = new app_image();
+    img->filename    = filename;
+    img->name        = get_filename(filename);
+    img->is_hdr      = is_hdr_filename(filename);
+    img->exposure = exposure;
+    img->filmic = filmic;
+    img->srgb = srgb;
+    img->load_thread = std::thread(load_image_async, img);
+    app->imgs.push_back(img);
+    app->img_id = (int)app->imgs.size()-1;
+}
+
 void draw_glwidgets(glwindow* win) {
     auto app    = (app_state*)get_user_pointer(win);
     auto edited = false;
@@ -269,11 +283,19 @@ void update(app_state* app) {
     }
 }
 
+void drop_callback(glwindow* win, int num, const char** paths) {
+    auto app = (app_state*)get_user_pointer(win);
+    for(auto i = 0; i < num; i ++) {
+        add_new_image(app, paths[i]);
+    }
+}
+
 void run_ui(app_state* app) {
     // window
     auto img      = app->imgs.at(app->img_id);
     auto win_size = vec2i{720 + 320, 720};
     auto win      = make_glwindow(win_size, "yimview", app, draw);
+    set_drop_callback(win, drop_callback);
 
     // init widgets
     init_glwidgets(win);
@@ -320,7 +342,7 @@ int main(int argc, char* argv[]) {
     auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "display exposure");
     auto filmic   = parse_arg(parser, "--filmic", false, "display filmic");
-    auto srgb     = parse_arg(parser, "--srgb", true, "display as sRGB");
+    auto srgb     = parse_arg(parser, "--no-srgb", true, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     auto filenames = parse_args(
@@ -328,17 +350,7 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // loading images
-    for (auto filename : filenames) {
-        auto img         = new app_image();
-        img->filename    = filename;
-        img->name        = get_filename(filename);
-        img->is_hdr      = is_hdr_filename(filename);
-        img->exposure    = exposure;
-        img->filmic      = filmic;
-        img->srgb        = srgb;
-        img->load_thread = std::thread(load_image_async, img);
-        app->imgs.push_back(img);
-    }
+    for (auto filename : filenames) add_new_image(app, filename, exposure, filmic, srgb);
     app->img_id = 0;
 
     // run ui
