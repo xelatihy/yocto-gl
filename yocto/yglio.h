@@ -908,6 +908,7 @@ template<typename T>
 inline T parse_arg(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
     auto vals = parse_string(parser, name, to_string(def), usage, req, {});
+    if(vals == to_string(def)) return def;
     auto val  = def;
     if (!parse(vals, val)) {
         parser.error += "bad value for " + name;
