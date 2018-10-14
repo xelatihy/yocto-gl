@@ -814,7 +814,7 @@ inline void from_json(const json& js, image<T>& val) {
 template <typename T>
 inline void to_json(json& js, const volume<T>& val) {
     js         = json::object();
-    js["size"] = val.size();
+    js["size"] = extents(val);
     js["data"] = data_vector(val);
 }
 template <typename T>
@@ -1299,7 +1299,7 @@ volume<float> load_volume1f(const std::string& filename) {
 bool save_volume1f(const std::string& filename, const volume<float>& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
-    if (!write_value(fs, vol.size())) return false;
+    if (!write_value(fs, extents(vol))) return false;
     if (!write_values(fs, data_vector(vol))) return false;
     return true;
 }
@@ -1370,10 +1370,10 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
 
     // load volumes
     for (auto txt : scn->voltextures) {
-        if (txt->path == "" || !txt->vol.empty()) continue;
+        if (txt->path == "" || !empty(txt->vol)) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         txt->vol      = load_volume1f(filename);
-        if (txt->vol.empty()) {
+        if (empty(txt->vol)) {
             if (!skip_missing) return false;
         }
     }
@@ -1426,7 +1426,7 @@ bool save_scene_textures(
 
     // save volumes
     for (auto txt : scn->voltextures) {
-        if (txt->vol.empty()) continue;
+        if (empty(txt->vol)) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (!save_volume1f(filename, txt->vol)) {
             if (!skip_missing) return false;
@@ -1880,7 +1880,7 @@ bool dump_json_object(json& js, const voltexture* val, const scene* scn) {
     if (!dump_json_value(js, val->path, "path", def.path)) return false;
     if (!dump_json_value(js, val->clamp, "clamp", def.clamp)) return false;
     if (val->path == "") {
-        if (!val->vol.empty()) js["vol"] = val->vol;
+        if (!empty(val->vol)) js["vol"] = val->vol;
     }
     return true;
 }

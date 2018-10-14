@@ -4064,7 +4064,7 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
 
 // Lookup a texture value
 float lookup_voltexture(const voltexture* txt, const vec3i& ijk) {
-    if (txt->vol.empty()) {
+    if (empty(txt->vol)) {
         return txt->vol[ijk];
     } else {
         return 0;
@@ -4073,7 +4073,7 @@ float lookup_voltexture(const voltexture* txt, const vec3i& ijk) {
 
 // Evaluate a volume texture
 float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
-    if (!txt || txt->vol.empty()) return 1;
+    if (!txt || empty(txt->vol)) return 1;
 
     // get image width/height
     auto width  = ygl::width(txt->vol);

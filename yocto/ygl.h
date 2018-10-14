@@ -2788,10 +2788,6 @@ struct volume {
     volume(const vec3i& size, const T* v)
         : _size{size}, _data(v, v + size.x * size.y * size.z) {}
 
-    // size
-    vec3i size() const { return _size; }
-    bool  empty() const { return _data.empty(); }
-
     // pixel access
     T& operator[](const vec3i& ijk) {
         return _data[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
@@ -2802,16 +2798,6 @@ struct volume {
     // T& at(int i, int j) { return _data.at(ij.z * _size.x * _size.y + j *
     // _size.x + i); } const T& at(int i, int j) const { return _data.at(ij.z *
     // _size.x * _size.y + j * _size.x + i); }
-
-    // data acess
-    T*                    data() { return _data.data(); }
-    const T*              data() const { return _data.data(); }
-    T*                    begin() { return _data.data(); }
-    const T*              begin() const { return _data.data(); }
-    T*                    end() { return _data.data() + _data.size(); }
-    const T*              end() const { return _data.data() + _data.size(); }
-    std::vector<T>&       data_vector() { return _data; }
-    const std::vector<T>& data_vector() const { return _data; }
 
     // private data
     vec3i          _size = {0, 0};
