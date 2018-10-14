@@ -1555,11 +1555,11 @@ namespace ygl {
 
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
-    return a._size == b._size && a._data == b._data;
+    return a.extents == b.extents && a.data == b.data;
 }
 template <typename T>
 bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a._.size == b._size && a._data == b._data;
+    return a._.size == b.extents && a.data == b.data;
 }
 
 // Dumps a json value
