@@ -46,7 +46,7 @@ struct app_image {
 
     // diplay image
     image<vec4f> display;
-    uint         gl_txt = 0;
+    gltexture    gl_txt = {};
 
     // image stats
     image_stats stats;
@@ -282,9 +282,9 @@ void update(app_state* app) {
     }
 }
 
-void drop_callback(glwindow* win, int num, const char** paths) {
+void drop_callback(glwindow* win, const vector<string>& paths) {
     auto app = (app_state*)get_user_pointer(win);
-    for (auto i = 0; i < num; i++) { add_new_image(app, paths[i], ""); }
+    for (auto path : paths) add_new_image(app, path, "");
 }
 
 void run_ui(app_state* app) {

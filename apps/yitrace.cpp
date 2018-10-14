@@ -56,7 +56,7 @@ struct app_state {
     bool                         navigation_fps = false;
     bool                         quiet          = false;
     int64_t                      trace_start    = 0;
-    uint                         gl_txt         = 0;
+    gltexture                    gl_txt         = {};
 };
 
 void draw_glwidgets(glwindow* win) {
