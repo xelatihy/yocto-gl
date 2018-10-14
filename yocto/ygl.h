@@ -295,6 +295,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -332,6 +333,8 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
+using std::unique_ptr;
+using std::make_unique;
 using namespace std::string_literals;
 
 using byte = unsigned char;

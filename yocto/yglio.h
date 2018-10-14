@@ -538,7 +538,7 @@ struct ply_data {
 };
 
 // Load ply mesh
-ply_data load_ply(const string& filename);
+ply_data* load_ply(const string& filename);
 
 }  // namespace ygl
 
