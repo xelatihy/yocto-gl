@@ -40,7 +40,7 @@ struct draw_glshape_vbos {
 struct draw_glstate {
     glprogram                                   gl_prog = {};
     unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
-    unordered_map<const texture*, unsigned int>    txt_id;
+    unordered_map<const texture*, gltexture>    txt_id;
 };
 
 // Application state
@@ -482,17 +482,17 @@ void draw_glshape(draw_glstate* state, const shape* shp,
     set_gluniform(state->gl_prog, "mat_op", mat->op);
     set_gluniform(state->gl_prog, "mat_double_sided", (int)mat->double_sided);
     set_gluniform_texture(state->gl_prog, "mat_ke_txt", "mat_ke_txt_on",
-        mat->ke_txt ? state->txt_id.at(mat->ke_txt) : 0, 0);
+        state->txt_id.at(mat->ke_txt), 0);
     set_gluniform_texture(state->gl_prog, "mat_kd_txt", "mat_kd_txt_on",
-        mat->kd_txt ? state->txt_id.at(mat->kd_txt) : 0, 1);
+        state->txt_id.at(mat->kd_txt), 1);
     set_gluniform_texture(state->gl_prog, "mat_ks_txt", "mat_ks_txt_on",
-        mat->ks_txt ? state->txt_id.at(mat->ks_txt) : 0, 2);
+        state->txt_id.at(mat->ks_txt), 2);
     set_gluniform_texture(state->gl_prog, "mat_rs_txt", "mat_rs_txt_on",
-        mat->rs_txt ? state->txt_id.at(mat->rs_txt) : 0, 3);
+        state->txt_id.at(mat->rs_txt), 3);
     set_gluniform_texture(state->gl_prog, "mat_op_txt", "mat_op_txt_on",
-        mat->op_txt ? state->txt_id.at(mat->op_txt) : 0, 4);
+        state->txt_id.at(mat->op_txt), 4);
     set_gluniform_texture(state->gl_prog, "mat_norm_txt", "mat_norm_txt_on",
-        mat->norm_txt ? state->txt_id.at(mat->norm_txt) : 0, 5);
+        state->txt_id.at(mat->norm_txt), 5);
 
     auto& vbos = state->shp_vbos.at(shp);
     set_gluniform(state->gl_prog, "elem_faceted", (int)shp->norm.empty());
@@ -617,7 +617,7 @@ draw_glstate* init_draw_state(glwindow* win) {
     auto state = new draw_glstate();
     // load textures and vbos
     state->gl_prog         = make_glprogram(vertex, fragment);
-    state->txt_id[nullptr] = 0;
+    state->txt_id[nullptr] = {};
     for (auto txt : app->scn->textures) {
         if (!empty(txt->imgf)) {
             state->txt_id[txt] = make_gltexture(txt->imgf, true, true, true);

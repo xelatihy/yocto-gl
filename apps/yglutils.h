@@ -49,7 +49,6 @@ struct glprogram {
     uint vid = 0;
     uint fid = 0;
     uint vao = 0;
-
     operator bool() const { return (bool)pid; }
 };
 
@@ -57,15 +56,20 @@ glprogram make_glprogram(const char* vertex, const char* fragment);
 void bind_glprogram(glprogram& pid);
 void unbind_glprogram();
 
-uint make_gltexture(
+struct gltexture {
+    uint tid = 0;
+    operator bool() const { return (bool)tid; }
+};
+
+gltexture make_gltexture(
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
 void update_gltexture(
-    int tid, const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
+    gltexture& txt, const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
 
-uint make_gltexture(
+gltexture make_gltexture(
     const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
 void update_gltexture(
-    int tid, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
+    gltexture& txt, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
 
 uint make_glarraybuffer(const vector<float>& buf, bool dynamic = false);
 uint make_glarraybuffer(const vector<vec2f>& buf, bool dynamic = false);
@@ -94,11 +98,11 @@ inline void set_gluniform(const glprogram& prog, const char* var, const T& val) 
     set_gluniform(get_gluniform_location(prog, var), val);
 }
 
-void set_gluniform_texture(int loc, uint tid, int unit);
-void set_gluniform_texture(glprogram& prog, const char* var, uint tid, int unit);
-void set_gluniform_texture(int loc, int loc_on, uint tid, int unit);
+void set_gluniform_texture(int loc, const gltexture& txt, int unit);
+void set_gluniform_texture(glprogram& prog, const char* var, const gltexture& txt, int unit);
+void set_gluniform_texture(int loc, int loc_on, const gltexture& txt, int unit);
 void set_gluniform_texture(
-    glprogram& prog, const char* var, const char* var_on, uint tid, int unit);
+    glprogram& prog, const char* var, const char* var_on, const gltexture& txt, int unit);
 
 int get_glvertexattrib_location(const glprogram& prog, const char* name);
 
@@ -118,7 +122,7 @@ void draw_gllines(uint bid, int num);
 void draw_gltriangles(uint bid, int num);
 
 void draw_glimage(
-    uint gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale);
+    const gltexture& txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale);
 
 struct glwindow;
 

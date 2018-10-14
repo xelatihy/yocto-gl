@@ -46,7 +46,7 @@ struct app_image {
 
     // diplay image
     image<vec4f> display;
-    uint         gl_txt = 0;
+    gltexture         gl_txt = {};
 
     // image stats
     image_stats stats;
