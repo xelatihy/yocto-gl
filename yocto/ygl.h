@@ -431,11 +431,11 @@ const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Access component by index.
 template <typename T>
-inline const T& at(const vec3<T>& v, int i) {
+inline const T& element_at(const vec3<T>& v, int i) {
     return *(&v.x + i);
 }
 template <typename T>
-inline T& at(vec3<T>& v, int i) {
+inline T& element_at(vec3<T>& v, int i) {
     return *(&v.x + i);
 }
 
@@ -2479,82 +2479,26 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
+    int       width  = 0;   // image width
+    int       height = 0;   // image height
+    vector<T> pixels = {};  // image pixels
+
     // constructors
-    image() : extents{0, 0}, data() {}
-    image(const vec2i& wh, const T& v = T{})
-        : extents{wh}, data(wh.x * wh.y, v) {}
-    image(const vec2i& wh, const T* v)
-        : extents{wh}, data(v, v + wh.x * wh.y) {}
-
-    // pixel access
-    T& operator[](const vec2i& ij) { return data[ij.y * extents.x + ij.x]; }
-    const T& operator[](const vec2i& ij) const {
-        return data[ij.y * extents.x + ij.x];
-    }
-    // T& at(int i, int j) { return data.at(j * extents.x + i); }
-    // const T& at(int i, int j) const { return data.at(j * extents.x + i); }
-
-    // private data
-    vec2i     extents = {0, 0};
-    vector<T> data    = {};
+    image() : width{0}, height{0}, pixels() {}
+    image(int w, int h, const T& v = T{})
+        : width{w}, height{h}, pixels(w * h, v) {}
+    image(int w, int h, const T* v)
+        : width{w}, height{h}, pixels(v, v + w * h) {}
 };
 
-// Size
+// Element access.
 template <typename T>
-int width(const image<T>& img) {
-    return img.extents.x;
+inline T& pixel_at(image<T>& img, int i, int j) {
+    return img.pixels[j * img.width + i];
 }
 template <typename T>
-int height(const image<T>& img) {
-    return img.extents.y;
-}
-template <typename T>
-vec2i extents(const image<T>& img) {
-    return img.extents;
-}
-template <typename T>
-size_t size(const image<T>& img) {
-    return img.data.size();
-}
-template <typename T>
-bool empty(const image<T>& img) {
-    return img.data.empty();
-}
-
-// Data access
-template <typename T>
-T* data(image<T>& img) {
-    return img.data.data();
-}
-template <typename T>
-const T* data(const image<T>& img) {
-    return img.data.data();
-}
-template <typename T>
-vector<T>& data_vector(image<T>& img) {
-    return img.data;
-}
-template <typename T>
-const vector<T>& data_vector(const image<T>& img) {
-    return img.data;
-}
-
-// Iteration
-template <typename T>
-T* begin(image<T>& img) {
-    return img.data.data();
-}
-template <typename T>
-const T* begin(const image<T>& img) {
-    return img.data.data();
-}
-template <typename T>
-T* end(image<T>& img) {
-    return img.data.data() + img.data.size();
-}
-template <typename T>
-const T* end(const image<T>& img) {
-    return img.data.data() + img.data.size();
+inline const T& pixel_at(const image<T>& img, int i, int j) {
+    return img.pixels[j * img.width + i];
 }
 
 }  // namespace ygl
@@ -2688,7 +2632,7 @@ image<vec4f> tonemap_filmic(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
+image<vec4f> resize_image(const image<vec4f>& img, int width, int height);
 
 }  // namespace ygl
 
@@ -2698,42 +2642,42 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 namespace ygl {
 
 // Make example images.
-image<vec4f> make_grid_image4f(const vec2i& size, int tile = 8,
+image<vec4f> make_grid_image4f(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_checker_image4f(const vec2i& size, int tile = 8,
+image<vec4f> make_checker_image4f(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_bumpdimple_image4f(const vec2i& size, int tile = 8);
-image<vec4f> make_ramp_image4f(
-    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
-image<vec4f> make_gammaramp_image4f(const vec2i& size);
-image<vec4f> make_uvramp_image4f(const vec2i& size);
+image<vec4f> make_bumpdimple_image4f(int width, int height, int tile = 8);
+image<vec4f> make_ramp_image4f(int width, int height, const vec4f& c0,
+    const vec4f& c1, float srgb = false);
+image<vec4f> make_gammaramp_image4f(int width, int height);
+image<vec4f> make_uvramp_image4f(int width, int height);
 image<vec4f> make_uvgrid_image4f(
-    const vec2i& size, int tile = 8, bool colored = true);
+    int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
+image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le = {1, 1, 1},
-    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
-    float lheight = pif / 16);
+image<vec4f> make_lights_image4f(int width, int height,
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+    float lwidth = pif / 16, float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 image<vec4f> make_noise_image4f(
-    const vec2i& size, float scale = 1, bool wrap = true);
-image<vec4f> make_fbm_image4f(const vec2i& size, float scale = 1,
+    int width, int height, float scale = 1, bool wrap = true);
+image<vec4f> make_fbm_image4f(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image<vec4f> make_ridge_image4f(const vec2i& size, float scale = 1,
+image<vec4f> make_ridge_image4f(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image<vec4f> make_turbulence_image4f(const vec2i& size, float scale = 1,
+image<vec4f> make_turbulence_image4f(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -2808,109 +2752,27 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
+    int       width  = 0;   // volume width
+    int       height = 0;   // volume height
+    int       depth  = 0;   // volume height
+    vector<T> voxels = {};  // volume voxels
+
     // constructors
-    volume() : extents{0, 0}, data() {}
-    volume(const vec3i& size, const T& v = T{})
-        : extents{size}, data(size.x * size.y, v) {}
-    volume(const vec3i& size, const T* v)
-        : extents{size}, data(v, v + size.x * size.y * size.z) {}
-
-    // pixel access
-    T& operator[](const vec3i& ijk) {
-        return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
-    }
-    const T& operator[](const vec3i& ijk) const {
-        return data[ijk.z * extents.x * extents.y + ijk.y * extents.x + ijk.x];
-    }
-    // T& at(int i, int j) { return data.at(ij.z * extents.x * extents.y + j *
-    // extents.x + i); } const T& at(int i, int j) const { return data.at(ij.z *
-    // extents.x * extents.y + j * extents.x + i); }
-
-    // private data
-    vec3i     extents = {0, 0};
-    vector<T> data    = {};
+    volume() : width{0}, height{0}, depth{0}, voxels() {}
+    volume(int w, int h, int d, const T& v = T{})
+        : width{w}, height{h}, depth{d}, voxels(w * h * d, v) {}
+    volume(int w, int h, int d, const T* v)
+        : width{w}, height{h}, depth{d}, voxels(v, v + w * h * d) {}
 };
-
-// Size
-template <typename T>
-int width(const volume<T>& vol) {
-    return vol.extents.x;
-}
-template <typename T>
-int height(const volume<T>& vol) {
-    return vol.extents.y;
-}
-template <typename T>
-int depth(const volume<T>& vol) {
-    return vol.extents.z;
-}
-template <typename T>
-vec3i extents(const volume<T>& vol) {
-    return vol.extents;
-}
-template <typename T>
-size_t size(const volume<T>& vol) {
-    return vol.data.size();
-}
-template <typename T>
-bool empty(const volume<T>& vol) {
-    return vol.data.empty();
-}
 
 // Element access
 template <typename T>
-T& at(volume<T>& vol, const vec3i& ijk) {
-    return vol.data[ijk.z * vol.extents.x * vol.extents.y +
-                    ijk.y * vol.extents.x + ijk.x];
+T& voxel_at(volume<T>& vol, int i, int j, int k) {
+    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 template <typename T>
-const T& at(const volume<T>& vol, const vec3i& ijk) {
-    return vol.data[ijk.z * vol.extents.x * vol.extents.y +
-                    ijk.y * vol.extents.x + ijk.x];
-}
-template <typename T>
-T& at(volume<T>& vol, int i, int j, int k) {
-    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
-}
-template <typename T>
-const T& at(const volume<T>& vol, int i, int j, int k) {
-    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
-}
-
-// Data access
-template <typename T>
-T* data(volume<T>& vol) {
-    return vol.data.data();
-}
-template <typename T>
-const T* data(const volume<T>& vol) {
-    return vol.data.data();
-}
-template <typename T>
-vector<T>& data_vector(volume<T>& vol) {
-    return vol.data;
-}
-template <typename T>
-const vector<T>& data_vector(const volume<T>& vol) {
-    return vol.data;
-}
-
-// Iteration
-template <typename T>
-T* begin(volume<T>& vol) {
-    return vol.data.data();
-}
-template <typename T>
-const T* begin(const volume<T>& vol) {
-    return vol.data.data();
-}
-template <typename T>
-T* end(volume<T>& vol) {
-    return vol.data.data() + vol.data.size();
-}
-template <typename T>
-const T* end(const volume<T>& vol) {
-    return vol.data.data() + vol.data.size();
+const T& voxel_at(const volume<T>& vol, int i, int j, int k) {
+    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 
 }  // namespace ygl
@@ -2922,7 +2784,7 @@ namespace ygl {
 
 // make a simple example volume
 volume<float> make_test_volume1f(
-    const vec3i& size, float scale = 10, float exponent = 6);
+    int width, int height, int depth, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
@@ -3199,7 +3061,7 @@ inline environment* make_sky_environment(
     auto txt    = new texture();
     txt->name   = name;
     txt->path   = "textures/" + name + ".hdr";
-    txt->imgf   = make_sunsky_image4f({1024, 512}, sun_angle);
+    txt->imgf   = make_sunsky_image4f(1024, 512, sun_angle);
     auto env    = new environment();
     env->name   = name;
     env->ke     = {1, 1, 1};
@@ -3267,9 +3129,9 @@ vec3f eval_environment(const scene* scn, const vec3f& i);
 
 // Evaluate a texture.
 vec2i eval_texture_size(const texture* txt);
-vec4f lookup_texture(const texture* txt, const vec2i& ij);
+vec4f lookup_texture(const texture* txt, int i, int j);
 vec4f eval_texture(const texture* txt, const vec2f& texcoord);
-float lookup_voltexture(const voltexture* txt, const vec3i& ijk);
+float lookup_voltexture(const voltexture* txt, int i, int j, int k);
 float eval_voltexture(const voltexture* txt, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.

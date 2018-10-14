@@ -617,9 +617,9 @@ draw_glstate* init_draw_state(glwindow* win) {
     state->prog          = make_glprogram(vertex, fragment);
     state->txts[nullptr] = {};
     for (auto txt : app->scn->textures) {
-        if (!empty(txt->imgf)) {
+        if (!txt->imgf.pixels.empty()) {
             state->txts[txt] = make_gltexture(txt->imgf, true, true, true);
-        } else if (!empty(txt->imgb)) {
+        } else if (!txt->imgb.pixels.empty()) {
             state->txts[txt] = make_gltexture(txt->imgb, txt->srgb, true, true);
         } else {
             printf("bad texture");
@@ -651,9 +651,10 @@ draw_glstate* init_draw_state(glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto cam   = app->scn->cameras.at(app->camid);
-    auto wsize = clamp(eval_image_size(cam, app->resolution), 256, 1440);
-    auto win   = make_glwindow(wsize, "yview", app, draw);
+    auto cam    = app->scn->cameras.at(app->camid);
+    auto width  = clamp(eval_image_size(cam, app->resolution).x, 256, 1440),
+         height = clamp(eval_image_size(cam, app->resolution).y, 256, 1440);
+    auto win    = make_glwindow(width, height, "yview", app, draw);
 
     // init widget
     init_glwidgets(win);
