@@ -32,7 +32,7 @@ using namespace ygl;
 
 #if 0
 template <typename Image>
-Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
+Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto width = imgs[0].size().x * tilex;
     auto height = imgs[0].size().y * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
@@ -63,13 +63,13 @@ Image make_image_grid(const std::vector<Image>& imgs, int tilex) {
 #endif
 
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
-    float range_sigma, const std::vector<image<vec4f>>& features,
-    const std::vector<float>& features_sigma) {
+    float range_sigma, const vector<image<vec4f>>& features,
+    const vector<float>& features_sigma) {
     auto filtered     = image<vec4f>{extents(img)};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw           = 1 / (2.0f * range_sigma * range_sigma);
-    auto fw           = std::vector<float>();
+    auto fw           = vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
     for (auto j = 0; j < height(img); j++) {
@@ -83,8 +83,8 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
                     if (ii >= width(img) || jj >= height(img)) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
-                    auto w   = (float)std::exp(-dot(uv, uv) * sw) *
-                             (float)std::exp(-dot(rgb, rgb) * rw);
+                    auto w   = (float)exp(-dot(uv, uv) * sw) *
+                             (float)exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
                         auto feat = features[fi][{i, j}] -
                                     features[fi][{ii, jj}];
@@ -117,8 +117,7 @@ image<vec4f> filter_bilateral(
                     if (ii >= width(img) || jj >= height(img)) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
-                    auto w   = std::exp(-dot(uv, uv) * sw) *
-                             std::exp(-dot(rgb, rgb) * rw);
+                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
                     av += w * img[{ii, jj}];
                     aw += w;
                 }

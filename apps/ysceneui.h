@@ -34,10 +34,8 @@
 #include "yglutils.h"
 using namespace ygl;
 
-#include <map>
-
-inline const std::map<animation_type, std::string>& animation_type_names() {
-    static auto names = std::map<animation_type, std::string>{
+inline const map<animation_type, string>& animation_type_names() {
+    static auto names = map<animation_type, string>{
         {animation_type::linear, "linear"},
         {animation_type::step, "step"},
         {animation_type::bezier, "bezier"},
@@ -47,11 +45,11 @@ inline const std::map<animation_type, std::string>& animation_type_names() {
 
 template <typename T>
 inline void draw_scene_tree_glwidgets_rec(
-    glwindow* win, const std::string& lbl_, T* val, void*& sel) {}
+    glwindow* win, const string& lbl_, T* val, void*& sel) {}
 
 template <typename T>
 inline void draw_glwidgets_scene_tree(
-    glwindow* win, const std::string& lbl_, T* val, void*& sel) {
+    glwindow* win, const string& lbl_, T* val, void*& sel) {
     if (!val) return;
     auto lbl = val->name;
     if (!lbl_.empty()) lbl = lbl_ + ": " + val->name;
@@ -63,7 +61,7 @@ inline void draw_glwidgets_scene_tree(
 
 template <>
 inline void draw_scene_tree_glwidgets_rec<instance>(
-    glwindow* win, const std::string& lbl_, instance* val, void*& sel) {
+    glwindow* win, const string& lbl_, instance* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "shp", val->shp, sel);
     draw_glwidgets_scene_tree(win, "sbd", val->sbd, sel);
     draw_glwidgets_scene_tree(win, "mat", val->mat, sel);
@@ -71,7 +69,7 @@ inline void draw_scene_tree_glwidgets_rec<instance>(
 
 template <>
 inline void draw_scene_tree_glwidgets_rec<material>(
-    glwindow* win, const std::string& lbl_, material* val, void*& sel) {
+    glwindow* win, const string& lbl_, material* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel);
     draw_glwidgets_scene_tree(win, "kd", val->kd_txt, sel);
     draw_glwidgets_scene_tree(win, "ks", val->ks_txt, sel);
@@ -81,27 +79,27 @@ inline void draw_scene_tree_glwidgets_rec<material>(
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<environment>(
-    glwindow* win, const std::string& lbl_, environment* val, void*& sel) {
+    glwindow* win, const string& lbl_, environment* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel);
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<node>(
-    glwindow* win, const std::string& lbl_, node* val, void*& sel) {
+    glwindow* win, const string& lbl_, node* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "ist", val->ist, sel);
     draw_glwidgets_scene_tree(win, "cam", val->cam, sel);
     draw_glwidgets_scene_tree(win, "env", val->env, sel);
     draw_glwidgets_scene_tree(win, "par", val->parent, sel);
     auto cid = 0;
     for (auto ch : val->children) {
-        draw_glwidgets_scene_tree(win, "ch" + std::to_string(cid++), ch, sel);
+        draw_glwidgets_scene_tree(win, "ch" + to_string(cid++), ch, sel);
     }
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<animation>(
-    glwindow* win, const std::string& lbl_, animation* val, void*& sel) {
+    glwindow* win, const string& lbl_, animation* val, void*& sel) {
     auto tid = 0;
     for (auto tg : val->targets) {
-        draw_glwidgets_scene_tree(win, "tg" + std::to_string(tid++), tg, sel);
+        draw_glwidgets_scene_tree(win, "tg" + to_string(tid++), tg, sel);
     }
 }
 
@@ -324,9 +322,9 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
-    scene* scn, void*& sel,
-    std::vector<std::pair<std::string, void*>>& update_list, int height) {
+inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
+    scene* scn, void*& sel, vector<tuple<string, void*>>& update_list,
+    int height) {
     if (!scn) return false;
     draw_glwidgets_scene_tree(win, scn, sel);
     auto update_len = update_list.size();
@@ -353,9 +351,9 @@ inline bool draw_glwidgets_scene_tree(glwindow* win, const std::string& lbl,
     return update_list.size() != update_len;
 }
 
-inline bool draw_glwidgets_scene_inspector(glwindow* win,
-    const std::string& lbl, scene* scn, void*& sel,
-    std::vector<std::pair<std::string, void*>>& update_list, int height) {
+inline bool draw_glwidgets_scene_inspector(glwindow* win, const string& lbl,
+    scene* scn, void*& sel, vector<tuple<string, void*>>& update_list,
+    int height) {
     if (!scn || !sel) return false;
     begin_child_glwidget(win, "scrolling scene inspector", {0, height});
 

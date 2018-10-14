@@ -95,23 +95,23 @@ namespace ygl {
 // Formats a string `fmt` with values taken from `args`. Uses `{}` as
 // placeholder.
 template <typename... Args>
-inline std::string format(const std::string& fmt, const Args&... args);
+inline string format(const string& fmt, const Args&... args);
 
 // Converts to string.
 template <typename T>
-inline std::string to_string(const T& val);
+inline string to_string(const T& val);
 
 // Prints a formatted string to stdout or file.
 template <typename... Args>
-inline bool print(FILE* fs, const std::string& fmt, const Args&... args);
+inline bool print(FILE* fs, const string& fmt, const Args&... args);
 template <typename... Args>
-inline bool print(const std::string& fmt, const Args&... args) {
+inline bool print(const string& fmt, const Args&... args) {
     return print(stdout, fmt, args...);
 }
 
 // Parse a list of space separated values.
 template <typename... Args>
-inline bool parse(const std::string& str, Args&... args);
+inline bool parse(const string& str, Args&... args);
 template <typename... Args>
 inline bool parse(FILE* fs, Args&... args);
 
@@ -124,15 +124,15 @@ namespace ygl {
 
 // Log info/error/fatal message
 template <typename... Args>
-inline void log_info(const std::string& fmt, const Args&... args);
+inline void log_info(const string& fmt, const Args&... args);
 template <typename... Args>
-inline void log_error(const std::string& fmt, const Args&... args);
+inline void log_error(const string& fmt, const Args&... args);
 template <typename... Args>
-inline void log_fatal(const std::string& fmt, const Args&... args);
+inline void log_fatal(const string& fmt, const Args&... args);
 
 // Setup logging
 void set_log_console(bool enabled);
-void set_log_file(const std::string& filename, bool append = false);
+void set_log_file(const string& filename, bool append = false);
 
 }  // namespace ygl
 
@@ -154,9 +154,9 @@ inline int64_t get_time() {
 namespace ygl {
 
 // Format duration string from nanoseconds
-std::string format_duration(int64_t duration);
+string format_duration(int64_t duration);
 // Format a large integer number in human readable form
-std::string format_num(uint64_t num);
+string format_num(uint64_t num);
 
 }  // namespace ygl
 
@@ -166,19 +166,18 @@ std::string format_num(uint64_t num);
 namespace ygl {
 
 // Normalize path delimiters.
-std::string normalize_path(const std::string& filename);
+string normalize_path(const string& filename);
 // Get directory name (not including '/').
-std::string get_dirname(const std::string& filename);
+string get_dirname(const string& filename);
 // Get extension (not including '.').
-std::string get_extension(const std::string& filename);
+string get_extension(const string& filename);
 // Get filename without directory.
-std::string get_filename(const std::string& filename);
+string get_filename(const string& filename);
 // Replace extension.
-std::string replace_extension(
-    const std::string& filename, const std::string& ext);
+string replace_extension(const string& filename, const string& ext);
 
 // Check if a file can be opened for reading.
-bool exists_file(const std::string& filename);
+bool exists_file(const string& filename);
 
 }  // namespace ygl
 
@@ -189,17 +188,17 @@ namespace ygl {
 
 // Command line parser data. All data should be considered private.
 struct cmdline_parser {
-    std::vector<std::string> args      = {};  // command line arguments
-    std::string              usage_cmd = "";  // program name
-    std::string              usage_hlp = "";  // program help
-    std::string              usage_opt = "";  // options help
-    std::string              usage_arg = "";  // arguments help
-    std::string              error     = "";  // current parse error
+    vector<string> args      = {};  // command line arguments
+    string         usage_cmd = "";  // program name
+    string         usage_hlp = "";  // program help
+    string         usage_opt = "";  // options help
+    string         usage_arg = "";  // arguments help
+    string         error     = "";  // current parse error
 };
 
 // Initialize a command line parser.
-cmdline_parser make_cmdline_parser(int argc, char** argv,
-    const std::string& usage, const std::string& cmd = "");
+cmdline_parser make_cmdline_parser(
+    int argc, char** argv, const string& usage, const string& cmd = "");
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser);
 
@@ -207,28 +206,26 @@ void check_cmdline(cmdline_parser& parser);
 // Options's names starts with "--" or "-", otherwise they are arguments.
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
-bool  parse_arg(cmdline_parser& parser, const std::string& name, bool def,
-     const std::string& usage);
-int   parse_arg(cmdline_parser& parser, const std::string& name, int def,
-      const std::string& usage, bool req = false);
-float parse_arg(cmdline_parser& parser, const std::string& name, float def,
-    const std::string& usage, bool req = false);
-vec2f parse_arg(cmdline_parser& parser, const std::string& name,
-    const vec2f& def, const std::string& usage, bool req = false);
-vec3f parse_arg(cmdline_parser& parser, const std::string& name,
-    const vec3f& def, const std::string& usage, bool req = false);
-std::string parse_arg(cmdline_parser& parser, const std::string& name,
-    const std::string& def, const std::string& usage, bool req = false);
-std::string parse_arg(cmdline_parser& parser, const std::string& name,
-    const char* def, const std::string& usage, bool req = false);
+bool parse_arg(
+    cmdline_parser& parser, const string& name, bool def, const string& usage);
+int    parse_arg(cmdline_parser& parser, const string& name, int def,
+       const string& usage, bool req = false);
+float  parse_arg(cmdline_parser& parser, const string& name, float def,
+     const string& usage, bool req = false);
+vec2f  parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
+     const string& usage, bool req = false);
+vec3f  parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
+     const string& usage, bool req = false);
+string parse_arg(cmdline_parser& parser, const string& name, const string& def,
+    const string& usage, bool req = false);
+string parse_arg(cmdline_parser& parser, const string& name, const char* def,
+    const string& usage, bool req = false);
 // Parse all arguments left on the command line.
-std::vector<std::string> parse_args(cmdline_parser& parser,
-    const std::string& name, const std::vector<std::string>& def,
-    const std::string& usage, bool req = false);
+vector<string> parse_args(cmdline_parser& parser, const string& name,
+    const vector<string>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
-int parse_arge(cmdline_parser& parser, const std::string& name, int def,
-    const std::string& usage, const std::vector<std::string>& labels,
-    bool req = false);
+int parse_arge(cmdline_parser& parser, const string& name, int def,
+    const string& usage, const vector<string>& labels, bool req = false);
 
 }  // namespace ygl
 
@@ -238,12 +235,12 @@ int parse_arge(cmdline_parser& parser, const std::string& name, int def,
 namespace ygl {
 
 // Load/save a text file
-std::string load_text(const std::string& filename);
-bool        save_text(const std::string& filename, const std::string& str);
+string load_text(const string& filename);
+bool   save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-std::vector<byte> load_binary(const std::string& filename);
-bool save_binary(const std::string& filename, const std::vector<byte>& data);
+vector<byte> load_binary(const string& filename);
+bool         save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace ygl
 
@@ -253,16 +250,16 @@ bool save_binary(const std::string& filename, const std::vector<byte>& data);
 namespace ygl {
 
 // Check if an image is HDR based on filename.
-bool is_hdr_filename(const std::string& filename);
+bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channel float image in linear color space.
-image<vec4f> load_image4f(const std::string& filename);
-bool         save_image4f(const std::string& filename, const image<vec4f>& img);
+image<vec4f> load_image4f(const string& filename);
+bool         save_image4f(const string& filename, const image<vec4f>& img);
 image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 
 // Loads/saves a 4 channel byte image in sRGB color space.
-image<vec4b> load_image4b(const std::string& filename);
-bool         save_image4b(const std::string& filename, const image<vec4b>& img);
+image<vec4b> load_image4b(const string& filename);
+bool         save_image4b(const string& filename, const image<vec4b>& img);
 bool         load_image4b_from_memory(
             const byte* data, int data_size, image<vec4b>& img);
 image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
@@ -271,7 +268,7 @@ image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-bool save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
+bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     float exposure = 0, bool filmic = false, bool srgb = true);
 
 }  // namespace ygl
@@ -282,8 +279,8 @@ bool save_tonemapped_image(const std::string& filename, const image<vec4f>& hdr,
 namespace ygl {
 
 // Loads/saves a 1 channel volume.
-volume<float> load_volume1f(const std::string& filename);
-bool save_volume1f(const std::string& filename, const volume<float>& vol);
+volume<float> load_volume1f(const string& filename);
+bool          save_volume1f(const string& filename, const volume<float>& vol);
 
 }  // namespace ygl
 
@@ -293,42 +290,42 @@ bool save_volume1f(const std::string& filename, const volume<float>& vol);
 namespace ygl {
 
 // Load/save a scene in the supported formats.
-scene* load_scene(const std::string& filename, bool load_textures = true,
+scene* load_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_scene(const std::string& filename, const scene* scn,
+bool   save_scene(const string& filename, const scene* scn,
       bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
-scene* load_json_scene(const std::string& filename, bool load_textures = true,
+scene* load_json_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_json_scene(const std::string& filename, const scene* scn,
+bool   save_json_scene(const string& filename, const scene* scn,
       bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
-scene* load_obj_scene(const std::string& filename, bool load_textures = true,
+scene* load_obj_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true, bool split_shapes = true);
-bool   save_obj_scene(const std::string& filename, const scene* scn,
+bool   save_obj_scene(const string& filename, const scene* scn,
       bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
-scene* load_gltf_scene(const std::string& filename, bool load_textures = true,
+scene* load_gltf_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_gltf_scene(const std::string& filename, const scene* scn,
+bool   save_gltf_scene(const string& filename, const scene* scn,
       bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-scene* load_pbrt_scene(const std::string& filename, bool load_textures = true,
+scene* load_pbrt_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_pbrt_scene(const std::string& filename, const scene* scn,
+bool   save_pbrt_scene(const string& filename, const scene* scn,
       bool save_textures = true, bool skip_missing = true);
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
-scene* load_ybin_scene(const std::string& filename, bool load_textures = true,
+scene* load_ybin_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_ybin_scene(const std::string& filename, const scene* scn,
+bool   save_ybin_scene(const string& filename, const scene* scn,
       bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
@@ -339,38 +336,34 @@ bool   save_ybin_scene(const std::string& filename, const scene* scn,
 namespace ygl {
 
 // Load/Save a mesh
-bool load_mesh(const std::string& filename, std::vector<int>& points,
-    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
-    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
-    std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
-    std::vector<float>& radius);
-bool save_mesh(const std::string& filename, const std::vector<int>& points,
-    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
-    const std::vector<float>& radius, bool ascii = false);
+bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
+    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius);
+bool save_mesh(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, const vector<vec4f>& color,
+    const vector<float>& radius, bool ascii = false);
 
 // Load/Save a ply mesh
-bool load_ply_mesh(const std::string& filename, std::vector<int>& points,
-    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
-    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
-    std::vector<vec2f>& texcoord, std::vector<vec4f>& color,
-    std::vector<float>& radius);
-bool save_ply_mesh(const std::string& filename, const std::vector<int>& points,
-    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, const std::vector<vec4f>& color,
-    const std::vector<float>& radius, bool ascii = false);
+bool load_ply_mesh(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
+    vector<float>& radius);
+bool save_ply_mesh(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, const vector<vec4f>& color,
+    const vector<float>& radius, bool ascii = false);
 
 // Load/Save an OBJ mesh
-bool load_obj_mesh(const std::string& filename, std::vector<int>& points,
-    std::vector<vec2i>& lines, std::vector<vec3i>& triangles,
-    std::vector<vec3f>& pos, std::vector<vec3f>& norm,
-    std::vector<vec2f>& texcoord, bool flip_texcoord = true);
-bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
-    const std::vector<vec2i>& lines, const std::vector<vec3i>& triangles,
-    const std::vector<vec3f>& pos, const std::vector<vec3f>& norm,
-    const std::vector<vec2f>& texcoord, bool flip_texcoord = true);
+bool load_obj_mesh(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord = true);
+bool save_obj_mesh(const string& filename, const vector<int>& points,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, bool flip_texcoord = true);
 
 }  // namespace ygl
 
@@ -380,28 +373,25 @@ bool save_obj_mesh(const std::string& filename, const std::vector<int>& points,
 namespace ygl {
 
 // Load/Save a mesh
-bool load_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
-    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
-    std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
-    std::vector<vec2f>& texcoord, std::vector<vec4i>& quads_color,
-    std::vector<vec4f>& color);
-bool save_fvmesh(const std::string& filename,
-    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
-    const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
-    const std::vector<vec4i>& quads_texcoord,
-    const std::vector<vec2f>& texcoord, const std::vector<vec4i>& quads_color,
-    const std::vector<vec4f>& color, bool ascii = false);
+bool load_fvmesh(const string& filename, vector<vec4i>& quads_pos,
+    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
+    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
+    vector<vec4i>& quads_color, vector<vec4f>& color);
+bool save_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
+    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
+    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
+    const vector<vec2f>& texcoord, const vector<vec4i>& quads_color,
+    const vector<vec4f>& color, bool ascii = false);
 
 // Load/Save an OBJ mesh
-bool load_obj_fvmesh(const std::string& filename, std::vector<vec4i>& quads_pos,
-    std::vector<vec3f>& pos, std::vector<vec4i>& quads_norm,
-    std::vector<vec3f>& norm, std::vector<vec4i>& quads_texcoord,
-    std::vector<vec2f>& texcoord, bool flip_texcoord = true);
-bool save_obj_fvmesh(const std::string& filename,
-    const std::vector<vec4i>& quads_pos, const std::vector<vec3f>& pos,
-    const std::vector<vec4i>& quads_norm, const std::vector<vec3f>& norm,
-    const std::vector<vec4i>& quads_texcoord,
-    const std::vector<vec2f>& texcoord, bool flip_texcoord = true);
+bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_pos,
+    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
+    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
+    bool flip_texcoord = true);
+bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
+    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
+    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
+    const vector<vec2f>& texcoord, bool flip_texcoord = true);
 
 }  // namespace ygl
 
@@ -419,17 +409,17 @@ struct obj_vertex {
 
 // Obj texture information.
 struct obj_texture_info {
-    std::string path  = "";     // file path
-    bool        clamp = false;  // clamp to edge
-    float       scale = 1;      // scale for bump/displacement
+    string path  = "";     // file path
+    bool   clamp = false;  // clamp to edge
+    float  scale = 1;      // scale for bump/displacement
     // Properties not explicitly handled.
-    std::unordered_map<std::string, std::vector<float>> props;
+    unordered_map<string, vector<float>> props;
 };
 
 // Obj material.
 struct obj_material {
-    std::string name;       // name
-    int         illum = 0;  // MTL illum mode
+    string name;       // name
+    int    illum = 0;  // MTL illum mode
 
     // base values
     vec3f ke  = {0, 0, 0};  // emission color
@@ -471,24 +461,24 @@ struct obj_material {
     obj_texture_info vd_txt;  // density
 
     // Properties not explicitly handled.
-    std::unordered_map<std::string, std::vector<std::string>> props;
+    unordered_map<string, vector<string>> props;
 };
 
 // Obj camera [extension].
 struct obj_camera {
-    std::string name;                         // name
-    frame3f     frame    = identity_frame3f;  // transform
-    bool        ortho    = false;             // orthographic
-    vec2f       film     = {0.036f, 0.024f};  // film size (default to 35mm)
-    float       focal    = 0.050f;            // focal length
-    float       aspect   = 16.0f / 9.0f;      // aspect ratio
-    float       aperture = 0;                 // lens aperture
-    float       focus    = maxf;              // focus distance
+    string  name;                         // name
+    frame3f frame    = identity_frame3f;  // transform
+    bool    ortho    = false;             // orthographic
+    vec2f   film     = {0.036f, 0.024f};  // film size (default to 35mm)
+    float   focal    = 0.050f;            // focal length
+    float   aspect   = 16.0f / 9.0f;      // aspect ratio
+    float   aperture = 0;                 // lens aperture
+    float   focus    = maxf;              // focus distance
 };
 
 // Obj environment [extension].
 struct obj_environment {
-    std::string      name;                      // name
+    string           name;                      // name
     frame3f          frame = identity_frame3f;  // transform
     vec3f            ke    = zero3f;            // emission color
     obj_texture_info ke_txt;                    // emission texture
@@ -496,24 +486,24 @@ struct obj_environment {
 
 // Obj callbacks
 struct obj_callbacks {
-    std::function<void(const vec3f&)>                   vert        = {};
-    std::function<void(const vec3f&)>                   norm        = {};
-    std::function<void(const vec2f&)>                   texcoord    = {};
-    std::function<void(const std::vector<obj_vertex>&)> face        = {};
-    std::function<void(const std::vector<obj_vertex>&)> line        = {};
-    std::function<void(const std::vector<obj_vertex>&)> point       = {};
-    std::function<void(const std::string& name)>        object      = {};
-    std::function<void(const std::string& name)>        group       = {};
-    std::function<void(const std::string& name)>        usemtl      = {};
-    std::function<void(const std::string& name)>        smoothing   = {};
-    std::function<void(const std::string& name)>        mtllib      = {};
-    std::function<void(const obj_material&)>            material    = {};
-    std::function<void(const obj_camera&)>              camera      = {};
-    std::function<void(const obj_environment&)>         environmnet = {};
+    function<void(const vec3f&)>              vert        = {};
+    function<void(const vec3f&)>              norm        = {};
+    function<void(const vec2f&)>              texcoord    = {};
+    function<void(const vector<obj_vertex>&)> face        = {};
+    function<void(const vector<obj_vertex>&)> line        = {};
+    function<void(const vector<obj_vertex>&)> point       = {};
+    function<void(const string& name)>        object      = {};
+    function<void(const string& name)>        group       = {};
+    function<void(const string& name)>        usemtl      = {};
+    function<void(const string& name)>        smoothing   = {};
+    function<void(const string& name)>        mtllib      = {};
+    function<void(const obj_material&)>       material    = {};
+    function<void(const obj_camera&)>         camera      = {};
+    function<void(const obj_environment&)>    environmnet = {};
 };
 
 // Load obj scene
-bool load_obj(const std::string& filename, const obj_callbacks& cb,
+bool load_obj(const string& filename, const obj_callbacks& cb,
     bool geometry_only = false, bool skip_missing = true,
     bool flip_texcoord = true, bool flip_tr = true);
 
@@ -529,26 +519,26 @@ enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
 
 // ply property
 struct ply_property {
-    std::string                     name    = "";
-    ply_type                        type    = ply_type::ply_float;
-    std::vector<float>              scalars = {};
-    std::vector<std::array<int, 8>> lists   = {};
+    string                     name    = "";
+    ply_type                   type    = ply_type::ply_float;
+    vector<float>              scalars = {};
+    vector<std::array<int, 8>> lists   = {};
 };
 
 // ply element
 struct ply_element {
-    std::string               name       = "";
-    int                       count      = 0;
-    std::vector<ply_property> properties = {};
+    string               name       = "";
+    int                  count      = 0;
+    vector<ply_property> properties = {};
 };
 
 // simple ply api data
 struct ply_data {
-    std::vector<ply_element> elements = {};
+    vector<ply_element> elements = {};
 };
 
 // Load ply mesh
-ply_data load_ply(const std::string& filename);
+ply_data load_ply(const string& filename);
 
 }  // namespace ygl
 
@@ -558,64 +548,37 @@ ply_data load_ply(const std::string& filename);
 namespace ygl {
 
 // Prints basic types
-inline bool print_value(std::string& str, const std::string& val) {
+inline bool print_value(string& str, const string& val) {
     str += val;
     return true;
 }
-inline bool print_value(std::string& str, const char* val) {
+inline bool print_value(string& str, const char* val) {
     str += val;
     return true;
 }
-inline bool print_value(std::string& str, int val) {
+inline bool print_value(string& str, int val) {
     str += std::to_string(val);
     return true;
 }
-inline bool print_value(std::string& str, float val) {
+inline bool print_value(string& str, float val) {
     str += std::to_string(val);
     return true;
 }
-inline bool print_value(std::string& str, double val) {
+inline bool print_value(string& str, double val) {
     str += std::to_string(val);
     return true;
 }
 
 // Print compound types.
 template <typename T>
-inline bool print_value(std::string& str, const vec2<T>& v) {
+inline bool print_value(string& str, const vec2<T>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const vec3<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(std::string& str, const vec4<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.w)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(std::string& str, const mat2<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(std::string& str, const mat3<T>& v) {
+inline bool print_value(string& str, const vec3<T>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
@@ -624,7 +587,7 @@ inline bool print_value(std::string& str, const mat3<T>& v) {
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const mat4<T>& v) {
+inline bool print_value(string& str, const vec4<T>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
@@ -635,7 +598,34 @@ inline bool print_value(std::string& str, const mat4<T>& v) {
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const frame2<T>& v) {
+inline bool print_value(string& str, const mat2<T>& v) {
+    if (!print_value(str, v.x)) return false;
+    if (!print_value(str, " ")) return false;
+    if (!print_value(str, v.y)) return false;
+    return true;
+}
+template <typename T>
+inline bool print_value(string& str, const mat3<T>& v) {
+    if (!print_value(str, v.x)) return false;
+    if (!print_value(str, " ")) return false;
+    if (!print_value(str, v.y)) return false;
+    if (!print_value(str, " ")) return false;
+    if (!print_value(str, v.z)) return false;
+    return true;
+}
+template <typename T>
+inline bool print_value(string& str, const mat4<T>& v) {
+    if (!print_value(str, v.x)) return false;
+    if (!print_value(str, " ")) return false;
+    if (!print_value(str, v.y)) return false;
+    if (!print_value(str, " ")) return false;
+    if (!print_value(str, v.z)) return false;
+    if (!print_value(str, " ")) return false;
+    if (!print_value(str, v.w)) return false;
+    return true;
+}
+template <typename T>
+inline bool print_value(string& str, const frame2<T>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
@@ -644,7 +634,7 @@ inline bool print_value(std::string& str, const frame2<T>& v) {
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const frame3<T>& v) {
+inline bool print_value(string& str, const frame3<T>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
@@ -655,35 +645,35 @@ inline bool print_value(std::string& str, const frame3<T>& v) {
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const bbox1<T>& v) {
+inline bool print_value(string& str, const bbox1<T>& v) {
     if (!print_value(str, v.min)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.max)) return false;
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const bbox2<T>& v) {
+inline bool print_value(string& str, const bbox2<T>& v) {
     if (!print_value(str, v.min)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.max)) return false;
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const bbox3<T>& v) {
+inline bool print_value(string& str, const bbox3<T>& v) {
     if (!print_value(str, v.min)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.max)) return false;
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const bbox4<T>& v) {
+inline bool print_value(string& str, const bbox4<T>& v) {
     if (!print_value(str, v.min)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.max)) return false;
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const ray2<T>& v) {
+inline bool print_value(string& str, const ray2<T>& v) {
     if (!print_value(str, v.o)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.d)) return false;
@@ -694,7 +684,7 @@ inline bool print_value(std::string& str, const ray2<T>& v) {
     return true;
 }
 template <typename T>
-inline bool print_value(std::string& str, const ray3<T>& v) {
+inline bool print_value(string& str, const ray3<T>& v) {
     if (!print_value(str, v.o)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.d)) return false;
@@ -706,14 +696,14 @@ inline bool print_value(std::string& str, const ray3<T>& v) {
 }
 
 // Prints a string.
-inline bool print_next(std::string& str, const std::string& fmt) {
+inline bool print_next(string& str, const string& fmt) {
     return print_value(str, fmt);
 }
 template <typename Arg, typename... Args>
-inline bool print_next(std::string& str, const std::string& fmt, const Arg& arg,
-    const Args&... args) {
+inline bool print_next(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
     auto pos = fmt.find("{}");
-    if (pos == std::string::npos) return print_value(str, fmt);
+    if (pos == string::npos) return print_value(str, fmt);
     if (!print_value(str, fmt.substr(0, pos))) return false;
     if (!print_value(str, arg)) return false;
     return print_next(str, fmt.substr(pos + 2), args...);
@@ -722,29 +712,29 @@ inline bool print_next(std::string& str, const std::string& fmt, const Arg& arg,
 // Formats a string `fmt` with values taken from `args`. Uses `{}` as
 // placeholder.
 template <typename... Args>
-inline std::string format(const std::string& fmt, const Args&... args) {
-    auto str = std::string();
+inline string format(const string& fmt, const Args&... args) {
+    auto str = string();
     print_next(str, fmt, args...);
     return str;
 }
 
 // Prints a string.
 template <typename... Args>
-inline bool print(FILE* fs, const std::string& fmt, const Args&... args) {
+inline bool print(FILE* fs, const string& fmt, const Args&... args) {
     auto str = format(fmt, args...);
     return fprintf(fs, "%s", str.c_str()) >= 0;
 }
 
 // Converts to string.
 template <typename T>
-inline std::string to_string(const T& val) {
-    auto str = std::string();
+inline string to_string(const T& val) {
+    auto str = string();
     print_value(str, val);
     return str;
 }
 
 // Prints basic types to string
-inline bool _parse(const char*& str, std::string& val) {
+inline bool _parse(const char*& str, string& val) {
     auto n = 0;
     char buf[4096];
     if (sscanf(str, "%4095s%n", buf, &n) != 1) return false;
@@ -772,7 +762,7 @@ inline bool _parse(const char*& str, double& val) {
 }
 
 // Prints basic types to stream
-inline bool _parse(FILE* fs, std::string& val) {
+inline bool _parse(FILE* fs, string& val) {
     char buf[4096];
     if (fscanf(fs, "%4095s", buf) != 1) return false;
     val = buf;
@@ -869,7 +859,7 @@ inline bool _is_whitespace(const char* str) {
 
 // Parse a list of space separated values.
 template <typename... Args>
-inline bool parse(const std::string& str, Args&... args) {
+inline bool parse(const string& str, Args&... args) {
     auto str_ = str.c_str();
     if (!_parse_next(str_, args...)) return false;
     return _is_whitespace(str_);
@@ -893,15 +883,15 @@ void log_message(const char* lbl, const char* msg);
 
 // Log info/error/fatal message
 template <typename... Args>
-inline void log_info(const std::string& fmt, const Args&... args) {
+inline void log_info(const string& fmt, const Args&... args) {
     log_message("INFO ", format(fmt, args...).c_str());
 }
 template <typename... Args>
-inline void log_error(const std::string& fmt, const Args&... args) {
+inline void log_error(const string& fmt, const Args&... args) {
     log_message("ERROR", format(fmt, args...).c_str());
 }
 template <typename... Args>
-inline void log_fatal(const std::string& fmt, const Args&... args) {
+inline void log_fatal(const string& fmt, const Args&... args) {
     log_message("FATAL", format(fmt, args...).c_str());
     exit(1);
 }

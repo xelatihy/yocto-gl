@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
             format_duration(get_time() - block_start).c_str());
         if (save_batch) {
             auto filename = replace_extension(imfilename,
-                std::to_string(state->sample) + "." + get_extension(imfilename));
+                to_string(state->sample) + "." + get_extension(imfilename));
             log_info("saving image {}", filename.c_str());
             if (!save_tonemapped_image(
                     filename, state->img, exposure, gamma, filmic))

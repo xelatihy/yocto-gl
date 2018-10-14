@@ -38,9 +38,9 @@ struct draw_glshape_vbos {
 };
 
 struct draw_glstate {
-    unsigned int                                        gl_prog = 0;
-    std::unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
-    std::unordered_map<const texture*, unsigned int>    txt_id;
+    unsigned int                                   gl_prog = 0;
+    unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
+    unordered_map<const texture*, unsigned int>    txt_id;
 };
 
 // Application state
@@ -49,31 +49,31 @@ struct app_state {
     scene* scn = nullptr;
 
     // parameters
-    std::string filename    = "scene.json";  // scene name
-    std::string imfilename  = "out.png";     // output image
-    std::string outfilename = "scene.json";  // save scene name
-    int         camid       = 0;             // camera id
-    int         resolution  = 512;           // image resolution
-    bool        wireframe   = false;         // wireframe drawing
-    bool        edges       = false;         // draw edges
-    float       edge_offset = 0.01f;         // offset for edges
-    bool        eyelight    = false;         // camera light mode
-    float       exposure    = 0;             // exposure
-    float       gamma       = 2.2f;          // gamma
-    vec3f       ambient     = {0, 0, 0};     // ambient lighting
-    float       near_plane  = 0.01f;         // near plane
-    float       far_plane   = 10000.0f;      // far plane
+    string filename    = "scene.json";  // scene name
+    string imfilename  = "out.png";     // output image
+    string outfilename = "scene.json";  // save scene name
+    int    camid       = 0;             // camera id
+    int    resolution  = 512;           // image resolution
+    bool   wireframe   = false;         // wireframe drawing
+    bool   edges       = false;         // draw edges
+    float  edge_offset = 0.01f;         // offset for edges
+    bool   eyelight    = false;         // camera light mode
+    float  exposure    = 0;             // exposure
+    float  gamma       = 2.2f;          // gamma
+    vec3f  ambient     = {0, 0, 0};     // ambient lighting
+    float  near_plane  = 0.01f;         // near plane
+    float  far_plane   = 10000.0f;      // far plane
 
     draw_glstate* state = nullptr;
 
-    bool                                       widgets_open   = false;
-    bool                                       navigation_fps = false;
-    void*                                      selection      = nullptr;
-    std::vector<std::pair<std::string, void*>> update_list;
-    float                                      time       = 0;
-    std::string                                anim_group = "";
-    vec2f                                      time_range = zero2f;
-    bool                                       animate    = false;
+    bool                         widgets_open   = false;
+    bool                         navigation_fps = false;
+    void*                        selection      = nullptr;
+    vector<tuple<string, void*>> update_list;
+    float                        time       = 0;
+    string                       anim_group = "";
+    vec2f                        time_range = zero2f;
+    bool                         animate    = false;
 
     ~app_state() {
         if (scn) delete scn;
@@ -94,19 +94,19 @@ void draw(glwindow* win) {
 
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
-        if (sel.first == "texture") {
+        if (get<0>(sel) == "texture") {
             // TODO: update texture
             printf("texture update not supported\n");
         }
-        if (sel.first == "subdiv") {
+        if (get<0>(sel) == "subdiv") {
             // TODO: update subdiv
             printf("subdiv update not supported\n");
         }
-        if (sel.first == "shape") {
+        if (get<0>(sel) == "shape") {
             // TODO: update shape
             printf("shape update not supported\n");
         }
-        if (sel.first == "node" || sel.first == "animation" ||
+        if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
             app->time != last_time) {
             update_transforms(app->scn, app->time, app->anim_group);
             last_time = app->time;
@@ -566,9 +566,9 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
     set_gluniform(state->gl_prog, "gamma", gamma);
 
     if (!eyelight) {
-        auto lights_pos  = std::vector<vec3f>();
-        auto lights_ke   = std::vector<vec3f>();
-        auto lights_type = std::vector<int>();
+        auto lights_pos  = vector<vec3f>();
+        auto lights_ke   = vector<vec3f>();
+        auto lights_type = vector<int>();
         for (auto lgt : scn->instances) {
             if (lgt->mat->ke == zero3f) continue;
             if (lights_pos.size() >= 16) break;
@@ -595,7 +595,7 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
         set_gluniform(state->gl_prog, "lamb", zero3f);
         set_gluniform(state->gl_prog, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
-            auto is = std::to_string(i);
+            auto is = to_string(i);
             set_gluniform(
                 state->gl_prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
             set_gluniform(
@@ -717,23 +717,22 @@ void run_ui(app_state* app) {
 }
 
 // Load INI file. The implementation does not handle escaping.
-std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
-load_ini(const std::string& filename) {
+unordered_map<string, unordered_map<string, string>> load_ini(
+    const string& filename) {
     auto f = fopen(filename.c_str(), "rt");
-    if (!f) throw std::runtime_error("cannot open " + filename);
-    auto ret       = std::unordered_map<std::string,
-        std::unordered_map<std::string, std::string>>();
-    auto cur_group = std::string();
+    if (!f) throw runtime_error("cannot open " + filename);
+    auto ret       = unordered_map<string, unordered_map<string, string>>();
+    auto cur_group = string();
     ret[""]        = {};
 
     char buf[4096];
     while (fgets(buf, 4096, f)) {
-        auto line = std::string(buf);
+        auto line = string(buf);
         if (line.empty()) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
         if (line.front() == '[') {
-            if (line.back() != ']') throw std::runtime_error("bad INI format");
+            if (line.back() != ']') throw runtime_error("bad INI format");
             cur_group      = line.substr(1, line.length() - 2);
             ret[cur_group] = {};
         } else if (line.find('=') != line.npos) {
@@ -741,7 +740,7 @@ load_ini(const std::string& filename) {
             auto val            = line.substr(line.find('=') + 1);
             ret[cur_group][var] = val;
         } else {
-            throw std::runtime_error("bad INI format");
+            throw runtime_error("bad INI format");
         }
     }
 
