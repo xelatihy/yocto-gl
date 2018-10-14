@@ -206,18 +206,9 @@ void check_cmdline(cmdline_parser& parser);
 // Options's names starts with "--" or "-", otherwise they are arguments.
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
-inline bool parse_arg(
-    cmdline_parser& parser, const string& name, bool def, const string& usage);
-inline int    parse_arg(cmdline_parser& parser, const string& name, int def,
-       const string& usage, bool req = false);
-inline float  parse_arg(cmdline_parser& parser, const string& name, float def,
+template<typename T>
+inline T parse_arg(cmdline_parser& parser, const string& name, T def,
      const string& usage, bool req = false);
-inline vec2f  parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
-     const string& usage, bool req = false);
-inline vec3f  parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
-     const string& usage, bool req = false);
-inline string parse_arg(cmdline_parser& parser, const string& name, const string& def,
-    const string& usage, bool req = false);
 inline string parse_arg(cmdline_parser& parser, const string& name, const char* def,
     const string& usage, bool req = false);
 // Parse all arguments left on the command line.
@@ -913,58 +904,27 @@ vector<string> parse_strings(cmdline_parser& parser, const string& name,
 
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
-inline bool parse_arg(
-    cmdline_parser& parser, const string& name, bool def, const string& usage) {
-    return parse_flag(parser, name, def, usage);
-}
-inline string parse_arg(cmdline_parser& parser, const string& name, const string& def,
+template<typename T>
+inline T parse_arg(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
-    return parse_string(parser, name, def, usage, req, {});
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
+    auto val  = def;
+    if (!parse(vals, val)) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+template<>
+inline bool parse_arg<bool>(cmdline_parser& parser, const string& name, bool def,
+    const string& usage, bool req) {
+    return parse_flag(parser, name, def, usage);
 }
 inline string parse_arg(cmdline_parser& parser, const string& name, const char* def,
     const string& usage, bool req) {
     return parse_string(parser, name, def, usage, req, {});
 }
-inline int parse_arg(cmdline_parser& parser, const string& name, int def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
-inline float parse_arg(cmdline_parser& parser, const string& name, float def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
-inline vec2f parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
-inline vec3f parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
+
 inline int parse_arge(cmdline_parser& parser, const string& name, int def,
     const string& usage, const vector<string>& labels, bool req) {
     auto val = parse_string(parser, name, labels.at(def), usage, req, labels);
