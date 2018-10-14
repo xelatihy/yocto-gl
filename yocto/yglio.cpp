@@ -1632,8 +1632,11 @@ bool parse_json_objref(const json& js, T*& val, const std::vector<T*>& refs) {
     if (!js.is_string()) return false;
     auto name = ""s;
     if (!parse_json_value(js, name)) return false;
-    val       = new T();
-    val->name = name;
+    val = nullptr;
+    for(auto ref : refs) {
+        if(ref->name == name) { val = ref; break; }
+    }
+    if(!val) return false;
     return true;
 }
 
@@ -2434,14 +2437,6 @@ bool dump_json_object(json& js, const scene* val, const scene* scn) {
     return true;
 }
 
-template <typename T>
-static std::unordered_map<std::string, T*> make_named_map(
-    const std::vector<T*>& elems) {
-    auto map = std::unordered_map<std::string, T*>();
-    for (auto elem : elems) map[elem->name] = elem;
-    return map;
-};
-
 // Procedural commands for scenes
 bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
@@ -2500,59 +2495,6 @@ bool parse_json_object(const json& js, scene* val, const scene* scn) {
     if (!parse_json_objarray(js, val->nodes, "nodes", scn)) return false;
     if (!parse_json_objarray(js, val->animations, "animations", scn)) return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
-
-    // fix references
-    auto cmap    = make_named_map(val->cameras);
-    auto tmap    = make_named_map(val->textures);
-    auto vmap    = make_named_map(val->voltextures);
-    auto mmap    = make_named_map(val->materials);
-    auto smap    = make_named_map(val->shapes);
-    auto rmap    = make_named_map(val->subdivs);
-    auto imap    = make_named_map(val->instances);
-    auto emap    = make_named_map(val->environments);
-    auto nmap    = make_named_map(val->nodes);
-    auto fix_ref = [](auto& map, auto& elems, auto& ref) {
-        if (!ref) return;
-        auto name = ref->name;
-        if (map.find(ref->name) != map.end()) {
-            ref = map.at(name);
-        } else {
-            map[ref->name] = ref;
-            elems.push_back(ref);
-        }
-    };
-    for (auto anm : val->animations) {
-        for (auto& nde : anm->targets) fix_ref(nmap, val->nodes, nde);
-    }
-    for (auto nde : val->nodes) {
-        fix_ref(nmap, val->nodes, nde->parent);
-        fix_ref(cmap, val->cameras, nde->cam);
-        fix_ref(imap, val->instances, nde->ist);
-        fix_ref(emap, val->environments, nde->env);
-    }
-    for (auto env : val->environments) {
-        fix_ref(tmap, val->textures, env->ke_txt);
-    }
-    for (auto ist : val->instances) {
-        fix_ref(mmap, val->materials, ist->mat);
-        fix_ref(smap, val->shapes, ist->shp);
-        fix_ref(rmap, val->subdivs, ist->sbd);
-    }
-    for (auto mat : val->materials) {
-        fix_ref(tmap, val->textures, mat->ke_txt);
-        fix_ref(tmap, val->textures, mat->kd_txt);
-        fix_ref(tmap, val->textures, mat->ks_txt);
-        fix_ref(tmap, val->textures, mat->kt_txt);
-        fix_ref(tmap, val->textures, mat->op_txt);
-        fix_ref(tmap, val->textures, mat->rs_txt);
-        fix_ref(tmap, val->textures, mat->occ_txt);
-        fix_ref(tmap, val->textures, mat->norm_txt);
-        fix_ref(tmap, val->textures, mat->bump_txt);
-        fix_ref(tmap, val->textures, mat->disp_txt);
-        fix_ref(vmap, val->voltextures, mat->vd_txt);
-    }
-
-    // done
     return true;
 }
 
