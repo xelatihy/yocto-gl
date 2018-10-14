@@ -46,7 +46,7 @@ struct draw_glstate {
 // Application state
 struct app_state {
     // scene
-    scene* scn = nullptr;
+    unique_ptr<scene> scn = nullptr;
 
     // parameters
     string filename    = "scene.json";  // scene name
@@ -64,7 +64,7 @@ struct app_state {
     float  near_plane  = 0.01f;         // near plane
     float  far_plane   = 10000.0f;      // far plane
 
-    draw_glstate* state = nullptr;
+    unique_ptr<draw_glstate> state = nullptr;
 
     bool                         widgets_open   = false;
     bool                         navigation_fps = false;
@@ -74,11 +74,6 @@ struct app_state {
     string                       anim_group = "";
     vec2f                        time_range = zero2f;
     bool                         animate    = false;
-
-    ~app_state() {
-        if (scn) delete scn;
-        if (state) delete state;
-    }
 };
 
 void draw_glscene(const draw_glstate* state, const scene* scn,
@@ -108,7 +103,7 @@ void draw(glwindow* win) {
         }
         if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
             app->time != last_time) {
-            update_transforms(app->scn, app->time, app->anim_group);
+            update_transforms(app->scn.get(), app->time, app->anim_group);
             last_time = app->time;
         }
     }
@@ -116,9 +111,9 @@ void draw(glwindow* win) {
 
     auto cam = app->scn->cameras.at(app->camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    draw_glscene(app->state, app->scn, cam, framebuffer_size, app->selection,
-        app->eyelight, app->wireframe, app->edges, app->exposure, app->gamma,
-        app->near_plane, app->far_plane);
+    draw_glscene(app->state.get(), app->scn.get(), cam, framebuffer_size,
+        app->selection, app->eyelight, app->wireframe, app->edges,
+        app->exposure, app->gamma, app->near_plane, app->far_plane);
 
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {
@@ -149,12 +144,12 @@ void draw(glwindow* win) {
         }
         if (begin_header_glwidget(win, "navigate")) {
             draw_glwidgets_scene_tree(
-                win, "", app->scn, app->selection, app->update_list, 200);
+                win, "", app->scn.get(), app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspect")) {
             draw_glwidgets_scene_inspector(
-                win, "", app->scn, app->selection, app->update_list, 200);
+                win, "", app->scn.get(), app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -667,10 +662,10 @@ void run_ui(app_state* app) {
     init_glwidgets(win);
 
     // load textures and vbos
-    update_transforms(app->scn, app->time);
+    update_transforms(app->scn.get(), app->time);
 
     // init gl data
-    app->state = init_draw_state(win);
+    app->state = unique_ptr<draw_glstate>{init_draw_state(win)};
 
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -702,7 +697,7 @@ void run_ui(app_state* app) {
             app->time += 1 / 60.0f;
             if (app->time < app->time_range.x || app->time > app->time_range.y)
                 app->time = app->time_range.x;
-            update_transforms(app->scn, app->time);
+            update_transforms(app->scn.get(), app->time);
         }
 
         // draw
@@ -775,22 +770,22 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     if (!quiet) log_info("loading scene ", app->filename);
-    app->scn = load_scene(app->filename);
+    app->scn = unique_ptr<scene>{load_scene(app->filename)};
     if (!app->scn) log_fatal("cannot load scene {}", app->filename);
 
     // tesselate
     if (!quiet) log_info("tesselating scene elements\n");
-    tesselate_subdivs(app->scn);
+    tesselate_subdivs(app->scn.get());
 
     // add components
     if (!quiet) log_info("adding scene elements\n");
     if (double_sided) {
         for (auto mat : app->scn->materials) mat->double_sided = true;
     }
-    for (auto& err : validate(app->scn)) log_error(err);
+    for (auto& err : validate(app->scn.get())) log_error(err);
 
     // animation
-    auto time_range = compute_animation_range(app->scn);
+    auto time_range = compute_animation_range(app->scn.get());
     app->time       = time_range.x;
 
     // run ui

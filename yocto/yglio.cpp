@@ -2476,12 +2476,12 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
         auto& jjs  = js.at("random_instances");
         auto  num  = jjs.value("num", 100);
         auto  seed = jjs.value("seed", 13);
-        auto  base = new instance();
-        parse_json_object(jjs.at("base"), base, scn);
-        auto ists = vector<instance*>();
+        auto  base = make_unique<instance>();
+        parse_json_object(jjs.at("base"), base.get(), scn);
+        auto ists = vector<unique_ptr<instance>>();
         for (auto& j : jjs.at("instances")) {
-            ists.push_back(new instance());
-            parse_json_object(j, ists.back(), scn);
+            ists.push_back(make_unique<instance>());
+            parse_json_object(j, ists.back().get(), scn);
         }
 
         auto pos                 = vector<vec3f>();
@@ -2491,10 +2491,10 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
             base->shp->pos, base->shp->norm, base->shp->texcoord, num, seed);
 
         auto nmap = unordered_map<instance*, int>();
-        for (auto ist : ists) nmap[ist] = 0;
+        for (auto& ist : ists) nmap[ist.get()] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
-            auto ist = ists.at(rand1i(rng, (int)ists.size() - 1));
+            auto ist = ists.at(rand1i(rng, (int)ists.size() - 1)).get();
             nmap[ist] += 1;
             val->instances.push_back(new instance());
             val->instances.back()->name = ist->name + std::to_string(nmap[ist]);
@@ -2544,7 +2544,7 @@ bool parse_json_object(const json& js, scene* val) {
 scene* load_json_scene(
     const string& filename, bool load_textures, bool skip_missing) {
     // initialize
-    auto scn = new scene();
+    auto scn = make_unique<scene>();
 
     // load jsonz
     auto js = load_json(filename);
@@ -2552,7 +2552,7 @@ scene* load_json_scene(
 
     // deserialize json
     try {
-        if (!parse_json_object(js, scn)) {
+        if (!parse_json_object(js, scn.get())) {
             log_io_error("could not deserialize json {}", filename);
             return nullptr;
         }
@@ -2587,19 +2587,19 @@ scene* load_json_scene(
 
     // skip textures
     if (load_textures) {
-        if (!load_scene_textures(scn, dirname, skip_missing, false))
+        if (!load_scene_textures(scn.get(), dirname, skip_missing, false))
             return nullptr;
     }
 
     // fix scene
     if (scn->name == "") scn->name = get_filename(filename);
-    add_missing_cameras(scn);
-    add_missing_materials(scn);
-    add_missing_names(scn);
-    update_transforms(scn);
+    add_missing_cameras(scn.get());
+    add_missing_materials(scn.get());
+    add_missing_names(scn.get());
+    update_transforms(scn.get());
 
     // done
-    return scn;
+    return scn.release();
 }
 
 // Save a scene in the builtin JSON format.
@@ -3035,7 +3035,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
 // Loads an OBJ
 scene* load_obj_scene(const string& filename, bool load_textures,
     bool skip_missing, bool split_shapes) {
-    auto scn = new scene();
+    auto scn = make_unique<scene>();
 
     // splitting policy
     auto split_material  = split_shapes;
@@ -3108,7 +3108,7 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         return ist;
     };
     // Parse texture options and name
-    auto add_texture = [scn, &tmap](const obj_texture_info& info, bool srgb) {
+    auto add_texture = [&scn, &tmap](const obj_texture_info& info, bool srgb) {
         if (info.path == "") return (texture*)nullptr;
         if (tmap.find(info.path) != tmap.end()) { return tmap.at(info.path); }
 
@@ -3125,7 +3125,8 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         return txt;
     };
     // Parse texture options and name
-    auto add_voltexture = [scn, &vmap](const obj_texture_info& info, bool srgb) {
+    auto add_voltexture = [&scn, &vmap](
+                              const obj_texture_info& info, bool srgb) {
         if (info.path == "") return (voltexture*)nullptr;
         if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
 
@@ -3153,7 +3154,7 @@ scene* load_obj_scene(const string& filename, bool load_textures,
     };
 
     // current objet
-    ist = add_instance(scn, "", "", "", true);
+    ist = add_instance(scn.get(), "", "", "", true);
 
     // callbacks
     auto cb     = obj_callbacks();
@@ -3182,24 +3183,24 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         gname     = "";
         matname   = "";
         smoothing = true;
-        ist       = add_instance(scn, oname, matname, gname, smoothing);
+        ist       = add_instance(scn.get(), oname, matname, gname, smoothing);
     };
     cb.group = [&](const string& name) {
         gname = name;
         if (split_group) {
-            ist = add_instance(scn, oname, matname, gname, smoothing);
+            ist = add_instance(scn.get(), oname, matname, gname, smoothing);
         }
     };
     cb.smoothing = [&](const string& name) {
         smoothing = (name == "on");
         if (split_smoothing) {
-            ist = add_instance(scn, oname, matname, gname, smoothing);
+            ist = add_instance(scn.get(), oname, matname, gname, smoothing);
         }
     };
     cb.usemtl = [&](const string& name) {
         matname = name;
         if (split_material) {
-            ist = add_instance(scn, oname, matname, gname, smoothing);
+            ist = add_instance(scn.get(), oname, matname, gname, smoothing);
         } else {
             if (matname != "") ist->mat = mmap.at(matname);
         }
@@ -3273,19 +3274,19 @@ scene* load_obj_scene(const string& filename, bool load_textures,
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
-        if (!load_scene_textures(scn, dirname, skip_missing, false))
+        if (!load_scene_textures(scn.get(), dirname, skip_missing, false))
             return nullptr;
     }
 
     // fix scene
     scn->name = get_filename(filename);
-    add_missing_cameras(scn);
-    add_missing_materials(scn);
-    add_missing_names(scn);
-    update_transforms(scn);
+    add_missing_cameras(scn.get());
+    add_missing_materials(scn.get());
+    add_missing_names(scn.get());
+    update_transforms(scn.get());
 
     // done
-    return scn;
+    return scn.release();
 }
 
 bool save_mtl(const string& filename, const scene* scn, bool flip_tr = true) {
@@ -4015,31 +4016,32 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
 scene* load_gltf_scene(
     const string& filename, bool load_textures, bool skip_missing) {
     // initialization
-    auto scn = new scene();
+    auto scn = make_unique<scene>();
 
     // convert json
     auto js = load_json(filename);
     if (js.empty()) return nullptr;
     try {
-        if (!gltf_to_scene(scn, js, get_dirname(filename))) return nullptr;
+        if (!gltf_to_scene(scn.get(), js, get_dirname(filename)))
+            return nullptr;
     } catch (...) { return nullptr; }
 
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
-        if (!load_scene_textures(scn, dirname, skip_missing, false))
+        if (!load_scene_textures(scn.get(), dirname, skip_missing, false))
             return nullptr;
     }
 
     // fix scene
     scn->name = get_filename(filename);
-    add_missing_cameras(scn);
-    add_missing_materials(scn);
-    add_missing_names(scn);
-    update_transforms(scn);
+    add_missing_cameras(scn.get());
+    add_missing_materials(scn.get());
+    add_missing_names(scn.get());
+    update_transforms(scn.get());
 
     // fix cameras
-    auto bbox = compute_bbox(scn);
+    auto bbox = compute_bbox(scn.get());
     for (auto cam : scn->cameras) {
         auto center = (bbox.min + bbox.max) / 2;
         auto dist   = dot(-cam->frame.z, center - cam->frame.o);
@@ -4047,7 +4049,7 @@ scene* load_gltf_scene(
     }
 
     // done
-    return scn;
+    return scn.release();
 }
 
 // convert gltf scene to json
@@ -4470,7 +4472,7 @@ scene* load_pbrt_scene(
     };
 
     // parse
-    auto scn   = new scene();
+    auto scn   = make_unique<scene>();
     auto stack = vector<stack_item>();
     stack.push_back(stack_item());
 
@@ -4950,18 +4952,18 @@ scene* load_pbrt_scene(
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
-        if (!load_scene_textures(scn, dirname, skip_missing, false))
+        if (!load_scene_textures(scn.get(), dirname, skip_missing, false))
             return nullptr;
     }
 
     // fix scene
     scn->name = get_filename(filename);
-    add_missing_cameras(scn);
-    add_missing_materials(scn);
-    add_missing_names(scn);
-    update_transforms(scn);
+    add_missing_cameras(scn.get());
+    add_missing_materials(scn.get());
+    add_missing_names(scn.get());
+    update_transforms(scn.get());
 
-    return scn;
+    return scn.release();
 }
 
 // Convert a scene to pbrt format
@@ -5443,9 +5445,9 @@ scene* load_ybin_scene(
     const string& filename, bool load_textures, bool skip_missing) {
     auto fs = open(filename, "rb");
     if (!fs) return nullptr;
-    auto scn = new scene();
-    if (!serialize_scene(scn, fs, false)) return nullptr;
-    return scn;
+    auto scn = make_unique<scene>();
+    if (!serialize_scene(scn.get(), fs, false)) return nullptr;
+    return scn.release();
 }
 
 // Load/save a binary dump useful for very fast scene IO.
@@ -5526,13 +5528,13 @@ void normalize_ply_line(char* s) {
 }
 
 // Load ply mesh
-ply_data load_ply(const string& filename) {
+ply_data* load_ply(const string& filename) {
     // open file
     auto fs = open(filename, "rb");
     if (!fs) return {};
 
     // parse header
-    auto ply   = ply_data();
+    auto ply   = make_unique<ply_data>();
     auto ascii = false;
     char buf[4096];
     auto line = ""s;
@@ -5552,7 +5554,7 @@ ply_data load_ply(const string& filename) {
             auto elem  = ply_element();
             elem.name  = parse_string(ss);
             elem.count = parse_int(ss);
-            ply.elements.push_back(elem);
+            ply->elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
             auto type = parse_string(ss);
@@ -5574,10 +5576,10 @@ ply_data load_ply(const string& filename) {
                 return {};
             }
             prop.name = parse_string(ss);
-            prop.scalars.resize(ply.elements.back().count);
+            prop.scalars.resize(ply->elements.back().count);
             if (prop.type == ply_type::ply_int_list)
-                prop.lists.resize(ply.elements.back().count);
-            ply.elements.back().properties.push_back(prop);
+                prop.lists.resize(ply->elements.back().count);
+            ply->elements.back().properties.push_back(prop);
         } else if (cmd == "end_header") {
             break;
         } else {
@@ -5586,7 +5588,7 @@ ply_data load_ply(const string& filename) {
     }
 
     // parse content
-    for (auto& elem : ply.elements) {
+    for (auto& elem : ply->elements) {
         for (auto vid = 0; vid < elem.count; vid++) {
             auto ss = (char*)nullptr;
             if (ascii) {
@@ -5643,7 +5645,7 @@ ply_data load_ply(const string& filename) {
         }
     }
 
-    return ply;
+    return ply.release();
 }
 
 // Load ply mesh
@@ -5656,14 +5658,14 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
         points, lines, triangles, pos, norm, texcoord, color, radius);
 
     // load ply
-    auto ply = load_ply(filename);
-    if (ply.elements.empty()) {
+    auto ply = unique_ptr<ply_data>{load_ply(filename)};
+    if (ply->elements.empty()) {
         log_io_error("empty ply file {}", filename);
         return false;
     }
 
     // copy vertex data
-    for (auto& elem : ply.elements) {
+    for (auto& elem : ply->elements) {
         if (elem.name != "vertex") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {
@@ -5695,7 +5697,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     }
 
     // copy triangle data
-    for (auto& elem : ply.elements) {
+    for (auto& elem : ply->elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {

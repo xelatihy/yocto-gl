@@ -34,8 +34,8 @@
 // Application state
 struct app_state {
     // scene
-    scene*    scn = nullptr;
-    bvh_tree* bvh = nullptr;
+    unique_ptr<scene>    scn = nullptr;
+    unique_ptr<bvh_tree> bvh = nullptr;
 
     // rendering params
     string       filename   = "scene.json";
@@ -43,8 +43,8 @@ struct app_state {
     trace_params params     = {};
 
     // rendering state
-    trace_state*  state  = nullptr;
-    trace_lights* lights = nullptr;
+    unique_ptr<trace_state>  state  = nullptr;
+    unique_ptr<trace_lights> lights = nullptr;
 
     // view image
     vec2f                        imcenter     = zero2f;
@@ -57,13 +57,6 @@ struct app_state {
     bool                         quiet          = false;
     int64_t                      trace_start    = 0;
     uint                         gl_txt         = 0;
-
-    ~app_state() {
-        if (scn) delete scn;
-        if (bvh) delete bvh;
-        if (state) delete state;
-        if (lights) delete lights;
-    }
 };
 
 void draw_glwidgets(glwindow* win) {
@@ -123,12 +116,12 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "navigate")) {
             draw_glwidgets_scene_tree(
-                win, "", app->scn, app->selection, app->update_list, 200);
+                win, "", app->scn.get(), app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspec")) {
             draw_glwidgets_scene_inspector(
-                win, "", app->scn, app->selection, app->update_list, 200);
+                win, "", app->scn.get(), app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -159,7 +152,7 @@ bool update(app_state* app) {
     if (app->update_list.empty()) return false;
 
     // stop renderer
-    trace_async_stop(app->state);
+    trace_async_stop(app->state.get());
 
     // update BVH
     for (auto& sel : app->update_list) {
@@ -170,20 +163,24 @@ bool update(app_state* app) {
                     break;
                 }
             }
-            refit_bvh(app->scn, app->bvh);
+            refit_bvh(app->scn.get(), app->bvh.get());
         }
-        if (get<0>(sel) == "instance") { refit_bvh(app->scn, app->bvh); }
+        if (get<0>(sel) == "instance") {
+            refit_bvh(app->scn.get(), app->bvh.get());
+        }
         if (get<0>(sel) == "node") {
-            update_transforms(app->scn, 0);
-            refit_bvh(app->scn, app->bvh);
+            update_transforms(app->scn.get(), 0);
+            refit_bvh(app->scn.get(), app->bvh.get());
         }
     }
     app->update_list.clear();
 
-    delete app->state;
+    app->state       = {};
     app->trace_start = get_time();
-    app->state       = make_trace_state(app->scn, app->params);
-    trace_async_start(app->state, app->scn, app->bvh, app->lights, app->params);
+    app->state       = unique_ptr<trace_state>(
+        make_trace_state(app->scn.get(), app->params));
+    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(),
+        app->lights.get(), app->params);
 
     // updated
     return true;
@@ -232,7 +229,7 @@ void run_ui(app_state* app) {
                 auto cam = app->scn->cameras.at(app->params.camid);
                 auto ray = eval_camera_ray(
                     cam, ij, extents(app->state->img), {0.5f, 0.5f}, zero2f);
-                auto isec = intersect_ray(app->scn, app->bvh, ray);
+                auto isec = intersect_ray(app->scn.get(), app->bvh.get(), ray);
                 if (isec.ist) app->selection = isec.ist;
             }
         }
@@ -289,7 +286,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     auto load_start = get_time();
-    app->scn        = load_scene(app->filename);
+    app->scn        = unique_ptr<scene>(load_scene(app->filename));
     if (!app->scn) log_fatal("cannot load scene " + app->filename);
     if (!quiet)
         printf("loading in %s\n",
@@ -297,7 +294,7 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     if (!quiet) printf("tesselating scene elements\n");
-    tesselate_subdivs(app->scn);
+    tesselate_subdivs(app->scn.get());
 
     // add components
     if (!quiet) printf("adding scene elements\n");
@@ -309,21 +306,23 @@ int main(int argc, char* argv[]) {
         for (auto mat : app->scn->materials) mat->double_sided = true;
     if (app->scn->cameras.empty())
         app->scn->cameras.push_back(
-            make_bbox_camera("<view>", compute_bbox(app->scn)));
-    add_missing_names(app->scn);
-    for (auto& err : validate(app->scn)) printf("warning: %s\n", err.c_str());
+            make_bbox_camera("<view>", compute_bbox(app->scn.get())));
+    add_missing_names(app->scn.get());
+    for (auto& err : validate(app->scn.get()))
+        printf("warning: %s\n", err.c_str());
 
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = get_time();
-    app->bvh       = build_bvh(app->scn, true, embree);
+    app->bvh = unique_ptr<bvh_tree>(build_bvh(app->scn.get(), true, embree));
     if (!quiet)
         printf("building bvh in %s\n",
             format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     if (!quiet) printf("initializing lights\n");
-    app->lights = make_trace_lights(app->scn, app->params);
+    app->lights = unique_ptr<trace_lights>(
+        make_trace_lights(app->scn.get(), app->params));
 
     // fix renderer type if no lights
     if (app->lights->lights.empty() && app->lights->environments.empty() &&
@@ -334,19 +333,20 @@ int main(int argc, char* argv[]) {
     }
 
     // prepare renderer
-    app->state = make_trace_state(app->scn, app->params);
+    app->state = unique_ptr<trace_state>(
+        make_trace_state(app->scn.get(), app->params));
 
     // initialize rendering objects
     if (!quiet) printf("starting async renderer\n");
     app->trace_start = get_time();
-    trace_async_start(app->state, app->scn, app->bvh, app->lights, app->params);
+    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(),
+        app->lights.get(), app->params);
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    trace_async_stop(app->state);
-    delete app;
+    trace_async_stop(app->state.get());
 
     // done
     return 0;
