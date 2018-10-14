@@ -2485,10 +2485,10 @@ struct image {
 
     // constructors
     image() : width{0}, height{0}, pixels() {}
-    image(const vec2i& wh, const T& v = T{})
-        : width{wh.x}, height{wh.y}, pixels(wh.x * wh.y, v) {}
-    image(const vec2i& wh, const T* v)
-        : width{wh.x}, height{wh.y}, pixels(v, v + wh.x * wh.y) {}
+    image(int w, int h, const T& v = T{})
+        : width{w}, height{h}, pixels(w * h, v) {}
+    image(int w, int h, const T* v)
+        : width{w}, height{h}, pixels(v, v + w * h) {}
 };
 
 // Element access.
@@ -2708,42 +2708,42 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 namespace ygl {
 
 // Make example images.
-image<vec4f> make_grid_image4f(const vec2i& size, int tile = 8,
+image<vec4f> make_grid_image4f(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_checker_image4f(const vec2i& size, int tile = 8,
+image<vec4f> make_checker_image4f(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_bumpdimple_image4f(const vec2i& size, int tile = 8);
+image<vec4f> make_bumpdimple_image4f(int width, int height, int tile = 8);
 image<vec4f> make_ramp_image4f(
-    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
-image<vec4f> make_gammaramp_image4f(const vec2i& size);
-image<vec4f> make_uvramp_image4f(const vec2i& size);
+    int width, int height, const vec4f& c0, const vec4f& c1, float srgb = false);
+image<vec4f> make_gammaramp_image4f(int width, int height);
+image<vec4f> make_uvramp_image4f(int width, int height);
 image<vec4f> make_uvgrid_image4f(
-    const vec2i& size, int tile = 8, bool colored = true);
+    int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
+image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image4f(const vec2i& size, const vec3f& le = {1, 1, 1},
+image<vec4f> make_lights_image4f(int width, int height, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 image<vec4f> make_noise_image4f(
-    const vec2i& size, float scale = 1, bool wrap = true);
-image<vec4f> make_fbm_image4f(const vec2i& size, float scale = 1,
+    int width, int height, float scale = 1, bool wrap = true);
+image<vec4f> make_fbm_image4f(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image<vec4f> make_ridge_image4f(const vec2i& size, float scale = 1,
+image<vec4f> make_ridge_image4f(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image<vec4f> make_turbulence_image4f(const vec2i& size, float scale = 1,
+image<vec4f> make_turbulence_image4f(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -2825,10 +2825,10 @@ struct volume {
 
     // constructors
     volume() : width{0}, height{0}, depth{0}, voxels() {}
-    volume(const vec3i& size, const T& v = T{})
-        : width{size.x}, height{size.y}, depth{size.z}, voxels(size.x * size.y * size.z, v) {}
-    volume(const vec3i& size, const T* v)
-        : width{size.x}, height{size.y}, depth{size.z}, voxels(v, v + size.x * size.y * size.z) {}
+    volume(int w, int h, int d, const T& v = T{})
+        : width{w}, height{h}, depth{d}, voxels(w * h * d, v) {}
+    volume(int w, int h, int d, const T* v)
+        : width{w}, height{h}, depth{d}, voxels(v, v + w * h * d) {}
 };
 
 // Element access
@@ -2919,8 +2919,8 @@ const T* end(const volume<T>& vol) {
 namespace ygl {
 
 // make a simple example volume
-volume<float> make_test_volume1f(
-    const vec3i& size, float scale = 10, float exponent = 6);
+volume<float> make_test_volume1f(int width, int height, int depth,
+    float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
@@ -3197,7 +3197,7 @@ inline environment* make_sky_environment(
     auto txt    = new texture();
     txt->name   = name;
     txt->path   = "textures/" + name + ".hdr";
-    txt->imgf   = make_sunsky_image4f({1024, 512}, sun_angle);
+    txt->imgf   = make_sunsky_image4f(1024, 512, sun_angle);
     auto env    = new environment();
     env->name   = name;
     env->ke     = {1, 1, 1};
