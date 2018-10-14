@@ -131,10 +131,10 @@ uint make_gltexture(
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_float) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.size().x, img.size().y,
-            0, GL_RGBA, GL_FLOAT, img.data());
+            0, GL_RGBA, GL_FLOAT, data(img));
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0,
-            GL_RGBA, GL_FLOAT, img.data());
+            GL_RGBA, GL_FLOAT, data(img));
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -157,7 +157,7 @@ void update_gltexture(
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-        GL_FLOAT, img.data());
+        GL_FLOAT, data(img));
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
@@ -181,10 +181,10 @@ uint make_gltexture(
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_srgb) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.size().x,
-            img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+            img.size().y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data(img));
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.size().x, img.size().y, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, img.data());
+            GL_RGBA, GL_UNSIGNED_BYTE, data(img));
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -207,7 +207,7 @@ void update_gltexture(
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
-        GL_UNSIGNED_BYTE, img.data());
+        GL_UNSIGNED_BYTE, data(img));
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);

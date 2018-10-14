@@ -1009,7 +1009,7 @@ image<vec4f> load_pfm_image4f(const std::string& filename) {
 }
 bool save_pfm_image4f(const std::string& filename, const image<vec4f>& img) {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
+            (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1034,7 +1034,7 @@ image<vec4f> load_exr_image4f(const std::string& filename) {
     return img;
 }
 bool save_exr_image4f(const std::string& filename, const image<vec4f>& img) {
-    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+    if (!SaveEXR((float*)data(img), img.size().x, img.size().y, 4,
             filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -1073,7 +1073,7 @@ image<vec4f> load_stb_image4f(const std::string& filename) {
 // save an image with stbi
 bool save_png_image4b(const std::string& filename, const image<vec4b>& img) {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4)) {
+            data(img), img.size().x * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1081,7 +1081,7 @@ bool save_png_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 bool save_jpg_image4b(const std::string& filename, const image<vec4b>& img) {
     if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
+            filename.c_str(), img.size().x, img.size().y, 4, data(img), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1089,7 +1089,7 @@ bool save_jpg_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 bool save_tga_image4b(const std::string& filename, const image<vec4b>& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
+            filename.c_str(), img.size().x, img.size().y, 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1097,7 +1097,7 @@ bool save_tga_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 bool save_bmp_image4b(const std::string& filename, const image<vec4b>& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
+            filename.c_str(), img.size().x, img.size().y, 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1105,7 +1105,7 @@ bool save_bmp_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 bool save_hdr_image4f(const std::string& filename, const image<vec4f>& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
+            (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1269,8 +1269,8 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
     if (!size.y)
         size.y = (int)round(img.size().y * (size.x / (float)img.size().x));
     auto res_img = image<vec4f>{size};
-    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+    stbir_resize_float_generic((float*)data(img), img.size().x, img.size().y,
+        sizeof(vec4f) * img.size().x, (float*)data(res_img), res_img.size().x,
         res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
         nullptr);

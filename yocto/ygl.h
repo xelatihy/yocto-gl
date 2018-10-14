@@ -2478,20 +2478,20 @@ struct image {
     // T& at(int i, int j) { return _data.at(j * _size.x + i); }
     // const T& at(int i, int j) const { return _data.at(j * _size.x + i); }
 
-    // data acess
-    T*       data() { return _data.data(); }
-    const T* data() const { return _data.data(); }
-    T*       begin() { return _data.data(); }
-    const T* begin() const { return _data.data(); }
-    T*       end() { return _data.data() + _data.size(); }
-    const T* end() const { return _data.data() + _data.size(); }
-
     // private data
     vec2i          _size = {0, 0};
     std::vector<T> _data = {};
 };
 
 // Data access
+template <typename T>
+T* data(image<T>& img) {
+    return img._data.data();
+}
+template <typename T>
+const T* data(const image<T>& img) {
+    return img._data.data();
+}
 template <typename T>
 std::vector<T>& data_vector(image<T>& img) {
     return img._data;
@@ -2500,6 +2500,17 @@ template <typename T>
 const std::vector<T>& data_vector(const image<T>& img) {
     return img._data;
 }
+
+// Iteration
+template <typename T>
+T*       begin(image<T>& img) { return img._data.data(); }
+template <typename T>
+const T* begin(const image<T>& img) { return img._data.data(); }
+template <typename T>
+T*       end(image<T>& img) { return img._data.data() + img._data.size(); }
+template <typename T>
+const T* end(const image<T>& img) { return img._data.data() + img._data.size(); }
+
 
 }  // namespace ygl
 
