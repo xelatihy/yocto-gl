@@ -92,7 +92,7 @@ void update_stats_async(app_image* img) {
     img->stats_done       = false;
     img->stats.pxl_bounds = invalid_bbox4f;
     img->stats.lum_bounds = invalid_bbox1f;
-    for (auto p : img->img) {
+    for (auto p : img->img.pixels) {
         img->stats.pxl_bounds += p;
         img->stats.lum_bounds += luminance(xyz(p));
     }

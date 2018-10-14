@@ -1011,7 +1011,7 @@ image<vec4f> load_pfm_image4f(const string& filename) {
 }
 bool save_pfm_image4f(const string& filename, const image<vec4f>& img) {
     if (!save_pfm(
-            filename.c_str(), img.width, img.height, 4, (float*)data(img))) {
+            filename.c_str(), img.width, img.height, 4, (float*)img.pixels.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1037,7 +1037,7 @@ image<vec4f> load_exr_image4f(const string& filename) {
 }
 bool save_exr_image4f(const string& filename, const image<vec4f>& img) {
     if (!SaveEXR(
-            (float*)data(img), img.width, img.height, 4, filename.c_str())) {
+            (float*)img.pixels.data(), img.width, img.height, 4, filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1072,7 +1072,7 @@ image<vec4f> load_stb_image4f(const string& filename) {
 
 // save an image with stbi
 bool save_png_image4b(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), img.width, img.height, 4, data(img),
+    if (!stbi_write_png(filename.c_str(), img.width, img.height, 4, img.pixels.data(),
             img.width * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -1081,7 +1081,7 @@ bool save_png_image4b(const string& filename, const image<vec4b>& img) {
 }
 bool save_jpg_image4b(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_jpg(
-            filename.c_str(), img.width, img.height, 4, data(img), 75)) {
+            filename.c_str(), img.width, img.height, 4, img.pixels.data(), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1089,7 +1089,7 @@ bool save_jpg_image4b(const string& filename, const image<vec4b>& img) {
 }
 bool save_tga_image4b(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.width, img.height, 4, data(img))) {
+            filename.c_str(), img.width, img.height, 4, img.pixels.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1097,7 +1097,7 @@ bool save_tga_image4b(const string& filename, const image<vec4b>& img) {
 }
 bool save_bmp_image4b(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.width, img.height, 4, data(img))) {
+            filename.c_str(), img.width, img.height, 4, img.pixels.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1105,7 +1105,7 @@ bool save_bmp_image4b(const string& filename, const image<vec4b>& img) {
 }
 bool save_hdr_image4f(const string& filename, const image<vec4f>& img) {
     if (!stbi_write_hdr(
-            filename.c_str(), img.width, img.height, 4, (float*)data(img))) {
+            filename.c_str(), img.width, img.height, 4, (float*)img.pixels.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1266,8 +1266,8 @@ image<vec4f> resize_image(const image<vec4f>& img, int width, int height) {
     if (!height)
         height = (int)round(img.height * (width / (float)img.width));
     auto res_img = image<vec4f>{width, height};
-    stbir_resize_float_generic((float*)data(img), img.width, img.height,
-        sizeof(vec4f) * img.width, (float*)data(res_img), width,
+    stbir_resize_float_generic((float*)img.pixels.data(), img.width, img.height,
+        sizeof(vec4f) * img.width, (float*)res_img.pixels.data(), width,
         height, sizeof(vec4f) * width, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
         nullptr);
@@ -1380,13 +1380,13 @@ bool load_scene_textures(
         auto has_opacity = unordered_map<texture*, bool>();
         for (auto& txt : scn->textures) {
             has_opacity[txt] = false;
-            for (auto& p : txt->imgf) {
+            for (auto& p : txt->imgf.pixels) {
                 if (p.w < 0.999f) {
                     has_opacity[txt] = true;
                     break;
                 }
             }
-            for (auto& p : txt->imgb) {
+            for (auto& p : txt->imgb.pixels) {
                 if (p.w < 255) {
                     has_opacity[txt] = true;
                     break;
@@ -5180,7 +5180,7 @@ bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
         if (!read_value(fs, width)) return false;
         if (!read_value(fs, height)) return false;
         img = image<T>{width, height};
-        if (!read_values(fs, data_vector(img))) return false;
+        if (!read_values(fs, img.pixels)) return false;
         return true;
     }
 }

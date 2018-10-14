@@ -129,10 +129,10 @@ gltexture make_gltexture(
     glBindTexture(GL_TEXTURE_2D, txt.tid);
     if (as_float) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.width, img.height, 0,
-            GL_RGBA, GL_FLOAT, data(img));
+            GL_RGBA, GL_FLOAT, img.pixels.data());
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0,
-            GL_RGBA, GL_FLOAT, data(img));
+            GL_RGBA, GL_FLOAT,img.pixels.data());
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -155,7 +155,7 @@ void update_gltexture(gltexture& txt, const image<vec4f>& img, bool as_float,
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, txt.tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
-        GL_FLOAT, data(img));
+        GL_FLOAT, img.pixels.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
@@ -179,10 +179,10 @@ gltexture make_gltexture(
     glBindTexture(GL_TEXTURE_2D, txt.tid);
     if (as_srgb) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.width, img.height,
-            0, GL_RGBA, GL_UNSIGNED_BYTE, data(img));
+            0, GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, data(img));
+            GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
@@ -205,7 +205,7 @@ void update_gltexture(gltexture& txt, const image<vec4b>& img, bool as_srgb,
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, txt.tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
-        GL_UNSIGNED_BYTE, data(img));
+        GL_UNSIGNED_BYTE, img.pixels.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);

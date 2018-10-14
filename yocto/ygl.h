@@ -2509,42 +2509,6 @@ inline const T& at(const image<T>& img, const vec2i& ij) {
     return img.pixels[ij.y * img.width + ij.x];
 } 
 
-// Data access
-template <typename T>
-T* data(image<T>& img) {
-    return img.pixels.data();
-}
-template <typename T>
-const T* data(const image<T>& img) {
-    return img.pixels.data();
-}
-template <typename T>
-vector<T>& data_vector(image<T>& img) {
-    return img.pixels;
-}
-template <typename T>
-const vector<T>& data_vector(const image<T>& img) {
-    return img.pixels;
-}
-
-// Iteration
-template <typename T>
-T* begin(image<T>& img) {
-    return img.pixels.data();
-}
-template <typename T>
-const T* begin(const image<T>& img) {
-    return img.pixels.data();
-}
-template <typename T>
-T* end(image<T>& img) {
-    return img.pixels.data() + img.pixels.size();
-}
-template <typename T>
-const T* end(const image<T>& img) {
-    return img.pixels.data() + img.pixels.size();
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -2825,42 +2789,6 @@ T& at(volume<T>& vol, int i, int j, int k) {
 template<typename T>
 const T& at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
-}
-
-// Data access
-template <typename T>
-T* data(volume<T>& vol) {
-    return vol.voxels.data();
-}
-template <typename T>
-const T* data(const volume<T>& vol) {
-    return vol.voxels.data();
-}
-template <typename T>
-vector<T>& data_vector(volume<T>& vol) {
-    return vol.voxels;
-}
-template <typename T>
-const vector<T>& data_vector(const volume<T>& vol) {
-    return vol.voxels;
-}
-
-// Iteration
-template <typename T>
-T* begin(volume<T>& vol) {
-    return vol.voxels.data();
-}
-template <typename T>
-const T* begin(const volume<T>& vol) {
-    return vol.voxels.data();
-}
-template <typename T>
-T* end(volume<T>& vol) {
-    return vol.voxels.data() + vol.voxels.size();
-}
-template <typename T>
-const T* end(const volume<T>& vol) {
-    return vol.voxels.data() + vol.voxels.size();
 }
 
 }  // namespace ygl
