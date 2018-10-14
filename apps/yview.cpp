@@ -31,16 +31,16 @@
 #include "yglutils.h"
 #include "ysceneui.h"
 
-struct draw_glshape_vbos {
-    unsigned int gl_pos = 0, gl_norm = 0, gl_texcoord = 0, gl_color = 0,
-                 gl_tangsp = 0, gl_points = 0, gl_lines = 0,
-                 gl_triangles = 0;  // unmanaged data for OpenGL viewer
+struct glshape {
+    glarraybuffer gl_pos = {}, gl_norm = {}, gl_texcoord = {}, gl_color = {},
+                  gl_tangsp   = {};
+    glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {};
 };
 
 struct draw_glstate {
-    unsigned int                                   gl_prog = 0;
-    unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
-    unordered_map<const texture*, unsigned int>    txt_id;
+    glprogram                                prog = {};
+    unordered_map<const shape*, glshape>     shps;
+    unordered_map<const texture*, gltexture> txts;
 };
 
 // Application state
@@ -76,10 +76,10 @@ struct app_state {
     bool                         animate    = false;
 };
 
-void draw_glscene(const draw_glstate* state, const scene* scn,
-    const camera* cam, const vec2i& viewport_size, const void* highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
-    float near_plane, float far_plane);
+void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
+    const vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe, bool edges, float exposure, float gamma, float near_plane,
+    float far_plane);
 
 // draw with shading
 void draw(glwindow* win) {
@@ -465,56 +465,54 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(const draw_glstate* state, const shape* shp,
-    const material* mat, const mat4f& xform, bool highlighted, bool eyelight,
-    bool edges) {
-    set_gluniform(state->gl_prog, "shape_xform", xform);
-    set_gluniform(state->gl_prog, "shape_normal_offset", 0.0f);
+void draw_glshape(draw_glstate* state, const shape* shp, const material* mat,
+    const mat4f& xform, bool highlighted, bool eyelight, bool edges) {
+    set_gluniform(state->prog, "shape_xform", xform);
+    set_gluniform(state->prog, "shape_normal_offset", 0.0f);
 
     auto mtype = 1;
     if (mat->base_metallic) mtype = 2;
     if (mat->gltf_textures) mtype = (mat->base_metallic) ? 2 : 3;
-    set_gluniform(state->gl_prog, "mat_type", mtype);
-    set_gluniform(state->gl_prog, "mat_ke", mat->ke);
-    set_gluniform(state->gl_prog, "mat_kd", mat->kd);
-    set_gluniform(state->gl_prog, "mat_ks", mat->ks);
-    set_gluniform(state->gl_prog, "mat_rs", mat->rs);
-    set_gluniform(state->gl_prog, "mat_op", mat->op);
-    set_gluniform(state->gl_prog, "mat_double_sided", (int)mat->double_sided);
-    set_gluniform_texture(state->gl_prog, "mat_ke_txt", "mat_ke_txt_on",
-        mat->ke_txt ? state->txt_id.at(mat->ke_txt) : 0, 0);
-    set_gluniform_texture(state->gl_prog, "mat_kd_txt", "mat_kd_txt_on",
-        mat->kd_txt ? state->txt_id.at(mat->kd_txt) : 0, 1);
-    set_gluniform_texture(state->gl_prog, "mat_ks_txt", "mat_ks_txt_on",
-        mat->ks_txt ? state->txt_id.at(mat->ks_txt) : 0, 2);
-    set_gluniform_texture(state->gl_prog, "mat_rs_txt", "mat_rs_txt_on",
-        mat->rs_txt ? state->txt_id.at(mat->rs_txt) : 0, 3);
-    set_gluniform_texture(state->gl_prog, "mat_op_txt", "mat_op_txt_on",
-        mat->op_txt ? state->txt_id.at(mat->op_txt) : 0, 4);
-    set_gluniform_texture(state->gl_prog, "mat_norm_txt", "mat_norm_txt_on",
-        mat->norm_txt ? state->txt_id.at(mat->norm_txt) : 0, 5);
+    set_gluniform(state->prog, "mat_type", mtype);
+    set_gluniform(state->prog, "mat_ke", mat->ke);
+    set_gluniform(state->prog, "mat_kd", mat->kd);
+    set_gluniform(state->prog, "mat_ks", mat->ks);
+    set_gluniform(state->prog, "mat_rs", mat->rs);
+    set_gluniform(state->prog, "mat_op", mat->op);
+    set_gluniform(state->prog, "mat_double_sided", (int)mat->double_sided);
+    set_gluniform_texture(state->prog, "mat_ke_txt", "mat_ke_txt_on",
+        state->txts.at(mat->ke_txt), 0);
+    set_gluniform_texture(state->prog, "mat_kd_txt", "mat_kd_txt_on",
+        state->txts.at(mat->kd_txt), 1);
+    set_gluniform_texture(state->prog, "mat_ks_txt", "mat_ks_txt_on",
+        state->txts.at(mat->ks_txt), 2);
+    set_gluniform_texture(state->prog, "mat_rs_txt", "mat_rs_txt_on",
+        state->txts.at(mat->rs_txt), 3);
+    set_gluniform_texture(state->prog, "mat_op_txt", "mat_op_txt_on",
+        state->txts.at(mat->op_txt), 4);
+    set_gluniform_texture(state->prog, "mat_norm_txt", "mat_norm_txt_on",
+        state->txts.at(mat->norm_txt), 5);
 
-    auto& vbos = state->shp_vbos.at(shp);
-    set_gluniform(state->gl_prog, "elem_faceted", (int)shp->norm.empty());
-    set_glvertexattrib(state->gl_prog, "vert_pos", vbos.gl_pos, zero3f);
-    set_glvertexattrib(state->gl_prog, "vert_norm", vbos.gl_norm, zero3f);
+    auto& vbos = state->shps.at(shp);
+    set_gluniform(state->prog, "elem_faceted", (int)shp->norm.empty());
+    set_glvertexattrib(state->prog, "vert_pos", vbos.gl_pos, zero3f);
+    set_glvertexattrib(state->prog, "vert_norm", vbos.gl_norm, zero3f);
+    set_glvertexattrib(state->prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
     set_glvertexattrib(
-        state->gl_prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+        state->prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
     set_glvertexattrib(
-        state->gl_prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
-    set_glvertexattrib(
-        state->gl_prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+        state->prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
     if (!shp->points.empty()) {
-        set_gluniform(state->gl_prog, "elem_type", 1);
+        set_gluniform(state->prog, "elem_type", 1);
         draw_glpoints(vbos.gl_points, shp->points.size());
     }
     if (!shp->lines.empty()) {
-        set_gluniform(state->gl_prog, "elem_type", 2);
+        set_gluniform(state->prog, "elem_type", 2);
         draw_gllines(vbos.gl_lines, shp->lines.size());
     }
     if (!shp->triangles.empty()) {
-        set_gluniform(state->gl_prog, "elem_type", 3);
+        set_gluniform(state->prog, "elem_type", 3);
         draw_gltriangles(vbos.gl_triangles, shp->triangles.size());
     }
 
@@ -522,10 +520,10 @@ void draw_glshape(const draw_glstate* state, const shape* shp,
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
         check_glerror();
-        set_gluniform(state->gl_prog, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(state->gl_prog, "ke"), 0, 0, 0);
-        set_gluniform(state->gl_prog, "op"), mat->op);
-        set_gluniform(state->gl_prog, "shp_normal_offset"), 0.01f);
+        set_gluniform(state->prog, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state->prog, "ke"), 0, 0, 0);
+        set_gluniform(state->prog, "op"), mat->op);
+        set_gluniform(state->prog, "shp_normal_offset"), 0.01f);
         check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
@@ -539,10 +537,10 @@ void draw_glshape(const draw_glstate* state, const shape* shp,
 }
 
 // Display a scene
-void draw_glscene(const draw_glstate* state, const scene* scn,
-    const camera* cam, const vec2i& viewport_size, const void* highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
-    float near_plane, float far_plane) {
+void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
+    const vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe, bool edges, float exposure, float gamma, float near_plane,
+    float far_plane) {
     set_glviewport(viewport_size);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
@@ -552,13 +550,13 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
     auto camera_proj = perspective_mat(eval_camera_fovy(cam),
         (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
-    bind_glprogram(state->gl_prog);
-    set_gluniform(state->gl_prog, "cam_pos", cam->frame.o);
-    set_gluniform(state->gl_prog, "cam_xform_inv", camera_view);
-    set_gluniform(state->gl_prog, "cam_proj", camera_proj);
-    set_gluniform(state->gl_prog, "eyelight", (int)eyelight);
-    set_gluniform(state->gl_prog, "exposure", exposure);
-    set_gluniform(state->gl_prog, "gamma", gamma);
+    bind_glprogram(state->prog);
+    set_gluniform(state->prog, "cam_pos", cam->frame.o);
+    set_gluniform(state->prog, "cam_xform_inv", camera_view);
+    set_gluniform(state->prog, "cam_proj", camera_proj);
+    set_gluniform(state->prog, "eyelight", (int)eyelight);
+    set_gluniform(state->prog, "exposure", exposure);
+    set_gluniform(state->prog, "gamma", gamma);
 
     if (!eyelight) {
         auto lights_pos  = vector<vec3f>();
@@ -587,15 +585,15 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
             lights_type.push_back(0);
         }
         if (lights_pos.empty()) eyelight = false;
-        set_gluniform(state->gl_prog, "lamb", zero3f);
-        set_gluniform(state->gl_prog, "lnum", (int)lights_pos.size());
+        set_gluniform(state->prog, "lamb", zero3f);
+        set_gluniform(state->prog, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = to_string(i);
             set_gluniform(
-                state->gl_prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
+                state->prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
             set_gluniform(
-                state->gl_prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
-            set_gluniform(state->gl_prog, ("ltype[" + is + "]").c_str(),
+                state->prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            set_gluniform(state->prog, ("ltype[" + is + "]").c_str(),
                 (int)lights_type[i]);
         }
     }
@@ -608,7 +606,7 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
             eyelight, edges);
     }
 
-    bind_glprogram(0);
+    unbind_glprogram();
     if (wireframe) set_glwireframe(false);
 }
 
@@ -616,20 +614,19 @@ draw_glstate* init_draw_state(glwindow* win) {
     auto app   = (app_state*)get_user_pointer(win);
     auto state = new draw_glstate();
     // load textures and vbos
-    state->gl_prog         = make_glprogram(vertex, fragment);
-    state->txt_id[nullptr] = 0;
+    state->prog          = make_glprogram(vertex, fragment);
+    state->txts[nullptr] = {};
     for (auto txt : app->scn->textures) {
         if (!empty(txt->imgf)) {
-            state->txt_id[txt] = make_gltexture(txt->imgf, true, true, true);
+            state->txts[txt] = make_gltexture(txt->imgf, true, true, true);
         } else if (!empty(txt->imgb)) {
-            state->txt_id[txt] = make_gltexture(
-                txt->imgb, txt->srgb, true, true);
+            state->txts[txt] = make_gltexture(txt->imgb, txt->srgb, true, true);
         } else {
             printf("bad texture");
         }
     }
     for (auto& shp : app->scn->shapes) {
-        auto vbos = draw_glshape_vbos();
+        auto vbos = glshape();
         if (!shp->pos.empty())
             vbos.gl_pos = make_glarraybuffer(shp->pos, false);
         if (!shp->norm.empty())
@@ -646,7 +643,7 @@ draw_glstate* init_draw_state(glwindow* win) {
             vbos.gl_lines = make_glelementbuffer(shp->lines, false);
         if (!shp->triangles.empty())
             vbos.gl_triangles = make_glelementbuffer(shp->triangles, false);
-        state->shp_vbos[shp] = vbos;
+        state->shps[shp] = vbos;
     }
     return state;
 }

@@ -44,29 +44,56 @@ void set_glviewport(const vec2i& size);
 
 void set_glwireframe(bool enabled);
 
-uint make_glprogram(const char* vertex, const char* fragment);
-void bind_glprogram(uint pid);
+struct glprogram {
+    uint pid = 0;
+    uint vid = 0;
+    uint fid = 0;
+    uint vao = 0;
+         operator bool() const { return (bool)pid; }
+};
 
-uint make_gltexture(
+glprogram make_glprogram(const char* vertex, const char* fragment);
+void      bind_glprogram(glprogram& pid);
+void      unbind_glprogram();
+
+struct gltexture {
+    uint tid = 0;
+         operator bool() const { return (bool)tid; }
+};
+
+gltexture make_gltexture(
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
-void update_gltexture(
-    int tid, const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
+void update_gltexture(gltexture& txt, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap);
 
-uint make_gltexture(
+gltexture make_gltexture(
     const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
-void update_gltexture(
-    int tid, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
+void update_gltexture(gltexture& txt, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap);
 
-uint make_glarraybuffer(const vector<float>& buf, bool dynamic = false);
-uint make_glarraybuffer(const vector<vec2f>& buf, bool dynamic = false);
-uint make_glarraybuffer(const vector<vec3f>& buf, bool dynamic = false);
-uint make_glarraybuffer(const vector<vec4f>& buf, bool dynamic = false);
+struct glarraybuffer {
+    uint bid = 0;
+         operator bool() const { return (bool)bid; }
+};
 
-uint make_glelementbuffer(const vector<int>& buf, bool dynamic = false);
-uint make_glelementbuffer(const vector<vec2i>& buf, bool dynamic = false);
-uint make_glelementbuffer(const vector<vec3i>& buf, bool dynamic = false);
+struct glelementbuffer {
+    uint bid = 0;
+         operator bool() const { return (bool)bid; }
+};
 
-int get_gluniform_location(uint pid, const char* name);
+glarraybuffer make_glarraybuffer(const vector<float>& buf, bool dynamic = false);
+glarraybuffer make_glarraybuffer(const vector<vec2f>& buf, bool dynamic = false);
+glarraybuffer make_glarraybuffer(const vector<vec3f>& buf, bool dynamic = false);
+glarraybuffer make_glarraybuffer(const vector<vec4f>& buf, bool dynamic = false);
+
+glelementbuffer make_glelementbuffer(
+    const vector<int>& buf, bool dynamic = false);
+glelementbuffer make_glelementbuffer(
+    const vector<vec2i>& buf, bool dynamic = false);
+glelementbuffer make_glelementbuffer(
+    const vector<vec3i>& buf, bool dynamic = false);
+
+int get_gluniform_location(const glprogram& prog, const char* name);
 
 void set_gluniform(int loc, int val);
 void set_gluniform(int loc, const vec2i& val);
@@ -80,44 +107,45 @@ void set_gluniform(int loc, const mat4f& val);
 void set_gluniform(int loc, const frame3f& val);
 
 template <typename T>
-inline void set_gluniform(uint pid, const char* var, const T& val) {
-    set_gluniform(get_gluniform_location(pid, var), val);
+inline void set_gluniform(const glprogram& prog, const char* var, const T& val) {
+    set_gluniform(get_gluniform_location(prog, var), val);
 }
 
-void set_gluniform_texture(int loc, uint tid, int unit);
-void set_gluniform_texture(uint pid, const char* var, uint tid, int unit);
-void set_gluniform_texture(int loc, int loc_on, uint tid, int unit);
+void set_gluniform_texture(int loc, const gltexture& txt, int unit);
 void set_gluniform_texture(
-    uint pid, const char* var, const char* var_on, uint tid, int unit);
+    glprogram& prog, const char* var, const gltexture& txt, int unit);
+void set_gluniform_texture(int loc, int loc_on, const gltexture& txt, int unit);
+void set_gluniform_texture(glprogram& prog, const char* var, const char* var_on,
+    const gltexture& txt, int unit);
 
-int get_glvertexattrib_location(uint pid, const char* name);
+int get_glvertexattrib_location(const glprogram& prog, const char* name);
 
-void set_glvertexattrib(int loc, int bid, float val);
-void set_glvertexattrib(int loc, int bid, const vec2f& val);
-void set_glvertexattrib(int loc, int bid, const vec3f& val);
-void set_glvertexattrib(int loc, int bid, const vec4f& val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, float val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec2f& val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec3f& val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec4f& val);
 
 template <typename T>
-inline void set_glvertexattrib(
-    uint pid, const char* var, uint bid, const T& val) {
-    set_glvertexattrib(get_glvertexattrib_location(pid, var), bid, val);
+inline void set_glvertexattrib(const glprogram& prog, const char* var,
+    const glarraybuffer& buf, const T& val) {
+    set_glvertexattrib(get_glvertexattrib_location(prog, var), buf, val);
 }
 
-void draw_glpoints(uint bid, int num);
-void draw_gllines(uint bid, int num);
-void draw_gltriangles(uint bid, int num);
+void draw_glpoints(const glelementbuffer& buf, int num);
+void draw_gllines(const glelementbuffer& buf, int num);
+void draw_gltriangles(const glelementbuffer& buf, int num);
 
-void draw_glimage(
-    uint gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale);
+void draw_glimage(const gltexture& txt, vec2i imsize, vec2i winsize,
+    vec2f imcenter, float imscale);
 
-using glwindow = ::GLFWwindow;
+struct glwindow;
 
 glwindow* make_glwindow(const vec2i& size, const char* title,
-    void* user_pointer, void (*refresh)(GLFWwindow*));
+    void* user_pointer, function<void(glwindow*)> refresh_cb);
 void      delete_glwindow(glwindow* win);
 
-void set_drop_callback(glwindow* win,
-    void (*callback)(glwindow* win, int num, const char** paths));
+void set_drop_callback(glwindow*                               win,
+    function<void(glwindow* win, const vector<string>& paths)> drop_cb);
 
 void* get_user_pointer(glwindow* win);
 
