@@ -51,9 +51,9 @@ int main(int argc, char* argv[]) {
     auto print_info = parse_arg(
         parser, "--print-info,-i", false, "print obj info");
     auto output = parse_arg(
-        parser, "--output,-o", "out.obj", "output obj scene", true);
+        parser, "--output,-o", "out.obj"s, "output obj scene", true);
     auto filename = parse_arg(
-        parser, "filename", "img.obj", "input obj filename", true);
+        parser, "filename", "in.obj"s, "input obj filename", true);
     check_cmdline(parser);
 
     // prepare stats

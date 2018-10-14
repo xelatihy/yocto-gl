@@ -974,10 +974,11 @@ inline void check_cmdline(cmdline_parser& parser) {
 }
 
 // Parse an option string. Name should start with "--" or "-".
-inline string parse_option(cmdline_parser& parser, const string& name,
-    const string& def, const string& usage, bool req,
-    const vector<string>& choices) {
-    parser.usage_opt += get_option_usage(name, "", usage, def, choices);
+template <typename T>
+inline T parse_option(cmdline_parser& parser, const string& name, T def,
+    const string& usage, bool req, const vector<string>& choices) {
+    parser.usage_opt += get_option_usage(
+        name, "", usage, to_string(def), choices);
     if (parser.error != "") return def;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
@@ -993,10 +994,15 @@ inline string parse_option(cmdline_parser& parser, const string& name,
         parser.error += "missing value for " + name;
         return def;
     }
-    auto val = *(pos + 1);
+    auto vals = *(pos + 1);
     parser.args.erase(pos, pos + 2);
     if (!choices.empty() &&
-        std::find(choices.begin(), choices.end(), val) == choices.end()) {
+        std::find(choices.begin(), choices.end(), vals) == choices.end()) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    auto val = def;
+    if (!parse(vals, val)) {
         parser.error += "bad value for " + name;
         return def;
     }
@@ -1004,10 +1010,11 @@ inline string parse_option(cmdline_parser& parser, const string& name,
 }
 
 // Parse an argument string. Name should not start with "--" or "-".
-inline string parse_argument(cmdline_parser& parser, const string& name,
-    const string& def, const string& usage, bool req,
-    const vector<string>& choices) {
-    parser.usage_arg += get_option_usage(name, "", usage, def, choices);
+template <typename T>
+inline T parse_argument(cmdline_parser& parser, const string& name, const T def,
+    const string& usage, bool req, const vector<string>& choices) {
+    parser.usage_arg += get_option_usage(
+        name, "", usage, to_string(def), choices);
     if (parser.error != "") return def;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
@@ -1015,23 +1022,19 @@ inline string parse_argument(cmdline_parser& parser, const string& name,
         if (req) parser.error += "missing value for " + name;
         return def;
     }
-    auto val = *pos;
+    auto vals = *pos;
     parser.args.erase(pos);
     if (!choices.empty() &&
-        std::find(choices.begin(), choices.end(), val) == choices.end()) {
+        std::find(choices.begin(), choices.end(), vals) == choices.end()) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    auto val = def;
+    if (!parse(vals, val)) {
         parser.error += "bad value for " + name;
         return def;
     }
     return val;
-}
-
-// Parse a string argument.
-inline string parse_string(cmdline_parser& parser, const string& name,
-    const string& def, const string& usage, bool req,
-    const vector<string>& choices) {
-    return is_option(name) ?
-               parse_option(parser, name, def, usage, req, choices) :
-               parse_argument(parser, name, def, usage, req, choices);
 }
 
 // Parse all left argument strings. Name should not start with "--" or "-".
@@ -1072,28 +1075,21 @@ inline bool parse_flag(
 template <typename T>
 inline T parse_arg(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    if (vals == to_string(def)) return def;
-    auto val = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
+    return is_option(name) ? parse_option(parser, name, def, usage, req, {}) :
+                             parse_argument(parser, name, def, usage, req, {});
 }
 template <>
 inline bool parse_arg<bool>(cmdline_parser& parser, const string& name,
     bool def, const string& usage, bool req) {
     return parse_flag(parser, name, def, usage);
 }
-inline string parse_arg(cmdline_parser& parser, const string& name,
-    const char* def, const string& usage, bool req) {
-    return parse_string(parser, name, def, usage, req, {});
-}
 
 inline int parse_arge(cmdline_parser& parser, const string& name, int def,
     const string& usage, const vector<string>& labels, bool req) {
-    auto val = parse_string(parser, name, labels.at(def), usage, req, labels);
+    auto val = is_option(name) ? parse_option(parser, name, labels.at(def),
+                                     usage, req, labels) :
+                                 parse_argument(parser, name, labels.at(def),
+                                     usage, req, labels);
     return (int)(std::find(labels.begin(), labels.end(), val) - labels.begin());
 }
 
@@ -1102,6 +1098,12 @@ inline vector<string> parse_args(cmdline_parser& parser, const string& name,
     const vector<string>& def, const string& usage, bool req) {
     return parse_strings(parser, name, def, usage, req);
 }
+
+// Override to avoid issues with const char
+inline string parse_arg(cmdline_parser& parser, const string& name,
+    const char* def, const string& usage, bool req) {
+        return parse_arg(parser, name, std::string(def), usage, req);
+    }
 
 }  // namespace ygl
 

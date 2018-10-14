@@ -50,14 +50,14 @@ int main(int argc, char** argv) {
     auto uniform_txt = parse_arg(
         parser, "--uniform-txt", false, "uniform texture formats");
     auto output = parse_arg(
-        parser, "--output,-o", "out.json", "output scene", true);
+        parser, "--output,-o", "out.json"s, "output scene", true);
     auto filename = parse_arg(
-        parser, "scene", "scene.json", "input scene", true);
+        parser, "scene", "scene.json"s, "input scene", true);
     check_cmdline(parser);
 
     // load scene
     auto scn = unique_ptr<scene>{load_scene(filename, !notextures)};
-    if (!scn) log_fatal("cannot load scene %" + filename);
+    if (!scn) log_fatal("cannot load scene {}", filename);
 
     // change texture names
     if (uniform_txt) {

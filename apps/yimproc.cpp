@@ -145,13 +145,13 @@ int main(int argc, char* argv[]) {
     auto range_sigma = parse_arg(
         parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
     auto alpha_filename = parse_arg(
-        parser, "--set-alpha", "", "set alpha as this image alpha");
+        parser, "--set-alpha", ""s, "set alpha as this image alpha");
     auto coloralpha_filename = parse_arg(
-        parser, "--set-color-as-alpha", "", "set alpha as this image color");
+        parser, "--set-color-as-alpha", ""s, "set alpha as this image color");
     auto output = parse_arg(
-        parser, "--output,-o", "out.png", "output image filename", true);
+        parser, "--output,-o", "out.png"s, "output image filename", true);
     auto filename = parse_arg(
-        parser, "filename", "img.hdr", "input image filename", true);
+        parser, "filename", "img.hdr"s, "input image filename", true);
     check_cmdline(parser);
 
     // load
@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
     if (alpha_filename != "") {
         auto alpha = load_image4f(alpha_filename);
         if (alpha.pixels.empty())
-            log_fatal("cannot load image " + alpha_filename);
+            log_fatal("cannot load image {}", alpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
