@@ -154,8 +154,14 @@ void load_image_async(app_image* img) {
 
 // save an image
 void save_image_async(app_image* img) {
-    if (!save_image4f(img->outname, img->display)) {
-        img->error_msg = "error saving image";
+    if(is_hdr_filename(img->outname)) {
+        if (!save_image4b(img->outname, float_to_byte(img->display))) {
+            img->error_msg = "error saving image";
+        }
+    } else {
+        if (!save_image4f(img->outname, srgb_to_linear(img->display))) {
+            img->error_msg = "error saving image";
+        }
     }
 }
 
