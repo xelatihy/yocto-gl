@@ -57,9 +57,9 @@ struct app_image {
     bool  srgb     = true;
 
     // computation futures
-    std::atomic<bool> load_done, display_done, stats_done, texture_done;
+    atomic<bool> load_done, display_done, stats_done, texture_done;
     thread       load_thread, display_thread, stats_thread, save_thread;
-    std::atomic<bool> display_stop;
+    atomic<bool> display_stop;
     string       error_msg = "";
 
     // viewing properties

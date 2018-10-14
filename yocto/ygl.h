@@ -329,6 +329,7 @@ using std::tie;
 using std::tuple;
 using std::function;
 using std::runtime_error;
+using std::atomic;
 using namespace std::string_literals;
 
 using byte = unsigned char;

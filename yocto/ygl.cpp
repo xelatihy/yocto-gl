@@ -4459,8 +4459,8 @@ void print_stats(const scene* scn) {
 namespace ygl {
 
 // Trace stats.
-std::atomic<uint64_t> _trace_npaths{0};
-std::atomic<uint64_t> _trace_nrays{0};
+atomic<uint64_t> _trace_npaths{0};
+atomic<uint64_t> _trace_nrays{0};
 
 // Intersect a scene handling opacity.
 scene_intersection intersect_ray_cutout(const scene* scn, const bvh_tree* bvh,
