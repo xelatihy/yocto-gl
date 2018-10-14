@@ -110,14 +110,14 @@ void draw_gltriangles(uint bid, int num);
 void draw_glimage(
     uint gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale);
 
-using glwindow = ::GLFWwindow;
+struct glwindow;
 
 glwindow* make_glwindow(const vec2i& size, const char* title,
-    void* user_pointer, void (*refresh)(GLFWwindow*));
+    void* user_pointer, function<void(glwindow*)> refresh_cb);
 void      delete_glwindow(glwindow* win);
 
 void set_drop_callback(glwindow* win,
-    void (*callback)(glwindow* win, int num, const char** paths));
+    function<void(glwindow* win, const vector<string>& paths)> drop_cb);
 
 void* get_user_pointer(glwindow* win);
 

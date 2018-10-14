@@ -479,8 +479,29 @@ void draw_glimage(
     bind_glprogram(0);
 }
 
+struct glwindow {
+    GLFWwindow* win = nullptr;
+    void* user_ptr = nullptr;
+    std::function<void(glwindow*)> refresh_cb = {};
+    std::function<void(glwindow*,const vector<string>&)> drop_cb = {};
+};
+
+void _glfw_refresh_callback(GLFWwindow* glfw) {
+    auto win = (glwindow*)glfwGetWindowUserPointer(glfw);
+    if(win->refresh_cb) win->refresh_cb(win);
+}
+
+void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
+    auto win = (glwindow*)glfwGetWindowUserPointer(glfw);
+    if(win->drop_cb) {
+        auto pathv = vector<string>();
+        for(auto i = 0; i < num; i ++) pathv.push_back(paths[i]);
+        win->drop_cb(win, pathv);
+    }
+}
+
 glwindow* make_glwindow(const vec2i& size, const char* title,
-    void* user_pointer, void (*refresh)(GLFWwindow*)) {
+    void* user_pointer, std::function<void(glwindow*)> refresh_cb) {
     // init glfw
     if (!glfwInit()) throw runtime_error("cannot open glwindow");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -491,67 +512,75 @@ glwindow* make_glwindow(const vec2i& size, const char* title,
 #endif
 
     // create window
-    auto win = glfwCreateWindow(size.x, size.y, title, nullptr, nullptr);
-    glfwMakeContextCurrent(win);
+    auto win = make_unique<glwindow>();
+    win->win = glfwCreateWindow(size.x, size.y, title, nullptr, nullptr);
+    if(!win->win) return {};
+    glfwMakeContextCurrent(win->win);
     glfwSwapInterval(1);  // Enable vsync
 
     // set user data
-    glfwSetWindowRefreshCallback(win, refresh);
-    glfwSetWindowUserPointer(win, user_pointer);
+    glfwSetWindowRefreshCallback(win->win, _glfw_refresh_callback);
+    glfwSetWindowUserPointer(win->win, win.get());
+    win->user_ptr = user_pointer;
+    win->refresh_cb = refresh_cb;
 
     // init gl extensions
     if (!gladLoadGL()) throw runtime_error("cannot initialize glad");
 
-    return win;
+    return win.release();
 }
 
 void delete_glwindow(glwindow* win) {
-    glfwDestroyWindow(win);
+    glfwDestroyWindow(win->win);
     glfwTerminate();
+    win->win = nullptr;
 }
 
-void* get_user_pointer(glwindow* win) { return glfwGetWindowUserPointer(win); }
+void* get_user_pointer(glwindow* win) { 
+    return win->user_ptr; 
+}
 
 void set_drop_callback(glwindow* win,
-    void (*callback)(glwindow* win, int num, const char** paths)) {
-    glfwSetDropCallback(win, callback);
+    function<void(glwindow* win, const vector<string>& paths)> drop_cb) {
+    win->drop_cb = drop_cb;
+    glfwSetDropCallback(win->win, _glfw_drop_callback);
 }
 
 vec2i get_glframebuffer_size(glwindow* win) {
     auto size = zero2i;
-    glfwGetFramebufferSize(win, &size.x, &size.y);
+    glfwGetFramebufferSize(win->win, &size.x, &size.y);
     return size;
 }
 
 vec2i get_glwindow_size(glwindow* win) {
     auto size = zero2i;
-    glfwGetWindowSize(win, &size.x, &size.y);
+    glfwGetWindowSize(win->win, &size.x, &size.y);
     return size;
 }
 
-bool should_glwindow_close(glwindow* win) { return glfwWindowShouldClose(win); }
+bool should_glwindow_close(glwindow* win) { return glfwWindowShouldClose(win->win); }
 
 vec2f get_glmouse_pos(glwindow* win) {
     double mouse_posx, mouse_posy;
-    glfwGetCursorPos(win, &mouse_posx, &mouse_posy);
+    glfwGetCursorPos(win->win, &mouse_posx, &mouse_posy);
     return vec2f{(float)mouse_posx, (float)mouse_posy};
 }
 
 bool get_glmouse_left(glwindow* win) {
-    return glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
+    return glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS;
 }
 bool get_glmouse_right(glwindow* win) {
-    return glfwGetMouseButton(win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
+    return glfwGetMouseButton(win->win, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS;
 }
 
 bool get_glalt_key(glwindow* win) {
-    return glfwGetKey(win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-           glfwGetKey(win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+    return glfwGetKey(win->win, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+           glfwGetKey(win->win, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
 }
 
 bool get_glshift_key(glwindow* win) {
-    return glfwGetKey(win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-           glfwGetKey(win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+    return glfwGetKey(win->win, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+           glfwGetKey(win->win, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 }
 
 void process_glevents(glwindow* win, bool wait) {
@@ -561,13 +590,13 @@ void process_glevents(glwindow* win, bool wait) {
         glfwPollEvents();
 }
 
-void swap_glbuffers(glwindow* win) { glfwSwapBuffers(win); }
+void swap_glbuffers(glwindow* win) { glfwSwapBuffers(win->win); }
 
 void init_glwidgets(glwindow* win) {
     // init widgets
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
-    ImGui_ImplGlfw_InitForOpenGL(win, true);
+    ImGui_ImplGlfw_InitForOpenGL(win->win, true);
 #ifndef __APPLE__
     ImGui_ImplOpenGL3_Init();
 #else
