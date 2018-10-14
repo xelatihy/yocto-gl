@@ -2193,7 +2193,7 @@ bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
-    auto shp = make_shape_data();
+    auto shp = make_fvshape_data();
     if (type == "cube") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
@@ -2206,8 +2206,9 @@ bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
         shp.quads_norm.pop_back();
         shp.quads_texcoord.pop_back();
     } else if (type == "suzanne") {
-        shp = make_suzanne(js.value("size", 2.0f), false);
-        std::swap(shp.quads_pos, shp.quads);
+        auto qshp = make_suzanne(js.value("size", 2.0f), false);
+        shp.quads_pos = qshp.quads;
+        shp.pos = qshp.pos;
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
