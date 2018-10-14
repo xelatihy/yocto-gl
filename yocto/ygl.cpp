@@ -934,7 +934,7 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-std::tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
 sample_triangles_points(const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, int npoints, int seed) {
@@ -1115,9 +1115,9 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
     auto t0   = (bbox.min - ray.o) * invd;
     auto t1   = (bbox.max - ray.o) * invd;
     // flip based on range directions
-    if (invd.x < 0.0f) std::swap(t0.x, t1.x);
-    if (invd.y < 0.0f) std::swap(t0.y, t1.y);
-    if (invd.z < 0.0f) std::swap(t0.z, t1.z);
+    if (invd.x < 0.0f) swap(t0.x, t1.x);
+    if (invd.y < 0.0f) swap(t0.y, t1.y);
+    if (invd.z < 0.0f) swap(t0.z, t1.z);
     auto tmin = _safemax(t0.z, _safemax(t0.y, _safemax(t0.x, ray.tmin)));
     auto tmax = _safemin(t1.z, _safemin(t1.y, _safemin(t1.x, ray.tmax)));
     tmax *= 1.00000024f;  // for double: 1.0000000000000004
@@ -2190,7 +2190,7 @@ make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
         qshps[2].norm[i]  = -qshps[2].norm[i];
     }
     for (auto i = 0; i < qshps[2].quads.size(); i++)
-        std::swap(qshps[2].quads[i].x, qshps[2].quads[i].z);
+        swap(qshps[2].quads[i].x, qshps[2].quads[i].z);
 
     return merge_shape_data(qshps);
 }
@@ -2955,11 +2955,11 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
     auto  r = rgb.x, g = rgb.y, b = rgb.z;
     float K = 0.f;
     if (g < b) {
-        std::swap(g, b);
+        swap(g, b);
         K = -1.f;
     }
     if (r < g) {
-        std::swap(r, g);
+        swap(r, g);
         K = -2.f / 6.f - K;
     }
 
@@ -4031,9 +4031,9 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
         s = clamp(texcoord.x, 0.0f, 1.0f) * width;
         t = clamp(texcoord.y, 0.0f, 1.0f) * height;
     } else {
-        s = std::fmod(texcoord.x, 1.0f) * width;
+        s = fmod(texcoord.x, 1.0f) * width;
         if (s < 0) s += width;
-        t = std::fmod(texcoord.y, 1.0f) * height;
+        t = fmod(texcoord.y, 1.0f) * height;
         if (t < 0) t += height;
     }
 

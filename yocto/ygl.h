@@ -318,6 +318,8 @@ using std::round;
 using std::sin;
 using std::sqrt;
 using std::tan;
+using std::fmod;
+using std::swap;
 
 using std::string;
 using std::vector;
@@ -2201,7 +2203,7 @@ inline pair<int, vec2f> sample_quads(
 
 // Samples a set of points over a triangle mesh uniformly. Returns pos, norm
 // and texcoord of the sampled points.
-std::tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
 sample_triangles_points(const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, int npoints, int seed = 7);

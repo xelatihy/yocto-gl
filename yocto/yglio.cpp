@@ -898,8 +898,8 @@ float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     if (s > 0) {
         for (auto i = 0; i < nvalues; ++i) {
             auto dta = (uint8_t*)(pixels + i);
-            std::swap(dta[0], dta[3]);
-            std::swap(dta[1], dta[2]);
+            swap(dta[0], dta[3]);
+            swap(dta[1], dta[2]);
         }
     }
 
@@ -4838,7 +4838,7 @@ scene* load_pbrt_scene(
             frame = {normalize(frame.x), normalize(frame.y), normalize(frame.z),
                 frame.o};
             if (stack.back().reverse) {
-                for (auto& t : shp->triangles) std::swap(t.y, t.z);
+                for (auto& t : shp->triangles) swap(t.y, t.z);
             }
             scn->shapes.push_back(shp);
             auto ist   = new instance();
@@ -5112,8 +5112,8 @@ bool save_pbrt_scene(const string& filename, const scene* scn,
 void pbrt_flipyz_scene(const scene* scn) {
     // flip meshes
     for (auto shp : scn->shapes) {
-        for (auto& p : shp->pos) std::swap(p.y, p.z);
-        for (auto& n : shp->norm) std::swap(n.y, n.z);
+        for (auto& p : shp->pos) swap(p.y, p.z);
+        for (auto& n : shp->norm) swap(n.y, n.z);
     }
     for (auto ist : scn->instances) {
         ist->frame = ist->frame *
