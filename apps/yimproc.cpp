@@ -42,17 +42,17 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
         if (extents(img) != extents(imgs[0])) {
             log_fatal("images of different sizes are not accepted");
         }
-        auto ox = (img_idx % tilex) * width(img),
-             oy = (img_idx / tilex) * height(img);
+        auto ox = (img_idx % tilex) * img.width,
+             oy = (img_idx / tilex) * img.height;
         if (ret.hdr) {
-            for (auto j = 0; j < height(img); j++) {
-                for (auto i = 0; i < width(img); i++) {
+            for (auto j = 0; j < img.height; j++) {
+                for (auto i = 0; i < img.width; i++) {
                     ret.hdr[{i + ox, j + oy}] = img.hdr[{i, j}];
                 }
             }
         } else {
-            for (auto j = 0; j < height(img); j++) {
-                for (auto i = 0; i < width(img); i++) {
+            for (auto j = 0; j < img.height; j++) {
+                for (auto i = 0; i < img.width; i++) {
                     ret.ldr[{i + ox, j + oy}] = img.ldr[{i, j}];
                 }
             }
@@ -65,36 +65,36 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
-    auto filtered     = image<vec4f>{extents(img)};
+    auto filtered     = image<vec4f>{img.width, img.height};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw           = 1 / (2.0f * range_sigma * range_sigma);
     auto fw           = vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-    for (auto j = 0; j < height(img); j++) {
-        for (auto i = 0; i < width(img); i++) {
+    for (auto j = 0; j < img.height; j++) {
+        for (auto i = 0; i < img.width; i++) {
             auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -filter_width; fj <= filter_width; fj++) {
                 for (auto fi = -filter_width; fi <= filter_width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= width(img) || jj >= height(img)) continue;
+                    if (ii >= img.width || jj >= img.height) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto rgb = pixel_at(img, i, j) - pixel_at(img, i, j);
                     auto w   = (float)exp(-dot(uv, uv) * sw) *
                              (float)exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat = features[fi][{i, j}] -
-                                    features[fi][{ii, jj}];
+                        auto feat = pixel_at(features[fi], i, j) -
+                                    pixel_at(features[fi], i, j);
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
-                    av += w * img[{ii, jj}];
+                    av += w * pixel_at(img, ii, jj);
                     aw += w;
                 }
             }
-            filtered[{i, j}] = av / aw;
+            pixel_at(filtered, i, j) = av / aw;
         }
     }
     return filtered;
@@ -102,27 +102,27 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
 
 image<vec4f> filter_bilateral(
     const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-    auto filtered = image<vec4f>{extents(img)};
+    auto filtered = image<vec4f>{img.width, img.height};
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-    for (auto j = 0; j < height(img); j++) {
-        for (auto i = 0; i < width(img); i++) {
+    for (auto j = 0; j < img.height; j++) {
+        for (auto i = 0; i < img.width; i++) {
             auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -fwidth; fj <= fwidth; fj++) {
                 for (auto fi = -fwidth; fi <= fwidth; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= width(img) || jj >= height(img)) continue;
+                    if (ii >= img.width || jj >= img.height) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto rgb = pixel_at(img, i, j) - pixel_at(img, ii, jj);
                     auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
-                    av += w * img[{ii, jj}];
+                    av += w * pixel_at(img, ii, jj);
                     aw += w;
                 }
             }
-            filtered[{i, j}] = av / aw;
+            pixel_at(filtered, i, j) = av / aw;
         }
     }
     return filtered;
@@ -156,37 +156,39 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = load_image4f(filename);
-    if (empty(img)) log_fatal("cannot load image " + filename);
+    if (img.pixels.empty()) log_fatal("cannot load image " + filename);
 
     // set alpha
     if (alpha_filename != "") {
         auto alpha = load_image4f(alpha_filename);
-        if (empty(alpha)) log_fatal("cannot load image " + alpha_filename);
-        if (extents(img) != extents(alpha)) {
+        if (alpha.pixels.empty())
+            log_fatal("cannot load image " + alpha_filename);
+        if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
         }
-        for (auto j = 0; j < height(img); j++)
-            for (auto i = 0; i < width(img); i++)
-                img[{i, j}].w = alpha[{i, j}].w;
+        for (auto j = 0; j < img.height; j++)
+            for (auto i = 0; i < img.width; i++)
+                pixel_at(img, i, j).w = pixel_at(alpha, i, j).w;
     }
 
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = load_image4f(coloralpha_filename);
-        if (empty(alpha)) log_fatal("cannot load image " + coloralpha_filename);
-        if (extents(img) != extents(alpha)) {
+        if (alpha.pixels.empty())
+            log_fatal("cannot load image " + coloralpha_filename);
+        if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
         }
-        for (auto j = 0; j < height(img); j++)
-            for (auto i = 0; i < width(img); i++)
-                img[{i, j}].w = mean(alpha[{i, j}]);
+        for (auto j = 0; j < img.height; j++)
+            for (auto i = 0; i < img.width; i++)
+                pixel_at(img, i, j).w = mean(pixel_at(alpha, i, j));
     }
 
     // resize
     if (res_width || res_height) {
-        img = resize_image(img, {res_width, res_height});
+        img = resize_image(img, res_width, res_height);
     }
 
     // bilateral
