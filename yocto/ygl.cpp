@@ -348,9 +348,9 @@ vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
     for (auto t : triangles) {
         auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
             texcoord[t.x], texcoord[t.y], texcoord[t.z]);
-        tutv      = {normalize(tutv.first), normalize(tutv.second)};
-        for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tutv.first;
-        for (auto vid : {t.x, t.y, t.z}) tangv[vid] += tutv.second;
+        tutv      = {normalize(get<0>(tutv)), normalize(get<1>(tutv))};
+        for (auto vid : {t.x, t.y, t.z}) tangu[vid] += get<0>(tutv);
+        for (auto vid : {t.x, t.y, t.z}) tangv[vid] += get<1>(tutv);
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
@@ -364,7 +364,7 @@ vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
 }
 
 // Apply skinning
-pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms) {
@@ -391,7 +391,7 @@ pair<vector<vec3f>, vector<vec3f>> compute_skinning(
 }
 
 // Apply skinning as specified in Khronos glTF
-pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
@@ -571,7 +571,7 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
 
 // Subdivide lines.
 template <typename T>
-pair<vector<vec2i>, vector<T>> subdivide_lines(
+tuple<vector<vec2i>, vector<T>> subdivide_lines(
     const vector<vec2i>& lines, const vector<T>& vert) {
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
@@ -593,18 +593,18 @@ pair<vector<vec2i>, vector<T>> subdivide_lines(
     return {tlines, tvert};
 }
 
-template pair<vector<vec2i>, vector<float>> subdivide_lines(
+template tuple<vector<vec2i>, vector<float>> subdivide_lines(
     const vector<vec2i>&, const vector<float>&);
-template pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
+template tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
     const vector<vec2i>&, const vector<vec2f>&);
-template pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
+template tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>&, const vector<vec3f>&);
-template pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
+template tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>&, const vector<vec4f>&);
 
 // Subdivide triangle.
 template <typename T>
-pair<vector<vec3i>, vector<T>> subdivide_triangles(
+tuple<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vert) {
     // get edges
     auto emap  = make_edge_map(triangles);
@@ -638,18 +638,18 @@ pair<vector<vec3i>, vector<T>> subdivide_triangles(
     return {ttriangles, tvert};
 }
 
-template pair<vector<vec3i>, vector<float>> subdivide_triangles(
+template tuple<vector<vec3i>, vector<float>> subdivide_triangles(
     const vector<vec3i>&, const vector<float>&);
-template pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+template tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
     const vector<vec3i>&, const vector<vec2f>&);
-template pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+template tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>&, const vector<vec3f>&);
-template pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+template tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
     const vector<vec3i>&, const vector<vec4f>&);
 
 // Subdivide quads.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_quads(
+tuple<vector<vec4i>, vector<T>> subdivide_quads(
     const vector<vec4i>& quads, const vector<T>& vert) {
     // get edges
     auto emap  = make_edge_map(quads);
@@ -703,18 +703,18 @@ pair<vector<vec4i>, vector<T>> subdivide_quads(
     return {tquads, tvert};
 }
 
-template pair<vector<vec4i>, vector<float>> subdivide_quads(
+template tuple<vector<vec4i>, vector<float>> subdivide_quads(
     const vector<vec4i>&, const vector<float>&);
-template pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
+template tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
     const vector<vec4i>&, const vector<vec2f>&);
-template pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
+template tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>&, const vector<vec3f>&);
-template pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
+template tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>&, const vector<vec4f>&);
 
 // Subdivide beziers.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_beziers(
+tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vert) {
     auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
@@ -742,18 +742,18 @@ pair<vector<vec4i>, vector<T>> subdivide_beziers(
     return {tbeziers, tvert};
 }
 
-template pair<vector<vec4i>, vector<float>> subdivide_beziers(
+template tuple<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>&, const vector<float>&);
-template pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+template tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
     const vector<vec4i>&, const vector<vec2f>&);
-template pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+template tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>&, const vector<vec3f>&);
-template pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+template tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>&, const vector<vec4f>&);
 
 // Subdivide catmullclark.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<T>& vert,
     bool lock_boundary) {
     // get edges
@@ -873,17 +873,17 @@ pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
     return {tquads, tvert};
 }
 
-template pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
+template tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<float>&, bool);
-template pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+template tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<vec2f>&, bool);
-template pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+template tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<vec3f>&, bool);
-template pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+template tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<vec4f>&, bool);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-pair<vector<vec3f>, vector<int>> weld_vertices(
+tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& pos, float threshold) {
     auto vid  = vector<int>(pos.size());
     auto wpos = vector<vec3f>();
@@ -899,7 +899,7 @@ pair<vector<vec3f>, vector<int>> weld_vertices(
     }
     return {wpos, vid};
 }
-pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& pos,
     float threshold) {
     auto vid            = vector<int>();
@@ -914,7 +914,7 @@ pair<vector<vec3i>, vector<vec3f>> weld_triangles(
     }
     return {wtriangles, wpos};
 }
-pair<vector<vec4i>, vector<vec3f>> weld_quads(
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(
     const vector<vec4i>& quads, const vector<vec3f>& pos,
     float threshold) {
     auto vid            = vector<int>();
@@ -3846,7 +3846,7 @@ vec4f eval_elem_tangsp(const shape* shp, int ei) {
     if (!shp->triangles.empty()) {
         auto t    = shp->triangles[ei];
         auto norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
-        auto txty = pair<vec3f, vec3f>();
+        auto txty = tuple<vec3f, vec3f>();
         if (shp->texcoord.empty()) {
             txty = triangle_tangents_fromuv(shp->pos[t.x], shp->pos[t.y],
                 shp->pos[t.z], {0, 0}, {1, 0}, {0, 1});
@@ -3855,7 +3855,7 @@ vec4f eval_elem_tangsp(const shape* shp, int ei) {
                 shp->pos[t.z], shp->texcoord[t.x], shp->texcoord[t.y],
                 shp->texcoord[t.z]);
         }
-        auto tx = txty.first, ty = txty.second;
+        auto tx = get<0>(txty), ty = get<1>(txty);
         tx     = orthonormalize(tx, norm);
         auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
         tangsp = {tx.x, tx.y, tx.z, s};
@@ -4232,14 +4232,14 @@ bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv) {
 bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
-pair<int, vec2f> sample_shape(const shape* shp,
+tuple<int, vec2f> sample_shape(const shape* shp,
     const vector<float>& elem_cdf, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elem_cdf.empty()) return {};
     if (!shp->triangles.empty()) {
         return sample_triangles(elem_cdf, re, ruv);
     } else if (!shp->lines.empty()) {
-        return {sample_lines(elem_cdf, re, ruv.x).first, ruv};
+        return {get<0>(sample_lines(elem_cdf, re, ruv.x)), ruv};
     } else if (!shp->pos.empty()) {
         return {sample_points(elem_cdf, re), ruv};
     } else {
@@ -4735,7 +4735,7 @@ vec3f sample_environment(const environment* env,
 vec3f sample_light(const instance* ist, const vector<float>& elem_cdf,
     const vec3f& p, float rel, const vec2f& ruv) {
     auto sample = sample_shape(ist->shp, elem_cdf, rel, ruv);
-    return normalize(eval_pos(ist, sample.first, sample.second) - p);
+    return normalize(eval_pos(ist, get<0>(sample), get<1>(sample)) - p);
 }
 
 // Sample pdf for a light point.
@@ -5950,7 +5950,7 @@ void trace_async_stop(trace_state* state) {
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
-pair<uint64_t, uint64_t> get_trace_stats() {
+tuple<uint64_t, uint64_t> get_trace_stats() {
     return {_trace_nrays, _trace_npaths};
 }
 void reset_trace_stats() {

@@ -52,7 +52,7 @@ struct app_state {
     bool                                       zoom_to_fit  = true;
     bool                                       widgets_open = false;
     void*                                      selection    = nullptr;
-    vector<pair<string, void*>> update_list;
+    vector<tuple<string, void*>> update_list;
     bool                                       navigation_fps = false;
     bool                                       quiet          = false;
     int64_t                                    trace_start    = 0;
@@ -163,17 +163,17 @@ bool update(app_state* app) {
 
     // update BVH
     for (auto& sel : app->update_list) {
-        if (sel.first == "shape") {
+        if (get<0>(sel) == "shape") {
             for (auto sid = 0; sid < app->scn->shapes.size(); sid++) {
-                if (app->scn->shapes[sid] == sel.second) {
-                    refit_bvh((shape*)sel.second, app->bvh->shape_bvhs[sid]);
+                if (app->scn->shapes[sid] == get<1>(sel)) {
+                    refit_bvh((shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
                     break;
                 }
             }
             refit_bvh(app->scn, app->bvh);
         }
-        if (sel.first == "instance") { refit_bvh(app->scn, app->bvh); }
-        if (sel.first == "node") {
+        if (get<0>(sel) == "instance") { refit_bvh(app->scn, app->bvh); }
+        if (get<0>(sel) == "node") {
             update_transforms(app->scn, 0);
             refit_bvh(app->scn, app->bvh);
         }

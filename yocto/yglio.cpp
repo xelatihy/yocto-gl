@@ -3689,7 +3689,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
     };
 
     // convert meshes
-    auto meshes = vector<vector<pair<shape*, material*>>>();
+    auto meshes = vector<vector<tuple<shape*, material*>>>();
     if (gltf.count("meshes")) {
         for (auto mid = 0; mid < gltf.at("meshes").size(); mid++) {
             auto& gmesh = gltf.at("meshes").at(mid);
@@ -3903,18 +3903,18 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
             if (shps.size() == 1) {
                 nde->ist       = new instance();
                 nde->ist->name = nde->name;
-                nde->ist->shp  = shps[0].first;
-                nde->ist->mat  = shps[0].second;
+                nde->ist->shp  = get<0>(shps[0]);
+                nde->ist->mat  = get<1>(shps[0]);
                 scn->instances.push_back(nde->ist);
             } else {
                 for (auto shp : shps) {
                     auto child       = new node();
-                    child->name      = nde->name + "_" + shp.first->name;
+                    child->name      = nde->name + "_" + get<0>(shp)->name;
                     child->parent    = nde;
                     child->ist       = new instance();
                     child->ist->name = child->name;
-                    child->ist->shp  = shp.first;
-                    child->ist->mat  = shp.second;
+                    child->ist->shp  = get<0>(shp);
+                    child->ist->mat  = get<1>(shp);
                     scn->instances.push_back(child->ist);
                 }
             }
@@ -4578,7 +4578,7 @@ scene* load_pbrt_scene(
     };
 
     auto get_scaled_texture =
-        [&txt_map, &get_vec3f](const json& js) -> pair<vec3f, texture*> {
+        [&txt_map, &get_vec3f](const json& js) -> tuple<vec3f, texture*> {
         if (js.is_string())
             return {{1, 1, 1}, txt_map.at(js.get<string>())};
         return {get_vec3f(js), nullptr};

@@ -320,13 +320,13 @@ using std::sqrt;
 using std::tan;
 using std::fmod;
 using std::swap;
+using std::get;
 
 using std::string;
 using std::vector;
 using std::map;
 using std::unordered_map;
 using std::thread;
-using std::pair;
 using std::tie;
 using std::tuple;
 using std::function;
@@ -1710,7 +1710,7 @@ inline mat4<T> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-inline pair<vec3<T>, T> rotation_axisangle(const vec4<T>& quat) {
+inline tuple<vec3<T>, T> rotation_axisangle(const vec4<T>& quat) {
     return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T>
@@ -1966,7 +1966,7 @@ inline float quad_area(
 }
 
 // Triangle tangent and bitangent from uv
-inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline tuple<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
@@ -2052,12 +2052,12 @@ vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
     const vector<vec2f>& texcoord);
 
 // Apply skinning to vertex position and normals.
-pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
@@ -2108,35 +2108,35 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-pair<vector<vec2i>, vector<T>> subdivide_lines(
+tuple<vector<vec2i>, vector<T>> subdivide_lines(
     const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-pair<vector<vec3i>, vector<T>> subdivide_triangles(
+tuple<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_quads(
+tuple<vector<vec4i>, vector<T>> subdivide_quads(
     const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_beziers(
+tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<T>& vert,
     bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-pair<vector<vec3f>, vector<int>> weld_vertices(
+tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& pos, float threshold);
-pair<vector<vec3i>, vector<vec3f>> weld_triangles(
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& pos,
     float threshold);
-pair<vector<vec4i>, vector<vec3f>> weld_quads(
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(
     const vector<vec4i>& quads, const vector<vec3f>& pos,
     float threshold);
 
@@ -2164,7 +2164,7 @@ inline vector<float> sample_lines_cdf(
     }
     return cdf;
 }
-inline pair<int, float> sample_lines(
+inline tuple<int, float> sample_lines(
     const vector<float>& cdf, float re, float ru) {
     return {sample_discrete(cdf, re), ru};
 }
@@ -2180,7 +2180,7 @@ inline vector<float> sample_triangles_cdf(
     }
     return cdf;
 }
-inline pair<int, vec2f> sample_triangles(
+inline tuple<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
@@ -2196,7 +2196,7 @@ inline vector<float> sample_quads_cdf(
     }
     return cdf;
 }
-inline pair<int, vec2f> sample_quads(
+inline tuple<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), ruv};
 }
@@ -3421,7 +3421,7 @@ void trace_async_stop(trace_state* state);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
-pair<uint64_t, uint64_t> get_trace_stats();
+tuple<uint64_t, uint64_t> get_trace_stats();
 void                          reset_trace_stats();
 
 }  // namespace ygl

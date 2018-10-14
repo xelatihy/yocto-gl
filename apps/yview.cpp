@@ -69,7 +69,7 @@ struct app_state {
     bool                                       widgets_open   = false;
     bool                                       navigation_fps = false;
     void*                                      selection      = nullptr;
-    vector<pair<string, void*>> update_list;
+    vector<tuple<string, void*>> update_list;
     float                                      time       = 0;
     string                                anim_group = "";
     vec2f                                      time_range = zero2f;
@@ -94,19 +94,19 @@ void draw(glwindow* win) {
 
     static auto last_time = 0.0f;
     for (auto& sel : app->update_list) {
-        if (sel.first == "texture") {
+        if (get<0>(sel) == "texture") {
             // TODO: update texture
             printf("texture update not supported\n");
         }
-        if (sel.first == "subdiv") {
+        if (get<0>(sel) == "subdiv") {
             // TODO: update subdiv
             printf("subdiv update not supported\n");
         }
-        if (sel.first == "shape") {
+        if (get<0>(sel) == "shape") {
             // TODO: update shape
             printf("shape update not supported\n");
         }
-        if (sel.first == "node" || sel.first == "animation" ||
+        if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
             app->time != last_time) {
             update_transforms(app->scn, app->time, app->anim_group);
             last_time = app->time;
