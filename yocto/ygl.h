@@ -2466,9 +2466,6 @@ struct image {
         : _size{wh}, _data(wh.x * wh.y, v) {}
     image(const vec2i& wh, const T* v) : _size{wh}, _data(v, v + wh.x * wh.y) {}
 
-    // size
-    vec2i size() const { return _size; }
-
     // pixel access
     T& operator[](const vec2i& ij) { return _data[ij.y * _size.x + ij.x]; }
     const T& operator[](const vec2i& ij) const {
@@ -2490,6 +2487,10 @@ int width(const image<T>& img) {
 template <typename T>
 int height(const image<T>& img) {
     return img._size.y;
+}
+template <typename T>
+vec2i extents(const image<T>& img) {
+    return img._size;
 }
 template <typename T>
 size_t size(const image<T>& img) {
@@ -2527,7 +2528,6 @@ template <typename T>
 T*       end(image<T>& img) { return img._data.data() + img._data.size(); }
 template <typename T>
 const T* end(const image<T>& img) { return img._data.data() + img._data.size(); }
-
 
 }  // namespace ygl
 
@@ -2818,7 +2818,41 @@ struct volume {
     std::vector<T> _data = {};
 };
 
+// Size
+template <typename T>
+int width(const volume<T>& vol) {
+    return vol._size.x;
+}
+template <typename T>
+int height(const volume<T>& vol) {
+    return vol._size.y;
+}
+template <typename T>
+int depth(const volume<T>& vol) {
+    return vol._size.z;
+}
+template <typename T>
+vec3i extents(const volume<T>& vol) {
+    return vol._size;
+}
+template <typename T>
+size_t size(const volume<T>& vol) {
+    return vol._data.size();
+}
+template <typename T>
+bool empty(const volume<T>& vol) {
+    return vol._data.empty();
+}
+
 // Data access
+template <typename T>
+T* data(volume<T>& vol) {
+    return vol._data.data();
+}
+template <typename T>
+const T* data(const volume<T>& vol) {
+    return vol._data.data();
+}
 template <typename T>
 std::vector<T>& data_vector(volume<T>& vol) {
     return vol._data;
@@ -2827,6 +2861,16 @@ template <typename T>
 const std::vector<T>& data_vector(const volume<T>& vol) {
     return vol._data;
 }
+
+// Iteration
+template <typename T>
+T*       begin(volume<T>& vol) { return vol._data.data(); }
+template <typename T>
+const T* begin(const volume<T>& vol) { return vol._data.data(); }
+template <typename T>
+T*       end(volume<T>& vol) { return vol._data.data() + vol._data.size(); }
+template <typename T>
+const T* end(const volume<T>& vol) { return vol._data.data() + vol._data.size(); }
 
 }  // namespace ygl
 

@@ -178,9 +178,9 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 1);
     edited += draw_checkbox_glwidget(win, "srgb", val->srgb);
     draw_label_glwidgets(
-        win, "hdr", "%d x %d", val->imgf.size().x, val->imgf.size().y);
+        win, "hdr", "%d x %d", width(val->imgf), height(val->imgf));
     draw_label_glwidgets(
-        win, "ldr", "%d x %d", val->imgb.size().x, val->imgb.size().y);
+        win, "ldr", "%d x %d", width(val->imgb), height(val->imgb));
     return edited;
 }
 
