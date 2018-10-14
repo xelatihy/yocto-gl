@@ -102,14 +102,14 @@ void update_display_image(app_image* img) {
     img->display_done = false;
     img->texture_done = false;
     if (img->is_hdr) {
-        if (img->img.size().x * img->img.size().y > 1024 * 1024) {
+        if (width(img->img) * height(img->img) > 1024 * 1024) {
             auto nthreads = std::thread::hardware_concurrency();
             auto threads  = std::vector<std::thread>();
             for (auto tid = 0; tid < nthreads; tid++) {
                 threads.push_back(std::thread([img, tid, nthreads]() {
-                    for (auto j = tid; j < img->img.size().y; j += nthreads) {
+                    for (auto j = tid; j < height(img->img); j += nthreads) {
                         if (img->display_stop) break;
-                        for (auto i = 0; i < img->img.size().x; i++) {
+                        for (auto i = 0; i < width(img->img); i++) {
                             img->display[{i, j}] = tonemap_filmic(
                                 img->img[{i, j}], img->exposure, img->filmic,
                                 img->srgb);
@@ -119,23 +119,23 @@ void update_display_image(app_image* img) {
             }
             for (auto& t : threads) t.join();
         } else {
-            for (auto j = 0; j < img->img.size().y; j++) {
+            for (auto j = 0; j < height(img->img); j++) {
                 if (img->display_stop) break;
-                for (auto i = 0; i < img->img.size().x; i++) {
+                for (auto i = 0; i < width(img->img); i++) {
                     img->display[{i, j}] = tonemap_filmic(img->img[{i, j}],
                         img->exposure, img->filmic, img->srgb);
                 }
             }
         }
     } else {
-        if (img->img.size().x * img->img.size().y > 1024 * 1024) {
+        if (width(img->img) * height(img->img) > 1024 * 1024) {
             auto nthreads = std::thread::hardware_concurrency();
             auto threads  = std::vector<std::thread>();
             for (auto tid = 0; tid < nthreads; tid++) {
                 threads.push_back(std::thread([img, tid, nthreads]() {
-                    for (auto j = tid; j < img->img.size().y; j += nthreads) {
+                    for (auto j = tid; j < height(img->img); j += nthreads) {
                         if (img->display_stop) break;
-                        for (auto i = 0; i < img->img.size().x; i++) {
+                        for (auto i = 0; i < width(img->img); i++) {
                             img->display[{i, j}] = linear_to_srgb(
                                 img->img[{i, j}]);
                         }
@@ -144,9 +144,9 @@ void update_display_image(app_image* img) {
             }
             for (auto& t : threads) t.join();
         } else {
-            for (auto j = 0; j < img->img.size().y; j++) {
+            for (auto j = 0; j < height(img->img); j++) {
                 if (img->display_stop) break;
-                for (auto i = 0; i < img->img.size().x; i++) {
+                for (auto i = 0; i < width(img->img); i++) {
                     img->display[{i, j}] = linear_to_srgb(img->img[{i, j}]);
                 }
             }
@@ -164,7 +164,7 @@ void load_image(app_image* img) {
     auto start     = get_time();
     img->error_msg = "";
     img->img       = load_image4f(img->filename);
-    if (img->img.empty()) img->error_msg = "cannot load image";
+    if (empty(img->img)) img->error_msg = "cannot load image";
     img->load_done = true;
     img->display   = img->img;
     printf("load: %s\n", format_duration(get_time() - start).c_str());
@@ -193,7 +193,7 @@ void draw_glwidgets(glwindow* win) {
                 status = "done";
             draw_label_glwidgets(win, "status", status.c_str());
             draw_label_glwidgets(
-                win, "size", "%d x %d ", img->img.size().x, img->img.size().y);
+                win, "size", "%d x %d ", width(img->img), height(img->img));
             draw_slider_glwidget(win, "zoom", img->imscale, 0.1, 10);
             draw_checkbox_glwidget(win, "zoom to fit", img->zoom_to_fit);
             end_header_glwidget(win);
@@ -208,11 +208,11 @@ void draw_glwidgets(glwindow* win) {
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
             auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
-                {img->img.size().x, img->img.size().y});
+                extents(img->img));
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img->img.size().x && ij.y >= 0 &&
-                ij.y < img->img.size().y) {
+            if (ij.x >= 0 && ij.x < width(img->img) && ij.y >= 0 &&
+                ij.y < height(img->img)) {
                 pixel = img->img[ij];
             }
             draw_coloredit_glwidget(win, "pixel", pixel);
@@ -244,10 +244,9 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
-        center_image4f(img->imcenter, img->imscale,
-            {img->display.size().x, img->display.size().y}, win_size,
+        center_image4f(img->imcenter, img->imscale, extents(img->display), win_size,
             img->zoom_to_fit);
-        draw_glimage(img->gl_txt, {img->display.size().x, img->display.size().y},
+        draw_glimage(img->gl_txt, extents(img->display),
             win_size, img->imcenter, img->imscale);
     }
     draw_glwidgets(win);
@@ -276,8 +275,8 @@ void run_ui(app_state* app) {
     init_glwidgets(win);
 
     // center image
-    center_image4f(img->imcenter, img->imscale, img->img.size(), win_size,
-        img->img.size().x > win_size.x || img->img.size().y > win_size.y);
+    center_image4f(img->imcenter, img->imscale, extents(img->img), win_size,
+        width(img->img) > win_size.x || height(img->img) > win_size.y);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;

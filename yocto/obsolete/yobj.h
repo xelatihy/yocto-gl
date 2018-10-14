@@ -1450,7 +1450,7 @@ void save_obj_textures(
 
     // save images
     for (auto txt : obj->textures) {
-        if (txt->img.empty()) continue;
+        if (txt->empty(img)) continue;
         auto filename = dirname + txt->path;
         for (auto& c : filename)
             if (c == '\\') c = '/';

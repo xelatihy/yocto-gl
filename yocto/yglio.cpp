@@ -802,7 +802,7 @@ inline void from_json(const json& js, bbox4<T>& val) {
 template <typename T>
 inline void to_json(json& js, const image<T>& val) {
     js         = json::object();
-    js["size"] = val.size();
+    js["size"] = extents(val);
     js["data"] = data_vector(val);
 }
 template <typename T>
@@ -814,7 +814,7 @@ inline void from_json(const json& js, image<T>& val) {
 template <typename T>
 inline void to_json(json& js, const volume<T>& val) {
     js         = json::object();
-    js["size"] = val.size();
+    js["size"] = extents(val);
     js["data"] = data_vector(val);
 }
 template <typename T>
@@ -1008,8 +1008,8 @@ image<vec4f> load_pfm_image4f(const std::string& filename) {
     return img;
 }
 bool save_pfm_image4f(const std::string& filename, const image<vec4f>& img) {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
+    if (!save_pfm(filename.c_str(), width(img), height(img), 4,
+            (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1034,7 +1034,7 @@ image<vec4f> load_exr_image4f(const std::string& filename) {
     return img;
 }
 bool save_exr_image4f(const std::string& filename, const image<vec4f>& img) {
-    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+    if (!SaveEXR((float*)data(img), width(img), height(img), 4,
             filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -1072,8 +1072,8 @@ image<vec4f> load_stb_image4f(const std::string& filename) {
 
 // save an image with stbi
 bool save_png_image4b(const std::string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4)) {
+    if (!stbi_write_png(filename.c_str(), width(img), height(img), 4,
+            data(img), width(img) * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1081,7 +1081,7 @@ bool save_png_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 bool save_jpg_image4b(const std::string& filename, const image<vec4b>& img) {
     if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
+            filename.c_str(), width(img), height(img), 4, data(img), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1089,7 +1089,7 @@ bool save_jpg_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 bool save_tga_image4b(const std::string& filename, const image<vec4b>& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
+            filename.c_str(), width(img), height(img), 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1097,15 +1097,15 @@ bool save_tga_image4b(const std::string& filename, const image<vec4b>& img) {
 }
 bool save_bmp_image4b(const std::string& filename, const image<vec4b>& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
+            filename.c_str(), width(img), height(img), 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_hdr_image4f(const std::string& filename, const image<vec4f>& img) {
-    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
+    if (!stbi_write_hdr(filename.c_str(), width(img), height(img), 4,
+            (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1265,13 +1265,13 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size_) {
     auto size = size_;
     if (!size.x && !size.y) throw std::runtime_error("bad image size");
     if (!size.x)
-        size.x = (int)round(img.size().x * (size.y / (float)img.size().y));
+        size.x = (int)round(width(img) * (size.y / (float)height(img)));
     if (!size.y)
-        size.y = (int)round(img.size().y * (size.x / (float)img.size().x));
+        size.y = (int)round(height(img) * (size.x / (float)width(img)));
     auto res_img = image<vec4f>{size};
-    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
+    stbir_resize_float_generic((float*)data(img), width(img), height(img),
+        sizeof(vec4f) * width(img), (float*)data(res_img), width(res_img),
+        height(res_img), sizeof(vec4f) * width(res_img), 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
         nullptr);
     return res_img;
@@ -1299,7 +1299,7 @@ volume<float> load_volume1f(const std::string& filename) {
 bool save_volume1f(const std::string& filename, const volume<float>& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
-    if (!write_value(fs, vol.size())) return false;
+    if (!write_value(fs, extents(vol))) return false;
     if (!write_values(fs, data_vector(vol))) return false;
     return true;
 }
@@ -1355,7 +1355,7 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
     bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->imgf.empty() || !txt->imgb.empty())
+        if (txt->path == "" || !empty(txt->imgf) || !empty(txt->imgb))
             continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
@@ -1363,17 +1363,17 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
         } else {
             txt->imgb = load_image4b(filename);
         }
-        if (txt->imgf.empty() && txt->imgb.empty()) {
+        if (empty(txt->imgf) && empty(txt->imgb)) {
             if (!skip_missing) return false;
         }
     }
 
     // load volumes
     for (auto txt : scn->voltextures) {
-        if (txt->path == "" || !txt->vol.empty()) continue;
+        if (txt->path == "" || !empty(txt->vol)) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         txt->vol      = load_volume1f(filename);
-        if (txt->vol.empty()) {
+        if (empty(txt->vol)) {
             if (!skip_missing) return false;
         }
     }
@@ -1411,7 +1411,7 @@ bool save_scene_textures(
     const scene* scn, const std::string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
-        if (txt->imgf.empty() && txt->imgb.empty()) continue;
+        if (empty(txt->imgf) && empty(txt->imgb)) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
             if (!save_image4f(filename, txt->imgf)) {
@@ -1426,7 +1426,7 @@ bool save_scene_textures(
 
     // save volumes
     for (auto txt : scn->voltextures) {
-        if (txt->vol.empty()) continue;
+        if (empty(txt->vol)) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (!save_volume1f(filename, txt->vol)) {
             if (!skip_missing) return false;
@@ -1555,11 +1555,11 @@ namespace ygl {
 
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
-    return a.size() == b.size() && data_vector(a) == data_vector(b);
+    return a.extents == b.extents && a.data == b.data;
 }
 template <typename T>
 bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.size() == b.size() && data_vector(a) == data_vector(b);
+    return a._.size == b.extents && a.data == b.data;
 }
 
 // Dumps a json value
@@ -1880,7 +1880,7 @@ bool dump_json_object(json& js, const voltexture* val, const scene* scn) {
     if (!dump_json_value(js, val->path, "path", def.path)) return false;
     if (!dump_json_value(js, val->clamp, "clamp", def.clamp)) return false;
     if (val->path == "") {
-        if (!val->vol.empty()) js["vol"] = val->vol;
+        if (!empty(val->vol)) js["vol"] = val->vol;
     }
     return true;
 }
@@ -5180,7 +5180,7 @@ bool serialize_bin_value(std::string& vec, file_stream& fs, bool save) {
 template <typename T>
 bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
     if (save) {
-        auto size = (vec2i)img.size();
+        auto size = extents(img);
         if (!write_value(fs, size)) return false;
         if (!write_values(fs, data_vector(img))) return false;
         return true;
@@ -5197,7 +5197,7 @@ bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
 template <typename T>
 bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
     if (save) {
-        auto size = (vec3i)vol.size();
+        auto size = extents(vol);
         if (!write_value(fs, size)) return false;
         if (!write_values(fs, data_vector(vol))) return false;
         return true;

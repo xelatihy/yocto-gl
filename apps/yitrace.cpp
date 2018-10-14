@@ -76,7 +76,7 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "trace")) {
             draw_label_glwidgets(win, "image", "%d x %d @ %d",
-                app->state->img.size().x, app->state->img.size().y,
+                width(app->state->img), height(app->state->img),
                 app->state->sample);
             auto cam_names = std::vector<std::string>();
             for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
@@ -109,10 +109,10 @@ void draw_glwidgets(glwindow* win) {
             draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
             auto ij        = get_image_coords(
-                mouse_pos, app->imcenter, app->imscale, app->state->img.size());
+                mouse_pos, app->imcenter, app->imscale, extents(app->state->img));
             draw_dragger_glwidget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->state->img.size().x && ij.y >= 0 &&
-                ij.y < app->state->img.size().y) {
+            if (ij.x >= 0 && ij.x < width(app->state->img) && ij.y >= 0 &&
+                ij.y < height(app->state->img)) {
                 draw_coloredit_glwidget(
                     win, "pixel", app->state->img[{ij.x, ij.y}]);
             } else {
@@ -141,14 +141,14 @@ void draw(glwindow* win) {
     auto fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    center_image4f(app->imcenter, app->imscale, app->state->display.size(),
+    center_image4f(app->imcenter, app->imscale, extents(app->state->display),
         win_size, app->zoom_to_fit);
     if (!app->gl_txt) {
         app->gl_txt = make_gltexture(app->state->display, false, false, false);
     } else {
         update_gltexture(app->gl_txt, app->state->display, false, false, false);
     }
-    draw_glimage(app->gl_txt, app->state->display.size(), win_size,
+    draw_glimage(app->gl_txt, extents(app->state->display), win_size,
         app->imcenter, app->imscale);
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -192,7 +192,7 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto win_size = clamp(app->state->img.size(), 256, 1440);
+    auto win_size = clamp(extents(app->state->img), 256, 1440);
     auto win      = make_glwindow(win_size, "yitrace", app, draw);
 
     // init widgets
@@ -226,12 +226,12 @@ void run_ui(app_state* app) {
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
-                {app->state->img.size().x, app->state->img.size().y});
-            if (ij.x < 0 || ij.x >= app->state->img.size().x || ij.y < 0 ||
-                ij.y >= app->state->img.size().y) {
+                extents(app->state->img));
+            if (ij.x < 0 || ij.x >= width(app->state->img) || ij.y < 0 ||
+                ij.y >= height(app->state->img)) {
                 auto cam = app->scn->cameras.at(app->params.camid);
                 auto ray = eval_camera_ray(
-                    cam, ij, app->state->img.size(), {0.5f, 0.5f}, zero2f);
+                    cam, ij, extents(app->state->img), {0.5f, 0.5f}, zero2f);
                 auto isec = intersect_ray(app->scn, app->bvh, ray);
                 if (isec.ist) app->selection = isec.ist;
             }
