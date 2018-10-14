@@ -1595,6 +1595,75 @@ bool parse_json_value(const json& js, T& val, const char* name, const T& def) {
     return parse_json_value(js.at(name), val);
 }
 
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, T* val) {
+    return dump_json_value(js, val ? val->name : ""s);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, T* val, const char* name) {
+    if (!val) return true;
+    return dump_json_objref(js[name], val);
+}
+
+    // Dumps a json value
+    template <typename T>
+    bool dump_json_objref(json& js, const std::vector<T*>& val) {
+        js = json::array();
+        for(auto v : val) {
+            js.push_back({});
+            if(!dump_json_objref(js.back(), v)) return false;
+        }
+        return true;
+    }
+    
+    // Dumps a json value
+    template <typename T>
+    bool dump_json_objref(json& js, const std::vector<T*>& val, const char* name) {
+        if (val.empty()) return true;
+        return dump_json_objref(js[name], val);
+    }
+    
+    // Dumps a json value
+    template <typename T>
+    bool parse_json_objref(const json& js, T*& val) {
+        if(!js.is_string()) return false;
+        auto name = ""s;
+        if(!parse_json_value(js, name)) return false;
+        val = new T();
+        val->name = name;
+        return true;
+    }
+    
+    // Dumps a json value
+    template <typename T>
+    bool parse_json_objref(const json& js, T*& val, const char* name) {
+        if (!js.count(name)) return true;
+        val = nullptr;
+        return parse_json_objref(js.at(name), val);
+    }
+    
+// Dumps a json value
+template <typename T>
+    bool parse_json_objref(const json& js, std::vector<T*>& val) {
+    if(!js.is_array()) return false;
+        for(auto& j : js) {
+            val.push_back(nullptr);
+            if(!parse_json_objref(j, val.back())) return false;
+        }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, std::vector<T*>& val, const char* name) {
+    if (!js.count(name)) return true;
+    val = {};
+    return parse_json_objref(js.at(name), val);
+}
+
 // Starts a json object
 bool dump_json_objbegin(json& js) {
     js = json::object();
@@ -1852,17 +1921,17 @@ bool dump_json_object(json& js, const material* val) {
         return false;
     if (!dump_json_value(js, val->refract, "refract", def.refract))
         return false;
-    if (val->ke_txt != def.ke_txt) js["ke_txt"] = val->ke_txt->name;
-    if (val->kd_txt != def.kd_txt) js["kd_txt"] = val->kd_txt->name;
-    if (val->ks_txt != def.ks_txt) js["ks_txt"] = val->ks_txt->name;
-    if (val->kt_txt != def.kt_txt) js["kt_txt"] = val->kt_txt->name;
-    if (val->rs_txt != def.rs_txt) js["rs_txt"] = val->rs_txt->name;
-    if (val->op_txt != def.op_txt) js["op_txt"] = val->op_txt->name;
-    if (val->occ_txt != def.occ_txt) js["occ_txt"] = val->occ_txt->name;
-    if (val->bump_txt != def.bump_txt) js["bump_txt"] = val->bump_txt->name;
-    if (val->disp_txt != def.disp_txt) js["disp_txt"] = val->disp_txt->name;
-    if (val->norm_txt != def.norm_txt) js["norm_txt"] = val->norm_txt->name;
-    if (val->vd_txt != def.vd_txt) js["vd_txt"] = val->vd_txt->name;
+    if(!dump_json_objref(js, val->ke_txt, "ke_txt")) return false;
+    if(!dump_json_objref(js, val->kd_txt, "kd_txt")) return false;
+    if(!dump_json_objref(js, val->ks_txt, "ks_txt")) return false;
+    if(!dump_json_objref(js, val->kt_txt, "kt_txt")) return false;
+    if(!dump_json_objref(js, val->rs_txt, "rs_txt")) return false;
+    if(!dump_json_objref(js, val->op_txt, "op_txt")) return false;
+    if(!dump_json_objref(js, val->occ_txt, "occ_txt")) return false;
+    if(!dump_json_objref(js, val->bump_txt, "bump_txt")) return false;
+    if(!dump_json_objref(js, val->disp_txt, "disp_txt")) return false;
+    if(!dump_json_objref(js, val->norm_txt, "norm_txt")) return false;
+    if(!dump_json_objref(js, val->vd_txt, "vd_txt")) return false;
     return true;
 }
 
@@ -1900,50 +1969,17 @@ bool parse_json_object(const json& js, material* val) {
         return false;
     if (!parse_json_value(js, val->refract, "refract", def.refract))
         return false;
-    if (js.count("ke_txt")) {
-        val->ke_txt       = new texture();
-        val->ke_txt->name = js.at("ke_txt").get<std::string>();
-    }
-    if (js.count("kd_txt")) {
-        val->kd_txt       = new texture();
-        val->kd_txt->name = js.at("kd_txt").get<std::string>();
-    }
-    if (js.count("ks_txt")) {
-        val->ks_txt       = new texture();
-        val->ks_txt->name = js.at("ks_txt").get<std::string>();
-    }
-    if (js.count("kt_txt")) {
-        val->kt_txt       = new texture();
-        val->kt_txt->name = js.at("kt_txt").get<std::string>();
-    }
-    if (js.count("rs_txt")) {
-        val->rs_txt       = new texture();
-        val->rs_txt->name = js.at("rs_txt").get<std::string>();
-    }
-    if (js.count("op_txt")) {
-        val->op_txt       = new texture();
-        val->op_txt->name = js.at("op_txt").get<std::string>();
-    }
-    if (js.count("occ_txt")) {
-        val->occ_txt       = new texture();
-        val->occ_txt->name = js.at("occ_txt").get<std::string>();
-    }
-    if (js.count("bump_txt")) {
-        val->bump_txt       = new texture();
-        val->bump_txt->name = js.at("bump_txt").get<std::string>();
-    }
-    if (js.count("disp_txt")) {
-        val->disp_txt       = new texture();
-        val->disp_txt->name = js.at("disp_txt").get<std::string>();
-    }
-    if (js.count("norm_txt")) {
-        val->norm_txt       = new texture();
-        val->norm_txt->name = js.at("norm_txt").get<std::string>();
-    }
-    if (js.count("vd_txt")) {
-        val->vd_txt       = new voltexture();
-        val->vd_txt->name = js.at("vd_txt").get<std::string>();
-    }
+    if (!parse_json_objref(js, val->ke_txt, "ke_txt")) return false;
+    if (!parse_json_objref(js, val->kd_txt, "kd_txt")) return false;
+    if (!parse_json_objref(js, val->ks_txt, "ks_txt")) return false;
+    if (!parse_json_objref(js, val->kt_txt, "kt_txt")) return false;
+    if (!parse_json_objref(js, val->rs_txt, "rs_txt")) return false;
+    if (!parse_json_objref(js, val->op_txt, "op_txt")) return false;
+    if (!parse_json_objref(js, val->occ_txt, "occ_txt")) return false;
+    if (!parse_json_objref(js, val->bump_txt, "bump_txt")) return false;
+    if (!parse_json_objref(js, val->disp_txt, "disp_txt")) return false;
+    if (!parse_json_objref(js, val->norm_txt, "norm_txt")) return false;
+    if (!parse_json_objref(js, val->vd_txt, "vd_txt")) return false;
     if (!parse_json_procedural(js, val, "!!proc")) return false;
     return true;
 }
@@ -2180,9 +2216,9 @@ bool dump_json_object(json& js, const instance* val) {
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (val->shp != def.shp) js["shp"] = val->shp->name;
-    if (val->mat != def.mat) js["mat"] = val->mat->name;
-    if (val->sbd != def.sbd) js["sbd"] = val->sbd->name;
+    if(!dump_json_objref(js, val->shp, "shp")) return false;
+    if(!dump_json_objref(js, val->mat, "mat")) return false;
+    if(!dump_json_objref(js, val->sbd, "sbd")) return false;
     return true;
 }
 
@@ -2211,18 +2247,9 @@ bool parse_json_object(const json& js, instance* val) {
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (js.count("shp")) {
-        val->shp       = new shape();
-        val->shp->name = js.at("shp").get<std::string>();
-    }
-    if (js.count("mat")) {
-        val->mat       = new material();
-        val->mat->name = js.at("mat").get<std::string>();
-    }
-    if (js.count("sbd")) {
-        val->sbd       = new subdiv();
-        val->sbd->name = js.at("sbd").get<std::string>();
-    }
+    if (!parse_json_objref(js, val->shp, "shp")) return false;
+    if (!parse_json_objref(js, val->sbd, "sbd")) return false;
+    if (!parse_json_objref(js, val->mat, "mat")) return false;
     if (!parse_json_procedural(js, val, "!!proc")) return false;
     return true;
 }
@@ -2255,10 +2282,7 @@ bool parse_json_object(const json& js, environment* val) {
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!parse_json_value(js, val->ke, "ke", def.ke)) return false;
-    if (js.count("ke_txt")) {
-        val->ke_txt       = new texture();
-        val->ke_txt->name = js.at("ke_txt").get<std::string>();
-    }
+    if (!parse_json_objref(js, val->ke_txt, "ke_txt")) return false;
     if (!parse_json_procedural(js, val, "!!proc")) return false;
     return true;
 }
@@ -2276,10 +2300,10 @@ bool dump_json_object(json& js, const node* val) {
     if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
     if (!dump_json_value(js, val->weights, "weights", def.weights))
         return false;
-    if (val->parent != def.parent) js["parent"] = val->parent->name;
-    if (val->cam != def.cam) js["cam"] = val->cam->name;
-    if (val->ist != def.ist) js["ist"] = val->ist->name;
-    if (val->env != def.env) js["env"] = val->env->name;
+    if(!dump_json_objref(js, val->parent, "parent")) return false;
+    if(!dump_json_objref(js, val->cam, "cam")) return false;
+    if(!dump_json_objref(js, val->ist, "ist")) return false;
+    if(!dump_json_objref(js, val->env, "env")) return false;
     return true;
 }
 
@@ -2308,22 +2332,10 @@ bool parse_json_object(const json& js, node* val) {
     if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
     if (!parse_json_value(js, val->weights, "weights", def.weights))
         return false;
-    if (js.count("parent")) {
-        val->parent       = new node();
-        val->parent->name = js.at("parent").get<std::string>();
-    }
-    if (js.count("cam")) {
-        val->cam       = new camera();
-        val->cam->name = js.at("cam").get<std::string>();
-    }
-    if (js.count("ist")) {
-        val->ist       = new instance();
-        val->ist->name = js.at("ist").get<std::string>();
-    }
-    if (js.count("env")) {
-        val->env       = new environment();
-        val->env->name = js.at("env").get<std::string>();
-    }
+    if (!parse_json_objref(js, val->parent, "parent")) return false;
+    if (!parse_json_objref(js, val->ist, "ist")) return false;
+    if (!parse_json_objref(js, val->cam, "cam")) return false;
+    if (!parse_json_objref(js, val->env, "env")) return false;
     if (!parse_json_procedural(js, val, "!!proc")) return false;
     return true;
 }
@@ -2370,10 +2382,7 @@ bool dump_json_object(json& js, const animation* val) {
             return false;
         if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
     }
-    if (val->targets != def.targets) {
-        js["targets"] = json::array();
-        for (auto v : val->targets) js["targets"].push_back(v->name);
-    }
+    if (!dump_json_objref(js, val->targets, "targets")) return false;
     return true;
 }
 
@@ -2402,10 +2411,7 @@ bool parse_json_object(const json& js, animation* val) {
     if (!parse_json_value(js, val->rotation, "rotation", def.rotation))
         return false;
     if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
-    for (auto& j : js.value("targets", json::array())) {
-        val->targets.push_back(new node());
-        val->targets.back()->name = j.get<std::string>();
-    }
+    if (!parse_json_objref(js, val->targets, "targets")) return false;
     if (!parse_json_procedural(js, val, "!!proc")) return false;
     return true;
 }
