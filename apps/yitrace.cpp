@@ -38,8 +38,8 @@ struct app_state {
     bvh_tree* bvh = nullptr;
 
     // rendering params
-    std::string  filename   = "scene.json";
-    std::string  imfilename = "out.obj";
+    string  filename   = "scene.json";
+    string  imfilename = "out.obj";
     trace_params params     = {};
 
     // rendering state
@@ -52,7 +52,7 @@ struct app_state {
     bool                                       zoom_to_fit  = true;
     bool                                       widgets_open = false;
     void*                                      selection    = nullptr;
-    std::vector<std::pair<std::string, void*>> update_list;
+    vector<pair<string, void*>> update_list;
     bool                                       navigation_fps = false;
     bool                                       quiet          = false;
     int64_t                                    trace_start    = 0;
@@ -78,7 +78,7 @@ void draw_glwidgets(glwindow* win) {
             draw_label_glwidgets(win, "image", "%d x %d @ %d",
                 width(app->state->img), height(app->state->img),
                 app->state->sample);
-            auto cam_names = std::vector<std::string>();
+            auto cam_names = vector<string>();
             for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
             auto edited = 0;
             edited += draw_combobox_glwidget(

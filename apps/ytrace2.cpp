@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
         done = trace_samples(state, scn, bvh, lights, params);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
-                std::to_string(state->sample) + "." + get_extension(imfilename));
+                to_string(state->sample) + "." + get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
             save_tonemapped_image(filename, state->img, exposure, gamma, filmic);
         }

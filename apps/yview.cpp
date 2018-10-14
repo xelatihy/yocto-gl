@@ -39,8 +39,8 @@ struct draw_glshape_vbos {
 
 struct draw_glstate {
     unsigned int                                        gl_prog = 0;
-    std::unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
-    std::unordered_map<const texture*, unsigned int>    txt_id;
+    unordered_map<const shape*, draw_glshape_vbos> shp_vbos;
+    unordered_map<const texture*, unsigned int>    txt_id;
 };
 
 // Application state
@@ -49,9 +49,9 @@ struct app_state {
     scene* scn = nullptr;
 
     // parameters
-    std::string filename    = "scene.json";  // scene name
-    std::string imfilename  = "out.png";     // output image
-    std::string outfilename = "scene.json";  // save scene name
+    string filename    = "scene.json";  // scene name
+    string imfilename  = "out.png";     // output image
+    string outfilename = "scene.json";  // save scene name
     int         camid       = 0;             // camera id
     int         resolution  = 512;           // image resolution
     bool        wireframe   = false;         // wireframe drawing
@@ -69,9 +69,9 @@ struct app_state {
     bool                                       widgets_open   = false;
     bool                                       navigation_fps = false;
     void*                                      selection      = nullptr;
-    std::vector<std::pair<std::string, void*>> update_list;
+    vector<pair<string, void*>> update_list;
     float                                      time       = 0;
-    std::string                                anim_group = "";
+    string                                anim_group = "";
     vec2f                                      time_range = zero2f;
     bool                                       animate    = false;
 
@@ -566,9 +566,9 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
     set_gluniform(state->gl_prog, "gamma", gamma);
 
     if (!eyelight) {
-        auto lights_pos  = std::vector<vec3f>();
-        auto lights_ke   = std::vector<vec3f>();
-        auto lights_type = std::vector<int>();
+        auto lights_pos  = vector<vec3f>();
+        auto lights_ke   = vector<vec3f>();
+        auto lights_type = vector<int>();
         for (auto lgt : scn->instances) {
             if (lgt->mat->ke == zero3f) continue;
             if (lights_pos.size() >= 16) break;
@@ -595,7 +595,7 @@ void draw_glscene(const draw_glstate* state, const scene* scn,
         set_gluniform(state->gl_prog, "lamb", zero3f);
         set_gluniform(state->gl_prog, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
-            auto is = std::to_string(i);
+            auto is = to_string(i);
             set_gluniform(
                 state->gl_prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
             set_gluniform(
@@ -717,18 +717,18 @@ void run_ui(app_state* app) {
 }
 
 // Load INI file. The implementation does not handle escaping.
-std::unordered_map<std::string, std::unordered_map<std::string, std::string>>
-load_ini(const std::string& filename) {
+unordered_map<string, unordered_map<string, string>>
+load_ini(const string& filename) {
     auto f = fopen(filename.c_str(), "rt");
     if (!f) throw std::runtime_error("cannot open " + filename);
-    auto ret       = std::unordered_map<std::string,
-        std::unordered_map<std::string, std::string>>();
-    auto cur_group = std::string();
+    auto ret       = unordered_map<string,
+        unordered_map<string, string>>();
+    auto cur_group = string();
     ret[""]        = {};
 
     char buf[4096];
     while (fgets(buf, 4096, f)) {
-        auto line = std::string(buf);
+        auto line = string(buf);
         if (line.empty()) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
