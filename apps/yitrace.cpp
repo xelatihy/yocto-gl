@@ -108,8 +108,8 @@ void draw_glwidgets(glwindow* win) {
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij        = get_image_coords(
-                mouse_pos, app->imcenter, app->imscale, extents(app->state->img));
+            auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
+                extents(app->state->img));
             draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < width(app->state->img) && ij.y >= 0 &&
                 ij.y < height(app->state->img)) {

@@ -317,6 +317,7 @@ using std::round;
 using std::sin;
 using std::sqrt;
 using std::tan;
+using namespace std::string_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;
@@ -2471,7 +2472,8 @@ struct image {
     image() : extents{0, 0}, data() {}
     image(const vec2i& wh, const T& v = T{})
         : extents{wh}, data(wh.x * wh.y, v) {}
-    image(const vec2i& wh, const T* v) : extents{wh}, data(v, v + wh.x * wh.y) {}
+    image(const vec2i& wh, const T* v)
+        : extents{wh}, data(v, v + wh.x * wh.y) {}
 
     // pixel access
     T& operator[](const vec2i& ij) { return data[ij.y * extents.x + ij.x]; }
@@ -2483,7 +2485,7 @@ struct image {
 
     // private data
     vec2i          extents = {0, 0};
-    std::vector<T> data = {};
+    std::vector<T> data    = {};
 };
 
 // Size
@@ -2528,13 +2530,21 @@ const std::vector<T>& data_vector(const image<T>& img) {
 
 // Iteration
 template <typename T>
-T*       begin(image<T>& img) { return img.data.data(); }
+T* begin(image<T>& img) {
+    return img.data.data();
+}
 template <typename T>
-const T* begin(const image<T>& img) { return img.data.data(); }
+const T* begin(const image<T>& img) {
+    return img.data.data();
+}
 template <typename T>
-T*       end(image<T>& img) { return img.data.data() + img.data.size(); }
+T* end(image<T>& img) {
+    return img.data.data() + img.data.size();
+}
 template <typename T>
-const T* end(const image<T>& img) { return img.data.data() + img.data.size(); }
+const T* end(const image<T>& img) {
+    return img.data.data() + img.data.size();
+}
 
 }  // namespace ygl
 
@@ -2808,7 +2818,7 @@ struct volume {
 
     // private data
     vec3i          extents = {0, 0};
-    std::vector<T> data = {};
+    std::vector<T> data    = {};
 };
 
 // Size
@@ -2838,21 +2848,23 @@ bool empty(const volume<T>& vol) {
 }
 
 // Element access
-template<typename T>
+template <typename T>
 T& at(volume<T>& vol, const vec3i& ijk) {
-        return vol.data[ijk.z * vol.extents.x * vol.extents.y + ijk.y * vol.extents.x + ijk.x];
+    return vol.data[ijk.z * vol.extents.x * vol.extents.y +
+                    ijk.y * vol.extents.x + ijk.x];
 }
-template<typename T>
+template <typename T>
 const T& at(const volume<T>& vol, const vec3i& ijk) {
-        return vol.data[ijk.z * vol.extents.x * vol.extents.y + ijk.y * vol.extents.x + ijk.x];
+    return vol.data[ijk.z * vol.extents.x * vol.extents.y +
+                    ijk.y * vol.extents.x + ijk.x];
 }
-template<typename T>
+template <typename T>
 T& at(volume<T>& vol, int i, int j, int k) {
-        return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];    
+    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
 }
-template<typename T>
+template <typename T>
 const T& at(const volume<T>& vol, int i, int j, int k) {
-        return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];    
+    return vol.data[k * vol.extents.x * vol.extents.y + j * vol.extents.x + i];
 }
 
 // Data access
@@ -2875,13 +2887,21 @@ const std::vector<T>& data_vector(const volume<T>& vol) {
 
 // Iteration
 template <typename T>
-T*       begin(volume<T>& vol) { return vol.data.data(); }
+T* begin(volume<T>& vol) {
+    return vol.data.data();
+}
 template <typename T>
-const T* begin(const volume<T>& vol) { return vol.data.data(); }
+const T* begin(const volume<T>& vol) {
+    return vol.data.data();
+}
 template <typename T>
-T*       end(volume<T>& vol) { return vol.data.data() + vol.data.size(); }
+T* end(volume<T>& vol) {
+    return vol.data.data() + vol.data.size();
+}
 template <typename T>
-const T* end(const volume<T>& vol) { return vol.data.data() + vol.data.size(); }
+const T* end(const volume<T>& vol) {
+    return vol.data.data() + vol.data.size();
+}
 
 }  // namespace ygl
 

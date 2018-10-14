@@ -2247,15 +2247,15 @@ make_shape_data make_geodesic_sphere(
 // coordinates.
 make_fvshape_data make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshp                         = make_cube(steps, size, uvsize, false);
+    auto qshp  = make_cube(steps, size, uvsize, false);
     auto fvshp = make_fvshape_data{};
     std::tie(fvshp.quads_pos, fvshp.pos) = weld_quads(qshp.quads, qshp.pos,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    fvshp.quads_norm                   = qshp.quads;
-    fvshp.norm = qshp.norm;
-    fvshp.quads_texcoord               = qshp.quads;
-    fvshp.texcoord = qshp.texcoord;
+    fvshp.quads_norm                     = qshp.quads;
+    fvshp.norm                           = qshp.norm;
+    fvshp.quads_texcoord                 = qshp.quads;
+    fvshp.texcoord                       = qshp.texcoord;
     return fvshp;
 }
 
@@ -3300,8 +3300,7 @@ image<vec4f> make_sunsky_image4f(const vec2i& size, float thetaSun,
             for (int i = 0; i < width(img); i++) {
                 auto pxl   = img[{i, j}];
                 auto le    = vec3f{pxl.x, pxl.y, pxl.z};
-                auto angle = sin(theta) * 4 * pif /
-                             (width(img) * height(img));
+                auto angle = sin(theta) * 4 * pif / (width(img) * height(img));
                 ground += le * (ground_albedo / pif) * cos(theta) * angle;
             }
         }
@@ -3342,8 +3341,7 @@ image<vec4f> make_noise_image4f(const vec2i& size, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{width(img), height(img), 2} : zero3i;
     for (auto j = 0; j < height(img); j++) {
         for (auto i = 0; i < width(img); i++) {
-            auto p = vec3f{i / (float)width(img), j / (float)height(img),
-                         0.5f} *
+            auto p = vec3f{i / (float)width(img), j / (float)height(img), 0.5f} *
                      scale;
             auto g      = perlin_noise(p, wrap3i);
             g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -3360,8 +3358,7 @@ image<vec4f> make_fbm_image4f(const vec2i& size, float scale, float lacunarity,
     auto wrap3i = (wrap) ? vec3i{width(img), height(img), 2} : zero3i;
     for (auto j = 0; j < height(img); j++) {
         for (auto i = 0; i < width(img); i++) {
-            auto p = vec3f{i / (float)width(img), j / (float)height(img),
-                         0.5f} *
+            auto p = vec3f{i / (float)width(img), j / (float)height(img), 0.5f} *
                      scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -3378,8 +3375,7 @@ image<vec4f> make_ridge_image4f(const vec2i& size, float scale,
     auto wrap3i = (wrap) ? vec3i{width(img), height(img), 2} : zero3i;
     for (auto j = 0; j < height(img); j++) {
         for (auto i = 0; i < width(img); i++) {
-            auto p = vec3f{i / (float)width(img), j / (float)height(img),
-                         0.5f} *
+            auto p = vec3f{i / (float)width(img), j / (float)height(img), 0.5f} *
                      scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
@@ -3397,8 +3393,7 @@ image<vec4f> make_turbulence_image4f(const vec2i& size, float scale,
     auto wrap3i = (wrap) ? vec3i{width(img), height(img), 2} : zero3i;
     for (auto j = 0; j < height(img); j++) {
         for (auto i = 0; i < width(img); i++) {
-            auto p = vec3f{i / (float)width(img), j / (float)height(img),
-                         0.5f} *
+            auto p = vec3f{i / (float)width(img), j / (float)height(img), 0.5f} *
                      scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);

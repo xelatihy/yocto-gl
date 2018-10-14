@@ -116,6 +116,9 @@ glwindow* make_glwindow(const vec2i& size, const char* title,
     void* user_pointer, void (*refresh)(GLFWwindow*));
 void      delete_glwindow(glwindow* win);
 
+void set_drop_callback(glwindow* win,
+    void (*callback)(glwindow* win, int num, const char** paths));
+
 void* get_user_pointer(glwindow* win);
 
 vec2i get_glframebuffer_size(glwindow* win);
@@ -153,7 +156,9 @@ void end_header_widget(glwindow* win);
 void draw_separator_glwidget(glwindow* win);
 void continue_glwidgets_line(glwindow* win);
 
-bool draw_inputtext_glwidget(glwindow* win, const char* lbl, std::string& val);
+bool draw_button_glwidget(glwindow* win, const char* lbl);
+
+bool draw_textinput_glwidget(glwindow* win, const char* lbl, std::string& val);
 bool draw_slider_glwidget(
     glwindow* win, const char* lbl, float& val, float min, float max);
 bool draw_slider_glwidget(

@@ -62,7 +62,6 @@
 
 #include <array>
 #include <climits>
-using namespace std::string_literals;
 
 #include "ext/json.hpp"
 
@@ -1008,8 +1007,8 @@ image<vec4f> load_pfm_image4f(const std::string& filename) {
     return img;
 }
 bool save_pfm_image4f(const std::string& filename, const image<vec4f>& img) {
-    if (!save_pfm(filename.c_str(), width(img), height(img), 4,
-            (float*)data(img))) {
+    if (!save_pfm(
+            filename.c_str(), width(img), height(img), 4, (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1034,8 +1033,8 @@ image<vec4f> load_exr_image4f(const std::string& filename) {
     return img;
 }
 bool save_exr_image4f(const std::string& filename, const image<vec4f>& img) {
-    if (!SaveEXR((float*)data(img), width(img), height(img), 4,
-            filename.c_str())) {
+    if (!SaveEXR(
+            (float*)data(img), width(img), height(img), 4, filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1072,8 +1071,8 @@ image<vec4f> load_stb_image4f(const std::string& filename) {
 
 // save an image with stbi
 bool save_png_image4b(const std::string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), width(img), height(img), 4,
-            data(img), width(img) * 4)) {
+    if (!stbi_write_png(filename.c_str(), width(img), height(img), 4, data(img),
+            width(img) * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1104,8 +1103,8 @@ bool save_bmp_image4b(const std::string& filename, const image<vec4b>& img) {
     return true;
 }
 bool save_hdr_image4f(const std::string& filename, const image<vec4f>& img) {
-    if (!stbi_write_hdr(filename.c_str(), width(img), height(img), 4,
-            (float*)data(img))) {
+    if (!stbi_write_hdr(
+            filename.c_str(), width(img), height(img), 4, (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -1355,8 +1354,7 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
     bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !empty(txt->imgf) || !empty(txt->imgb))
-            continue;
+        if (txt->path == "" || !empty(txt->imgf) || !empty(txt->imgb)) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
             txt->imgf = load_image4f(filename);
@@ -2206,9 +2204,9 @@ bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
         shp.quads_norm.pop_back();
         shp.quads_texcoord.pop_back();
     } else if (type == "suzanne") {
-        auto qshp = make_suzanne(js.value("size", 2.0f), false);
+        auto qshp     = make_suzanne(js.value("size", 2.0f), false);
         shp.quads_pos = qshp.quads;
-        shp.pos = qshp.pos;
+        shp.pos       = qshp.pos;
     } else {
         throw std::runtime_error("unknown shape type " + type);
     }
