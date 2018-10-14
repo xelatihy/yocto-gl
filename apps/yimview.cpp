@@ -229,7 +229,7 @@ void draw_glwidgets(glwindow* win) {
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 &&
                 ij.y < img->img.height) {
-                pixel = pixel_at(img->img, ij);
+                pixel = pixel_at(img->img, ij.x, ij.y);
             }
             draw_coloredit_glwidget(win, "pixel", pixel);
             auto stats = (img->stats_done) ? img->stats : image_stats{};

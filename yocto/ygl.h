@@ -2500,14 +2500,6 @@ template<typename T>
 inline const T& pixel_at(const image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 } 
-template<typename T>
-inline T& pixel_at(image<T>& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.width + ij.x];
-} 
-template<typename T>
-inline const T& pixel_at(const image<T>& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.width + ij.x];
-} 
 
 }  // namespace ygl
 
@@ -2774,14 +2766,6 @@ struct volume {
 };
 
 // Element access
-template<typename T>
-T& voxel_at(volume<T>& vol, const vec3i& ijk) {
-    return vol.data[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
-}
-template<typename T>
-const T& voxel_at(const volume<T>& vol, const vec3i& ijk) {
-    return vol.voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
-}
 template<typename T>
 T& voxel_at(volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width* vol.height + j * vol.width + i];
@@ -3145,9 +3129,9 @@ vec3f eval_environment(const scene* scn, const vec3f& i);
 
 // Evaluate a texture.
 vec2i eval_texture_size(const texture* txt);
-vec4f lookup_texture(const texture* txt, const vec2i& ij);
+vec4f lookup_texture(const texture* txt, int i, int j);
 vec4f eval_texture(const texture* txt, const vec2f& texcoord);
-float lookup_voltexture(const voltexture* txt, const vec3i& ijk);
+float lookup_voltexture(const voltexture* txt, int i, int j, int k);
 float eval_voltexture(const voltexture* txt, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.

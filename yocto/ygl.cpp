@@ -3598,7 +3598,7 @@ vector<float> compute_environment_cdf(const environment* env) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
-            auto val    = lookup_texture(txt, ij);
+            auto val    = lookup_texture(txt, ij.x, ij.y);
             elem_cdf[i] = max(xyz(val)) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
@@ -3993,13 +3993,13 @@ vec2i eval_texture_size(const texture* txt) {
 }
 
 // Lookup a texture value
-vec4f lookup_texture(const texture* txt, const vec2i& ij) {
+vec4f lookup_texture(const texture* txt, int i, int j) {
     if (!txt->imgf.pixels.empty()) {
-        return pixel_at(txt->imgf, ij);
+        return pixel_at(txt->imgf, i, j);
     } else if (!txt->imgb.pixels.empty() && txt->srgb) {
-        return srgb_to_linear(byte_to_float(pixel_at(txt->imgb, ij)));
+        return srgb_to_linear(byte_to_float(pixel_at(txt->imgb, i, j)));
     } else if (!txt->imgb.pixels.empty() && !txt->srgb) {
-        return byte_to_float(pixel_at(txt->imgb, ij));
+        return byte_to_float(pixel_at(txt->imgb, i, j));
     } else {
         return zero4f;
     }
@@ -4035,20 +4035,20 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     if (!txt->linear) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
-        return lookup_texture(txt, {i, j});
+        return lookup_texture(txt, i, j);
     }
 
     // handle interpolation
-    return lookup_texture(txt, {i, j}) * (1 - u) * (1 - v) +
-           lookup_texture(txt, {i, jj}) * (1 - u) * v +
-           lookup_texture(txt, {ii, j}) * u * (1 - v) +
-           lookup_texture(txt, {ii, jj}) * u * v;
+    return lookup_texture(txt, i, j) * (1 - u) * (1 - v) +
+           lookup_texture(txt, i, jj) * (1 - u) * v +
+           lookup_texture(txt, ii, j) * u * (1 - v) +
+           lookup_texture(txt, ii, jj) * u * v;
 }
 
 // Lookup a texture value
-float lookup_voltexture(const voltexture* txt, const vec3i& ijk) {
+float lookup_voltexture(const voltexture* txt, int i, int j, int k) {
     if (txt->vol.voxels.empty()) {
-        return voxel_at(txt->vol, ijk);
+        return voxel_at(txt->vol, i, j, k);
     } else {
         return 0;
     }
@@ -4080,18 +4080,18 @@ float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         k = w < 0.5 ? k : min(k + 1, depth - 1);
-        return lookup_voltexture(txt, {i, j, k});
+        return lookup_voltexture(txt, i, j, k);
     }
 
     // trilinear interpolation
-    return lookup_voltexture(txt, {i, j, k}) * (1 - u) * (1 - v) * (1 - w) +
-           lookup_voltexture(txt, {ii, j, k}) * u * (1 - v) * (1 - w) +
-           lookup_voltexture(txt, {i, jj, k}) * (1 - u) * v * (1 - w) +
-           lookup_voltexture(txt, {i, j, kk}) * (1 - u) * (1 - v) * w +
-           lookup_voltexture(txt, {i, jj, kk}) * (1 - u) * v * w +
-           lookup_voltexture(txt, {ii, j, kk}) * u * (1 - v) * w +
-           lookup_voltexture(txt, {ii, jj, k}) * u * v * (1 - w) +
-           lookup_voltexture(txt, {ii, jj, kk}) * u * v * w;
+    return lookup_voltexture(txt, i, j, k) * (1 - u) * (1 - v) * (1 - w) +
+           lookup_voltexture(txt, ii, j, k) * u * (1 - v) * (1 - w) +
+           lookup_voltexture(txt, i, jj, k) * (1 - u) * v * (1 - w) +
+           lookup_voltexture(txt, i, j, kk) * (1 - u) * (1 - v) * w +
+           lookup_voltexture(txt, i, jj, kk) * (1 - u) * v * w +
+           lookup_voltexture(txt, ii, j, kk) * u * (1 - v) * w +
+           lookup_voltexture(txt, ii, jj, k) * u * v * (1 - w) +
+           lookup_voltexture(txt, ii, jj, kk) * u * v * w;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -5745,7 +5745,7 @@ vec4f trace_sample(trace_state* state, const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const vec2i& ij, const trace_params& params) {
     _trace_npaths += 1;
     auto  cam = scn->cameras.at(params.camid);
-    auto& rng = pixel_at(state->rng, ij);
+    auto& rng = pixel_at(state->rng, ij.x, ij.y);
     auto  ray = eval_camera_ray(
         cam, ij, {state->img.width, state->img.height}, rand2f(rng), rand2f(rng));
     auto hit = false;
