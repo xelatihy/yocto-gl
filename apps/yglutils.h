@@ -71,14 +71,24 @@ gltexture make_gltexture(
 void update_gltexture(
     gltexture& txt, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
 
-uint make_glarraybuffer(const vector<float>& buf, bool dynamic = false);
-uint make_glarraybuffer(const vector<vec2f>& buf, bool dynamic = false);
-uint make_glarraybuffer(const vector<vec3f>& buf, bool dynamic = false);
-uint make_glarraybuffer(const vector<vec4f>& buf, bool dynamic = false);
+struct glarraybuffer {
+    uint bid = 0;
+    operator bool() const { return (bool)bid; }
+};
 
-uint make_glelementbuffer(const vector<int>& buf, bool dynamic = false);
-uint make_glelementbuffer(const vector<vec2i>& buf, bool dynamic = false);
-uint make_glelementbuffer(const vector<vec3i>& buf, bool dynamic = false);
+struct glelementbuffer {
+    uint bid = 0;
+    operator bool() const { return (bool)bid; }
+};
+
+glarraybuffer make_glarraybuffer(const vector<float>& buf, bool dynamic = false);
+glarraybuffer make_glarraybuffer(const vector<vec2f>& buf, bool dynamic = false);
+glarraybuffer make_glarraybuffer(const vector<vec3f>& buf, bool dynamic = false);
+glarraybuffer make_glarraybuffer(const vector<vec4f>& buf, bool dynamic = false);
+
+glelementbuffer make_glelementbuffer(const vector<int>& buf, bool dynamic = false);
+glelementbuffer make_glelementbuffer(const vector<vec2i>& buf, bool dynamic = false);
+glelementbuffer make_glelementbuffer(const vector<vec3i>& buf, bool dynamic = false);
 
 int get_gluniform_location(const glprogram& prog, const char* name);
 
@@ -106,20 +116,20 @@ void set_gluniform_texture(
 
 int get_glvertexattrib_location(const glprogram& prog, const char* name);
 
-void set_glvertexattrib(int loc, int bid, float val);
-void set_glvertexattrib(int loc, int bid, const vec2f& val);
-void set_glvertexattrib(int loc, int bid, const vec3f& val);
-void set_glvertexattrib(int loc, int bid, const vec4f& val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, float val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec2f& val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec3f& val);
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec4f& val);
 
 template <typename T>
 inline void set_glvertexattrib(
-   const glprogram& prog, const char* var, uint bid, const T& val) {
-    set_glvertexattrib(get_glvertexattrib_location(prog, var), bid, val);
+   const glprogram& prog, const char* var, const glarraybuffer& buf, const T& val) {
+    set_glvertexattrib(get_glvertexattrib_location(prog, var), buf, val);
 }
 
-void draw_glpoints(uint bid, int num);
-void draw_gllines(uint bid, int num);
-void draw_gltriangles(uint bid, int num);
+void draw_glpoints(const glelementbuffer& buf, int num);
+void draw_gllines(const glelementbuffer& buf, int num);
+void draw_gltriangles(const glelementbuffer& buf, int num);
 
 void draw_glimage(
     const gltexture& txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale);

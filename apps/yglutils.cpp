@@ -222,49 +222,49 @@ void update_gltexture(
 }
 
 template <typename T>
-uint make_glarraybuffer_impl(const vector<T>& buf, bool dynamic) {
-    auto bid = (uint)0;
+glarraybuffer make_glarraybuffer_impl(const vector<T>& data, bool dynamic) {
+    auto buf = glarraybuffer{};
     assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &bid);
-    glBindBuffer(GL_ARRAY_BUFFER, bid);
-    glBufferData(GL_ARRAY_BUFFER, buf.size() * sizeof(T), buf.data(),
+    glGenBuffers(1, &buf.bid);
+    glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
+    glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return bid;
+    return buf;
 }
 
-uint make_glarraybuffer(const vector<float>& buf, bool dynamic) {
-    return make_glarraybuffer_impl(buf, dynamic);
+glarraybuffer make_glarraybuffer(const vector<float>& data, bool dynamic) {
+    return make_glarraybuffer_impl(data, dynamic);
 }
-uint make_glarraybuffer(const vector<vec2f>& buf, bool dynamic) {
-    return make_glarraybuffer_impl(buf, dynamic);
+glarraybuffer make_glarraybuffer(const vector<vec2f>& data, bool dynamic) {
+    return make_glarraybuffer_impl(data, dynamic);
 }
-uint make_glarraybuffer(const vector<vec3f>& buf, bool dynamic) {
-    return make_glarraybuffer_impl(buf, dynamic);
+glarraybuffer make_glarraybuffer(const vector<vec3f>& data, bool dynamic) {
+    return make_glarraybuffer_impl(data, dynamic);
 }
-uint make_glarraybuffer(const vector<vec4f>& buf, bool dynamic) {
-    return make_glarraybuffer_impl(buf, dynamic);
+glarraybuffer make_glarraybuffer(const vector<vec4f>& data, bool dynamic) {
+    return make_glarraybuffer_impl(data, dynamic);
 }
 
 template <typename T>
-uint make_glelementbuffer_impl(const vector<T>& buf, bool dynamic) {
-    auto bid = (uint)0;
+glelementbuffer make_glelementbuffer_impl(const vector<T>& data, bool dynamic) {
+    auto buf = glelementbuffer{};
     assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &bid);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, buf.size() * sizeof(T), buf.data(),
+    glGenBuffers(1, &buf.bid);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return bid;
+    return buf;
 }
 
-uint make_glelementbuffer(const vector<int>& buf, bool dynamic) {
+glelementbuffer make_glelementbuffer(const vector<int>& buf, bool dynamic) {
     return make_glelementbuffer_impl(buf, dynamic);
 }
-uint make_glelementbuffer(const vector<vec2i>& buf, bool dynamic) {
+glelementbuffer make_glelementbuffer(const vector<vec2i>& buf, bool dynamic) {
     return make_glelementbuffer_impl(buf, dynamic);
 }
-uint make_glelementbuffer(const vector<vec3i>& buf, bool dynamic) {
+glelementbuffer make_glelementbuffer(const vector<vec3i>& buf, bool dynamic) {
     return make_glelementbuffer_impl(buf, dynamic);
 }
 
@@ -370,10 +370,10 @@ int get_glvertexattrib_location(const glprogram& prog, const char* name) {
     return glGetAttribLocation(prog.pid, name);
 }
 
-void set_glvertexattrib(int loc, int bid, float val) {
+void set_glvertexattrib(int loc, const glarraybuffer& buf, float val) {
     assert(glGetError() == GL_NO_ERROR);
-    if (bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, bid);
+    if (buf.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
         glEnableVertexAttribArray(loc);
         glVertexAttribPointer(loc, 1, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -382,10 +382,10 @@ void set_glvertexattrib(int loc, int bid, float val) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int loc, int bid, const vec2f& val) {
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec2f& val) {
     assert(glGetError() == GL_NO_ERROR);
-    if (bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, bid);
+    if (buf.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
         glEnableVertexAttribArray(loc);
         glVertexAttribPointer(loc, 2, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -394,10 +394,10 @@ void set_glvertexattrib(int loc, int bid, const vec2f& val) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int loc, int bid, const vec3f& val) {
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec3f& val) {
     assert(glGetError() == GL_NO_ERROR);
-    if (bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, bid);
+    if (buf.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
         glEnableVertexAttribArray(loc);
         glVertexAttribPointer(loc, 3, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -406,10 +406,10 @@ void set_glvertexattrib(int loc, int bid, const vec3f& val) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int loc, int bid, const vec4f& val) {
+void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec4f& val) {
     assert(glGetError() == GL_NO_ERROR);
-    if (bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, bid);
+    if (buf.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
         glEnableVertexAttribArray(loc);
         glVertexAttribPointer(loc, 4, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -418,26 +418,26 @@ void set_glvertexattrib(int loc, int bid, const vec4f& val) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void draw_glpoints(uint bid, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
+void draw_glpoints(const glelementbuffer& buf, int num) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
     glDrawElements(GL_POINTS, num, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_gllines(uint bid, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
+void draw_gllines(const glelementbuffer& buf, int num) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
     glDrawElements(GL_LINES, num * 2, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_gltriangles(uint bid, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, bid);
+void draw_gltriangles(const glelementbuffer& buf, int num) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
 void draw_glimage(
     const gltexture& gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale) {
     static glprogram gl_prog = {};
-    static uint gl_texcoord = 0;
-    static uint gl_triangles = 0;
+    static glarraybuffer gl_texcoord = {};
+    static glelementbuffer gl_triangles = {};
 
     // initialization
     if (!gl_prog) {
