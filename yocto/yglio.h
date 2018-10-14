@@ -206,25 +206,25 @@ void check_cmdline(cmdline_parser& parser);
 // Options's names starts with "--" or "-", otherwise they are arguments.
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
-bool parse_arg(
+inline bool parse_arg(
     cmdline_parser& parser, const string& name, bool def, const string& usage);
-int    parse_arg(cmdline_parser& parser, const string& name, int def,
+inline int    parse_arg(cmdline_parser& parser, const string& name, int def,
        const string& usage, bool req = false);
-float  parse_arg(cmdline_parser& parser, const string& name, float def,
+inline float  parse_arg(cmdline_parser& parser, const string& name, float def,
      const string& usage, bool req = false);
-vec2f  parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
+inline vec2f  parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
      const string& usage, bool req = false);
-vec3f  parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
+inline vec3f  parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
      const string& usage, bool req = false);
-string parse_arg(cmdline_parser& parser, const string& name, const string& def,
+inline string parse_arg(cmdline_parser& parser, const string& name, const string& def,
     const string& usage, bool req = false);
-string parse_arg(cmdline_parser& parser, const string& name, const char* def,
+inline string parse_arg(cmdline_parser& parser, const string& name, const char* def,
     const string& usage, bool req = false);
 // Parse all arguments left on the command line.
-vector<string> parse_args(cmdline_parser& parser, const string& name,
+inline vector<string> parse_args(cmdline_parser& parser, const string& name,
     const vector<string>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
-int parse_arge(cmdline_parser& parser, const string& name, int def,
+inline int parse_arge(cmdline_parser& parser, const string& name, int def,
     const string& usage, const vector<string>& labels, bool req = false);
 
 }  // namespace ygl
@@ -897,5 +897,86 @@ inline void log_fatal(const string& fmt, const Args&... args) {
 }
 
 }  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF COMMAND-LINE PARSING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+bool parse_flag(
+    cmdline_parser& parser, const string& name, bool def, const string& usage);
+string parse_string(cmdline_parser& parser, const string& name,
+    const string& def, const string& usage, bool req,
+    const vector<string>& choices);
+vector<string> parse_strings(cmdline_parser& parser, const string& name,
+    const vector<string>& def, const string& usage, bool req);
+
+// Parse an integer, float, string. If name starts with "--" or "-", then it is
+// an option, otherwise it is a position argument.
+inline bool parse_arg(
+    cmdline_parser& parser, const string& name, bool def, const string& usage) {
+    return parse_flag(parser, name, def, usage);
+}
+inline string parse_arg(cmdline_parser& parser, const string& name, const string& def,
+    const string& usage, bool req) {
+    return parse_string(parser, name, def, usage, req, {});
+}
+inline string parse_arg(cmdline_parser& parser, const string& name, const char* def,
+    const string& usage, bool req) {
+    return parse_string(parser, name, def, usage, req, {});
+}
+inline int parse_arg(cmdline_parser& parser, const string& name, int def,
+    const string& usage, bool req) {
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
+    auto val  = def;
+    if (!parse(vals, val)) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+inline float parse_arg(cmdline_parser& parser, const string& name, float def,
+    const string& usage, bool req) {
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
+    auto val  = def;
+    if (!parse(vals, val)) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+inline vec2f parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
+    const string& usage, bool req) {
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
+    auto val  = def;
+    if (!parse(vals, val)) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+inline vec3f parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
+    const string& usage, bool req) {
+    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
+    auto val  = def;
+    if (!parse(vals, val)) {
+        parser.error += "bad value for " + name;
+        return def;
+    }
+    return val;
+}
+inline int parse_arge(cmdline_parser& parser, const string& name, int def,
+    const string& usage, const vector<string>& labels, bool req) {
+    auto val = parse_string(parser, name, labels.at(def), usage, req, labels);
+    return (int)(std::find(labels.begin(), labels.end(), val) - labels.begin());
+}
+
+// Parser an argument
+inline vector<string> parse_args(cmdline_parser& parser, const string& name,
+    const vector<string>& def, const string& usage, bool req) {
+    return parse_strings(parser, name, def, usage, req);
+}
+
+}
 
 #endif

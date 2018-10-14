@@ -572,68 +572,8 @@ string parse_string(cmdline_parser& parser, const string& name,
                parse_argument(parser, name, def, usage, req, choices);
 }
 
-// Parse an integer, float, string. If name starts with "--" or "-", then it is
-// an option, otherwise it is a position argument.
-bool parse_arg(
-    cmdline_parser& parser, const string& name, bool def, const string& usage) {
-    return parse_flag(parser, name, def, usage);
-}
-string parse_arg(cmdline_parser& parser, const string& name, const string& def,
-    const string& usage, bool req) {
-    return parse_string(parser, name, def, usage, req, {});
-}
-string parse_arg(cmdline_parser& parser, const string& name, const char* def,
-    const string& usage, bool req) {
-    return parse_string(parser, name, def, usage, req, {});
-}
-int parse_arg(cmdline_parser& parser, const string& name, int def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
-float parse_arg(cmdline_parser& parser, const string& name, float def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
-vec2f parse_arg(cmdline_parser& parser, const string& name, const vec2f& def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
-vec3f parse_arg(cmdline_parser& parser, const string& name, const vec3f& def,
-    const string& usage, bool req) {
-    auto vals = parse_string(parser, name, to_string(def), usage, req, {});
-    auto val  = def;
-    if (!parse(vals, val)) {
-        parser.error += "bad value for " + name;
-        return def;
-    }
-    return val;
-}
-int parse_arge(cmdline_parser& parser, const string& name, int def,
-    const string& usage, const vector<string>& labels, bool req) {
-    auto val = parse_string(parser, name, labels.at(def), usage, req, labels);
-    return (int)(std::find(labels.begin(), labels.end(), val) - labels.begin());
-}
-
-// Parser an argument
-vector<string> parse_args(cmdline_parser& parser, const string& name,
+// Parse all left argument strings. Name should not start with "--" or "-".
+vector<string> parse_strings(cmdline_parser& parser, const string& name,
     const vector<string>& def, const string& usage, bool req) {
     auto defs = string();
     for (auto& d : def) defs += " " + d;
