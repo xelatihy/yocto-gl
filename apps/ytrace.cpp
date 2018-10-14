@@ -112,7 +112,8 @@ int main(int argc, char* argv[]) {
     while (!done) {
         log_info("rendering sample {}/{}", state->sample, params.nsamples);
         auto block_start = get_time();
-        done             = trace_samples(state.get(), scn.get(), bvh.get(), lights.get(), params);
+        done             = trace_samples(
+            state.get(), scn.get(), bvh.get(), lights.get(), params);
         log_info("rendering block in {}",
             format_duration(get_time() - block_start).c_str());
         if (save_batch) {

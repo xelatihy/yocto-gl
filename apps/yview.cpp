@@ -111,9 +111,9 @@ void draw(glwindow* win) {
 
     auto cam = app->scn->cameras.at(app->camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    draw_glscene(app->state.get(), app->scn.get(), cam, framebuffer_size, app->selection,
-        app->eyelight, app->wireframe, app->edges, app->exposure, app->gamma,
-        app->near_plane, app->far_plane);
+    draw_glscene(app->state.get(), app->scn.get(), cam, framebuffer_size,
+        app->selection, app->eyelight, app->wireframe, app->edges,
+        app->exposure, app->gamma, app->near_plane, app->far_plane);
 
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {

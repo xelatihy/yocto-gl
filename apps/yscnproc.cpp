@@ -49,7 +49,7 @@ int main(int argc, char** argv) {
         parser, "--notextures", false, "Disable textures.");
     auto uniform_txt = parse_arg(
         parser, "--uniform-txt", false, "uniform texture formats");
-    auto output    = parse_arg(
+    auto output = parse_arg(
         parser, "--output,-o", "out.json", "output scene", true);
     auto filename = parse_arg(
         parser, "scene", "scene.json", "input scene", true);

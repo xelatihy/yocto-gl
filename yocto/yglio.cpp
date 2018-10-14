@@ -3125,7 +3125,8 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         return txt;
     };
     // Parse texture options and name
-    auto add_voltexture = [&scn, &vmap](const obj_texture_info& info, bool srgb) {
+    auto add_voltexture = [&scn, &vmap](
+                              const obj_texture_info& info, bool srgb) {
         if (info.path == "") return (voltexture*)nullptr;
         if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
 
@@ -4021,7 +4022,8 @@ scene* load_gltf_scene(
     auto js = load_json(filename);
     if (js.empty()) return nullptr;
     try {
-        if (!gltf_to_scene(scn.get(), js, get_dirname(filename))) return nullptr;
+        if (!gltf_to_scene(scn.get(), js, get_dirname(filename)))
+            return nullptr;
     } catch (...) { return nullptr; }
 
     // load textures

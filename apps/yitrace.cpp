@@ -165,7 +165,9 @@ bool update(app_state* app) {
             }
             refit_bvh(app->scn.get(), app->bvh.get());
         }
-        if (get<0>(sel) == "instance") { refit_bvh(app->scn.get(), app->bvh.get()); }
+        if (get<0>(sel) == "instance") {
+            refit_bvh(app->scn.get(), app->bvh.get());
+        }
         if (get<0>(sel) == "node") {
             update_transforms(app->scn.get(), 0);
             refit_bvh(app->scn.get(), app->bvh.get());
@@ -173,10 +175,12 @@ bool update(app_state* app) {
     }
     app->update_list.clear();
 
-    app->state = {};
+    app->state       = {};
     app->trace_start = get_time();
-    app->state       = unique_ptr<trace_state>(make_trace_state(app->scn.get(), app->params));
-    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(), app->lights.get(), app->params);
+    app->state       = unique_ptr<trace_state>(
+        make_trace_state(app->scn.get(), app->params));
+    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(),
+        app->lights.get(), app->params);
 
     // updated
     return true;
@@ -304,19 +308,21 @@ int main(int argc, char* argv[]) {
         app->scn->cameras.push_back(
             make_bbox_camera("<view>", compute_bbox(app->scn.get())));
     add_missing_names(app->scn.get());
-    for (auto& err : validate(app->scn.get())) printf("warning: %s\n", err.c_str());
+    for (auto& err : validate(app->scn.get()))
+        printf("warning: %s\n", err.c_str());
 
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = get_time();
-    app->bvh       = unique_ptr<bvh_tree>(build_bvh(app->scn.get(), true, embree));
+    app->bvh = unique_ptr<bvh_tree>(build_bvh(app->scn.get(), true, embree));
     if (!quiet)
         printf("building bvh in %s\n",
             format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     if (!quiet) printf("initializing lights\n");
-    app->lights = unique_ptr<trace_lights>(make_trace_lights(app->scn.get(), app->params));
+    app->lights = unique_ptr<trace_lights>(
+        make_trace_lights(app->scn.get(), app->params));
 
     // fix renderer type if no lights
     if (app->lights->lights.empty() && app->lights->environments.empty() &&
@@ -327,12 +333,14 @@ int main(int argc, char* argv[]) {
     }
 
     // prepare renderer
-    app->state = unique_ptr<trace_state>(make_trace_state(app->scn.get(), app->params));
+    app->state = unique_ptr<trace_state>(
+        make_trace_state(app->scn.get(), app->params));
 
     // initialize rendering objects
     if (!quiet) printf("starting async renderer\n");
     app->trace_start = get_time();
-    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(), app->lights.get(), app->params);
+    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(),
+        app->lights.get(), app->params);
 
     // run interactive
     run_ui(app);
