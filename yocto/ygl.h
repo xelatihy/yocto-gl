@@ -2468,7 +2468,6 @@ struct image {
 
     // size
     vec2i size() const { return _size; }
-    bool  empty() const { return _data.empty(); }
 
     // pixel access
     T& operator[](const vec2i& ij) { return _data[ij.y * _size.x + ij.x]; }
@@ -2482,6 +2481,24 @@ struct image {
     vec2i          _size = {0, 0};
     std::vector<T> _data = {};
 };
+
+// Size
+template <typename T>
+int width(const image<T>& img) {
+    return img._size.x;
+}
+template <typename T>
+int height(const image<T>& img) {
+    return img._size.y;
+}
+template <typename T>
+size_t size(const image<T>& img) {
+    return img._data.size();
+}
+template <typename T>
+bool empty(const image<T>& img) {
+    return img._data.empty();
+}
 
 // Data access
 template <typename T>

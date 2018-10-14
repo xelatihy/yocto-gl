@@ -3610,7 +3610,7 @@ std::vector<float> compute_environment_cdf(const environment* env) {
     if (!txt) return {};
     auto size     = eval_texture_size(txt);
     auto elem_cdf = std::vector<float>(size.x * size.y);
-    if (!txt->imgf.empty()) {
+    if (!empty(txt->imgf)) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
@@ -3763,7 +3763,7 @@ std::vector<std::string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const std::vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->imgf.empty() && val->imgb.empty())
+            if (empty(val->imgf) && empty(val->imgb))
                 errs.push_back("empty texture " + val->name);
         }
     };
@@ -4000,9 +4000,9 @@ vec3f eval_environment(const scene* scn, const vec3f& w) {
 
 // Check texture size
 vec2i eval_texture_size(const texture* txt) {
-    if (!txt->imgf.empty()) {
+    if (!empty(txt->imgf)) {
         return txt->imgf.size();
-    } else if (!txt->imgb.empty()) {
+    } else if (!empty(txt->imgb)) {
         return txt->imgb.size();
     } else {
         return zero2i;
@@ -4011,11 +4011,11 @@ vec2i eval_texture_size(const texture* txt) {
 
 // Lookup a texture value
 vec4f lookup_texture(const texture* txt, const vec2i& ij) {
-    if (!txt->imgf.empty()) {
+    if (!empty(txt->imgf)) {
         return txt->imgf[ij];
-    } else if (!txt->imgb.empty() && txt->srgb) {
+    } else if (!empty(txt->imgb) && txt->srgb) {
         return srgb_to_linear(byte_to_float(txt->imgb[ij]));
-    } else if (!txt->imgb.empty() && !txt->srgb) {
+    } else if (!empty(txt->imgb) && !txt->srgb) {
         return byte_to_float(txt->imgb[ij]);
     } else {
         return zero4f;
@@ -4025,7 +4025,7 @@ vec4f lookup_texture(const texture* txt, const vec2i& ij) {
 // Evaluate a texture
 vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     if (!txt) return {1, 1, 1, 1};
-    if (txt->imgf.empty() && txt->imgb.empty()) return {1, 1, 1, 1};
+    if (empty(txt->imgf) && empty(txt->imgb)) return {1, 1, 1, 1};
 
     // get image width/height
     auto size  = eval_texture_size(txt);

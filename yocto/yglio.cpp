@@ -1355,7 +1355,7 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
     bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->imgf.empty() || !txt->imgb.empty())
+        if (txt->path == "" || !empty(txt->imgf) || !empty(txt->imgb))
             continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
@@ -1363,7 +1363,7 @@ bool load_scene_textures(scene* scn, const std::string& dirname,
         } else {
             txt->imgb = load_image4b(filename);
         }
-        if (txt->imgf.empty() && txt->imgb.empty()) {
+        if (empty(txt->imgf) && empty(txt->imgb)) {
             if (!skip_missing) return false;
         }
     }
@@ -1411,7 +1411,7 @@ bool save_scene_textures(
     const scene* scn, const std::string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
-        if (txt->imgf.empty() && txt->imgb.empty()) continue;
+        if (empty(txt->imgf) && empty(txt->imgb)) continue;
         auto filename = normalize_path(dirname + "/" + txt->path);
         if (is_hdr_filename(filename)) {
             if (!save_image4f(filename, txt->imgf)) {

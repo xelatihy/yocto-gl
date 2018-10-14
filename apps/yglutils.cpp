@@ -141,7 +141,7 @@ uint make_gltexture(
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -163,7 +163,7 @@ void update_gltexture(
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -191,7 +191,7 @@ uint make_gltexture(
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
@@ -213,7 +213,7 @@ void update_gltexture(
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
-        if (!img.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+        if (!empty(img)) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR : GL_NEAREST);
