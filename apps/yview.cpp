@@ -33,15 +33,14 @@
 
 struct glshape {
     glarraybuffer gl_pos = {}, gl_norm = {}, gl_texcoord = {}, gl_color = {},
-                 gl_tangsp = {};
-    glelementbuffer gl_points = {}, gl_lines = {},
-                 gl_triangles = {};
+                  gl_tangsp   = {};
+    glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {};
 };
 
 struct draw_glstate {
-    glprogram                                   prog = {};
-    unordered_map<const shape*, glshape>        shps;
-    unordered_map<const texture*, gltexture>    txts;
+    glprogram                                prog = {};
+    unordered_map<const shape*, glshape>     shps;
+    unordered_map<const texture*, gltexture> txts;
 };
 
 // Application state
@@ -77,10 +76,10 @@ struct app_state {
     bool                         animate    = false;
 };
 
-void draw_glscene(draw_glstate* state, const scene* scn,
-    const camera* cam, const vec2i& viewport_size, const void* highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
-    float near_plane, float far_plane);
+void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
+    const vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe, bool edges, float exposure, float gamma, float near_plane,
+    float far_plane);
 
 // draw with shading
 void draw(glwindow* win) {
@@ -466,9 +465,8 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(draw_glstate* state, const shape* shp,
-    const material* mat, const mat4f& xform, bool highlighted, bool eyelight,
-    bool edges) {
+void draw_glshape(draw_glstate* state, const shape* shp, const material* mat,
+    const mat4f& xform, bool highlighted, bool eyelight, bool edges) {
     set_gluniform(state->prog, "shape_xform", xform);
     set_gluniform(state->prog, "shape_normal_offset", 0.0f);
 
@@ -499,8 +497,7 @@ void draw_glshape(draw_glstate* state, const shape* shp,
     set_gluniform(state->prog, "elem_faceted", (int)shp->norm.empty());
     set_glvertexattrib(state->prog, "vert_pos", vbos.gl_pos, zero3f);
     set_glvertexattrib(state->prog, "vert_norm", vbos.gl_norm, zero3f);
-    set_glvertexattrib(
-        state->prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+    set_glvertexattrib(state->prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
     set_glvertexattrib(
         state->prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
     set_glvertexattrib(
@@ -540,10 +537,10 @@ void draw_glshape(draw_glstate* state, const shape* shp,
 }
 
 // Display a scene
-void draw_glscene(draw_glstate* state, const scene* scn,
-    const camera* cam, const vec2i& viewport_size, const void* highlighted,
-    bool eyelight, bool wireframe, bool edges, float exposure, float gamma,
-    float near_plane, float far_plane) {
+void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
+    const vec2i& viewport_size, const void* highlighted, bool eyelight,
+    bool wireframe, bool edges, float exposure, float gamma, float near_plane,
+    float far_plane) {
     set_glviewport(viewport_size);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));
@@ -617,14 +614,13 @@ draw_glstate* init_draw_state(glwindow* win) {
     auto app   = (app_state*)get_user_pointer(win);
     auto state = new draw_glstate();
     // load textures and vbos
-    state->prog         = make_glprogram(vertex, fragment);
+    state->prog          = make_glprogram(vertex, fragment);
     state->txts[nullptr] = {};
     for (auto txt : app->scn->textures) {
         if (!empty(txt->imgf)) {
             state->txts[txt] = make_gltexture(txt->imgf, true, true, true);
         } else if (!empty(txt->imgb)) {
-            state->txts[txt] = make_gltexture(
-                txt->imgb, txt->srgb, true, true);
+            state->txts[txt] = make_gltexture(txt->imgb, txt->srgb, true, true);
         } else {
             printf("bad texture");
         }

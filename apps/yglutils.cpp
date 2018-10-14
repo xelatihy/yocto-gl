@@ -150,8 +150,8 @@ gltexture make_gltexture(
     return txt;
 }
 
-void update_gltexture(
-    gltexture& txt, const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
+void update_gltexture(gltexture& txt, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, txt.tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width(img), height(img), GL_RGBA,
@@ -200,8 +200,8 @@ gltexture make_gltexture(
     return txt;
 }
 
-void update_gltexture(
-    gltexture& txt, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
+void update_gltexture(gltexture& txt, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, txt.tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width(img), height(img), GL_RGBA,
@@ -343,7 +343,8 @@ void set_gluniform_texture(int loc, const gltexture& txt, int unit) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(glprogram& prog, const char* var, const gltexture& txt, int unit) {
+void set_gluniform_texture(
+    glprogram& prog, const char* var, const gltexture& txt, int unit) {
     set_gluniform_texture(get_gluniform_location(prog, var), txt, unit);
 }
 
@@ -360,8 +361,8 @@ void set_gluniform_texture(int loc, int loc_on, const gltexture& txt, int unit) 
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(
-    glprogram& prog, const char* var, const char* var_on, const gltexture& txt, int unit) {
+void set_gluniform_texture(glprogram& prog, const char* var, const char* var_on,
+    const gltexture& txt, int unit) {
     set_gluniform_texture(get_gluniform_location(prog, var),
         get_gluniform_location(prog, var_on), txt, unit);
 }
@@ -433,10 +434,10 @@ void draw_gltriangles(const glelementbuffer& buf, int num) {
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(
-    const gltexture& gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale) {
-    static glprogram gl_prog = {};
-    static glarraybuffer gl_texcoord = {};
+void draw_glimage(const gltexture& gl_txt, vec2i imsize, vec2i winsize,
+    vec2f imcenter, float imscale) {
+    static glprogram       gl_prog      = {};
+    static glarraybuffer   gl_texcoord  = {};
     static glelementbuffer gl_triangles = {};
 
     // initialization
@@ -483,22 +484,22 @@ void draw_glimage(
 }
 
 struct glwindow {
-    GLFWwindow* win = nullptr;
-    void* user_ptr = nullptr;
-    std::function<void(glwindow*)> refresh_cb = {};
-    std::function<void(glwindow*,const vector<string>&)> drop_cb = {};
+    GLFWwindow*                                           win        = nullptr;
+    void*                                                 user_ptr   = nullptr;
+    std::function<void(glwindow*)>                        refresh_cb = {};
+    std::function<void(glwindow*, const vector<string>&)> drop_cb    = {};
 };
 
 void _glfw_refresh_callback(GLFWwindow* glfw) {
     auto win = (glwindow*)glfwGetWindowUserPointer(glfw);
-    if(win->refresh_cb) win->refresh_cb(win);
+    if (win->refresh_cb) win->refresh_cb(win);
 }
 
 void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     auto win = (glwindow*)glfwGetWindowUserPointer(glfw);
-    if(win->drop_cb) {
+    if (win->drop_cb) {
         auto pathv = vector<string>();
-        for(auto i = 0; i < num; i ++) pathv.push_back(paths[i]);
+        for (auto i = 0; i < num; i++) pathv.push_back(paths[i]);
         win->drop_cb(win, pathv);
     }
 }
@@ -517,14 +518,14 @@ glwindow* make_glwindow(const vec2i& size, const char* title,
     // create window
     auto win = make_unique<glwindow>();
     win->win = glfwCreateWindow(size.x, size.y, title, nullptr, nullptr);
-    if(!win->win) return {};
+    if (!win->win) return {};
     glfwMakeContextCurrent(win->win);
     glfwSwapInterval(1);  // Enable vsync
 
     // set user data
     glfwSetWindowRefreshCallback(win->win, _glfw_refresh_callback);
     glfwSetWindowUserPointer(win->win, win.get());
-    win->user_ptr = user_pointer;
+    win->user_ptr   = user_pointer;
     win->refresh_cb = refresh_cb;
 
     // init gl extensions
@@ -539,11 +540,9 @@ void delete_glwindow(glwindow* win) {
     win->win = nullptr;
 }
 
-void* get_user_pointer(glwindow* win) { 
-    return win->user_ptr; 
-}
+void* get_user_pointer(glwindow* win) { return win->user_ptr; }
 
-void set_drop_callback(glwindow* win,
+void set_drop_callback(glwindow*                               win,
     function<void(glwindow* win, const vector<string>& paths)> drop_cb) {
     win->drop_cb = drop_cb;
     glfwSetDropCallback(win->win, _glfw_drop_callback);
@@ -561,7 +560,9 @@ vec2i get_glwindow_size(glwindow* win) {
     return size;
 }
 
-bool should_glwindow_close(glwindow* win) { return glfwWindowShouldClose(win->win); }
+bool should_glwindow_close(glwindow* win) {
+    return glfwWindowShouldClose(win->win);
+}
 
 vec2f get_glmouse_pos(glwindow* win) {
     double mouse_posx, mouse_posy;
