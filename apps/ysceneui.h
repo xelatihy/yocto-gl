@@ -155,7 +155,7 @@ inline void draw_glwidgets_scene_tree(glwindow* win, scene* scn, void*& sel) {
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, camera* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_slider_glwidget(win, "frame.x", val->frame.x.x, -1, 1);
     edited += draw_slider_glwidget(win, "frame.y", val->frame.y.x, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z.x, -1, 1);
@@ -172,8 +172,8 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, texture* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
-    edited += draw_inputtext_glwidget(win, "path", val->path);
+    edited += draw_textinput_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "path", val->path);
     edited += draw_checkbox_glwidget(win, "clamp", val->clamp);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 1);
     edited += draw_checkbox_glwidget(win, "srgb", val->srgb);
@@ -187,7 +187,7 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, material* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
     edited += draw_coloredit_glwidget(win, "kd", val->kd);
     edited += draw_coloredit_glwidget(win, "ks", val->ks);
@@ -226,8 +226,8 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, shape* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
-    edited += draw_inputtext_glwidget(win, "path", val->path);
+    edited += draw_textinput_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "path", val->path);
     draw_label_glwidgets(win, "lines", "%ld", val->lines.size());
     draw_label_glwidgets(win, "triangles", "%ld", val->triangles.size());
     draw_label_glwidgets(win, "pos", "%ld", val->pos.size());
@@ -242,7 +242,7 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, subdiv* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_slider_glwidget(win, "level", val->level, 0, 10);
     edited += draw_checkbox_glwidget(win, "catmull-clark", val->catmull_clark);
     continue_glwidgets_line(win);
@@ -261,7 +261,7 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, instance* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
     edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
@@ -275,7 +275,7 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, environment* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
     edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
@@ -289,7 +289,7 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, node* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_combobox_glwidget(
         win, "parent", val->parent, scn->nodes, true);
     edited += draw_slider_glwidget(win, "local.x", val->local.x, -1, 1);
@@ -310,9 +310,9 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(
     glwindow* win, animation* val, scene* scn) {
     auto edited = 0;
-    edited += draw_inputtext_glwidget(win, "name", val->name);
-    edited += draw_inputtext_glwidget(win, "path", val->path);
-    edited += draw_inputtext_glwidget(win, "group", val->group);
+    edited += draw_textinput_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "path", val->path);
+    edited += draw_textinput_glwidget(win, "group", val->group);
     // edited += draw_combobox_glwidget(win, "type", &val->type,
     // animation_type_names());
     draw_label_glwidgets(win, "times", "%ld", val->times.size());

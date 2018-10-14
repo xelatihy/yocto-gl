@@ -38,7 +38,8 @@ struct image_stats {
 
 struct app_image {
     // original data
-    std::string  filename;
+    std::string  filename;  // filename
+    std::string  outname;   // output filename for display
     std::string  name;
     image<vec4f> img;
     bool         is_hdr = false;
@@ -57,7 +58,7 @@ struct app_image {
 
     // computation futures
     std::atomic<bool> load_done, display_done, stats_done, texture_done;
-    std::thread       load_thread, display_thread, stats_thread;
+    std::thread       load_thread, display_thread, stats_thread, save_thread;
     std::atomic<bool> display_stop;
     std::string       error_msg = "";
 
@@ -72,6 +73,7 @@ struct app_image {
         if (load_thread.joinable()) load_thread.join();
         if (display_thread.joinable()) display_thread.join();
         if (stats_thread.joinable()) stats_thread.join();
+        if (save_thread.joinable()) save_thread.join();
     }
 };
 
@@ -86,7 +88,7 @@ struct app_state {
 };
 
 // compute min/max
-void update_image_stats(app_image* img) {
+void update_stats_async(app_image* img) {
     img->stats_done       = false;
     img->stats.pxl_bounds = invalid_bbox4f;
     img->stats.lum_bounds = invalid_bbox1f;
@@ -97,58 +99,31 @@ void update_image_stats(app_image* img) {
     img->stats_done = true;
 }
 
-void update_display_image(app_image* img) {
+void update_display_async(app_image* img) {
     auto start        = get_time();
     img->display_done = false;
     img->texture_done = false;
-    if (img->is_hdr) {
-        if (width(img->img) * height(img->img) > 1024 * 1024) {
-            auto nthreads = std::thread::hardware_concurrency();
-            auto threads  = std::vector<std::thread>();
-            for (auto tid = 0; tid < nthreads; tid++) {
-                threads.push_back(std::thread([img, tid, nthreads]() {
-                    for (auto j = tid; j < height(img->img); j += nthreads) {
-                        if (img->display_stop) break;
-                        for (auto i = 0; i < width(img->img); i++) {
-                            img->display[{i, j}] = tonemap_filmic(
-                                img->img[{i, j}], img->exposure, img->filmic,
-                                img->srgb);
-                        }
+    if (width(img->img) * height(img->img) > 1024 * 1024) {
+        auto nthreads = std::thread::hardware_concurrency();
+        auto threads  = std::vector<std::thread>();
+        for (auto tid = 0; tid < nthreads; tid++) {
+            threads.push_back(std::thread([img, tid, nthreads]() {
+                for (auto j = tid; j < height(img->img); j += nthreads) {
+                    if (img->display_stop) break;
+                    for (auto i = 0; i < width(img->img); i++) {
+                        img->display[{i, j}] = tonemap_filmic(img->img[{i, j}],
+                            img->exposure, img->filmic, img->srgb);
                     }
-                }));
-            }
-            for (auto& t : threads) t.join();
-        } else {
-            for (auto j = 0; j < height(img->img); j++) {
-                if (img->display_stop) break;
-                for (auto i = 0; i < width(img->img); i++) {
-                    img->display[{i, j}] = tonemap_filmic(img->img[{i, j}],
-                        img->exposure, img->filmic, img->srgb);
                 }
-            }
+            }));
         }
+        for (auto& t : threads) t.join();
     } else {
-        if (width(img->img) * height(img->img) > 1024 * 1024) {
-            auto nthreads = std::thread::hardware_concurrency();
-            auto threads  = std::vector<std::thread>();
-            for (auto tid = 0; tid < nthreads; tid++) {
-                threads.push_back(std::thread([img, tid, nthreads]() {
-                    for (auto j = tid; j < height(img->img); j += nthreads) {
-                        if (img->display_stop) break;
-                        for (auto i = 0; i < width(img->img); i++) {
-                            img->display[{i, j}] = linear_to_srgb(
-                                img->img[{i, j}]);
-                        }
-                    }
-                }));
-            }
-            for (auto& t : threads) t.join();
-        } else {
-            for (auto j = 0; j < height(img->img); j++) {
-                if (img->display_stop) break;
-                for (auto i = 0; i < width(img->img); i++) {
-                    img->display[{i, j}] = linear_to_srgb(img->img[{i, j}]);
-                }
+        for (auto j = 0; j < height(img->img); j++) {
+            if (img->display_stop) break;
+            for (auto i = 0; i < width(img->img); i++) {
+                img->display[{i, j}] = tonemap_filmic(
+                    img->img[{i, j}], img->exposure, img->filmic, img->srgb);
             }
         }
     }
@@ -160,17 +135,53 @@ void update_display_image(app_image* img) {
 }
 
 // load image
-void load_image(app_image* img) {
-    auto start     = get_time();
-    img->error_msg = "";
-    img->img       = load_image4f(img->filename);
+void load_image_async(app_image* img) {
+    auto start        = get_time();
+    img->load_done    = false;
+    img->stats_done   = false;
+    img->display_done = false;
+    img->texture_done = false;
+    img->error_msg    = "";
+    img->img          = load_image4f(img->filename);
     if (empty(img->img)) img->error_msg = "cannot load image";
     img->load_done = true;
     img->display   = img->img;
     printf("load: %s\n", format_duration(get_time() - start).c_str());
     fflush(stdout);
-    img->display_thread = std::thread(update_display_image, img);
-    img->stats_thread   = std::thread(update_image_stats, img);
+    img->display_thread = std::thread(update_display_async, img);
+    img->stats_thread   = std::thread(update_stats_async, img);
+}
+
+// save an image
+void save_image_async(app_image* img) {
+    if(is_hdr_filename(img->outname)) {
+        if (!save_image4b(img->outname, float_to_byte(img->display))) {
+            img->error_msg = "error saving image";
+        }
+    } else {
+        if (!save_image4f(img->outname, srgb_to_linear(img->display))) {
+            img->error_msg = "error saving image";
+        }
+    }
+}
+
+// add a new image
+void add_new_image(app_state* app, const std::string& filename,
+    const std::string& outname, float exposure = 0, bool filmic = false,
+    bool srgb = true) {
+    auto img      = new app_image();
+    img->filename = filename;
+    img->outname  = (outname == "") ?
+                       replace_extension(filename, ".display.png") :
+                       outname;
+    img->name        = get_filename(filename);
+    img->is_hdr      = is_hdr_filename(filename);
+    img->exposure    = exposure;
+    img->filmic      = filmic;
+    img->srgb        = srgb;
+    img->load_thread = std::thread(load_image_async, img);
+    app->imgs.push_back(img);
+    app->img_id = (int)app->imgs.size() - 1;
 }
 
 void draw_glwidgets(glwindow* win) {
@@ -182,6 +193,12 @@ void draw_glwidgets(glwindow* win) {
         if (begin_header_glwidget(win, "image")) {
             draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
             draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
+            draw_textinput_glwidget(win, "outname", img->outname);
+            if (draw_button_glwidget(win, "save display")) {
+                if (img->display_done) {
+                    img->save_thread = std::thread(save_image_async, img);
+                }
+            }
             auto status = std::string();
             if (img->error_msg != "")
                 status = "error: " + img->error_msg;
@@ -207,8 +224,8 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
-                extents(img->img));
+            auto ij        = get_image_coords(
+                mouse_pos, img->imcenter, img->imscale, extents(img->img));
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < width(img->img) && ij.y >= 0 &&
@@ -231,8 +248,9 @@ void draw_glwidgets(glwindow* win) {
             img->display_stop = true;
             img->display_thread.join();
         }
+        if (img->save_thread.joinable()) img->save_thread.join();
         img->display_stop   = false;
-        img->display_thread = std::thread(update_display_image, img);
+        img->display_thread = std::thread(update_display_async, img);
     }
 }
 
@@ -244,10 +262,10 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
-        center_image4f(img->imcenter, img->imscale, extents(img->display), win_size,
-            img->zoom_to_fit);
-        draw_glimage(img->gl_txt, extents(img->display),
-            win_size, img->imcenter, img->imscale);
+        center_image4f(img->imcenter, img->imscale, extents(img->display),
+            win_size, img->zoom_to_fit);
+        draw_glimage(img->gl_txt, extents(img->display), win_size,
+            img->imcenter, img->imscale);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -265,11 +283,17 @@ void update(app_state* app) {
     }
 }
 
+void drop_callback(glwindow* win, int num, const char** paths) {
+    auto app = (app_state*)get_user_pointer(win);
+    for (auto i = 0; i < num; i++) { add_new_image(app, paths[i], ""); }
+}
+
 void run_ui(app_state* app) {
     // window
     auto img      = app->imgs.at(app->img_id);
     auto win_size = vec2i{720 + 320, 720};
     auto win      = make_glwindow(win_size, "yimview", app, draw);
+    set_drop_callback(win, drop_callback);
 
     // init widgets
     init_glwidgets(win);
@@ -316,29 +340,18 @@ int main(int argc, char* argv[]) {
     auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "display exposure");
     auto filmic   = parse_arg(parser, "--filmic", false, "display filmic");
-    auto srgb     = parse_arg(parser, "--srgb", true, "display as sRGB");
+    auto srgb     = parse_arg(parser, "--no-srgb", true, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
-    auto filenames = parse_args(
+    auto outfilename = parse_arg(parser, "--out,-o", ""s, "image out filename");
+    auto filenames   = parse_args(
         parser, "images", std::vector<std::string>{}, "image filenames", true);
     check_cmdline(parser);
 
     // loading images
-    for (auto filename : filenames) {
-        auto img         = new app_image();
-        img->filename    = filename;
-        img->name        = get_filename(filename);
-        img->is_hdr      = is_hdr_filename(filename);
-        img->exposure    = exposure;
-        img->filmic      = filmic;
-        img->srgb        = srgb;
-        img->load_thread = std::thread(load_image, img);
-        app->imgs.push_back(img);
-    }
+    for (auto filename : filenames)
+        add_new_image(app, filename, outfilename, exposure, filmic, srgb);
     app->img_id = 0;
-
-    // wait a bit to see if the first image gets loaded
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // run ui
     run_ui(app);

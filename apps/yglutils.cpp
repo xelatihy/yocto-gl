@@ -130,8 +130,8 @@ uint make_gltexture(
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_float) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width(img), height(img),
-            0, GL_RGBA, GL_FLOAT, data(img));
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width(img), height(img), 0,
+            GL_RGBA, GL_FLOAT, data(img));
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(img), height(img), 0,
             GL_RGBA, GL_FLOAT, data(img));
@@ -180,8 +180,8 @@ uint make_gltexture(
     glGenTextures(1, &tid);
     glBindTexture(GL_TEXTURE_2D, tid);
     if (as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width(img),
-            height(img), 0, GL_RGBA, GL_UNSIGNED_BYTE, data(img));
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width(img), height(img),
+            0, GL_RGBA, GL_UNSIGNED_BYTE, data(img));
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width(img), height(img), 0,
             GL_RGBA, GL_UNSIGNED_BYTE, data(img));
@@ -514,6 +514,11 @@ void delete_glwindow(glwindow* win) {
 
 void* get_user_pointer(glwindow* win) { return glfwGetWindowUserPointer(win); }
 
+void set_drop_callback(glwindow* win,
+    void (*callback)(glwindow* win, int num, const char** paths)) {
+    glfwSetDropCallback(win, callback);
+}
+
 vec2i get_glframebuffer_size(glwindow* win) {
     auto size = zero2i;
     glfwGetFramebufferSize(win, &size.x, &size.y);
@@ -608,6 +613,10 @@ bool begin_header_glwidget(glwindow* win, const char* lbl) {
 }
 void end_header_glwidget(glwindow* win) { ImGui::PopID(); }
 
+bool draw_button_glwidget(glwindow* win, const char* lbl) {
+    return ImGui::Button(lbl);
+}
+
 void draw_label_glwidgets(
     glwindow* win, const char* lbl, const std::string& txt) {
     ImGui::LabelText(lbl, "%s", txt.c_str());
@@ -624,7 +633,7 @@ void draw_separator_glwidget(glwindow* win) { ImGui::Separator(); }
 
 void continue_glwidgets_line(glwindow* win) { ImGui::SameLine(); }
 
-bool draw_inputtext_glwidget(glwindow* win, const char* lbl, std::string& val) {
+bool draw_textinput_glwidget(glwindow* win, const char* lbl, std::string& val) {
     char buf[4096];
     auto num = 0;
     for (auto c : val) buf[num++] = c;

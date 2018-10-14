@@ -175,8 +175,7 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = load_image4f(coloralpha_filename);
-        if (empty(alpha))
-            log_fatal("cannot load image " + coloralpha_filename);
+        if (empty(alpha)) log_fatal("cannot load image " + coloralpha_filename);
         if (extents(img) != extents(alpha)) {
             log_fatal("bad image size\n");
             exit(1);

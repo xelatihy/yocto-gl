@@ -137,7 +137,7 @@ void draw(glwindow* win) {
             if (app->time_range != zero2f) {
                 draw_slider_glwidget(win, "time", app->time, app->time_range.x,
                     app->time_range.y);
-                draw_inputtext_glwidget(win, "anim group", app->anim_group);
+                draw_textinput_glwidget(win, "anim group", app->anim_group);
                 draw_checkbox_glwidget(win, "animate", app->animate);
             }
             draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
