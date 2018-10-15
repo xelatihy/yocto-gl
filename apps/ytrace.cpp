@@ -42,8 +42,8 @@ int main(int argc, char* argv[]) {
         parser, "--resolution,-r", 512, "Image vertical resolution.");
     params.nsamples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    params.tracer = parse_arge(
-        parser, "--tracer,-t", trace_type::path, "Trace type.", trace_type_names);
+    params.tracer   = parse_arge(parser, "--tracer,-t", trace_type::path,
+        "Trace type.", trace_type_names);
     params.nbounces = parse_arg(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     params.pixel_clamp = parse_arg(

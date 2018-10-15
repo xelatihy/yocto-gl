@@ -212,11 +212,11 @@ inline T      parse_arg(cmdline_parser& parser, const string& name, T def,
 inline string parse_arg(cmdline_parser& parser, const string& name,
     const char* def, const string& usage, bool req = false);
 // Parse all arguments left on the command line.
-template<typename T>
+template <typename T>
 inline vector<T> parse_args(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
-template<typename T>
+template <typename T>
 inline T parse_arge(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req = false);
 
@@ -1098,7 +1098,7 @@ inline T parse_argument(cmdline_parser& parser, const string& name, const T def,
 }
 
 // Parse all left argument strings. Name should not start with "--" or "-".
-template<typename T>
+template <typename T>
 inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req) {
     auto defs = string();
@@ -1145,18 +1145,18 @@ inline bool parse_arg<bool>(cmdline_parser& parser, const string& name,
     return parse_flag(parser, name, def, usage);
 }
 
-template<typename T>
+template <typename T>
 inline T parse_arge(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req) {
     auto val = is_option(name) ? parse_option(parser, name, labels.at((int)def),
                                      usage, req, labels) :
-                                 parse_argument(parser, name, labels.at((int)def),
-                                     usage, req, labels);
+                                 parse_argument(parser, name,
+                                     labels.at((int)def), usage, req, labels);
     return (T)(std::find(labels.begin(), labels.end(), val) - labels.begin());
 }
 
 // Parser an argument
-template<typename T>
+template <typename T>
 inline vector<T> parse_args(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req) {
     return parse_arguments(parser, name, def, usage, req);
@@ -1165,8 +1165,8 @@ inline vector<T> parse_args(cmdline_parser& parser, const string& name,
 // Override to avoid issues with const char
 inline string parse_arg(cmdline_parser& parser, const string& name,
     const char* def, const string& usage, bool req) {
-        return parse_arg(parser, name, std::string(def), usage, req);
-    }
+    return parse_arg(parser, name, std::string(def), usage, req);
+}
 
 }  // namespace ygl
 
