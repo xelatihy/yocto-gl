@@ -612,27 +612,9 @@ inline bool print_value(string& str, const bbox4<T>& v) {
     if (!print_value(str, v.max)) return false;
     return true;
 }
-template <typename T>
-inline bool print_value(string& str, const ray2<T>& v) {
-    if (!print_value(str, v.o)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.d)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmin)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmax)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const ray3<T>& v) {
-    if (!print_value(str, v.o)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.d)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmin)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmax)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const ray<T, N>& v) {
+    return print_value(str, (const std::array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.
@@ -751,13 +733,9 @@ template <typename Archive, typename T>
 inline bool _parse(Archive& ar, bbox4<T>& v) {
     return _parse(ar, (std::array<T, 8>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, ray2<T>& v) {
-    return _parse(ar, (std::array<T, 6>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, ray3<T>& v) {
-    return _parse(ar, (std::array<T, 8>&)v);
+template <typename Archive, typename T, int N>
+inline bool _parse(Archive& ar, ray<T, N>& v) {
+    return _parse(ar, (std::array<T, N*2+2>&)v);
 }
 
 // Prints a string.

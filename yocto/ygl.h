@@ -1394,15 +1394,19 @@ inline bbox3<T> quad_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1,
 namespace ygl {
 
 // Rays with origin, direction and min/max t value.
+template <typename T, int N>
+struct ray;
+
+// Rays with origin, direction and min/max t value.
 template <typename T>
-struct ray2 {
+struct ray<T, 2> {
     vec<T, 2> o    = {0, 0};
     vec<T, 2> d    = {0, 1};
     T       tmin = 0;
     T       tmax = maxt<T>();
 };
 template <typename T>
-struct ray3 {
+struct ray<T, 3> {
     vec<T, 3> o    = {0, 0, 0};
     vec<T, 3> d    = {0, 0, 1};
     T       tmin = 0;
@@ -1410,17 +1414,17 @@ struct ray3 {
 };
 
 // Type aliases.
-using ray2f = ray2<float>;
-using ray3f = ray3<float>;
+using ray2f = ray<float, 2>;
+using ray3f = ray<float, 3>;
 
 // Construct a ray from direction or segments using a default epsilon.
-template <typename T>
-inline ray3<T> make_ray(const vec<T, 3>& o, const vec<T, 3>& d, T eps = 1e-4f) {
+template <typename T, int N>
+inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
     return {o, d, eps, maxt<T>()};
 }
-template <typename T>
-inline ray3<T> make_segment(
-    const vec<T, 3>& p1, const vec<T, 3>& p2, T eps = 1e-4f) {
+template <typename T, int N>
+inline ray<T, N> make_segment(
+    const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
     return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
@@ -1484,12 +1488,12 @@ inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
 }
 
 // Transforms rays and bounding boxes by matrices.
-template <typename T>
-inline ray3<T> transform_ray(const frame<T, 3>& a, const ray3<T>& b) {
+template <typename T, int N>
+inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
-template <typename T>
-inline ray3<T> transform_ray(const mat<T, 4, 4>& a, const ray3<T>& b) {
+template <typename T, int N>
+inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
@@ -1521,7 +1525,7 @@ inline vec<T, 2> transform_point_inverse(const frame<T, 2>& a, const vec<T, 2>& 
     return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
 }
 template <typename T>
-inline vec3f transform_point_inverse(const frame<T, 3>& a, const vec3f& b) {
+inline vec3f transform_point_inverse(const frame<T, 3>& a, const vec<T, 3>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
 }
 template <typename T>
@@ -1529,15 +1533,15 @@ inline vec<T, 2> transform_vector_inverse(const frame<T, 2>& a, const vec<T, 2>&
     return {dot(b, a.x), dot(b, a.y)};
 }
 template <typename T>
-inline vec3f transform_vector_inverse(const frame<T, 3>& a, const vec3f& b) {
+inline vec3f transform_vector_inverse(const frame<T, 3>& a, const vec<T, 3>& b) {
     return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
 }
-template <typename T>
-inline vec3f transform_direction_inverse(const frame<T, 3>& a, const vec3f& b) {
+template <typename T, int N>
+inline vec3f transform_direction_inverse(const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector_inverse(a, b));
 }
-template <typename T>
-inline ray3<T> transform_ray_inverse(const frame<T, 3>& a, const ray3<T>& b) {
+template <typename T, int N>
+inline ray<T, N> transform_ray_inverse(const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point_inverse(a, b.o),
         transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
