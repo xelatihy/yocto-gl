@@ -112,8 +112,6 @@ inline bool print(const string& fmt, const Args&... args) {
 // Parse a list of space separated values.
 template <typename... Args>
 inline bool parse(const string& str, Args&... args);
-template <typename... Args>
-inline bool parse(FILE* fs, Args&... args);
 
 }  // namespace ygl
 
@@ -659,58 +657,44 @@ inline bool _parse(const char*& str, double& val) {
     return true;
 }
 
-// Prints basic types to stream
-inline bool _parse(FILE* fs, string& val) {
-    char buf[4096];
-    if (fscanf(fs, "%4095s", buf) != 1) return false;
-    val = buf;
-    return true;
-}
-inline bool _parse(FILE* fs, int& val) { return fscanf(fs, "%d", &val) == 1; }
-inline bool _parse(FILE* fs, float& val) { return fscanf(fs, "%f", &val) == 1; }
-inline bool _parse(FILE* fs, double& val) {
-    return fscanf(fs, "%lf", &val) == 1;
-}
-
 // Print compound types
-template <typename Archive, typename T, size_t N>
-inline bool _parse(Archive& ar, std::array<T, N>& val) {
+template <typename T, size_t N>
+inline bool _parse(const char*& str, std::array<T, N>& val) {
     for (auto i = 0; i < N; i++) {
-        if (!_parse(ar, val[i])) return false;
+        if (!_parse(str, val[i])) return false;
     }
     return true;
 }
 // Data acess
-template <typename Archive, typename T, int N>
-inline bool _parse(Archive& ar, vec<T, N>& v) {
-    return _parse(ar, (std::array<T, N>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, vec<T, N>& v) {
+    return _parse(str, (std::array<T, N>&)v);
 }
-template <typename Archive, typename T, int N, int M>
-inline bool _parse(Archive& ar, mat<T, N, M>& v) {
-    return _parse(ar, (std::array<T, N * M>&)v);
+template <typename T, int N, int M>
+inline bool _parse(const char*& str, mat<T, N, M>& v) {
+    return _parse(str, (std::array<T, N * M>&)v);
 }
-template <typename Archive, typename T, int N>
-inline bool _parse(Archive& ar, frame<T, N>& v) {
-    return _parse(ar, (std::array<T, N*(N + 1)>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, frame<T, N>& v) {
+    return _parse(str, (std::array<T, N*(N + 1)>&)v);
 }
-template <typename Archive, typename T, int N>
-inline bool _parse(Archive& ar, bbox<T, N>& v) {
-    return _parse(ar, (std::array<T, N * 2>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, bbox<T, N>& v) {
+    return _parse(str, (std::array<T, N * 2>&)v);
 }
-template <typename Archive, typename T, int N>
-inline bool _parse(Archive& ar, ray<T, N>& v) {
-    return _parse(ar, (std::array<T, N * 2 + 2>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, ray<T, N>& v) {
+    return _parse(str, (std::array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.
-template <typename Archive>
-inline bool _parse_next(Archive& ar) {
+inline bool _parse_next(const char*& str) {
     return true;
 }
-template <typename Archive, typename Arg, typename... Args>
-inline bool _parse_next(Archive& ar, Arg& arg, Args&... args) {
-    if (!_parse(ar, arg)) return false;
-    return _parse_next(ar, args...);
+template <typename Arg, typename... Args>
+inline bool _parse_next(const char*& str, Arg& arg, Args&... args) {
+    if (!_parse(str, arg)) return false;
+    return _parse_next(str, args...);
 }
 
 // Returns trus if this is white space
@@ -725,12 +709,6 @@ inline bool parse(const string& str, Args&... args) {
     auto str_ = str.c_str();
     if (!_parse_next(str_, args...)) return false;
     return _is_whitespace(str_);
-}
-
-// Parse a list of space separated values.
-template <typename... Args>
-inline bool parse(FILE* fs, Args&... args) {
-    return _parse_next(fs, args...);
 }
 
 }  // namespace ygl
