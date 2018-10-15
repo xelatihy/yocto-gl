@@ -103,7 +103,7 @@
     "shapes": [
         {
             "name": "floor",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     0,
@@ -140,7 +140,7 @@
         },
         {
             "name": "ceiling",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     2,
@@ -177,7 +177,7 @@
         },
         {
             "name": "backwall",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     0,
@@ -214,7 +214,7 @@
         },
         {
             "name": "rightwall",
-            "pos": [
+            "positions": [
                 [
                     1,
                     0,
@@ -251,7 +251,7 @@
         },
         {
             "name": "leftwall",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     0,
@@ -288,7 +288,7 @@
         },
         {
             "name": "shortbox",
-            "pos": [
+            "positions": [
                 [
                     0.53,
                     0.6,
@@ -475,7 +475,7 @@
         },
         {
             "name": "tallbox",
-            "pos": [
+            "positions": [
                 [
                     -0.53,
                     1.2,
@@ -662,7 +662,7 @@
         },
         {
             "name": "light",
-            "pos": [
+            "positions": [
                 [
                     -0.25,
                     1.99,
