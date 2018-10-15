@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
     auto double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
     auto add_skyenv = parse_arg(
-        parser, "--add-skyenv,-E", false, "add missing env map");
+        parser, "--add-skyenv,-E", false, "add missing environment map");
     auto imfilename = parse_arg(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     auto filename = parse_arg(
@@ -72,38 +72,38 @@ int main(int argc, char* argv[]) {
     // scene loading
     log_info("loading scene {}", filename);
     auto load_start = get_time();
-    auto scn        = unique_ptr<yocto_scene>{load_scene(filename)};
-    if (!scn) log_fatal("cannot load scene {}", filename);
+    auto scene        = unique_ptr<yocto_scene>{load_scene(filename)};
+    if (!scene) log_fatal("cannot load scene {}", filename);
     log_info("loading in {}", format_duration(get_time() - load_start).c_str());
 
     // tesselate
     log_info("tesselating scene elements");
-    tesselate_subdivs(scn.get());
+    tesselate_subdivs(scene.get());
 
     // add components
     log_info("adding scene elements");
-    if (add_skyenv && scn->environments.empty()) {
-        scn->environments.push_back(make_sky_environment("sky"));
-        scn->textures.push_back(scn->environments.back()->emission_texture);
+    if (add_skyenv && scene->environments.empty()) {
+        scene->environments.push_back(make_sky_environment("sky"));
+        scene->textures.push_back(scene->environments.back()->emission_texture);
     }
     if (double_sided)
-        for (auto mat : scn->materials) mat->double_sided = true;
-    for (auto& err : validate(scn.get())) log_error("warning: {}", err);
+        for (auto mat : scene->materials) mat->double_sided = true;
+    for (auto& err : validate(scene.get())) log_error("warning: {}", err);
 
     // build bvh
     log_info("building bvh");
     auto bvh_start = get_time();
-    auto bvh       = unique_ptr<bvh_tree>{build_bvh(scn.get(), true, embree)};
+    auto bvh       = unique_ptr<bvh_tree>{build_bvh(scene.get(), true, embree)};
     log_info(
         "building bvh in {}", format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     log_info("initializing lights");
-    auto lights = unique_ptr<trace_lights>{make_trace_lights(scn.get(), params)};
+    auto lights = unique_ptr<trace_lights>{make_trace_lights(scene.get(), params)};
 
     // initialize rendering objects
     log_info("initializing tracer data");
-    auto state = unique_ptr<trace_state>{make_trace_state(scn.get(), params)};
+    auto state = unique_ptr<trace_state>{make_trace_state(scene.get(), params)};
 
     // render
     log_info("rendering image");
@@ -113,7 +113,7 @@ int main(int argc, char* argv[]) {
         log_info("rendering sample {}/{}", state->current_sample, params.num_samples);
         auto block_start = get_time();
         done             = trace_samples(
-            state.get(), scn.get(), bvh.get(), lights.get(), params);
+            state.get(), scene.get(), bvh.get(), lights.get(), params);
         log_info("rendering block in {}",
             format_duration(get_time() - block_start).c_str());
         if (save_batch) {

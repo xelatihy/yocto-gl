@@ -34,7 +34,7 @@
 // Application state
 struct app_state {
     // scene
-    unique_ptr<yocto_scene> scn = nullptr;
+    unique_ptr<yocto_scene> scene = nullptr;
     unique_ptr<bvh_tree>    bvh = nullptr;
 
     // rendering params
@@ -72,7 +72,7 @@ void draw_glwidgets(glwindow* win) {
                 app->state->rendered_image.width, app->state->rendered_image.height,
                 app->state->current_sample);
             auto cam_names = vector<string>();
-            for (auto cam : app->scn->cameras) cam_names.push_back(cam->name);
+            for (auto cam : app->scene->cameras) cam_names.push_back(cam->name);
             auto edited = 0;
             edited += draw_combobox_glwidget(
                 win, "camera", app->params.camera_id, cam_names);
@@ -116,12 +116,12 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "navigate")) {
             draw_glwidgets_scene_tree(
-                win, "", app->scn.get(), app->selection, app->update_list, 200);
+                win, "", app->scene.get(), app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspec")) {
             draw_glwidgets_scene_inspector(
-                win, "", app->scn.get(), app->selection, app->update_list, 200);
+                win, "", app->scene.get(), app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -159,21 +159,21 @@ bool update(app_state* app) {
     // update BVH
     for (auto& sel : app->update_list) {
         if (get<0>(sel) == "shape") {
-            for (auto sid = 0; sid < app->scn->shapes.size(); sid++) {
-                if (app->scn->shapes[sid] == get<1>(sel)) {
+            for (auto sid = 0; sid < app->scene->shapes.size(); sid++) {
+                if (app->scene->shapes[sid] == get<1>(sel)) {
                     refit_bvh(
                         (yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
                     break;
                 }
             }
-            refit_bvh(app->scn.get(), app->bvh.get());
+            refit_bvh(app->scene.get(), app->bvh.get());
         }
         if (get<0>(sel) == "instance") {
-            refit_bvh(app->scn.get(), app->bvh.get());
+            refit_bvh(app->scene.get(), app->bvh.get());
         }
         if (get<0>(sel) == "node") {
-            update_transforms(app->scn.get(), 0);
-            refit_bvh(app->scn.get(), app->bvh.get());
+            update_transforms(app->scene.get(), 0);
+            refit_bvh(app->scene.get(), app->bvh.get());
         }
     }
     app->update_list.clear();
@@ -181,8 +181,8 @@ bool update(app_state* app) {
     app->state       = {};
     app->trace_start = get_time();
     app->state       = unique_ptr<trace_state>(
-        make_trace_state(app->scn.get(), app->params));
-    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(),
+        make_trace_state(app->scene.get(), app->params));
+    trace_async_start(app->state.get(), app->scene.get(), app->bvh.get(),
         app->lights.get(), app->params);
 
     // updated
@@ -219,7 +219,7 @@ void run_ui(app_state* app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto cam = app->scn->cameras.at(app->params.camera_id);
+            auto cam = app->scene->cameras.at(app->params.camera_id);
             camera_turntable(cam->frame, cam->focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", cam});
         }
@@ -230,11 +230,11 @@ void run_ui(app_state* app) {
                 {app->state->rendered_image.width, app->state->rendered_image.height});
             if (ij.x < 0 || ij.x >= app->state->rendered_image.width || ij.y < 0 ||
                 ij.y >= app->state->rendered_image.height) {
-                auto cam  = app->scn->cameras.at(app->params.camera_id);
+                auto cam  = app->scene->cameras.at(app->params.camera_id);
                 auto ray  = eval_camera_ray(cam, ij,
                     {app->state->rendered_image.width, app->state->rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
-                auto isec = intersect_ray(app->scn.get(), app->bvh.get(), ray);
+                auto isec = intersect_ray(app->scene.get(), app->bvh.get(), ray);
                 if (isec.instance) app->selection = isec.instance;
             }
         }
@@ -279,7 +279,7 @@ int main(int argc, char* argv[]) {
     auto double_sided = parse_arg(
         parser, "--double-sided", false, "Double-sided rendering.");
     auto add_skyenv = parse_arg(
-        parser, "--add-skyenv", false, "Add missing env map");
+        parser, "--add-skyenv", false, "Add missing environment map");
     auto quiet = parse_arg(
         parser, "--quiet", false, "Print only errors messages");
     app->imfilename = parse_arg(
@@ -291,36 +291,36 @@ int main(int argc, char* argv[]) {
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     auto load_start = get_time();
-    app->scn        = unique_ptr<yocto_scene>(load_scene(app->filename));
-    if (!app->scn) log_fatal("cannot load scene " + app->filename);
+    app->scene        = unique_ptr<yocto_scene>(load_scene(app->filename));
+    if (!app->scene) log_fatal("cannot load scene " + app->filename);
     if (!quiet)
         printf("loading in %s\n",
             format_duration(get_time() - load_start).c_str());
 
     // tesselate
     if (!quiet) printf("tesselating scene elements\n");
-    tesselate_subdivs(app->scn.get());
+    tesselate_subdivs(app->scene.get());
 
     // add components
     if (!quiet) printf("adding scene elements\n");
-    if (add_skyenv && app->scn->environments.empty()) {
-        app->scn->environments.push_back(make_sky_environment("sky"));
-        app->scn->textures.push_back(
-            app->scn->environments.back()->emission_texture);
+    if (add_skyenv && app->scene->environments.empty()) {
+        app->scene->environments.push_back(make_sky_environment("sky"));
+        app->scene->textures.push_back(
+            app->scene->environments.back()->emission_texture);
     }
     if (double_sided)
-        for (auto mat : app->scn->materials) mat->double_sided = true;
-    if (app->scn->cameras.empty())
-        app->scn->cameras.push_back(
-            make_bbox_camera("<view>", compute_bbox(app->scn.get())));
-    add_missing_names(app->scn.get());
-    for (auto& err : validate(app->scn.get()))
+        for (auto mat : app->scene->materials) mat->double_sided = true;
+    if (app->scene->cameras.empty())
+        app->scene->cameras.push_back(
+            make_bbox_camera("<view>", compute_bbox(app->scene.get())));
+    add_missing_names(app->scene.get());
+    for (auto& err : validate(app->scene.get()))
         printf("warning: %s\n", err.c_str());
 
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = get_time();
-    app->bvh = unique_ptr<bvh_tree>(build_bvh(app->scn.get(), true, embree));
+    app->bvh = unique_ptr<bvh_tree>(build_bvh(app->scene.get(), true, embree));
     if (!quiet)
         printf("building bvh in %s\n",
             format_duration(get_time() - bvh_start).c_str());
@@ -328,7 +328,7 @@ int main(int argc, char* argv[]) {
     // init renderer
     if (!quiet) printf("initializing lights\n");
     app->lights = unique_ptr<trace_lights>(
-        make_trace_lights(app->scn.get(), app->params));
+        make_trace_lights(app->scene.get(), app->params));
 
     // fix renderer type if no lights
     if (app->lights->instances.empty() && app->lights->environments.empty() &&
@@ -340,12 +340,12 @@ int main(int argc, char* argv[]) {
 
     // prepare renderer
     app->state = unique_ptr<trace_state>(
-        make_trace_state(app->scn.get(), app->params));
+        make_trace_state(app->scene.get(), app->params));
 
     // initialize rendering objects
     if (!quiet) printf("starting async renderer\n");
     app->trace_start = get_time();
-    trace_async_start(app->state.get(), app->scn.get(), app->bvh.get(),
+    trace_async_start(app->state.get(), app->scene.get(), app->bvh.get(),
         app->lights.get(), app->params);
 
     // run interactive

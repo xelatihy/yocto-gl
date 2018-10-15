@@ -63,34 +63,34 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     printf("loading scene %s\n", filename.c_str());
-    auto scn = load_scene(filename);
-    if (!scn) {
+    auto scene = load_scene(filename);
+    if (!scene) {
         printf("could not load %s\n", filename.c_str());
         exit(1);
     }
 
     // tesselate
     printf("tesselating scene elements\n");
-    tesselate_subdivs(scn);
+    tesselate_subdivs(scene);
 
     // build bvh
     printf("building bvh\n");
-    auto bvh = build_bvh(scn, true, embree);
+    auto bvh = build_bvh(scene, true, embree);
 
     // init renderer
     printf("initializing lights\n");
-    auto lights = make_trace_lights(scn, params);
+    auto lights = make_trace_lights(scene, params);
 
     // initialize rendering objects
     printf("initializing tracer data\n");
-    auto state = make_trace_state(scn, params);
+    auto state = make_trace_state(scene, params);
 
     // render
     printf("rendering image\n");
     auto done = false;
     while (!done) {
         printf("rendering sample %d/%d\n", state->current_sample, params.num_samples);
-        done = trace_samples(state, scn, bvh, lights, params);
+        done = trace_samples(state, scene, bvh, lights, params);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(state->current_sample) + "." + get_extension(imfilename));
@@ -104,7 +104,7 @@ int main(int argc, char* argv[]) {
     save_tonemapped_image(imfilename, state->rendered_image, exposure, gamma, filmic);
 
     // cleanup
-    delete scn;
+    delete scene;
     delete state;
     delete bvh;
     delete lights;
