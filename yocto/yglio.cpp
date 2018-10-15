@@ -1974,7 +1974,7 @@ bool parse_json_object(const json& js, subdiv* val, const scene* scn) {
         return false;
     if (!parse_json_value(js, val->colors_quads, "colors_quads", def.colors_quads))
         return false;
-    if (!parse_json_value(js, val->positions, positions, def.positions))
+    if (!parse_json_value(js, val->positions, "positions", def.positions))
         return false;
     if (!parse_json_value(
             js, val->texturecoords, "texturecoords", def.texturecoords))
@@ -2163,17 +2163,17 @@ bool dump_json_object(json& js, const animation* val, const scene* scn) {
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->filename, "filename", def.filename))
         return false;
-    if (!dump_json_value(js, val->group, "group", def.group)) return false;
+    if (!dump_json_value(js, val->animation_group, "animation_group", def.animation_group)) return false;
     if (!dump_json_value(js, val->type, "type", def.type)) return false;
     if (val->filename == "") {
-        if (!dump_json_value(js, val->times, "times", def.times)) return false;
-        if (val->translation != def.translation)
-            js["translation"] = val->translation;
-        if (!dump_json_value(js, val->rotation, "rotation", def.rotation))
+        if (!dump_json_value(js, val->keyframes_times, "keyframes_times", def.keyframes_times)) return false;
+        if (!dump_json_value(js, val->translation_keyframes, "translation_keyframes", def.translation_keyframes))
             return false;
-        if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
+        if (!dump_json_value(js, val->rotation_keyframes, "rotation_keyframes", def.rotation_keyframes))
+            return false;
+        if (!dump_json_value(js, val->scale_keyframes, "scale_keyframes", def.scale_keyframes)) return false;
     }
-    if (!dump_json_objref(js, val->targets, "targets", scn->nodes))
+    if (!dump_json_objref(js, val->node_targets, "node_targets", scn->nodes))
         return false;
     return true;
 }
@@ -2183,7 +2183,7 @@ bool apply_json_procedural(const json& js, animation* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation_axisangle")) {
         for (auto& j : js.at("rotation_axisangle")) {
-            val->rotation.push_back(rotation_quat(j.get<vec4f>()));
+            val->rotation_keyframes.push_back(rotation_quat(j.get<vec4f>()));
         }
     }
     return true;
@@ -2196,15 +2196,15 @@ bool parse_json_object(const json& js, animation* val, const scene* scn) {
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->filename, "filename", def.filename))
         return false;
-    if (!parse_json_value(js, val->group, "group", def.group)) return false;
+    if (!parse_json_value(js, val->animation_group, "group", def.animation_group)) return false;
     if (!parse_json_value(js, val->type, "type", def.type)) return false;
-    if (!parse_json_value(js, val->times, "times", def.times)) return false;
-    if (!parse_json_value(js, val->translation, "translation", def.translation))
+    if (!parse_json_value(js, val->keyframes_times, "times", def.keyframes_times)) return false;
+    if (!parse_json_value(js, val->translation_keyframes, "translation", def.translation_keyframes))
         return false;
-    if (!parse_json_value(js, val->rotation, "rotation", def.rotation))
+    if (!parse_json_value(js, val->rotation_keyframes, "rotation", def.rotation_keyframes))
         return false;
-    if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
-    if (!parse_json_objref(js, val->targets, "targets", scn->nodes))
+    if (!parse_json_value(js, val->scale_keyframes, "scale", def.scale_keyframes)) return false;
+    if (!parse_json_objref(js, val->node_targets, "targets", scn->nodes))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
@@ -3716,12 +3716,12 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                     anm->name = (ganm.count("name") ? ganm.value("name", ""s) :
                                                       "anim") +
                                 std::to_string(aid++);
-                    anm->group      = ganm.value("name", ""s);
+                    anm->animation_group      = ganm.value("name", ""s);
                     auto input_view = accessor_values(
                         gltf.at("accessors").at(gsampler.value("input", -1)));
-                    anm->times.resize(input_view.size());
+                    anm->keyframes_times.resize(input_view.size());
                     for (auto i = 0; i < input_view.size(); i++)
-                        anm->times[i] = input_view[i][0];
+                        anm->keyframes_times[i] = input_view[i][0];
                     auto type = gsampler.value("interpolation", "LINEAR");
                     if (type == "LINEAR") anm->type = animation_type::linear;
                     if (type == "STEP") anm->type = animation_type::step;
@@ -3731,25 +3731,25 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                         gltf.at("accessors").at(gsampler.value("output", -1)));
                     switch (path) {
                         case 0: {  // translation
-                            anm->translation.reserve(output_view.size());
+                            anm->translation_keyframes.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                anm->translation.push_back(
+                                anm->translation_keyframes.push_back(
                                     {(float)output_view[i][0],
                                         (float)output_view[i][1],
                                         (float)output_view[i][2]});
                         } break;
                         case 1: {  // rotation
-                            anm->rotation.reserve(output_view.size());
+                            anm->rotation_keyframes.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                anm->rotation.push_back({(float)output_view[i][0],
+                                anm->rotation_keyframes.push_back({(float)output_view[i][0],
                                     (float)output_view[i][1],
                                     (float)output_view[i][2],
                                     (float)output_view[i][3]});
                         } break;
                         case 2: {  // scale
-                            anm->scale.reserve(output_view.size());
+                            anm->scale_keyframes.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                anm->scale.push_back({(float)output_view[i][0],
+                                anm->scale_keyframes.push_back({(float)output_view[i][0],
                                     (float)output_view[i][1],
                                     (float)output_view[i][2]});
                         } break;
@@ -3787,7 +3787,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                 }
                 scn->animations[sampler_map.at(
                                     {gchannel.at("sampler").get<int>(), path})]
-                    ->targets.push_back(
+                    ->node_targets.push_back(
                         scn->nodes[(int)gchannel.at("target").at("node").get<int>()]);
             }
         }

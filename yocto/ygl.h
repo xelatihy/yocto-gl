@@ -2864,36 +2864,36 @@ struct subdiv {
 
 // Shape instance.
 struct instance {
-    string    name     = "";                // name
-    frame3f   frame    = identity_frame3f;  // transform frame
-    shape*    shape    = nullptr;           // shape
-    material* material = nullptr;           // material
-    subdiv*   subdiv   = nullptr;           // subdivision shape
+    string    name     = "";
+    frame3f   frame    = identity_frame3f;
+    shape*    shape    = nullptr;
+    material* material = nullptr;
+    subdiv*   subdiv   = nullptr;
 };
 
 // Environment map.
 struct environment {
-    string   name             = "";                // name
-    frame3f  frame            = identity_frame3f;  // transform frame
-    vec3f    emission         = {0, 0, 0};         // emission color
-    texture* emission_texture = nullptr;           // emission texture
+    string   name             = "";
+    frame3f  frame            = identity_frame3f;
+    vec3f    emission         = {0, 0, 0};
+    texture* emission_texture = nullptr;
 };
 
 // Node in a transform hierarchy.
 struct node {
-    string        name        = "";                // name
-    node*         parent      = nullptr;           // parent
-    frame3f       local       = identity_frame3f;  // transform frame
-    vec3f         translation = {0, 0, 0};         // translation
-    vec4f         rotation    = {0, 0, 0, 1};      // rotation
-    vec3f         scale       = {1, 1, 1};         // scale
-    vector<float> weights     = {};                // morph weights
-    camera*       camera      = nullptr;           // camera
-    instance*     instance    = nullptr;           // instance
-    environment*  environment = nullptr;           // environment
+    string        name        = "";
+    node*         parent      = nullptr;
+    frame3f       local       = identity_frame3f;
+    vec3f         translation = {0, 0, 0};
+    vec4f         rotation    = {0, 0, 0, 1};
+    vec3f         scale       = {1, 1, 1};
+    vector<float> weights     = {};
+    camera*       camera      = nullptr;
+    instance*     instance    = nullptr;
+    environment*  environment = nullptr;
 
     // compute properties
-    vector<node*> children = {};  // child nodes
+    vector<node*> children = {};
 };
 
 // Keyframe type.
@@ -2901,16 +2901,16 @@ enum struct animation_type { linear, step, bezier };
 
 // Keyframe data.
 struct animation {
-    string                name        = "";  // name
-    string                filename    = "";  // path for glTF buffer
-    string                group       = "";  // group
-    animation_type        type        = animation_type::linear;  // type
-    vector<float>         times       = {};  // keyframe times
-    vector<vec3f>         translation = {};  // translation keyframes
-    vector<vec4f>         rotation    = {};  // rotation keyframes
-    vector<vec3f>         scale       = {};  // scale keyframes
-    vector<vector<float>> weights     = {};  // morph weight keyframes
-    vector<node*>         targets     = {};  // target nodes
+    string                name        = "";
+    string                filename    = "";
+    string                animation_group       = "";
+    animation_type        type        = animation_type::linear;
+    vector<float>         keyframes_times       = {};
+    vector<vec3f>         translation_keyframes = {};
+    vector<vec4f>         rotation_keyframes    = {};
+    vector<vec3f>         scale_keyframes       = {};
+    vector<vector<float>> morph_weights_keyframes     = {};
+    vector<node*>         node_targets     = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -2921,17 +2921,17 @@ struct animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct scene {
-    string               name         = "";  // name
-    vector<camera*>      cameras      = {};  // cameras
-    vector<shape*>       shapes       = {};  // shapes
-    vector<subdiv*>      subdivs      = {};  // subdivs
-    vector<instance*>    instances    = {};  // instances
-    vector<material*>    materials    = {};  // materials
-    vector<texture*>     textures     = {};  // textures
-    vector<environment*> environments = {};  // environments
-    vector<voltexture*>  voltextures  = {};  // volume textures
-    vector<node*>        nodes        = {};  // node hierarchy [optional]
-    vector<animation*>   animations   = {};  // animations [optional]
+    string               name         = "";
+    vector<camera*>      cameras      = {};
+    vector<shape*>       shapes       = {};
+    vector<subdiv*>      subdivs      = {};
+    vector<instance*>    instances    = {};
+    vector<material*>    materials    = {};
+    vector<texture*>     textures     = {};
+    vector<environment*> environments = {};
+    vector<voltexture*>  voltextures  = {};
+    vector<node*>        nodes        = {};
+    vector<animation*>   animations   = {};
 
     // cleanup
     ~scene();

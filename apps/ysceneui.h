@@ -98,7 +98,7 @@ template <>
 inline void draw_scene_tree_glwidgets_rec<animation>(
     glwindow* win, const string& lbl_, animation* val, void*& sel) {
     auto tid = 0;
-    for (auto tg : val->targets) {
+    for (auto tg : val->node_targets) {
         draw_glwidgets_scene_tree(win, "tg" + to_string(tid++), tg, sel);
     }
 }
@@ -314,15 +314,15 @@ inline bool draw_glwidgets_scene_inspector(
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_textinput_glwidget(win, "path", val->filename);
-    edited += draw_textinput_glwidget(win, "group", val->group);
+    edited += draw_textinput_glwidget(win, "group", val->animation_group);
     // edited += draw_combobox_glwidget(win, "type", &val->type,
     // animation_type_names());
-    draw_label_glwidgets(win, "times", "%ld", val->times.size());
-    draw_label_glwidgets(win, "translation", "%ld", val->translation.size());
-    draw_label_glwidgets(win, "rotation", "%ld", val->rotation.size());
-    draw_label_glwidgets(win, "scale", "%ld", val->scale.size());
-    draw_label_glwidgets(win, "weights", "%ld", val->weights.size());
-    draw_label_glwidgets(win, "targets", "%ld", val->targets.size());
+    draw_label_glwidgets(win, "times", "%ld", val->keyframes_times.size());
+    draw_label_glwidgets(win, "translation", "%ld", val->translation_keyframes.size());
+    draw_label_glwidgets(win, "rotation", "%ld", val->rotation_keyframes.size());
+    draw_label_glwidgets(win, "scale", "%ld", val->scale_keyframes.size());
+    draw_label_glwidgets(win, "weights", "%ld", val->morph_weights_keyframes.size());
+    draw_label_glwidgets(win, "targets", "%ld", val->node_targets.size());
     return edited;
 }
 

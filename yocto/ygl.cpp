@@ -3487,53 +3487,53 @@ void tesselate_subdivs(scene* scn) {
 
 // Update animation transforms
 void update_transforms(animation* anm, float time, const string& anim_group) {
-    if (anim_group != "" && anim_group != anm->group) return;
+    if (anim_group != "" && anim_group != anm->animation_group) return;
 
-    if (!anm->translation.empty()) {
+    if (!anm->translation_keyframes.empty()) {
         auto val = vec3f{0, 0, 0};
         switch (anm->type) {
             case animation_type::step:
-                val = eval_keyframed_step(anm->times, anm->translation, time);
+                val = eval_keyframed_step(anm->keyframes_times, anm->translation_keyframes, time);
                 break;
             case animation_type::linear:
-                val = eval_keyframed_linear(anm->times, anm->translation, time);
+                val = eval_keyframed_linear(anm->keyframes_times, anm->translation_keyframes, time);
                 break;
             case animation_type::bezier:
-                val = eval_keyframed_bezier(anm->times, anm->translation, time);
+                val = eval_keyframed_bezier(anm->keyframes_times, anm->translation_keyframes, time);
                 break;
             default: throw runtime_error("should not have been here");
         }
-        for (auto target : anm->targets) target->translation = val;
+        for (auto target : anm->node_targets) target->translation = val;
     }
-    if (!anm->rotation.empty()) {
+    if (!anm->rotation_keyframes.empty()) {
         auto val = vec4f{0, 0, 0, 1};
         switch (anm->type) {
             case animation_type::step:
-                val = eval_keyframed_step(anm->times, anm->rotation, time);
+                val = eval_keyframed_step(anm->keyframes_times, anm->rotation_keyframes, time);
                 break;
             case animation_type::linear:
-                val = eval_keyframed_linear(anm->times, anm->rotation, time);
+                val = eval_keyframed_linear(anm->keyframes_times, anm->rotation_keyframes, time);
                 break;
             case animation_type::bezier:
-                val = eval_keyframed_bezier(anm->times, anm->rotation, time);
+                val = eval_keyframed_bezier(anm->keyframes_times, anm->rotation_keyframes, time);
                 break;
         }
-        for (auto target : anm->targets) target->rotation = val;
+        for (auto target : anm->node_targets) target->rotation = val;
     }
-    if (!anm->scale.empty()) {
+    if (!anm->scale_keyframes.empty()) {
         auto val = vec3f{1, 1, 1};
         switch (anm->type) {
             case animation_type::step:
-                val = eval_keyframed_step(anm->times, anm->scale, time);
+                val = eval_keyframed_step(anm->keyframes_times, anm->scale_keyframes, time);
                 break;
             case animation_type::linear:
-                val = eval_keyframed_linear(anm->times, anm->scale, time);
+                val = eval_keyframed_linear(anm->keyframes_times, anm->scale_keyframes, time);
                 break;
             case animation_type::bezier:
-                val = eval_keyframed_bezier(anm->times, anm->scale, time);
+                val = eval_keyframed_bezier(anm->keyframes_times, anm->scale_keyframes, time);
                 break;
         }
-        for (auto target : anm->targets) target->scale = val;
+        for (auto target : anm->node_targets) target->scale = val;
     }
 }
 
@@ -3562,9 +3562,9 @@ vec2f compute_animation_range(const scene* scn, const string& anim_group) {
     if (scn->animations.empty()) return zero2f;
     auto range = vec2f{+maxf, -maxf};
     for (auto anm : scn->animations) {
-        if (anim_group != "" && anm->group != anim_group) continue;
-        range.x = min(range.x, anm->times.front());
-        range.y = max(range.y, anm->times.back());
+        if (anim_group != "" && anm->animation_group != anim_group) continue;
+        range.x = min(range.x, anm->keyframes_times.front());
+        range.y = max(range.y, anm->keyframes_times.back());
     }
     if (range.y < range.x) return zero2f;
     return range;
