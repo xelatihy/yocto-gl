@@ -382,32 +382,13 @@ bool save_json(const string& filename, const json& js) {
     return save_text(filename, str);
 }
 
-template <typename T>
-inline void to_json(json& js, const vec<T, 2>& val) {
-    js = std::array<T, 2>{{val.x, val.y}};
+template <typename T, int N>
+inline void to_json(json& js, const vec<T, N>& val) {
+    js = (const std::array<T, N>&)val;
 }
-template <typename T>
-inline void from_json(const json& js, vec<T, 2>& val) {
-    auto vala = js.get<std::array<T, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const vec<T, 3>& val) {
-    js = std::array<T, 3>{{val.x, val.y, val.z}};
-}
-template <typename T>
-inline void from_json(const json& js, vec<T, 3>& val) {
-    auto vala = js.get<std::array<T, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const vec<T, 4>& val) {
-    js = std::array<T, 4>{{val.x, val.y, val.z, val.w}};
-}
-template <typename T>
-inline void from_json(const json& js, vec<T, 4>& val) {
-    auto vala = js.get<std::array<T, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
+template <typename T, int N>
+inline void from_json(const json& js, vec<T, N>& val) {
+    (std::array<T, N>&)val = js.get<std::array<T, N>>();
 }
 
 template <typename T>
@@ -429,32 +410,13 @@ inline void from_json(const json& js, frame3<T>& val) {
     val       = {vala[0], vala[1], vala[2], vala[3]};
 }
 
-template <typename T>
-inline void to_json(json& js, const mat2<T>& val) {
-    js = std::array<vec<T, 2>, 2>{{val.x, val.y}};
+template <typename T, int N, int M>
+inline void to_json(json& js, const mat<T, N, M>& val) {
+    js = (const std::array<vec<T, N>, M>&)val;
 }
-template <typename T>
-inline void from_json(const json& js, mat2<T>& val) {
-    auto vala = js.get<std::array<vec<T, 2>, 2>>();
-    val       = {vala[0], vala[1]};
-}
-template <typename T>
-inline void to_json(json& js, const mat3<T>& val) {
-    js = std::array<vec<T, 3>, 3>{{val.x, val.y, val.z}};
-}
-template <typename T>
-inline void from_json(const json& js, mat3<T>& val) {
-    auto vala = js.get<std::array<vec<T, 3>, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-template <typename T>
-inline void to_json(json& js, const mat4<T>& val) {
-    js = std::array<vec<T, 4>, 4>{{val.x, val.y, val.z, val.w}};
-}
-template <typename T>
-inline void from_json(const json& js, mat4<T>& val) {
-    auto vala = js.get<std::array<vec<T, 4>, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
+template <typename T, int N, int M>
+inline void from_json(const json& js, mat<T, N, M>& val) {
+    (std::array<vec<T, N>, M>&)val = js.get<std::array<vec<T, N>, M>>();
 }
 
 template <typename T>

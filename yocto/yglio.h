@@ -562,60 +562,23 @@ inline bool print_value(string& str, double val) {
     return true;
 }
 
+template<typename T, size_t N>
+inline bool print_value(string& str, const std::array<T, N>& val) {
+    for(auto i = 0; i < N; i ++) {
+        if(i) str += " ";
+        str += std::to_string(val[i]);
+    }
+    return true;
+}
+
 // Print compound types.
-template <typename T>
-inline bool print_value(string& str, const vec<T, 2>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const vec<T, N>& v) {
+    return print_value(str, (const std::array<T, N>&)v);
 }
-template <typename T>
-inline bool print_value(string& str, const vec<T, 3>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const vec<T, 4>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.w)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const mat2<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const mat3<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const mat4<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.w)) return false;
-    return true;
+template <typename T, int N, int M>
+inline bool print_value(string& str, const mat<T, N, M>& v) {
+    return print_value(str, (const std::array<T, N * M>&)v);
 }
 template <typename T>
 inline bool print_value(string& str, const frame2<T>& v) {
@@ -776,29 +739,13 @@ inline bool _parse(Archive& ar, std::array<T, N>& val) {
     return true;
 }
 // Data acess
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec<T, 2>& v) {
-    return _parse(ar, (std::array<T, 2>&)v);
+template <typename Archive, typename T, int N>
+inline bool _parse(Archive& ar, vec<T, N>& v) {
+    return _parse(ar, (std::array<T, N>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec<T, 3>& v) {
-    return _parse(ar, (std::array<T, 3>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec<T, 4>& v) {
-    return _parse(ar, (std::array<T, 4>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, mat2<T>& v) {
-    return _parse(ar, (std::array<T, 4>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, mat3<T>& v) {
-    return _parse(ar, (std::array<T, 9>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, mat4<T>& v) {
-    return _parse(ar, (std::array<T, 16>&)v);
+template <typename Archive, typename T, int N, int M>
+inline bool _parse(Archive& ar, mat<T, N, M>& v) {
+    return _parse(ar, (std::array<T, N * M>&)v);
 }
 template <typename Archive, typename T>
 inline bool _parse(Archive& ar, frame2<T>& v) {
