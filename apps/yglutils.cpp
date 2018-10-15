@@ -150,8 +150,8 @@ gltexture make_gltexture(
     return texture;
 }
 
-void update_gltexture(gltexture& texture, const image<vec4f>& img, bool as_float,
-    bool linear, bool mipmap) {
+void update_gltexture(gltexture& texture, const image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
@@ -348,7 +348,8 @@ void set_gluniform_texture(
     set_gluniform_texture(get_gluniform_location(prog, var), texture, unit);
 }
 
-void set_gluniform_texture(int loc, int loc_on, const gltexture& texture, int unit) {
+void set_gluniform_texture(
+    int loc, int loc_on, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
     if (texture.tid) {
         glActiveTexture(GL_TEXTURE0 + unit);

@@ -122,7 +122,8 @@ void draw(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "view")) {
-            draw_combobox_glwidget(win, "camera", camera, app->scene->cameras, false);
+            draw_combobox_glwidget(
+                win, "camera", camera, app->scene->cameras, false);
             draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
             draw_checkbox_glwidget(win, "eyelight", app->eyelight);
             continue_glwidgets_line(win);
@@ -143,13 +144,13 @@ void draw(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "navigate")) {
-            draw_glwidgets_scene_tree(
-                win, "", app->scene.get(), app->selection, app->update_list, 200);
+            draw_glwidgets_scene_tree(win, "", app->scene.get(), app->selection,
+                app->update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspect")) {
-            draw_glwidgets_scene_inspector(
-                win, "", app->scene.get(), app->selection, app->update_list, 200);
+            draw_glwidgets_scene_inspector(win, "", app->scene.get(),
+                app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -566,17 +567,18 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
         for (auto lgt : scene->instances) {
             if (lgt->material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto shape  = lgt->shape;
-            auto bbox = compute_bbox(shape);
-            auto pos  = (bbox.max + bbox.min) / 2;
-            auto area = 0.0f;
+            auto shape = lgt->shape;
+            auto bbox  = compute_bbox(shape);
+            auto pos   = (bbox.max + bbox.min) / 2;
+            auto area  = 0.0f;
             if (!shape->triangles.empty()) {
                 for (auto t : shape->triangles)
                     area += triangle_area(shape->positions[t.x],
                         shape->positions[t.y], shape->positions[t.z]);
             } else if (!shape->lines.empty()) {
                 for (auto l : shape->lines)
-                    area += line_length(shape->positions[l.x], shape->positions[l.y]);
+                    area += line_length(
+                        shape->positions[l.x], shape->positions[l.y]);
             } else {
                 area += shape->positions.size();
             }
@@ -600,7 +602,8 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
 
     if (wireframe) set_glwireframe(true);
     for (auto instance : scene->instances) {
-        draw_glshape(state, instance->shape, instance->material, frame_to_mat(instance->frame),
+        draw_glshape(state, instance->shape, instance->material,
+            frame_to_mat(instance->frame),
             instance == highlighted || instance->shape == highlighted ||
                 instance->material == highlighted,
             eyelight, edges);
@@ -618,7 +621,8 @@ draw_glstate* init_draw_state(glwindow* win) {
     state->txts[nullptr] = {};
     for (auto texture : app->scene->textures) {
         if (!texture->hdr_image.pixels.empty()) {
-            state->txts[texture] = make_gltexture(texture->hdr_image, true, true, true);
+            state->txts[texture] = make_gltexture(
+                texture->hdr_image, true, true, true);
         } else if (!texture->ldr_image.pixels.empty()) {
             state->txts[texture] = make_gltexture(
                 texture->ldr_image, !texture->ldr_as_linear, true, true);
@@ -652,7 +656,7 @@ draw_glstate* init_draw_state(glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto camera    = app->scene->cameras.at(app->camid);
+    auto camera = app->scene->cameras.at(app->camid);
     auto width  = clamp(eval_image_size(camera, app->resolution).x, 256, 1440),
          height = clamp(eval_image_size(camera, app->resolution).y, 256, 1440);
     auto win    = make_glwindow(width, height, "yview", app, draw);
@@ -687,7 +691,8 @@ void run_ui(app_state* app) {
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto camera = app->scene->cameras.at(app->camid);
-            camera_turntable(camera->frame, camera->focus_distance, rotate, dolly, pan);
+            camera_turntable(
+                camera->frame, camera->focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", camera});
         }
 

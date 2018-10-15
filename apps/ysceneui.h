@@ -106,7 +106,8 @@ inline void draw_scene_tree_glwidgets_rec<yocto_animation>(
 inline void draw_glwidgets_scene_tree(
     glwindow* win, yocto_scene* scene, void*& sel) {
     if (!scene->cameras.empty() && begin_treenode_glwidget(win, "cameras")) {
-        for (auto v : scene->cameras) draw_glwidgets_scene_tree(win, "", v, sel);
+        for (auto v : scene->cameras)
+            draw_glwidgets_scene_tree(win, "", v, sel);
         end_treenode_glwidget(win);
     }
     if (!scene->shapes.empty() && begin_treenode_glwidget(win, "shapes")) {
@@ -114,7 +115,8 @@ inline void draw_glwidgets_scene_tree(
         end_treenode_glwidget(win);
     }
     if (!scene->surfaces.empty() && begin_treenode_glwidget(win, "subdivs")) {
-        for (auto v : scene->surfaces) draw_glwidgets_scene_tree(win, "", v, sel);
+        for (auto v : scene->surfaces)
+            draw_glwidgets_scene_tree(win, "", v, sel);
         end_treenode_glwidget(win);
     }
     if (!scene->instances.empty() && begin_treenode_glwidget(win, "instances")) {
@@ -128,7 +130,8 @@ inline void draw_glwidgets_scene_tree(
         end_treenode_glwidget(win);
     }
     if (!scene->textures.empty() && begin_treenode_glwidget(win, "textures")) {
-        for (auto v : scene->textures) draw_glwidgets_scene_tree(win, "", v, sel);
+        for (auto v : scene->textures)
+            draw_glwidgets_scene_tree(win, "", v, sel);
         end_treenode_glwidget(win);
     }
     if (!scene->environments.empty() &&
@@ -142,8 +145,8 @@ inline void draw_glwidgets_scene_tree(
         end_treenode_glwidget(win);
     }
     if (!scene->animations.empty() && begin_treenode_glwidget(win,
-                                        "animation"
-                                        "s")) {
+                                          "animation"
+                                          "s")) {
         for (auto v : scene->animations)
             draw_glwidgets_scene_tree(win, "", v, sel);
         end_treenode_glwidget(win);
@@ -214,8 +217,8 @@ inline bool draw_glwidgets_scene_inspector(
         val->transmission_texture, scene->textures, true);
     edited += draw_combobox_glwidget(
         win, "opacity_texture", val->opacity_texture, scene->textures, true);
-    edited += draw_combobox_glwidget(
-        win, "roughness_texture", val->roughness_texture, scene->textures, true);
+    edited += draw_combobox_glwidget(win, "roughness_texture",
+        val->roughness_texture, scene->textures, true);
     edited += draw_combobox_glwidget(
         win, "bump_texture", val->bump_texture, scene->textures, true);
     edited += draw_combobox_glwidget(win, "displacement_texture",
@@ -270,7 +273,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
-    edited += draw_combobox_glwidget(win, "shape", val->shape, scene->shapes, true);
+    edited += draw_combobox_glwidget(
+        win, "shape", val->shape, scene->shapes, true);
     edited += draw_combobox_glwidget(
         win, "surface", val->surface, scene->surfaces, true);
     edited += draw_combobox_glwidget(
@@ -305,7 +309,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "translation", val->translation, -10, 10);
     edited += draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 10);
-    edited += draw_combobox_glwidget(win, "camera", val->camera, scene->cameras, true);
+    edited += draw_combobox_glwidget(
+        win, "camera", val->camera, scene->cameras, true);
     edited += draw_combobox_glwidget(
         win, "instance", val->instance, scene->instances, true);
     edited += draw_combobox_glwidget(

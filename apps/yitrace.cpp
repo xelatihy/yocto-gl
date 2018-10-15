@@ -35,7 +35,7 @@
 struct app_state {
     // scene
     unique_ptr<yocto_scene> scene = nullptr;
-    unique_ptr<bvh_tree>    bvh = nullptr;
+    unique_ptr<bvh_tree>    bvh   = nullptr;
 
     // rendering params
     string       filename   = "scene.json";
@@ -69,10 +69,11 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "trace")) {
             draw_label_glwidgets(win, "image", "%d x %d @ %d",
-                app->state->rendered_image.width, app->state->rendered_image.height,
-                app->state->current_sample);
+                app->state->rendered_image.width,
+                app->state->rendered_image.height, app->state->current_sample);
             auto cam_names = vector<string>();
-            for (auto camera : app->scene->cameras) cam_names.push_back(camera->name);
+            for (auto camera : app->scene->cameras)
+                cam_names.push_back(camera->name);
             auto edited = 0;
             edited += draw_combobox_glwidget(
                 win, "camera", app->params.camera_id, cam_names);
@@ -80,8 +81,8 @@ void draw_glwidgets(glwindow* win) {
                 win, "resolution", app->params.vertical_resolution, 256, 4096);
             edited += draw_slider_glwidget(
                 win, "nsamples", app->params.num_samples, 16, 4096);
-            edited += draw_combobox_glwidget(
-                win, "tracer", (int&)app->params.sample_tracer, trace_type_names);
+            edited += draw_combobox_glwidget(win, "tracer",
+                (int&)app->params.sample_tracer, trace_type_names);
             edited += draw_slider_glwidget(
                 win, "nbounces", app->params.max_bounces, 1, 10);
             edited += draw_slider_glwidget(
@@ -90,10 +91,12 @@ void draw_glwidgets(glwindow* win) {
                 win, "pratio", app->params.preview_ratio, 1, 64);
             if (edited) app->update_list.push_back({"app", app});
             draw_label_glwidgets(win, "time/sample", "%0.3lf",
-                (app->state->current_sample) ? (get_time() - app->trace_start) /
-                                           (1000000000.0 * app->state->current_sample) :
-                                       0.0);
-            draw_slider_glwidget(win, "exposure", app->params.display_exposure, -5, 5);
+                (app->state->current_sample) ?
+                    (get_time() - app->trace_start) /
+                        (1000000000.0 * app->state->current_sample) :
+                    0.0);
+            draw_slider_glwidget(
+                win, "exposure", app->params.display_exposure, -5, 5);
             draw_checkbox_glwidget(win, "filmic", app->params.display_filmic);
             draw_checkbox_glwidget(win, "srgb", app->params.display_srgb);
             draw_slider_glwidget(win, "zoom", app->imscale, 0.1, 10);
@@ -102,12 +105,13 @@ void draw_glwidgets(glwindow* win) {
             draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
             auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
-                {app->state->rendered_image.width, app->state->rendered_image.height});
+                {app->state->rendered_image.width,
+                    app->state->rendered_image.height});
             draw_dragger_glwidget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->state->rendered_image.width && ij.y >= 0 &&
-                ij.y < app->state->rendered_image.height) {
-                draw_coloredit_glwidget(
-                    win, "pixel", pixel_at(app->state->rendered_image, ij.x, ij.y));
+            if (ij.x >= 0 && ij.x < app->state->rendered_image.width &&
+                ij.y >= 0 && ij.y < app->state->rendered_image.height) {
+                draw_coloredit_glwidget(win, "pixel",
+                    pixel_at(app->state->rendered_image, ij.x, ij.y));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_glwidget(win, "pixel", zero4f_);
@@ -115,13 +119,13 @@ void draw_glwidgets(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "navigate")) {
-            draw_glwidgets_scene_tree(
-                win, "", app->scene.get(), app->selection, app->update_list, 200);
+            draw_glwidgets_scene_tree(win, "", app->scene.get(), app->selection,
+                app->update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspec")) {
-            draw_glwidgets_scene_inspector(
-                win, "", app->scene.get(), app->selection, app->update_list, 200);
+            draw_glwidgets_scene_inspector(win, "", app->scene.get(),
+                app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -135,16 +139,18 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     center_image4f(app->imcenter, app->imscale,
-        {app->state->display_image.width, app->state->display_image.height}, win_size,
-        app->zoom_to_fit);
+        {app->state->display_image.width, app->state->display_image.height},
+        win_size, app->zoom_to_fit);
     if (!app->gl_txt) {
-        app->gl_txt = make_gltexture(app->state->display_image, false, false, false);
+        app->gl_txt = make_gltexture(
+            app->state->display_image, false, false, false);
     } else {
-        update_gltexture(app->gl_txt, app->state->display_image, false, false, false);
+        update_gltexture(
+            app->gl_txt, app->state->display_image, false, false, false);
     }
     draw_glimage(app->gl_txt,
-        {app->state->display_image.width, app->state->display_image.height}, win_size,
-        app->imcenter, app->imscale);
+        {app->state->display_image.width, app->state->display_image.height},
+        win_size, app->imcenter, app->imscale);
     draw_glwidgets(win);
     swap_glbuffers(win);
 }
@@ -220,19 +226,22 @@ void run_ui(app_state* app) {
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto camera = app->scene->cameras.at(app->params.camera_id);
-            camera_turntable(camera->frame, camera->focus_distance, rotate, dolly, pan);
+            camera_turntable(
+                camera->frame, camera->focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", camera});
         }
 
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
-                {app->state->rendered_image.width, app->state->rendered_image.height});
-            if (ij.x < 0 || ij.x >= app->state->rendered_image.width || ij.y < 0 ||
-                ij.y >= app->state->rendered_image.height) {
-                auto camera  = app->scene->cameras.at(app->params.camera_id);
-                auto ray  = eval_camera_ray(camera, ij,
-                    {app->state->rendered_image.width, app->state->rendered_image.height},
+                {app->state->rendered_image.width,
+                    app->state->rendered_image.height});
+            if (ij.x < 0 || ij.x >= app->state->rendered_image.width ||
+                ij.y < 0 || ij.y >= app->state->rendered_image.height) {
+                auto camera = app->scene->cameras.at(app->params.camera_id);
+                auto ray    = eval_camera_ray(camera, ij,
+                    {app->state->rendered_image.width,
+                        app->state->rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
                 auto isec = intersect_ray(app->scene.get(), app->bvh.get(), ray);
                 if (isec.instance) app->selection = isec.instance;
@@ -262,14 +271,14 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
-    app->params.camera_id       = parse_arg(parser, "--camera", 0, "Camera index.");
+    app->params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
     app->params.vertical_resolution = parse_arg(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
     app->params.num_samples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app->params.sample_tracer   = parse_arge(parser, "--tracer,-t", trace_type::path,
-        "Tracer type.", trace_type_names);
-    app->params.max_bounces = parse_arg(
+    app->params.sample_tracer = parse_arge(parser, "--tracer,-t",
+        trace_type::path, "Tracer type.", trace_type_names);
+    app->params.max_bounces   = parse_arg(
         parser, "--nbounces", 4, "Maximum number of bounces.");
     app->params.pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
@@ -291,7 +300,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     auto load_start = get_time();
-    app->scene        = unique_ptr<yocto_scene>(load_scene(app->filename));
+    app->scene      = unique_ptr<yocto_scene>(load_scene(app->filename));
     if (!app->scene) log_fatal("cannot load scene " + app->filename);
     if (!quiet)
         printf("loading in %s\n",

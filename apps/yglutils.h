@@ -63,8 +63,8 @@ struct gltexture {
 
 gltexture make_gltexture(
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
-void update_gltexture(gltexture& texture, const image<vec4f>& img, bool as_float,
-    bool linear, bool mipmap);
+void update_gltexture(gltexture& texture, const image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap);
 
 gltexture make_gltexture(
     const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
@@ -114,7 +114,8 @@ inline void set_gluniform(const glprogram& prog, const char* var, const T& val) 
 void set_gluniform_texture(int loc, const gltexture& texture, int unit);
 void set_gluniform_texture(
     glprogram& prog, const char* var, const gltexture& texture, int unit);
-void set_gluniform_texture(int loc, int loc_on, const gltexture& texture, int unit);
+void set_gluniform_texture(
+    int loc, int loc_on, const gltexture& texture, int unit);
 void set_gluniform_texture(glprogram& prog, const char* var, const char* var_on,
     const gltexture& texture, int unit);
 

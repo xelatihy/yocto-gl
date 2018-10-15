@@ -2831,11 +2831,11 @@ struct yocto_shape {
     vector<vec3i> triangles = {};
 
     // vertex data
-    vector<vec3f> positions      = {};
-    vector<vec3f> normals        = {};
-    vector<vec2f> texturecoords  = {};
-    vector<vec4f> colors         = {};
-    vector<float> radius         = {};
+    vector<vec3f> positions     = {};
+    vector<vec3f> normals       = {};
+    vector<vec2f> texturecoords = {};
+    vector<vec4f> colors        = {};
+    vector<float> radius        = {};
     vector<vec4f> tangentspaces = {};
 };
 
@@ -3010,10 +3010,10 @@ inline yocto_material* make_default_material(const string& name) {
 // Add a sky environment
 inline yocto_environment* make_sky_environment(
     const string& name, float sun_angle = pif / 4) {
-    auto texture              = new yocto_texture();
-    texture->name             = name;
-    texture->filename         = "textures/" + name + ".hdr";
-    texture->hdr_image        = make_sunsky_image4f(1024, 512, sun_angle);
+    auto texture                  = new yocto_texture();
+    texture->name                 = name;
+    texture->filename             = "textures/" + name + ".hdr";
+    texture->hdr_image            = make_sunsky_image4f(1024, 512, sun_angle);
     auto environment              = new yocto_environment();
     environment->name             = name;
     environment->emission         = {1, 1, 1};
@@ -3031,10 +3031,10 @@ namespace ygl {
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
 struct scene_intersection {
-    yocto_instance* instance  = nullptr;
-    int             element_id   = 0;
-    vec2f           element_uv   = zero2f;
-    float           distance = maxf;
+    yocto_instance* instance   = nullptr;
+    int             element_id = 0;
+    vec2f           element_uv = zero2f;
+    float           distance   = maxf;
 };
 
 // Intersects a ray with an instance. The bvh refers is the shape bvh.
@@ -3097,7 +3097,8 @@ vec2i eval_image_size(const yocto_camera* camera, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
-ray3f eval_camera_ray(const yocto_camera* camera, const vec2f& uv, const vec2f& luv);
+ray3f eval_camera_ray(
+    const yocto_camera* camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
@@ -3169,39 +3170,39 @@ const auto trace_type_names = vector<string>{"path", "volpath", "direct",
 
 // Trace options
 struct trace_params {
-    int        camera_id         = 0;
-    int        vertical_resolution   = 256;
-    trace_type sample_tracer        = trace_type::path;
-    int        num_samples      = 256;
-    int        max_bounces      = 8;
-    float      pixel_clamp   = 100;
-    int        samples_per_batch        = 16;
-    bool       no_parallel    = false;
-    int        preview_ratio = 8;
-    float      display_exposure      = 0;
-    bool       display_filmic        = false;
-    bool       display_srgb          = true;
-    int        random_seed          = trace_default_seed;
+    int        camera_id           = 0;
+    int        vertical_resolution = 256;
+    trace_type sample_tracer       = trace_type::path;
+    int        num_samples         = 256;
+    int        max_bounces         = 8;
+    float      pixel_clamp         = 100;
+    int        samples_per_batch   = 16;
+    bool       no_parallel         = false;
+    int        preview_ratio       = 8;
+    float      display_exposure    = 0;
+    bool       display_filmic      = false;
+    bool       display_srgb        = true;
+    int        random_seed         = trace_default_seed;
 };
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<yocto_instance*>    instances;
-    vector<yocto_environment*> environments;
+    vector<yocto_instance*>                          instances;
+    vector<yocto_environment*>                       environments;
     unordered_map<yocto_shape*, vector<float>>       shapes_cdfs;
     unordered_map<yocto_environment*, vector<float>> environment_cdfs;
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
 struct trace_state {
-    image<vec4f> rendered_image     = {};
-    image<vec4f> display_image = {};
+    image<vec4f> rendered_image = {};
+    image<vec4f> display_image  = {};
 
     // internal data used during rendering
-    image<vec4f>     accumulation_buffer     = {};
-    image<int>       samples_per_pixel = {};
-    image<rng_state> random_number_generators     = {};
-    int              current_sample  = 0;
+    image<vec4f>     accumulation_buffer      = {};
+    image<int>       samples_per_pixel        = {};
+    image<rng_state> random_number_generators = {};
+    int              current_sample           = 0;
     vector<thread>   async_threads;
     bool             async_stop_flag = false;
 };
@@ -3211,7 +3212,8 @@ trace_lights* make_trace_lights(
     const yocto_scene* scene, const trace_params& params);
 
 // Initialize state of the renderer.
-trace_state* make_trace_state(const yocto_scene* scene, const trace_params& params);
+trace_state* make_trace_state(
+    const yocto_scene* scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
