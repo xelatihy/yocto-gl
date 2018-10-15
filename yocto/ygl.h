@@ -38,7 +38,7 @@
 //
 // We provide common operations for small vectors and matrices typically used
 // in graphics. In particular, we support 2-4 dimensional vectors `vec<T, 2>`,
-// `vec3f<T>`, `vec<T, 4>`.
+// `vec<T, 3>`, `vec<T, 4>`.
 //
 // We support 2-4 dimensional generic matrices `mat<T, N, 2>`, `mat<T, N, 3>`,
 // `mat<T, N, 4>`, with matrix-matrix and matrix-vector products, transposes and
