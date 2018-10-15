@@ -121,88 +121,102 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
     return prog;
 }
 
-gltexture make_gltexture(const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
+gltexture make_gltexture(
+    const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
     auto texture = gltexture();
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.tid);
     glBindTexture(GL_TEXTURE_2D, texture.tid);
     if (as_float) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.width, img.height, 0, GL_RGBA, GL_FLOAT,
-            img.pixels.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.width, img.height, 0,
+            GL_RGBA, GL_FLOAT, img.pixels.data());
     } else {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA, GL_FLOAT,
-            img.pixels.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0,
+            GL_RGBA, GL_FLOAT, img.pixels.data());
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
         if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
     return texture;
 }
 
-void update_gltexture(
-    gltexture& texture, const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
+void update_gltexture(gltexture& texture, const image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.tid);
-    glTexSubImage2D(
-        GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA, GL_FLOAT, img.pixels.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
+        GL_FLOAT, img.pixels.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
         if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
 
-gltexture make_gltexture(const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
+gltexture make_gltexture(
+    const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
     auto texture = gltexture();
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.tid);
     glBindTexture(GL_TEXTURE_2D, texture.tid);
     if (as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.width, img.height, 0, GL_RGBA,
-            GL_UNSIGNED_BYTE, img.pixels.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.width, img.height, 0,
+            GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
     } else {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-            img.pixels.data());
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, img.width, img.height, 0,
+            GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
     }
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
         if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
     return texture;
 }
 
-void update_gltexture(
-    gltexture& texture, const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
+void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.tid);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA, GL_UNSIGNED_BYTE,
-        img.pixels.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
+        GL_UNSIGNED_BYTE, img.pixels.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
             (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
         if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
     } else {
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -329,11 +343,13 @@ void set_gluniform_texture(int loc, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(glprogram& prog, const char* var, const gltexture& texture, int unit) {
+void set_gluniform_texture(
+    glprogram& prog, const char* var, const gltexture& texture, int unit) {
     set_gluniform_texture(get_gluniform_location(prog, var), texture, unit);
 }
 
-void set_gluniform_texture(int loc, int loc_on, const gltexture& texture, int unit) {
+void set_gluniform_texture(
+    int loc, int loc_on, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
     if (texture.tid) {
         glActiveTexture(GL_TEXTURE0 + unit);
@@ -346,10 +362,10 @@ void set_gluniform_texture(int loc, int loc_on, const gltexture& texture, int un
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(
-    glprogram& prog, const char* var, const char* var_on, const gltexture& texture, int unit) {
-    set_gluniform_texture(
-        get_gluniform_location(prog, var), get_gluniform_location(prog, var_on), texture, unit);
+void set_gluniform_texture(glprogram& prog, const char* var, const char* var_on,
+    const gltexture& texture, int unit) {
+    set_gluniform_texture(get_gluniform_location(prog, var),
+        get_gluniform_location(prog, var_on), texture, unit);
 }
 
 int get_glvertexattrib_location(const glprogram& prog, const char* name) {
@@ -419,15 +435,15 @@ void draw_gltriangles(const glelementbuffer& buf, int num) {
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(
-    const gltexture& gl_txt, vec2i imsize, vec2i winsize, vec2f imcenter, float imscale) {
+void draw_glimage(const gltexture& gl_txt, vec2i imsize, vec2i winsize,
+    vec2f imcenter, float imscale) {
     static glprogram       gl_prog      = {};
     static glarraybuffer   gl_texcoord  = {};
     static glelementbuffer gl_triangles = {};
 
     // initialization
     if (!gl_prog) {
-        auto vert    = R"(
+        auto vert   = R"(
             #version 330
             in vec2 texcoord;
             out vec2 frag_texcoord;
@@ -440,7 +456,7 @@ void draw_glimage(
                 frag_texcoord = texcoord;
             }
         )";
-        auto frag    = R"(
+        auto frag   = R"(
             #version 330
             in vec2 frag_texcoord;
             out vec4 frag_color;
@@ -449,9 +465,11 @@ void draw_glimage(
                 frag_color = texture(txt, frag_texcoord);
             }
         )";
-        gl_prog      = make_glprogram(vert, frag);
-        gl_texcoord  = make_glarraybuffer(vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-        gl_triangles = make_glelementbuffer(vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+        gl_prog     = make_glprogram(vert, frag);
+        gl_texcoord = make_glarraybuffer(
+            vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+        gl_triangles = make_glelementbuffer(
+            vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     }
 
     // draw
@@ -487,8 +505,8 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     }
 }
 
-glwindow* make_glwindow(int width, int height, const char* title, void* user_pointer,
-    std::function<void(glwindow*)> refresh_cb) {
+glwindow* make_glwindow(int width, int height, const char* title,
+    void* user_pointer, std::function<void(glwindow*)> refresh_cb) {
     // init glfw
     if (!glfwInit()) throw runtime_error("cannot open glwindow");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -525,8 +543,8 @@ void delete_glwindow(glwindow* win) {
 
 void* get_user_pointer(glwindow* win) { return win->user_ptr; }
 
-void set_drop_callback(
-    glwindow* win, function<void(glwindow* win, const vector<string>& paths)> drop_cb) {
+void set_drop_callback(glwindow*                               win,
+    function<void(glwindow* win, const vector<string>& paths)> drop_cb) {
     win->drop_cb = drop_cb;
     glfwSetDropCallback(win->win, _glfw_drop_callback);
 }
@@ -543,7 +561,9 @@ vec2i get_glwindow_size(glwindow* win) {
     return size;
 }
 
-bool should_glwindow_close(glwindow* win) { return glfwWindowShouldClose(win->win); }
+bool should_glwindow_close(glwindow* win) {
+    return glfwWindowShouldClose(win->win);
+}
 
 vec2f get_glmouse_pos(glwindow* win) {
     double mouse_posx, mouse_posy;
@@ -614,7 +634,9 @@ void end_glwidgets_frame(glwindow* win) {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-bool begin_glwidgets_window(glwindow* win, const char* title) { return ImGui::Begin(title); }
+bool begin_glwidgets_window(glwindow* win, const char* title) {
+    return ImGui::Begin(title);
+}
 
 bool begin_header_glwidget(glwindow* win, const char* lbl) {
     if (!ImGui::CollapsingHeader(lbl)) return false;
@@ -623,7 +645,9 @@ bool begin_header_glwidget(glwindow* win, const char* lbl) {
 }
 void end_header_glwidget(glwindow* win) { ImGui::PopID(); }
 
-bool draw_button_glwidget(glwindow* win, const char* lbl) { return ImGui::Button(lbl); }
+bool draw_button_glwidget(glwindow* win, const char* lbl) {
+    return ImGui::Button(lbl);
+}
 
 void draw_label_glwidgets(glwindow* win, const char* lbl, const string& texture) {
     ImGui::LabelText(lbl, "%s", texture.c_str());
@@ -650,59 +674,71 @@ bool draw_textinput_glwidget(glwindow* win, const char* lbl, string& val) {
     return edited;
 }
 
-bool draw_slider_glwidget(glwindow* win, const char* lbl, float& val, float min, float max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, float& val, float min, float max) {
     return ImGui::SliderFloat(lbl, &val, min, max);
 }
-bool draw_slider_glwidget(glwindow* win, const char* lbl, vec2f& val, float min, float max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec2f& val, float min, float max) {
     return ImGui::SliderFloat2(lbl, &val.x, min, max);
 }
-bool draw_slider_glwidget(glwindow* win, const char* lbl, vec3f& val, float min, float max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec3f& val, float min, float max) {
     return ImGui::SliderFloat3(lbl, &val.x, min, max);
 }
-bool draw_slider_glwidget(glwindow* win, const char* lbl, vec4f& val, float min, float max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec4f& val, float min, float max) {
     return ImGui::SliderFloat4(lbl, &val.x, min, max);
 }
 
-bool draw_slider_glwidget(glwindow* win, const char* lbl, int& val, int min, int max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, int& val, int min, int max) {
     return ImGui::SliderInt(lbl, &val, min, max);
 }
-bool draw_slider_glwidget(glwindow* win, const char* lbl, vec2i& val, int min, int max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec2i& val, int min, int max) {
     return ImGui::SliderInt2(lbl, &val.x, min, max);
 }
-bool draw_slider_glwidget(glwindow* win, const char* lbl, vec3i& val, int min, int max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec3i& val, int min, int max) {
     return ImGui::SliderInt3(lbl, &val.x, min, max);
 }
-bool draw_slider_glwidget(glwindow* win, const char* lbl, vec4i& val, int min, int max) {
+bool draw_slider_glwidget(
+    glwindow* win, const char* lbl, vec4i& val, int min, int max) {
     return ImGui::SliderInt4(lbl, &val.x, min, max);
 }
 
-bool draw_dragger_glwidget(
-    glwindow* win, const char* lbl, float& val, float speed, float min, float max) {
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, float& val,
+    float speed, float min, float max) {
     return ImGui::DragFloat(lbl, &val, speed, min, max);
 }
-bool draw_dragger_glwidget(
-    glwindow* win, const char* lbl, vec2f& val, float speed, float min, float max) {
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec2f& val,
+    float speed, float min, float max) {
     return ImGui::DragFloat2(lbl, &val.x, speed, min, max);
 }
-bool draw_dragger_glwidget(
-    glwindow* win, const char* lbl, vec3f& val, float speed, float min, float max) {
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec3f& val,
+    float speed, float min, float max) {
     return ImGui::DragFloat3(lbl, &val.x, speed, min, max);
 }
-bool draw_dragger_glwidget(
-    glwindow* win, const char* lbl, vec4f& val, float speed, float min, float max) {
+bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec4f& val,
+    float speed, float min, float max) {
     return ImGui::DragFloat4(lbl, &val.x, speed, min, max);
 }
 
-bool draw_dragger_glwidget(glwindow* win, const char* lbl, int& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(
+    glwindow* win, const char* lbl, int& val, float speed, int min, int max) {
     return ImGui::DragInt(lbl, &val, speed, min, max);
 }
-bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec2i& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(
+    glwindow* win, const char* lbl, vec2i& val, float speed, int min, int max) {
     return ImGui::DragInt2(lbl, &val.x, speed, min, max);
 }
-bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec3i& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(
+    glwindow* win, const char* lbl, vec3i& val, float speed, int min, int max) {
     return ImGui::DragInt3(lbl, &val.x, speed, min, max);
 }
-bool draw_dragger_glwidget(glwindow* win, const char* lbl, vec4i& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(
+    glwindow* win, const char* lbl, vec4i& val, float speed, int min, int max) {
     return ImGui::DragInt4(lbl, &val.x, speed, min, max);
 }
 
@@ -718,7 +754,9 @@ bool draw_coloredit_glwidget(glwindow* win, const char* lbl, vec4f& val) {
     return ImGui::ColorEdit4(lbl, &val.x);
 }
 
-bool begin_treenode_glwidget(glwindow* win, const char* lbl) { return ImGui::TreeNode(lbl); }
+bool begin_treenode_glwidget(glwindow* win, const char* lbl) {
+    return ImGui::TreeNode(lbl);
+}
 
 void end_treenode_glwidget(glwindow* win) { ImGui::TreePop(); }
 
@@ -734,13 +772,15 @@ bool begin_selectabletreenode_glwidget(
 
 void begin_selectabletreeleaf_glwidget(
     glwindow* win, const char* lbl, void*& selection, void* content) {
-    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf |
+                                    ImGuiTreeNodeFlags_NoTreePushOnOpen;
     if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
     ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
     if (ImGui::IsItemClicked()) selection = content;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& val, const vector<string>& labels) {
+bool draw_combobox_glwidget(
+    glwindow* win, const char* lbl, int& val, const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, labels[val].c_str())) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -759,7 +799,8 @@ bool draw_combobox_glwidget(
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
         ImGui::PushID(i);
-        if (ImGui::Selectable(labels[i].c_str(), val == labels[i])) val = labels[i];
+        if (ImGui::Selectable(labels[i].c_str(), val == labels[i]))
+            val = labels[i];
         if (val == labels[i]) ImGui::SetItemDefaultFocus();
         ImGui::PopID();
     }
@@ -767,8 +808,8 @@ bool draw_combobox_glwidget(
     return val != old_val;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx, const vector<void*>& vals,
-    const char* (*label)(void*)) {
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
+    const vector<void*>& vals, const char* (*label)(void*)) {
     if (!ImGui::BeginCombo(lbl, label(vals.at(idx)))) return false;
     auto old_idx = idx;
     for (auto i = 0; i < vals.size(); i++) {
@@ -781,8 +822,8 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx, const vect
     return idx != old_idx;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val, const vector<void*>& vals,
-    const char* (*label)(void*), bool include_null) {
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
+    const vector<void*>& vals, const char* (*label)(void*), bool include_null) {
     if (!ImGui::BeginCombo(lbl, (val) ? label(val) : "<none>")) return false;
     auto old_val = val;
     if (include_null) {

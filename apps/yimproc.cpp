@@ -62,8 +62,9 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 }
 #endif
 
-image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma, float range_sigma,
-    const vector<image<vec4f>>& features, const vector<float>& features_sigma) {
+image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
+    float range_sigma, const vector<image<vec4f>>& features,
+    const vector<float>& features_sigma) {
     auto filtered     = image<vec4f>{img.width, img.height};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -82,9 +83,11 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma, floa
                     if (ii >= img.width || jj >= img.height) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = pixel_at(img, i, j) - pixel_at(img, i, j);
-                    auto w   = (float)exp(-dot(uv, uv) * sw) * (float)exp(-dot(rgb, rgb) * rw);
+                    auto w   = (float)exp(-dot(uv, uv) * sw) *
+                             (float)exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat = pixel_at(features[fi], i, j) - pixel_at(features[fi], i, j);
+                        auto feat = pixel_at(features[fi], i, j) -
+                                    pixel_at(features[fi], i, j);
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
                     av += w * pixel_at(img, ii, jj);
@@ -97,7 +100,8 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma, floa
     return filtered;
 }
 
-image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma, float range_sigma) {
+image<vec4f> filter_bilateral(
+    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
     auto filtered = image<vec4f>{img.width, img.height};
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -113,7 +117,7 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma, floa
                     if (ii >= img.width || jj >= img.height) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = pixel_at(img, i, j) - pixel_at(img, ii, jj);
-                    auto w   = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
+                    auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
                     av += w * pixel_at(img, ii, jj);
                     aw += w;
                 }
@@ -126,20 +130,28 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma, floa
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser     = make_cmdline_parser(argc, argv, "Process images", "yimproc");
-    auto tonemap    = parse_arg(parser, "--tonemap,-t", false, "Tonemap image");
-    auto exposure   = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto srgb       = parse_arg(parser, "--srgb", true, "Tonemap to sRGB.");
-    auto filmic     = parse_arg(parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto res_width  = parse_arg(parser, "--res-width", 0, "resize width (0 to maintain aspect)");
-    auto res_height = parse_arg(parser, "--res-height", 0, "resize height (0 to maintain aspect)");
-    auto spatial_sigma  = parse_arg(parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
-    auto range_sigma    = parse_arg(parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
-    auto alpha_filename = parse_arg(parser, "--set-alpha", ""s, "set alpha as this image alpha");
+    auto parser  = make_cmdline_parser(argc, argv, "Process images", "yimproc");
+    auto tonemap = parse_arg(parser, "--tonemap,-t", false, "Tonemap image");
+    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
+    auto srgb     = parse_arg(parser, "--srgb", true, "Tonemap to sRGB.");
+    auto filmic   = parse_arg(
+        parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+    auto res_width = parse_arg(
+        parser, "--res-width", 0, "resize width (0 to maintain aspect)");
+    auto res_height = parse_arg(
+        parser, "--res-height", 0, "resize height (0 to maintain aspect)");
+    auto spatial_sigma = parse_arg(
+        parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
+    auto range_sigma = parse_arg(
+        parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
+    auto alpha_filename = parse_arg(
+        parser, "--set-alpha", ""s, "set alpha as this image alpha");
     auto coloralpha_filename = parse_arg(
         parser, "--set-color-as-alpha", ""s, "set alpha as this image color");
-    auto output   = parse_arg(parser, "--output,-o", "out.png"s, "output image filename", true);
-    auto filename = parse_arg(parser, "filename", "img.hdr"s, "input image filename", true);
+    auto output = parse_arg(
+        parser, "--output,-o", "out.png"s, "output image filename", true);
+    auto filename = parse_arg(
+        parser, "filename", "img.hdr"s, "input image filename", true);
     check_cmdline(parser);
 
     // load
@@ -149,19 +161,22 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (alpha_filename != "") {
         auto alpha = load_image4f(alpha_filename);
-        if (alpha.pixels.empty()) log_fatal("cannot load image {}", alpha_filename);
+        if (alpha.pixels.empty())
+            log_fatal("cannot load image {}", alpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
         }
         for (auto j = 0; j < img.height; j++)
-            for (auto i = 0; i < img.width; i++) pixel_at(img, i, j).w = pixel_at(alpha, i, j).w;
+            for (auto i = 0; i < img.width; i++)
+                pixel_at(img, i, j).w = pixel_at(alpha, i, j).w;
     }
 
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = load_image4f(coloralpha_filename);
-        if (alpha.pixels.empty()) log_fatal("cannot load image " + coloralpha_filename);
+        if (alpha.pixels.empty())
+            log_fatal("cannot load image " + coloralpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size\n");
             exit(1);
@@ -172,7 +187,9 @@ int main(int argc, char* argv[]) {
     }
 
     // resize
-    if (res_width || res_height) { img = resize_image(img, res_width, res_height); }
+    if (res_width || res_height) {
+        img = resize_image(img, res_width, res_height);
+    }
 
     // bilateral
     if (spatial_sigma && range_sigma) {

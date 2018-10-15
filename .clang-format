@@ -4,7 +4,7 @@ Language:        Cpp
 Standard:        Cpp11
 
 IndentWidth:     4
-ColumnLimit:     100
+ColumnLimit:     80
 
 AlignAfterOpenBracket: DontAlign
 

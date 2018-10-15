@@ -68,26 +68,35 @@ void draw_glwidgets(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "trace")) {
-            draw_label_glwidgets(win, "image", "%d x %d @ %d", app->state->rendered_image.width,
+            draw_label_glwidgets(win, "image", "%d x %d @ %d",
+                app->state->rendered_image.width,
                 app->state->rendered_image.height, app->state->current_sample);
             auto cam_names = vector<string>();
-            for (auto camera : app->scene->cameras) cam_names.push_back(camera->name);
+            for (auto camera : app->scene->cameras)
+                cam_names.push_back(camera->name);
             auto edited = 0;
-            edited += draw_combobox_glwidget(win, "camera", app->params.camera_id, cam_names);
+            edited += draw_combobox_glwidget(
+                win, "camera", app->params.camera_id, cam_names);
             edited += draw_slider_glwidget(
                 win, "resolution", app->params.vertical_resolution, 256, 4096);
-            edited += draw_slider_glwidget(win, "nsamples", app->params.num_samples, 16, 4096);
-            edited += draw_combobox_glwidget(
-                win, "tracer", (int&)app->params.sample_tracer, trace_type_names);
-            edited += draw_slider_glwidget(win, "nbounces", app->params.max_bounces, 1, 10);
-            edited += draw_slider_glwidget(win, "seed", (int&)app->params.random_seed, 0, 1000);
-            edited += draw_slider_glwidget(win, "pratio", app->params.preview_ratio, 1, 64);
+            edited += draw_slider_glwidget(
+                win, "nsamples", app->params.num_samples, 16, 4096);
+            edited += draw_combobox_glwidget(win, "tracer",
+                (int&)app->params.sample_tracer, trace_type_names);
+            edited += draw_slider_glwidget(
+                win, "nbounces", app->params.max_bounces, 1, 10);
+            edited += draw_slider_glwidget(
+                win, "seed", (int&)app->params.random_seed, 0, 1000);
+            edited += draw_slider_glwidget(
+                win, "pratio", app->params.preview_ratio, 1, 64);
             if (edited) app->update_list.push_back({"app", app});
             draw_label_glwidgets(win, "time/sample", "%0.3lf",
                 (app->state->current_sample) ?
-                    (get_time() - app->trace_start) / (1000000000.0 * app->state->current_sample) :
+                    (get_time() - app->trace_start) /
+                        (1000000000.0 * app->state->current_sample) :
                     0.0);
-            draw_slider_glwidget(win, "exposure", app->params.display_exposure, -5, 5);
+            draw_slider_glwidget(
+                win, "exposure", app->params.display_exposure, -5, 5);
             draw_checkbox_glwidget(win, "filmic", app->params.display_filmic);
             draw_checkbox_glwidget(win, "srgb", app->params.display_srgb);
             draw_slider_glwidget(win, "zoom", app->imscale, 0.1, 10);
@@ -95,13 +104,14 @@ void draw_glwidgets(glwindow* win) {
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij        = get_image_coords(mouse_pos, app->imcenter, app->imscale,
-                {app->state->rendered_image.width, app->state->rendered_image.height});
+            auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
+                {app->state->rendered_image.width,
+                    app->state->rendered_image.height});
             draw_dragger_glwidget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->state->rendered_image.width && ij.y >= 0 &&
-                ij.y < app->state->rendered_image.height) {
-                draw_coloredit_glwidget(
-                    win, "pixel", pixel_at(app->state->rendered_image, ij.x, ij.y));
+            if (ij.x >= 0 && ij.x < app->state->rendered_image.width &&
+                ij.y >= 0 && ij.y < app->state->rendered_image.height) {
+                draw_coloredit_glwidget(win, "pixel",
+                    pixel_at(app->state->rendered_image, ij.x, ij.y));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_glwidget(win, "pixel", zero4f_);
@@ -109,13 +119,13 @@ void draw_glwidgets(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "navigate")) {
-            draw_glwidgets_scene_tree(
-                win, "", app->scene.get(), app->selection, app->update_list, 200);
+            draw_glwidgets_scene_tree(win, "", app->scene.get(), app->selection,
+                app->update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspec")) {
-            draw_glwidgets_scene_inspector(
-                win, "", app->scene.get(), app->selection, app->update_list, 200);
+            draw_glwidgets_scene_inspector(win, "", app->scene.get(),
+                app->selection, app->update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -129,14 +139,17 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     center_image4f(app->imcenter, app->imscale,
-        {app->state->display_image.width, app->state->display_image.height}, win_size,
-        app->zoom_to_fit);
+        {app->state->display_image.width, app->state->display_image.height},
+        win_size, app->zoom_to_fit);
     if (!app->gl_txt) {
-        app->gl_txt = make_gltexture(app->state->display_image, false, false, false);
+        app->gl_txt = make_gltexture(
+            app->state->display_image, false, false, false);
     } else {
-        update_gltexture(app->gl_txt, app->state->display_image, false, false, false);
+        update_gltexture(
+            app->gl_txt, app->state->display_image, false, false, false);
     }
-    draw_glimage(app->gl_txt, {app->state->display_image.width, app->state->display_image.height},
+    draw_glimage(app->gl_txt,
+        {app->state->display_image.width, app->state->display_image.height},
         win_size, app->imcenter, app->imscale);
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -154,13 +167,16 @@ bool update(app_state* app) {
         if (get<0>(sel) == "shape") {
             for (auto sid = 0; sid < app->scene->shapes.size(); sid++) {
                 if (app->scene->shapes[sid] == get<1>(sel)) {
-                    refit_bvh((yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
+                    refit_bvh(
+                        (yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
                     break;
                 }
             }
             refit_bvh(app->scene.get(), app->bvh.get());
         }
-        if (get<0>(sel) == "instance") { refit_bvh(app->scene.get(), app->bvh.get()); }
+        if (get<0>(sel) == "instance") {
+            refit_bvh(app->scene.get(), app->bvh.get());
+        }
         if (get<0>(sel) == "node") {
             update_transforms(app->scene.get(), 0);
             refit_bvh(app->scene.get(), app->bvh.get());
@@ -170,9 +186,10 @@ bool update(app_state* app) {
 
     app->state       = {};
     app->trace_start = get_time();
-    app->state       = unique_ptr<trace_state>(make_trace_state(app->scene.get(), app->params));
-    trace_async_start(
-        app->state.get(), app->scene.get(), app->bvh.get(), app->lights.get(), app->params);
+    app->state       = unique_ptr<trace_state>(
+        make_trace_state(app->scene.get(), app->params));
+    trace_async_start(app->state.get(), app->scene.get(), app->bvh.get(),
+        app->lights.get(), app->params);
 
     // updated
     return true;
@@ -204,25 +221,29 @@ void run_ui(app_state* app) {
             auto dolly  = 0.0f;
             auto pan    = zero2f;
             auto rotate = zero2f;
-            if (mouse_left && !shift_down) rotate = (mouse_pos - last_pos) / 100.0f;
+            if (mouse_left && !shift_down)
+                rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto camera = app->scene->cameras.at(app->params.camera_id);
-            camera_turntable(camera->frame, camera->focus_distance, rotate, dolly, pan);
+            camera_turntable(
+                camera->frame, camera->focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", camera});
         }
 
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
-                {app->state->rendered_image.width, app->state->rendered_image.height});
-            if (ij.x < 0 || ij.x >= app->state->rendered_image.width || ij.y < 0 ||
-                ij.y >= app->state->rendered_image.height) {
+                {app->state->rendered_image.width,
+                    app->state->rendered_image.height});
+            if (ij.x < 0 || ij.x >= app->state->rendered_image.width ||
+                ij.y < 0 || ij.y >= app->state->rendered_image.height) {
                 auto camera = app->scene->cameras.at(app->params.camera_id);
                 auto ray    = eval_camera_ray(camera, ij,
-                    {app->state->rendered_image.width, app->state->rendered_image.height},
+                    {app->state->rendered_image.width,
+                        app->state->rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
-                auto isec   = intersect_ray(app->scene.get(), app->bvh.get(), ray);
+                auto isec = intersect_ray(app->scene.get(), app->bvh.get(), ray);
                 if (isec.instance) app->selection = isec.instance;
             }
         }
@@ -248,23 +269,32 @@ int main(int argc, char* argv[]) {
     auto app = new app_state();
 
     // parse command line
-    auto parser           = make_cmdline_parser(argc, argv, "progressive path tracing", "yitrace");
+    auto parser = make_cmdline_parser(
+        argc, argv, "progressive path tracing", "yitrace");
     app->params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
     app->params.vertical_resolution = parse_arg(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    app->params.num_samples   = parse_arg(parser, "--nsamples,-s", 4096, "Number of samples.");
-    app->params.sample_tracer = parse_arge(
-        parser, "--tracer,-t", trace_type::path, "Tracer type.", trace_type_names);
-    app->params.max_bounces = parse_arg(parser, "--nbounces", 4, "Maximum number of bounces.");
-    app->params.pixel_clamp = parse_arg(parser, "--pixel-clamp", 100, "Final pixel clamping.");
+    app->params.num_samples = parse_arg(
+        parser, "--nsamples,-s", 4096, "Number of samples.");
+    app->params.sample_tracer = parse_arge(parser, "--tracer,-t",
+        trace_type::path, "Tracer type.", trace_type_names);
+    app->params.max_bounces   = parse_arg(
+        parser, "--nbounces", 4, "Maximum number of bounces.");
+    app->params.pixel_clamp = parse_arg(
+        parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app->params.random_seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");
-    auto embree       = parse_arg(parser, "--embree", false, "Use Embree ratracer");
-    auto double_sided = parse_arg(parser, "--double-sided", false, "Double-sided rendering.");
-    auto add_skyenv   = parse_arg(parser, "--add-skyenv", false, "Add missing environment map");
-    auto quiet        = parse_arg(parser, "--quiet", false, "Print only errors messages");
-    app->imfilename   = parse_arg(parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    app->filename     = parse_arg(parser, "scene", "scene.json"s, "Scene filename", true);
+    auto embree = parse_arg(parser, "--embree", false, "Use Embree ratracer");
+    auto double_sided = parse_arg(
+        parser, "--double-sided", false, "Double-sided rendering.");
+    auto add_skyenv = parse_arg(
+        parser, "--add-skyenv", false, "Add missing environment map");
+    auto quiet = parse_arg(
+        parser, "--quiet", false, "Print only errors messages");
+    app->imfilename = parse_arg(
+        parser, "--output-image,-o", "out.hdr"s, "Image filename");
+    app->filename = parse_arg(
+        parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
@@ -272,7 +302,9 @@ int main(int argc, char* argv[]) {
     auto load_start = get_time();
     app->scene      = unique_ptr<yocto_scene>(load_scene(app->filename));
     if (!app->scene) log_fatal("cannot load scene " + app->filename);
-    if (!quiet) printf("loading in %s\n", format_duration(get_time() - load_start).c_str());
+    if (!quiet)
+        printf("loading in %s\n",
+            format_duration(get_time() - load_start).c_str());
 
     // tesselate
     if (!quiet) printf("tesselating scene elements\n");
@@ -282,40 +314,48 @@ int main(int argc, char* argv[]) {
     if (!quiet) printf("adding scene elements\n");
     if (add_skyenv && app->scene->environments.empty()) {
         app->scene->environments.push_back(make_sky_environment("sky"));
-        app->scene->textures.push_back(app->scene->environments.back()->emission_texture);
+        app->scene->textures.push_back(
+            app->scene->environments.back()->emission_texture);
     }
     if (double_sided)
         for (auto mat : app->scene->materials) mat->double_sided = true;
     if (app->scene->cameras.empty())
-        app->scene->cameras.push_back(make_bbox_camera("<view>", compute_bbox(app->scene.get())));
+        app->scene->cameras.push_back(
+            make_bbox_camera("<view>", compute_bbox(app->scene.get())));
     add_missing_names(app->scene.get());
-    for (auto& err : validate(app->scene.get())) printf("warning: %s\n", err.c_str());
+    for (auto& err : validate(app->scene.get()))
+        printf("warning: %s\n", err.c_str());
 
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = get_time();
-    app->bvh       = unique_ptr<bvh_tree>(build_bvh(app->scene.get(), true, embree));
-    if (!quiet) printf("building bvh in %s\n", format_duration(get_time() - bvh_start).c_str());
+    app->bvh = unique_ptr<bvh_tree>(build_bvh(app->scene.get(), true, embree));
+    if (!quiet)
+        printf("building bvh in %s\n",
+            format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     if (!quiet) printf("initializing lights\n");
-    app->lights = unique_ptr<trace_lights>(make_trace_lights(app->scene.get(), app->params));
+    app->lights = unique_ptr<trace_lights>(
+        make_trace_lights(app->scene.get(), app->params));
 
     // fix renderer type if no lights
     if (app->lights->instances.empty() && app->lights->environments.empty() &&
         app->params.sample_tracer != trace_type::eyelight) {
-        if (!quiet) printf("no lights presents, switching to eyelight shader\n");
+        if (!quiet)
+            printf("no lights presents, switching to eyelight shader\n");
         app->params.sample_tracer = trace_type::eyelight;
     }
 
     // prepare renderer
-    app->state = unique_ptr<trace_state>(make_trace_state(app->scene.get(), app->params));
+    app->state = unique_ptr<trace_state>(
+        make_trace_state(app->scene.get(), app->params));
 
     // initialize rendering objects
     if (!quiet) printf("starting async renderer\n");
     app->trace_start = get_time();
-    trace_async_start(
-        app->state.get(), app->scene.get(), app->bvh.get(), app->lights.get(), app->params);
+    trace_async_start(app->state.get(), app->scene.get(), app->bvh.get(),
+        app->lights.get(), app->params);
 
     // run interactive
     run_ui(app);

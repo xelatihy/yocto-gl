@@ -35,27 +35,39 @@ int main(int argc, char* argv[]) {
     auto params = trace_params();
 
     // parse command line
-    auto parser                = make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
-    params.camera_id           = parse_arg(parser, "--camera", 0, "Camera index.");
+    auto parser = make_cmdline_parser(
+        argc, argv, "Offline path tracing", "ytrace");
+    params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
     params.vertical_resolution = parse_arg(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    params.num_samples   = parse_arg(parser, "--nsamples,-s", 256, "Number of samples.");
-    params.sample_tracer = parse_arge(
-        parser, "--tracer,-t", trace_type::path, "Trace type.", trace_type_names);
-    params.max_bounces = parse_arg(parser, "--nbounces", 8, "Maximum number of bounces.");
-    params.pixel_clamp = parse_arg(parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
-    params.no_parallel = parse_arg(parser, "--noparallel", false, "Disable parallel execution.");
-    params.random_seed = parse_arg(parser, "--seed", 13, "Seed for the random number generators.");
-    params.samples_per_batch = parse_arg(parser, "--nbatch,-b", 16, "Samples per batch.");
-    auto save_batch   = parse_arg(parser, "--save-batch", false, "Save images progressively");
-    auto exposure     = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto gamma        = parse_arg(parser, "--gamma,-g", 2.2f, "Hdr gamma");
-    auto filmic       = parse_arg(parser, "--filmic", false, "Hdr filmic");
-    auto embree       = parse_arg(parser, "--embree", false, "Use Embree ratracer");
-    auto double_sided = parse_arg(parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto add_skyenv   = parse_arg(parser, "--add-skyenv,-E", false, "add missing environment map");
-    auto imfilename   = parse_arg(parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    auto filename     = parse_arg(parser, "scene", "scene.json"s, "Scene filename", true);
+    params.num_samples = parse_arg(
+        parser, "--nsamples,-s", 256, "Number of samples.");
+    params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,
+        "Trace type.", trace_type_names);
+    params.max_bounces   = parse_arg(
+        parser, "--nbounces", 8, "Maximum number of bounces.");
+    params.pixel_clamp = parse_arg(
+        parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
+    params.no_parallel = parse_arg(
+        parser, "--noparallel", false, "Disable parallel execution.");
+    params.random_seed = parse_arg(
+        parser, "--seed", 13, "Seed for the random number generators.");
+    params.samples_per_batch = parse_arg(
+        parser, "--nbatch,-b", 16, "Samples per batch.");
+    auto save_batch = parse_arg(
+        parser, "--save-batch", false, "Save images progressively");
+    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
+    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "Hdr gamma");
+    auto filmic   = parse_arg(parser, "--filmic", false, "Hdr filmic");
+    auto embree   = parse_arg(parser, "--embree", false, "Use Embree ratracer");
+    auto double_sided = parse_arg(
+        parser, "--double-sided,-D", false, "Double-sided rendering.");
+    auto add_skyenv = parse_arg(
+        parser, "--add-skyenv,-E", false, "add missing environment map");
+    auto imfilename = parse_arg(
+        parser, "--output-image,-o", "out.hdr"s, "Image filename");
+    auto filename = parse_arg(
+        parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
@@ -83,11 +95,13 @@ int main(int argc, char* argv[]) {
     log_info("building bvh");
     auto bvh_start = get_time();
     auto bvh       = unique_ptr<bvh_tree>{build_bvh(scene.get(), true, embree)};
-    log_info("building bvh in {}", format_duration(get_time() - bvh_start).c_str());
+    log_info(
+        "building bvh in {}", format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
     log_info("initializing lights");
-    auto lights = unique_ptr<trace_lights>{make_trace_lights(scene.get(), params)};
+    auto lights = unique_ptr<trace_lights>{
+        make_trace_lights(scene.get(), params)};
 
     // initialize rendering objects
     log_info("initializing tracer data");
@@ -98,23 +112,30 @@ int main(int argc, char* argv[]) {
     auto render_start = get_time();
     auto done         = false;
     while (!done) {
-        log_info("rendering sample {}/{}", state->current_sample, params.num_samples);
+        log_info("rendering sample {}/{}", state->current_sample,
+            params.num_samples);
         auto block_start = get_time();
-        done             = trace_samples(state.get(), scene.get(), bvh.get(), lights.get(), params);
-        log_info("rendering block in {}", format_duration(get_time() - block_start).c_str());
+        done             = trace_samples(
+            state.get(), scene.get(), bvh.get(), lights.get(), params);
+        log_info("rendering block in {}",
+            format_duration(get_time() - block_start).c_str());
         if (save_batch) {
             auto filename = replace_extension(
-                imfilename, to_string(state->current_sample) + "." + get_extension(imfilename));
+                imfilename, to_string(state->current_sample) + "." +
+                                get_extension(imfilename));
             log_info("saving image {}", filename.c_str());
-            if (!save_tonemapped_image(filename, state->rendered_image, exposure, gamma, filmic))
+            if (!save_tonemapped_image(
+                    filename, state->rendered_image, exposure, gamma, filmic))
                 log_fatal("cannot save image " + filename);
         }
     }
-    log_info("rendering image in {}", format_duration(get_time() - render_start).c_str());
+    log_info("rendering image in {}",
+        format_duration(get_time() - render_start).c_str());
 
     // save image
     log_info("saving image {}", imfilename.c_str());
-    if (!save_tonemapped_image(imfilename, state->rendered_image, exposure, gamma, filmic))
+    if (!save_tonemapped_image(
+            imfilename, state->rendered_image, exposure, gamma, filmic))
         log_fatal("cannot save image " + imfilename);
 
     // done

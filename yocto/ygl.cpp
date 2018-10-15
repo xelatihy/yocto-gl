@@ -266,20 +266,22 @@ float perlin_noise(const vec3f& p, const vec3i& wrap) {
 }
 
 // adapeted  stb_perlin.h
-float perlin_ridge_noise(
-    const vec3f& p, float lacunarity, float gain, float offset, int octaves, const vec3i& wrap) {
-    return stb_perlin_ridge_noise3(
-        p.x, p.y, p.z, lacunarity, gain, offset, octaves, wrap.x, wrap.y, wrap.z);
+float perlin_ridge_noise(const vec3f& p, float lacunarity, float gain,
+    float offset, int octaves, const vec3i& wrap) {
+    return stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
+        octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-float perlin_fbm_noise(const vec3f& p, float lacunarity, float gain, int octaves, const vec3i& wrap) {
-    return stb_perlin_fbm_noise3(p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
+float perlin_fbm_noise(const vec3f& p, float lacunarity, float gain,
+    int octaves, const vec3i& wrap) {
+    return stb_perlin_fbm_noise3(
+        p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
-float perlin_turbulence_noise(
-    const vec3f& p, float lacunarity, float gain, int octaves, const vec3i& wrap) {
+float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gain,
+    int octaves, const vec3i& wrap) {
     return stb_perlin_turbulence_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
@@ -292,7 +294,8 @@ float perlin_turbulence_noise(
 namespace ygl {
 
 // Compute per-vertex tangents for lines.
-vector<vec3f> compute_tangents(const vector<vec2i>& lines, const vector<vec3f>& pos) {
+vector<vec3f> compute_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& pos) {
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto& l : lines) {
         auto n = line_tangent(pos[l.x], pos[l.y]);
@@ -304,7 +307,8 @@ vector<vec3f> compute_tangents(const vector<vec2i>& lines, const vector<vec3f>& 
 }
 
 // Compute per-vertex normals for triangles.
-vector<vec3f> compute_normals(const vector<vec3i>& triangles, const vector<vec3f>& pos) {
+vector<vec3f> compute_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto& t : triangles) {
         auto n = triangle_normal(pos[t.x], pos[t.y], pos[t.z]);
@@ -317,7 +321,8 @@ vector<vec3f> compute_normals(const vector<vec3i>& triangles, const vector<vec3f
 }
 
 // Compute per-vertex normals for quads.
-vector<vec3f> compute_normals(const vector<vec4i>& quads, const vector<vec3f>& pos) {
+vector<vec3f> compute_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& pos) {
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto q : quads) {
         auto n = quad_normal(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
@@ -335,14 +340,15 @@ vector<vec3f> compute_normals(const vector<vec4i>& quads, const vector<vec3f>& p
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord) {
+vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord) {
     auto tangu = vector<vec3f>(pos.size(), zero3f);
     auto tangv = vector<vec3f>(pos.size(), zero3f);
     for (auto t : triangles) {
-        auto tutv = triangle_tangents_fromuv(
-            pos[t.x], pos[t.y], pos[t.z], texcoord[t.x], texcoord[t.y], texcoord[t.z]);
-        tutv = {normalize(get<0>(tutv)), normalize(get<1>(tutv))};
+        auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
+            texcoord[t.x], texcoord[t.y], texcoord[t.z]);
+        tutv      = {normalize(get<0>(tutv)), normalize(get<1>(tutv))};
         for (auto vid : {t.x, t.y, t.z}) tangu[vid] += get<0>(tutv);
         for (auto vid : {t.x, t.y, t.z}) tangv[vid] += get<1>(tutv);
     }
@@ -350,8 +356,8 @@ vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles, const vector
     for (auto& t : tangv) t = normalize(t);
     auto tangsp = vector<vec4f>(pos.size(), zero4f);
     for (auto i = 0; i < pos.size(); i++) {
-        tangu[i]  = orthonormalize(tangu[i], norm[i]);
-        auto s    = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
+        tangu[i] = orthonormalize(tangu[i], norm[i]);
+        auto s   = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
         tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
     return tangsp;
@@ -359,15 +365,19 @@ vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles, const vector
 
 // Apply skinning
 tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms) {
+    const vector<vec3f>& norm, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
     auto skinned_pos  = vector<vec3f>(pos.size());
     auto skinned_norm = vector<vec3f>(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
-        skinned_pos[i] = transform_point(xforms[joints[i].x], pos[i]) * weights[i].x +
-                         transform_point(xforms[joints[i].y], pos[i]) * weights[i].y +
-                         transform_point(xforms[joints[i].z], pos[i]) * weights[i].z +
-                         transform_point(xforms[joints[i].w], pos[i]) * weights[i].w;
+        skinned_pos[i] = transform_point(xforms[joints[i].x], pos[i]) *
+                             weights[i].x +
+                         transform_point(xforms[joints[i].y], pos[i]) *
+                             weights[i].y +
+                         transform_point(xforms[joints[i].z], pos[i]) *
+                             weights[i].z +
+                         transform_point(xforms[joints[i].w], pos[i]) *
+                             weights[i].w;
     }
     for (auto i = 0; i < pos.size(); i++) {
         skinned_norm[i] = normalize(
@@ -380,14 +390,17 @@ tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
 }
 
 // Apply skinning as specified in Khronos glTF
-tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights, const vector<vec4i>& joints,
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
     auto skinned_pos  = vector<vec3f>(pos.size());
     auto skinned_norm = vector<vec3f>(norm.size());
     for (auto i = 0; i < pos.size(); i++) {
-        auto xform = xforms[joints[i].x] * weights[i].x + xforms[joints[i].y] * weights[i].y +
-                     xforms[joints[i].z] * weights[i].z + xforms[joints[i].w] * weights[i].w;
+        auto xform = xforms[joints[i].x] * weights[i].x +
+                     xforms[joints[i].y] * weights[i].y +
+                     xforms[joints[i].z] * weights[i].z +
+                     xforms[joints[i].w] * weights[i].w;
         skinned_pos[i]  = transform_point(xform, pos[i]);
         skinned_norm[i] = normalize(transform_direction(xform, norm[i]));
     }
@@ -463,7 +476,8 @@ vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
 
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads, int row_length) {
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length) {
     auto triangles = vector<vec3i>();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
@@ -504,10 +518,11 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos, vector<vec3f>& qnorm,
-    vector<vec2f>& qtexcoord, vector<vec4f>& qcolor, const vector<vec4i>& quads_pos,
-    const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
-    const vector<vec4i>& quads_color, const vector<vec3f>& pos, const vector<vec3f>& norm,
+void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
+    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
+    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
+    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
+    const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, const vector<vec4f>& color) {
     // make faces unique
     unordered_map<vec4i, int> vert_map;
@@ -545,13 +560,16 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos, vector<vec
     qtexcoord.clear();
     if (!texcoord.empty()) {
         qtexcoord.resize(vert_map.size());
-        for (auto kv : vert_map) { qtexcoord[kv.second] = texcoord[kv.first.z]; }
+        for (auto kv : vert_map) {
+            qtexcoord[kv.second] = texcoord[kv.first.z];
+        }
     }
 }
 
 // Subdivide lines.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines(const vector<vec2i>& lines, const vector<T>& vert) {
+tuple<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vert) {
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
     // create vertices
@@ -610,7 +628,8 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles(
         ttriangles[i * 4 + 2] = {t.z, nverts + get_edge_index(emap, {t.z, t.x}),
             nverts + get_edge_index(emap, {t.y, t.z})};
         ttriangles[i * 4 + 3] = {nverts + get_edge_index(emap, {t.x, t.y}),
-            nverts + get_edge_index(emap, {t.y, t.z}), nverts + get_edge_index(emap, {t.z, t.x})};
+            nverts + get_edge_index(emap, {t.y, t.z}),
+            nverts + get_edge_index(emap, {t.z, t.x})};
     }
     // done
     return {ttriangles, tvert};
@@ -627,7 +646,8 @@ template tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
 
 // Subdivide quads.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, const vector<T>& vert) {
+tuple<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vert) {
     // get edges
     auto emap  = make_edge_map(quads);
     auto edges = get_edges(emap);
@@ -645,7 +665,9 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, cons
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
+                                             vert[q.w]) /
+                                         4;
         } else {
             tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
@@ -656,21 +678,21 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, cons
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.w, q.x})};
-            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.x, q.y})};
-            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.y, q.z})};
-            tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.z, q.w})};
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.w, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
+            tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.w})};
         } else {
-            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.z, q.x})};
-            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.x, q.y})};
-            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.y, q.z})};
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
         }
     }
     tquads.resize(qi);
@@ -708,7 +730,8 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers(
         tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
         tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
         tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
-        tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 + 3 * vert[b.z] / 8 + vert[b.w] / 8);
+        tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 + 3 * vert[b.z] / 8 +
+                        vert[b.w] / 8);
         tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
         tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
     }
@@ -750,7 +773,9 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
+                                             vert[q.w]) /
+                                         4;
         } else {
             tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
@@ -761,21 +786,21 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.w, q.x})};
-            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.x, q.y})};
-            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.y, q.z})};
-            tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.z, q.w})};
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.w, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
+            tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.w})};
         } else {
-            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.z, q.x})};
-            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.x, q.y})};
-            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}), nverts + nedges + i,
-                nverts + get_edge_index(emap, {q.y, q.z})};
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
         }
     }
     tquads.resize(qi);
@@ -854,7 +879,8 @@ template tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<vec4f>&, bool);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-tuple<vector<vec3f>, vector<int>> weld_vertices(const vector<vec3f>& pos, float threshold) {
+tuple<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& pos, float threshold) {
     auto vid  = vector<int>(pos.size());
     auto wpos = vector<vec3f>();
     for (auto i = 0; i < pos.size(); i++) {
@@ -903,21 +929,24 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, int npoints, int seed) {
+    const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    int seed) {
     auto sampled_pos      = vector<vec3f>(npoints);
     auto sampled_norm     = vector<vec3f>(npoints);
     auto sampled_texcoord = vector<vec2f>(npoints);
     auto cdf              = sample_triangles_cdf(triangles, pos);
     auto rng              = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto ei        = 0;
-        auto uv        = zero2f;
-        tie(ei, uv)    = sample_triangles(cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
+        auto ei     = 0;
+        auto uv     = zero2f;
+        tie(ei, uv) = sample_triangles(
+            cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
         auto t         = triangles[ei];
         sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], uv);
         if (!sampled_norm.empty()) {
-            sampled_norm[i] = normalize(interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], uv));
+            sampled_norm[i] = normalize(
+                interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], uv));
         } else {
             sampled_norm[i] = triangle_normal(pos[t.x], pos[t.y], pos[t.z]);
         }
@@ -940,7 +969,8 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
 namespace ygl {
 
 // Intersect a ray with a point (approximate)
-bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& dist, vec2f& uv) {
+bool intersect_point(
+    const ray3f& ray, const vec3f& p, float r, float& dist, vec2f& uv) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
     auto t = dot(w, ray.d) / dot(ray.d, ray.d);
@@ -961,8 +991,8 @@ bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& dist, vec
 }
 
 // Intersect a ray with a line
-bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1,
-    float& dist, vec2f& uv) {
+bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    float r0, float r1, float& dist, vec2f& uv) {
     // setup intersection params
     auto u = ray.d;
     auto v = p1 - p0;
@@ -1008,8 +1038,8 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0
 }
 
 // Intersect a ray with a triangle
-bool intersect_triangle(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2, float& dist, vec2f& uv) {
+bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, float& dist, vec2f& uv) {
     // compute triangle edges
     auto edge1 = p1 - p0;
     auto edge2 = p2 - p0;
@@ -1045,8 +1075,8 @@ bool intersect_triangle(
 }
 
 // Intersect a ray with a quad.
-bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    const vec3f& p3, float& dist, vec2f& uv) {
+bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv) {
     auto hit  = false;
     auto tray = ray;
     if (intersect_triangle(tray, p0, p1, p3, dist, uv)) {
@@ -1063,10 +1093,14 @@ bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1, const ve
 
 // Min/max used in BVH traversal. Copied here since the traversal code
 // relies on the specific behaviour wrt NaNs.
-static inline const float& _safemin(const float& a, const float& b) { return (a < b) ? a : b; }
+static inline const float& _safemin(const float& a, const float& b) {
+    return (a < b) ? a : b;
+}
 // Min/max used in BVH traversal. Copied here since the traversal code
 // relies on the specific behaviour wrt NaNs.
-static inline const float& _safemax(const float& a, const float& b) { return (a > b) ? a : b; }
+static inline const float& _safemax(const float& a, const float& b) {
+    return (a > b) ? a : b;
+}
 
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
@@ -1085,8 +1119,8 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
 }
 
 // Intersect a ray with a axis-aligned bounding box
-bool intersect_bbox(
-    const ray3f& ray, const vec3f& ray_dinv, const vec3i& ray_dsign, const bbox3f& bbox_) {
+bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox_) {
     auto bbox  = &bbox_.min;
     auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
     auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
@@ -1108,7 +1142,8 @@ bool intersect_bbox(
 namespace ygl {
 
 // TODO: documentation
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r, float& dist, vec2f& uv) {
+bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
+    float& dist, vec2f& uv) {
     auto d2 = dot(pos - p, pos - p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     dist = sqrt(d2);
@@ -1128,8 +1163,8 @@ float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
 }
 
 // TODO: documentation
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0, const vec3f& p1, float r0,
-    float r1, float& dist, vec2f& uv) {
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, float r0, float r1, float& dist, vec2f& uv) {
     auto u = closestuv_line(pos, p0, p1);
     // Compute projected position from the clamped t d = a + t * ab;
     auto p  = p0 + (p1 - p0) * u;
@@ -1146,7 +1181,8 @@ bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0, const vec3f
 // TODO: documentation
 // this is a complicated test -> I probably "--"+prefix to use a sequence of
 // test (triangle body, and 3 edges)
-vec2f closestuv_triangle(const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+vec2f closestuv_triangle(
+    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     auto ab = p1 - p0;
     auto ac = p2 - p0;
     auto ap = pos - p0;
@@ -1187,8 +1223,9 @@ vec2f closestuv_triangle(const vec3f& pos, const vec3f& p0, const vec3f& p1, con
 }
 
 // TODO: documentation
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, float r0, float r1, float r2, float& dist, vec2f& uv) {
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
+    vec2f& uv) {
     uv      = closestuv_triangle(pos, p0, p1, p2);
     auto p  = interpolate_triangle(p0, p1, p2, uv);
     auto r  = interpolate_triangle(r0, r1, r2, uv);
@@ -1199,8 +1236,9 @@ bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0, const v
 }
 
 // TODO: documentation
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0, const vec3f& p1, const vec3f& p2,
-    const vec3f& p3, float r0, float r1, float r2, float r3, float& dist, vec2f& uv) {
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
+    float r2, float r3, float& dist, vec2f& uv) {
     auto hit = false;
     if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r3, dist, uv)) {
         dist_max = dist;
@@ -1272,8 +1310,8 @@ struct bvh_prim {
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-int make_bvh_node(
-    vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start, int end, bool high_quality) {
+int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
+    int end, bool high_quality) {
     // add a new node
     auto nodeid = (int)nodes.size();
     nodes.push_back({});
@@ -1304,13 +1342,16 @@ int make_bvh_node(
                 auto      min_cost  = maxf;
                 auto      bbox_area = [](auto& b) {
                     auto size = b.max - b.min;
-                    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z + 2 * size.y * size.z;
+                    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
+                           2 * size.y * size.z;
                 };
                 auto min_left = 0, min_right = 0;
                 for (auto axis = 0; axis < 3; axis++) {
                     for (auto b = 1; b < nbins; b++) {
-                        auto split     = (&cbbox.min.x)[axis] + b * (&csize.x)[axis] / nbins;
-                        auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
+                        auto split = (&cbbox.min.x)[axis] +
+                                     b * (&csize.x)[axis] / nbins;
+                        auto left_bbox   = invalid_bbox3f,
+                             right_bbox  = invalid_bbox3f;
                         auto left_nprims = 0, right_nprims = 0;
                         for (auto i = start; i < end; i++) {
                             if ((&prims[i].center.x)[axis] < split) {
@@ -1321,8 +1362,11 @@ int make_bvh_node(
                                 right_nprims += 1;
                             }
                         }
-                        auto cost = 1 + left_nprims * bbox_area(left_bbox) / bbox_area(cbbox) +
-                                    right_nprims * bbox_area(right_bbox) / bbox_area(cbbox);
+                        auto cost = 1 +
+                                    left_nprims * bbox_area(left_bbox) /
+                                        bbox_area(cbbox) +
+                                    right_nprims * bbox_area(right_bbox) /
+                                        bbox_area(cbbox);
                         if (cost < min_cost) {
                             min_cost   = cost;
                             middle     = split;
@@ -1333,11 +1377,14 @@ int make_bvh_node(
                     }
                 }
                 // split
-                mid = (int)(std::partition(prims.data() + start, prims.data() + end,
-                                [split_axis, middle](
-                                    auto& a) { return (&a.center.x)[split_axis] < middle; }) -
+                mid = (int)(std::partition(prims.data() + start,
+                                prims.data() + end,
+                                [split_axis, middle](auto& a) {
+                                    return (&a.center.x)[split_axis] < middle;
+                                }) -
                             prims.data());
-                if (mid == start || mid == end) throw runtime_error("bad build");
+                if (mid == start || mid == end)
+                    throw runtime_error("bad build");
             } else {
                 // split along largest
                 auto largest_axis = 0;
@@ -1349,9 +1396,10 @@ int make_bvh_node(
 #if 1
                 split_axis = largest_axis;
                 mid        = (start + end) / 2;
-                std::nth_element(prims.data() + start, prims.data() + mid, prims.data() + end,
-                    [split_axis](auto& a, auto& b) {
-                        return (&a.center.x)[split_axis] < (&b.center.x)[split_axis];
+                std::nth_element(prims.data() + start, prims.data() + mid,
+                    prims.data() + end, [split_axis](auto& a, auto& b) {
+                        return (&a.center.x)[split_axis] <
+                               (&b.center.x)[split_axis];
                     });
 #endif
 #if 0
@@ -1379,8 +1427,10 @@ int make_bvh_node(
         node.is_internal      = true;
         node.split_axis       = split_axis;
         node.num_primitives   = 2;
-        node.primitive_ids[0] = make_bvh_node(nodes, prims, start, mid, high_quality);
-        node.primitive_ids[1] = make_bvh_node(nodes, prims, mid, end, high_quality);
+        node.primitive_ids[0] = make_bvh_node(
+            nodes, prims, start, mid, high_quality);
+        node.primitive_ids[1] = make_bvh_node(
+            nodes, prims, mid, end, high_quality);
     } else {
         // Make a leaf node
         node.is_internal    = false;
@@ -1403,13 +1453,13 @@ void build_bvh(bvh_tree* bvh, bool high_quality) {
         }
     } else if (!bvh->lines.empty()) {
         for (auto& l : bvh->lines) {
-            prims.push_back({line_bbox(
-                bvh->positions[l.x], bvh->positions[l.y], bvh->radius[l.x], bvh->radius[l.y])});
+            prims.push_back({line_bbox(bvh->positions[l.x], bvh->positions[l.y],
+                bvh->radius[l.x], bvh->radius[l.y])});
         }
     } else if (!bvh->triangles.empty()) {
         for (auto& t : bvh->triangles) {
-            prims.push_back(
-                {triangle_bbox(bvh->positions[t.x], bvh->positions[t.y], bvh->positions[t.z])});
+            prims.push_back({triangle_bbox(bvh->positions[t.x],
+                bvh->positions[t.y], bvh->positions[t.z])});
         }
     } else if (!bvh->quads.empty()) {
         for (auto& q : bvh->quads) {
@@ -1419,7 +1469,8 @@ void build_bvh(bvh_tree* bvh, bool high_quality) {
     } else if (!bvh->instances.empty()) {
         for (auto& instance : bvh->instances) {
             auto sbvh = bvh->shape_bvhs[instance.shape_id];
-            prims.push_back({transform_bbox(instance.frame, sbvh->nodes[0].bbox)});
+            prims.push_back(
+                {transform_bbox(instance.frame, sbvh->nodes[0].bbox)});
         }
     }
 
@@ -1449,19 +1500,20 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
     } else if (!bvh->triangles.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& t = bvh->triangles[node.primitive_ids[i]];
-            node.bbox += triangle_bbox(bvh->positions[t.x], bvh->positions[t.y], bvh->positions[t.z]);
+            node.bbox += triangle_bbox(
+                bvh->positions[t.x], bvh->positions[t.y], bvh->positions[t.z]);
         }
     } else if (!bvh->quads.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& t = bvh->quads[node.primitive_ids[i]];
-            node.bbox += quad_bbox(
-                bvh->positions[t.x], bvh->positions[t.y], bvh->positions[t.z], bvh->positions[t.w]);
+            node.bbox += quad_bbox(bvh->positions[t.x], bvh->positions[t.y],
+                bvh->positions[t.z], bvh->positions[t.w]);
         }
     } else if (!bvh->lines.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& l = bvh->lines[node.primitive_ids[i]];
-            node.bbox += line_bbox(
-                bvh->positions[l.x], bvh->positions[l.y], bvh->radius[l.x], bvh->radius[l.y]);
+            node.bbox += line_bbox(bvh->positions[l.x], bvh->positions[l.y],
+                bvh->radius[l.x], bvh->radius[l.y]);
         }
     } else if (!bvh->points.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
@@ -1486,10 +1538,16 @@ void refit_bvh(bvh_tree* bvh) { refit_bvh(bvh, 0); }
 void embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
         case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
-        case RTC_ERROR_INVALID_ARGUMENT: printf("RTC_ERROR_INVALID_ARGUMENT"); break;
-        case RTC_ERROR_INVALID_OPERATION: printf("RTC_ERROR_INVALID_OPERATION"); break;
+        case RTC_ERROR_INVALID_ARGUMENT:
+            printf("RTC_ERROR_INVALID_ARGUMENT");
+            break;
+        case RTC_ERROR_INVALID_OPERATION:
+            printf("RTC_ERROR_INVALID_OPERATION");
+            break;
         case RTC_ERROR_OUT_OF_MEMORY: printf("RTC_ERROR_OUT_OF_MEMORY"); break;
-        case RTC_ERROR_UNSUPPORTED_CPU: printf("RTC_ERROR_UNSUPPORTED_CPU"); break;
+        case RTC_ERROR_UNSUPPORTED_CPU:
+            printf("RTC_ERROR_UNSUPPORTED_CPU");
+            break;
         case RTC_ERROR_CANCELLED: printf("RTC_ERROR_CANCELLED"); break;
         default: printf("invalid error code"); break;
     }
@@ -1515,12 +1573,14 @@ void build_embree_bvh(bvh_tree* bvh) {
     } else if (!bvh->lines.empty()) {
         throw runtime_error("not yet implemented");
     } else if (!bvh->triangles.empty()) {
-        auto embree_geom = rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+        auto embree_geom = rtcNewGeometry(
+            embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        auto vert = rtcSetNewGeometryBuffer(
-            embree_geom, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4, bvh->pos.size());
-        auto triangles = rtcSetNewGeometryBuffer(
-            embree_geom, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4, bvh->triangles.size());
+        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
+            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh->pos.size());
+        auto triangles = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
+            bvh->triangles.size());
         memcpy(vert, bvh->pos.data(), bvh->pos.size() * 12);
         memcpy(triangles, bvh->triangles.data(), bvh->triangles.size() * 12);
         rtcCommitGeometry(embree_geom);
@@ -1530,11 +1590,12 @@ void build_embree_bvh(bvh_tree* bvh) {
     } else if (!bvh->instances.empty()) {
         for (auto iid = 0; iid < bvh->instances.size(); iid++) {
             auto instance    = bvh->instances[iid];
-            auto embree_geom = rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
-            rtcSetGeometryInstancedScene(
-                embree_geom, (RTCScene)bvh->shape_bvhs[instance.sid]->embree_bvh);
-            rtcSetGeometryTransform(
-                embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+            auto embree_geom = rtcNewGeometry(
+                embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+            rtcSetGeometryInstancedScene(embree_geom,
+                (RTCScene)bvh->shape_bvhs[instance.sid]->embree_bvh);
+            rtcSetGeometryTransform(embree_geom, 0,
+                RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
             rtcCommitGeometry(embree_geom);
             rtcAttachGeometryByID(embree_scene, embree_geom, iid);
         }
@@ -1543,9 +1604,11 @@ void build_embree_bvh(bvh_tree* bvh) {
     bvh->embree_bvh = embree_scene;
 }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
-void refit_embree_bvh(bvh_tree* bvh) { throw runtime_error("not yet implemented"); }
-bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any, float& dist,
-    int& iid, int& eid, vec2f& uv) {
+void refit_embree_bvh(bvh_tree* bvh) {
+    throw runtime_error("not yet implemented");
+}
+bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
+    float& dist, int& iid, int& eid, vec2f& uv) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -1574,8 +1637,8 @@ void build_embree_bvh(bvh_tree* bvh) { return build_bvh(bvh, true); }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
 void refit_embree_bvh(bvh_tree* bvh) { return refit_bvh(bvh); }
 // Intersect BVH using Embree
-bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float& dist,
-    int& iid, int& eid, vec2f& uv) {
+bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
+    float& dist, int& iid, int& eid, vec2f& uv) {
     throw runtime_error("this should not have been called");
 }
 #endif
@@ -1589,10 +1652,11 @@ void build_bvh(bvh_tree* bvh, bool high_quality, bool embree) {
 }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float& dist, int& iid,
-    int& eid, vec2f& uv) {
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
+    float& dist, int& iid, int& eid, vec2f& uv) {
     // call Embree if needed
-    if (bvh->embree_bvh) return intersect_embree_bvh(bvh, ray_, find_any, dist, iid, eid, uv);
+    if (bvh->embree_bvh)
+        return intersect_embree_bvh(bvh, ray_, find_any, dist, iid, eid, uv);
 
     // node stack
     int  node_stack[128];
@@ -1607,8 +1671,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float&
 
     // prepare ray for fast queries
     auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-    auto ray_dsign = vec3i{
-        (ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0, (ray_dinv.z < 0) ? 1 : 0};
+    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
+        (ray_dinv.z < 0) ? 1 : 0};
 
     // walking stack
     while (node_cur) {
@@ -1633,8 +1697,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float&
         } else if (!bvh->triangles.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh->triangles[node.primitive_ids[i]];
-                if (intersect_triangle(ray, bvh->positions[t.x], bvh->positions[t.y],
-                        bvh->positions[t.z], dist, uv)) {
+                if (intersect_triangle(ray, bvh->positions[t.x],
+                        bvh->positions[t.y], bvh->positions[t.z], dist, uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1653,8 +1717,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float&
         } else if (!bvh->lines.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh->lines[node.primitive_ids[i]];
-                if (intersect_line(ray, bvh->positions[l.x], bvh->positions[l.y], bvh->radius[l.x],
-                        bvh->radius[l.y], dist, uv)) {
+                if (intersect_line(ray, bvh->positions[l.x], bvh->positions[l.y],
+                        bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1663,7 +1727,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float&
         } else if (!bvh->points.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh->points[node.primitive_ids[i]];
-                if (intersect_point(ray, bvh->positions[p], bvh->radius[p], dist, uv)) {
+                if (intersect_point(
+                        ray, bvh->positions[p], bvh->radius[p], dist, uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1673,7 +1738,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float&
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh->instances[node.primitive_ids[i]];
                 if (intersect_bvh(bvh->shape_bvhs[instance.shape_id],
-                        transform_ray(instance.frame_inverse, ray), find_any, dist, iid, eid, uv)) {
+                        transform_ray(instance.frame_inverse, ray), find_any,
+                        dist, iid, eid, uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     iid      = node.primitive_ids[i];
@@ -1691,8 +1757,8 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any, float&
 }
 
 // Finds the closest element with a bvh.
-bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool find_any, float& dist,
-    int& iid, int& eid, vec2f& uv) {
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+    bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
     // node stack
     int  node_stack[64];
     auto node_cur          = 0;
@@ -1718,9 +1784,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool fin
         } else if (!bvh->triangles.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh->triangles[node.primitive_ids[i]];
-                if (overlap_triangle(pos, max_dist, bvh->positions[t.x], bvh->positions[t.y],
-                        bvh->positions[t.z], bvh->radius[t.x], bvh->radius[t.y], bvh->radius[t.z],
-                        dist, uv)) {
+                if (overlap_triangle(pos, max_dist, bvh->positions[t.x],
+                        bvh->positions[t.y], bvh->positions[t.z], bvh->radius[t.x],
+                        bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1729,9 +1795,10 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool fin
         } else if (!bvh->quads.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& q = bvh->quads[node.primitive_ids[i]];
-                if (overlap_quad(pos, max_dist, bvh->positions[q.x], bvh->positions[q.y],
-                        bvh->positions[q.z], bvh->positions[q.w], bvh->radius[q.x],
-                        bvh->radius[q.y], bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
+                if (overlap_quad(pos, max_dist, bvh->positions[q.x],
+                        bvh->positions[q.y], bvh->positions[q.z],
+                        bvh->positions[q.w], bvh->radius[q.x], bvh->radius[q.y],
+                        bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1740,8 +1807,9 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool fin
         } else if (!bvh->lines.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh->lines[node.primitive_ids[i]];
-                if (overlap_line(pos, max_dist, bvh->positions[l.x], bvh->positions[l.y],
-                        bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
+                if (overlap_line(pos, max_dist, bvh->positions[l.x],
+                        bvh->positions[l.y], bvh->radius[l.x], bvh->radius[l.y],
+                        dist, uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1750,7 +1818,8 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool fin
         } else if (!bvh->points.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh->points[node.primitive_ids[i]];
-                if (overlap_point(pos, max_dist, bvh->positions[p], bvh->radius[p], dist, uv)) {
+                if (overlap_point(pos, max_dist, bvh->positions[p],
+                        bvh->radius[p], dist, uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1760,8 +1829,8 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool fin
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh->instances[node.primitive_ids[i]];
                 if (overlap_bvh(bvh->shape_bvhs[instance.shape_id],
-                        transform_point(instance.frame_inverse, pos), max_dist, find_any, dist, iid,
-                        eid, uv)) {
+                        transform_point(instance.frame_inverse, pos), max_dist,
+                        find_any, dist, iid, eid, uv)) {
                     hit      = true;
                     max_dist = dist;
                     iid      = node.primitive_ids[i];
@@ -1847,15 +1916,15 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool fin
 namespace ygl {
 
 // Make a quad.
-make_shape_data make_quad(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool as_triangles) {
+make_shape_data make_quad(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, bool as_triangles) {
     auto shape = make_shape_data();
     shape.positions.resize((steps.x + 1) * (steps.y + 1));
     shape.normals.resize((steps.x + 1) * (steps.y + 1));
     shape.texturecoords.resize((steps.x + 1) * (steps.y + 1));
     for (auto j = 0; j <= steps.y; j++) {
         for (auto i = 0; i <= steps.x; i++) {
-            auto uv                                = vec2f{i / (float)steps.x, j / (float)steps.y};
+            auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
             shape.positions[j * (steps.x + 1) + i] = {
                 (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
             shape.normals[j * (steps.x + 1) + i]       = {0, 0, 1};
@@ -1867,18 +1936,21 @@ make_shape_data make_quad(
         shape.quads.resize(steps.x * steps.y);
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i < steps.x; i++) {
-                shape.quads[j * steps.x + i] = {j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1,
-                    (j + 1) * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i};
+                shape.quads[j * steps.x + i] = {j * (steps.x + 1) + i,
+                    j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
+                    (j + 1) * (steps.x + 1) + i};
             }
         }
     } else {
         shape.triangles.resize(steps.x * steps.y * 2);
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i < steps.x; i++) {
-                shape.triangles[(j * steps.x + i) * 2 + 0] = {j * (steps.x + 1) + i,
-                    j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1};
-                shape.triangles[(j * steps.x + i) * 2 + 1] = {j * (steps.x + 1) + i,
-                    (j + 1) * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i};
+                shape.triangles[(j * steps.x + i) * 2 + 0] = {
+                    j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1,
+                    (j + 1) * (steps.x + 1) + i + 1};
+                shape.triangles[(j * steps.x + i) * 2 + 1] = {
+                    j * (steps.x + 1) + i, (j + 1) * (steps.x + 1) + i + 1,
+                    (j + 1) * (steps.x + 1) + i};
             }
         }
     }
@@ -1886,8 +1958,8 @@ make_shape_data make_quad(
     return shape;
 }
 
-make_shape_data make_floor(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool as_triangles) {
+make_shape_data make_floor(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, bool as_triangles) {
     auto shape = make_quad(steps, size, uvsize, as_triangles);
     for (auto& p : shape.positions) p = {p.x, p.z, p.y};
     for (auto& n : shape.normals) n = {n.x, n.z, n.y};
@@ -1895,69 +1967,84 @@ make_shape_data make_floor(
 }
 
 // Make a stack of quads
-make_shape_data make_quad_stack(
-    const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool as_triangles) {
+make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
+    const vec2f& uvsize, bool as_triangles) {
     auto qshps = vector<make_shape_data>(steps.z + 1);
     for (auto i = 0; i <= steps.z; i++) {
-        qshps[i] = make_quad({steps.x, steps.y}, {size.x, size.y}, uvsize, as_triangles);
-        for (auto& p : qshps[i].positions) p.z = (-0.5f + (float)i / steps.z) * size.z;
+        qshps[i] = make_quad(
+            {steps.x, steps.y}, {size.x, size.y}, uvsize, as_triangles);
+        for (auto& p : qshps[i].positions)
+            p.z = (-0.5f + (float)i / steps.z) * size.z;
     }
     return merge_shape_data(qshps);
 }
 
 // Make a cube.
-make_shape_data make_cube(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool as_triangles) {
+make_shape_data make_cube(const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, bool as_triangles) {
     auto qshps = vector<make_shape_data>(6);
     // + z
-    qshps[0] = make_quad({steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y}, as_triangles);
+    qshps[0] = make_quad({steps.x, steps.y}, {size.x, size.y},
+        {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[0].positions.size(); i++) {
-        qshps[0].positions[i] = {qshps[0].positions[i].x, qshps[0].positions[i].y, size.z / 2};
-        qshps[0].normals[i]   = {0, 0, 1};
+        qshps[0].positions[i] = {
+            qshps[0].positions[i].x, qshps[0].positions[i].y, size.z / 2};
+        qshps[0].normals[i] = {0, 0, 1};
     }
     // - z
-    qshps[1] = make_quad({steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y}, as_triangles);
+    qshps[1] = make_quad({steps.x, steps.y}, {size.x, size.y},
+        {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[1].positions.size(); i++) {
-        qshps[1].positions[i] = {-qshps[1].positions[i].x, qshps[1].positions[i].y, -size.z / 2};
-        qshps[1].normals[i]   = {0, 0, -1};
+        qshps[1].positions[i] = {
+            -qshps[1].positions[i].x, qshps[1].positions[i].y, -size.z / 2};
+        qshps[1].normals[i] = {0, 0, -1};
     }
     // + x
-    qshps[2] = make_quad({steps.y, steps.z}, {size.y, size.z}, {uvsize.y, uvsize.z}, as_triangles);
+    qshps[2] = make_quad({steps.y, steps.z}, {size.y, size.z},
+        {uvsize.y, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[2].positions.size(); i++) {
-        qshps[2].positions[i] = {size.x / 2, qshps[2].positions[i].y, -qshps[2].positions[i].x};
-        qshps[2].normals[i]   = {1, 0, 0};
+        qshps[2].positions[i] = {
+            size.x / 2, qshps[2].positions[i].y, -qshps[2].positions[i].x};
+        qshps[2].normals[i] = {1, 0, 0};
     }
     // - x
-    qshps[3] = make_quad({steps.y, steps.z}, {size.y, size.z}, {uvsize.y, uvsize.z}, as_triangles);
+    qshps[3] = make_quad({steps.y, steps.z}, {size.y, size.z},
+        {uvsize.y, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[3].positions.size(); i++) {
-        qshps[3].positions[i] = {-size.x / 2, qshps[3].positions[i].y, qshps[3].positions[i].x};
-        qshps[3].normals[i]   = {-1, 0, 0};
+        qshps[3].positions[i] = {
+            -size.x / 2, qshps[3].positions[i].y, qshps[3].positions[i].x};
+        qshps[3].normals[i] = {-1, 0, 0};
     }
     // + y
-    qshps[4] = make_quad({steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y}, as_triangles);
+    qshps[4] = make_quad({steps.x, steps.y}, {size.x, size.y},
+        {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[4].positions.size(); i++) {
-        qshps[4].positions[i] = {qshps[4].positions[i].x, size.y / 2, -qshps[4].positions[i].y};
-        qshps[4].normals[i]   = {0, 1, 0};
+        qshps[4].positions[i] = {
+            qshps[4].positions[i].x, size.y / 2, -qshps[4].positions[i].y};
+        qshps[4].normals[i] = {0, 1, 0};
     }
     // - y
-    qshps[5] = make_quad({steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y}, as_triangles);
+    qshps[5] = make_quad({steps.x, steps.y}, {size.x, size.y},
+        {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[5].positions.size(); i++) {
-        qshps[5].positions[i] = {qshps[5].positions[i].x, -size.y / 2, qshps[5].positions[i].y};
-        qshps[5].normals[i]   = {0, -1, 0};
+        qshps[5].positions[i] = {
+            qshps[5].positions[i].x, -size.y / 2, qshps[5].positions[i].y};
+        qshps[5].normals[i] = {0, -1, 0};
     }
     return merge_shape_data(qshps);
 }
 
 // Make a rounded cube.
-make_shape_data make_cube_rounded(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius, bool as_triangles) {
+make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, float radius, bool as_triangles) {
     auto shape = make_cube(steps, size, uvsize, as_triangles);
     auto c     = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < shape.positions.size(); i++) {
-        auto pc = vec3f{
-            fabs(shape.positions[i].x), fabs(shape.positions[i].y), fabs(shape.positions[i].z)};
+        auto pc = vec3f{fabs(shape.positions[i].x), fabs(shape.positions[i].y),
+            fabs(shape.positions[i].z)};
         auto ps = vec3f{shape.positions[i].x < 0 ? -1.0f : 1.0f,
-            shape.positions[i].y < 0 ? -1.0f : 1.0f, shape.positions[i].z < 0 ? -1.0f : 1.0f};
+            shape.positions[i].y < 0 ? -1.0f : 1.0f,
+            shape.positions[i].z < 0 ? -1.0f : 1.0f};
         if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
             auto pn            = normalize(pc - c);
             shape.positions[i] = c + radius * pn;
@@ -1984,12 +2071,13 @@ make_shape_data make_cube_rounded(
 }
 
 // Make a sphere.
-make_shape_data make_sphere(const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
+make_shape_data make_sphere(
+    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
     auto shape = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
-        auto uv                = shape.texturecoords[i];
-        auto a                 = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        auto p                 = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        auto uv = shape.texturecoords[i];
+        auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+        auto p  = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         shape.positions[i]     = p * (size / 2);
         shape.normals[i]       = normalize(p);
         shape.texturecoords[i] = uv * uvsize;
@@ -1998,8 +2086,10 @@ make_shape_data make_sphere(const vec2i& steps, float size, const vec2f& uvsize,
 }
 
 // Make a spherecube.
-make_shape_data make_sphere_cube(int steps, float size, float uvsize, bool as_triangles) {
-    auto shape = make_cube({steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize}, as_triangles);
+make_shape_data make_sphere_cube(
+    int steps, float size, float uvsize, bool as_triangles) {
+    auto shape = make_cube({steps, steps, steps}, {1, 1, 1},
+        {uvsize, uvsize, uvsize}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto p             = shape.positions[i];
         shape.positions[i] = normalize(p) * (size / 2);
@@ -2009,8 +2099,8 @@ make_shape_data make_sphere_cube(int steps, float size, float uvsize, bool as_tr
 }
 
 // Make a flipped sphere. This is not watertight.
-make_shape_data make_sphere_flipcap(
-    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip, bool as_triangles) {
+make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
+    const vec2f& uvsize, const vec2f& zflip, bool as_triangles) {
     auto shape = make_sphere(steps, size, uvsize, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         if (shape.positions[i].z > zflip.y) {
@@ -2027,12 +2117,14 @@ make_shape_data make_sphere_flipcap(
 }
 
 // Make a disk.
-make_shape_data make_disk(const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
+make_shape_data make_disk(
+    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
     auto shape = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
-        auto uv                = shape.texturecoords[i];
-        auto phi               = 2 * pif * uv.x;
-        shape.positions[i]     = {cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
+        auto uv            = shape.texturecoords[i];
+        auto phi           = 2 * pif * uv.x;
+        shape.positions[i] = {
+            cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
         shape.normals[i]       = {0, 0, 1};
         shape.texturecoords[i] = uv * uvsize;
     }
@@ -2040,13 +2132,16 @@ make_shape_data make_disk(const vec2i& steps, float size, const vec2f& uvsize, b
 }
 
 // Make a disk from a quad.
-make_shape_data make_disk_quad(int steps, float size, float uvsize, bool as_triangles) {
-    auto shape = make_quad({steps, steps}, {2, 2}, {uvsize, uvsize}, as_triangles);
+make_shape_data make_disk_quad(
+    int steps, float size, float uvsize, bool as_triangles) {
+    auto shape = make_quad(
+        {steps, steps}, {2, 2}, {uvsize, uvsize}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
         auto xy = vec2f{shape.positions[i].x, shape.positions[i].y};
-        auto uv = vec2f{xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
+        auto uv = vec2f{
+            xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
         shape.positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
     return shape;
@@ -2068,43 +2163,49 @@ make_shape_data make_disk_bulged(
 }
 
 // Make a cylinder (side-only).
-make_shape_data make_cylinder_side(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool as_triangles) {
+make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, bool as_triangles) {
     auto shape = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
-        auto uv            = shape.texturecoords[i];
-        auto phi           = 2 * pif * uv.x;
-        shape.positions[i] = {cos(phi) * size.x / 2, sin(phi) * size.x / 2, (uv.y - 0.5f) * size.y};
-        shape.normals[i]   = {cos(phi), sin(phi), 0};
+        auto uv                = shape.texturecoords[i];
+        auto phi               = 2 * pif * uv.x;
+        shape.positions[i]     = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
+            (uv.y - 0.5f) * size.y};
+        shape.normals[i]       = {cos(phi), sin(phi), 0};
         shape.texturecoords[i] = uv * uvsize;
     }
     return shape;
 }
 
 // Make a cylinder.
-make_shape_data make_cylinder(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool as_triangles) {
+make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, bool as_triangles) {
     auto qshps = vector<make_shape_data>(3);
     // side
-    qshps[0] = make_cylinder_side(
-        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y}, as_triangles);
+    qshps[0] = make_cylinder_side({steps.x, steps.y}, {size.x, size.y},
+        {uvsize.x, uvsize.y}, as_triangles);
     // top
-    qshps[1] = make_disk({steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
-    for (auto i = 0; i < qshps[1].positions.size(); i++) { qshps[1].positions[i].z = size.y / 2; }
+    qshps[1] = make_disk(
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
+    for (auto i = 0; i < qshps[1].positions.size(); i++) {
+        qshps[1].positions[i].z = size.y / 2;
+    }
     // bottom
-    qshps[2] = make_disk({steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
+    qshps[2] = make_disk(
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[2].positions.size(); i++) {
         qshps[2].positions[i].z = -size.y / 2;
         qshps[2].normals[i]     = -qshps[2].normals[i];
     }
-    for (auto i = 0; i < qshps[2].quads.size(); i++) swap(qshps[2].quads[i].x, qshps[2].quads[i].z);
+    for (auto i = 0; i < qshps[2].quads.size(); i++)
+        swap(qshps[2].quads[i].x, qshps[2].quads[i].z);
 
     return merge_shape_data(qshps);
 }
 
 // Make a rounded cylinder.
-make_shape_data make_cylinder_rounded(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius, bool as_triangles) {
+make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, float radius, bool as_triangles) {
     auto shape = make_cylinder(steps, size, uvsize, as_triangles);
     auto c     = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < shape.positions.size(); i++) {
@@ -2115,8 +2216,8 @@ make_shape_data make_cylinder_rounded(
         auto ps  = (z < 0) ? -1.0f : 1.0f;
         if (pc.x >= c.x && pc.y >= c.y) {
             auto pn            = normalize(pc - c);
-            shape.positions[i] = {cos(phi) * c.x + radius * pn.x, sin(phi) * c.x + radius * pn.x,
-                ps * (c.y + radius * pn.y)};
+            shape.positions[i] = {cos(phi) * c.x + radius * pn.x,
+                sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
             shape.normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
         } else {
             continue;
@@ -2126,21 +2227,24 @@ make_shape_data make_cylinder_rounded(
 }
 
 // Make a geodesic sphere.
-make_shape_data make_geodesic_sphere(int tesselation, float size, bool as_triangles) {
+make_shape_data make_geodesic_sphere(
+    int tesselation, float size, bool as_triangles) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
-    const float X         = 0.525731112119133606f;
-    const float Z         = 0.850650808352039932f;
-    static auto pos       = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z}, {X, 0.0, -Z},
-        {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X}, {Z, X, 0.0}, {-Z, X, 0.0},
-        {Z, -X, 0.0}, {-Z, -X, 0.0}};
-    static auto triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5}, {4, 8, 5}, {4, 1, 8},
-        {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11},
-        {11, 6, 0}, {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
+    const float X   = 0.525731112119133606f;
+    const float Z   = 0.850650808352039932f;
+    static auto pos = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
+        {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
+        {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
+    static auto triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5},
+        {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2},
+        {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1},
+        {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
     auto        shape     = make_shape_data();
     shape.positions       = pos;
     shape.triangles       = triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        tie(shape.triangles, shape.positions) = subdivide_triangles(shape.triangles, shape.positions);
+        tie(shape.triangles, shape.positions) = subdivide_triangles(
+            shape.triangles, shape.positions);
     }
     for (auto& p : shape.positions) p = normalize(p) * size / 2;
     shape.normals = shape.positions;
@@ -2149,10 +2253,12 @@ make_shape_data make_geodesic_sphere(int tesselation, float size, bool as_triang
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-make_fvshape_data make_fvcube(const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshp                                   = make_cube(steps, size, uvsize, false);
-    auto fvshp                                  = make_fvshape_data{};
-    tie(fvshp.positions_quads, fvshp.positions) = weld_quads(qshp.quads, qshp.positions,
+make_fvshape_data make_fvcube(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
+    auto qshp  = make_cube(steps, size, uvsize, false);
+    auto fvshp = make_fvshape_data{};
+    tie(fvshp.positions_quads, fvshp.positions) = weld_quads(qshp.quads,
+        qshp.positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     fvshp.normals_quads                         = qshp.quads;
     fvshp.normals                               = qshp.normals;
@@ -2165,104 +2271,122 @@ make_fvshape_data make_fvcube(const vec3i& steps, const vec3f& size, const vec3f
 // degenerate.
 make_shape_data make_suzanne(float size, bool as_triangles) {
     static auto suzanne_pos       = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
-        {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875}, {-0.5, 0.09375, 0.6875},
-        {0.546875, 0.0546875, 0.578125}, {-0.546875, 0.0546875, 0.578125},
-        {0.3515625, -0.0234375, 0.6171875}, {-0.3515625, -0.0234375, 0.6171875},
-        {0.3515625, 0.03125, 0.71875}, {-0.3515625, 0.03125, 0.71875},
-        {0.3515625, 0.1328125, 0.78125}, {-0.3515625, 0.1328125, 0.78125},
-        {0.2734375, 0.1640625, 0.796875}, {-0.2734375, 0.1640625, 0.796875},
-        {0.203125, 0.09375, 0.7421875}, {-0.203125, 0.09375, 0.7421875},
-        {0.15625, 0.0546875, 0.6484375}, {-0.15625, 0.0546875, 0.6484375},
-        {0.078125, 0.2421875, 0.65625}, {-0.078125, 0.2421875, 0.65625},
-        {0.140625, 0.2421875, 0.7421875}, {-0.140625, 0.2421875, 0.7421875},
-        {0.2421875, 0.2421875, 0.796875}, {-0.2421875, 0.2421875, 0.796875},
-        {0.2734375, 0.328125, 0.796875}, {-0.2734375, 0.328125, 0.796875},
-        {0.203125, 0.390625, 0.7421875}, {-0.203125, 0.390625, 0.7421875},
-        {0.15625, 0.4375, 0.6484375}, {-0.15625, 0.4375, 0.6484375},
-        {0.3515625, 0.515625, 0.6171875}, {-0.3515625, 0.515625, 0.6171875},
-        {0.3515625, 0.453125, 0.71875}, {-0.3515625, 0.453125, 0.71875},
-        {0.3515625, 0.359375, 0.78125}, {-0.3515625, 0.359375, 0.78125}, {0.4375, 0.328125, 0.765625},
-        {-0.4375, 0.328125, 0.765625}, {0.5, 0.390625, 0.6875}, {-0.5, 0.390625, 0.6875},
-        {0.546875, 0.4375, 0.578125}, {-0.546875, 0.4375, 0.578125}, {0.625, 0.2421875, 0.5625},
-        {-0.625, 0.2421875, 0.5625}, {0.5625, 0.2421875, 0.671875}, {-0.5625, 0.2421875, 0.671875},
-        {0.46875, 0.2421875, 0.7578125}, {-0.46875, 0.2421875, 0.7578125},
-        {0.4765625, 0.2421875, 0.7734375}, {-0.4765625, 0.2421875, 0.7734375},
-        {0.4453125, 0.3359375, 0.78125}, {-0.4453125, 0.3359375, 0.78125},
-        {0.3515625, 0.375, 0.8046875}, {-0.3515625, 0.375, 0.8046875},
-        {0.265625, 0.3359375, 0.8203125}, {-0.265625, 0.3359375, 0.8203125},
-        {0.2265625, 0.2421875, 0.8203125}, {-0.2265625, 0.2421875, 0.8203125},
-        {0.265625, 0.15625, 0.8203125}, {-0.265625, 0.15625, 0.8203125},
-        {0.3515625, 0.2421875, 0.828125}, {-0.3515625, 0.2421875, 0.828125},
-        {0.3515625, 0.1171875, 0.8046875}, {-0.3515625, 0.1171875, 0.8046875},
-        {0.4453125, 0.15625, 0.78125}, {-0.4453125, 0.15625, 0.78125}, {0.0, 0.4296875, 0.7421875},
-        {0.0, 0.3515625, 0.8203125}, {0.0, -0.6796875, 0.734375}, {0.0, -0.3203125, 0.78125},
-        {0.0, -0.1875, 0.796875}, {0.0, -0.7734375, 0.71875}, {0.0, 0.40625, 0.6015625},
-        {0.0, 0.5703125, 0.5703125}, {0.0, 0.8984375, -0.546875}, {0.0, 0.5625, -0.8515625},
-        {0.0, 0.0703125, -0.828125}, {0.0, -0.3828125, -0.3515625}, {0.203125, -0.1875, 0.5625},
-        {-0.203125, -0.1875, 0.5625}, {0.3125, -0.4375, 0.5703125}, {-0.3125, -0.4375, 0.5703125},
-        {0.3515625, -0.6953125, 0.5703125}, {-0.3515625, -0.6953125, 0.5703125},
-        {0.3671875, -0.890625, 0.53125}, {-0.3671875, -0.890625, 0.53125},
-        {0.328125, -0.9453125, 0.5234375}, {-0.328125, -0.9453125, 0.5234375},
-        {0.1796875, -0.96875, 0.5546875}, {-0.1796875, -0.96875, 0.5546875},
-        {0.0, -0.984375, 0.578125}, {0.4375, -0.140625, 0.53125}, {-0.4375, -0.140625, 0.53125},
+        {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
+        {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
+        {-0.546875, 0.0546875, 0.578125}, {0.3515625, -0.0234375, 0.6171875},
+        {-0.3515625, -0.0234375, 0.6171875}, {0.3515625, 0.03125, 0.71875},
+        {-0.3515625, 0.03125, 0.71875}, {0.3515625, 0.1328125, 0.78125},
+        {-0.3515625, 0.1328125, 0.78125}, {0.2734375, 0.1640625, 0.796875},
+        {-0.2734375, 0.1640625, 0.796875}, {0.203125, 0.09375, 0.7421875},
+        {-0.203125, 0.09375, 0.7421875}, {0.15625, 0.0546875, 0.6484375},
+        {-0.15625, 0.0546875, 0.6484375}, {0.078125, 0.2421875, 0.65625},
+        {-0.078125, 0.2421875, 0.65625}, {0.140625, 0.2421875, 0.7421875},
+        {-0.140625, 0.2421875, 0.7421875}, {0.2421875, 0.2421875, 0.796875},
+        {-0.2421875, 0.2421875, 0.796875}, {0.2734375, 0.328125, 0.796875},
+        {-0.2734375, 0.328125, 0.796875}, {0.203125, 0.390625, 0.7421875},
+        {-0.203125, 0.390625, 0.7421875}, {0.15625, 0.4375, 0.6484375},
+        {-0.15625, 0.4375, 0.6484375}, {0.3515625, 0.515625, 0.6171875},
+        {-0.3515625, 0.515625, 0.6171875}, {0.3515625, 0.453125, 0.71875},
+        {-0.3515625, 0.453125, 0.71875}, {0.3515625, 0.359375, 0.78125},
+        {-0.3515625, 0.359375, 0.78125}, {0.4375, 0.328125, 0.765625},
+        {-0.4375, 0.328125, 0.765625}, {0.5, 0.390625, 0.6875},
+        {-0.5, 0.390625, 0.6875}, {0.546875, 0.4375, 0.578125},
+        {-0.546875, 0.4375, 0.578125}, {0.625, 0.2421875, 0.5625},
+        {-0.625, 0.2421875, 0.5625}, {0.5625, 0.2421875, 0.671875},
+        {-0.5625, 0.2421875, 0.671875}, {0.46875, 0.2421875, 0.7578125},
+        {-0.46875, 0.2421875, 0.7578125}, {0.4765625, 0.2421875, 0.7734375},
+        {-0.4765625, 0.2421875, 0.7734375}, {0.4453125, 0.3359375, 0.78125},
+        {-0.4453125, 0.3359375, 0.78125}, {0.3515625, 0.375, 0.8046875},
+        {-0.3515625, 0.375, 0.8046875}, {0.265625, 0.3359375, 0.8203125},
+        {-0.265625, 0.3359375, 0.8203125}, {0.2265625, 0.2421875, 0.8203125},
+        {-0.2265625, 0.2421875, 0.8203125}, {0.265625, 0.15625, 0.8203125},
+        {-0.265625, 0.15625, 0.8203125}, {0.3515625, 0.2421875, 0.828125},
+        {-0.3515625, 0.2421875, 0.828125}, {0.3515625, 0.1171875, 0.8046875},
+        {-0.3515625, 0.1171875, 0.8046875}, {0.4453125, 0.15625, 0.78125},
+        {-0.4453125, 0.15625, 0.78125}, {0.0, 0.4296875, 0.7421875},
+        {0.0, 0.3515625, 0.8203125}, {0.0, -0.6796875, 0.734375},
+        {0.0, -0.3203125, 0.78125}, {0.0, -0.1875, 0.796875},
+        {0.0, -0.7734375, 0.71875}, {0.0, 0.40625, 0.6015625},
+        {0.0, 0.5703125, 0.5703125}, {0.0, 0.8984375, -0.546875},
+        {0.0, 0.5625, -0.8515625}, {0.0, 0.0703125, -0.828125},
+        {0.0, -0.3828125, -0.3515625}, {0.203125, -0.1875, 0.5625},
+        {-0.203125, -0.1875, 0.5625}, {0.3125, -0.4375, 0.5703125},
+        {-0.3125, -0.4375, 0.5703125}, {0.3515625, -0.6953125, 0.5703125},
+        {-0.3515625, -0.6953125, 0.5703125}, {0.3671875, -0.890625, 0.53125},
+        {-0.3671875, -0.890625, 0.53125}, {0.328125, -0.9453125, 0.5234375},
+        {-0.328125, -0.9453125, 0.5234375}, {0.1796875, -0.96875, 0.5546875},
+        {-0.1796875, -0.96875, 0.5546875}, {0.0, -0.984375, 0.578125},
+        {0.4375, -0.140625, 0.53125}, {-0.4375, -0.140625, 0.53125},
         {0.6328125, -0.0390625, 0.5390625}, {-0.6328125, -0.0390625, 0.5390625},
         {0.828125, 0.1484375, 0.4453125}, {-0.828125, 0.1484375, 0.4453125},
         {0.859375, 0.4296875, 0.59375}, {-0.859375, 0.4296875, 0.59375},
-        {0.7109375, 0.484375, 0.625}, {-0.7109375, 0.484375, 0.625}, {0.4921875, 0.6015625, 0.6875},
-        {-0.4921875, 0.6015625, 0.6875}, {0.3203125, 0.7578125, 0.734375},
-        {-0.3203125, 0.7578125, 0.734375}, {0.15625, 0.71875, 0.7578125},
-        {-0.15625, 0.71875, 0.7578125}, {0.0625, 0.4921875, 0.75}, {-0.0625, 0.4921875, 0.75},
+        {0.7109375, 0.484375, 0.625}, {-0.7109375, 0.484375, 0.625},
+        {0.4921875, 0.6015625, 0.6875}, {-0.4921875, 0.6015625, 0.6875},
+        {0.3203125, 0.7578125, 0.734375}, {-0.3203125, 0.7578125, 0.734375},
+        {0.15625, 0.71875, 0.7578125}, {-0.15625, 0.71875, 0.7578125},
+        {0.0625, 0.4921875, 0.75}, {-0.0625, 0.4921875, 0.75},
         {0.1640625, 0.4140625, 0.7734375}, {-0.1640625, 0.4140625, 0.7734375},
-        {0.125, 0.3046875, 0.765625}, {-0.125, 0.3046875, 0.765625}, {0.203125, 0.09375, 0.7421875},
-        {-0.203125, 0.09375, 0.7421875}, {0.375, 0.015625, 0.703125}, {-0.375, 0.015625, 0.703125},
-        {0.4921875, 0.0625, 0.671875}, {-0.4921875, 0.0625, 0.671875}, {0.625, 0.1875, 0.6484375},
-        {-0.625, 0.1875, 0.6484375}, {0.640625, 0.296875, 0.6484375},
-        {-0.640625, 0.296875, 0.6484375}, {0.6015625, 0.375, 0.6640625},
-        {-0.6015625, 0.375, 0.6640625}, {0.4296875, 0.4375, 0.71875}, {-0.4296875, 0.4375, 0.71875},
-        {0.25, 0.46875, 0.7578125}, {-0.25, 0.46875, 0.7578125}, {0.0, -0.765625, 0.734375},
-        {0.109375, -0.71875, 0.734375}, {-0.109375, -0.71875, 0.734375},
-        {0.1171875, -0.8359375, 0.7109375}, {-0.1171875, -0.8359375, 0.7109375},
-        {0.0625, -0.8828125, 0.6953125}, {-0.0625, -0.8828125, 0.6953125}, {0.0, -0.890625, 0.6875},
-        {0.0, -0.1953125, 0.75}, {0.0, -0.140625, 0.7421875}, {0.1015625, -0.1484375, 0.7421875},
-        {-0.1015625, -0.1484375, 0.7421875}, {0.125, -0.2265625, 0.75}, {-0.125, -0.2265625, 0.75},
+        {0.125, 0.3046875, 0.765625}, {-0.125, 0.3046875, 0.765625},
+        {0.203125, 0.09375, 0.7421875}, {-0.203125, 0.09375, 0.7421875},
+        {0.375, 0.015625, 0.703125}, {-0.375, 0.015625, 0.703125},
+        {0.4921875, 0.0625, 0.671875}, {-0.4921875, 0.0625, 0.671875},
+        {0.625, 0.1875, 0.6484375}, {-0.625, 0.1875, 0.6484375},
+        {0.640625, 0.296875, 0.6484375}, {-0.640625, 0.296875, 0.6484375},
+        {0.6015625, 0.375, 0.6640625}, {-0.6015625, 0.375, 0.6640625},
+        {0.4296875, 0.4375, 0.71875}, {-0.4296875, 0.4375, 0.71875},
+        {0.25, 0.46875, 0.7578125}, {-0.25, 0.46875, 0.7578125},
+        {0.0, -0.765625, 0.734375}, {0.109375, -0.71875, 0.734375},
+        {-0.109375, -0.71875, 0.734375}, {0.1171875, -0.8359375, 0.7109375},
+        {-0.1171875, -0.8359375, 0.7109375}, {0.0625, -0.8828125, 0.6953125},
+        {-0.0625, -0.8828125, 0.6953125}, {0.0, -0.890625, 0.6875},
+        {0.0, -0.1953125, 0.75}, {0.0, -0.140625, 0.7421875},
+        {0.1015625, -0.1484375, 0.7421875}, {-0.1015625, -0.1484375, 0.7421875},
+        {0.125, -0.2265625, 0.75}, {-0.125, -0.2265625, 0.75},
         {0.0859375, -0.2890625, 0.7421875}, {-0.0859375, -0.2890625, 0.7421875},
         {0.3984375, -0.046875, 0.671875}, {-0.3984375, -0.046875, 0.671875},
         {0.6171875, 0.0546875, 0.625}, {-0.6171875, 0.0546875, 0.625},
         {0.7265625, 0.203125, 0.6015625}, {-0.7265625, 0.203125, 0.6015625},
-        {0.7421875, 0.375, 0.65625}, {-0.7421875, 0.375, 0.65625}, {0.6875, 0.4140625, 0.7265625},
-        {-0.6875, 0.4140625, 0.7265625}, {0.4375, 0.546875, 0.796875},
-        {-0.4375, 0.546875, 0.796875}, {0.3125, 0.640625, 0.8359375},
-        {-0.3125, 0.640625, 0.8359375}, {0.203125, 0.6171875, 0.8515625},
-        {-0.203125, 0.6171875, 0.8515625}, {0.1015625, 0.4296875, 0.84375},
-        {-0.1015625, 0.4296875, 0.84375}, {0.125, -0.1015625, 0.8125}, {-0.125, -0.1015625, 0.8125},
+        {0.7421875, 0.375, 0.65625}, {-0.7421875, 0.375, 0.65625},
+        {0.6875, 0.4140625, 0.7265625}, {-0.6875, 0.4140625, 0.7265625},
+        {0.4375, 0.546875, 0.796875}, {-0.4375, 0.546875, 0.796875},
+        {0.3125, 0.640625, 0.8359375}, {-0.3125, 0.640625, 0.8359375},
+        {0.203125, 0.6171875, 0.8515625}, {-0.203125, 0.6171875, 0.8515625},
+        {0.1015625, 0.4296875, 0.84375}, {-0.1015625, 0.4296875, 0.84375},
+        {0.125, -0.1015625, 0.8125}, {-0.125, -0.1015625, 0.8125},
         {0.2109375, -0.4453125, 0.7109375}, {-0.2109375, -0.4453125, 0.7109375},
-        {0.25, -0.703125, 0.6875}, {-0.25, -0.703125, 0.6875}, {0.265625, -0.8203125, 0.6640625},
-        {-0.265625, -0.8203125, 0.6640625}, {0.234375, -0.9140625, 0.6328125},
-        {-0.234375, -0.9140625, 0.6328125}, {0.1640625, -0.9296875, 0.6328125},
-        {-0.1640625, -0.9296875, 0.6328125}, {0.0, -0.9453125, 0.640625},
-        {0.0, 0.046875, 0.7265625}, {0.0, 0.2109375, 0.765625}, {0.328125, 0.4765625, 0.7421875},
-        {-0.328125, 0.4765625, 0.7421875}, {0.1640625, 0.140625, 0.75}, {-0.1640625, 0.140625, 0.75},
-        {0.1328125, 0.2109375, 0.7578125}, {-0.1328125, 0.2109375, 0.7578125},
-        {0.1171875, -0.6875, 0.734375}, {-0.1171875, -0.6875, 0.734375},
-        {0.078125, -0.4453125, 0.75}, {-0.078125, -0.4453125, 0.75}, {0.0, -0.4453125, 0.75},
-        {0.0, -0.328125, 0.7421875}, {0.09375, -0.2734375, 0.78125}, {-0.09375, -0.2734375, 0.78125},
-        {0.1328125, -0.2265625, 0.796875}, {-0.1328125, -0.2265625, 0.796875},
-        {0.109375, -0.1328125, 0.78125}, {-0.109375, -0.1328125, 0.78125},
-        {0.0390625, -0.125, 0.78125}, {-0.0390625, -0.125, 0.78125}, {0.0, -0.203125, 0.828125},
+        {0.25, -0.703125, 0.6875}, {-0.25, -0.703125, 0.6875},
+        {0.265625, -0.8203125, 0.6640625}, {-0.265625, -0.8203125, 0.6640625},
+        {0.234375, -0.9140625, 0.6328125}, {-0.234375, -0.9140625, 0.6328125},
+        {0.1640625, -0.9296875, 0.6328125}, {-0.1640625, -0.9296875, 0.6328125},
+        {0.0, -0.9453125, 0.640625}, {0.0, 0.046875, 0.7265625},
+        {0.0, 0.2109375, 0.765625}, {0.328125, 0.4765625, 0.7421875},
+        {-0.328125, 0.4765625, 0.7421875}, {0.1640625, 0.140625, 0.75},
+        {-0.1640625, 0.140625, 0.75}, {0.1328125, 0.2109375, 0.7578125},
+        {-0.1328125, 0.2109375, 0.7578125}, {0.1171875, -0.6875, 0.734375},
+        {-0.1171875, -0.6875, 0.734375}, {0.078125, -0.4453125, 0.75},
+        {-0.078125, -0.4453125, 0.75}, {0.0, -0.4453125, 0.75},
+        {0.0, -0.328125, 0.7421875}, {0.09375, -0.2734375, 0.78125},
+        {-0.09375, -0.2734375, 0.78125}, {0.1328125, -0.2265625, 0.796875},
+        {-0.1328125, -0.2265625, 0.796875}, {0.109375, -0.1328125, 0.78125},
+        {-0.109375, -0.1328125, 0.78125}, {0.0390625, -0.125, 0.78125},
+        {-0.0390625, -0.125, 0.78125}, {0.0, -0.203125, 0.828125},
         {0.046875, -0.1484375, 0.8125}, {-0.046875, -0.1484375, 0.8125},
-        {0.09375, -0.15625, 0.8125}, {-0.09375, -0.15625, 0.8125}, {0.109375, -0.2265625, 0.828125},
-        {-0.109375, -0.2265625, 0.828125}, {0.078125, -0.25, 0.8046875},
-        {-0.078125, -0.25, 0.8046875}, {0.0, -0.2890625, 0.8046875}, {0.2578125, -0.3125, 0.5546875},
+        {0.09375, -0.15625, 0.8125}, {-0.09375, -0.15625, 0.8125},
+        {0.109375, -0.2265625, 0.828125}, {-0.109375, -0.2265625, 0.828125},
+        {0.078125, -0.25, 0.8046875}, {-0.078125, -0.25, 0.8046875},
+        {0.0, -0.2890625, 0.8046875}, {0.2578125, -0.3125, 0.5546875},
         {-0.2578125, -0.3125, 0.5546875}, {0.1640625, -0.2421875, 0.7109375},
         {-0.1640625, -0.2421875, 0.7109375}, {0.1796875, -0.3125, 0.7109375},
         {-0.1796875, -0.3125, 0.7109375}, {0.234375, -0.25, 0.5546875},
-        {-0.234375, -0.25, 0.5546875}, {0.0, -0.875, 0.6875}, {0.046875, -0.8671875, 0.6875},
-        {-0.046875, -0.8671875, 0.6875}, {0.09375, -0.8203125, 0.7109375},
-        {-0.09375, -0.8203125, 0.7109375}, {0.09375, -0.7421875, 0.7265625},
-        {-0.09375, -0.7421875, 0.7265625}, {0.0, -0.78125, 0.65625}, {0.09375, -0.75, 0.6640625},
-        {-0.09375, -0.75, 0.6640625}, {0.09375, -0.8125, 0.640625}, {-0.09375, -0.8125, 0.640625},
-        {0.046875, -0.8515625, 0.6328125}, {-0.046875, -0.8515625, 0.6328125},
-        {0.0, -0.859375, 0.6328125}, {0.171875, 0.21875, 0.78125}, {-0.171875, 0.21875, 0.78125},
+        {-0.234375, -0.25, 0.5546875}, {0.0, -0.875, 0.6875},
+        {0.046875, -0.8671875, 0.6875}, {-0.046875, -0.8671875, 0.6875},
+        {0.09375, -0.8203125, 0.7109375}, {-0.09375, -0.8203125, 0.7109375},
+        {0.09375, -0.7421875, 0.7265625}, {-0.09375, -0.7421875, 0.7265625},
+        {0.0, -0.78125, 0.65625}, {0.09375, -0.75, 0.6640625},
+        {-0.09375, -0.75, 0.6640625}, {0.09375, -0.8125, 0.640625},
+        {-0.09375, -0.8125, 0.640625}, {0.046875, -0.8515625, 0.6328125},
+        {-0.046875, -0.8515625, 0.6328125}, {0.0, -0.859375, 0.6328125},
+        {0.171875, 0.21875, 0.78125}, {-0.171875, 0.21875, 0.78125},
         {0.1875, 0.15625, 0.7734375}, {-0.1875, 0.15625, 0.7734375},
         {0.3359375, 0.4296875, 0.7578125}, {-0.3359375, 0.4296875, 0.7578125},
         {0.2734375, 0.421875, 0.7734375}, {-0.2734375, 0.421875, 0.7734375},
@@ -2271,19 +2395,22 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {0.5859375, 0.2890625, 0.6875}, {-0.5859375, 0.2890625, 0.6875},
         {0.578125, 0.1953125, 0.6796875}, {-0.578125, 0.1953125, 0.6796875},
         {0.4765625, 0.1015625, 0.71875}, {-0.4765625, 0.1015625, 0.71875},
-        {0.375, 0.0625, 0.7421875}, {-0.375, 0.0625, 0.7421875}, {0.2265625, 0.109375, 0.78125},
-        {-0.2265625, 0.109375, 0.78125}, {0.1796875, 0.296875, 0.78125},
-        {-0.1796875, 0.296875, 0.78125}, {0.2109375, 0.375, 0.78125}, {-0.2109375, 0.375, 0.78125},
+        {0.375, 0.0625, 0.7421875}, {-0.375, 0.0625, 0.7421875},
+        {0.2265625, 0.109375, 0.78125}, {-0.2265625, 0.109375, 0.78125},
+        {0.1796875, 0.296875, 0.78125}, {-0.1796875, 0.296875, 0.78125},
+        {0.2109375, 0.375, 0.78125}, {-0.2109375, 0.375, 0.78125},
         {0.234375, 0.359375, 0.7578125}, {-0.234375, 0.359375, 0.7578125},
         {0.1953125, 0.296875, 0.7578125}, {-0.1953125, 0.296875, 0.7578125},
-        {0.2421875, 0.125, 0.7578125}, {-0.2421875, 0.125, 0.7578125}, {0.375, 0.0859375, 0.7265625},
-        {-0.375, 0.0859375, 0.7265625}, {0.4609375, 0.1171875, 0.703125},
-        {-0.4609375, 0.1171875, 0.703125}, {0.546875, 0.2109375, 0.671875},
-        {-0.546875, 0.2109375, 0.671875}, {0.5546875, 0.28125, 0.671875},
-        {-0.5546875, 0.28125, 0.671875}, {0.53125, 0.3359375, 0.6796875},
-        {-0.53125, 0.3359375, 0.6796875}, {0.4140625, 0.390625, 0.75}, {-0.4140625, 0.390625, 0.75},
-        {0.28125, 0.3984375, 0.765625}, {-0.28125, 0.3984375, 0.765625}, {0.3359375, 0.40625, 0.75},
-        {-0.3359375, 0.40625, 0.75}, {0.203125, 0.171875, 0.75}, {-0.203125, 0.171875, 0.75},
+        {0.2421875, 0.125, 0.7578125}, {-0.2421875, 0.125, 0.7578125},
+        {0.375, 0.0859375, 0.7265625}, {-0.375, 0.0859375, 0.7265625},
+        {0.4609375, 0.1171875, 0.703125}, {-0.4609375, 0.1171875, 0.703125},
+        {0.546875, 0.2109375, 0.671875}, {-0.546875, 0.2109375, 0.671875},
+        {0.5546875, 0.28125, 0.671875}, {-0.5546875, 0.28125, 0.671875},
+        {0.53125, 0.3359375, 0.6796875}, {-0.53125, 0.3359375, 0.6796875},
+        {0.4140625, 0.390625, 0.75}, {-0.4140625, 0.390625, 0.75},
+        {0.28125, 0.3984375, 0.765625}, {-0.28125, 0.3984375, 0.765625},
+        {0.3359375, 0.40625, 0.75}, {-0.3359375, 0.40625, 0.75},
+        {0.203125, 0.171875, 0.75}, {-0.203125, 0.171875, 0.75},
         {0.1953125, 0.2265625, 0.75}, {-0.1953125, 0.2265625, 0.75},
         {0.109375, 0.4609375, 0.609375}, {-0.109375, 0.4609375, 0.609375},
         {0.1953125, 0.6640625, 0.6171875}, {-0.1953125, 0.6640625, 0.6171875},
@@ -2291,39 +2418,43 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {0.484375, 0.5546875, 0.5546875}, {-0.484375, 0.5546875, 0.5546875},
         {0.6796875, 0.453125, 0.4921875}, {-0.6796875, 0.453125, 0.4921875},
         {0.796875, 0.40625, 0.4609375}, {-0.796875, 0.40625, 0.4609375},
-        {0.7734375, 0.1640625, 0.375}, {-0.7734375, 0.1640625, 0.375}, {0.6015625, 0.0, 0.4140625},
-        {-0.6015625, 0.0, 0.4140625}, {0.4375, -0.09375, 0.46875}, {-0.4375, -0.09375, 0.46875},
-        {0.0, 0.8984375, 0.2890625}, {0.0, 0.984375, -0.078125}, {0.0, -0.1953125, -0.671875},
-        {0.0, -0.4609375, 0.1875}, {0.0, -0.9765625, 0.4609375}, {0.0, -0.8046875, 0.34375},
-        {0.0, -0.5703125, 0.3203125}, {0.0, -0.484375, 0.28125}, {0.8515625, 0.234375, 0.0546875},
-        {-0.8515625, 0.234375, 0.0546875}, {0.859375, 0.3203125, -0.046875},
-        {-0.859375, 0.3203125, -0.046875}, {0.7734375, 0.265625, -0.4375},
-        {-0.7734375, 0.265625, -0.4375}, {0.4609375, 0.4375, -0.703125},
-        {-0.4609375, 0.4375, -0.703125}, {0.734375, -0.046875, 0.0703125},
-        {-0.734375, -0.046875, 0.0703125}, {0.59375, -0.125, -0.1640625},
-        {-0.59375, -0.125, -0.1640625}, {0.640625, -0.0078125, -0.4296875},
-        {-0.640625, -0.0078125, -0.4296875}, {0.3359375, 0.0546875, -0.6640625},
-        {-0.3359375, 0.0546875, -0.6640625}, {0.234375, -0.3515625, 0.40625},
-        {-0.234375, -0.3515625, 0.40625}, {0.1796875, -0.4140625, 0.2578125},
-        {-0.1796875, -0.4140625, 0.2578125}, {0.2890625, -0.7109375, 0.3828125},
-        {-0.2890625, -0.7109375, 0.3828125}, {0.25, -0.5, 0.390625}, {-0.25, -0.5, 0.390625},
+        {0.7734375, 0.1640625, 0.375}, {-0.7734375, 0.1640625, 0.375},
+        {0.6015625, 0.0, 0.4140625}, {-0.6015625, 0.0, 0.4140625},
+        {0.4375, -0.09375, 0.46875}, {-0.4375, -0.09375, 0.46875},
+        {0.0, 0.8984375, 0.2890625}, {0.0, 0.984375, -0.078125},
+        {0.0, -0.1953125, -0.671875}, {0.0, -0.4609375, 0.1875},
+        {0.0, -0.9765625, 0.4609375}, {0.0, -0.8046875, 0.34375},
+        {0.0, -0.5703125, 0.3203125}, {0.0, -0.484375, 0.28125},
+        {0.8515625, 0.234375, 0.0546875}, {-0.8515625, 0.234375, 0.0546875},
+        {0.859375, 0.3203125, -0.046875}, {-0.859375, 0.3203125, -0.046875},
+        {0.7734375, 0.265625, -0.4375}, {-0.7734375, 0.265625, -0.4375},
+        {0.4609375, 0.4375, -0.703125}, {-0.4609375, 0.4375, -0.703125},
+        {0.734375, -0.046875, 0.0703125}, {-0.734375, -0.046875, 0.0703125},
+        {0.59375, -0.125, -0.1640625}, {-0.59375, -0.125, -0.1640625},
+        {0.640625, -0.0078125, -0.4296875}, {-0.640625, -0.0078125, -0.4296875},
+        {0.3359375, 0.0546875, -0.6640625}, {-0.3359375, 0.0546875, -0.6640625},
+        {0.234375, -0.3515625, 0.40625}, {-0.234375, -0.3515625, 0.40625},
+        {0.1796875, -0.4140625, 0.2578125}, {-0.1796875, -0.4140625, 0.2578125},
+        {0.2890625, -0.7109375, 0.3828125}, {-0.2890625, -0.7109375, 0.3828125},
+        {0.25, -0.5, 0.390625}, {-0.25, -0.5, 0.390625},
         {0.328125, -0.9140625, 0.3984375}, {-0.328125, -0.9140625, 0.3984375},
         {0.140625, -0.7578125, 0.3671875}, {-0.140625, -0.7578125, 0.3671875},
         {0.125, -0.5390625, 0.359375}, {-0.125, -0.5390625, 0.359375},
         {0.1640625, -0.9453125, 0.4375}, {-0.1640625, -0.9453125, 0.4375},
         {0.21875, -0.28125, 0.4296875}, {-0.21875, -0.28125, 0.4296875},
         {0.2109375, -0.2265625, 0.46875}, {-0.2109375, -0.2265625, 0.46875},
-        {0.203125, -0.171875, 0.5}, {-0.203125, -0.171875, 0.5}, {0.2109375, -0.390625, 0.1640625},
-        {-0.2109375, -0.390625, 0.1640625}, {0.296875, -0.3125, -0.265625},
-        {-0.296875, -0.3125, -0.265625}, {0.34375, -0.1484375, -0.5390625},
-        {-0.34375, -0.1484375, -0.5390625}, {0.453125, 0.8671875, -0.3828125},
-        {-0.453125, 0.8671875, -0.3828125}, {0.453125, 0.9296875, -0.0703125},
-        {-0.453125, 0.9296875, -0.0703125}, {0.453125, 0.8515625, 0.234375},
-        {-0.453125, 0.8515625, 0.234375}, {0.4609375, 0.5234375, 0.4296875},
-        {-0.4609375, 0.5234375, 0.4296875}, {0.7265625, 0.40625, 0.3359375},
-        {-0.7265625, 0.40625, 0.3359375}, {0.6328125, 0.453125, 0.28125},
-        {-0.6328125, 0.453125, 0.28125}, {0.640625, 0.703125, 0.0546875},
-        {-0.640625, 0.703125, 0.0546875}, {0.796875, 0.5625, 0.125}, {-0.796875, 0.5625, 0.125},
+        {0.203125, -0.171875, 0.5}, {-0.203125, -0.171875, 0.5},
+        {0.2109375, -0.390625, 0.1640625}, {-0.2109375, -0.390625, 0.1640625},
+        {0.296875, -0.3125, -0.265625}, {-0.296875, -0.3125, -0.265625},
+        {0.34375, -0.1484375, -0.5390625}, {-0.34375, -0.1484375, -0.5390625},
+        {0.453125, 0.8671875, -0.3828125}, {-0.453125, 0.8671875, -0.3828125},
+        {0.453125, 0.9296875, -0.0703125}, {-0.453125, 0.9296875, -0.0703125},
+        {0.453125, 0.8515625, 0.234375}, {-0.453125, 0.8515625, 0.234375},
+        {0.4609375, 0.5234375, 0.4296875}, {-0.4609375, 0.5234375, 0.4296875},
+        {0.7265625, 0.40625, 0.3359375}, {-0.7265625, 0.40625, 0.3359375},
+        {0.6328125, 0.453125, 0.28125}, {-0.6328125, 0.453125, 0.28125},
+        {0.640625, 0.703125, 0.0546875}, {-0.640625, 0.703125, 0.0546875},
+        {0.796875, 0.5625, 0.125}, {-0.796875, 0.5625, 0.125},
         {0.796875, 0.6171875, -0.1171875}, {-0.796875, 0.6171875, -0.1171875},
         {0.640625, 0.75, -0.1953125}, {-0.640625, 0.75, -0.1953125},
         {0.640625, 0.6796875, -0.4453125}, {-0.640625, 0.6796875, -0.4453125},
@@ -2332,16 +2463,17 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {0.484375, 0.0234375, -0.546875}, {-0.484375, 0.0234375, -0.546875},
         {0.8203125, 0.328125, -0.203125}, {-0.8203125, 0.328125, -0.203125},
         {0.40625, -0.171875, 0.1484375}, {-0.40625, -0.171875, 0.1484375},
-        {0.4296875, -0.1953125, -0.2109375}, {-0.4296875, -0.1953125, -0.2109375},
-        {0.890625, 0.40625, -0.234375}, {-0.890625, 0.40625, -0.234375},
-        {0.7734375, -0.140625, -0.125}, {-0.7734375, -0.140625, -0.125},
-        {1.0390625, -0.1015625, -0.328125}, {-1.0390625, -0.1015625, -0.328125},
-        {1.28125, 0.0546875, -0.4296875}, {-1.28125, 0.0546875, -0.4296875},
-        {1.3515625, 0.3203125, -0.421875}, {-1.3515625, 0.3203125, -0.421875},
-        {1.234375, 0.5078125, -0.421875}, {-1.234375, 0.5078125, -0.421875},
-        {1.0234375, 0.4765625, -0.3125}, {-1.0234375, 0.4765625, -0.3125},
-        {1.015625, 0.4140625, -0.2890625}, {-1.015625, 0.4140625, -0.2890625},
-        {1.1875, 0.4375, -0.390625}, {-1.1875, 0.4375, -0.390625}, {1.265625, 0.2890625, -0.40625},
+        {0.4296875, -0.1953125, -0.2109375},
+        {-0.4296875, -0.1953125, -0.2109375}, {0.890625, 0.40625, -0.234375},
+        {-0.890625, 0.40625, -0.234375}, {0.7734375, -0.140625, -0.125},
+        {-0.7734375, -0.140625, -0.125}, {1.0390625, -0.1015625, -0.328125},
+        {-1.0390625, -0.1015625, -0.328125}, {1.28125, 0.0546875, -0.4296875},
+        {-1.28125, 0.0546875, -0.4296875}, {1.3515625, 0.3203125, -0.421875},
+        {-1.3515625, 0.3203125, -0.421875}, {1.234375, 0.5078125, -0.421875},
+        {-1.234375, 0.5078125, -0.421875}, {1.0234375, 0.4765625, -0.3125},
+        {-1.0234375, 0.4765625, -0.3125}, {1.015625, 0.4140625, -0.2890625},
+        {-1.015625, 0.4140625, -0.2890625}, {1.1875, 0.4375, -0.390625},
+        {-1.1875, 0.4375, -0.390625}, {1.265625, 0.2890625, -0.40625},
         {-1.265625, 0.2890625, -0.40625}, {1.2109375, 0.078125, -0.40625},
         {-1.2109375, 0.078125, -0.40625}, {1.03125, -0.0390625, -0.3046875},
         {-1.03125, -0.0390625, -0.3046875}, {0.828125, -0.0703125, -0.1328125},
@@ -2349,8 +2481,9 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {-0.921875, 0.359375, -0.21875}, {0.9453125, 0.3046875, -0.2890625},
         {-0.9453125, 0.3046875, -0.2890625}, {0.8828125, -0.0234375, -0.2109375},
         {-0.8828125, -0.0234375, -0.2109375}, {1.0390625, 0.0, -0.3671875},
-        {-1.0390625, 0.0, -0.3671875}, {1.1875, 0.09375, -0.4453125}, {-1.1875, 0.09375, -0.4453125},
-        {1.234375, 0.25, -0.4453125}, {-1.234375, 0.25, -0.4453125}, {1.171875, 0.359375, -0.4375},
+        {-1.0390625, 0.0, -0.3671875}, {1.1875, 0.09375, -0.4453125},
+        {-1.1875, 0.09375, -0.4453125}, {1.234375, 0.25, -0.4453125},
+        {-1.234375, 0.25, -0.4453125}, {1.171875, 0.359375, -0.4375},
         {-1.171875, 0.359375, -0.4375}, {1.0234375, 0.34375, -0.359375},
         {-1.0234375, 0.34375, -0.359375}, {0.84375, 0.2890625, -0.2109375},
         {-0.84375, 0.2890625, -0.2109375}, {0.8359375, 0.171875, -0.2734375},
@@ -2358,166 +2491,210 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {-0.7578125, 0.09375, -0.2734375}, {0.8203125, 0.0859375, -0.2734375},
         {-0.8203125, 0.0859375, -0.2734375}, {0.84375, 0.015625, -0.2734375},
         {-0.84375, 0.015625, -0.2734375}, {0.8125, -0.015625, -0.2734375},
-        {-0.8125, -0.015625, -0.2734375}, {0.7265625, 0.0, -0.0703125}, {-0.7265625, 0.0, -0.0703125},
-        {0.71875, -0.0234375, -0.171875}, {-0.71875, -0.0234375, -0.171875},
-        {0.71875, 0.0390625, -0.1875}, {-0.71875, 0.0390625, -0.1875},
-        {0.796875, 0.203125, -0.2109375}, {-0.796875, 0.203125, -0.2109375},
-        {0.890625, 0.2421875, -0.265625}, {-0.890625, 0.2421875, -0.265625},
-        {0.890625, 0.234375, -0.3203125}, {-0.890625, 0.234375, -0.3203125},
-        {0.8125, -0.015625, -0.3203125}, {-0.8125, -0.015625, -0.3203125},
-        {0.8515625, 0.015625, -0.3203125}, {-0.8515625, 0.015625, -0.3203125},
-        {0.828125, 0.078125, -0.3203125}, {-0.828125, 0.078125, -0.3203125},
-        {0.765625, 0.09375, -0.3203125}, {-0.765625, 0.09375, -0.3203125},
-        {0.84375, 0.171875, -0.3203125}, {-0.84375, 0.171875, -0.3203125},
-        {1.0390625, 0.328125, -0.4140625}, {-1.0390625, 0.328125, -0.4140625},
-        {1.1875, 0.34375, -0.484375}, {-1.1875, 0.34375, -0.484375},
-        {1.2578125, 0.2421875, -0.4921875}, {-1.2578125, 0.2421875, -0.4921875},
-        {1.2109375, 0.0859375, -0.484375}, {-1.2109375, 0.0859375, -0.484375},
-        {1.046875, 0.0, -0.421875}, {-1.046875, 0.0, -0.421875}, {0.8828125, -0.015625, -0.265625},
+        {-0.8125, -0.015625, -0.2734375}, {0.7265625, 0.0, -0.0703125},
+        {-0.7265625, 0.0, -0.0703125}, {0.71875, -0.0234375, -0.171875},
+        {-0.71875, -0.0234375, -0.171875}, {0.71875, 0.0390625, -0.1875},
+        {-0.71875, 0.0390625, -0.1875}, {0.796875, 0.203125, -0.2109375},
+        {-0.796875, 0.203125, -0.2109375}, {0.890625, 0.2421875, -0.265625},
+        {-0.890625, 0.2421875, -0.265625}, {0.890625, 0.234375, -0.3203125},
+        {-0.890625, 0.234375, -0.3203125}, {0.8125, -0.015625, -0.3203125},
+        {-0.8125, -0.015625, -0.3203125}, {0.8515625, 0.015625, -0.3203125},
+        {-0.8515625, 0.015625, -0.3203125}, {0.828125, 0.078125, -0.3203125},
+        {-0.828125, 0.078125, -0.3203125}, {0.765625, 0.09375, -0.3203125},
+        {-0.765625, 0.09375, -0.3203125}, {0.84375, 0.171875, -0.3203125},
+        {-0.84375, 0.171875, -0.3203125}, {1.0390625, 0.328125, -0.4140625},
+        {-1.0390625, 0.328125, -0.4140625}, {1.1875, 0.34375, -0.484375},
+        {-1.1875, 0.34375, -0.484375}, {1.2578125, 0.2421875, -0.4921875},
+        {-1.2578125, 0.2421875, -0.4921875}, {1.2109375, 0.0859375, -0.484375},
+        {-1.2109375, 0.0859375, -0.484375}, {1.046875, 0.0, -0.421875},
+        {-1.046875, 0.0, -0.421875}, {0.8828125, -0.015625, -0.265625},
         {-0.8828125, -0.015625, -0.265625}, {0.953125, 0.2890625, -0.34375},
         {-0.953125, 0.2890625, -0.34375}, {0.890625, 0.109375, -0.328125},
         {-0.890625, 0.109375, -0.328125}, {0.9375, 0.0625, -0.3359375},
-        {-0.9375, 0.0625, -0.3359375}, {1.0, 0.125, -0.3671875}, {-1.0, 0.125, -0.3671875},
-        {0.9609375, 0.171875, -0.3515625}, {-0.9609375, 0.171875, -0.3515625},
-        {1.015625, 0.234375, -0.375}, {-1.015625, 0.234375, -0.375},
-        {1.0546875, 0.1875, -0.3828125}, {-1.0546875, 0.1875, -0.3828125},
-        {1.109375, 0.2109375, -0.390625}, {-1.109375, 0.2109375, -0.390625},
-        {1.0859375, 0.2734375, -0.390625}, {-1.0859375, 0.2734375, -0.390625},
-        {1.0234375, 0.4375, -0.484375}, {-1.0234375, 0.4375, -0.484375}, {1.25, 0.46875, -0.546875},
-        {-1.25, 0.46875, -0.546875}, {1.3671875, 0.296875, -0.5}, {-1.3671875, 0.296875, -0.5},
-        {1.3125, 0.0546875, -0.53125}, {-1.3125, 0.0546875, -0.53125},
-        {1.0390625, -0.0859375, -0.4921875}, {-1.0390625, -0.0859375, -0.4921875},
-        {0.7890625, -0.125, -0.328125}, {-0.7890625, -0.125, -0.328125},
-        {0.859375, 0.3828125, -0.3828125}, {-0.859375, 0.3828125, -0.3828125}};
-    static auto suzanne_triangles = vector<vec3i>{{60, 64, 48}, {49, 65, 61}, {62, 64, 60},
-        {61, 65, 63}, {60, 58, 62}, {63, 59, 61}, {60, 56, 58}, {59, 57, 61}, {60, 54, 56},
-        {57, 55, 61}, {60, 52, 54}, {55, 53, 61}, {60, 50, 52}, {53, 51, 61}, {60, 48, 50},
-        {51, 49, 61}, {224, 228, 226}, {227, 229, 225}, {72, 283, 73}, {73, 284, 72},
-        {341, 347, 383}, {384, 348, 342}, {299, 345, 343}, {344, 346, 300}, {323, 379, 351},
-        {352, 380, 324}, {441, 443, 445}, {446, 444, 442}, {463, 491, 465}, {466, 492, 464},
-        {495, 497, 499}, {500, 498, 496}};
-    static auto suzanne_quads     = vector<vec4i>{{46, 0, 2, 44}, {3, 1, 47, 45}, {44, 2, 4, 42},
-        {5, 3, 45, 43}, {2, 8, 6, 4}, {7, 9, 3, 5}, {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8},
-        {15, 13, 11, 9}, {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16}, {19, 21, 15, 17},
-        {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20}, {27, 25, 23, 21}, {20, 26, 28, 18},
-        {29, 27, 21, 19}, {26, 32, 30, 28}, {31, 33, 27, 29}, {24, 34, 32, 26}, {33, 35, 25, 27},
-        {34, 36, 38, 32}, {39, 37, 35, 33}, {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40},
-        {43, 45, 39, 41}, {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48}, {51, 37, 47, 49},
-        {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52}, {55, 25, 35, 53}, {24, 22, 56, 54},
-        {57, 23, 25, 55}, {22, 12, 58, 56}, {59, 13, 23, 57}, {12, 10, 62, 58}, {63, 11, 13, 59},
-        {10, 0, 64, 62}, {65, 1, 11, 63}, {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
-        {175, 174, 89, 90}, {86, 171, 173, 88}, {174, 172, 87, 89}, {84, 169, 171, 86},
-        {172, 170, 85, 87}, {82, 167, 169, 84}, {170, 168, 83, 85}, {80, 165, 167, 82},
-        {168, 166, 81, 83}, {78, 91, 145, 163}, {146, 92, 79, 164}, {91, 93, 147, 145},
-        {148, 94, 92, 146}, {93, 95, 149, 147}, {150, 96, 94, 148}, {95, 97, 151, 149},
-        {152, 98, 96, 150}, {97, 99, 153, 151}, {154, 100, 98, 152}, {99, 101, 155, 153},
-        {156, 102, 100, 154}, {101, 103, 157, 155}, {158, 104, 102, 156}, {103, 105, 159, 157},
-        {160, 106, 104, 158}, {105, 107, 161, 159}, {162, 108, 106, 160}, {107, 66, 67, 161},
-        {67, 66, 108, 162}, {109, 127, 159, 161}, {160, 128, 110, 162}, {127, 178, 157, 159},
-        {158, 179, 128, 160}, {125, 155, 157, 178}, {158, 156, 126, 179}, {123, 153, 155, 125},
-        {156, 154, 124, 126}, {121, 151, 153, 123}, {154, 152, 122, 124}, {119, 149, 151, 121},
-        {152, 150, 120, 122}, {117, 147, 149, 119}, {150, 148, 118, 120}, {115, 145, 147, 117},
-        {148, 146, 116, 118}, {113, 163, 145, 115}, {146, 164, 114, 116}, {113, 180, 176, 163},
-        {176, 181, 114, 164}, {109, 161, 67, 111}, {67, 162, 110, 112}, {111, 67, 177, 182},
-        {177, 67, 112, 183}, {176, 180, 182, 177}, {183, 181, 176, 177}, {134, 136, 175, 173},
-        {175, 136, 135, 174}, {132, 134, 173, 171}, {174, 135, 133, 172}, {130, 132, 171, 169},
-        {172, 133, 131, 170}, {165, 186, 184, 167}, {185, 187, 166, 168}, {130, 169, 167, 184},
-        {168, 170, 131, 185}, {143, 189, 188, 186}, {188, 189, 144, 187}, {184, 186, 188, 68},
-        {188, 187, 185, 68}, {129, 130, 184, 68}, {185, 131, 129, 68}, {141, 192, 190, 143},
-        {191, 193, 142, 144}, {139, 194, 192, 141}, {193, 195, 140, 142}, {138, 196, 194, 139},
-        {195, 197, 138, 140}, {137, 70, 196, 138}, {197, 70, 137, 138}, {189, 143, 190, 69},
-        {191, 144, 189, 69}, {69, 190, 205, 207}, {206, 191, 69, 207}, {70, 198, 199, 196},
-        {200, 198, 70, 197}, {196, 199, 201, 194}, {202, 200, 197, 195}, {194, 201, 203, 192},
-        {204, 202, 195, 193}, {192, 203, 205, 190}, {206, 204, 193, 191}, {198, 203, 201, 199},
-        {202, 204, 198, 200}, {198, 207, 205, 203}, {206, 207, 198, 204}, {138, 139, 163, 176},
-        {164, 140, 138, 176}, {139, 141, 210, 163}, {211, 142, 140, 164}, {141, 143, 212, 210},
-        {213, 144, 142, 211}, {143, 186, 165, 212}, {166, 187, 144, 213}, {80, 208, 212, 165},
-        {213, 209, 81, 166}, {208, 214, 210, 212}, {211, 215, 209, 213}, {78, 163, 210, 214},
-        {211, 164, 79, 215}, {130, 129, 71, 221}, {71, 129, 131, 222}, {132, 130, 221, 219},
-        {222, 131, 133, 220}, {134, 132, 219, 217}, {220, 133, 135, 218}, {136, 134, 217, 216},
-        {218, 135, 136, 216}, {216, 217, 228, 230}, {229, 218, 216, 230}, {217, 219, 226, 228},
-        {227, 220, 218, 229}, {219, 221, 224, 226}, {225, 222, 220, 227}, {221, 71, 223, 224},
-        {223, 71, 222, 225}, {223, 230, 228, 224}, {229, 230, 223, 225}, {182, 180, 233, 231},
-        {234, 181, 183, 232}, {111, 182, 231, 253}, {232, 183, 112, 254}, {109, 111, 253, 255},
-        {254, 112, 110, 256}, {180, 113, 251, 233}, {252, 114, 181, 234}, {113, 115, 249, 251},
-        {250, 116, 114, 252}, {115, 117, 247, 249}, {248, 118, 116, 250}, {117, 119, 245, 247},
-        {246, 120, 118, 248}, {119, 121, 243, 245}, {244, 122, 120, 246}, {121, 123, 241, 243},
-        {242, 124, 122, 244}, {123, 125, 239, 241}, {240, 126, 124, 242}, {125, 178, 235, 239},
-        {236, 179, 126, 240}, {178, 127, 237, 235}, {238, 128, 179, 236}, {127, 109, 255, 237},
-        {256, 110, 128, 238}, {237, 255, 257, 275}, {258, 256, 238, 276}, {235, 237, 275, 277},
-        {276, 238, 236, 278}, {239, 235, 277, 273}, {278, 236, 240, 274}, {241, 239, 273, 271},
-        {274, 240, 242, 272}, {243, 241, 271, 269}, {272, 242, 244, 270}, {245, 243, 269, 267},
-        {270, 244, 246, 268}, {247, 245, 267, 265}, {268, 246, 248, 266}, {249, 247, 265, 263},
-        {266, 248, 250, 264}, {251, 249, 263, 261}, {264, 250, 252, 262}, {233, 251, 261, 279},
-        {262, 252, 234, 280}, {255, 253, 259, 257}, {260, 254, 256, 258}, {253, 231, 281, 259},
-        {282, 232, 254, 260}, {231, 233, 279, 281}, {280, 234, 232, 282}, {66, 107, 283, 72},
-        {284, 108, 66, 72}, {107, 105, 285, 283}, {286, 106, 108, 284}, {105, 103, 287, 285},
-        {288, 104, 106, 286}, {103, 101, 289, 287}, {290, 102, 104, 288}, {101, 99, 291, 289},
-        {292, 100, 102, 290}, {99, 97, 293, 291}, {294, 98, 100, 292}, {97, 95, 295, 293},
-        {296, 96, 98, 294}, {95, 93, 297, 295}, {298, 94, 96, 296}, {93, 91, 299, 297},
-        {300, 92, 94, 298}, {307, 308, 327, 337}, {328, 308, 307, 338}, {306, 307, 337, 335},
-        {338, 307, 306, 336}, {305, 306, 335, 339}, {336, 306, 305, 340}, {88, 90, 305, 339},
-        {305, 90, 89, 340}, {86, 88, 339, 333}, {340, 89, 87, 334}, {84, 86, 333, 329},
-        {334, 87, 85, 330}, {82, 84, 329, 331}, {330, 85, 83, 332}, {329, 335, 337, 331},
-        {338, 336, 330, 332}, {329, 333, 339, 335}, {340, 334, 330, 336}, {325, 331, 337, 327},
-        {338, 332, 326, 328}, {80, 82, 331, 325}, {332, 83, 81, 326}, {208, 341, 343, 214},
-        {344, 342, 209, 215}, {80, 325, 341, 208}, {342, 326, 81, 209}, {78, 214, 343, 345},
-        {344, 215, 79, 346}, {78, 345, 299, 91}, {300, 346, 79, 92}, {76, 323, 351, 303},
-        {352, 324, 76, 303}, {303, 351, 349, 77}, {350, 352, 303, 77}, {77, 349, 347, 304},
-        {348, 350, 77, 304}, {304, 347, 327, 308}, {328, 348, 304, 308}, {325, 327, 347, 341},
-        {348, 328, 326, 342}, {295, 297, 317, 309}, {318, 298, 296, 310}, {75, 315, 323, 76},
-        {324, 316, 75, 76}, {301, 357, 355, 302}, {356, 358, 301, 302}, {302, 355, 353, 74},
-        {354, 356, 302, 74}, {74, 353, 315, 75}, {316, 354, 74, 75}, {291, 293, 361, 363},
-        {362, 294, 292, 364}, {363, 361, 367, 365}, {368, 362, 364, 366}, {365, 367, 369, 371},
-        {370, 368, 366, 372}, {371, 369, 375, 373}, {376, 370, 372, 374}, {313, 377, 373, 375},
-        {374, 378, 314, 376}, {315, 353, 373, 377}, {374, 354, 316, 378}, {353, 355, 371, 373},
-        {372, 356, 354, 374}, {355, 357, 365, 371}, {366, 358, 356, 372}, {357, 359, 363, 365},
-        {364, 360, 358, 366}, {289, 291, 363, 359}, {364, 292, 290, 360}, {73, 359, 357, 301},
-        {358, 360, 73, 301}, {283, 285, 287, 289}, {288, 286, 284, 290}, {283, 289, 359, 73},
-        {360, 290, 284, 73}, {293, 295, 309, 361}, {310, 296, 294, 362}, {309, 311, 367, 361},
-        {368, 312, 310, 362}, {311, 381, 369, 367}, {370, 382, 312, 368}, {313, 375, 369, 381},
-        {370, 376, 314, 382}, {347, 349, 385, 383}, {386, 350, 348, 384}, {317, 383, 385, 319},
-        {386, 384, 318, 320}, {297, 299, 383, 317}, {384, 300, 298, 318}, {299, 343, 341, 383},
-        {342, 344, 300, 384}, {313, 321, 379, 377}, {380, 322, 314, 378}, {315, 377, 379, 323},
-        {380, 378, 316, 324}, {319, 385, 379, 321}, {380, 386, 320, 322}, {349, 351, 379, 385},
-        {380, 352, 350, 386}, {399, 387, 413, 401}, {414, 388, 400, 402}, {399, 401, 403, 397},
-        {404, 402, 400, 398}, {397, 403, 405, 395}, {406, 404, 398, 396}, {395, 405, 407, 393},
-        {408, 406, 396, 394}, {393, 407, 409, 391}, {410, 408, 394, 392}, {391, 409, 411, 389},
-        {412, 410, 392, 390}, {409, 419, 417, 411}, {418, 420, 410, 412}, {407, 421, 419, 409},
-        {420, 422, 408, 410}, {405, 423, 421, 407}, {422, 424, 406, 408}, {403, 425, 423, 405},
-        {424, 426, 404, 406}, {401, 427, 425, 403}, {426, 428, 402, 404}, {401, 413, 415, 427},
-        {416, 414, 402, 428}, {317, 319, 443, 441}, {444, 320, 318, 442}, {319, 389, 411, 443},
-        {412, 390, 320, 444}, {309, 317, 441, 311}, {442, 318, 310, 312}, {381, 429, 413, 387},
-        {414, 430, 382, 388}, {411, 417, 439, 443}, {440, 418, 412, 444}, {437, 445, 443, 439},
-        {444, 446, 438, 440}, {433, 445, 437, 435}, {438, 446, 434, 436}, {431, 447, 445, 433},
-        {446, 448, 432, 434}, {429, 447, 431, 449}, {432, 448, 430, 450}, {413, 429, 449, 415},
-        {450, 430, 414, 416}, {311, 447, 429, 381}, {430, 448, 312, 382}, {311, 441, 445, 447},
-        {446, 442, 312, 448}, {415, 449, 451, 475}, {452, 450, 416, 476}, {449, 431, 461, 451},
-        {462, 432, 450, 452}, {431, 433, 459, 461}, {460, 434, 432, 462}, {433, 435, 457, 459},
-        {458, 436, 434, 460}, {435, 437, 455, 457}, {456, 438, 436, 458}, {437, 439, 453, 455},
-        {454, 440, 438, 456}, {439, 417, 473, 453}, {474, 418, 440, 454}, {427, 415, 475, 463},
-        {476, 416, 428, 464}, {425, 427, 463, 465}, {464, 428, 426, 466}, {423, 425, 465, 467},
-        {466, 426, 424, 468}, {421, 423, 467, 469}, {468, 424, 422, 470}, {419, 421, 469, 471},
-        {470, 422, 420, 472}, {417, 419, 471, 473}, {472, 420, 418, 474}, {457, 455, 479, 477},
-        {480, 456, 458, 478}, {477, 479, 481, 483}, {482, 480, 478, 484}, {483, 481, 487, 485},
-        {488, 482, 484, 486}, {485, 487, 489, 491}, {490, 488, 486, 492}, {463, 475, 485, 491},
-        {486, 476, 464, 492}, {451, 483, 485, 475}, {486, 484, 452, 476}, {451, 461, 477, 483},
-        {478, 462, 452, 484}, {457, 477, 461, 459}, {462, 478, 458, 460}, {453, 473, 479, 455},
-        {480, 474, 454, 456}, {471, 481, 479, 473}, {480, 482, 472, 474}, {469, 487, 481, 471},
-        {482, 488, 470, 472}, {467, 489, 487, 469}, {488, 490, 468, 470}, {465, 491, 489, 467},
-        {490, 492, 466, 468}, {391, 389, 503, 501}, {504, 390, 392, 502}, {393, 391, 501, 499},
-        {502, 392, 394, 500}, {395, 393, 499, 497}, {500, 394, 396, 498}, {397, 395, 497, 495},
-        {498, 396, 398, 496}, {399, 397, 495, 493}, {496, 398, 400, 494}, {387, 399, 493, 505},
-        {494, 400, 388, 506}, {493, 501, 503, 505}, {504, 502, 494, 506}, {493, 495, 499, 501},
-        {500, 496, 494, 502}, {313, 381, 387, 505}, {388, 382, 314, 506}, {313, 505, 503, 321},
-        {504, 506, 314, 322}, {319, 321, 503, 389}, {504, 322, 320, 390}};
+        {-0.9375, 0.0625, -0.3359375}, {1.0, 0.125, -0.3671875},
+        {-1.0, 0.125, -0.3671875}, {0.9609375, 0.171875, -0.3515625},
+        {-0.9609375, 0.171875, -0.3515625}, {1.015625, 0.234375, -0.375},
+        {-1.015625, 0.234375, -0.375}, {1.0546875, 0.1875, -0.3828125},
+        {-1.0546875, 0.1875, -0.3828125}, {1.109375, 0.2109375, -0.390625},
+        {-1.109375, 0.2109375, -0.390625}, {1.0859375, 0.2734375, -0.390625},
+        {-1.0859375, 0.2734375, -0.390625}, {1.0234375, 0.4375, -0.484375},
+        {-1.0234375, 0.4375, -0.484375}, {1.25, 0.46875, -0.546875},
+        {-1.25, 0.46875, -0.546875}, {1.3671875, 0.296875, -0.5},
+        {-1.3671875, 0.296875, -0.5}, {1.3125, 0.0546875, -0.53125},
+        {-1.3125, 0.0546875, -0.53125}, {1.0390625, -0.0859375, -0.4921875},
+        {-1.0390625, -0.0859375, -0.4921875}, {0.7890625, -0.125, -0.328125},
+        {-0.7890625, -0.125, -0.328125}, {0.859375, 0.3828125, -0.3828125},
+        {-0.859375, 0.3828125, -0.3828125}};
+    static auto suzanne_triangles = vector<vec3i>{{60, 64, 48}, {49, 65, 61},
+        {62, 64, 60}, {61, 65, 63}, {60, 58, 62}, {63, 59, 61}, {60, 56, 58},
+        {59, 57, 61}, {60, 54, 56}, {57, 55, 61}, {60, 52, 54}, {55, 53, 61},
+        {60, 50, 52}, {53, 51, 61}, {60, 48, 50}, {51, 49, 61}, {224, 228, 226},
+        {227, 229, 225}, {72, 283, 73}, {73, 284, 72}, {341, 347, 383},
+        {384, 348, 342}, {299, 345, 343}, {344, 346, 300}, {323, 379, 351},
+        {352, 380, 324}, {441, 443, 445}, {446, 444, 442}, {463, 491, 465},
+        {466, 492, 464}, {495, 497, 499}, {500, 498, 496}};
+    static auto suzanne_quads = vector<vec4i>{{46, 0, 2, 44}, {3, 1, 47, 45},
+        {44, 2, 4, 42}, {5, 3, 45, 43}, {2, 8, 6, 4}, {7, 9, 3, 5},
+        {0, 10, 8, 2}, {9, 11, 1, 3}, {10, 12, 14, 8}, {15, 13, 11, 9},
+        {8, 14, 16, 6}, {17, 15, 9, 7}, {14, 20, 18, 16}, {19, 21, 15, 17},
+        {12, 22, 20, 14}, {21, 23, 13, 15}, {22, 24, 26, 20}, {27, 25, 23, 21},
+        {20, 26, 28, 18}, {29, 27, 21, 19}, {26, 32, 30, 28}, {31, 33, 27, 29},
+        {24, 34, 32, 26}, {33, 35, 25, 27}, {34, 36, 38, 32}, {39, 37, 35, 33},
+        {32, 38, 40, 30}, {41, 39, 33, 31}, {38, 44, 42, 40}, {43, 45, 39, 41},
+        {36, 46, 44, 38}, {45, 47, 37, 39}, {46, 36, 50, 48}, {51, 37, 47, 49},
+        {36, 34, 52, 50}, {53, 35, 37, 51}, {34, 24, 54, 52}, {55, 25, 35, 53},
+        {24, 22, 56, 54}, {57, 23, 25, 55}, {22, 12, 58, 56}, {59, 13, 23, 57},
+        {12, 10, 62, 58}, {63, 11, 13, 59}, {10, 0, 64, 62}, {65, 1, 11, 63},
+        {0, 46, 48, 64}, {49, 47, 1, 65}, {88, 173, 175, 90},
+        {175, 174, 89, 90}, {86, 171, 173, 88}, {174, 172, 87, 89},
+        {84, 169, 171, 86}, {172, 170, 85, 87}, {82, 167, 169, 84},
+        {170, 168, 83, 85}, {80, 165, 167, 82}, {168, 166, 81, 83},
+        {78, 91, 145, 163}, {146, 92, 79, 164}, {91, 93, 147, 145},
+        {148, 94, 92, 146}, {93, 95, 149, 147}, {150, 96, 94, 148},
+        {95, 97, 151, 149}, {152, 98, 96, 150}, {97, 99, 153, 151},
+        {154, 100, 98, 152}, {99, 101, 155, 153}, {156, 102, 100, 154},
+        {101, 103, 157, 155}, {158, 104, 102, 156}, {103, 105, 159, 157},
+        {160, 106, 104, 158}, {105, 107, 161, 159}, {162, 108, 106, 160},
+        {107, 66, 67, 161}, {67, 66, 108, 162}, {109, 127, 159, 161},
+        {160, 128, 110, 162}, {127, 178, 157, 159}, {158, 179, 128, 160},
+        {125, 155, 157, 178}, {158, 156, 126, 179}, {123, 153, 155, 125},
+        {156, 154, 124, 126}, {121, 151, 153, 123}, {154, 152, 122, 124},
+        {119, 149, 151, 121}, {152, 150, 120, 122}, {117, 147, 149, 119},
+        {150, 148, 118, 120}, {115, 145, 147, 117}, {148, 146, 116, 118},
+        {113, 163, 145, 115}, {146, 164, 114, 116}, {113, 180, 176, 163},
+        {176, 181, 114, 164}, {109, 161, 67, 111}, {67, 162, 110, 112},
+        {111, 67, 177, 182}, {177, 67, 112, 183}, {176, 180, 182, 177},
+        {183, 181, 176, 177}, {134, 136, 175, 173}, {175, 136, 135, 174},
+        {132, 134, 173, 171}, {174, 135, 133, 172}, {130, 132, 171, 169},
+        {172, 133, 131, 170}, {165, 186, 184, 167}, {185, 187, 166, 168},
+        {130, 169, 167, 184}, {168, 170, 131, 185}, {143, 189, 188, 186},
+        {188, 189, 144, 187}, {184, 186, 188, 68}, {188, 187, 185, 68},
+        {129, 130, 184, 68}, {185, 131, 129, 68}, {141, 192, 190, 143},
+        {191, 193, 142, 144}, {139, 194, 192, 141}, {193, 195, 140, 142},
+        {138, 196, 194, 139}, {195, 197, 138, 140}, {137, 70, 196, 138},
+        {197, 70, 137, 138}, {189, 143, 190, 69}, {191, 144, 189, 69},
+        {69, 190, 205, 207}, {206, 191, 69, 207}, {70, 198, 199, 196},
+        {200, 198, 70, 197}, {196, 199, 201, 194}, {202, 200, 197, 195},
+        {194, 201, 203, 192}, {204, 202, 195, 193}, {192, 203, 205, 190},
+        {206, 204, 193, 191}, {198, 203, 201, 199}, {202, 204, 198, 200},
+        {198, 207, 205, 203}, {206, 207, 198, 204}, {138, 139, 163, 176},
+        {164, 140, 138, 176}, {139, 141, 210, 163}, {211, 142, 140, 164},
+        {141, 143, 212, 210}, {213, 144, 142, 211}, {143, 186, 165, 212},
+        {166, 187, 144, 213}, {80, 208, 212, 165}, {213, 209, 81, 166},
+        {208, 214, 210, 212}, {211, 215, 209, 213}, {78, 163, 210, 214},
+        {211, 164, 79, 215}, {130, 129, 71, 221}, {71, 129, 131, 222},
+        {132, 130, 221, 219}, {222, 131, 133, 220}, {134, 132, 219, 217},
+        {220, 133, 135, 218}, {136, 134, 217, 216}, {218, 135, 136, 216},
+        {216, 217, 228, 230}, {229, 218, 216, 230}, {217, 219, 226, 228},
+        {227, 220, 218, 229}, {219, 221, 224, 226}, {225, 222, 220, 227},
+        {221, 71, 223, 224}, {223, 71, 222, 225}, {223, 230, 228, 224},
+        {229, 230, 223, 225}, {182, 180, 233, 231}, {234, 181, 183, 232},
+        {111, 182, 231, 253}, {232, 183, 112, 254}, {109, 111, 253, 255},
+        {254, 112, 110, 256}, {180, 113, 251, 233}, {252, 114, 181, 234},
+        {113, 115, 249, 251}, {250, 116, 114, 252}, {115, 117, 247, 249},
+        {248, 118, 116, 250}, {117, 119, 245, 247}, {246, 120, 118, 248},
+        {119, 121, 243, 245}, {244, 122, 120, 246}, {121, 123, 241, 243},
+        {242, 124, 122, 244}, {123, 125, 239, 241}, {240, 126, 124, 242},
+        {125, 178, 235, 239}, {236, 179, 126, 240}, {178, 127, 237, 235},
+        {238, 128, 179, 236}, {127, 109, 255, 237}, {256, 110, 128, 238},
+        {237, 255, 257, 275}, {258, 256, 238, 276}, {235, 237, 275, 277},
+        {276, 238, 236, 278}, {239, 235, 277, 273}, {278, 236, 240, 274},
+        {241, 239, 273, 271}, {274, 240, 242, 272}, {243, 241, 271, 269},
+        {272, 242, 244, 270}, {245, 243, 269, 267}, {270, 244, 246, 268},
+        {247, 245, 267, 265}, {268, 246, 248, 266}, {249, 247, 265, 263},
+        {266, 248, 250, 264}, {251, 249, 263, 261}, {264, 250, 252, 262},
+        {233, 251, 261, 279}, {262, 252, 234, 280}, {255, 253, 259, 257},
+        {260, 254, 256, 258}, {253, 231, 281, 259}, {282, 232, 254, 260},
+        {231, 233, 279, 281}, {280, 234, 232, 282}, {66, 107, 283, 72},
+        {284, 108, 66, 72}, {107, 105, 285, 283}, {286, 106, 108, 284},
+        {105, 103, 287, 285}, {288, 104, 106, 286}, {103, 101, 289, 287},
+        {290, 102, 104, 288}, {101, 99, 291, 289}, {292, 100, 102, 290},
+        {99, 97, 293, 291}, {294, 98, 100, 292}, {97, 95, 295, 293},
+        {296, 96, 98, 294}, {95, 93, 297, 295}, {298, 94, 96, 296},
+        {93, 91, 299, 297}, {300, 92, 94, 298}, {307, 308, 327, 337},
+        {328, 308, 307, 338}, {306, 307, 337, 335}, {338, 307, 306, 336},
+        {305, 306, 335, 339}, {336, 306, 305, 340}, {88, 90, 305, 339},
+        {305, 90, 89, 340}, {86, 88, 339, 333}, {340, 89, 87, 334},
+        {84, 86, 333, 329}, {334, 87, 85, 330}, {82, 84, 329, 331},
+        {330, 85, 83, 332}, {329, 335, 337, 331}, {338, 336, 330, 332},
+        {329, 333, 339, 335}, {340, 334, 330, 336}, {325, 331, 337, 327},
+        {338, 332, 326, 328}, {80, 82, 331, 325}, {332, 83, 81, 326},
+        {208, 341, 343, 214}, {344, 342, 209, 215}, {80, 325, 341, 208},
+        {342, 326, 81, 209}, {78, 214, 343, 345}, {344, 215, 79, 346},
+        {78, 345, 299, 91}, {300, 346, 79, 92}, {76, 323, 351, 303},
+        {352, 324, 76, 303}, {303, 351, 349, 77}, {350, 352, 303, 77},
+        {77, 349, 347, 304}, {348, 350, 77, 304}, {304, 347, 327, 308},
+        {328, 348, 304, 308}, {325, 327, 347, 341}, {348, 328, 326, 342},
+        {295, 297, 317, 309}, {318, 298, 296, 310}, {75, 315, 323, 76},
+        {324, 316, 75, 76}, {301, 357, 355, 302}, {356, 358, 301, 302},
+        {302, 355, 353, 74}, {354, 356, 302, 74}, {74, 353, 315, 75},
+        {316, 354, 74, 75}, {291, 293, 361, 363}, {362, 294, 292, 364},
+        {363, 361, 367, 365}, {368, 362, 364, 366}, {365, 367, 369, 371},
+        {370, 368, 366, 372}, {371, 369, 375, 373}, {376, 370, 372, 374},
+        {313, 377, 373, 375}, {374, 378, 314, 376}, {315, 353, 373, 377},
+        {374, 354, 316, 378}, {353, 355, 371, 373}, {372, 356, 354, 374},
+        {355, 357, 365, 371}, {366, 358, 356, 372}, {357, 359, 363, 365},
+        {364, 360, 358, 366}, {289, 291, 363, 359}, {364, 292, 290, 360},
+        {73, 359, 357, 301}, {358, 360, 73, 301}, {283, 285, 287, 289},
+        {288, 286, 284, 290}, {283, 289, 359, 73}, {360, 290, 284, 73},
+        {293, 295, 309, 361}, {310, 296, 294, 362}, {309, 311, 367, 361},
+        {368, 312, 310, 362}, {311, 381, 369, 367}, {370, 382, 312, 368},
+        {313, 375, 369, 381}, {370, 376, 314, 382}, {347, 349, 385, 383},
+        {386, 350, 348, 384}, {317, 383, 385, 319}, {386, 384, 318, 320},
+        {297, 299, 383, 317}, {384, 300, 298, 318}, {299, 343, 341, 383},
+        {342, 344, 300, 384}, {313, 321, 379, 377}, {380, 322, 314, 378},
+        {315, 377, 379, 323}, {380, 378, 316, 324}, {319, 385, 379, 321},
+        {380, 386, 320, 322}, {349, 351, 379, 385}, {380, 352, 350, 386},
+        {399, 387, 413, 401}, {414, 388, 400, 402}, {399, 401, 403, 397},
+        {404, 402, 400, 398}, {397, 403, 405, 395}, {406, 404, 398, 396},
+        {395, 405, 407, 393}, {408, 406, 396, 394}, {393, 407, 409, 391},
+        {410, 408, 394, 392}, {391, 409, 411, 389}, {412, 410, 392, 390},
+        {409, 419, 417, 411}, {418, 420, 410, 412}, {407, 421, 419, 409},
+        {420, 422, 408, 410}, {405, 423, 421, 407}, {422, 424, 406, 408},
+        {403, 425, 423, 405}, {424, 426, 404, 406}, {401, 427, 425, 403},
+        {426, 428, 402, 404}, {401, 413, 415, 427}, {416, 414, 402, 428},
+        {317, 319, 443, 441}, {444, 320, 318, 442}, {319, 389, 411, 443},
+        {412, 390, 320, 444}, {309, 317, 441, 311}, {442, 318, 310, 312},
+        {381, 429, 413, 387}, {414, 430, 382, 388}, {411, 417, 439, 443},
+        {440, 418, 412, 444}, {437, 445, 443, 439}, {444, 446, 438, 440},
+        {433, 445, 437, 435}, {438, 446, 434, 436}, {431, 447, 445, 433},
+        {446, 448, 432, 434}, {429, 447, 431, 449}, {432, 448, 430, 450},
+        {413, 429, 449, 415}, {450, 430, 414, 416}, {311, 447, 429, 381},
+        {430, 448, 312, 382}, {311, 441, 445, 447}, {446, 442, 312, 448},
+        {415, 449, 451, 475}, {452, 450, 416, 476}, {449, 431, 461, 451},
+        {462, 432, 450, 452}, {431, 433, 459, 461}, {460, 434, 432, 462},
+        {433, 435, 457, 459}, {458, 436, 434, 460}, {435, 437, 455, 457},
+        {456, 438, 436, 458}, {437, 439, 453, 455}, {454, 440, 438, 456},
+        {439, 417, 473, 453}, {474, 418, 440, 454}, {427, 415, 475, 463},
+        {476, 416, 428, 464}, {425, 427, 463, 465}, {464, 428, 426, 466},
+        {423, 425, 465, 467}, {466, 426, 424, 468}, {421, 423, 467, 469},
+        {468, 424, 422, 470}, {419, 421, 469, 471}, {470, 422, 420, 472},
+        {417, 419, 471, 473}, {472, 420, 418, 474}, {457, 455, 479, 477},
+        {480, 456, 458, 478}, {477, 479, 481, 483}, {482, 480, 478, 484},
+        {483, 481, 487, 485}, {488, 482, 484, 486}, {485, 487, 489, 491},
+        {490, 488, 486, 492}, {463, 475, 485, 491}, {486, 476, 464, 492},
+        {451, 483, 485, 475}, {486, 484, 452, 476}, {451, 461, 477, 483},
+        {478, 462, 452, 484}, {457, 477, 461, 459}, {462, 478, 458, 460},
+        {453, 473, 479, 455}, {480, 474, 454, 456}, {471, 481, 479, 473},
+        {480, 482, 472, 474}, {469, 487, 481, 471}, {482, 488, 470, 472},
+        {467, 489, 487, 469}, {488, 490, 468, 470}, {465, 491, 489, 467},
+        {490, 492, 466, 468}, {391, 389, 503, 501}, {504, 390, 392, 502},
+        {393, 391, 501, 499}, {502, 392, 394, 500}, {395, 393, 499, 497},
+        {500, 394, 396, 498}, {397, 395, 497, 495}, {498, 396, 398, 496},
+        {399, 397, 495, 493}, {496, 398, 400, 494}, {387, 399, 493, 505},
+        {494, 400, 388, 506}, {493, 501, 503, 505}, {504, 502, 494, 506},
+        {493, 495, 499, 501}, {500, 496, 494, 502}, {313, 381, 387, 505},
+        {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
+        {319, 321, 503, 389}, {504, 322, 320, 390}};
 
     auto shape      = make_shape_data();
     shape.positions = suzanne_pos;
     for (auto& p : shape.positions) p *= size / 2;
     if (!as_triangles) {
         shape.quads = suzanne_quads;
-        for (auto& t : suzanne_triangles) { shape.quads.push_back({t.x, t.y, t.z, t.z}); }
+        for (auto& t : suzanne_triangles) {
+            shape.quads.push_back({t.x, t.y, t.z, t.z});
+        }
     } else {
         shape.triangles = convert_quads_to_triangles(suzanne_quads);
         for (auto& t : suzanne_triangles) { shape.triangles.push_back(t); }
@@ -2527,10 +2704,10 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
 
 // Watertight cube
 make_shape_data make_cube(const vec3f& size, bool as_triangles) {
-    static auto cube_pos   = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1}, {+1, -1, -1},
-        {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
-    static auto cube_quads = vector<vec4i>{
-        {0, 1, 2, 3}, {7, 6, 5, 4}, {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
+    static auto cube_pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
+        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
+    static auto cube_quads   = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
+        {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
     static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     auto        shape        = make_shape_data();
     shape.positions          = cube_pos;
@@ -2544,8 +2721,8 @@ make_shape_data make_cube(const vec3f& size, bool as_triangles) {
 }
 
 // Generate lines set along a quad.
-make_shape_data make_lines(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, const vec2f& line_radius) {
+make_shape_data make_lines(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, const vec2f& line_radius) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
     auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
@@ -2559,9 +2736,11 @@ make_shape_data make_lines(
     if (steps.y > 1) {
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i <= steps.x; i++) {
-                auto uv = vec2f{i / (float)steps.x, j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
-                shape.positions[vid(i, j)] = {(uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-                shape.normals[vid(i, j)]   = {1, 0, 0};
+                auto uv                    = vec2f{i / (float)steps.x,
+                    j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
+                shape.positions[vid(i, j)] = {
+                    (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
+                shape.normals[vid(i, j)]       = {1, 0, 0};
                 shape.texturecoords[vid(i, j)] = uv * uvsize;
             }
         }
@@ -2576,7 +2755,9 @@ make_shape_data make_lines(
 
     shape.lines.resize(nlines);
     for (int j = 0; j < steps.y; j++) {
-        for (int i = 0; i < steps.x; i++) { shape.lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)}; }
+        for (int i = 0; i < steps.x; i++) {
+            shape.lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
+        }
     }
     return shape;
 }
@@ -2597,8 +2778,8 @@ make_shape_data make_points(int num, float uvsize, float point_radius) {
 }
 
 // Generate a point set.
-make_shape_data make_random_points(
-    int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed) {
+make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
+    float point_radius, uint64_t seed) {
     auto shape = make_points(num, uvsize, point_radius);
     auto rng   = make_rng(seed);
     for (auto i = 0; i < shape.positions.size(); i++) {
@@ -2621,9 +2802,10 @@ make_shape_data make_point(float point_radius) {
 // Make a bezier circle. Returns bezier, pos.
 make_shape_data make_bezier_circle(float size) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
-    const auto  c          = 0.551915024494f;
-    static auto circle_pos = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0}, {0, 1, 0}, {-c, 1, 0},
-        {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0}, {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
+    const auto  c              = 0.551915024494f;
+    static auto circle_pos     = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
+        {0, 1, 0}, {-c, 1, 0}, {-1, c, 0}, {-1, 0, 0}, {-1, -c, 0}, {-c, -1, 0},
+        {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
     static auto circle_beziers = vector<vec4i>{
         {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
     auto shape      = make_shape_data();
@@ -2634,9 +2816,9 @@ make_shape_data make_bezier_circle(float size) {
 
 // Make a hair ball around a shape
 make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
+    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
@@ -2671,14 +2853,20 @@ make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
         shape.radius[i]    = lerp(rad.x, rad.y, u);
         if (clump.x > 0) {
             shape.positions[i] = shape.positions[i] +
-                                 (shape.positions[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
+                                 (shape.positions[i + (cidx[bidx] - bidx) *
+                                                          (steps.x + 1)] -
                                      shape.positions[i]) *
                                      u * clump.x;
         }
         if (noise.x > 0) {
-            auto nx = perlin_noise(shape.positions[i] * noise.y + vec3f{0, 0, 0}) * noise.x;
-            auto ny = perlin_noise(shape.positions[i] * noise.y + vec3f{3, 7, 11}) * noise.x;
-            auto nz = perlin_noise(shape.positions[i] * noise.y + vec3f{13, 17, 19}) * noise.x;
+            auto nx = perlin_noise(shape.positions[i] * noise.y + vec3f{0, 0, 0}) *
+                      noise.x;
+            auto ny = perlin_noise(
+                          shape.positions[i] * noise.y + vec3f{3, 7, 11}) *
+                      noise.x;
+            auto nz = perlin_noise(
+                          shape.positions[i] * noise.y + vec3f{13, 17, 19}) *
+                      noise.x;
             shape.positions[i] += {nx, ny, nz};
         }
     }
@@ -2694,13 +2882,16 @@ make_shape_data merge_shape_data(const vector<make_shape_data>& shapes) {
     for (auto& sshp : shapes) {
         auto nverts = (int)shape.positions.size();
         for (auto& v : sshp.points) shape.points.push_back(v + nverts);
-        for (auto& v : sshp.lines) shape.lines.push_back({v.x + nverts, v.y + nverts});
+        for (auto& v : sshp.lines)
+            shape.lines.push_back({v.x + nverts, v.y + nverts});
         for (auto& v : sshp.triangles)
             shape.triangles.push_back({v.x + nverts, v.y + nverts, v.z + nverts});
         for (auto& v : sshp.quads)
-            shape.quads.push_back({v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
+            shape.quads.push_back(
+                {v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
         for (auto& v : sshp.beziers)
-            shape.beziers.push_back({v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
+            shape.beziers.push_back(
+                {v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
         for (auto& v : sshp.positions) shape.positions.push_back(v);
         for (auto& v : sshp.normals) shape.normals.push_back(v);
         for (auto& v : sshp.texturecoords) shape.texturecoords.push_back(v);
@@ -2719,7 +2910,8 @@ namespace ygl {
 // Convert between CIE XYZ and xyY
 vec3f xyz_to_xyY(const vec3f& xyz) {
     if (xyz == zero3f) return zero3f;
-    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
+    return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
+        xyz.y};
 }
 // Convert between CIE XYZ and xyY
 vec3f xyY_to_xyz(const vec3f& xyY) {
@@ -2780,7 +2972,8 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
     }
 
     float chroma = r - (g < b ? g : b);
-    return {fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+    return {
+        fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
 }  // namespace ygl
@@ -2841,7 +3034,8 @@ image<vec4b> float_to_byte(const image<vec4f>& fl) {
 }
 
 // Tonemap image
-image<vec4f> tonemap_filmic(const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+image<vec4f> tonemap_filmic(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
     auto ldr = image<vec4f>{hdr.width, hdr.height};
     for (auto idx = 0; idx < hdr.width * hdr.height; idx++) {
         ldr.pixels[idx] = tonemap_filmic(hdr.pixels[idx], exposure, filmic, srgb);
@@ -2857,12 +3051,14 @@ image<vec4f> tonemap_filmic(const image<vec4f>& hdr, float exposure, bool filmic
 namespace ygl {
 
 // Make a grid image
-image<vec4f> make_grid_image4f(int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
+image<vec4f> make_grid_image4f(
+    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 || j % tile == tile - 1;
+            auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
+                     j % tile == tile - 1;
             pixel_at(img, i, j) = (c) ? c0 : c1;
         }
     }
@@ -2870,7 +3066,8 @@ image<vec4f> make_grid_image4f(int width, int height, int tiles, const vec4f& c0
 }
 
 // Make a checkerboard image
-image<vec4f> make_checker_image4f(int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
+image<vec4f> make_checker_image4f(
+    int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
@@ -2890,7 +3087,8 @@ image<vec4f> make_bumpdimple_image4f(int width, int height, int tiles) {
         for (int i = 0; i < img.width; i++) {
             auto c  = (i / tile + j / tile) % 2 == 0;
             auto ii = i % tile - tile / 2, jj = j % tile - tile / 2;
-            auto r = sqrt(float(ii * ii + jj * jj)) / sqrt(float(tile * tile) / 4);
+            auto r = sqrt(float(ii * ii + jj * jj)) /
+                     sqrt(float(tile * tile) / 4);
             auto h = 0.5f;
             if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
             pixel_at(img, i, j) = {h, h, h, 1};
@@ -2900,7 +3098,8 @@ image<vec4f> make_bumpdimple_image4f(int width, int height, int tiles) {
 }
 
 // Make a uv colored grid
-image<vec4f> make_ramp_image4f(int width, int height, const vec4f& c0, const vec4f& c1) {
+image<vec4f> make_ramp_image4f(
+    int width, int height, const vec4f& c0, const vec4f& c1) {
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
@@ -2931,7 +3130,8 @@ image<vec4f> make_uvramp_image4f(int width, int height) {
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            pixel_at(img, i, j) = {i / (float)(img.width - 1), j / (float)(img.height - 1), 0, 1};
+            pixel_at(img, i, j) = {
+                i / (float)(img.width - 1), j / (float)(img.height - 1), 0, 1};
         }
     }
     return img;
@@ -2945,7 +3145,8 @@ image<vec4f> make_uvgrid_image4f(int width, int height, int tiles, bool colored)
         for (int i = 0; i < img.width; i++) {
             auto ii = i / tile, jj = j / tile;
             auto ww = img.width / tile, hh = img.height / tile;
-            auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) / 360.f;
+            auto ph = (((256 / (ww * hh)) * (ii + jj * ww) - 64 + 256) % 256) /
+                      360.f;
             auto pv = 0.5f;
             auto ps = 0.8f;
             if (i % (tile / 2) && j % (tile / 2)) {
@@ -2971,13 +3172,15 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
             auto i1 = (i + 1) % img.width, j1 = (j + 1) % img.height;
-            auto p00 = pixel_at(img, i, j), p10 = pixel_at(img, i1, j), p01 = pixel_at(img, i, j1);
-            auto g00             = (p00.x + p00.y + p00.z) / 3;
-            auto g01             = (p01.x + p01.y + p01.z) / 3;
-            auto g10             = (p10.x + p10.y + p10.z) / 3;
-            auto n               = vec3f{scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
-            n.y                  = -n.y;  // make green pointing up, even if y axis points down
-            n                    = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+            auto p00 = pixel_at(img, i, j), p10 = pixel_at(img, i1, j),
+                 p01 = pixel_at(img, i, j1);
+            auto g00 = (p00.x + p00.y + p00.z) / 3;
+            auto g01 = (p01.x + p01.y + p01.z) / 3;
+            auto g10 = (p10.x + p10.y + p10.z) / 3;
+            auto n   = vec3f{
+                scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
+            n.y = -n.y;  // make green pointing up, even if y axis points down
+            n   = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
             pixel_at(norm, i, j) = {n.x, n.y, n.z, 1};
         }
     }
@@ -2985,54 +3188,58 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
 }
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun, float turbidity,
-    bool has_sun, const vec3f& ground_albedo) {
+image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
+    float turbidity, bool has_sun, const vec3f& ground_albedo) {
     auto wSun = vec3f{0, cos(thetaSun), sin(thetaSun)};
 
     // sunSpectralRad =  ComputeAttenuatedSunlight(thetaS, turbidity);
     auto sunAngularRadius = 9.35e-03f / 2;  // Wikipedia
     auto thetaS           = thetaSun;
 
-    auto t1 = thetaSun, t2 = thetaSun * thetaSun, t3 = thetaSun * thetaSun * thetaSun;
+    auto t1 = thetaSun, t2 = thetaSun * thetaSun,
+         t3 = thetaSun * thetaSun * thetaSun;
     auto T  = turbidity;
     auto T2 = turbidity * turbidity;
 
-    auto zenith_xyY = vec3f{(+0.00165f * t3 - 0.00374f * t2 + 0.00208f * t1 + 0) * T2 +
-                                (-0.02902f * t3 + 0.06377f * t2 - 0.03202f * t1 + 0.00394f) * T +
-                                (+0.11693f * t3 - 0.21196f * t2 + 0.06052f * t1 + 0.25885f),
+    auto zenith_xyY = vec3f{
+        (+0.00165f * t3 - 0.00374f * t2 + 0.00208f * t1 + 0) * T2 +
+            (-0.02902f * t3 + 0.06377f * t2 - 0.03202f * t1 + 0.00394f) * T +
+            (+0.11693f * t3 - 0.21196f * t2 + 0.06052f * t1 + 0.25885f),
         (+0.00275f * t3 - 0.00610f * t2 + 0.00316f * t1 + 0) * T2 +
             (-0.04214f * t3 + 0.08970f * t2 - 0.04153f * t1 + 0.00515f) * T +
             (+0.15346f * t3 - 0.26756f * t2 + 0.06669f * t1 + 0.26688f),
-        1000 * (4.0453f * T - 4.9710f) * tan((4.0f / 9.0f - T / 120.0f) * (pif - 2 * t1)) -
+        1000 * (4.0453f * T - 4.9710f) *
+                tan((4.0f / 9.0f - T / 120.0f) * (pif - 2 * t1)) -
             .2155f * T + 2.4192f};
 
-    auto perez_A_xyY = vec3f{
-        -0.01925f * T - 0.25922f, -0.01669f * T - 0.26078f, +0.17872f * T - 1.46303f};
-    auto perez_B_xyY = vec3f{
-        -0.06651f * T + 0.00081f, -0.09495f * T + 0.00921f, -0.35540f * T + 0.42749f};
-    auto perez_C_xyY = vec3f{
-        -0.00041f * T + 0.21247f, -0.00792f * T + 0.21023f, -0.02266f * T + 5.32505f};
-    auto perez_D_xyY = vec3f{
-        -0.06409f * T - 0.89887f, -0.04405f * T - 1.65369f, +0.12064f * T - 2.57705f};
-    auto perez_E_xyY = vec3f{
-        -0.00325f * T + 0.04517f, -0.01092f * T + 0.05291f, -0.06696f * T + 0.37027f};
+    auto perez_A_xyY = vec3f{-0.01925f * T - 0.25922f, -0.01669f * T - 0.26078f,
+        +0.17872f * T - 1.46303f};
+    auto perez_B_xyY = vec3f{-0.06651f * T + 0.00081f, -0.09495f * T + 0.00921f,
+        -0.35540f * T + 0.42749f};
+    auto perez_C_xyY = vec3f{-0.00041f * T + 0.21247f, -0.00792f * T + 0.21023f,
+        -0.02266f * T + 5.32505f};
+    auto perez_D_xyY = vec3f{-0.06409f * T - 0.89887f, -0.04405f * T - 1.65369f,
+        +0.12064f * T - 2.57705f};
+    auto perez_E_xyY = vec3f{-0.00325f * T + 0.04517f, -0.01092f * T + 0.05291f,
+        -0.06696f * T + 0.37027f};
 
-    auto perez_f = [thetaS](float A, float B, float C, float D, float E, float theta, float gamma,
-                       float zenith) -> float {
-        auto den = ((1 + A * exp(B)) * (1 + C * exp(D * thetaS) + E * cos(thetaS) * cos(thetaS)));
+    auto perez_f = [thetaS](float A, float B, float C, float D, float E,
+                       float theta, float gamma, float zenith) -> float {
+        auto den = ((1 + A * exp(B)) *
+                    (1 + C * exp(D * thetaS) + E * cos(thetaS) * cos(thetaS)));
         auto num = ((1 + A * exp(B / cos(theta))) *
                     (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
         return zenith * num / den;
     };
 
-    auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY, perez_E_xyY,
-                   zenith_xyY](auto theta, auto gamma) -> vec3f {
-        auto x = perez_f(perez_A_xyY.x, perez_B_xyY.x, perez_C_xyY.x, perez_D_xyY.x, perez_E_xyY.x,
-            theta, gamma, zenith_xyY.x);
-        auto y = perez_f(perez_A_xyY.y, perez_B_xyY.y, perez_C_xyY.y, perez_D_xyY.y, perez_E_xyY.y,
-            theta, gamma, zenith_xyY.y);
-        auto Y = perez_f(perez_A_xyY.z, perez_B_xyY.z, perez_C_xyY.z, perez_D_xyY.z, perez_E_xyY.z,
-            theta, gamma, zenith_xyY.z);
+    auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
+                   perez_E_xyY, zenith_xyY](auto theta, auto gamma) -> vec3f {
+        auto x = perez_f(perez_A_xyY.x, perez_B_xyY.x, perez_C_xyY.x,
+            perez_D_xyY.x, perez_E_xyY.x, theta, gamma, zenith_xyY.x);
+        auto y = perez_f(perez_A_xyY.y, perez_B_xyY.y, perez_C_xyY.y,
+            perez_D_xyY.y, perez_E_xyY.y, theta, gamma, zenith_xyY.y);
+        auto Y = perez_f(perez_A_xyY.z, perez_B_xyY.z, perez_C_xyY.z,
+            perez_D_xyY.z, perez_E_xyY.z, theta, gamma, zenith_xyY.z);
         return xyz_to_rgb(xyY_to_xyz({x, y, Y})) / 10000.0f;
     };
 
@@ -3044,15 +3251,18 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun, float tu
     auto sun_sol    = vec3f{20000.0f, 27000.0f, 30000.0f};
     auto sun_lambda = vec3f{680, 530, 480};
     auto sun_beta   = 0.04608365822050f * turbidity - 0.04586025928522f;
-    auto sun_m      = 1.0f / (cos(thetaSun) + 0.000940f * pow(1.6386f - thetaSun, -1.253f));
+    auto sun_m      = 1.0f /
+                 (cos(thetaSun) + 0.000940f * pow(1.6386f - thetaSun, -1.253f));
 
     auto sun_le = zero3f;
     for (auto i = 0; i < 3; i++) {
-        auto tauR = exp(-sun_m * 0.008735f * pow((&sun_lambda.x)[i] / 1000, -4.08f));
-        auto tauA = exp(-sun_m * sun_beta * pow((&sun_lambda.x)[i] / 1000, -1.3f));
-        auto tauO = exp(-sun_m * (&sun_ko.x)[i] * .35f);
-        auto tauG = exp(
-            -1.41f * (&sun_kg.x)[i] * sun_m / pow(1 + 118.93f * (&sun_kg.x)[i] * sun_m, 0.45f));
+        auto tauR = exp(
+            -sun_m * 0.008735f * pow((&sun_lambda.x)[i] / 1000, -4.08f));
+        auto tauA = exp(
+            -sun_m * sun_beta * pow((&sun_lambda.x)[i] / 1000, -1.3f));
+        auto tauO      = exp(-sun_m * (&sun_ko.x)[i] * .35f);
+        auto tauG      = exp(-1.41f * (&sun_kg.x)[i] * sun_m /
+                        pow(1 + 118.93f * (&sun_kg.x)[i] * sun_m, 0.45f));
         auto tauWA     = exp(-0.2385f * (&sun_kwa.x)[i] * 2.0f * sun_m /
                          pow(1 + 20.07f * (&sun_kwa.x)[i] * 2.0f * sun_m, 0.45f));
         (&sun_le.x)[i] = (&sun_sol.x)[i] * tauR * tauA * tauO * tauG * tauWA;
@@ -3067,8 +3277,9 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun, float tu
         auto theta = pif * ((j + 0.5f) / img.height);
         theta      = clamp(theta, 0.0f, pif / 2 - epsf);
         for (int i = 0; i < img.width; i++) {
-            auto phi            = 2 * pif * (float(i + 0.5f) / img.width);
-            auto w              = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+            auto phi = 2 * pif * (float(i + 0.5f) / img.width);
+            auto w   = vec3f{
+                cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma          = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
             auto col            = sky(theta, gamma) + sun(theta, gamma);
             pixel_at(img, i, j) = {col.x, col.y, col.z, 1};
@@ -3097,8 +3308,8 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun, float tu
 }
 
 // Make an image of multiple lights.
-image<vec4f> make_lights_image4f(int width, int height, const vec3f& le, int nlights, float langle,
-    float lwidth, float lheight) {
+image<vec4f> make_lights_image4f(int width, int height, const vec3f& le,
+    int nlights, float langle, float lwidth, float lheight) {
     auto img = image<vec4f>{width, height, {0, 0, 0, 1}};
     for (auto j = 0; j < img.height / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.height);
@@ -3123,7 +3334,8 @@ image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
     for (auto j = 0; j < img.height; j++) {
         for (auto i = 0; i < img.width; i++) {
-            auto p              = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} * scale;
+            auto p = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} *
+                     scale;
             auto g              = perlin_noise(p, wrap3i);
             g                   = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             pixel_at(img, i, j) = {g, g, g, 1};
@@ -3133,15 +3345,16 @@ image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_fbm_image4f(
-    int width, int height, float scale, float lacunarity, float gain, int octaves, bool wrap) {
+image<vec4f> make_fbm_image4f(int width, int height, float scale,
+    float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
     for (auto j = 0; j < img.height; j++) {
         for (auto i = 0; i < img.width; i++) {
-            auto p              = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} * scale;
-            auto g              = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
-            g                   = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            auto p = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} *
+                     scale;
+            auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
+            g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             pixel_at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -3149,14 +3362,16 @@ image<vec4f> make_fbm_image4f(
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_ridge_image4f(int width, int height, float scale, float lacunarity, float gain,
-    float offset, int octaves, bool wrap) {
+image<vec4f> make_ridge_image4f(int width, int height, float scale,
+    float lacunarity, float gain, float offset, int octaves, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
     for (auto j = 0; j < img.height; j++) {
         for (auto i = 0; i < img.width; i++) {
-            auto p              = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} * scale;
-            auto g              = perlin_ridge_noise(p, lacunarity, gain, offset, octaves, wrap3i);
+            auto p = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} *
+                     scale;
+            auto g = perlin_ridge_noise(
+                p, lacunarity, gain, offset, octaves, wrap3i);
             g                   = clamp(g, 0.0f, 1.0f);
             pixel_at(img, i, j) = {g, g, g, 1};
         }
@@ -3165,14 +3380,16 @@ image<vec4f> make_ridge_image4f(int width, int height, float scale, float lacuna
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_turbulence_image4f(
-    int width, int height, float scale, float lacunarity, float gain, int octaves, bool wrap) {
+image<vec4f> make_turbulence_image4f(int width, int height, float scale,
+    float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
     for (auto j = 0; j < img.height; j++) {
         for (auto i = 0; i < img.width; i++) {
-            auto p              = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} * scale;
-            auto g              = perlin_turbulence_noise(p, lacunarity, gain, octaves, wrap3i);
+            auto p = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} *
+                     scale;
+            auto g = perlin_turbulence_noise(
+                p, lacunarity, gain, octaves, wrap3i);
             g                   = clamp(g, 0.0f, 1.0f);
             pixel_at(img, i, j) = {g, g, g, 1};
         }
@@ -3188,13 +3405,16 @@ image<vec4f> make_turbulence_image4f(
 namespace ygl {
 
 // make a simple example volume
-volume<float> make_test_volume1f(int width, int height, int depth, float scale, float exponent) {
+volume<float> make_test_volume1f(
+    int width, int height, int depth, float scale, float exponent) {
     auto vol = volume<float>{width, height, depth};
     for (auto k = 0; k < vol.depth; k++) {
         for (auto j = 0; j < vol.height; j++) {
             for (auto i = 0; i < vol.width; i++) {
-                auto  p   = vec3f{i / (float)width, j / (float)height, k / (float)depth};
-                float val = pow(max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
+                auto p = vec3f{
+                    i / (float)width, j / (float)height, k / (float)depth};
+                float val = pow(
+                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
                 voxel_at(vol, i, j, k) = clamp(val, 0.0f, 1.0f);
             }
         }
@@ -3251,14 +3471,16 @@ void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
     auto color          = surface->colors;
     for (auto l = 0; l < surface->subdivision_level; l++) {
         tie(quads_pos, pos)           = subdivide_catmullclark(quads_pos, pos);
-        tie(quads_texcoord, texcoord) = subdivide_catmullclark(quads_texcoord, texcoord, true);
-        tie(quads_color, color)       = subdivide_catmullclark(quads_color, color);
+        tie(quads_texcoord, texcoord) = subdivide_catmullclark(
+            quads_texcoord, texcoord, true);
+        tie(quads_color, color) = subdivide_catmullclark(quads_color, color);
     }
     auto norm = vector<vec3f>();
     if (surface->compute_normals) norm = compute_normals(quads_pos, pos);
     auto quads = quads_pos;
-    convert_face_varying(quads, shape->positions, shape->normals, shape->texturecoords,
-        shape->colors, quads_pos, quads_pos, quads_texcoord, quads_color, pos, norm, texcoord, color);
+    convert_face_varying(quads, shape->positions, shape->normals,
+        shape->texturecoords, shape->colors, quads_pos, quads_pos,
+        quads_texcoord, quads_color, pos, norm, texcoord, color);
     shape->triangles = convert_quads_to_triangles(quads);
 }
 void tesselate_subdivs(yocto_scene* scene) {
@@ -3269,23 +3491,24 @@ void tesselate_subdivs(yocto_scene* scene) {
 }
 
 // Update animation transforms
-void update_transforms(yocto_animation* animation, float time, const string& anim_group) {
+void update_transforms(
+    yocto_animation* animation, float time, const string& anim_group) {
     if (anim_group != "" && anim_group != animation->animation_group) return;
 
     if (!animation->translation_keyframes.empty()) {
         auto val = vec3f{0, 0, 0};
         switch (animation->interpolation_type) {
             case yocto_interpolation_type::step:
-                val = eval_keyframed_step(
-                    animation->keyframes_times, animation->translation_keyframes, time);
+                val = eval_keyframed_step(animation->keyframes_times,
+                    animation->translation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = eval_keyframed_linear(
-                    animation->keyframes_times, animation->translation_keyframes, time);
+                val = eval_keyframed_linear(animation->keyframes_times,
+                    animation->translation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = eval_keyframed_bezier(
-                    animation->keyframes_times, animation->translation_keyframes, time);
+                val = eval_keyframed_bezier(animation->keyframes_times,
+                    animation->translation_keyframes, time);
                 break;
             default: throw runtime_error("should not have been here");
         }
@@ -3295,16 +3518,16 @@ void update_transforms(yocto_animation* animation, float time, const string& ani
         auto val = vec4f{0, 0, 0, 1};
         switch (animation->interpolation_type) {
             case yocto_interpolation_type::step:
-                val = eval_keyframed_step(
-                    animation->keyframes_times, animation->rotation_keyframes, time);
+                val = eval_keyframed_step(animation->keyframes_times,
+                    animation->rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = eval_keyframed_linear(
-                    animation->keyframes_times, animation->rotation_keyframes, time);
+                val = eval_keyframed_linear(animation->keyframes_times,
+                    animation->rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = eval_keyframed_bezier(
-                    animation->keyframes_times, animation->rotation_keyframes, time);
+                val = eval_keyframed_bezier(animation->keyframes_times,
+                    animation->rotation_keyframes, time);
                 break;
         }
         for (auto target : animation->node_targets) target->rotation = val;
@@ -3313,16 +3536,16 @@ void update_transforms(yocto_animation* animation, float time, const string& ani
         auto val = vec3f{1, 1, 1};
         switch (animation->interpolation_type) {
             case yocto_interpolation_type::step:
-                val = eval_keyframed_step(
-                    animation->keyframes_times, animation->scale_keyframes, time);
+                val = eval_keyframed_step(animation->keyframes_times,
+                    animation->scale_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = eval_keyframed_linear(
-                    animation->keyframes_times, animation->scale_keyframes, time);
+                val = eval_keyframed_linear(animation->keyframes_times,
+                    animation->scale_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = eval_keyframed_bezier(
-                    animation->keyframes_times, animation->scale_keyframes, time);
+                val = eval_keyframed_bezier(animation->keyframes_times,
+                    animation->scale_keyframes, time);
                 break;
         }
         for (auto target : animation->node_targets) target->scale = val;
@@ -3330,7 +3553,8 @@ void update_transforms(yocto_animation* animation, float time, const string& ani
 }
 
 // Update node transforms
-void update_transforms(yocto_scene_node* node, const frame3f& parent = identity_frame3f) {
+void update_transforms(
+    yocto_scene_node* node, const frame3f& parent = identity_frame3f) {
     auto frame = parent * node->local * translation_frame(node->translation) *
                  rotation_frame(node->rotation) * scaling_frame(node->scale);
     if (node->instance) node->instance->frame = frame;
@@ -3341,7 +3565,8 @@ void update_transforms(yocto_scene_node* node, const frame3f& parent = identity_
 
 // Update node transforms
 void update_transforms(yocto_scene* scene, float time, const string& anim_group) {
-    for (auto& agr : scene->animations) update_transforms(agr, time, anim_group);
+    for (auto& agr : scene->animations)
+        update_transforms(agr, time, anim_group);
     for (auto& node : scene->nodes) node->children.clear();
     for (auto& node : scene->nodes)
         if (node->parent) node->parent->children.push_back(node);
@@ -3354,7 +3579,8 @@ vec2f compute_animation_range(const yocto_scene* scene, const string& anim_group
     if (scene->animations.empty()) return zero2f;
     auto range = vec2f{+maxf, -maxf};
     for (auto animation : scene->animations) {
-        if (anim_group != "" && animation->animation_group != anim_group) continue;
+        if (anim_group != "" && animation->animation_group != anim_group)
+            continue;
         range.x = min(range.x, animation->keyframes_times.front());
         range.y = max(range.y, animation->keyframes_times.back());
     }
@@ -3427,8 +3653,8 @@ bvh_tree* build_bvh(const yocto_scene* scene, bool high_quality, bool embree) {
 
     // instances
     for (auto instance : scene->instances) {
-        bvh->instances.push_back(
-            {instance->frame, inverse(instance->frame, false), bvh->shape_ids[instance->shape]});
+        bvh->instances.push_back({instance->frame,
+            inverse(instance->frame, false), bvh->shape_ids[instance->shape]});
         bvh->instance_ids[instance] = (int)bvh->instances.size() - 1;
     }
 
@@ -3449,10 +3675,12 @@ void refit_bvh(const yocto_shape* shape, bvh_tree* bvh) {
 // Refits a scene BVH
 void refit_bvh(const yocto_scene* scene, bvh_tree* bvh) {
     auto shape_ids = unordered_map<yocto_shape*, int>();
-    for (auto sid = 0; sid < scene->shapes.size(); sid++) shape_ids[scene->shapes[sid]] = sid;
+    for (auto sid = 0; sid < scene->shapes.size(); sid++)
+        shape_ids[scene->shapes[sid]] = sid;
     for (auto iid = 0; iid < scene->instances.size(); iid++) {
         auto instance       = scene->instances[iid];
-        bvh->instances[iid] = {instance->frame, inverse(instance->frame), shape_ids[instance->shape]};
+        bvh->instances[iid] = {instance->frame, inverse(instance->frame),
+            shape_ids[instance->shape]};
     }
     refit_bvh(bvh);
 }
@@ -3483,17 +3711,19 @@ void add_missing_names(yocto_scene* scene) {
 // Add missing tangent space if needed.
 void add_missing_tangent_space(yocto_scene* scene) {
     for (auto instance : scene->instances) {
-        if (!instance->shape->tangentspaces.empty() || instance->shape->texturecoords.empty())
+        if (!instance->shape->tangentspaces.empty() ||
+            instance->shape->texturecoords.empty())
             continue;
-        if (!instance->material ||
-            (!instance->material->normal_texture && !instance->material->bump_texture))
+        if (!instance->material || (!instance->material->normal_texture &&
+                                       !instance->material->bump_texture))
             continue;
         if (!instance->shape->triangles.empty()) {
             if (instance->shape->normals.empty())
                 instance->shape->normals = compute_normals(
                     instance->shape->triangles, instance->shape->positions);
-            instance->shape->tangentspaces = compute_tangent_space(instance->shape->triangles,
-                instance->shape->positions, instance->shape->normals, instance->shape->texturecoords);
+            instance->shape->tangentspaces = compute_tangent_space(
+                instance->shape->triangles, instance->shape->positions,
+                instance->shape->normals, instance->shape->texturecoords);
         } else {
             throw runtime_error("type not supported");
         }
@@ -3581,23 +3811,25 @@ yocto_camera* make_bbox_camera(
 namespace ygl {
 
 // Instance intersection.
-scene_intersection intersect_ray(
-    const yocto_instance* instance, const bvh_tree* sbvh, const ray3f& ray, bool find_any) {
+scene_intersection intersect_ray(const yocto_instance* instance,
+    const bvh_tree* sbvh, const ray3f& ray, bool find_any) {
     auto iid  = 0;
     auto isec = scene_intersection();
     auto tray = transform_ray_inverse(instance->frame, ray);
-    if (!intersect_bvh(sbvh, tray, find_any, isec.distance, iid, isec.element_id, isec.element_uv))
+    if (!intersect_bvh(sbvh, tray, find_any, isec.distance, iid,
+            isec.element_id, isec.element_uv))
         return {};
     isec.instance = (yocto_instance*)instance;
     return isec;
 }
 
 // Scene intersection.
-scene_intersection intersect_ray(
-    const yocto_scene* scene, const bvh_tree* bvh, const ray3f& ray, bool find_any) {
+scene_intersection intersect_ray(const yocto_scene* scene, const bvh_tree* bvh,
+    const ray3f& ray, bool find_any) {
     auto iid  = 0;
     auto isec = scene_intersection();
-    if (!intersect_bvh(bvh, ray, find_any, isec.distance, iid, isec.element_id, isec.element_uv))
+    if (!intersect_bvh(bvh, ray, find_any, isec.distance, iid, isec.element_id,
+            isec.element_uv))
         return {};
     isec.instance = scene->instances[iid];
     return isec;
@@ -3608,7 +3840,8 @@ vec3f eval_element_normal(const yocto_shape* shape, int ei) {
     auto norm = zero3f;
     if (!shape->triangles.empty()) {
         auto t = shape->triangles[ei];
-        norm = triangle_normal(shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
+        norm   = triangle_normal(shape->positions[t.x], shape->positions[t.y],
+            shape->positions[t.z]);
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
         norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
@@ -3623,15 +3856,17 @@ vec4f eval_element_tangentspace(const yocto_shape* shape, int ei) {
     auto tangsp = zero4f;
     if (!shape->triangles.empty()) {
         auto t    = shape->triangles[ei];
-        auto norm = triangle_normal(
-            shape->positions[t.x], shape->positions[t.y], shape->positions[t.z]);
+        auto norm = triangle_normal(shape->positions[t.x],
+            shape->positions[t.y], shape->positions[t.z]);
         auto txty = tuple<vec3f, vec3f>();
         if (shape->texturecoords.empty()) {
-            txty = triangle_tangents_fromuv(shape->positions[t.x], shape->positions[t.y],
-                shape->positions[t.z], {0, 0}, {1, 0}, {0, 1});
+            txty = triangle_tangents_fromuv(shape->positions[t.x],
+                shape->positions[t.y], shape->positions[t.z], {0, 0}, {1, 0},
+                {0, 1});
         } else {
-            txty = triangle_tangents_fromuv(shape->positions[t.x], shape->positions[t.y],
-                shape->positions[t.z], shape->texturecoords[t.x], shape->texturecoords[t.y],
+            txty = triangle_tangents_fromuv(shape->positions[t.x],
+                shape->positions[t.y], shape->positions[t.z],
+                shape->texturecoords[t.x], shape->texturecoords[t.y],
                 shape->texturecoords[t.z]);
         }
         auto tx = get<0>(txty), ty = get<1>(txty);
@@ -3644,7 +3879,8 @@ vec4f eval_element_tangentspace(const yocto_shape* shape, int ei) {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const yocto_shape* shape, const vector<T>& vals, int ei, const vec2f& uv) {
+T eval_elem(
+    const yocto_shape* shape, const vector<T>& vals, int ei, const vec2f& uv) {
     if (vals.empty()) return {};
     if (!shape->triangles.empty()) {
         auto t = shape->triangles[ei];
@@ -3682,22 +3918,27 @@ float eval_radius(const yocto_shape* shape, int ei, const vec2f& uv) {
     return eval_elem(shape, shape->radius, ei, uv);
 }
 vec4f eval_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv) {
-    if (shape->tangentspaces.empty()) return eval_element_tangentspace(shape, ei);
+    if (shape->tangentspaces.empty())
+        return eval_element_tangentspace(shape, ei);
     return eval_elem(shape, shape->tangentspaces, ei, uv);
 }
-vec3f eval_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv, bool& left_handed) {
-    auto tangsp = (shape->tangentspaces.empty()) ? eval_element_tangentspace(shape, ei) :
-                                                   eval_elem(shape, shape->tangentspaces, ei, uv);
+vec3f eval_tangentspace(
+    const yocto_shape* shape, int ei, const vec2f& uv, bool& left_handed) {
+    auto tangsp = (shape->tangentspaces.empty()) ?
+                      eval_element_tangentspace(shape, ei) :
+                      eval_elem(shape, shape->tangentspaces, ei, uv);
     left_handed = tangsp.w < 0;
     return {tangsp.x, tangsp.y, tangsp.z};
 }
 
 // Instance values interpolated using barycentric coordinates.
 vec3f eval_position(const yocto_instance* instance, int ei, const vec2f& uv) {
-    return transform_point(instance->frame, eval_position(instance->shape, ei, uv));
+    return transform_point(
+        instance->frame, eval_position(instance->shape, ei, uv));
 }
 vec3f eval_normal(const yocto_instance* instance, int ei, const vec2f& uv) {
-    return transform_direction(instance->frame, eval_normal(instance->shape, ei, uv));
+    return transform_direction(
+        instance->frame, eval_normal(instance->shape, ei, uv));
 }
 vec2f eval_texturecoord(const yocto_instance* instance, int ei, const vec2f& uv) {
     return eval_texturecoord(instance->shape, ei, uv);
@@ -3708,30 +3949,37 @@ vec4f eval_color(const yocto_instance* instance, int ei, const vec2f& uv) {
 float eval_radius(const yocto_instance* instance, int ei, const vec2f& uv) {
     return eval_radius(instance->shape, ei, uv);
 }
-vec3f eval_tangentspace(const yocto_instance* instance, int ei, const vec2f& uv, bool& left_handed) {
-    return transform_direction(
-        instance->frame, eval_tangentspace(instance->shape, ei, uv, left_handed));
+vec3f eval_tangentspace(const yocto_instance* instance, int ei, const vec2f& uv,
+    bool& left_handed) {
+    return transform_direction(instance->frame,
+        eval_tangentspace(instance->shape, ei, uv, left_handed));
 }
 // Instance element values.
 vec3f eval_element_normal(const yocto_instance* instance, int ei) {
-    return transform_direction(instance->frame, eval_element_normal(instance->shape, ei));
+    return transform_direction(
+        instance->frame, eval_element_normal(instance->shape, ei));
 }
 // Shading normals including material perturbations.
-vec3f eval_shading_normal(const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o) {
+vec3f eval_shading_normal(
+    const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o) {
     if (!instance->shape->triangles.empty()) {
         auto n = eval_normal(instance, ei, uv);
         if (instance->material && instance->material->normal_texture) {
             auto texcoord    = eval_texturecoord(instance, ei, uv);
             auto left_handed = false;
-            auto texture     = xyz(eval_texture(instance->material->normal_texture, texcoord));
-            texture          = texture * 2 - vec3f{1, 1, 1};
-            texture.y        = -texture.y;  // flip vertical axis to align green with
-                                            // image up
-            auto tu = orthonormalize(eval_tangentspace(instance, ei, uv, left_handed), n);
+            auto texture     = xyz(
+                eval_texture(instance->material->normal_texture, texcoord));
+            texture   = texture * 2 - vec3f{1, 1, 1};
+            texture.y = -texture.y;  // flip vertical axis to align green with
+                                     // image up
+            auto tu = orthonormalize(
+                eval_tangentspace(instance, ei, uv, left_handed), n);
             auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
-            n       = normalize(texture.x * tu + texture.y * tv + texture.z * n);
+            n = normalize(texture.x * tu + texture.y * tv + texture.z * n);
         }
-        if (instance->material && instance->material->double_sided && dot(n, o) < 0) n = -n;
+        if (instance->material && instance->material->double_sided &&
+            dot(n, o) < 0)
+            n = -n;
         return n;
     } else if (!instance->shape->lines.empty()) {
         return orthonormalize(o, eval_normal(instance, ei, uv));
@@ -3743,28 +3991,31 @@ vec3f eval_shading_normal(const yocto_instance* instance, int ei, const vec2f& u
 // Environment texture coordinates from the direction.
 vec2f eval_texcoord(const yocto_environment* environment, const vec3f& w) {
     auto wl = transform_direction_inverse(environment->frame, w);
-    auto uv = vec2f{atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
+    auto uv = vec2f{
+        atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
     if (uv.x < 0) uv.x += 1;
     return uv;
 }
 // Evaluate the environment direction.
 vec3f eval_direction(const yocto_environment* environment, const vec2f& uv) {
-    return transform_direction(
-        environment->frame, {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
-                                sin(uv.x * 2 * pif) * sin(uv.y * pif)});
+    return transform_direction(environment->frame,
+        {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
+            sin(uv.x * 2 * pif) * sin(uv.y * pif)});
 }
 // Evaluate the environment color.
 vec3f eval_emission(const yocto_environment* environment, const vec3f& w) {
     auto ke = environment->emission;
     if (environment->emission_texture) {
-        ke *= xyz(eval_texture(environment->emission_texture, eval_texcoord(environment, w)));
+        ke *= xyz(eval_texture(
+            environment->emission_texture, eval_texcoord(environment, w)));
     }
     return ke;
 }
 // Evaluate all environment color.
 vec3f eval_emission(const yocto_scene* scene, const vec3f& w) {
     auto ke = zero3f;
-    for (auto environment : scene->environments) ke += eval_emission(environment, w);
+    for (auto environment : scene->environments)
+        ke += eval_emission(environment, w);
     return ke;
 }
 
@@ -3795,7 +4046,8 @@ vec4f lookup_texture(const yocto_texture* texture, int i, int j) {
 // Evaluate a texture
 vec4f eval_texture(const yocto_texture* texture, const vec2f& texcoord) {
     if (!texture) return {1, 1, 1, 1};
-    if (texture->hdr_image.pixels.empty() && texture->ldr_image.pixels.empty()) return {1, 1, 1, 1};
+    if (texture->hdr_image.pixels.empty() && texture->ldr_image.pixels.empty())
+        return {1, 1, 1, 1};
 
     // get image width/height
     auto size  = eval_texture_size(texture);
@@ -3828,7 +4080,8 @@ vec4f eval_texture(const yocto_texture* texture, const vec2f& texcoord) {
     // handle interpolation
     return lookup_texture(texture, i, j) * (1 - u) * (1 - v) +
            lookup_texture(texture, i, jj) * (1 - u) * v +
-           lookup_texture(texture, ii, j) * u * (1 - v) + lookup_texture(texture, ii, jj) * u * v;
+           lookup_texture(texture, ii, j) * u * (1 - v) +
+           lookup_texture(texture, ii, jj) * u * v;
 }
 
 // Lookup a texture value
@@ -3891,36 +4144,40 @@ void set_camera_fovy(yocto_camera* camera, float fovy, float aspect, float width
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_camera_ray(const yocto_camera* camera, const vec2f& uv, const vec2f& luv) {
+ray3f eval_camera_ray(
+    const yocto_camera* camera, const vec2f& uv, const vec2f& luv) {
     auto dist = camera->focal_length;
     if (camera->focus_distance < maxf) {
         dist = camera->focal_length * camera->focus_distance /
                (camera->focus_distance - camera->focal_length);
     }
-    auto e = vec3f{luv.x * camera->lens_aperture, luv.y * camera->lens_aperture, 0};
+    auto e = vec3f{
+        luv.x * camera->lens_aperture, luv.y * camera->lens_aperture, 0};
     // auto q = vec3f{camera->width * (uv.x - 0.5f),
     //     camera->height * (uv.y - 0.5f), dist};
     // X flipped for mirror
-    auto q = vec3f{camera->film_size.x * (0.5f - uv.x), camera->film_size.y * (uv.y - 0.5f), dist};
-    auto ray = make_ray(
-        transform_point(camera->frame, e), transform_direction(camera->frame, normalize(e - q)));
+    auto q   = vec3f{camera->film_size.x * (0.5f - uv.x),
+        camera->film_size.y * (uv.y - 0.5f), dist};
+    auto ray = make_ray(transform_point(camera->frame, e),
+        transform_direction(camera->frame, normalize(e - q)));
     return ray;
 }
 
 vec2i eval_image_size(const yocto_camera* camera, int yresolution) {
-    return {(int)round(yresolution * camera->film_size.x / camera->film_size.y), yresolution};
+    return {(int)round(yresolution * camera->film_size.x / camera->film_size.y),
+        yresolution};
 }
 
 // Generates a ray from a camera.
-ray3f eval_camera_ray(const yocto_camera* camera, const vec2i& ij, const vec2i& imsize,
-    const vec2f& puv, const vec2f& luv) {
+ray3f eval_camera_ray(const yocto_camera* camera, const vec2i& ij,
+    const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(camera, uv, luv);
 }
 
 // Generates a ray from a camera.
-ray3f eval_camera_ray(
-    const yocto_camera* camera, int idx, const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
+ray3f eval_camera_ray(const yocto_camera* camera, int idx, const vec2i& imsize,
+    const vec2f& puv, const vec2f& luv) {
     auto ij = vec2i{idx % imsize.x, idx / imsize.x};
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(camera, uv, luv);
@@ -3930,22 +4187,24 @@ ray3f eval_camera_ray(
 vec3f eval_emission(const yocto_instance* instance, int ei, const vec2f& uv) {
     if (!instance || !instance->material) return zero3f;
     return instance->material->emission * xyz(eval_color(instance, ei, uv)) *
-           xyz(eval_texture(
-               instance->material->emission_texture, eval_texturecoord(instance, ei, uv)));
+           xyz(eval_texture(instance->material->emission_texture,
+               eval_texturecoord(instance, ei, uv)));
 }
 vec3f eval_diffuse(const yocto_instance* instance, int ei, const vec2f& uv) {
     if (!instance || !instance->material) return zero3f;
     if (!instance->material->base_metallic) {
         return instance->material->diffuse * xyz(eval_color(instance, ei, uv)) *
-               xyz(eval_texture(
-                   instance->material->diffuse_texture, eval_texturecoord(instance, ei, uv)));
+               xyz(eval_texture(instance->material->diffuse_texture,
+                   eval_texturecoord(instance, ei, uv)));
     } else {
-        auto kb = instance->material->diffuse * xyz(eval_color(instance, ei, uv)) *
-                  xyz(eval_texture(
-                      instance->material->diffuse_texture, eval_texturecoord(instance, ei, uv)));
-        auto km = instance->material->specular.x * eval_texture(instance->material->specular_texture,
-                                                       eval_texturecoord(instance, ei, uv))
-                                                       .z;
+        auto kb = instance->material->diffuse *
+                  xyz(eval_color(instance, ei, uv)) *
+                  xyz(eval_texture(instance->material->diffuse_texture,
+                      eval_texturecoord(instance, ei, uv)));
+        auto km = instance->material->specular.x *
+                  eval_texture(instance->material->specular_texture,
+                      eval_texturecoord(instance, ei, uv))
+                      .z;
         return kb * (1 - km);
     }
 }
@@ -3953,15 +4212,17 @@ vec3f eval_specular(const yocto_instance* instance, int ei, const vec2f& uv) {
     if (!instance || !instance->material) return zero3f;
     if (!instance->material->base_metallic) {
         return instance->material->specular * xyz(eval_color(instance, ei, uv)) *
-               xyz(eval_texture(
-                   instance->material->specular_texture, eval_texturecoord(instance, ei, uv)));
+               xyz(eval_texture(instance->material->specular_texture,
+                   eval_texturecoord(instance, ei, uv)));
     } else {
-        auto kb = instance->material->diffuse * xyz(eval_color(instance, ei, uv)) *
-                  xyz(eval_texture(
-                      instance->material->diffuse_texture, eval_texturecoord(instance, ei, uv)));
-        auto km = instance->material->specular.x * eval_texture(instance->material->specular_texture,
-                                                       eval_texturecoord(instance, ei, uv))
-                                                       .z;
+        auto kb = instance->material->diffuse *
+                  xyz(eval_color(instance, ei, uv)) *
+                  xyz(eval_texture(instance->material->diffuse_texture,
+                      eval_texturecoord(instance, ei, uv)));
+        auto km = instance->material->specular.x *
+                  eval_texture(instance->material->specular_texture,
+                      eval_texturecoord(instance, ei, uv))
+                      .z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
@@ -3983,22 +4244,25 @@ float eval_roughness(const yocto_instance* instance, int ei, const vec2f& uv) {
             return rs * rs;
         }
     } else {
-        auto rs = instance->material->roughness * eval_texture(instance->material->roughness_texture,
-                                                      eval_texturecoord(instance, ei, uv))
-                                                      .y;
+        auto rs = instance->material->roughness *
+                  eval_texture(instance->material->roughness_texture,
+                      eval_texturecoord(instance, ei, uv))
+                      .y;
         return rs * rs;
     }
 }
 vec3f eval_transmission(const yocto_instance* instance, int ei, const vec2f& uv) {
     if (!instance || !instance->material) return zero3f;
     return instance->material->transmission * xyz(eval_color(instance, ei, uv)) *
-           xyz(eval_texture(
-               instance->material->transmission_texture, eval_texturecoord(instance, ei, uv)));
+           xyz(eval_texture(instance->material->transmission_texture,
+               eval_texturecoord(instance, ei, uv)));
 }
 float eval_opacity(const yocto_instance* instance, int ei, const vec2f& uv) {
     if (!instance || !instance->material) return 1;
     return instance->material->opacity * eval_color(instance->shape, ei, uv).w *
-           eval_texture(instance->material->opacity_texture, eval_texturecoord(instance, ei, uv)).w;
+           eval_texture(instance->material->opacity_texture,
+               eval_texturecoord(instance, ei, uv))
+               .w;
 }
 
 // Evaluates the bsdf at a location.
@@ -4008,7 +4272,8 @@ bsdf eval_bsdf(const yocto_instance* instance, int ei, const vec2f& uv) {
     f.ks      = eval_specular(instance, ei, uv);
     f.kt      = eval_transmission(instance, ei, uv);
     f.rs      = eval_roughness(instance, ei, uv);
-    f.refract = (instance && instance->material) ? instance->material->refract : false;
+    f.refract = (instance && instance->material) ? instance->material->refract :
+                                                   false;
     if (f.kd != zero3f) {
         f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
     } else if (f.rs <= 0.03f * 0.03f)
@@ -4018,8 +4283,8 @@ bsdf eval_bsdf(const yocto_instance* instance, int ei, const vec2f& uv) {
 bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
-tuple<int, vec2f> sample_shape(
-    const yocto_shape* shape, const vector<float>& elem_cdf, float re, const vec2f& ruv) {
+tuple<int, vec2f> sample_shape(const yocto_shape* shape,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elem_cdf.empty()) return {};
     if (!shape->triangles.empty()) {
@@ -4049,8 +4314,8 @@ bool has_volume_color(const yocto_material* vol) {
              vol->volume_density.y == vol->volume_density.z);
 }
 
-vec3f eval_transmission(const yocto_material* vol, const vec3f& from, const vec3f& dir, float dist,
-    int channel, rng_state& rng) {
+vec3f eval_transmission(const yocto_material* vol, const vec3f& from,
+    const vec3f& dir, float dist, int channel, rng_state& rng) {
     auto& vd = vol->volume_density;
     if (is_volume_homogeneus(vol))
         return vec3f{exp(-dist * vd.x), exp(-dist * vd.y), exp(-dist * vd.z)};
@@ -4063,14 +4328,16 @@ vec3f eval_transmission(const yocto_material* vol, const vec3f& from, const vec3
         t += step;
         if (t >= dist) break;
         pos += dir * step;
-        auto density = vol->volume_density * eval_voltexture(vol->volume_density_texture, pos);
-        tr *= 1.0f - max(0.0f, element_at(density, channel) / element_at(vd, channel));
+        auto density = vol->volume_density *
+                       eval_voltexture(vol->volume_density_texture, pos);
+        tr *= 1.0f -
+              max(0.0f, element_at(density, channel) / element_at(vd, channel));
     }
     return {tr, tr, tr};
 }
 
-float sample_distance(
-    const yocto_material* vol, const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
+float sample_distance(const yocto_material* vol, const vec3f& from,
+    const vec3f& dir, int channel, rng_state& rng) {
     auto pos      = from;
     auto majorant = element_at(vol->volume_density, channel);
     if (majorant == 0) return maxf;
@@ -4085,7 +4352,8 @@ float sample_distance(
 
         pos += dir * step;
         dist += step;
-        auto density = vol->volume_density * eval_voltexture(vol->volume_density_texture, pos);
+        auto density = vol->volume_density *
+                       eval_voltexture(vol->volume_density_texture, pos);
 
         if (element_at(density, channel) / majorant >= rand1f(rng)) return dist;
 
@@ -4095,8 +4363,8 @@ float sample_distance(
     }
 }
 
-float sample_distance(const yocto_instance* instance, const bbox3f& bbox, const vec3f& from,
-    const vec3f& dir, int channel, rng_state& rng) {
+float sample_distance(const yocto_instance* instance, const bbox3f& bbox,
+    const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
     if (instance->material->volume_density == zero3f) return maxf;
 
     // Transform coordinates so that every position in the bounding box of the
@@ -4107,7 +4375,8 @@ float sample_distance(const yocto_instance* instance, const bbox3f& bbox, const 
     auto froml = transform_point_inverse(frame, from) / scale;
     auto dirl  = transform_direction_inverse(frame, dir) / scale;
     auto ll    = length(dirl);
-    auto dist  = sample_distance(instance->material, froml, dirl / ll, channel, rng);
+    auto dist  = sample_distance(
+        instance->material, froml, dirl / ll, channel, rng);
     return dist * ll;
 }
 
@@ -4250,8 +4519,8 @@ atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
 // Intersect a scene handling opacity.
-scene_intersection intersect_ray_cutout(const yocto_scene* scene, const bvh_tree* bvh,
-    const ray3f& ray_, rng_state& rng, int nbounces) {
+scene_intersection intersect_ray_cutout(const yocto_scene* scene,
+    const bvh_tree* bvh, const ray3f& ray_, rng_state& rng, int nbounces) {
     auto ray = ray_;
     for (auto b = 0; b < nbounces; b++) {
         _trace_nrays += 1;
@@ -4260,7 +4529,9 @@ scene_intersection intersect_ray_cutout(const yocto_scene* scene, const bvh_tree
         auto op = eval_opacity(isec.instance, isec.element_id, isec.element_uv);
         if (op > 0.999f) return isec;
         if (rand1f(rng) < op) return isec;
-        ray = make_ray(eval_position(isec.instance, isec.element_id, isec.element_uv), ray.d);
+        ray = make_ray(
+            eval_position(isec.instance, isec.element_id, isec.element_uv),
+            ray.d);
     }
     return {};
 }
@@ -4273,7 +4544,8 @@ inline bool check_near_mirror(vec3f n, vec3f o, vec3f i) {
 // Schlick approximation of the Fresnel term
 vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& i) {
     if (ks == zero3f) return zero3f;
-    return ks + (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - fabs(dot(h, i)), 0.0f, 1.0f), 5.0f);
+    return ks + (vec3f{1, 1, 1} - ks) *
+                    pow(clamp(1.0f - fabs(dot(h, i)), 0.0f, 1.0f), 5.0f);
 }
 vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& i, float rs) {
     if (ks == zero3f) return zero3f;
@@ -4294,9 +4566,11 @@ float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i) {
     auto g = 1 / (1 + lambda_o + lambda_i);
 #else
     auto Go = (2 * fabs(dot(n, o))) /
-              (fabs(dot(n, o)) + sqrt(rs * rs + (1 - rs * rs) * dot(n, o) * dot(n, o)));
+              (fabs(dot(n, o)) +
+                  sqrt(rs * rs + (1 - rs * rs) * dot(n, o) * dot(n, o)));
     auto Gi = (2 * fabs(dot(n, i))) /
-              (fabs(dot(n, i)) + sqrt(rs * rs + (1 - rs * rs) * dot(n, i) * dot(n, i)));
+              (fabs(dot(n, i)) +
+                  sqrt(rs * rs + (1 - rs * rs) * dot(n, i) * dot(n, i)));
     return Go * Gi;
 #endif
 }
@@ -4334,7 +4608,8 @@ vec3f eval_bsdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
         auto F  = fresnel_schlick(f.ks, h, o);
         auto D  = eval_ggx_dist(f.rs, n, h);
         auto G  = eval_ggx_sm(f.rs, n, o, ir);
-        bsdf += f.kt * (vec3f{1, 1, 1} - F) * D * G / (4 * fabs(dot(n, o)) * fabs(dot(n, ir)));
+        bsdf += f.kt * (vec3f{1, 1, 1} - F) * D * G /
+                (4 * fabs(dot(n, o)) * fabs(dot(n, ir)));
     }
 
     return bsdf;
@@ -4342,7 +4617,8 @@ vec3f eval_bsdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
 
 // Evaluates the BRDF assuming that it is called only from the directions
 // generated by sample_brdf.
-vec3f eval_delta_brdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+vec3f eval_delta_brdf(
+    const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (!is_delta_bsdf(f)) return zero3f;
     auto bsdf = zero3f;
 
@@ -4362,10 +4638,12 @@ vec3f eval_delta_brdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_brdf(const bsdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
+vec3f sample_brdf(
+    const bsdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
     if (is_delta_bsdf(f)) return zero3f;
     auto F    = fresnel_schlick(f.ks, n, o);
-    auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F), max(f.kt * (vec3f{1, 1, 1} - F))};
+    auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F),
+        max(f.kt * (vec3f{1, 1, 1} - F))};
     if (prob == zero3f) return zero3f;
     prob /= prob.x + prob.y + prob.z;
 
@@ -4373,20 +4651,23 @@ vec3f sample_brdf(const bsdf& f, const vec3f& n, const vec3f& o, float rnl, cons
     if (f.kd != zero3f && rnl < prob.x) {
         auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
         auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) : make_frame_fromz(zero3f, -n);
+        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
+                                   make_frame_fromz(zero3f, -n);
         return transform_direction(fp, il);
     }
     // sample according to specular GGX
     else if (f.ks != zero3f && rnl < prob.x + prob.y) {
         auto hl = sample_ggx(f.rs, rn);
-        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) : make_frame_fromz(zero3f, -n);
-        auto h  = transform_direction(fp, hl);
+        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
+                                   make_frame_fromz(zero3f, -n);
+        auto h = transform_direction(fp, hl);
         return reflect(o, h);
     }
     // transmission hack
     else if (f.kt != zero3f && rnl < prob.x + prob.y + prob.z) {
         auto hl = sample_ggx(f.rs, rn);
-        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) : make_frame_fromz(zero3f, -n);
+        auto fp = dot(n, o) >= 0 ? make_frame_fromz(zero3f, n) :
+                                   make_frame_fromz(zero3f, -n);
         auto h  = transform_direction(fp, hl);
         auto ir = reflect(o, h);
         return dot(n, o) >= 0 ? reflect(-ir, -n) : reflect(-ir, n);
@@ -4396,7 +4677,8 @@ vec3f sample_brdf(const bsdf& f, const vec3f& n, const vec3f& o, float rnl, cons
 }
 
 // Picks a direction based on the BRDF
-vec3f sample_delta_brdf(const bsdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
+vec3f sample_delta_brdf(
+    const bsdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
     if (!is_delta_bsdf(f)) return zero3f;
     auto F    = fresnel_schlick(f.ks, n, o);
     auto prob = vec3f{0, max(F), max(f.kt * (vec3f{1, 1, 1} - F))};
@@ -4426,16 +4708,20 @@ vec3f sample_delta_brdf(const bsdf& f, const vec3f& n, const vec3f& o, float rnl
 }
 
 // Compute the weight for sampling the BRDF
-float sample_brdf_pdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+float sample_brdf_pdf(
+    const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (is_delta_bsdf(f)) return 0;
     auto F    = fresnel_schlick(f.ks, n, o);
-    auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F), max(f.kt * (vec3f{1, 1, 1} - F))};
+    auto prob = vec3f{max(f.kd * (vec3f{1, 1, 1} - F)), max(F),
+        max(f.kt * (vec3f{1, 1, 1} - F))};
     if (prob == zero3f) return 0;
     prob /= prob.x + prob.y + prob.z;
 
     auto pdf = 0.0f;
 
-    if (f.kd != zero3f && dot(n, o) * dot(n, i) > 0) { pdf += prob.x * fabs(dot(n, i)) / pif; }
+    if (f.kd != zero3f && dot(n, o) * dot(n, i) > 0) {
+        pdf += prob.x * fabs(dot(n, i)) / pif;
+    }
     if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) {
         auto h = normalize(i + o);
         auto d = sample_ggx_pdf(f.rs, fabs(dot(n, h)));
@@ -4452,7 +4738,8 @@ float sample_brdf_pdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f
 }
 
 // Compute the weight for sampling the BRDF
-float sample_delta_brdf_pdf(const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
+float sample_delta_brdf_pdf(
+    const bsdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (!is_delta_bsdf(f)) return 0;
     auto F    = fresnel_schlick(f.ks, n, o);
     auto prob = vec3f{0, max(F), max(f.kt * (vec3f{1, 1, 1} - F))};
@@ -4468,8 +4755,8 @@ float sample_delta_brdf_pdf(const bsdf& f, const vec3f& n, const vec3f& o, const
 }
 
 // Sample pdf for an environment.
-float sample_environment_pdf(
-    const yocto_environment* environment, const vector<float>& elem_cdf, const vec3f& i) {
+float sample_environment_pdf(const yocto_environment* environment,
+    const vector<float>& elem_cdf, const vec3f& i) {
     auto texture = environment->emission_texture;
     if (!elem_cdf.empty() && texture) {
         auto size     = eval_texture_size(texture);
@@ -4478,7 +4765,8 @@ float sample_environment_pdf(
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
         auto prob     = sample_discrete_pdf(elem_cdf, idx) / elem_cdf.back();
-        auto angle    = (2 * pif / size.x) * (pif / size.y) * sin(pif * (j + 0.5f) / size.y);
+        auto angle    = (2 * pif / size.x) * (pif / size.y) *
+                     sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
     } else {
         return 1 / (4 * pif);
@@ -4486,8 +4774,8 @@ float sample_environment_pdf(
 }
 
 // Picks a point on an environment.
-vec3f sample_environment(const yocto_environment* environment, const vector<float>& elem_cdf,
-    float rel, const vec2f& ruv) {
+vec3f sample_environment(const yocto_environment* environment,
+    const vector<float>& elem_cdf, float rel, const vec2f& ruv) {
     auto texture = environment->emission_texture;
     if (!elem_cdf.empty() && texture) {
         auto idx  = sample_discrete(elem_cdf, rel);
@@ -4501,15 +4789,16 @@ vec3f sample_environment(const yocto_environment* environment, const vector<floa
 }
 
 // Picks a point on a light.
-vec3f sample_light(const yocto_instance* instance, const vector<float>& elem_cdf, const vec3f& p,
-    float rel, const vec2f& ruv) {
+vec3f sample_light(const yocto_instance* instance,
+    const vector<float>& elem_cdf, const vec3f& p, float rel, const vec2f& ruv) {
     auto sample = sample_shape(instance->shape, elem_cdf, rel, ruv);
     return normalize(eval_position(instance, get<0>(sample), get<1>(sample)) - p);
 }
 
 // Sample pdf for a light point.
-float sample_light_pdf(const yocto_instance* instance, const vector<float>& elem_cdf,
-    const vec3f& p, const vec3f& i, const vec3f& lp, const vec3f& ln) {
+float sample_light_pdf(const yocto_instance* instance,
+    const vector<float>& elem_cdf, const vec3f& p, const vec3f& i,
+    const vec3f& lp, const vec3f& ln) {
     if (instance->material->emission == zero3f) return 0;
     // prob triangle * area triangle = area triangle mesh
     auto area = elem_cdf.back();
@@ -4517,8 +4806,8 @@ float sample_light_pdf(const yocto_instance* instance, const vector<float>& elem
 }
 
 // Sample lights wrt solid angle
-vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh, const vec3f& p, float lrn,
-    float rel, const vec2f& ruv) {
+vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
+    const vec3f& p, float lrn, float rel, const vec2f& ruv) {
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
     auto idx     = sample_index(nlights, lrn);
     if (idx < lights->instances.size()) {
@@ -4533,8 +4822,8 @@ vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh, const vec3f
 }
 
 // Sample lights pdf
-float sample_lights_pdf(const yocto_scene* scene, const trace_lights* lights, const bvh_tree* bvh,
-    const vec3f& p, const vec3f& i) {
+float sample_lights_pdf(const yocto_scene* scene, const trace_lights* lights,
+    const bvh_tree* bvh, const vec3f& p, const vec3f& i) {
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
     auto pdf     = 0.0f;
     // instances
@@ -4547,9 +4836,12 @@ float sample_lights_pdf(const yocto_scene* scene, const trace_lights* lights, co
         auto isec = intersect_ray(lgt, sbvh, ray);
         while (isec.instance) {
             // accumulate pdf
-            auto lp = eval_position(isec.instance, isec.element_id, isec.element_uv);
-            auto ln = eval_normal(isec.instance, isec.element_id, isec.element_uv);
-            pdf += sample_light_pdf(lgt, elem_cdf, p, i, lp, ln) * sample_index_pdf(nlights);
+            auto lp = eval_position(
+                isec.instance, isec.element_id, isec.element_uv);
+            auto ln = eval_normal(
+                isec.instance, isec.element_id, isec.element_uv);
+            pdf += sample_light_pdf(lgt, elem_cdf, p, i, lp, ln) *
+                   sample_index_pdf(nlights);
             // continue
             ray  = make_ray(lp, i);
             isec = intersect_ray(lgt, sbvh, ray);
@@ -4558,14 +4850,15 @@ float sample_lights_pdf(const yocto_scene* scene, const trace_lights* lights, co
     // environments
     for (auto lgt : lights->environments) {
         auto& elem_cdf = lights->environment_cdfs.at(lgt);
-        pdf += sample_environment_pdf(lgt, elem_cdf, i) * sample_index_pdf(nlights);
+        pdf += sample_environment_pdf(lgt, elem_cdf, i) *
+               sample_index_pdf(nlights);
     }
     return pdf;
 }
 
 // Test occlusion.
-vec3f eval_transmission(const yocto_scene* scene, const bvh_tree* bvh, const vec3f& from,
-    const vec3f& to, int nbounces) {
+vec3f eval_transmission(const yocto_scene* scene, const bvh_tree* bvh,
+    const vec3f& from, const vec3f& to, int nbounces) {
     auto weight = vec3f{1, 1, 1};
     auto p      = from;
     for (auto bounce = 0; bounce < nbounces; bounce++) {
@@ -4593,9 +4886,9 @@ float prob_direct(const bsdf& f) {
 // Sample a direction of direct illumination from the point p, which is inside
 // mediums.back(). pdf and incoming radiance le are returned in reference. It
 // works for both surface rendering and volume rendering.
-vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const vec3f& p, int channel, vector<yocto_instance*> mediums, rng_state& rng, float& pdf,
-    vec3f& le) {
+vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const vec3f& p, int channel,
+    vector<yocto_instance*> mediums, rng_state& rng, float& pdf, vec3f& le) {
     auto  i      = zero3f;
     vec3f weight = vec3f{1, 1, 1};
 
@@ -4605,12 +4898,12 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh, const t
     if (idx < lights->instances.size()) {
         auto  lgt      = lights->instances[idx];
         auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
-        i              = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
+        i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
         pdf *= 1.0 / elem_cdf.back();
     } else {
         auto  lgt      = lights->environments[idx - lights->instances.size()];
         auto& elem_cdf = lights->environment_cdfs.at(lgt);
-        i              = sample_environment(lgt, elem_cdf, rand1f(rng), rand2f(rng));
+        i = sample_environment(lgt, elem_cdf, rand1f(rng), rand2f(rng));
         pdf *= sample_environment_pdf(lgt, elem_cdf, i);
         auto isec = intersect_ray_cutout(scene, bvh, make_ray(p, i), rng, 10);
         if (isec.instance == nullptr) {
@@ -4622,13 +4915,16 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh, const t
     auto isec = intersect_ray(scene, bvh, make_ray(p, i));
 
     while (isec.instance) {
-        auto lp       = eval_position(isec.instance, isec.element_id, isec.element_uv);
-        auto ln       = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, -i);
-        auto emission = eval_emission(isec.instance, isec.element_id, isec.element_uv);
+        auto lp = eval_position(isec.instance, isec.element_id, isec.element_uv);
+        auto ln = eval_shading_normal(
+            isec.instance, isec.element_id, isec.element_uv, -i);
+        auto emission = eval_emission(
+            isec.instance, isec.element_id, isec.element_uv);
 
         yocto_instance* medium = mediums.back();
         if (medium->material->volume_density != zero3f)
-            weight *= eval_transmission(medium->material, lp, i, isec.distance, channel, rng);
+            weight *= eval_transmission(
+                medium->material, lp, i, isec.distance, channel, rng);
 
         // Hack: Uncomment this or the result will be biased
         // If mediums refracts, the transmission ray won't reach the sampled
@@ -4682,9 +4978,11 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh, const t
 }
 
 // Recursive path tracing.
-vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray_, rng_state& rng, int nbounces, bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty()) return zero3f;
+vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
+    bool* hit) {
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto l        = zero3f;
@@ -4705,11 +5003,14 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh, const trace_ligh
         // point
         auto o = -ray.d;
         auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-        auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+        auto n = eval_shading_normal(
+            isec.instance, isec.element_id, isec.element_uv, o);
         auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
         // emission
-        if (emission) l += weight * eval_emission(isec.instance, isec.element_id, isec.element_uv);
+        if (emission)
+            l += weight *
+                 eval_emission(isec.instance, isec.element_id, isec.element_uv);
 
         // early exit and russian roulette
         if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -4720,14 +5021,17 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh, const trace_ligh
         }
 
         // direct
-        if (!is_delta_bsdf(f) && (!lights->instances.empty() || !lights->environments.empty())) {
+        if (!is_delta_bsdf(f) &&
+            (!lights->instances.empty() || !lights->environments.empty())) {
             auto i = (rand1f(rng) < 0.5f) ?
-                         sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng), rand2f(rng)) :
+                         sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
+                             rand2f(rng)) :
                          sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-            auto isec = intersect_ray_cutout(scene, bvh, make_ray(p, i), rng, nbounces);
-            auto le   = (isec.instance) ?
-                          eval_emission(isec.instance, isec.element_id, isec.element_uv) :
-                          eval_emission(scene, i);
+            auto isec = intersect_ray_cutout(
+                scene, bvh, make_ray(p, i), rng, nbounces);
+            auto le = (isec.instance) ? eval_emission(isec.instance,
+                                            isec.element_id, isec.element_uv) :
+                                        eval_emission(scene, i);
             auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
             if (le * brdfcos != zero3f) {
                 auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i) +
@@ -4780,12 +5084,15 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 }
 
 // @Hack: air volume properties should be set in the scene struct.
-static yocto_instance* air = new yocto_instance{"air", {}, nullptr, new yocto_material{}, nullptr};
+static yocto_instance* air = new yocto_instance{
+    "air", {}, nullptr, new yocto_material{}, nullptr};
 
 // Iterative volume path tracing.
-vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray_, rng_state& rng, int nbounces, bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty()) return zero3f;
+vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
+    bool* hit) {
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto radiance = zero3f;
@@ -4834,7 +5141,8 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh, const trace_l
         // TODO: FIXME REMOVING BBOX
         // Sample distance of next absorption/scattering event in the medium.
         // dist_pdf is unknown due to delta tracking.
-        auto bbox = transform_bbox(medium->frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
+        auto bbox = transform_bbox(
+            medium->frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
         auto dist = sample_distance(medium, bbox, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
@@ -4861,8 +5169,10 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh, const trace_l
         // surface intersection
         if (isec.instance) {
             auto o = -ray.d;
-            auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-            auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+            auto p = eval_position(
+                isec.instance, isec.element_id, isec.element_uv);
+            auto n = eval_shading_normal(
+                isec.instance, isec.element_id, isec.element_uv, o);
             auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
             // distance sampling pdf is unknown due to delta tracking, but we do
@@ -4871,7 +5181,8 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh, const trace_l
 
             // emission
             if (emission)
-                radiance += weight * eval_emission(isec.instance, isec.element_id, isec.element_uv);
+                radiance += weight * eval_emission(isec.instance,
+                                         isec.element_id, isec.element_uv);
 
             // early exit
             if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -4882,7 +5193,8 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh, const trace_l
                 // great with delta-like brdfs)
                 vec3f direct;
                 float pdf;
-                vec3f i = direct_illumination(scene, bvh, lights, p, ch, mediums, rng, pdf, direct);
+                vec3f i = direct_illumination(
+                    scene, bvh, lights, p, ch, mediums, rng, pdf, direct);
                 if (pdf != 0) {
                     auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
                     radiance += weight * direct * brdfcos / pdf;
@@ -4950,8 +5262,8 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh, const trace_l
             // direct lighting
             vec3f direct;
             float pdf_direct;
-            vec3f l = direct_illumination(
-                scene, bvh, lights, ray.o, ch, mediums, rng, pdf_direct, direct);
+            vec3f l = direct_illumination(scene, bvh, lights, ray.o, ch,
+                mediums, rng, pdf_direct, direct);
             if (pdf_direct != 0) {
                 auto f = va * eval_phase_function(dot(l, -ray.d), vg);
                 radiance += weight * direct * f / pdf_direct;
@@ -4976,9 +5288,11 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh, const trace_l
 }
 
 // Recursive path tracing.
-vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray_, rng_state& rng, int nbounces, bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty()) return zero3f;
+vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
+    bool* hit) {
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto l      = zero3f;
@@ -4999,11 +5313,13 @@ vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh, const trac
         // point
         auto o = -ray.d;
         auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-        auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+        auto n = eval_shading_normal(
+            isec.instance, isec.element_id, isec.element_uv, o);
         auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
         // emission
-        l += weight * eval_emission(isec.instance, isec.element_id, isec.element_uv);
+        l += weight *
+             eval_emission(isec.instance, isec.element_id, isec.element_uv);
 
         // early exit and russian roulette
         if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -5039,9 +5355,11 @@ vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh, const trac
 }
 
 // Recursive path tracing.
-vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray_, rng_state& rng, int nbounces, bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty()) return zero3f;
+vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
+    bool* hit) {
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto l        = zero3f;
@@ -5063,11 +5381,14 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh, const trac
         // point
         auto o = -ray.d;
         auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-        auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+        auto n = eval_shading_normal(
+            isec.instance, isec.element_id, isec.element_uv, o);
         auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
         // emission
-        if (emission) l += weight * eval_emission(isec.instance, isec.element_id, isec.element_uv);
+        if (emission)
+            l += weight *
+                 eval_emission(isec.instance, isec.element_id, isec.element_uv);
 
         // early exit and russian roulette
         if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -5079,19 +5400,22 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh, const trac
 
         // direct
         if (!is_delta_bsdf(f) && !lights->instances.empty()) {
-            auto  lgt      = lights->instances[sample_index(lights->instances.size(), rand1f(rng))];
+            auto  lgt      = lights->instances[sample_index(
+                lights->instances.size(), rand1f(rng))];
             auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
             auto  eid      = 0;
             auto  euv      = zero2f;
-            tie(eid, euv)  = sample_shape(lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
-            auto lp        = eval_position(lgt, eid, euv);
-            auto i         = normalize(lp - p);
-            auto ln        = eval_shading_normal(lgt, eid, euv, -i);
-            auto isec      = intersect_ray_cutout(scene, bvh, make_ray(p, i), rng, nbounces);
+            tie(eid, euv)  = sample_shape(
+                lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
+            auto lp   = eval_position(lgt, eid, euv);
+            auto i    = normalize(lp - p);
+            auto ln   = eval_shading_normal(lgt, eid, euv, -i);
+            auto isec = intersect_ray_cutout(
+                scene, bvh, make_ray(p, i), rng, nbounces);
             if (isec.instance == lgt && isec.element_id == eid) {
-                auto larea   = elem_cdf.back();
-                auto pdf     = sample_index_pdf(lights->instances.size()) / larea;
-                auto le      = eval_emission(lgt, eid, euv);
+                auto larea = elem_cdf.back();
+                auto pdf   = sample_index_pdf(lights->instances.size()) / larea;
+                auto le    = eval_emission(lgt, eid, euv);
                 auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
                 auto gterm   = fabs(dot(ln, i)) / dot(lp - p, lp - p);
                 if (pdf != 0) l += weight * le * brdfcos * gterm / pdf;
@@ -5125,9 +5449,11 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh, const trac
 }
 
 // Direct illumination.
-vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty()) return zero3f;
+vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // intersect scene
     auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
@@ -5135,7 +5461,8 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh, const trace_li
 
     // handle environment
     if (!isec.instance) {
-        for (auto environment : scene->environments) l += eval_emission(environment, ray.d);
+        for (auto environment : scene->environments)
+            l += eval_emission(environment, ray.d);
         return l;
     }
     if (hit) *hit = true;
@@ -5143,7 +5470,8 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh, const trace_li
     // point
     auto o = -ray.d;
     auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-    auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+    auto n = eval_shading_normal(
+        isec.instance, isec.element_id, isec.element_uv, o);
     auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
     // emission
@@ -5152,10 +5480,13 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh, const trace_li
     // direct
     if (!is_delta_bsdf(f)) {
         auto i = (rand1f(rng) < 0.5f) ?
-                     sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng), rand2f(rng)) :
+                     sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
+                         rand2f(rng)) :
                      sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-        auto isec = intersect_ray_cutout(scene, bvh, make_ray(p, i), rng, nbounces);
-        auto le = (isec.instance) ? eval_emission(isec.instance, isec.element_id, isec.element_uv) :
+        auto isec = intersect_ray_cutout(
+            scene, bvh, make_ray(p, i), rng, nbounces);
+        auto le = (isec.instance) ? eval_emission(isec.instance,
+                                        isec.element_id, isec.element_uv) :
                                     eval_emission(scene, i);
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
         if (le * brdfcos != zero3f) {
@@ -5170,7 +5501,9 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh, const trace_li
         auto i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
         auto brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
         auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
-        l += brdfcos * trace_direct(scene, bvh, lights, ray, rng, nbounces - 1, nullptr) / pdf;
+        l += brdfcos *
+             trace_direct(scene, bvh, lights, ray, rng, nbounces - 1, nullptr) /
+             pdf;
     }
 
     // done
@@ -5178,9 +5511,11 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh, const trace_li
 }
 
 // Direct illumination.
-vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty()) return zero3f;
+vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // intersect scene
     auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
@@ -5188,7 +5523,8 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh, const tr
 
     // handle environment
     if (!isec.instance) {
-        for (auto environment : lights->environments) l += eval_emission(environment, ray.d);
+        for (auto environment : lights->environments)
+            l += eval_emission(environment, ray.d);
         return l;
     }
     if (hit) *hit = true;
@@ -5196,7 +5532,8 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh, const tr
     // point
     auto o = -ray.d;
     auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-    auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+    auto n = eval_shading_normal(
+        isec.instance, isec.element_id, isec.element_uv, o);
     auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
     // emission
@@ -5204,15 +5541,18 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh, const tr
 
     // direct
     if (!is_delta_bsdf(f) && !lights->instances.empty()) {
-        auto  lgt      = lights->instances[sample_index(lights->instances.size(), rand1f(rng))];
+        auto  lgt      = lights->instances[sample_index(
+            lights->instances.size(), rand1f(rng))];
         auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
         auto  eid      = 0;
         auto  euv      = zero2f;
-        tie(eid, euv)  = sample_shape(lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
-        auto lp        = eval_position(lgt, eid, euv);
-        auto i         = normalize(lp - p);
-        auto ln        = eval_shading_normal(lgt, eid, euv, -i);
-        auto isec      = intersect_ray_cutout(scene, bvh, make_ray(p, i), rng, nbounces);
+        tie(eid, euv)  = sample_shape(
+            lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
+        auto lp   = eval_position(lgt, eid, euv);
+        auto i    = normalize(lp - p);
+        auto ln   = eval_shading_normal(lgt, eid, euv, -i);
+        auto isec = intersect_ray_cutout(
+            scene, bvh, make_ray(p, i), rng, nbounces);
         if (isec.instance == lgt && isec.element_id == eid) {
             auto larea   = elem_cdf.back();
             auto pdf     = sample_index_pdf(lights->instances.size()) / larea;
@@ -5229,7 +5569,8 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh, const tr
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
         auto pdf     = sample_brdf_pdf(f, n, o, i);
         auto le      = zero3f;
-        for (auto environment : scene->environments) le += eval_emission(environment, i);
+        for (auto environment : scene->environments)
+            le += eval_emission(environment, i);
         if (pdf != 0) l += le * brdfcos / pdf;
     }
 
@@ -5239,7 +5580,10 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh, const tr
         auto brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
         auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
         if (pdf != 0)
-            l += brdfcos * trace_direct(scene, bvh, lights, ray, rng, nbounces - 1, nullptr) / pdf;
+            l += brdfcos *
+                 trace_direct(
+                     scene, bvh, lights, ray, rng, nbounces - 1, nullptr) /
+                 pdf;
     }
 
     // done
@@ -5247,8 +5591,9 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh, const tr
 }
 
 // Environment illumination only with no shadows.
-vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     if (scene->environments.empty()) return zero3f;
 
     // intersect scene
@@ -5257,7 +5602,8 @@ vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh, const tra
 
     // handle environment
     if (!isec.instance) {
-        for (auto environment : scene->environments) l += eval_emission(environment, ray.d);
+        for (auto environment : scene->environments)
+            l += eval_emission(environment, ray.d);
         return l;
     }
     if (hit) *hit = true;
@@ -5265,7 +5611,8 @@ vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh, const tra
     // point
     auto o = -ray.d;
     auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-    auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+    auto n = eval_shading_normal(
+        isec.instance, isec.element_id, isec.element_uv, o);
     auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
     // emission
@@ -5296,8 +5643,8 @@ vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh, const tra
     // opacity
     auto op = eval_opacity(isec.instance, isec.element_id, isec.element_uv);
     if (op != 1) {
-        l = op * l +
-            (1 - op) * trace_direct(scene, bvh, lights, make_ray(p, -o), rng, nbounces - 1, hit);
+        l = op * l + (1 - op) * trace_direct(scene, bvh, lights,
+                                    make_ray(p, -o), rng, nbounces - 1, hit);
     }
 
     // done
@@ -5305,15 +5652,17 @@ vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh, const tra
 }
 
 // Eyelight for quick previewing.
-vec3f trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
     auto l    = zero3f;
 
     // handle environment
     if (!isec.instance) {
-        for (auto environment : scene->environments) l += eval_emission(environment, ray.d);
+        for (auto environment : scene->environments)
+            l += eval_emission(environment, ray.d);
         return l;
     }
     if (hit) *hit = true;
@@ -5321,7 +5670,8 @@ vec3f trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh, const trace_
     // point
     auto o = -ray.d;
     // auto p = eval_pos(isec.instance, isec.ei, isec.uv);
-    auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+    auto n = eval_shading_normal(
+        isec.instance, isec.element_id, isec.element_uv, o);
     auto f = eval_bsdf(isec.instance, isec.element_id, isec.element_uv);
 
     // emission
@@ -5335,8 +5685,9 @@ vec3f trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh, const trace_
 }
 
 // Debug previewing.
-vec3f trace_debug_normal(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_normal(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scene, bvh, ray);
     if (!isec.instance) return zero3f;
@@ -5344,7 +5695,8 @@ vec3f trace_debug_normal(const yocto_scene* scene, const bvh_tree* bvh, const tr
 
     // point
     auto o = -ray.d;
-    auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+    auto n = eval_shading_normal(
+        isec.instance, isec.element_id, isec.element_uv, o);
 
     // shade
     return n * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
@@ -5352,7 +5704,8 @@ vec3f trace_debug_normal(const yocto_scene* scene, const bvh_tree* bvh, const tr
 
 // Debug frontfacing.
 vec3f trace_debug_frontfacing(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scene, bvh, ray);
     if (!isec.instance) return zero3f;
@@ -5360,15 +5713,17 @@ vec3f trace_debug_frontfacing(const yocto_scene* scene, const bvh_tree* bvh,
 
     // point
     auto o = -ray.d;
-    auto n = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, o);
+    auto n = eval_shading_normal(
+        isec.instance, isec.element_id, isec.element_uv, o);
 
     // shade
     return dot(n, o) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
 }
 
 // Debug previewing.
-vec3f trace_debug_albedo(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_albedo(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scene, bvh, ray);
     if (!isec.instance) return zero3f;
@@ -5382,8 +5737,9 @@ vec3f trace_debug_albedo(const yocto_scene* scene, const bvh_tree* bvh, const tr
 }
 
 // Debug previewing.
-vec3f trace_debug_diffuse(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_debug_diffuse(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scene, bvh, ray);
     if (!isec.instance) return zero3f;
@@ -5398,7 +5754,8 @@ vec3f trace_debug_diffuse(const yocto_scene* scene, const bvh_tree* bvh, const t
 
 // Debug previewing.
 vec3f trace_debug_specular(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scene, bvh, ray);
     if (!isec.instance) return zero3f;
@@ -5413,7 +5770,8 @@ vec3f trace_debug_specular(const yocto_scene* scene, const bvh_tree* bvh,
 
 // Debug previewing.
 vec3f trace_debug_roughness(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scene, bvh, ray);
     if (!isec.instance) return zero3f;
@@ -5428,26 +5786,32 @@ vec3f trace_debug_roughness(const yocto_scene* scene, const bvh_tree* bvh,
 
 // Debug previewing.
 vec3f trace_debug_texcoord(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
+    bool* hit) {
     // intersect scene
     auto isec = intersect_ray(scene, bvh, ray);
     if (!isec.instance) return zero3f;
     if (hit) *hit = true;
 
     // point
-    auto texcoord = eval_texturecoord(isec.instance, isec.element_id, isec.element_uv);
+    auto texcoord = eval_texturecoord(
+        isec.instance, isec.element_id, isec.element_uv);
 
     // shade
     return {texcoord.x, texcoord.y, 0};
 }
 
 // Trace a single ray from the camera using the given algorithm.
-vec3f trace_func(const yocto_scene* scene, const bvh_tree* bvh, const trace_lights* lights,
-    trace_type tracer, const ray3f& ray, rng_state& rng, int nbounces, bool* hit) {
+vec3f trace_func(const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, trace_type tracer, const ray3f& ray,
+    rng_state& rng, int nbounces, bool* hit) {
     switch (tracer) {
-        case trace_type::path: return trace_path(scene, bvh, lights, ray, rng, nbounces, hit);
-        case trace_type::volpath: return trace_volpath(scene, bvh, lights, ray, rng, nbounces, hit);
-        case trace_type::direct: return trace_direct(scene, bvh, lights, ray, rng, nbounces, hit);
+        case trace_type::path:
+            return trace_path(scene, bvh, lights, ray, rng, nbounces, hit);
+        case trace_type::volpath:
+            return trace_volpath(scene, bvh, lights, ray, rng, nbounces, hit);
+        case trace_type::direct:
+            return trace_direct(scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::environment:
             return trace_environment(scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::eyelight:
@@ -5457,36 +5821,47 @@ vec3f trace_func(const yocto_scene* scene, const bvh_tree* bvh, const trace_ligh
         case trace_type::path_naive:
             return trace_path_naive(scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::direct_nomis:
-            return trace_direct_nomis(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_direct_nomis(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_normal:
-            return trace_debug_normal(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_normal(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_albedo:
-            return trace_debug_albedo(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_albedo(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_texcoord:
-            return trace_debug_texcoord(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_texcoord(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_frontfacing:
-            return trace_debug_frontfacing(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_frontfacing(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_diffuse:
-            return trace_debug_diffuse(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_diffuse(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_specular:
-            return trace_debug_specular(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_specular(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_roughness:
-            return trace_debug_roughness(scene, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_roughness(
+                scene, bvh, lights, ray, rng, nbounces, hit);
         default: throw runtime_error("should not have gotten here");
     }
     return zero3f;
 }
 
 // Trace a single sample
-vec4f trace_sample(trace_state* state, const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, int i, int j, const trace_params& params) {
+vec4f trace_sample(trace_state* state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights* lights, int i, int j,
+    const trace_params& params) {
     _trace_npaths += 1;
     auto  camera = scene->cameras.at(params.camera_id);
     auto& rng    = pixel_at(state->random_number_generators, i, j);
     auto  ray    = eval_camera_ray(camera, {i, j},
-        {state->rendered_image.width, state->rendered_image.height}, rand2f(rng), rand2f(rng));
+        {state->rendered_image.width, state->rendered_image.height},
+        rand2f(rng), rand2f(rng));
     auto  hit    = false;
-    auto l = trace_func(scene, bvh, lights, params.sample_tracer, ray, rng, params.max_bounces, &hit);
+    auto  l = trace_func(scene, bvh, lights, params.sample_tracer, ray, rng,
+        params.max_bounces, &hit);
     if (!isfinite(l.x) || !isfinite(l.y) || !isfinite(l.z)) {
         printf("NaN detected\n");
         l = zero3f;
@@ -5502,32 +5877,36 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
     for (auto j = 0; j < rngs.height; j++) {
         for (auto i = 0; i < rngs.width; i++) {
             pixel_at(rngs, i, j) = make_rng(seed, rseed + 1);
-            rseed                = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd
-                                                                                     // rand
+            rseed = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd
+                                                                      // rand
         }
     }
     return rngs;
 }
 
 // Init trace state
-trace_state* make_trace_state(const yocto_scene* scene, const trace_params& params) {
-    auto state                      = new trace_state();
-    auto camera                     = scene->cameras[params.camera_id];
-    auto size                       = eval_image_size(camera, params.vertical_resolution);
-    state->rendered_image           = image<vec4f>{size.x, size.y, zero4f};
-    state->display_image            = image<vec4f>{size.x, size.y, zero4f};
+trace_state* make_trace_state(
+    const yocto_scene* scene, const trace_params& params) {
+    auto state            = new trace_state();
+    auto camera           = scene->cameras[params.camera_id];
+    auto size             = eval_image_size(camera, params.vertical_resolution);
+    state->rendered_image = image<vec4f>{size.x, size.y, zero4f};
+    state->display_image  = image<vec4f>{size.x, size.y, zero4f};
     state->accumulation_buffer      = image<vec4f>{size.x, size.y, zero4f};
     state->samples_per_pixel        = image<int>{size.x, size.y, 0};
-    state->random_number_generators = make_trace_rngs(size.x, size.y, params.random_seed);
+    state->random_number_generators = make_trace_rngs(
+        size.x, size.y, params.random_seed);
     return state;
 }
 
 // Init trace lights
-trace_lights* make_trace_lights(const yocto_scene* scene, const trace_params& params) {
+trace_lights* make_trace_lights(
+    const yocto_scene* scene, const trace_params& params) {
     auto lights = new trace_lights();
 
     for (auto instance : scene->instances) {
-        if (!instance->material || instance->material->emission == zero3f) continue;
+        if (!instance->material || instance->material->emission == zero3f)
+            continue;
         if (instance->shape->triangles.empty()) continue;
         lights->instances.push_back(instance);
         lights->shapes_cdfs[instance->shape] = compute_shape_cdf(instance->shape);
@@ -5536,7 +5915,8 @@ trace_lights* make_trace_lights(const yocto_scene* scene, const trace_params& pa
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
         lights->environments.push_back(environment);
-        lights->environment_cdfs[environment] = compute_environment_cdf(environment);
+        lights->environment_cdfs[environment] = compute_environment_cdf(
+            environment);
     }
 
     return lights;
@@ -5561,12 +5941,14 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(thread([=]() {
-                for (auto j = tid; j < state->rendered_image.height; j += nthreads) {
+                for (auto j = tid; j < state->rendered_image.height;
+                     j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
                         for (auto s = 0; s < params.num_samples; s++)
                             pixel_at(state->rendered_image, i, j) += trace_sample(
                                 state, scene, bvh, lights, i, j, params);
-                        pixel_at(state->rendered_image, i, j) /= params.num_samples;
+                        pixel_at(
+                            state->rendered_image, i, j) /= params.num_samples;
                     }
                 }
             }));
@@ -5579,9 +5961,10 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-bool trace_samples(trace_state* state, const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const trace_params& params) {
-    auto nbatch = min(params.samples_per_batch, params.num_samples - state->current_sample);
+bool trace_samples(trace_state* state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
+    auto nbatch = min(
+        params.samples_per_batch, params.num_samples - state->current_sample);
     if (params.no_parallel) {
         for (auto j = 0; j < state->rendered_image.height; j++) {
             for (auto i = 0; i < state->rendered_image.width; i++) {
@@ -5589,10 +5972,12 @@ bool trace_samples(trace_state* state, const yocto_scene* scene, const bvh_tree*
                 for (auto s = 0; s < nbatch; s++)
                     pixel_at(state->rendered_image, i, j) += trace_sample(
                         state, scene, bvh, lights, i, j, params);
-                pixel_at(state->rendered_image, i, j) /= state->current_sample + nbatch;
+                pixel_at(state->rendered_image, i, j) /= state->current_sample +
+                                                         nbatch;
                 pixel_at(state->display_image, i, j) = tonemap_filmic(
-                    pixel_at(state->rendered_image, i, j), params.display_exposure,
-                    params.display_filmic, params.display_srgb);
+                    pixel_at(state->rendered_image, i, j),
+                    params.display_exposure, params.display_filmic,
+                    params.display_srgb);
             }
         }
     } else {
@@ -5600,16 +5985,20 @@ bool trace_samples(trace_state* state, const yocto_scene* scene, const bvh_tree*
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(thread([=]() {
-                for (auto j = tid; j < state->rendered_image.height; j += nthreads) {
+                for (auto j = tid; j < state->rendered_image.height;
+                     j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
-                        pixel_at(state->rendered_image, i, j) *= state->current_sample;
+                        pixel_at(state->rendered_image, i,
+                            j) *= state->current_sample;
                         for (auto s = 0; s < nbatch; s++)
                             pixel_at(state->rendered_image, i, j) += trace_sample(
                                 state, scene, bvh, lights, i, j, params);
-                        pixel_at(state->rendered_image, i, j) /= state->current_sample + nbatch;
+                        pixel_at(state->rendered_image, i,
+                            j) /= state->current_sample + nbatch;
                         pixel_at(state->display_image, i, j) = tonemap_filmic(
-                            pixel_at(state->rendered_image, i, j), params.display_exposure,
-                            params.display_filmic, params.display_srgb);
+                            pixel_at(state->rendered_image, i, j),
+                            params.display_exposure, params.display_filmic,
+                            params.display_srgb);
                     }
                 }
             }));
@@ -5621,23 +6010,24 @@ bool trace_samples(trace_state* state, const yocto_scene* scene, const bvh_tree*
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* state, const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const trace_params& params) {
+void trace_async_start(trace_state* state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
     // render preview image
     if (params.preview_ratio) {
         auto pparams                = params;
-        pparams.vertical_resolution = state->rendered_image.height / params.preview_ratio;
-        pparams.num_samples         = 1;
-        auto pimg                   = trace_image4f(scene, bvh, lights, pparams);
-        auto pdisplay               = tonemap_filmic(
-            pimg, params.display_exposure, params.display_filmic, params.display_srgb);
+        pparams.vertical_resolution = state->rendered_image.height /
+                                      params.preview_ratio;
+        pparams.num_samples = 1;
+        auto pimg           = trace_image4f(scene, bvh, lights, pparams);
+        auto pdisplay       = tonemap_filmic(pimg, params.display_exposure,
+            params.display_filmic, params.display_srgb);
         auto pwidth = pimg.width, pheight = pimg.height;
         for (auto j = 0; j < state->rendered_image.height; j++) {
             for (auto i = 0; i < state->rendered_image.width; i++) {
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
                 pixel_at(state->rendered_image, i, j) = pixel_at(pimg, pi, pj);
-                pixel_at(state->display_image, i, j)  = pixel_at(pdisplay, pi, pj);
+                pixel_at(state->display_image, i, j) = pixel_at(pdisplay, pi, pj);
             }
         }
     }
@@ -5649,7 +6039,8 @@ void trace_async_start(trace_state* state, const yocto_scene* scene, const bvh_t
         state->async_threads.push_back(thread([=, &params]() {
             for (auto s = 0; s < params.num_samples; s++) {
                 if (!tid) state->current_sample = s;
-                for (auto j = tid; j < state->rendered_image.height; j += nthreads) {
+                for (auto j = tid; j < state->rendered_image.height;
+                     j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
                         if (state->async_stop_flag) return;
                         pixel_at(state->rendered_image, i, j) *= s;
@@ -5657,8 +6048,9 @@ void trace_async_start(trace_state* state, const yocto_scene* scene, const bvh_t
                             state, scene, bvh, lights, i, j, params);
                         pixel_at(state->rendered_image, i, j) /= s + 1;
                         pixel_at(state->display_image, i, j) = tonemap_filmic(
-                            pixel_at(state->rendered_image, i, j), params.display_exposure,
-                            params.display_filmic, params.display_srgb);
+                            pixel_at(state->rendered_image, i, j),
+                            params.display_exposure, params.display_filmic,
+                            params.display_srgb);
                     }
                 }
             }
@@ -5676,8 +6068,10 @@ void trace_async_stop(trace_state* state) {
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
-tuple<uint64_t, uint64_t> get_trace_stats() { return {_trace_nrays, _trace_npaths}; }
-void                      reset_trace_stats() {
+tuple<uint64_t, uint64_t> get_trace_stats() {
+    return {_trace_nrays, _trace_npaths};
+}
+void reset_trace_stats() {
     _trace_nrays  = 0;
     _trace_npaths = 0;
 }
@@ -5693,8 +6087,8 @@ float specular_exponent_to_roughness(float n) { return sqrtf(2 / (n + 2)); }
 
 // Specular to fresnel eta.
 void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
-    es  = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)), (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
-        (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
+    es  = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
+        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)), (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
     esk = {0, 0, 0};
 }
 
@@ -5717,7 +6111,8 @@ vec3f fresnel_dielectric(float cosw, const vec3f& eta_) {
     auto eta2 = eta * eta;
 
     auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
-    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0) return vec3f{1, 1, 1};  // tir
+    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
+        return vec3f{1, 1, 1};  // tir
 
     auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
     auto t1 = eta * t0;
@@ -5742,14 +6137,16 @@ vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 
     auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
     auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-    auto a2plusb2   = vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
-    auto t1         = a2plusb2 + vec3f{cos2, cos2, cos2};
-    auto a_2        = (a2plusb2 + t0) / 2.0f;
-    auto a          = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
-    auto t2         = 2.0f * a * cosw;
-    auto rs         = (t1 - t2) / (t1 + t2);
+    auto a2plusb2   = vec3f{
+        sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
+    auto t1  = a2plusb2 + vec3f{cos2, cos2, cos2};
+    auto a_2 = (a2plusb2 + t0) / 2.0f;
+    auto a   = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
+    auto t2  = 2.0f * a * cosw;
+    auto rs  = (t1 - t2) / (t1 + t2);
 
-    auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 + vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
+    auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
+              vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
     auto t4 = t2 * sin2;
     auto rp = rs * (t3 - t4) / (t3 + t4);
 
@@ -5793,7 +6190,8 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-float integrate_func_base(function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
+float integrate_func_base(
+    function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand1f(rng);
@@ -5816,8 +6214,9 @@ float integrate_func_stratified(
     return integral;
 }
 
-float integrate_func_importance(function<float(float)> f, function<float(float)> pdf,
-    function<float(float)> warp, int nsamples, rng_state& rng) {
+float integrate_func_importance(function<float(float)> f,
+    function<float(float)> pdf, function<float(float)> warp, int nsamples,
+    rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand1f(rng);
@@ -5838,22 +6237,26 @@ float integrate_func_importance(function<float(float)> f, function<float(float)>
 // auto f = [](double x) { return sin(x); }
 // auto a = 0.0, b = (double)M_PI;
 // auto expected = (double)M_PI;
-void print_integrate_func_test(function<float(float)> f, float a, float b, float expected,
-    int nsamples, function<float(float)> pdf, function<float(float)> warp) {
+void print_integrate_func_test(function<float(float)> f, float a, float b,
+    float expected, int nsamples, function<float(float)> pdf,
+    function<float(float)> warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func_stratified(f, a, b, ns, rng);
-        auto integral_importance = integrate_func_importance(f, pdf, warp, ns, rng);
-        auto error_base          = fabs(integral_base - expected) / expected;
-        auto error_stratified    = fabs(integral_stratified - expected) / expected;
-        auto error_importance    = fabs(integral_importance - expected) / expected;
-        printf("%d %g %g %g %g\n", ns, integral_base, error_base, error_stratified, error_importance);
+        auto integral_importance = integrate_func_importance(
+            f, pdf, warp, ns, rng);
+        auto error_base       = fabs(integral_base - expected) / expected;
+        auto error_stratified = fabs(integral_stratified - expected) / expected;
+        auto error_importance = fabs(integral_importance - expected) / expected;
+        printf("%d %g %g %g %g\n", ns, integral_base, error_base,
+            error_stratified, error_importance);
     }
 }
 
-float integrate_func2_base(function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
+float integrate_func2_base(
+    function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand2f(rng);
@@ -5870,7 +6273,8 @@ float integrate_func2_stratified(
     auto nsamples2 = (int)sqrt(nsamples);
     for (auto i = 0; i < nsamples2; i++) {
         for (auto j = 0; j < nsamples2; j++) {
-            auto r = vec2f{(i + rand1f(rng)) / nsamples2, (j + rand1f(rng)) / nsamples2};
+            auto r = vec2f{
+                (i + rand1f(rng)) / nsamples2, (j + rand1f(rng)) / nsamples2};
             auto x = a + r * (b - a);
             integral += f(x) * (b.x - a.x) * (b.y - a.y);
         }
@@ -5879,8 +6283,9 @@ float integrate_func2_stratified(
     return integral;
 }
 
-float integrate_func2_importance(function<float(vec2f)> f, function<float(vec2f)> pdf,
-    function<vec2f(vec2f)> warp, int nsamples, rng_state& rng) {
+float integrate_func2_importance(function<float(vec2f)> f,
+    function<float(vec2f)> pdf, function<vec2f(vec2f)> warp, int nsamples,
+    rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = rand2f(rng);
@@ -5897,18 +6302,21 @@ float integrate_func2_importance(function<float(vec2f)> f, function<float(vec2f)
 // auto a = 0.0, b = 1.0;
 // auto expected = 3.0 / 4.0;
 // auto nsamples = 10000
-void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b, float expected,
-    int nsamples, function<float(vec2f)> pdf, function<vec2f(vec2f)> warp) {
+void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
+    float expected, int nsamples, function<float(vec2f)> pdf,
+    function<vec2f(vec2f)> warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func2_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func2_stratified(f, a, b, ns, rng);
-        auto integral_importance = integrate_func2_importance(f, pdf, warp, ns, rng);
-        auto error_base          = fabs(integral_base - expected) / expected;
-        auto error_stratified    = fabs(integral_stratified - expected) / expected;
-        auto error_importance    = fabs(integral_importance - expected) / expected;
-        printf("%d %g %g %g %g\n", ns, integral_base, error_base, error_stratified, error_importance);
+        auto integral_importance = integrate_func2_importance(
+            f, pdf, warp, ns, rng);
+        auto error_base       = fabs(integral_base - expected) / expected;
+        auto error_stratified = fabs(integral_stratified - expected) / expected;
+        auto error_importance = fabs(integral_importance - expected) / expected;
+        printf("%d %g %g %g %g\n", ns, integral_base, error_base,
+            error_stratified, error_importance);
     }
 }
 
