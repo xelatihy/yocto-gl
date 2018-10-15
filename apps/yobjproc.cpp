@@ -43,17 +43,12 @@ string to_string(const obj_vertex& v) {
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(
-        argc, argv, "Process obj files directly", "yobjproc");
-    auto translation = parse_arg(
-        parser, "--translation,-t", zero3f, "translation");
-    auto scale      = parse_arg(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
-    auto print_info = parse_arg(
-        parser, "--print-info,-i", false, "print obj info");
-    auto output = parse_arg(
-        parser, "--output,-o", "out.obj"s, "output obj scene", true);
-    auto filename = parse_arg(
-        parser, "filename", "in.obj"s, "input obj filename", true);
+    auto parser      = make_cmdline_parser(argc, argv, "Process obj files directly", "yobjproc");
+    auto translation = parse_arg(parser, "--translation,-t", zero3f, "translation");
+    auto scale       = parse_arg(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
+    auto print_info  = parse_arg(parser, "--print-info,-i", false, "print obj info");
+    auto output      = parse_arg(parser, "--output,-o", "out.obj"s, "output obj scene", true);
+    auto filename    = parse_arg(parser, "filename", "in.obj"s, "input obj filename", true);
     check_cmdline(parser);
 
     // prepare stats
@@ -125,9 +120,7 @@ int main(int argc, char* argv[]) {
         fprintf(fs, "usemtl %s\n", name.c_str());
         nusemtl += 1;
     };
-    cb.mtllib = [&](const string& name) {
-        fprintf(fs, "mtllib %s\n", name.c_str());
-    };
+    cb.mtllib   = [&](const string& name) { fprintf(fs, "mtllib %s\n", name.c_str()); };
     cb.material = [&](auto&) { nmaterials += 1; };
 
     // parse and write
@@ -144,15 +137,12 @@ int main(int argc, char* argv[]) {
         if (translation != zero3f || scale != vec3f{1, 1, 1}) {
             auto center = (tbox.max + tbox.min) / 2;
             auto size   = tbox.max - tbox.min;
-            printf("tbox min: % 6g % 6g % 6g\n", tbox.min.x, tbox.min.y,
-                tbox.min.z);
-            printf("tbox max: % 6g % 6g % 6g\n", tbox.max.x, tbox.max.y,
-                tbox.max.z);
+            printf("tbox min: % 6g % 6g % 6g\n", tbox.min.x, tbox.min.y, tbox.min.z);
+            printf("tbox max: % 6g % 6g % 6g\n", tbox.max.x, tbox.max.y, tbox.max.z);
             printf("tbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
             printf("tbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
         }
-        printf("faces:    % 6d % 6d % 6d % 6d\n", nfaces, ntriangles, nquads,
-            npolys);
+        printf("faces:    % 6d % 6d % 6d % 6d\n", nfaces, ntriangles, nquads, npolys);
         printf("lines:    % 6d % 6d\n", nplines, nlines);
         printf("point:    % 6d % 6d\n", nppoints, npoints);
         printf("objs:     % 6d % 6d\n", nobjects, ngroups);

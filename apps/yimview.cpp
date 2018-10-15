@@ -112,8 +112,7 @@ void update_display_async(app_image* img) {
                     if (img->display_stop) break;
                     for (auto i = 0; i < img->img.width; i++) {
                         pixel_at(img->display, i, j) = tonemap_filmic(
-                            pixel_at(img->img, i, j), img->exposure,
-                            img->filmic, img->srgb);
+                            pixel_at(img->img, i, j), img->exposure, img->filmic, img->srgb);
                     }
                 }
             }));
@@ -124,8 +123,7 @@ void update_display_async(app_image* img) {
             if (img->display_stop) break;
             for (auto i = 0; i < img->img.width; i++) {
                 pixel_at(img->display, i, j) = tonemap_filmic(
-                    pixel_at(img->img, i, j), img->exposure, img->filmic,
-                    img->srgb);
+                    pixel_at(img->img, i, j), img->exposure, img->filmic, img->srgb);
             }
         }
     }
@@ -170,10 +168,9 @@ void save_image_async(app_image* img) {
 // add a new image
 void add_new_image(app_state* app, const string& filename, const string& outname,
     float exposure = 0, bool filmic = false, bool srgb = true) {
-    auto img      = new app_image();
-    img->filename = filename;
-    img->outname = (outname == "") ? replace_extension(filename, ".display.png") :
-                                     outname;
+    auto img         = new app_image();
+    img->filename    = filename;
+    img->outname     = (outname == "") ? replace_extension(filename, ".display.png") : outname;
     img->name        = get_filename(filename);
     img->is_hdr      = is_hdr_filename(filename);
     img->exposure    = exposure;
@@ -195,9 +192,7 @@ void draw_glwidgets(glwindow* win) {
             draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
             draw_textinput_glwidget(win, "outname", img->outname);
             if (draw_button_glwidget(win, "save display")) {
-                if (img->display_done) {
-                    img->save_thread = thread(save_image_async, img);
-                }
+                if (img->display_done) { img->save_thread = thread(save_image_async, img); }
             }
             auto status = string();
             if (img->error_msg != "")
@@ -209,8 +204,7 @@ void draw_glwidgets(glwindow* win) {
             else
                 status = "done";
             draw_label_glwidgets(win, "status", status.c_str());
-            draw_label_glwidgets(
-                win, "size", "%d x %d ", img->img.width, img->img.height);
+            draw_label_glwidgets(win, "size", "%d x %d ", img->img.width, img->img.height);
             draw_slider_glwidget(win, "zoom", img->imscale, 0.1, 10);
             draw_checkbox_glwidget(win, "zoom to fit", img->zoom_to_fit);
             end_header_glwidget(win);
@@ -223,12 +217,11 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
-                {img->img.width, img->img.height});
+            auto ij        = get_image_coords(
+                mouse_pos, img->imcenter, img->imscale, {img->img.width, img->img.height});
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 &&
-                ij.y < img->img.height) {
+            if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 && ij.y < img->img.height) {
                 pixel = pixel_at(img->img, ij.x, ij.y);
             }
             draw_coloredit_glwidget(win, "pixel", pixel);
@@ -261,11 +254,10 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
-        center_image4f(img->imcenter, img->imscale,
-            {img->display.width, img->display.height}, win_size,
-            img->zoom_to_fit);
-        draw_glimage(img->gl_txt, {img->display.width, img->display.height},
-            win_size, img->imcenter, img->imscale);
+        center_image4f(img->imcenter, img->imscale, {img->display.width, img->display.height},
+            win_size, img->zoom_to_fit);
+        draw_glimage(img->gl_txt, {img->display.width, img->display.height}, win_size,
+            img->imcenter, img->imscale);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -299,8 +291,8 @@ void run_ui(app_state* app) {
     init_glwidgets(win);
 
     // center image
-    center_image4f(img->imcenter, img->imscale, {img->img.width, img->img.height},
-        {width, height}, img->img.width > width || img->img.height > height);
+    center_image4f(img->imcenter, img->imscale, {img->img.width, img->img.height}, {width, height},
+        img->img.width > width || img->img.height > height);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -312,8 +304,7 @@ void run_ui(app_state* app) {
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse
-        if (mouse_left && !widgets_active)
-            img->imcenter += mouse_pos - last_pos;
+        if (mouse_left && !widgets_active) img->imcenter += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
             img->imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
 
@@ -344,8 +335,7 @@ int main(int argc, char* argv[]) {
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     auto outfilename = parse_arg(parser, "--out,-o", ""s, "image out filename");
-    auto filenames   = parse_args(
-        parser, "images", vector<string>{}, "image filenames", true);
+    auto filenames   = parse_args(parser, "images", vector<string>{}, "image filenames", true);
     check_cmdline(parser);
 
     // loading images

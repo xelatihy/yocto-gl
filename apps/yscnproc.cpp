@@ -31,8 +31,7 @@
 using namespace ygl;
 
 bool mkdir(const string& dir) {
-    if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
-        return true;
+    if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../") return true;
 #ifndef _MSC_VER
     system(("mkdir -p " + dir).c_str());
     return true;
@@ -44,15 +43,11 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
-    auto notextures = parse_arg(
-        parser, "--notextures", false, "Disable textures.");
-    auto uniform_txt = parse_arg(
-        parser, "--uniform-texture", false, "uniform texture formats");
-    auto output = parse_arg(
-        parser, "--output,-o", "out.json"s, "output scene", true);
-    auto filename = parse_arg(
-        parser, "scene", "scene.json"s, "input scene", true);
+    auto parser      = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
+    auto notextures  = parse_arg(parser, "--notextures", false, "Disable textures.");
+    auto uniform_txt = parse_arg(parser, "--uniform-texture", false, "uniform texture formats");
+    auto output      = parse_arg(parser, "--output,-o", "out.json"s, "output scene", true);
+    auto filename    = parse_arg(parser, "scene", "scene.json"s, "input scene", true);
     check_cmdline(parser);
 
     // load scene
@@ -80,12 +75,10 @@ int main(int argc, char** argv) {
     }
 
     // make a directory if needed
-    if (!mkdir(get_dirname(output)))
-        log_fatal("cannot create directory " + get_dirname(output));
+    if (!mkdir(get_dirname(output))) log_fatal("cannot create directory " + get_dirname(output));
 
     // save scene
-    if (!save_scene(output, scene.get(), !notextures))
-        log_fatal("cannot save scene %" + output);
+    if (!save_scene(output, scene.get(), !notextures)) log_fatal("cannot save scene %" + output);
 
     // done
     return 0;

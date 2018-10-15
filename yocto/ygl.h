@@ -759,8 +759,7 @@ inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u) {
 template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
     // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
-    return fabs(v.x) > fabs(v.z) ? vec<T, 3>{-v.y, v.x, 0} :
-                                   vec<T, 3>{0, -v.z, v.y};
+    return fabs(v.x) > fabs(v.z) ? vec<T, 3>{-v.y, v.x, 0} : vec<T, 3>{0, -v.z, v.y};
 }
 template <typename T>
 inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
@@ -791,8 +790,7 @@ inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T2 max) {
 }
 template <typename T, typename T1, typename T2>
 inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-        clamp(x.w, min, max)};
+    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max), clamp(x.w, min, max)};
 }
 template <typename T>
 inline T max(const vec<T, 2>& a) {
@@ -840,8 +838,7 @@ inline vec<T, 4> quat_mul(const vec<T, 4>& a, float b) {
 template <typename T>
 inline vec<T, 4> quat_mul(const vec<T, 4>& a, const vec<T, 4>& b) {
     return {a.x * b.w + a.w * b.x + a.y * b.w - a.z * b.y,
-        a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z,
-        a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
+        a.y * b.w + a.w * b.y + a.z * b.x - a.x * b.z, a.z * b.w + a.w * b.z + a.x * b.y - a.y * b.x,
         a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z};
 }
 template <typename T>
@@ -863,8 +860,7 @@ struct hash<ygl::vec<T, 2>> {
     size_t operator()(const ygl::vec<T, 2>& v) const {
         auto vh = hash<T>();
         auto h  = (size_t)0;
-        for (auto i = 0; i < 2; i++)
-            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        for (auto i = 0; i < 2; i++) h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
 };
@@ -874,8 +870,7 @@ struct hash<ygl::vec<T, 3>> {
     size_t operator()(const ygl::vec<T, 3>& v) const {
         auto vh = hash<int>();
         auto h  = (size_t)0;
-        for (auto i = 0; i < 3; i++)
-            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        for (auto i = 0; i < 3; i++) h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
 };
@@ -885,8 +880,7 @@ struct hash<ygl::vec<T, 4>> {
     size_t operator()(const ygl::vec<T, 4>& v) const {
         auto vh = hash<int>();
         auto h  = (size_t)0;
-        for (auto i = 0; i < 4; i++)
-            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        for (auto i = 0; i < 4; i++) h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
 };
@@ -930,8 +924,7 @@ using mat4f = mat<float, 4, 4>;
 // Identity matrices constants.
 const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
 const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-const auto identity_mat4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+const auto identity_mat4f = mat4f{{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
 template <typename T, int N>
@@ -1120,8 +1113,7 @@ inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
     return {x, y, z, o};
 }
 template <typename T>
-inline frame<T, 3> make_frame_fromzx(
-    const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
+inline frame<T, 3> make_frame_fromzx(const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
@@ -1198,8 +1190,7 @@ inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b) {
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T>
 inline frame<T, 2> inverse(const frame<T, 2>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y}) :
-                             inverse(mat<T, 2, 2>{a.x, a.y});
+    auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y}) : inverse(mat<T, 2, 2>{a.x, a.y});
     return {minv.x, minv.y, -(minv * a.o)};
 }
 template <typename T>
@@ -1336,18 +1327,16 @@ inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const bbox<T, 3>& b) {
 // Bounding box expansions with points and other boxes.
 template <typename T>
 inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const vec<T, 4>& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z),
-        min(a.min.w, b.w)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z),
-        max(a.max.w, b.w)};
+    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z), min(a.min.w, b.w)};
+    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z), max(a.max.w, b.w)};
     return a;
 }
 template <typename T>
 inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
-    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y),
-        min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
-    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y),
-        max(a.max.z, b.max.z), max(a.max.w, b.max.w)};
+    a.min = {
+        min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
+    a.max = {
+        max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z), max(a.max.w, b.max.w)};
     return a;
 }
 
@@ -1360,8 +1349,7 @@ inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T r = 0) {
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> line_bbox(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, T r0 = 0, T r1 = 0) {
+inline bbox<T, 3> line_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1, T r0 = 0, T r1 = 0) {
     auto bounds = bbox<T, 3>{};
     bounds += p0 - vec3f{r0, r0, r0};
     bounds += p0 + vec3f{r0, r0, r0};
@@ -1370,8 +1358,7 @@ inline bbox<T, 3> line_bbox(
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> triangle_bbox(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
+inline bbox<T, 3> triangle_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
     auto bounds = bbox<T, 3>{};
     bounds += p0;
     bounds += p1;
@@ -1379,8 +1366,8 @@ inline bbox<T, 3> triangle_bbox(
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> quad_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1,
-    const vec<T, 3>& p2, const vec<T, 3>& p3) {
+inline bbox<T, 3> quad_bbox(
+    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
     auto bounds = bbox<T, 3>{};
     bounds += p0;
     bounds += p1;
@@ -1426,8 +1413,7 @@ inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f)
     return {o, d, eps, maxt<T>()};
 }
 template <typename T, int N>
-inline ray<T, N> make_segment(
-    const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
+inline ray<T, N> make_segment(const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
     return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
@@ -1501,22 +1487,20 @@ inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b
 }
 template <typename T>
 inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
-    auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-        vec3f{b.max.x, b.max.y, b.max.z}};
+    auto corners = {vec3f{b.min.x, b.min.y, b.min.z}, vec3f{b.min.x, b.min.y, b.max.z},
+        vec3f{b.min.x, b.max.y, b.min.z}, vec3f{b.min.x, b.max.y, b.max.z},
+        vec3f{b.max.x, b.min.y, b.min.z}, vec3f{b.max.x, b.min.y, b.max.z},
+        vec3f{b.max.x, b.max.y, b.min.z}, vec3f{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox<T, 3>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
 }
 template <typename T>
 inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
-    auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
-        vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
-        vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
-        vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
-        vec3f{b.max.x, b.max.y, b.max.z}};
+    auto corners = {vec3f{b.min.x, b.min.y, b.min.z}, vec3f{b.min.x, b.min.y, b.max.z},
+        vec3f{b.min.x, b.max.y, b.min.z}, vec3f{b.min.x, b.max.y, b.max.z},
+        vec3f{b.max.x, b.min.y, b.min.z}, vec3f{b.max.x, b.min.y, b.max.z},
+        vec3f{b.max.x, b.max.y, b.min.z}, vec3f{b.max.x, b.max.y, b.max.z}};
     auto xformed = bbox<T, 3>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
@@ -1524,8 +1508,7 @@ inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
 
 // Inverse transforms by frames, assuming they are rigid transforms.
 template <typename T>
-inline vec<T, 2> transform_point_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_point_inverse(const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
 }
 template <typename T>
@@ -1533,8 +1516,7 @@ inline vec3f transform_point_inverse(const frame<T, 3>& a, const vec<T, 3>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
 }
 template <typename T>
-inline vec<T, 2> transform_vector_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_vector_inverse(const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b, a.x), dot(b, a.y)};
 }
 template <typename T>
@@ -1542,18 +1524,15 @@ inline vec3f transform_vector_inverse(const frame<T, 3>& a, const vec<T, 3>& b) 
     return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
 }
 template <typename T, int N>
-inline vec3f transform_direction_inverse(
-    const frame<T, N>& a, const vec<T, N>& b) {
+inline vec3f transform_direction_inverse(const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector_inverse(a, b));
 }
 template <typename T, int N>
 inline ray<T, N> transform_ray_inverse(const frame<T, N>& a, const ray<T, N>& b) {
-    return {transform_point_inverse(a, b.o),
-        transform_direction_inverse(a, b.d), b.tmin, b.tmax};
+    return {transform_point_inverse(a, b.o), transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox<T, 3> transform_bbox_inverse(
-    const frame<T, 3>& a, const bbox<T, 3>& b) {
+inline bbox<T, 3> transform_bbox_inverse(const frame<T, 3>& a, const bbox<T, 3>& b) {
     return transform_bbox(inverse(a), b);
 }
 
@@ -1581,10 +1560,9 @@ inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
 template <typename T>
 inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
     auto v = quat;
-    return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
-                (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
-        {(v.x * v.y - v.z * v.w) * 2,
-            v.w * v.w - v.x * v.x + v.y * v.y - v.z * v.z,
+    return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z, (v.x * v.y + v.z * v.w) * 2,
+                (v.z * v.x - v.y * v.w) * 2},
+        {(v.x * v.y - v.z * v.w) * 2, v.w * v.w - v.x * v.x + v.y * v.y - v.z * v.z,
             (v.y * v.z + v.x * v.w) * 2},
         {(v.z * v.x + v.y * v.w) * 2, (v.y * v.z - v.x * v.w) * 2,
             v.w * v.w - v.x * v.x - v.y * v.y + v.z * v.z},
@@ -1597,8 +1575,8 @@ inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
-inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
-    const vec<T, 3>& up, bool inv_xz = false) {
+inline frame<T, 3> lookat_frame(
+    const vec<T, 3>& eye, const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
     auto v = normalize(cross(w, u));
@@ -1618,8 +1596,7 @@ inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
 }
 template <typename T>
 inline mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
-    return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
-        {0, 0, -2 / (f - n), 0},
+    return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0}, {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 template <typename T>
@@ -1628,21 +1605,19 @@ inline mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
 }
 template <typename T>
 inline mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
-    return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
-        {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
+    return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0}, {0, 0, 2 / (near - far), 0},
+        {0, 0, (far + near) / (near - far), 1}};
 }
 template <typename T>
 inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
-        {0, 0, (far + near) / (near - far), -1},
-        {0, 0, 2 * far * near / (near - far), 0}};
+        {0, 0, (far + near) / (near - far), -1}, {0, 0, 2 * far * near / (near - far), 0}};
 }
 template <typename T>
 inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
     auto tg = tan(fovy / 2);
-    return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
-        {0, 0, 2 * near, 0}};
+    return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1}, {0, 0, 2 * near, 0}};
 }
 
 // Rotation conversions.
@@ -1659,29 +1634,27 @@ inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
 }
 template <typename T>
 inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
-    return rotation_quat(
-        vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
+    return rotation_quat(vec3f{axisangle.x, axisangle.y, axisangle.z}, axisangle.w);
 }
 
 // Turntable and FPS Camera navigation.
-inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan);
-inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan);
+inline void camera_turntable(
+    vec3f& from, vec3f& to, vec3f& up, const vec2f& rotate, float dolly, const vec2f& pan);
+inline void camera_turntable(
+    frame3f& frame, float& focus, const vec2f& rotate, float dolly, const vec2f& pan);
 inline void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
-    float scale, const vec2i& txt_size) {
+inline vec2i get_image_coords(
+    const vec2f& mouse_pos, const vec2f& center, float scale, const vec2i& txt_size) {
     auto xyf = (mouse_pos - center) / scale;
-    return vec2i{(int)round(xyf.x + txt_size.x / 2.0f),
-        (int)round(xyf.y + txt_size.y / 2.0f)};
+    return vec2i{(int)round(xyf.x + txt_size.x / 2.0f), (int)round(xyf.y + txt_size.y / 2.0f)};
 }
 
 // Center image and autofit.
-inline void center_image4f(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
+inline void center_image4f(
+    vec2f& center, float& scale, const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
         scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
         center = {(float)winsize.x / 2, (float)winsize.y / 2};
@@ -1738,9 +1711,7 @@ inline float rand1f(rng_state& rng) {
     // return advance_rng(rng) * scale;
 }
 inline vec2f rand2f(rng_state& rng) { return {rand1f(rng), rand1f(rng)}; }
-inline vec3f rand3f(rng_state& rng) {
-    return {rand1f(rng), rand1f(rng), rand1f(rng)};
-}
+inline vec3f rand3f(rng_state& rng) { return {rand1f(rng), rand1f(rng), rand1f(rng)}; }
 
 }  // namespace ygl
 
@@ -1756,9 +1727,7 @@ inline vec3f sample_hemisphere(const vec2f& ruv) {
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_pdf(const vec3f& w) {
-    return (w.z <= 0) ? 0 : 1 / (2 * pif);
-}
+inline float sample_hemisphere_pdf(const vec3f& w) { return (w.z <= 0) ? 0 : 1 / (2 * pif); }
 
 // Sample a spherical direction with uniform distribution.
 inline vec3f sample_sphere(const vec2f& ruv) {
@@ -1783,9 +1752,7 @@ inline vec3f sample_hemisphere_cosine(const vec2f& ruv) {
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cosine_pdf(const vec3f& w) {
-    return (w.z <= 0) ? 0 : w.z / pif;
-}
+inline float sample_hemisphere_cosine_pdf(const vec3f& w) { return (w.z <= 0) ? 0 : w.z / pif; }
 
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_cospower(float n, const vec2f& ruv) {
@@ -1814,31 +1781,24 @@ inline vec3f sample_cylinder(const vec2f& ruv) {
 inline float sample_cylinder_pdf() { return 1 / pif; }
 
 // Sample a point uniformly on a triangle.
-inline vec2f sample_triangle(const vec2f& ruv) {
-    return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
-}
-inline vec3f sample_triangle(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
+inline vec2f sample_triangle(const vec2f& ruv) { return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)}; }
+inline vec3f sample_triangle(const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
     auto uv = sample_triangle(ruv);
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline float sample_triangle_pdf(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-inline int sample_index(int size, float r) {
-    return clamp((int)(r * size), 0, size - 1);
-}
+inline int   sample_index(int size, float r) { return clamp((int)(r * size), 0, size - 1); }
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete(const vector<float>& cdf, float r) {
     r        = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
-    auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
-                     cdf.data());
+    auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) - cdf.data());
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
@@ -1861,13 +1821,12 @@ namespace ygl {
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
 float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
-float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, float offset = 1.0f, int octaves = 6,
+float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f, float gain = 0.5f,
+    float offset = 1.0f, int octaves = 6, const vec3i& wrap = zero3i);
+float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f, float gain = 0.5f, int octaves = 6,
     const vec3i& wrap = zero3i);
-float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
-float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
+float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f, float gain = 0.5f,
+    int octaves = 6, const vec3i& wrap = zero3i);
 
 }  // namespace ygl
 
@@ -1877,12 +1836,8 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
 namespace ygl {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
-    return normalize(p1 - p0);
-}
-inline float line_length(const vec3f& p0, const vec3f& p1) {
-    return length(p1 - p0);
-}
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) { return normalize(p1 - p0); }
+inline float line_length(const vec3f& p0, const vec3f& p1) { return length(p1 - p0); }
 
 // Triangle properties.
 inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
@@ -1893,19 +1848,16 @@ inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
 }
 
 // Quad propeties.
-inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+inline vec3f quad_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
 }
-inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+inline float quad_area(const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
     return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
 }
 
 // Triangle tangent and bitangent from uv
-inline tuple<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2) {
+inline tuple<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec2f& uv0, const vec2f& uv1, const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
     // https://gist.github.com/aras-p/2843984
     // normal points up from texture space
@@ -1916,12 +1868,8 @@ inline tuple<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     auto div = s.x * t.y - s.y * t.x;
 
     if (div != 0) {
-        auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
-                      t.y * p.z - t.x * q.z} /
-                  div;
-        auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
-                      s.x * q.z - s.y * p.z} /
-                  div;
+        auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y, t.y * p.z - t.x * q.z} / div;
+        auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y, s.x * q.z - s.y * p.z} / div;
         return {tu, tv};
     } else {
         return {{1, 0, 0}, {0, 1, 0}};
@@ -1936,32 +1884,27 @@ inline T interpolate_line(const T& p0, const T& p1, float u) {
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
-inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+inline T interpolate_triangle(const T& p0, const T& p1, const T& p2, const vec2f& uv) {
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
-inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
-           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+inline T interpolate_quad(const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) + p2 * uv.x * uv.y +
+           p3 * (1 - uv.x) * uv.y;
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
-inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+inline T interpolate_bezier(const T& p0, const T& p1, const T& p2, const T& p3, float u) {
     return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
            p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
 }
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
-inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-           (p3 - p2) * 3 * u * u;
+inline T interpolate_bezier_derivative(const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) + (p3 - p2) * 3 * u * u;
 }
 
 }  // namespace ygl
@@ -1972,30 +1915,25 @@ inline T interpolate_bezier_derivative(
 namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& pos);
-vector<vec3f> compute_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos);
-vector<vec3f> compute_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& pos);
+vector<vec3f> compute_tangents(const vector<vec2i>& lines, const vector<vec3f>& pos);
+vector<vec3f> compute_normals(const vector<vec3i>& triangles, const vector<vec3f>& pos);
+vector<vec3f> compute_normals(const vector<vec4i>& quads, const vector<vec3f>& pos);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord);
+vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord);
 
 // Apply skinning to vertex position and normals.
 tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+    const vector<vec3f>& norm, const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
 
 // Dictionary to store edge information.
@@ -2025,25 +1963,22 @@ inline vector<vec2i> get_edges(const vector<vec4i>& quads) {
 vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length);
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads, int row_length);
 
 // Convert beziers to lines using 3 lines for each bezier.
 vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
-void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
-    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
-    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
-    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
+void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos, vector<vec3f>& qnorm,
+    vector<vec2f>& qtexcoord, vector<vec4f>& qcolor, const vector<vec4i>& quads_pos,
+    const vector<vec4i>& quads_norm, const vector<vec4i>& quads_texcoord,
+    const vector<vec4i>& quads_color, const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, const vector<vec4f>& color);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vert);
+tuple<vector<vec2i>, vector<T>> subdivide_lines(const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
@@ -2052,41 +1987,34 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles(
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vert);
+tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
 tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
-    const vector<T>& vert, bool lock_boundary = false);
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-tuple<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& pos, float threshold);
+tuple<vector<vec3f>, vector<int>>   weld_vertices(const vector<vec3f>& pos, float threshold);
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
     const vector<vec3i>& triangles, const vector<vec3f>& pos, float threshold);
 tuple<vector<vec4i>, vector<vec3f>> weld_quads(
     const vector<vec4i>& quads, const vector<vec3f>& pos, float threshold);
 
 // Pick a point in a point set uniformly.
-inline int sample_points(int npoints, float re) {
-    return sample_index(npoints, re);
-}
+inline int           sample_points(int npoints, float re) { return sample_index(npoints, re); }
 inline vector<float> sample_points_cdf(int npoints) {
     auto cdf = vector<float>(npoints);
     for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
     return cdf;
 }
-inline int sample_points(const vector<float>& cdf, float re) {
-    return sample_discrete(cdf, re);
-}
+inline int sample_points(const vector<float>& cdf, float re) { return sample_discrete(cdf, re); }
 
 // Pick a point on lines uniformly.
-inline vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos) {
+inline vector<float> sample_lines_cdf(const vector<vec2i>& lines, const vector<vec3f>& pos) {
     auto cdf = vector<float>(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
@@ -2095,14 +2023,12 @@ inline vector<float> sample_lines_cdf(
     }
     return cdf;
 }
-inline tuple<int, float> sample_lines(
-    const vector<float>& cdf, float re, float ru) {
+inline tuple<int, float> sample_lines(const vector<float>& cdf, float re, float ru) {
     return {sample_discrete(cdf, re), ru};
 }
 
 // Pick a point on a triangle mesh uniformly.
-inline vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
+inline vector<float> sample_triangles_cdf(const vector<vec3i>& triangles, const vector<vec3f>& pos) {
     auto cdf = vector<float>(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
@@ -2111,14 +2037,12 @@ inline vector<float> sample_triangles_cdf(
     }
     return cdf;
 }
-inline tuple<int, vec2f> sample_triangles(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
+inline tuple<int, vec2f> sample_triangles(const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), sample_triangle(ruv)};
 }
 
 // Pick a point on a quad mesh uniformly.
-inline vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos) {
+inline vector<float> sample_quads_cdf(const vector<vec4i>& quads, const vector<vec3f>& pos) {
     auto cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
@@ -2127,17 +2051,15 @@ inline vector<float> sample_quads_cdf(
     }
     return cdf;
 }
-inline tuple<int, vec2f> sample_quads(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
+inline tuple<int, vec2f> sample_quads(const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), ruv};
 }
 
 // Samples a set of points over a triangle mesh uniformly. Returns pos, norm
 // and texcoord of the sampled points.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
-    int seed = 7);
+    const vector<vec3i>& triangles, const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, int npoints, int seed = 7);
 
 }  // namespace ygl
 
@@ -2148,26 +2070,25 @@ namespace ygl {
 
 // Intersect a ray with a point (approximate).
 // Based on http://geomalgorithms.com/a02-lines.html.
-bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& dist, vec2f& uv);
+bool intersect_point(const ray3f& ray, const vec3f& p, float r, float& dist, vec2f& uv);
 
 // Intersect a ray with a line (approximate).
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
 // http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
-bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, float& dist, vec2f& uv);
+bool intersect_line(
+    const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1, float& dist, vec2f& uv);
 
 // Intersect a ray with a triangle.
-bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, float& dist, vec2f& uv);
+bool intersect_triangle(
+    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2, float& dist, vec2f& uv);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
 // 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
 // to 1. This is equivalent to Intel's Embree.
-bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv);
+bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2,
+    const vec3f& p3, float& dist, vec2f& uv);
 
 // Intersect a ray with a axis-aligned bounding box.
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
@@ -2175,33 +2096,30 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 // Intersect a ray with a axis-aligned bounding box, implemented as
 // "Robust BVH Ray Traversal" by T. Ize published at
 // http://jcgt.org/published/0002/02/02/paper.pdf
-bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
+bool intersect_bbox(
+    const ray3f& ray, const vec3f& ray_dinv, const vec3i& ray_dsign, const bbox3f& bbox);
 
 // Check if a point overlaps a position within a max distance.
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0, float r0,
-    float& dist, vec2f& uv);
+bool overlap_point(
+    const vec3f& pos, float dist_max, const vec3f& p0, float r0, float& dist, vec2f& uv);
 
 // Find closest line point to a position.
 float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 
 // Check if a line overlaps a position within a max distance.
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, float& dist, vec2f& uv);
+bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0, const vec3f& p1, float r0,
+    float r1, float& dist, vec2f& uv);
 
 // Find closest triangle point to a position.
-vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+vec2f closestuv_triangle(const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Check if a triangle overlaps a position within a max distance.
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
-    vec2f& uv);
+bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, float r0, float r1, float r2, float& dist, vec2f& uv);
 
 // Check if a quad overlaps a position within a max distance.
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, float& dist, vec2f& uv);
+bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, float r0, float r1, float r2, float r3, float& dist, vec2f& uv);
 
 // Check if a bounding box overlaps a position within a max distance.
 bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
@@ -2289,16 +2207,16 @@ void build_bvh(bvh_tree* bvh, bool high_quality, bool embree);
 // depending on `find_any`. Returns the ray distance `dist`, the instance
 // id `iid`, the shape id `sid`, the shape element index `eid` and the
 // shape barycentric coordinates `uv`.
-bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& uv);
+bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any, float& dist, int& iid,
+    int& eid, vec2f& uv);
 
 // Find a shape element that overlaps a point within a given distance
 // `max_dist`, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance `dist`, the instance id `iid`, the
 // shape id `sid`, the shape element index `eid` and the shape barycentric
 // coordinates `uv`.
-bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
+bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist, bool find_any, float& dist,
+    int& iid, int& eid, vec2f& uv);
 
 }  // namespace ygl
 
@@ -2338,36 +2256,31 @@ struct make_fvshape_data {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-make_shape_data make_quad(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_floor(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cube(const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_sphere(
-    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_sphere_cube(
-    int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
-    const vec2f& uvsize, const vec2f& zflip, bool as_triangles);
-make_shape_data make_disk(
-    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_disk_quad(
-    int steps, float size, float uvsize, bool as_triangles);
+make_shape_data make_quad(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_quad_stack(
+    const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_floor(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_cube(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool as_triangles);
+make_shape_data make_cube_rounded(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius, bool as_triangles);
+make_shape_data make_sphere(const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_sphere_cube(int steps, float size, float uvsize, bool as_triangles);
+make_shape_data make_sphere_flipcap(
+    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip, bool as_triangles);
+make_shape_data make_disk(const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_disk_quad(int steps, float size, float uvsize, bool as_triangles);
 make_shape_data make_disk_bulged(
     int steps, float size, float uvsize, float height, bool as_triangles);
-make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
-    const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
-    const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_geodesic_sphere(
-    int tesselation, float size, bool as_triangles);
+make_shape_data make_cylinder_side(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool as_triangles);
+make_shape_data make_cylinder(
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool as_triangles);
+make_shape_data make_cylinder_rounded(
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius, bool as_triangles);
+make_shape_data make_geodesic_sphere(int tesselation, float size, bool as_triangles);
 
 // Make examples shapes with are watertight (good for subdivs).
 // Returns (triangles, quads, pos)
@@ -2375,18 +2288,17 @@ make_shape_data make_suzanne(float size, bool as_triangles);
 make_shape_data make_cube(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_fvshape_data make_fvcube(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+make_fvshape_data make_fvcube(const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-make_shape_data make_lines(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
+make_shape_data make_lines(const vec2i& steps, const vec2f& size, const vec2f& uvsize,
+    const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 make_shape_data make_point(float point_radius = 0.001f);
 make_shape_data make_points(int num, float uvsize, float point_radius = 0.001f);
-make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
-    float point_radius = 0.001f, uint64_t seed = 0);
+make_shape_data make_random_points(
+    int num, const vec3f& size, float uvsize, float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
 make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
@@ -2398,10 +2310,10 @@ make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
 make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
-    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
+    const vector<vec3f>& spos, const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& noise = zero2f, const vec2f& clump = zero2f, const vec2f& rotation = zero2f,
+    int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
 make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
@@ -2422,10 +2334,8 @@ struct image {
 
     // constructors
     image() : width{0}, height{0}, pixels() {}
-    image(int w, int h, const T& v = T{})
-        : width{w}, height{h}, pixels(w * h, v) {}
-    image(int w, int h, const T* v)
-        : width{w}, height{h}, pixels(v, v + w * h) {}
+    image(int w, int h, const T& v = T{}) : width{w}, height{h}, pixels(w * h, v) {}
+    image(int w, int h, const T* v) : width{w}, height{h}, pixels(v, v + w * h) {}
 };
 
 // Element access.
@@ -2447,9 +2357,8 @@ namespace ygl {
 
 // Element-wise float to byte conversion.
 inline vec4b float_to_byte(const vec4f& a) {
-    return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
-        (byte)clamp(int(a.w * 256), 0, 255)};
+    return {(byte)clamp(int(a.x * 256), 0, 255), (byte)clamp(int(a.y * 256), 0, 255),
+        (byte)clamp(int(a.z * 256), 0, 255), (byte)clamp(int(a.w * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
     return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
@@ -2466,8 +2375,7 @@ inline vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
 }
 inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
-    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma),
-        lin.w};
+    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma), lin.w};
 }
 
 // sRGB non-linear curve
@@ -2488,46 +2396,36 @@ inline float linear_to_srgb(float lin) {
 
 // Conversion between linear and srgb colors.
 inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {
-        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
 }
 inline vec3f linear_to_srgb(const vec3f& lin) {
     return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-        srgb_to_linear(srgb.z), srgb.w};
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z), srgb.w};
 }
 inline vec4f linear_to_srgb(const vec4f& lin) {
-    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
-        lin.w};
+    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z), lin.w};
 }
 
 // Approximate luminance estimate for sRGB primaries (better relative luminance)
-inline float luminance(const vec3f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
-}
-inline float luminance(const vec4f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
-}
+inline float luminance(const vec3f& a) { return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z); }
+inline float luminance(const vec4f& a) { return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z); }
 
 // Fitted ACES tonemapping curve.
 inline float tonemap_filmic(float hdr) {
     // https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
     // hdr *= 0.6; // brings it back to ACES range
-    return (hdr * hdr * 2.51f + hdr * 0.03f) /
-           (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
+    return (hdr * hdr * 2.51f + hdr * 0.03f) / (hdr * hdr * 2.43f + hdr * 0.59f + 0.14f);
 }
 // Apply ACES fitted curve.
 inline vec4f tonemap_filmic(const vec4f& hdr) {
-    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z),
-        hdr.w};
+    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z), hdr.w};
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
 // an optional filmic curve.
-inline vec4f tonemap_filmic(
-    const vec4f& hdr, float exposure, bool filmic, bool srgb) {
+inline vec4f tonemap_filmic(const vec4f& hdr, float exposure, bool filmic, bool srgb) {
     auto scale = pow(2.0f, exposure);
     auto ldr   = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
     if (filmic) ldr = tonemap_filmic(ldr);
@@ -2565,8 +2463,7 @@ image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
 image<vec4f> linear_to_srgb(const image<vec4f>& lin);
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_filmic(
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+image<vec4f> tonemap_filmic(const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
 image<vec4f> resize_image(const image<vec4f>& img, int width, int height);
@@ -2580,42 +2477,35 @@ namespace ygl {
 
 // Make example images.
 image<vec4f> make_grid_image4f(int width, int height, int tile = 8,
-    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1}, const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image<vec4f> make_checker_image4f(int width, int height, int tile = 8,
-    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1}, const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image<vec4f> make_bumpdimple_image4f(int width, int height, int tile = 8);
-image<vec4f> make_ramp_image4f(int width, int height, const vec4f& c0,
-    const vec4f& c1, float srgb = false);
+image<vec4f> make_ramp_image4f(
+    int width, int height, const vec4f& c0, const vec4f& c1, float srgb = false);
 image<vec4f> make_gammaramp_image4f(int width, int height);
 image<vec4f> make_uvramp_image4f(int width, int height);
-image<vec4f> make_uvgrid_image4f(
-    int width, int height, int tile = 8, bool colored = true);
+image<vec4f> make_uvgrid_image4f(int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
-    float turbidity = 3, bool has_sun = false,
-    const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
+image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun, float turbidity = 3,
+    bool has_sun = false, const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image4f(int width, int height,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
+image<vec4f> make_lights_image4f(int width, int height, const vec3f& le = {1, 1, 1},
+    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16, float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image<vec4f> make_noise_image4f(
-    int width, int height, float scale = 1, bool wrap = true);
-image<vec4f> make_fbm_image4f(int width, int height, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image<vec4f> make_ridge_image4f(int width, int height, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
-    int octaves = 6, bool wrap = true);
-image<vec4f> make_turbulence_image4f(int width, int height, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+image<vec4f> make_noise_image4f(int width, int height, float scale = 1, bool wrap = true);
+image<vec4f> make_fbm_image4f(int width, int height, float scale = 1, float lacunarity = 2,
+    float gain = 0.5f, int octaves = 6, bool wrap = true);
+image<vec4f> make_ridge_image4f(int width, int height, float scale = 1, float lacunarity = 2,
+    float gain = 0.5f, float offset = 1.0f, int octaves = 6, bool wrap = true);
+image<vec4f> make_turbulence_image4f(int width, int height, float scale = 1, float lacunarity = 2,
+    float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
 
@@ -2633,8 +2523,7 @@ inline int eval_keyframed_index(const vector<float>& times, const float& time) {
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
-inline T eval_keyframed_step(
-    const vector<float>& times, const vector<T>& vals, float time) {
+inline T eval_keyframed_step(const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2644,8 +2533,7 @@ inline T eval_keyframed_step(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f eval_keyframed_slerp(
-    const vector<float>& times, const vector<vec4f>& vals, float time) {
+inline vec4f eval_keyframed_slerp(const vector<float>& times, const vector<vec4f>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2656,8 +2544,7 @@ inline vec4f eval_keyframed_slerp(
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline T eval_keyframed_linear(
-    const vector<float>& times, const vector<T>& vals, float time) {
+inline T eval_keyframed_linear(const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -2668,15 +2555,13 @@ inline T eval_keyframed_linear(
 
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
-inline T eval_keyframed_bezier(
-    const vector<float>& times, const vector<T>& vals, float time) {
+inline T eval_keyframed_bezier(const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
     auto idx = eval_keyframed_index(times, time);
     auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return interpolate_bezier(
-        vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
+    return interpolate_bezier(vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
 }  // namespace ygl
@@ -2901,16 +2786,16 @@ enum struct yocto_interpolation_type { linear, step, bezier };
 
 // Keyframe data.
 struct yocto_animation {
-    string                   name               = "";
-    string                   filename           = "";
-    string                   animation_group    = "";
-    yocto_interpolation_type interpolation_type = yocto_interpolation_type::linear;
-    vector<float>            keyframes_times    = {};
-    vector<vec3f>            translation_keyframes   = {};
-    vector<vec4f>            rotation_keyframes      = {};
-    vector<vec3f>            scale_keyframes         = {};
-    vector<vector<float>>    morph_weights_keyframes = {};
-    vector<yocto_scene_node*> node_targets           = {};
+    string                    name                    = "";
+    string                    filename                = "";
+    string                    animation_group         = "";
+    yocto_interpolation_type  interpolation_type      = yocto_interpolation_type::linear;
+    vector<float>             keyframes_times         = {};
+    vector<vec3f>             translation_keyframes   = {};
+    vector<vec4f>             rotation_keyframes      = {};
+    vector<vec3f>             scale_keyframes         = {};
+    vector<vector<float>>     morph_weights_keyframes = {};
+    vector<yocto_scene_node*> node_targets            = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -2959,11 +2844,9 @@ void merge_into(const yocto_scene* merge_into, yocto_scene* merge_from);
 namespace ygl {
 
 // Update node transforms.
-void update_transforms(
-    yocto_scene* scene, float time = 0, const string& anim_group = "");
+void update_transforms(yocto_scene* scene, float time = 0, const string& anim_group = "");
 // Compute animation range.
-vec2f compute_animation_range(
-    const yocto_scene* scene, const string& anim_group = "");
+vec2f compute_animation_range(const yocto_scene* scene, const string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
 bbox3f compute_bbox(const yocto_shape* shape);
@@ -2976,12 +2859,10 @@ vector<float> compute_shape_cdf(const yocto_shape* shape);
 vector<float> compute_environment_cdf(const yocto_environment* environment);
 
 // Updates/refits bvh.
-bvh_tree* build_bvh(
-    const yocto_shape* shape, bool high_quality, bool embree = false);
-bvh_tree* build_bvh(
-    const yocto_scene* scene, bool high_quality, bool embree = false);
-void refit_bvh(const yocto_shape* shape, bvh_tree* bvh);
-void refit_bvh(const yocto_scene* scene, bvh_tree* bvh);
+bvh_tree* build_bvh(const yocto_shape* shape, bool high_quality, bool embree = false);
+bvh_tree* build_bvh(const yocto_scene* scene, bool high_quality, bool embree = false);
+void      refit_bvh(const yocto_shape* shape, bvh_tree* bvh);
+void      refit_bvh(const yocto_scene* scene, bvh_tree* bvh);
 
 // Updates tesselation.
 void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape);
@@ -3008,8 +2889,7 @@ inline yocto_material* make_default_material(const string& name) {
 }
 
 // Add a sky environment
-inline yocto_environment* make_sky_environment(
-    const string& name, float sun_angle = pif / 4) {
+inline yocto_environment* make_sky_environment(const string& name, float sun_angle = pif / 4) {
     auto texture                  = new yocto_texture();
     texture->name                 = name;
     texture->filename             = "textures/" + name + ".hdr";
@@ -3038,11 +2918,11 @@ struct scene_intersection {
 };
 
 // Intersects a ray with an instance. The bvh refers is the shape bvh.
-scene_intersection intersect_ray(const yocto_instance* instance,
-    const bvh_tree* sbvh, const ray3f& ray, bool find_any = false);
+scene_intersection intersect_ray(
+    const yocto_instance* instance, const bvh_tree* sbvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with the scene.
-scene_intersection intersect_ray(const yocto_scene* scene, const bvh_tree* bvh,
-    const ray3f& ray, bool find_any = false);
+scene_intersection intersect_ray(
+    const yocto_scene* scene, const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f eval_position(const yocto_shape* shape, int ei, const vec2f& uv);
@@ -3051,8 +2931,7 @@ vec2f eval_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv);
 vec4f eval_color(const yocto_shape* shape, int ei, const vec2f& uv);
 float eval_radius(const yocto_shape* shape, int ei, const vec2f& uv);
 vec4f eval_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv);
-vec3f eval_tangentspace(
-    const yocto_shape* shape, int ei, const vec2f& uv, bool& left_handed);
+vec3f eval_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv, bool& left_handed);
 // Shape element values.
 vec3f eval_element_normal(const yocto_shape* shape, int ei);
 vec4f eval_element_tangentspace(const yocto_shape* shape, int ei);
@@ -3064,13 +2943,11 @@ vec3f eval_normal(const yocto_instance* instance, int ei, const vec2f& uv);
 vec2f eval_texturecoord(const yocto_instance* instance, int ei, const vec2f& uv);
 vec4f eval_color(const yocto_instance* instance, int ei, const vec2f& uv);
 float eval_radius(const yocto_instance* instance, int ei, const vec2f& uv);
-vec3f eval_tangentspace(
-    const yocto_instance* instance, int ei, const vec2f& uv, bool& left_handed);
+vec3f eval_tangentspace(const yocto_instance* instance, int ei, const vec2f& uv, bool& left_handed);
 // Instance element values.
 vec3f eval_element_normal(const yocto_instance* instance, int ei);
 // Shading normals including material perturbations.
-vec3f eval_shading_normal(
-    const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o);
+vec3f eval_shading_normal(const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f eval_texcoord(const yocto_environment* environment, const vec3f& i);
@@ -3091,24 +2968,22 @@ float eval_voltexture(const yocto_voltexture* texture, const vec3f& texcoord);
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const yocto_camera* camera);
 float eval_camera_aspect(const yocto_camera* camera);
-void  set_camera_fovy(
-     yocto_camera* camera, float fovy, float aspect, float width = 0.036f);
+void  set_camera_fovy(yocto_camera* camera, float fovy, float aspect, float width = 0.036f);
 vec2i eval_image_size(const yocto_camera* camera, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
-ray3f eval_camera_ray(
-    const yocto_camera* camera, const vec2f& uv, const vec2f& luv);
+ray3f eval_camera_ray(const yocto_camera* camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const yocto_camera* camera, const vec2i& ij,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
+ray3f eval_camera_ray(const yocto_camera* camera, const vec2i& ij, const vec2i& imsize,
+    const vec2f& puv, const vec2f& luv);
 // Generates a ray from a camera for pixel index `idx`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const yocto_camera* camera, int idx, const vec2i& imsize,
-    const vec2f& puv, const vec2f& luv);
+ray3f eval_camera_ray(
+    const yocto_camera* camera, int idx, const vec2i& imsize, const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
@@ -3163,10 +3038,9 @@ enum struct trace_type {
     debug_roughness,    // debug - roughness
 };
 
-const auto trace_type_names = vector<string>{"path", "volpath", "direct",
-    "environment", "eyelight", "path_nomis", "path_naive", "direct_nomis",
-    "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
-    "debug_diffuse", "debug_specular", "debug_roughness"};
+const auto trace_type_names = vector<string>{"path", "volpath", "direct", "environment", "eyelight",
+    "path_nomis", "path_naive", "direct_nomis", "debug_normal", "debug_albedo", "debug_texcoord",
+    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
 
 // Trace options
 struct trace_params {
@@ -3208,12 +3082,10 @@ struct trace_state {
 };
 
 // Initialize lights.
-trace_lights* make_trace_lights(
-    const yocto_scene* scene, const trace_params& params);
+trace_lights* make_trace_lights(const yocto_scene* scene, const trace_params& params);
 
 // Initialize state of the renderer.
-trace_state* make_trace_state(
-    const yocto_scene* scene, const trace_params& params);
+trace_state* make_trace_state(const yocto_scene* scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
@@ -3222,13 +3094,13 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state* state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params);
+bool trace_samples(trace_state* state, const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(trace_state* state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params);
+void trace_async_start(trace_state* state, const yocto_scene* scene, const bvh_tree* bvh,
+    const trace_lights* lights, const trace_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state* state);
 
@@ -3333,60 +3205,44 @@ template <typename T>
 inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
     return {
         {
-            a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
-            a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
-                a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
-                a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
-            a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
-                a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
-                a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
-            a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
-                a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
-                a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w,
+            a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w + a.z.y * a.w.z * a.y.w -
+                a.y.y * a.w.z * a.z.w - a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
+            a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w + a.w.y * a.z.z * a.x.w -
+                a.w.y * a.x.z * a.z.w - a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
+            a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w + a.y.y * a.w.z * a.x.w -
+                a.x.y * a.w.z * a.y.w - a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
+            a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w + a.z.y * a.y.z * a.x.w -
+                a.x.y * a.y.z * a.z.w - a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w,
         },
         {
-            a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
-                a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
-                a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x,
-            a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x +
-                a.z.z * a.w.w * a.x.x - a.x.z * a.w.w * a.z.x -
-                a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
-            a.x.z * a.w.w * a.y.x + a.y.z * a.x.w * a.w.x +
-                a.w.z * a.y.w * a.x.x - a.x.z * a.y.w * a.w.x -
-                a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
-            a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x +
-                a.y.z * a.z.w * a.x.x - a.x.z * a.z.w * a.y.x -
-                a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x,
+            a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x + a.w.z * a.z.w * a.y.x -
+                a.y.z * a.z.w * a.w.x - a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x,
+            a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x + a.z.z * a.w.w * a.x.x -
+                a.x.z * a.w.w * a.z.x - a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
+            a.x.z * a.w.w * a.y.x + a.y.z * a.x.w * a.w.x + a.w.z * a.y.w * a.x.x -
+                a.x.z * a.y.w * a.w.x - a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
+            a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x + a.y.z * a.z.w * a.x.x -
+                a.x.z * a.z.w * a.y.x - a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x,
         },
         {
-            a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
-                a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
-                a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y,
-            a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y +
-                a.w.w * a.z.x * a.x.y - a.x.w * a.z.x * a.w.y -
-                a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
-            a.x.w * a.y.x * a.w.y + a.w.w * a.x.x * a.y.y +
-                a.y.w * a.w.x * a.x.y - a.x.w * a.w.x * a.y.y -
-                a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
-            a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y +
-                a.z.w * a.y.x * a.x.y - a.x.w * a.y.x * a.z.y -
-                a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y,
+            a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y + a.z.w * a.w.x * a.y.y -
+                a.y.w * a.w.x * a.z.y - a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y,
+            a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y + a.w.w * a.z.x * a.x.y -
+                a.x.w * a.z.x * a.w.y - a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
+            a.x.w * a.y.x * a.w.y + a.w.w * a.x.x * a.y.y + a.y.w * a.w.x * a.x.y -
+                a.x.w * a.w.x * a.y.y - a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
+            a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y + a.z.w * a.y.x * a.x.y -
+                a.x.w * a.y.x * a.z.y - a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y,
         },
         {
-            a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
-                a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
-                a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z,
-            a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z +
-                a.z.x * a.w.y * a.x.z - a.x.x * a.w.y * a.z.z -
-                a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
-            a.x.x * a.w.y * a.y.z + a.y.x * a.x.y * a.w.z +
-                a.w.x * a.y.y * a.x.z - a.x.x * a.y.y * a.w.z -
-                a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
-            a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z +
-                a.y.x * a.z.y * a.x.z - a.x.x * a.z.y * a.y.z -
-                a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z,
+            a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z + a.w.x * a.z.y * a.y.z -
+                a.y.x * a.z.y * a.w.z - a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z,
+            a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z + a.z.x * a.w.y * a.x.z -
+                a.x.x * a.w.y * a.z.z - a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
+            a.x.x * a.w.y * a.y.z + a.y.x * a.x.y * a.w.z + a.w.x * a.y.y * a.x.z -
+                a.x.x * a.y.y * a.w.z - a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
+            a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z + a.y.x * a.z.y * a.x.z -
+                a.x.x * a.z.y * a.y.z - a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z,
         },
     };
 }
@@ -3396,24 +3252,19 @@ inline T determinant(const mat<T, 2, 2>& a) {
 }
 template <typename T>
 inline T determinant(const mat<T, 3, 3>& a) {
-    return a.x.x * (a.y.y * a.z.z - a.z.y * a.y.z) +
-           a.x.y * (a.y.z * a.z.x - a.z.z * a.y.x) +
+    return a.x.x * (a.y.y * a.z.z - a.z.y * a.y.z) + a.x.y * (a.y.z * a.z.x - a.z.z * a.y.x) +
            a.x.z * (a.y.x * a.z.y - a.z.x * a.y.y);
 }
 template <typename T>
 inline T determinant(const mat<T, 4, 4>& a) {
-    return a.x.x * (a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                       a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                       a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w) +
-           a.x.y * (a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
-                       a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
-                       a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x) +
-           a.x.z * (a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
-                       a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
-                       a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y) +
-           a.x.w * (a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
-                       a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
-                       a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
+    return a.x.x * (a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w + a.z.y * a.w.z * a.y.w -
+                       a.y.y * a.w.z * a.z.w - a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w) +
+           a.x.y * (a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x + a.w.z * a.z.w * a.y.x -
+                       a.y.z * a.z.w * a.w.x - a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x) +
+           a.x.z * (a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y + a.z.w * a.w.x * a.y.y -
+                       a.y.w * a.w.x * a.z.y - a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y) +
+           a.x.w * (a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z + a.w.x * a.z.y * a.y.z -
+                       a.y.x * a.z.y * a.w.z - a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
 }
 
 }  // namespace ygl
@@ -3424,8 +3275,8 @@ inline T determinant(const mat<T, 4, 4>& a) {
 namespace ygl {
 
 // Turntable for UI navigation.
-inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan) {
+inline void camera_turntable(
+    vec3f& from, vec3f& to, vec3f& up, const vec2f& rotate, float dolly, const vec2f& pan) {
     // rotate if necessary
     if (rotate.x || rotate.y) {
         auto z     = normalize(to - from);
@@ -3433,8 +3284,7 @@ inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
         auto phi   = atan2(z.z, z.x) + rotate.x;
         auto theta = acos(z.y) + rotate.y;
         theta      = clamp(theta, 0.001f, pif - 0.001f);
-        auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
-            sin(theta) * sin(phi) * lz};
+        auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz, sin(theta) * sin(phi) * lz};
         from       = to - nz;
     }
 
@@ -3451,23 +3301,22 @@ inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
         auto z = normalize(to - from);
         auto x = normalize(cross(up, z));
         auto y = normalize(cross(z, x));
-        auto t = vec3f{pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y,
-            pan.x * x.z + pan.y * y.z};
+        auto t = vec3f{
+            pan.x * x.x + pan.y * y.x, pan.x * x.y + pan.y * y.y, pan.x * x.z + pan.y * y.z};
         from += t;
         to += t;
     }
 }
 
 // Turntable for UI navigation.
-inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan) {
+inline void camera_turntable(
+    frame3f& frame, float& focus, const vec2f& rotate, float dolly, const vec2f& pan) {
     // rotate if necessary
     if (rotate != zero2f) {
-        auto phi   = atan2(frame.z.z, frame.z.x) + rotate.x;
-        auto theta = acos(frame.z.y) + rotate.y;
-        theta      = clamp(theta, 0.001f, pif - 0.001f);
-        auto new_z = vec3f{
-            sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
+        auto phi        = atan2(frame.z.z, frame.z.x) + rotate.x;
+        auto theta      = acos(frame.z.y) + rotate.y;
+        theta           = clamp(theta, 0.001f, pif - 0.001f);
+        auto new_z      = vec3f{sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
         auto new_center = frame.o - frame.z * focus;
         auto new_o      = new_center + new_z * focus;
         frame           = lookat_frame(new_o, new_center, {0, 1, 0});

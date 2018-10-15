@@ -205,18 +205,18 @@ void check_cmdline(cmdline_parser& parser);
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
 template <typename T>
-inline T      parse_arg(cmdline_parser& parser, const string& name, T def,
-         const string& usage, bool req = false);
-inline string parse_arg(cmdline_parser& parser, const string& name,
-    const char* def, const string& usage, bool req = false);
+inline T parse_arg(
+    cmdline_parser& parser, const string& name, T def, const string& usage, bool req = false);
+inline string parse_arg(cmdline_parser& parser, const string& name, const char* def,
+    const string& usage, bool req = false);
 // Parse all arguments left on the command line.
 template <typename T>
-inline vector<T> parse_args(cmdline_parser& parser, const string& name,
-    const vector<T>& def, const string& usage, bool req = false);
+inline vector<T> parse_args(cmdline_parser& parser, const string& name, const vector<T>& def,
+    const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
-inline T parse_arge(cmdline_parser& parser, const string& name, T def,
-    const string& usage, const vector<string>& labels, bool req = false);
+inline T parse_arge(cmdline_parser& parser, const string& name, T def, const string& usage,
+    const vector<string>& labels, bool req = false);
 
 }  // namespace ygl
 
@@ -251,15 +251,15 @@ image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 // Loads/saves a 4 channel byte image in sRGB color space.
 image<vec4b> load_image4b(const string& filename);
 bool         save_image4b(const string& filename, const image<vec4b>& img);
-bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
+bool         load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
 image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
 
 // Load 4 channel images with shortened api. Returns empty image on error;
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
-    float exposure = 0, bool filmic = false, bool srgb = true);
+bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr, float exposure = 0,
+    bool filmic = false, bool srgb = true);
 
 }  // namespace ygl
 
@@ -280,43 +280,42 @@ bool          save_volume1f(const string& filename, const volume<float>& vol);
 namespace ygl {
 
 // Load/save a scene in the supported formats.
-yocto_scene* load_scene(const string& filename, bool load_textures = true,
-    bool skip_missing = true);
-bool         save_scene(const string& filename, const yocto_scene* scene,
-            bool save_textures = true, bool skip_missing = true);
+yocto_scene* load_scene(const string& filename, bool load_textures = true, bool skip_missing = true);
+bool         save_scene(const string& filename, const yocto_scene* scene, bool save_textures = true,
+            bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
-yocto_scene* load_json_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_json_scene(
+    const string& filename, bool load_textures = true, bool skip_missing = true);
+bool save_json_scene(const string& filename, const yocto_scene* scene, bool save_textures = true,
     bool skip_missing = true);
-bool         save_json_scene(const string& filename, const yocto_scene* scene,
-            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
 yocto_scene* load_obj_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true, bool split_shapes = true);
-bool         save_obj_scene(const string& filename, const yocto_scene* scene,
-            bool save_textures = true, bool skip_missing = true);
+bool save_obj_scene(const string& filename, const yocto_scene* scene, bool save_textures = true,
+    bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
-yocto_scene* load_gltf_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_gltf_scene(
+    const string& filename, bool load_textures = true, bool skip_missing = true);
+bool save_gltf_scene(const string& filename, const yocto_scene* scene, bool save_textures = true,
     bool skip_missing = true);
-bool         save_gltf_scene(const string& filename, const yocto_scene* scene,
-            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-yocto_scene* load_pbrt_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_pbrt_scene(
+    const string& filename, bool load_textures = true, bool skip_missing = true);
+bool save_pbrt_scene(const string& filename, const yocto_scene* scene, bool save_textures = true,
     bool skip_missing = true);
-bool         save_pbrt_scene(const string& filename, const yocto_scene* scene,
-            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
-yocto_scene* load_ybin_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_ybin_scene(
+    const string& filename, bool load_textures = true, bool skip_missing = true);
+bool save_ybin_scene(const string& filename, const yocto_scene* scene, bool save_textures = true,
     bool skip_missing = true);
-bool         save_ybin_scene(const string& filename, const yocto_scene* scene,
-            bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
 
@@ -327,32 +326,28 @@ namespace ygl {
 
 // Load/Save a mesh
 bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius);
-bool save_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color,
-    const vector<float>& radius, bool ascii = false);
+    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4f>& color, vector<float>& radius);
+bool save_mesh(const string& filename, const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, const vector<vec4f>& color, const vector<float>& radius,
+    bool ascii = false);
 
 // Load/Save a ply mesh
-bool load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
-    vector<float>& radius);
-bool save_ply_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color,
-    const vector<float>& radius, bool ascii = false);
+bool load_ply_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4f>& color, vector<float>& radius);
+bool save_ply_mesh(const string& filename, const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec2f>& texcoord, const vector<vec4f>& color, const vector<float>& radius,
+    bool ascii = false);
 
 // Load/Save an OBJ mesh
-bool load_obj_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord = true);
-bool save_obj_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
+bool load_obj_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
+    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    bool flip_texcoord = true);
+bool save_obj_mesh(const string& filename, const vector<int>& points, const vector<vec2i>& lines,
+    const vector<vec3i>& triangles, const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, bool flip_texcoord = true);
 
 }  // namespace ygl
@@ -363,25 +358,21 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
 namespace ygl {
 
 // Load/Save a mesh
-bool load_fvmesh(const string& filename, vector<vec4i>& quads_pos,
-    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
-    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
-    vector<vec4i>& quads_color, vector<vec4f>& color);
-bool save_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
-    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
-    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
-    const vector<vec2f>& texcoord, const vector<vec4i>& quads_color,
-    const vector<vec4f>& color, bool ascii = false);
+bool load_fvmesh(const string& filename, vector<vec4i>& quads_pos, vector<vec3f>& pos,
+    vector<vec4i>& quads_norm, vector<vec3f>& norm, vector<vec4i>& quads_texcoord,
+    vector<vec2f>& texcoord, vector<vec4i>& quads_color, vector<vec4f>& color);
+bool save_fvmesh(const string& filename, const vector<vec4i>& quads_pos, const vector<vec3f>& pos,
+    const vector<vec4i>& quads_norm, const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
+    const vector<vec2f>& texcoord, const vector<vec4i>& quads_color, const vector<vec4f>& color,
+    bool ascii = false);
 
 // Load/Save an OBJ mesh
-bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_pos,
-    vector<vec3f>& pos, vector<vec4i>& quads_norm, vector<vec3f>& norm,
-    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
-    bool flip_texcoord = true);
+bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_pos, vector<vec3f>& pos,
+    vector<vec4i>& quads_norm, vector<vec3f>& norm, vector<vec4i>& quads_texcoord,
+    vector<vec2f>& texcoord, bool flip_texcoord = true);
 bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_pos,
-    const vector<vec3f>& pos, const vector<vec4i>& quads_norm,
-    const vector<vec3f>& norm, const vector<vec4i>& quads_texcoord,
-    const vector<vec2f>& texcoord, bool flip_texcoord = true);
+    const vector<vec3f>& pos, const vector<vec4i>& quads_norm, const vector<vec3f>& norm,
+    const vector<vec4i>& quads_texcoord, const vector<vec2f>& texcoord, bool flip_texcoord = true);
 
 }  // namespace ygl
 
@@ -493,9 +484,8 @@ struct obj_callbacks {
 };
 
 // Load obj scene
-bool load_obj(const string& filename, const obj_callbacks& cb,
-    bool geometry_only = false, bool skip_missing = true,
-    bool flip_texcoord = true, bool flip_tr = true);
+bool load_obj(const string& filename, const obj_callbacks& cb, bool geometry_only = false,
+    bool skip_missing = true, bool flip_texcoord = true, bool flip_tr = true);
 
 }  // namespace ygl
 
@@ -591,12 +581,9 @@ inline bool print_value(string& str, const ray<T, N>& v) {
 }
 
 // Prints a string.
-inline bool print_next(string& str, const string& fmt) {
-    return print_value(str, fmt);
-}
+inline bool print_next(string& str, const string& fmt) { return print_value(str, fmt); }
 template <typename Arg, typename... Args>
-inline bool print_next(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+inline bool print_next(string& str, const string& fmt, const Arg& arg, const Args&... args) {
     auto pos = fmt.find("{}");
     if (pos == string::npos) return print_value(str, fmt);
     if (!print_value(str, fmt.substr(0, pos))) return false;
@@ -809,9 +796,7 @@ inline cmdline_parser make_cmdline_parser(
 }
 
 // check if option or argument
-inline bool is_option(const string& name) {
-    return name.size() > 1 && name.front() == '-';
-}
+inline bool is_option(const string& name) { return name.size() > 1 && name.front() == '-'; }
 
 // get names from string
 inline vector<string> get_option_names(const string& name_) {
@@ -826,8 +811,8 @@ inline vector<string> get_option_names(const string& name_) {
 }
 
 // add help
-inline string get_option_usage(const string& name, const string& var,
-    const string& usage, const string& def_, const vector<string>& choices) {
+inline string get_option_usage(const string& name, const string& var, const string& usage,
+    const string& def_, const vector<string>& choices) {
     auto def = def_;
     if (def != "") def = "[" + def + "]";
     auto namevar = name;
@@ -847,8 +832,7 @@ inline string get_option_usage(const string& name, const string& var,
 inline void print_cmdline_usage(const cmdline_parser& parser) {
     printf("%s: %s\n", parser.usage_cmd.c_str(), parser.usage_hlp.c_str());
     printf("usage: %s %s %s\n\n", parser.usage_cmd.c_str(),
-        (parser.usage_opt.empty()) ? "" : "[options]",
-        (parser.usage_arg.empty()) ? "" : "arguments");
+        (parser.usage_opt.empty()) ? "" : "[options]", (parser.usage_arg.empty()) ? "" : "arguments");
     if (!parser.usage_opt.empty()) {
         printf("options:\n");
         printf("%s\n", parser.usage_opt.c_str());
@@ -860,8 +844,7 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
 }
 
 // Parse a flag. Name should start with either "--" or "-".
-inline bool parse_flag(
-    cmdline_parser& parser, const string& name, bool def, const string& usage);
+inline bool parse_flag(cmdline_parser& parser, const string& name, bool def, const string& usage);
 
 // check if any error occurred and exit appropriately
 inline void check_cmdline(cmdline_parser& parser) {
@@ -879,16 +862,14 @@ inline void check_cmdline(cmdline_parser& parser) {
 
 // Parse an option string. Name should start with "--" or "-".
 template <typename T>
-inline T parse_option(cmdline_parser& parser, const string& name, T def,
-    const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_opt += get_option_usage(
-        name, "", usage, to_string(def), choices);
+inline T parse_option(cmdline_parser& parser, const string& name, T def, const string& usage,
+    bool req, const vector<string>& choices) {
+    parser.usage_opt += get_option_usage(name, "", usage, to_string(def), choices);
     if (parser.error != "") return def;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
     for (auto& name : names) {
-        pos = std::min(
-            pos, std::find(parser.args.begin(), parser.args.end(), name));
+        pos = std::min(pos, std::find(parser.args.begin(), parser.args.end(), name));
     }
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name;
@@ -900,8 +881,7 @@ inline T parse_option(cmdline_parser& parser, const string& name, T def,
     }
     auto vals = *(pos + 1);
     parser.args.erase(pos, pos + 2);
-    if (!choices.empty() &&
-        std::find(choices.begin(), choices.end(), vals) == choices.end()) {
+    if (!choices.empty() && std::find(choices.begin(), choices.end(), vals) == choices.end()) {
         parser.error += "bad value for " + name;
         return def;
     }
@@ -917,19 +897,17 @@ inline T parse_option(cmdline_parser& parser, const string& name, T def,
 template <typename T>
 inline T parse_argument(cmdline_parser& parser, const string& name, const T def,
     const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_arg += get_option_usage(
-        name, "", usage, to_string(def), choices);
+    parser.usage_arg += get_option_usage(name, "", usage, to_string(def), choices);
     if (parser.error != "") return def;
-    auto pos = std::find_if(parser.args.begin(), parser.args.end(),
-        [](auto& v) { return v[0] != '-'; });
+    auto pos = std::find_if(
+        parser.args.begin(), parser.args.end(), [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name;
         return def;
     }
     auto vals = *pos;
     parser.args.erase(pos);
-    if (!choices.empty() &&
-        std::find(choices.begin(), choices.end(), vals) == choices.end()) {
+    if (!choices.empty() && std::find(choices.begin(), choices.end(), vals) == choices.end()) {
         parser.error += "bad value for " + name;
         return def;
     }
@@ -943,14 +921,14 @@ inline T parse_argument(cmdline_parser& parser, const string& name, const T def,
 
 // Parse all left argument strings. Name should not start with "--" or "-".
 template <typename T>
-inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
-    const vector<T>& def, const string& usage, bool req) {
+inline vector<T> parse_arguments(cmdline_parser& parser, const string& name, const vector<T>& def,
+    const string& usage, bool req) {
     auto defs = string();
     for (auto& d : def) defs += " " + d;
     parser.usage_arg += get_option_usage(name, "", usage, defs, {});
     if (parser.error != "") return {};
-    auto pos = std::find_if(parser.args.begin(), parser.args.end(),
-        [](auto& v) { return v[0] != '-'; });
+    auto pos = std::find_if(
+        parser.args.begin(), parser.args.end(), [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name;
         return {};
@@ -961,15 +939,13 @@ inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
 }
 
 // Parse a flag. Name should start with either "--" or "-".
-inline bool parse_flag(
-    cmdline_parser& parser, const string& name, bool def, const string& usage) {
+inline bool parse_flag(cmdline_parser& parser, const string& name, bool def, const string& usage) {
     parser.usage_opt += get_option_usage(name, "", usage, "", {});
     if (parser.error != "") return def;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
     for (auto& name : names)
-        pos = std::min(
-            pos, std::find(parser.args.begin(), parser.args.end(), name));
+        pos = std::min(pos, std::find(parser.args.begin(), parser.args.end(), name));
     if (pos == parser.args.end()) return def;
     parser.args.erase(pos);
     return !def;
@@ -978,37 +954,35 @@ inline bool parse_flag(
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
 template <typename T>
-inline T parse_arg(cmdline_parser& parser, const string& name, T def,
-    const string& usage, bool req) {
+inline T parse_arg(cmdline_parser& parser, const string& name, T def, const string& usage, bool req) {
     return is_option(name) ? parse_option(parser, name, def, usage, req, {}) :
                              parse_argument(parser, name, def, usage, req, {});
 }
 template <>
-inline bool parse_arg<bool>(cmdline_parser& parser, const string& name,
-    bool def, const string& usage, bool req) {
+inline bool parse_arg<bool>(
+    cmdline_parser& parser, const string& name, bool def, const string& usage, bool req) {
     return parse_flag(parser, name, def, usage);
 }
 
 template <typename T>
-inline T parse_arge(cmdline_parser& parser, const string& name, T def,
-    const string& usage, const vector<string>& labels, bool req) {
-    auto val = is_option(name) ? parse_option(parser, name, labels.at((int)def),
-                                     usage, req, labels) :
-                                 parse_argument(parser, name,
-                                     labels.at((int)def), usage, req, labels);
+inline T parse_arge(cmdline_parser& parser, const string& name, T def, const string& usage,
+    const vector<string>& labels, bool req) {
+    auto val = is_option(name) ?
+                   parse_option(parser, name, labels.at((int)def), usage, req, labels) :
+                   parse_argument(parser, name, labels.at((int)def), usage, req, labels);
     return (T)(std::find(labels.begin(), labels.end(), val) - labels.begin());
 }
 
 // Parser an argument
 template <typename T>
-inline vector<T> parse_args(cmdline_parser& parser, const string& name,
-    const vector<T>& def, const string& usage, bool req) {
+inline vector<T> parse_args(cmdline_parser& parser, const string& name, const vector<T>& def,
+    const string& usage, bool req) {
     return parse_arguments(parser, name, def, usage, req);
 }
 
 // Override to avoid issues with const char
-inline string parse_arg(cmdline_parser& parser, const string& name,
-    const char* def, const string& usage, bool req) {
+inline string parse_arg(
+    cmdline_parser& parser, const string& name, const char* def, const string& usage, bool req) {
     return parse_arg(parser, name, std::string(def), usage, req);
 }
 
