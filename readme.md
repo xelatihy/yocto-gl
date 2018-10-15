@@ -58,9 +58,9 @@ Other external libraries are included with their own license.
 Yocto/GL is split into two small libraries to make code navigation easier.
 See each header file for documentation.
 
-- `yocto_gl.{h,cpp}`: math library, image and shape operations, ray-scene 
+- `yocto/yocto_gl.{h,cpp}`: math library, image and shape operations, ray-scene 
   intesection with multi-level BVH, simple scene format, path tracing
-- `yocto_glio.{h,cpp}`: file and path operations, image loading and saving, 
+- `yocto/yocto_glio.{h,cpp}`: file and path operations, image loading and saving, 
   scene loading and saving, immediate-mode command line parsing
 
 
@@ -69,12 +69,12 @@ See each header file for documentation.
 You can see Yocto/GL in action in the following applications written to
 test the library:
 
-- `yview.cpp`: simple OpenGL viewer
-- `ytrace.cpp`: offline path-tracer
-- `yitrace.cpp`: interactive path-tracer
-- `yscnproc.cpp`: scene manipulation and conversion to/from OBJ and glTF
-- `yimview.cpp`: HDR/PNG/JPG image viewer with exposure/gamma tone mapping
-- `yimproc.cpp`: offline image manipulation.
+- `apps/yview.cpp`: simple OpenGL viewer
+- `apps/ytrace.cpp`: offline path-tracer
+- `apps/yitrace.cpp`: interactive path-tracer
+- `apps/yscnproc.cpp`: scene manipulation and conversion to/from OBJ and glTF
+- `apps/yimview.cpp`: HDR/PNG/JPG image viewer with exposure/gamma tone mapping
+- `apps/yimproc.cpp`: offline image manipulation.
 
 You can build the example applications using CMake with
     `mkdir build; cd build; cmake ..; cmake --build`

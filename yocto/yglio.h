@@ -872,18 +872,24 @@ inline bool parse(FILE* fs, Args&... args) {
 namespace ygl {
 
 // Logging configutation
-inline auto _log_console    = true;
-inline auto _log_filestream = (FILE*)nullptr;
+inline bool& _log_console() {
+    static auto _log_console = true;
+    return _log_console;
+}
+inline FILE*& _log_filestream() {
+    static auto _log_filestream = (FILE*)nullptr;
+    return _log_filestream;
+}
 
 // Logs a message
 inline void log_message(const char* lbl, const char* msg) {
-    if (_log_console) {
+    if (_log_console()) {
         printf("%s\n", msg);
         fflush(stdout);
     }
-    if (_log_filestream) {
-        fprintf(_log_filestream, "%s %s\n", lbl, msg);
-        fflush(_log_filestream);
+    if (_log_filestream()) {
+        fprintf(_log_filestream(), "%s %s\n", lbl, msg);
+        fflush(_log_filestream());
     }
 }
 
@@ -903,14 +909,14 @@ inline void log_fatal(const string& fmt, const Args&... args) {
 }
 
 // Configure the logging
-inline void set_log_console(bool enabled) { _log_console = enabled; }
+inline void set_log_console(bool enabled) { _log_console() = enabled; }
 inline void set_log_file(const string& filename, bool append) {
-    if (_log_filestream) {
-        fclose(_log_filestream);
-        _log_filestream = nullptr;
+    if (_log_filestream()) {
+        fclose(_log_filestream());
+        _log_filestream() = nullptr;
     }
     if (filename.empty()) return;
-    _log_filestream = fopen(filename.c_str(), append ? "at" : "wt");
+    _log_filestream() = fopen(filename.c_str(), append ? "at" : "wt");
 }
 
 }  // namespace ygl
