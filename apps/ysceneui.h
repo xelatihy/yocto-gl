@@ -239,7 +239,7 @@ inline bool draw_glwidgets_scene_inspector(
     draw_label_glwidgets(win, "texcoord", "%ld", val->texturecoords.size());
     draw_label_glwidgets(win, "color", "%ld", val->colors.size());
     draw_label_glwidgets(win, "radius", "%ld", val->radius.size());
-    draw_label_glwidgets(win, "tangsp", "%ld", val->tangent_spaces.size());
+    draw_label_glwidgets(win, "tangsp", "%ld", val->tangentspaces.size());
     return edited;
 }
 

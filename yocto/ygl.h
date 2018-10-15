@@ -2836,7 +2836,7 @@ struct yocto_shape {
     vector<vec2f> texturecoords  = {};
     vector<vec4f> colors         = {};
     vector<float> radius         = {};
-    vector<vec4f> tangent_spaces = {};
+    vector<vec4f> tangentspaces = {};
 };
 
 // Subdivision surface.
@@ -3028,12 +3028,13 @@ inline yocto_environment* make_sky_environment(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Scene intersection.
+// Scene intersection. Upron intersection we set the instance pointer,
+// the shape element_id and element_uv and the inetrsection distance.
 struct scene_intersection {
-    yocto_instance* ist  = nullptr;  // instance or null for no intersection
-    int             ei   = 0;        // shape element index
-    vec2f           uv   = zero2f;   // shape element coordinates
-    float           dist = maxf;     // ray/point distance
+    yocto_instance* instance  = nullptr;
+    int             element_id   = 0;
+    vec2f           element_uv   = zero2f;
+    float           distance = maxf;
 };
 
 // Intersects a ray with an instance. The bvh refers is the shape bvh.
@@ -3044,31 +3045,31 @@ scene_intersection intersect_ray(const yocto_scene* scn, const bvh_tree* bvh,
     const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f eval_pos(const yocto_shape* shp, int ei, const vec2f& uv);
-vec3f eval_norm(const yocto_shape* shp, int ei, const vec2f& uv);
-vec2f eval_texcoord(const yocto_shape* shp, int ei, const vec2f& uv);
+vec3f eval_position(const yocto_shape* shp, int ei, const vec2f& uv);
+vec3f eval_normal(const yocto_shape* shp, int ei, const vec2f& uv);
+vec2f eval_texturecoord(const yocto_shape* shp, int ei, const vec2f& uv);
 vec4f eval_color(const yocto_shape* shp, int ei, const vec2f& uv);
 float eval_radius(const yocto_shape* shp, int ei, const vec2f& uv);
-vec4f eval_tangsp(const yocto_shape* shp, int ei, const vec2f& uv);
-vec3f eval_tangsp(
+vec4f eval_tangentspace(const yocto_shape* shp, int ei, const vec2f& uv);
+vec3f eval_tangentspace(
     const yocto_shape* shp, int ei, const vec2f& uv, bool& left_handed);
 // Shape element values.
-vec3f eval_elem_norm(const yocto_shape* shp, int ei);
-vec4f eval_elem_tangsp(const yocto_shape* shp, int ei);
+vec3f eval_element_normal(const yocto_shape* shp, int ei);
+vec4f eval_element_tangentspace(const yocto_shape* shp, int ei);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f eval_pos(const yocto_instance* ist, int ei, const vec2f& uv);
-vec3f eval_norm(const yocto_instance* ist, int ei, const vec2f& uv);
-vec2f eval_texcoord(const yocto_instance* ist, int ei, const vec2f& uv);
+vec3f eval_position(const yocto_instance* ist, int ei, const vec2f& uv);
+vec3f eval_normal(const yocto_instance* ist, int ei, const vec2f& uv);
+vec2f eval_texturecoord(const yocto_instance* ist, int ei, const vec2f& uv);
 vec4f eval_color(const yocto_instance* ist, int ei, const vec2f& uv);
 float eval_radius(const yocto_instance* ist, int ei, const vec2f& uv);
-vec3f eval_tangsp(
+vec3f eval_tangentspace(
     const yocto_instance* ist, int ei, const vec2f& uv, bool& left_handed);
 // Instance element values.
-vec3f eval_elem_norm(const yocto_instance* ist, int ei);
+vec3f eval_element_normal(const yocto_instance* ist, int ei);
 // Shading normals including material perturbations.
-vec3f eval_shading_norm(
+vec3f eval_shading_normal(
     const yocto_instance* ist, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
@@ -3076,9 +3077,9 @@ vec2f eval_texcoord(const yocto_environment* env, const vec3f& i);
 // Evaluate the incoming direction from the uv.
 vec3f eval_direction(const yocto_environment* env, const vec2f& uv);
 // Evaluate the environment emission.
-vec3f eval_environment(const yocto_environment* env, const vec3f& i);
+vec3f eval_emission(const yocto_environment* env, const vec3f& i);
 // Evaluate all environment emission.
-vec3f eval_environment(const yocto_scene* scn, const vec3f& i);
+vec3f eval_emission(const yocto_scene* scn, const vec3f& i);
 
 // Evaluate a texture.
 vec2i eval_texture_size(const yocto_texture* txt);
@@ -3168,41 +3169,41 @@ const auto trace_type_names = vector<string>{"path", "volpath", "direct",
 
 // Trace options
 struct trace_params {
-    int        camid         = 0;                 // camera index
-    int        yresolution   = 256;               // vertical resolution
-    trace_type tracer        = trace_type::path;  // tracer type
-    int        nsamples      = 256;               // number of samples
-    int        nbounces      = 8;                 // max number of bounces
-    float      pixel_clamp   = 100;               // pixel clamping
-    int        nbatch        = 16;                // number of samples per batch
-    bool       noparallel    = false;  // serial or parallel execution
-    int        preview_ratio = 8;      // preview ratio for asycn rendering
-    float      exposure      = 0;      // tone mapping exposure
-    bool       filmic        = false;  // tone mapping filmic
-    bool       srgb          = true;   // tone mapping to sRGB
-    int        seed          = trace_default_seed;  // trace seed
+    int        camera_id         = 0;
+    int        vertical_resolution   = 256;
+    trace_type sample_tracer        = trace_type::path;
+    int        num_samples      = 256;
+    int        max_bounces      = 8;
+    float      pixel_clamp   = 100;
+    int        samples_per_batch        = 16;
+    bool       no_parallel    = false;
+    int        preview_ratio = 8;
+    float      display_exposure      = 0;
+    bool       display_filmic        = false;
+    bool       display_srgb          = true;
+    int        random_seed          = trace_default_seed;
 };
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<yocto_instance*>    instances;     // instance lights
-    vector<yocto_environment*> environments;  // environments lights
-    unordered_map<yocto_shape*, vector<float>>       shape_cdf;  // shape cdfs
-    unordered_map<yocto_environment*, vector<float>> env_cdf;    // env cdfs
+    vector<yocto_instance*>    instances;
+    vector<yocto_environment*> environments;
+    unordered_map<yocto_shape*, vector<float>>       shapes_cdfs;
+    unordered_map<yocto_environment*, vector<float>> environment_cdfs;
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
 struct trace_state {
-    image<vec4f> img     = {};  // image being rendered
-    image<vec4f> display = {};  // image tone mapped for display
+    image<vec4f> rendered_image     = {};
+    image<vec4f> display_image = {};
 
     // internal data used during rendering
-    image<vec4f>     acc     = {};  // accumulation buffer
-    image<int>       samples = {};  // samples per pixel
-    image<rng_state> rng     = {};  // random number generators
-    int              sample  = 0;   // current sample being rendered
-    vector<thread>   threads;       // threads used during rendering
-    bool             stop = false;  // stop flag for threads
+    image<vec4f>     accumulation_buffer     = {};
+    image<int>       samples_per_pixel = {};
+    image<rng_state> random_number_generators     = {};
+    int              current_sample  = 0;
+    vector<thread>   async_threads;
+    bool             async_stop_flag = false;
 };
 
 // Initialize lights.

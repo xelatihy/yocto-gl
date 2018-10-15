@@ -636,8 +636,8 @@ draw_glstate* init_draw_state(glwindow* win) {
             vbos.gl_texcoord = make_glarraybuffer(shp->texturecoords, false);
         if (!shp->colors.empty())
             vbos.gl_color = make_glarraybuffer(shp->colors, false);
-        if (!shp->tangent_spaces.empty())
-            vbos.gl_tangsp = make_glarraybuffer(shp->tangent_spaces, false);
+        if (!shp->tangentspaces.empty())
+            vbos.gl_tangsp = make_glarraybuffer(shp->tangentspaces, false);
         if (!shp->points.empty())
             vbos.gl_points = make_glelementbuffer(shp->points, false);
         if (!shp->lines.empty())

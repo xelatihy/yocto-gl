@@ -1769,7 +1769,7 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scn) 
         if (!dump_json_value(js, val->radius, "radius", def.radius))
             return false;
         if (!dump_json_value(
-                js, val->tangent_spaces, "tangent_spaces", def.tangent_spaces))
+                js, val->tangentspaces, "tangent_spaces", def.tangentspaces))
             return false;
     }
     return true;
@@ -1890,7 +1890,7 @@ bool parse_json_object(const json& js, yocto_shape* val, const yocto_scene* scn)
     if (!parse_json_value(js, val->colors, "color", def.colors)) return false;
     if (!parse_json_value(js, val->radius, "radius", def.radius)) return false;
     if (!parse_json_value(
-            js, val->tangent_spaces, "tangent_spaces", def.tangent_spaces))
+            js, val->tangentspaces, "tangent_spaces", def.tangentspaces))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
@@ -3552,12 +3552,12 @@ bool gltf_to_scene(yocto_scene* scn, const json& gltf, const string& dirname) {
                                 {(float)vals[i][0], (float)vals[i][1],
                                     (float)vals[i][2], (float)vals[i][3]});
                     } else if (semantic == "TANGENT") {
-                        shp->tangent_spaces.reserve(vals.size());
+                        shp->tangentspaces.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            shp->tangent_spaces.push_back(
+                            shp->tangentspaces.push_back(
                                 {(float)vals[i][0], (float)vals[i][1],
                                     (float)vals[i][2], (float)vals[i][3]});
-                        for (auto& t : shp->tangent_spaces) t.w = -t.w;
+                        for (auto& t : shp->tangentspaces) t.w = -t.w;
                     } else if (semantic == "RADIUS") {
                         shp->radius.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
@@ -5172,7 +5172,7 @@ bool serialize_bin_object(
     if (!serialize_bin_value(shp->texturecoords, fs, save)) return false;
     if (!serialize_bin_value(shp->colors, fs, save)) return false;
     if (!serialize_bin_value(shp->radius, fs, save)) return false;
-    if (!serialize_bin_value(shp->tangent_spaces, fs, save)) return false;
+    if (!serialize_bin_value(shp->tangentspaces, fs, save)) return false;
     return true;
 }
 
