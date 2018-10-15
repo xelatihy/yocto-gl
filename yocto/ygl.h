@@ -392,7 +392,7 @@ const auto pif = 3.14159265f;
 namespace ygl {
 
 // Small size vectors.
-template<typename T, int N>
+template <typename T, int N>
 struct vec;
 
 // Small size vectors.
@@ -759,7 +759,8 @@ inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u) {
 template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
     // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
-    return fabs(v.x) > fabs(v.z) ? vec<T, 3>{-v.y, v.x, 0} : vec<T, 3>{0, -v.z, v.y};
+    return fabs(v.x) > fabs(v.z) ? vec<T, 3>{-v.y, v.x, 0} :
+                                   vec<T, 3>{0, -v.z, v.y};
 }
 template <typename T>
 inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
@@ -927,9 +928,10 @@ using mat3f = mat<float, 3, 3>;
 using mat4f = mat<float, 4, 4>;
 
 // Identity matrices constants.
-const auto identity_mat2f = mat2f{{1,0},{0,1}};
-const auto identity_mat3f = mat3f{{1,0,0},{0,1,0},{0,0,1}};
-const auto identity_mat4f = mat4f{{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
+const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+const auto identity_mat4f = mat4f{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
 template <typename T, int N>
@@ -1083,7 +1085,7 @@ inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
 namespace ygl {
 
 // Rigid frames stored as a column-major affine transform matrix.
-template<typename T, int N>
+template <typename T, int N>
 struct frame;
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1406,15 +1408,15 @@ template <typename T>
 struct ray<T, 2> {
     vec<T, 2> o    = {0, 0};
     vec<T, 2> d    = {0, 1};
-    T       tmin = 0;
-    T       tmax = maxt<T>();
+    T         tmin = 0;
+    T         tmax = maxt<T>();
 };
 template <typename T>
 struct ray<T, 3> {
     vec<T, 3> o    = {0, 0, 0};
     vec<T, 3> d    = {0, 0, 1};
-    T       tmin = 0;
-    T       tmax = maxt<T>();
+    T         tmin = 0;
+    T         tmax = maxt<T>();
 };
 
 // Type aliases.
@@ -1423,7 +1425,8 @@ using ray3f = ray<float, 3>;
 
 // Construct a ray from direction or segments using a default epsilon.
 template <typename T, int N>
-inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
+inline ray<T, N> make_ray(
+    const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
     return {o, d, eps, maxt<T>()};
 }
 template <typename T, int N>
@@ -1497,7 +1500,8 @@ inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T, int N>
-inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
+inline ray<T, N> transform_ray(
+    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
@@ -1525,7 +1529,8 @@ inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
 
 // Inverse transforms by frames, assuming they are rigid transforms.
 template <typename T>
-inline vec<T, 2> transform_point_inverse(const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_point_inverse(
+    const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
 }
 template <typename T>
@@ -1533,7 +1538,8 @@ inline vec3f transform_point_inverse(const frame<T, 3>& a, const vec<T, 3>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
 }
 template <typename T>
-inline vec<T, 2> transform_vector_inverse(const frame<T, 2>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_vector_inverse(
+    const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b, a.x), dot(b, a.y)};
 }
 template <typename T>
@@ -1541,16 +1547,19 @@ inline vec3f transform_vector_inverse(const frame<T, 3>& a, const vec<T, 3>& b) 
     return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
 }
 template <typename T, int N>
-inline vec3f transform_direction_inverse(const frame<T, N>& a, const vec<T, N>& b) {
+inline vec3f transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector_inverse(a, b));
 }
 template <typename T, int N>
-inline ray<T, N> transform_ray_inverse(const frame<T, N>& a, const ray<T, N>& b) {
+inline ray<T, N> transform_ray_inverse(
+    const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point_inverse(a, b.o),
         transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox<T, 3> transform_bbox_inverse(const frame<T, 3>& a, const bbox<T, 3>& b) {
+inline bbox<T, 3> transform_bbox_inverse(
+    const frame<T, 3>& a, const bbox<T, 3>& b) {
     return transform_bbox(inverse(a), b);
 }
 

@@ -562,10 +562,10 @@ inline bool print_value(string& str, double val) {
     return true;
 }
 
-template<typename T, size_t N>
+template <typename T, size_t N>
 inline bool print_value(string& str, const std::array<T, N>& val) {
-    for(auto i = 0; i < N; i ++) {
-        if(i) str += " ";
+    for (auto i = 0; i < N; i++) {
+        if (i) str += " ";
         str += std::to_string(val[i]);
     }
     return true;
@@ -582,7 +582,7 @@ inline bool print_value(string& str, const mat<T, N, M>& v) {
 }
 template <typename T, int N>
 inline bool print_value(string& str, const frame<T, N>& v) {
-    return print_value(str, (const std::array<T, N * (N + 1)>&)v);
+    return print_value(str, (const std::array<T, N*(N + 1)>&)v);
 }
 template <typename T, int N>
 inline bool print_value(string& str, const bbox<T, N>& v) {
@@ -691,7 +691,7 @@ inline bool _parse(Archive& ar, mat<T, N, M>& v) {
 }
 template <typename Archive, typename T, int N>
 inline bool _parse(Archive& ar, frame<T, N>& v) {
-    return _parse(ar, (std::array<T, N * (N + 1)>&)v);
+    return _parse(ar, (std::array<T, N*(N + 1)>&)v);
 }
 template <typename Archive, typename T, int N>
 inline bool _parse(Archive& ar, bbox<T, N>& v) {
@@ -699,7 +699,7 @@ inline bool _parse(Archive& ar, bbox<T, N>& v) {
 }
 template <typename Archive, typename T, int N>
 inline bool _parse(Archive& ar, ray<T, N>& v) {
-    return _parse(ar, (std::array<T, N*2+2>&)v);
+    return _parse(ar, (std::array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.
