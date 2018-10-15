@@ -1109,8 +1109,7 @@ using frame3f = frame<float, 3>;
 
 // Indentity frames.
 const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-const auto identity_frame3f = frame3f{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+const auto identity_frame3f = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame construction from axis.
 template <typename T>
@@ -1330,10 +1329,8 @@ inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const vec<T, 3>& b) {
 }
 template <typename T>
 inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const bbox<T, 3>& b) {
-    a.min = {
-        min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
-    a.max = {
-        max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)};
+    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
+    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)};
     return a;
 }
 // Bounding box expansions with points and other boxes.
@@ -1425,8 +1422,7 @@ using ray3f = ray<float, 3>;
 
 // Construct a ray from direction or segments using a default epsilon.
 template <typename T, int N>
-inline ray<T, N> make_ray(
-    const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
+inline ray<T, N> make_ray(const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
     return {o, d, eps, maxt<T>()};
 }
 template <typename T, int N>
@@ -1500,8 +1496,7 @@ inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T, int N>
-inline ray<T, N> transform_ray(
-    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
+inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
@@ -1552,8 +1547,7 @@ inline vec3f transform_direction_inverse(
     return normalize(transform_vector_inverse(a, b));
 }
 template <typename T, int N>
-inline ray<T, N> transform_ray_inverse(
-    const frame<T, N>& a, const ray<T, N>& b) {
+inline ray<T, N> transform_ray_inverse(const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point_inverse(a, b.o),
         transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
@@ -2066,9 +2060,8 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<T>& vert,
-    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
+    const vector<T>& vert, bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
@@ -3078,8 +3071,7 @@ float eval_voltexture(const voltexture* txt, const vec3f& texcoord);
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam);
 float eval_camera_aspect(const camera* cam);
-void  set_camera_fovy(
-     camera* cam, float fovy, float aspect, float width = 0.036f);
+void set_camera_fovy(camera* cam, float fovy, float aspect, float width = 0.036f);
 vec2i eval_image_size(const camera* cam, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates

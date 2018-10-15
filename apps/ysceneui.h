@@ -222,8 +222,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, shape* val, scene* scn) {
+inline bool draw_glwidgets_scene_inspector(glwindow* win, shape* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_textinput_glwidget(win, "path", val->path);
@@ -266,8 +265,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
     edited += draw_combobox_glwidget(win, "shp", val->shape, scn->shapes, true);
-    edited += draw_combobox_glwidget(
-        win, "sbd", val->subdiv, scn->subdivs, true);
+    edited += draw_combobox_glwidget(win, "sbd", val->subdiv, scn->subdivs, true);
     edited += draw_combobox_glwidget(
         win, "mat", val->material, scn->materials, true);
     return edited;
@@ -287,8 +285,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, node* val, scene* scn) {
+inline bool draw_glwidgets_scene_inspector(glwindow* win, node* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
     edited += draw_combobox_glwidget(
@@ -297,12 +294,10 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "local.y", val->local.y, -1, 1);
     edited += draw_slider_glwidget(win, "local.z", val->local.z, -1, 1);
     edited += draw_slider_glwidget(win, "local.o", val->local.o, -10, 10);
-    edited += draw_slider_glwidget(
-        win, "translation", val->translation, -10, 10);
+    edited += draw_slider_glwidget(win, "translation", val->translation, -10, 10);
     edited += draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 10);
-    edited += draw_combobox_glwidget(
-        win, "cam", val->camera, scn->cameras, true);
+    edited += draw_combobox_glwidget(win, "cam", val->camera, scn->cameras, true);
     edited += draw_combobox_glwidget(
         win, "ist", val->instance, scn->instances, true);
     edited += draw_combobox_glwidget(

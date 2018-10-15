@@ -676,8 +676,7 @@ bool save_exr_image4f(const string& filename, const image<vec4f>& img) {
 // load an image using stbi library
 image<vec4b> load_stb_image4b(const string& filename) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4b*)stbi_load(
-        filename.c_str(), &width, &height, &ncomp, 4);
+    auto pixels = (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading image {}", filename);
         return {};
@@ -936,8 +935,7 @@ bool save_volume1f(const string& filename, const volume<float>& vol) {
 namespace ygl {
 
 // Load a scene
-scene* load_scene(
-    const string& filename, bool load_textures, bool skip_missing) {
+scene* load_scene(const string& filename, bool load_textures, bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return load_json_scene(filename, load_textures, skip_missing);
@@ -1228,8 +1226,7 @@ bool dump_json_objref(json& js, T* val, const vector<T*>& refs) {
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objref(
-    json& js, T* val, const char* name, const vector<T*>& refs) {
+bool dump_json_objref(json& js, T* val, const char* name, const vector<T*>& refs) {
     if (!val) return true;
     return dump_json_objref(js[name], val, refs);
 }
@@ -1374,13 +1371,11 @@ bool dump_json_object(json& js, const camera* val, const scene* scn) {
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!dump_json_value(
-            js, val->orthographic, "orthographic", def.orthographic))
+    if (!dump_json_value(js, val->orthographic, "orthographic", def.orthographic))
         return false;
     if (!dump_json_value(js, val->film_size, "film_size", def.film_size))
         return false;
-    if (!dump_json_value(
-            js, val->focal_length, "focal_length", def.focal_length))
+    if (!dump_json_value(js, val->focal_length, "focal_length", def.focal_length))
         return false;
     if (!dump_json_value(
             js, val->focus_distance, "focus_distance", def.focus_distance))
@@ -1399,8 +1394,7 @@ bool parse_json_object(const json& js, camera* val, const scene* scn) {
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!parse_json_value(js, val->film_size, "film_size", def.film_size))
         return false;
-    if (!parse_json_value(
-            js, val->focal_length, "focal_length", def.focal_length))
+    if (!parse_json_value(js, val->focal_length, "focal_length", def.focal_length))
         return false;
     if (!parse_json_value(
             js, val->focus_distance, "focus_distance", def.focus_distance))
@@ -1573,8 +1567,7 @@ bool dump_json_object(json& js, const material* val, const scene* scn) {
         return false;
     if (!dump_json_value(js, val->specular, "specular", def.specular))
         return false;
-    if (!dump_json_value(
-            js, val->transmission, "transmission", def.transmission))
+    if (!dump_json_value(js, val->transmission, "transmission", def.transmission))
         return false;
     if (!dump_json_value(js, val->roughness, "roughness", def.roughness))
         return false;
@@ -1636,8 +1629,7 @@ bool parse_json_object(const json& js, material* val, const scene* scn) {
     if (!parse_json_value(
             js, val->gltf_textures, "gltf_textures", def.gltf_textures))
         return false;
-    if (!parse_json_value(
-            js, val->double_sided, "double_sided", def.double_sided))
+    if (!parse_json_value(js, val->double_sided, "double_sided", def.double_sided))
         return false;
     if (!parse_json_value(js, val->emission, "emission", def.emission))
         return false;
@@ -1645,8 +1637,7 @@ bool parse_json_object(const json& js, material* val, const scene* scn) {
         return false;
     if (!parse_json_value(js, val->specular, "specular", def.specular))
         return false;
-    if (!parse_json_value(
-            js, val->transmission, "transmission", def.transmission))
+    if (!parse_json_value(js, val->transmission, "transmission", def.transmission))
         return false;
     if (!parse_json_value(js, val->roughness, "roughness", def.roughness))
         return false;
@@ -1737,12 +1728,10 @@ bool apply_json_procedural(const json& js, shape* val, const scene* scn) {
     auto shp = make_shape_data();
     if (type == "quad") {
         shp = make_quad(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
-            true);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), true);
     } else if (type == "quady") {
         shp = make_quad(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
-            true);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), true);
     } else if (type == "quad_stack") {
         shp = make_quad_stack(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}),
@@ -1881,12 +1870,10 @@ bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
     auto shp = make_fvshape_data();
     if (type == "cube") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_open") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
         shp.quads_pos.pop_back();
         shp.quads_norm.pop_back();
         shp.quads_texcoord.pop_back();
@@ -1911,8 +1898,8 @@ bool parse_json_object(const json& js, subdiv* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->path, "path", def.path)) return false;
-    if (!parse_json_value(
-            js, val->subdivision_level, "subdivision_level", def.subdivision_level))
+    if (!parse_json_value(js, val->subdivision_level, "subdivision_level",
+            def.subdivision_level))
         return false;
     if (!parse_json_value(
             js, val->catmull_clark, "catmull_clark", def.catmull_clark))
@@ -1944,7 +1931,8 @@ bool dump_json_object(json& js, const instance* val, const scene* scn) {
     if (!dump_json_objref(js, val->shape, "shape", scn->shapes)) return false;
     if (!dump_json_objref(js, val->material, "material", scn->materials))
         return false;
-    if (!dump_json_objref(js, val->subdiv, "subdiv", scn->subdivs)) return false;
+    if (!dump_json_objref(js, val->subdiv, "subdiv", scn->subdivs))
+        return false;
     return true;
 }
 
@@ -1974,7 +1962,8 @@ bool parse_json_object(const json& js, instance* val, const scene* scn) {
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!parse_json_objref(js, val->shape, "shape", scn->shapes)) return false;
-    if (!parse_json_objref(js, val->subdiv, "subdiv", scn->subdivs)) return false;
+    if (!parse_json_objref(js, val->subdiv, "subdiv", scn->subdivs))
+        return false;
     if (!parse_json_objref(js, val->material, "material", scn->materials))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
@@ -1987,8 +1976,10 @@ bool dump_json_object(json& js, const environment* val, const scene* scn) {
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!dump_json_value(js, val->emission, "emission", def.emission)) return false;
-    if (!dump_json_objref(js, val->emission_txt, "emission_txt", scn->textures)) return false;
+    if (!dump_json_value(js, val->emission, "emission", def.emission))
+        return false;
+    if (!dump_json_objref(js, val->emission_txt, "emission_txt", scn->textures))
+        return false;
     return true;
 }
 
@@ -2008,7 +1999,8 @@ bool parse_json_object(const json& js, environment* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!parse_json_value(js, val->emission, "emission", def.emission)) return false;
+    if (!parse_json_value(js, val->emission, "emission", def.emission))
+        return false;
     if (!parse_json_objref(js, val->emission_txt, "emission_txt", scn->textures))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
@@ -2029,7 +2021,8 @@ bool dump_json_object(json& js, const node* val, const scene* scn) {
     if (!dump_json_value(js, val->weights, "weights", def.weights))
         return false;
     if (!dump_json_objref(js, val->parent, "parent", scn->nodes)) return false;
-    if (!dump_json_objref(js, val->camera, "camera", scn->cameras)) return false;
+    if (!dump_json_objref(js, val->camera, "camera", scn->cameras))
+        return false;
     if (!dump_json_objref(js, val->instance, "instance", scn->instances))
         return false;
     if (!dump_json_objref(js, val->environment, "environment", scn->environments))
@@ -2065,7 +2058,8 @@ bool parse_json_object(const json& js, node* val, const scene* scn) {
     if (!parse_json_objref(js, val->parent, "parent", scn->nodes)) return false;
     if (!parse_json_objref(js, val->instance, "instance", scn->instances))
         return false;
-    if (!parse_json_objref(js, val->camera, "camera", scn->cameras)) return false;
+    if (!parse_json_objref(js, val->camera, "camera", scn->cameras))
+        return false;
     if (!parse_json_objref(js, val->environment, "environment", scn->environments))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
@@ -2200,8 +2194,7 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
             val->instances.push_back(new instance());
             val->instances.back()->name = ist->name + std::to_string(nmap[ist]);
             val->instances.back()->frame = base->frame *
-                                           translation_frame(pos[i]) *
-                                           ist->frame;
+                                           translation_frame(pos[i]) * ist->frame;
             val->instances.back()->shape    = ist->shape;
             val->instances.back()->material = ist->material;
             val->instances.back()->subdiv   = ist->subdiv;
@@ -2826,8 +2819,7 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         return txt;
     };
     // Parse texture options and name
-    auto add_voltexture = [&scn, &vmap](
-                              const obj_texture_info& info, bool srgb) {
+    auto add_voltexture = [&scn, &vmap](const obj_texture_info& info, bool srgb) {
         if (info.path == "") return (voltexture*)nullptr;
         if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
 
@@ -3645,8 +3637,8 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                 if (path_ == "rotation") path = 1;
                 if (path_ == "scale") path = 2;
                 if (path_ == "weights") path = 3;
-                if (sampler_map.find({gchannel.at("sampler").get<int>(),
-                        path}) == sampler_map.end()) {
+                if (sampler_map.find({gchannel.at("sampler").get<int>(), path}) ==
+                    sampler_map.end()) {
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
                     auto anm  = new animation();
@@ -3678,11 +3670,10 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                         case 1: {  // rotation
                             anm->rotation.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                anm->rotation.push_back(
-                                    {(float)output_view[i][0],
-                                        (float)output_view[i][1],
-                                        (float)output_view[i][2],
-                                        (float)output_view[i][3]});
+                                anm->rotation.push_back({(float)output_view[i][0],
+                                    (float)output_view[i][1],
+                                    (float)output_view[i][2],
+                                    (float)output_view[i][3]});
                         } break;
                         case 2: {  // scale
                             anm->scale.reserve(output_view.size());
@@ -3719,15 +3710,14 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                         } break;
                         default: { return false; }
                     }
-                    sampler_map[{gchannel.at("sampler").get<int>(), path}] =
-                        (int)scn->animations.size();
+                    sampler_map[{gchannel.at("sampler").get<int>(),
+                        path}] = (int)scn->animations.size();
                     scn->animations.push_back(anm);
                 }
                 scn->animations[sampler_map.at(
                                     {gchannel.at("sampler").get<int>(), path})]
                     ->targets.push_back(
-                        scn->nodes
-                            [(int)gchannel.at("target").at("node").get<int>()]);
+                        scn->nodes[(int)gchannel.at("target").at("node").get<int>()]);
             }
         }
     }
@@ -3847,8 +3837,7 @@ bool scene_to_gltf(const scene* scn, json& js) {
             mmjs["metallicFactor"]  = mat->specular.x;
             mmjs["roughnessFactor"] = mat->roughness;
             if (mat->diffuse_texture)
-                mmjs["baseColorTexture"]["index"] = tmap.at(
-                    mat->diffuse_texture);
+                mmjs["baseColorTexture"]["index"] = tmap.at(mat->diffuse_texture);
             if (mat->specular_texture)
                 mmjs["metallicRoughnessTexture"]["index"] = tmap.at(
                     mat->specular_texture);
@@ -4406,14 +4395,14 @@ scene* load_pbrt_scene(
                 if (jcmd.count("type")) type = jcmd.at("type").get<string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
-                        tie(mat->diffuse, mat->diffuse_texture) =
-                            get_scaled_texture(jcmd.at("Kd"));
+                        tie(mat->diffuse, mat->diffuse_texture) = get_scaled_texture(
+                            jcmd.at("Kd"));
                     if (jcmd.count("Ks"))
-                        tie(mat->specular, mat->specular_texture) =
-                            get_scaled_texture(jcmd.at("Ks"));
+                        tie(mat->specular, mat->specular_texture) = get_scaled_texture(
+                            jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        tie(mat->transmission, mat->transmission_texture) =
-                            get_scaled_texture(jcmd.at("Kt"));
+                        tie(mat->transmission, mat->transmission_texture) = get_scaled_texture(
+                            jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op         = vec3f{0, 0, 0};
                         auto op_txt     = (texture*)nullptr;
@@ -4426,8 +4415,8 @@ scene* load_pbrt_scene(
                 } else if (type == "matte") {
                     mat->diffuse = {1, 1, 1};
                     if (jcmd.count("Kd"))
-                        tie(mat->diffuse, mat->diffuse_texture) =
-                            get_scaled_texture(jcmd.at("Kd"));
+                        tie(mat->diffuse, mat->diffuse_texture) = get_scaled_texture(
+                            jcmd.at("Kd"));
                     mat->roughness = 1;
                 } else if (type == "mirror") {
                     mat->diffuse   = {0, 0, 0};
@@ -4440,22 +4429,22 @@ scene* load_pbrt_scene(
                     mat->roughness = 0;
                 } else if (type == "substrate") {
                     if (jcmd.count("Kd"))
-                        tie(mat->diffuse, mat->diffuse_texture) =
-                            get_scaled_texture(jcmd.at("Kd"));
+                        tie(mat->diffuse, mat->diffuse_texture) = get_scaled_texture(
+                            jcmd.at("Kd"));
                     mat->specular = {0.04f, 0.04f, 0.04f};
                     if (jcmd.count("Ks"))
-                        tie(mat->specular, mat->specular_texture) =
-                            get_scaled_texture(jcmd.at("Ks"));
+                        tie(mat->specular, mat->specular_texture) = get_scaled_texture(
+                            jcmd.at("Ks"));
                     mat->roughness = 0;
                 } else if (type == "glass") {
                     mat->specular     = {0.04f, 0.04f, 0.04f};
                     mat->transmission = {1, 1, 1};
                     if (jcmd.count("Ks"))
-                        tie(mat->specular, mat->specular_texture) =
-                            get_scaled_texture(jcmd.at("Ks"));
+                        tie(mat->specular, mat->specular_texture) = get_scaled_texture(
+                            jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        tie(mat->transmission, mat->transmission_texture) =
-                            get_scaled_texture(jcmd.at("Kt"));
+                        tie(mat->transmission, mat->transmission_texture) = get_scaled_texture(
+                            jcmd.at("Kt"));
                     mat->roughness = 0;
                 } else if (type == "mix") {
                     printf("mix material not properly supported\n");
@@ -4489,8 +4478,7 @@ scene* load_pbrt_scene(
                 }
                 if (stack.back().light_mat) {
                     mat->emission         = stack.back().light_mat->emission;
-                    mat->emission_texture = stack.back()
-                                                .light_mat->emission_texture;
+                    mat->emission_texture = stack.back().light_mat->emission_texture;
                 }
             }
         } else if (cmd == "NamedMaterial") {
@@ -4636,9 +4624,8 @@ scene* load_pbrt_scene(
                 ist->name     = shp->name;
                 ist->shape    = shp;
                 ist->material = mat;
-                ist->frame    = stack.back().frame *
-                             lookat_frame(
-                                 dir * distant_dist, zero3f, {0, 1, 0}, true);
+                ist->frame = stack.back().frame * lookat_frame(dir * distant_dist,
+                                                      zero3f, {0, 1, 0}, true);
                 scn->instances.push_back(ist);
                 printf("%s light not properly supported\n", type.c_str());
             } else {
@@ -5129,8 +5116,7 @@ bool serialize_bin_object(
         return false;
     if (!serialize_bin_handle(mat->specular_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(
-            mat->transmission_texture, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->transmission_texture, scn->textures, fs, save))
         return false;
     if (!serialize_bin_handle(mat->roughness_texture, scn->textures, fs, save))
         return false;
@@ -5140,8 +5126,7 @@ bool serialize_bin_object(
         return false;
     if (!serialize_bin_handle(mat->bump_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(
-            mat->displacement_texture, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->displacement_texture, scn->textures, fs, save))
         return false;
     if (!serialize_bin_handle(mat->normal_texture, scn->textures, fs, save))
         return false;
@@ -5394,8 +5379,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
     vector<float>& radius) {
     // clear
-    reset_mesh_data(
-        points, lines, triangles, pos, norm, texcoord, color, radius);
+    reset_mesh_data(points, lines, triangles, pos, norm, texcoord, color, radius);
 
     // load ply
     auto ply = unique_ptr<ply_data>{load_ply(filename)};
@@ -5543,8 +5527,7 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
     // clear
     auto color  = vector<vec4f>{};
     auto radius = vector<float>{};
-    reset_mesh_data(
-        points, lines, triangles, pos, norm, texcoord, color, radius);
+    reset_mesh_data(points, lines, triangles, pos, norm, texcoord, color, radius);
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -5630,9 +5613,8 @@ namespace ygl {
 
 // Reset mesh data
 void reset_fvmesh_data(vector<vec4i>& quads_pos, vector<vec3f>& pos,
-    vector<vec4i>& quads_norm, vector<vec3f>& norm,
-    vector<vec4i>& quads_texcoord, vector<vec2f>& texcoord,
-    vector<vec4i>& quads_color, vector<vec4f>& color) {
+    vector<vec4i>& quads_norm, vector<vec3f>& norm, vector<vec4i>& quads_texcoord,
+    vector<vec2f>& texcoord, vector<vec4i>& quads_color, vector<vec4f>& color) {
     quads_pos      = {};
     pos            = {};
     quads_norm     = {};

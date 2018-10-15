@@ -219,8 +219,7 @@ void run_ui(app_state* app) {
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->params.camid);
-            camera_turntable(
-                cam->frame, cam->focus_distance, rotate, dolly, pan);
+            camera_turntable(cam->frame, cam->focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", cam});
         }
 
@@ -305,8 +304,7 @@ int main(int argc, char* argv[]) {
     if (!quiet) printf("adding scene elements\n");
     if (add_skyenv && app->scn->environments.empty()) {
         app->scn->environments.push_back(make_sky_environment("sky"));
-        app->scn->textures.push_back(
-            app->scn->environments.back()->emission_txt);
+        app->scn->textures.push_back(app->scn->environments.back()->emission_txt);
     }
     if (double_sided)
         for (auto mat : app->scn->materials) mat->double_sided = true;

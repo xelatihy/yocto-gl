@@ -591,8 +591,7 @@ void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
             auto is = to_string(i);
             set_gluniform(
                 state->prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-            set_gluniform(
-                state->prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            set_gluniform(state->prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
             set_gluniform(state->prog, ("ltype[" + is + "]").c_str(),
                 (int)lights_type[i]);
         }
@@ -686,8 +685,7 @@ void run_ui(app_state* app) {
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
-            camera_turntable(
-                cam->frame, cam->focus_distance, rotate, dolly, pan);
+            camera_turntable(cam->frame, cam->focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", cam});
         }
 

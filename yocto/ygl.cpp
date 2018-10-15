@@ -1940,9 +1940,8 @@ make_shape_data make_quad(const vec2i& steps, const vec2f& size,
         shp.triangles.resize(steps.x * steps.y * 2);
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i < steps.x; i++) {
-                shp.triangles[(j * steps.x + i) * 2 + 0] = {
-                    j * (steps.x + 1) + i, j * (steps.x + 1) + i + 1,
-                    (j + 1) * (steps.x + 1) + i + 1};
+                shp.triangles[(j * steps.x + i) * 2 + 0] = {j * (steps.x + 1) + i,
+                    j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1};
                 shp.triangles[(j * steps.x + i) * 2 + 1] = {
                     j * (steps.x + 1) + i, (j + 1) * (steps.x + 1) + i + 1,
                     (j + 1) * (steps.x + 1) + i};
@@ -2229,8 +2228,7 @@ make_shape_data make_geodesic_sphere(
     shp.pos               = pos;
     shp.triangles         = triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        tie(shp.triangles, shp.pos) = subdivide_triangles(
-            shp.triangles, shp.pos);
+        tie(shp.triangles, shp.pos) = subdivide_triangles(shp.triangles, shp.pos);
     }
     for (auto& p : shp.pos) p = normalize(p) * size / 2;
     shp.norm = shp.pos;
@@ -2244,8 +2242,7 @@ make_fvshape_data make_fvcube(
     auto qshp                       = make_cube(steps, size, uvsize, false);
     auto fvshp                      = make_fvshape_data{};
     tie(fvshp.quads_pos, fvshp.pos) = weld_quads(qshp.quads, qshp.pos,
-        min(0.1f * size /
-            vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
+        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     fvshp.quads_norm                = qshp.quads;
     fvshp.norm                      = qshp.norm;
     fvshp.quads_texcoord            = qshp.quads;
@@ -2690,9 +2687,8 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
 
 // Watertight cube
 make_shape_data make_cube(const vec3f& size, bool as_triangles) {
-    static auto cube_pos     = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
-        {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
-        {+1, -1, +1}};
+    static auto cube_pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
+        {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
     static auto cube_quads   = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
         {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
     static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
@@ -3022,8 +3018,7 @@ image<vec4f> tonemap_filmic(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
     auto ldr = image<vec4f>{hdr.width, hdr.height};
     for (auto idx = 0; idx < hdr.width * hdr.height; idx++) {
-        ldr.pixels[idx] = tonemap_filmic(
-            hdr.pixels[idx], exposure, filmic, srgb);
+        ldr.pixels[idx] = tonemap_filmic(hdr.pixels[idx], exposure, filmic, srgb);
     }
     return ldr;
 }
@@ -3123,8 +3118,7 @@ image<vec4f> make_uvramp_image4f(int width, int height) {
 }
 
 // Make a uv colored grid
-image<vec4f> make_uvgrid_image4f(
-    int width, int height, int tiles, bool colored) {
+image<vec4f> make_uvgrid_image4f(int width, int height, int tiles, bool colored) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
@@ -3246,18 +3240,16 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
             -sun_m * 0.008735f * pow((&sun_lambda.x)[i] / 1000, -4.08f));
         auto tauA = exp(
             -sun_m * sun_beta * pow((&sun_lambda.x)[i] / 1000, -1.3f));
-        auto tauO  = exp(-sun_m * (&sun_ko.x)[i] * .35f);
-        auto tauG  = exp(-1.41f * (&sun_kg.x)[i] * sun_m /
+        auto tauO      = exp(-sun_m * (&sun_ko.x)[i] * .35f);
+        auto tauG      = exp(-1.41f * (&sun_kg.x)[i] * sun_m /
                         pow(1 + 118.93f * (&sun_kg.x)[i] * sun_m, 0.45f));
-        auto tauWA = exp(
-            -0.2385f * (&sun_kwa.x)[i] * 2.0f * sun_m /
-            pow(1 + 20.07f * (&sun_kwa.x)[i] * 2.0f * sun_m, 0.45f));
+        auto tauWA     = exp(-0.2385f * (&sun_kwa.x)[i] * 2.0f * sun_m /
+                         pow(1 + 20.07f * (&sun_kwa.x)[i] * 2.0f * sun_m, 0.45f));
         (&sun_le.x)[i] = (&sun_sol.x)[i] * tauR * tauA * tauO * tauG * tauWA;
     }
 
     auto sun = [has_sun, sunAngularRadius, sun_le](auto theta, auto gamma) {
-        return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
-                                                       zero3f;
+        return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f : zero3f;
     };
 
     auto img = image<vec4f>{width, height, {0, 0, 0, 1}};
@@ -3402,8 +3394,7 @@ volume<float> make_test_volume1f(
                 auto p = vec3f{
                     i / (float)width, j / (float)height, k / (float)depth};
                 float val = pow(
-                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
-                    exponent);
+                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
                 voxel_at(vol, i, j, k) = clamp(val, 0.0f, 1.0f);
             }
         }
@@ -3928,9 +3919,8 @@ vec3f eval_shading_norm(
         if (ist->material && ist->material->normal_texture) {
             auto texcoord    = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
-            auto txt         = xyz(
-                eval_texture(ist->material->normal_texture, texcoord));
-            txt   = txt * 2 - vec3f{1, 1, 1};
+            auto txt = xyz(eval_texture(ist->material->normal_texture, texcoord));
+            txt      = txt * 2 - vec3f{1, 1, 1};
             txt.y = -txt.y;  // flip vertical axis to align green with image up
             auto tu = orthonormalize(eval_tangsp(ist, ei, uv, left_handed), n);
             auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
@@ -4495,8 +4485,7 @@ vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& i) {
     return ks + (vec3f{1, 1, 1} - ks) *
                     pow(clamp(1.0f - fabs(dot(h, i)), 0.0f, 1.0f), 5.0f);
 }
-vec3f fresnel_schlick(
-    const vec3f& ks, const vec3f& h, const vec3f& i, float rs) {
+vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& i, float rs) {
     if (ks == zero3f) return zero3f;
     auto fks = fresnel_schlick(ks, fabs(dot(h, i)));
     return ks + (fks - ks) * (1 - sqrt(clamp(rs, 0.0f, 1.0f)));
@@ -5016,10 +5005,8 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
     // evaluated. transmission[i] = exp(-dist * vd[i]) pdf             =
     // exp(-dist * vd[channel])
     int i = (ch + 1) % 3, j = (ch + 2) % 3;
-    element_at(weight, i) = exp(
-        -dist * (element_at(vd, i) - element_at(vd, ch)));
-    element_at(weight, j) = exp(
-        -dist * (element_at(vd, j) - element_at(vd, ch)));
+    element_at(weight, i) = exp(-dist * (element_at(vd, i) - element_at(vd, ch)));
+    element_at(weight, j) = exp(-dist * (element_at(vd, j) - element_at(vd, ch)));
     return weight;
 }
 
@@ -5408,9 +5395,8 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
                      sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
                          rand2f(rng)) :
                      sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
-        auto isec = intersect_ray_cutout(
-            scn, bvh, make_ray(p, i), rng, nbounces);
-        auto le = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) :
+        auto isec = intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
+        auto le   = (isec.ist) ? eval_emission(isec.ist, isec.ei, isec.uv) :
                                eval_environment(scn, i);
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
         if (le * brdfcos != zero3f) {
@@ -5462,8 +5448,7 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
 
     // direct
     if (!is_delta_bsdf(f) && !lights->lights.empty()) {
-        auto lgt =
-            lights->lights[sample_index(lights->lights.size(), rand1f(rng))];
+        auto lgt = lights->lights[sample_index(lights->lights.size(), rand1f(rng))];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         auto  eid      = 0;
         auto  euv      = zero2f;
@@ -5472,8 +5457,7 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
         auto lp   = eval_pos(lgt, eid, euv);
         auto i    = normalize(lp - p);
         auto ln   = eval_shading_norm(lgt, eid, euv, -i);
-        auto isec = intersect_ray_cutout(
-            scn, bvh, make_ray(p, i), rng, nbounces);
+        auto isec = intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
         if (isec.ist == lgt && isec.ei == eid) {
             auto larea   = elem_cdf.back();
             auto pdf     = sample_index_pdf(lights->lights.size()) / larea;
@@ -5501,8 +5485,7 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
         auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
         if (pdf != 0)
             l += brdfcos *
-                 trace_direct(
-                     scn, bvh, lights, ray, rng, nbounces - 1, nullptr) /
+                 trace_direct(scn, bvh, lights, ray, rng, nbounces - 1, nullptr) /
                  pdf;
     }
 
@@ -5746,8 +5729,7 @@ vec3f trace_func(const scene* scn, const bvh_tree* bvh,
             return trace_debug_frontfacing(
                 scn, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_diffuse:
-            return trace_debug_diffuse(
-                scn, bvh, lights, ray, rng, nbounces, hit);
+            return trace_debug_diffuse(scn, bvh, lights, ray, rng, nbounces, hit);
         case trace_type::debug_specular:
             return trace_debug_specular(
                 scn, bvh, lights, ray, rng, nbounces, hit);
@@ -5979,8 +5961,7 @@ float specular_exponent_to_roughness(float n) { return sqrtf(2 / (n + 2)); }
 // Specular to fresnel eta.
 void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
     es  = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
-        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
-        (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
+        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)), (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
     esk = {0, 0, 0};
 }
 
@@ -6048,8 +6029,7 @@ vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 // Schlick approximation of the Fresnel term
 vec3f fresnel_schlick(const vec3f& ks, float cosw) {
     if (ks == zero3f) return zero3f;
-    return ks +
-           (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
+    return ks + (vec3f{1, 1, 1} - ks) * pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
 }
 vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs) {
     if (ks == zero3f) return zero3f;

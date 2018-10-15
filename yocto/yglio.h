@@ -251,8 +251,7 @@ image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 // Loads/saves a 4 channel byte image in sRGB color space.
 image<vec4b> load_image4b(const string& filename);
 bool         save_image4b(const string& filename, const image<vec4b>& img);
-bool         load_image4b_from_memory(
-            const byte* data, int data_size, image<vec4b>& img);
+bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
 image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
 
 // Load 4 channel images with shortened api. Returns empty image on error;
