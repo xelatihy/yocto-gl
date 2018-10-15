@@ -564,14 +564,14 @@ inline bool print_value(string& str, double val) {
 
 // Print compound types.
 template <typename T>
-inline bool print_value(string& str, const vec2<T>& v) {
+inline bool print_value(string& str, const vec<T, 2>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
     return true;
 }
 template <typename T>
-inline bool print_value(string& str, const vec3<T>& v) {
+inline bool print_value(string& str, const vec<T, 3>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
@@ -580,7 +580,7 @@ inline bool print_value(string& str, const vec3<T>& v) {
     return true;
 }
 template <typename T>
-inline bool print_value(string& str, const vec4<T>& v) {
+inline bool print_value(string& str, const vec<T, 4>& v) {
     if (!print_value(str, v.x)) return false;
     if (!print_value(str, " ")) return false;
     if (!print_value(str, v.y)) return false;
@@ -777,15 +777,15 @@ inline bool _parse(Archive& ar, std::array<T, N>& val) {
 }
 // Data acess
 template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec2<T>& v) {
+inline bool _parse(Archive& ar, vec<T, 2>& v) {
     return _parse(ar, (std::array<T, 2>&)v);
 }
 template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec3<T>& v) {
+inline bool _parse(Archive& ar, vec<T, 3>& v) {
     return _parse(ar, (std::array<T, 3>&)v);
 }
 template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec4<T>& v) {
+inline bool _parse(Archive& ar, vec<T, 4>& v) {
     return _parse(ar, (std::array<T, 4>&)v);
 }
 template <typename Archive, typename T>
