@@ -42,8 +42,8 @@ int main(int argc, char* argv[]) {
         parser, "--resolution,-r", 512, "Image vertical resolution.");
     params.nsamples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    params.tracer = (trace_type)parse_arge(
-        parser, "--tracer,-t", 0, "Trace type.", trace_type_names);
+    params.tracer   = parse_arge(parser, "--tracer,-t", trace_type::path,
+        "Trace type.", trace_type_names);
     params.nbounces = parse_arg(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     params.noparallel = parse_arg(
@@ -56,9 +56,9 @@ int main(int argc, char* argv[]) {
     auto filmic   = parse_arg(parser, "--filmic", false, "Hdr filmic");
     auto embree   = parse_arg(parser, "--embree", false, "Use Embree ratracer");
     auto imfilename = parse_arg(
-        parser, "--output-image,-o", "out.hdr", "Image filename");
+        parser, "--output-image,-o", "out.hdr"s, "Image filename");
     auto filename = parse_arg(
-        parser, "scene", "scene.json", "Scene filename", true);
+        parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading

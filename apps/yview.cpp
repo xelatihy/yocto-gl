@@ -759,11 +759,11 @@ int main(int argc, char* argv[]) {
     auto quiet = parse_arg(
         parser, "--quiet,-q", false, "Print only errors messages");
     auto highlight_filename = parse_arg(
-        parser, "--highlights", "", "Highlight filename");
+        parser, "--highlights", ""s, "Highlight filename");
     app->imfilename = parse_arg(
-        parser, "--output-image,-o", "out.png", "Image filename");
+        parser, "--output-image,-o", "out.png"s, "Image filename");
     app->filename = parse_arg(
-        parser, "scene", "scene.json", "Scene filename", true);
+        parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading

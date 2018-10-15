@@ -38,9 +38,9 @@ int main(int argc, char* argv[]) {
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
     auto srgb = parse_arg(parser, "--srgb", true, "Tonemap uses sRGB encoding");
     auto output = parse_arg(
-        parser, "--output,-o", "out.png", "output image filename", true);
+        parser, "--output,-o", "out.png"s, "output image filename", true);
     auto filename = parse_arg(
-        parser, "filename", "img.hdr", "input image filename", true);
+        parser, "filename", "img.hdr"s, "input image filename", true);
     check_cmdline(parser);
 
     auto hdr = load_image4f(filename);

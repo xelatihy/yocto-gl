@@ -42,8 +42,8 @@ int main(int argc, char* argv[]) {
         parser, "--resolution,-r", 512, "Image vertical resolution.");
     params.nsamples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    params.tracer = (trace_type)parse_arge(
-        parser, "--tracer,-t", 0, "Trace type.", trace_type_names);
+    params.tracer   = parse_arge(parser, "--tracer,-t", trace_type::path,
+        "Trace type.", trace_type_names);
     params.nbounces = parse_arg(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     params.pixel_clamp = parse_arg(
@@ -64,16 +64,16 @@ int main(int argc, char* argv[]) {
     auto add_skyenv = parse_arg(
         parser, "--add-skyenv,-E", false, "add missing env map");
     auto imfilename = parse_arg(
-        parser, "--output-image,-o", "out.hdr", "Image filename");
+        parser, "--output-image,-o", "out.hdr"s, "Image filename");
     auto filename = parse_arg(
-        parser, "scene", "scene.json", "Scene filename", true);
+        parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
     log_info("loading scene {}", filename);
     auto load_start = get_time();
     auto scn        = unique_ptr<scene>{load_scene(filename)};
-    if (!scn) log_fatal("cannot load scene " + filename);
+    if (!scn) log_fatal("cannot load scene {}", filename);
     log_info("loading in {}", format_duration(get_time() - load_start).c_str());
 
     // tesselate

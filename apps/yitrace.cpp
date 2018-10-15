@@ -266,8 +266,8 @@ int main(int argc, char* argv[]) {
         parser, "--resolution,-r", 512, "Image vertical resolution.");
     app->params.nsamples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app->params.tracer = (trace_type)parse_arge(
-        parser, "--tracer,-t", 0, "Tracer type.", trace_type_names);
+    app->params.tracer   = parse_arge(parser, "--tracer,-t", trace_type::path,
+        "Tracer type.", trace_type_names);
     app->params.nbounces = parse_arg(
         parser, "--nbounces", 4, "Maximum number of bounces.");
     app->params.pixel_clamp = parse_arg(
@@ -282,9 +282,9 @@ int main(int argc, char* argv[]) {
     auto quiet = parse_arg(
         parser, "--quiet", false, "Print only errors messages");
     app->imfilename = parse_arg(
-        parser, "--output-image,-o", "out.hdr", "Image filename");
+        parser, "--output-image,-o", "out.hdr"s, "Image filename");
     app->filename = parse_arg(
-        parser, "scene", "scene.json", "Scene filename", true);
+        parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
