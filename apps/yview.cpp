@@ -38,7 +38,7 @@ struct glshape {
 };
 
 struct draw_glstate {
-    glprogram                                prog = {};
+    glprogram                                      prog = {};
     unordered_map<const yocto_shape*, glshape>     shps;
     unordered_map<const yocto_texture*, gltexture> txts;
 };
@@ -76,10 +76,10 @@ struct app_state {
     bool                         animate    = false;
 };
 
-void draw_glscene(draw_glstate* state, const yocto_scene* scn, const yocto_camera* cam,
-    const vec2i& viewport_size, const void* highlighted, bool eyelight,
-    bool wireframe, bool edges, float exposure, float gamma, float near_plane,
-    float far_plane);
+void draw_glscene(draw_glstate* state, const yocto_scene* scn,
+    const yocto_camera* cam, const vec2i& viewport_size,
+    const void* highlighted, bool eyelight, bool wireframe, bool edges,
+    float exposure, float gamma, float near_plane, float far_plane);
 
 // draw with shading
 void draw(glwindow* win) {
@@ -465,8 +465,9 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(draw_glstate* state, const yocto_shape* shp, const yocto_material* mat,
-    const mat4f& xform, bool highlighted, bool eyelight, bool edges) {
+void draw_glshape(draw_glstate* state, const yocto_shape* shp,
+    const yocto_material* mat, const mat4f& xform, bool highlighted,
+    bool eyelight, bool edges) {
     set_gluniform(state->prog, "shape_xform", xform);
     set_gluniform(state->prog, "shape_normal_offset", 0.0f);
 
@@ -537,10 +538,10 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shp, const yocto_mater
 }
 
 // Display a scene
-void draw_glscene(draw_glstate* state, const yocto_scene* scn, const yocto_camera* cam,
-    const vec2i& viewport_size, const void* highlighted, bool eyelight,
-    bool wireframe, bool edges, float exposure, float gamma, float near_plane,
-    float far_plane) {
+void draw_glscene(draw_glstate* state, const yocto_scene* scn,
+    const yocto_camera* cam, const vec2i& viewport_size,
+    const void* highlighted, bool eyelight, bool wireframe, bool edges,
+    float exposure, float gamma, float near_plane, float far_plane) {
     set_glviewport(viewport_size);
 
     auto camera_view = frame_to_mat(inverse(cam->frame));

@@ -935,7 +935,8 @@ bool save_volume1f(const string& filename, const volume<float>& vol) {
 namespace ygl {
 
 // Load a scene
-yocto_scene* load_scene(const string& filename, bool load_textures, bool skip_missing) {
+yocto_scene* load_scene(
+    const string& filename, bool load_textures, bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return load_json_scene(filename, load_textures, skip_missing);
@@ -954,8 +955,8 @@ yocto_scene* load_scene(const string& filename, bool load_textures, bool skip_mi
 }
 
 // Save a scene
-bool save_scene(const string& filename, const yocto_scene* scn, bool save_textures,
-    bool skip_missing) {
+bool save_scene(const string& filename, const yocto_scene* scn,
+    bool save_textures, bool skip_missing) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return save_json_scene(filename, scn, save_textures, skip_missing);
@@ -973,8 +974,8 @@ bool save_scene(const string& filename, const yocto_scene* scn, bool save_textur
     }
 }
 
-bool load_scene_textures(
-    yocto_scene* scn, const string& dirname, bool skip_missing, bool assign_opacity) {
+bool load_scene_textures(yocto_scene* scn, const string& dirname,
+    bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
         if (txt->filename == "" || !txt->hdr_image.pixels.empty() ||
@@ -1354,7 +1355,8 @@ bool parse_json_procedural(
 }
 
 // Procedural commands for cameras
-bool apply_json_procedural(const json& js, yocto_camera* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_camera* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from") || js.count("to")) {
         auto from           = js.value("from", zero3f);
@@ -1435,7 +1437,8 @@ bool dump_json_object(json& js, const yocto_texture* val, const yocto_scene* scn
 }
 
 // Procedural commands for textures
-bool apply_json_procedural(const json& js, yocto_texture* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_texture* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -1505,7 +1508,8 @@ bool apply_json_procedural(const json& js, yocto_texture* val, const yocto_scene
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_texture* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_texture* val, const yocto_scene* scn) {
     static const auto def = yocto_texture();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -1531,7 +1535,8 @@ bool parse_json_object(const json& js, yocto_texture* val, const yocto_scene* sc
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const yocto_voltexture* val, const yocto_scene* scn) {
+bool dump_json_object(
+    json& js, const yocto_voltexture* val, const yocto_scene* scn) {
     static const auto def = yocto_voltexture();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -1550,7 +1555,8 @@ bool dump_json_object(json& js, const yocto_voltexture* val, const yocto_scene* 
 }
 
 // Procedural commands for textures
-bool apply_json_procedural(const json& js, yocto_voltexture* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_voltexture* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -1571,7 +1577,8 @@ bool apply_json_procedural(const json& js, yocto_voltexture* val, const yocto_sc
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_voltexture* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_voltexture* val, const yocto_scene* scn) {
     static const auto def = yocto_voltexture();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -1590,7 +1597,8 @@ bool parse_json_object(const json& js, yocto_voltexture* val, const yocto_scene*
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const yocto_material* val, const yocto_scene* scn) {
+bool dump_json_object(
+    json& js, const yocto_material* val, const yocto_scene* scn) {
     static const auto def = yocto_material();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -1652,13 +1660,15 @@ bool dump_json_object(json& js, const yocto_material* val, const yocto_scene* sc
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(const json& js, yocto_material* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_material* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     return true;
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_material* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_material* val, const yocto_scene* scn) {
     static const auto def = yocto_material();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -1766,7 +1776,8 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scn) 
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(const json& js, yocto_shape* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_shape* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -1921,7 +1932,8 @@ bool dump_json_object(json& js, const yocto_surface* val, const yocto_scene* scn
 }
 
 // Procedural commands for subdivs
-bool apply_json_procedural(const json& js, yocto_surface* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_surface* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
@@ -1951,7 +1963,8 @@ bool apply_json_procedural(const json& js, yocto_surface* val, const yocto_scene
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_surface* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_surface* val, const yocto_scene* scn) {
     static const auto def = yocto_surface();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -1985,7 +1998,8 @@ bool parse_json_object(const json& js, yocto_surface* val, const yocto_scene* sc
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const yocto_instance* val, const yocto_scene* scn) {
+bool dump_json_object(
+    json& js, const yocto_instance* val, const yocto_scene* scn) {
     static const auto def = yocto_instance();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -1999,7 +2013,8 @@ bool dump_json_object(json& js, const yocto_instance* val, const yocto_scene* sc
 }
 
 // Procedural commands for instances
-bool apply_json_procedural(const json& js, yocto_instance* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_instance* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from")) {
         auto from  = js.value("from", zero3f);
@@ -2018,7 +2033,8 @@ bool apply_json_procedural(const json& js, yocto_instance* val, const yocto_scen
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_instance* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_instance* val, const yocto_scene* scn) {
     static const auto def = yocto_instance();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -2033,7 +2049,8 @@ bool parse_json_object(const json& js, yocto_instance* val, const yocto_scene* s
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const yocto_environment* val, const yocto_scene* scn) {
+bool dump_json_object(
+    json& js, const yocto_environment* val, const yocto_scene* scn) {
     static const auto def = yocto_environment();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -2047,7 +2064,8 @@ bool dump_json_object(json& js, const yocto_environment* val, const yocto_scene*
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(const json& js, yocto_environment* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_environment* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
@@ -2057,7 +2075,8 @@ bool apply_json_procedural(const json& js, yocto_environment* val, const yocto_s
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_environment* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_environment* val, const yocto_scene* scn) {
     static const auto def = yocto_environment();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -2072,7 +2091,8 @@ bool parse_json_object(const json& js, yocto_environment* val, const yocto_scene
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const yocto_scene_node* val, const yocto_scene* scn) {
+bool dump_json_object(
+    json& js, const yocto_scene_node* val, const yocto_scene* scn) {
     static const auto def = yocto_scene_node();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
@@ -2095,7 +2115,8 @@ bool dump_json_object(json& js, const yocto_scene_node* val, const yocto_scene* 
 }
 
 // Procedural commands for nodes
-bool apply_json_procedural(const json& js, yocto_scene_node* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_scene_node* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from")) {
         auto from  = js.value("from", zero3f);
@@ -2107,7 +2128,8 @@ bool apply_json_procedural(const json& js, yocto_scene_node* val, const yocto_sc
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_scene_node* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_scene_node* val, const yocto_scene* scn) {
     static const auto def = yocto_scene_node();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
@@ -2157,21 +2179,32 @@ bool parse_json_value(const json& js, yocto_interpolation_type& val) {
 }
 
 // Serialize struct
-bool dump_json_object(json& js, const yocto_animation* val, const yocto_scene* scn) {
+bool dump_json_object(
+    json& js, const yocto_animation* val, const yocto_scene* scn) {
     static const auto def = yocto_animation();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->filename, "filename", def.filename))
         return false;
-    if (!dump_json_value(js, val->animation_group, "animation_group", def.animation_group)) return false;
-    if (!dump_json_value(js, val->interpolation_type, "type", def.interpolation_type)) return false;
+    if (!dump_json_value(
+            js, val->animation_group, "animation_group", def.animation_group))
+        return false;
+    if (!dump_json_value(
+            js, val->interpolation_type, "type", def.interpolation_type))
+        return false;
     if (val->filename == "") {
-        if (!dump_json_value(js, val->keyframes_times, "keyframes_times", def.keyframes_times)) return false;
-        if (!dump_json_value(js, val->translation_keyframes, "translation_keyframes", def.translation_keyframes))
+        if (!dump_json_value(js, val->keyframes_times, "keyframes_times",
+                def.keyframes_times))
             return false;
-        if (!dump_json_value(js, val->rotation_keyframes, "rotation_keyframes", def.rotation_keyframes))
+        if (!dump_json_value(js, val->translation_keyframes,
+                "translation_keyframes", def.translation_keyframes))
             return false;
-        if (!dump_json_value(js, val->scale_keyframes, "scale_keyframes", def.scale_keyframes)) return false;
+        if (!dump_json_value(js, val->rotation_keyframes, "rotation_keyframes",
+                def.rotation_keyframes))
+            return false;
+        if (!dump_json_value(js, val->scale_keyframes, "scale_keyframes",
+                def.scale_keyframes))
+            return false;
     }
     if (!dump_json_objref(js, val->node_targets, "node_targets", scn->nodes))
         return false;
@@ -2179,7 +2212,8 @@ bool dump_json_object(json& js, const yocto_animation* val, const yocto_scene* s
 }
 
 // Procedural commands for animations
-bool apply_json_procedural(const json& js, yocto_animation* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_animation* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation_axisangle")) {
         for (auto& j : js.at("rotation_axisangle")) {
@@ -2190,20 +2224,31 @@ bool apply_json_procedural(const json& js, yocto_animation* val, const yocto_sce
 }
 
 // Serialize struct
-bool parse_json_object(const json& js, yocto_animation* val, const yocto_scene* scn) {
+bool parse_json_object(
+    const json& js, yocto_animation* val, const yocto_scene* scn) {
     static const auto def = yocto_animation();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->filename, "filename", def.filename))
         return false;
-    if (!parse_json_value(js, val->animation_group, "animation_group", def.animation_group)) return false;
-    if (!parse_json_value(js, val->interpolation_type, "interpolation_type", def.interpolation_type)) return false;
-    if (!parse_json_value(js, val->keyframes_times, "keyframes_times", def.keyframes_times)) return false;
-    if (!parse_json_value(js, val->translation_keyframes, "translation_keyframes", def.translation_keyframes))
+    if (!parse_json_value(
+            js, val->animation_group, "animation_group", def.animation_group))
         return false;
-    if (!parse_json_value(js, val->rotation_keyframes, "rotation_keyframes", def.rotation_keyframes))
+    if (!parse_json_value(js, val->interpolation_type, "interpolation_type",
+            def.interpolation_type))
         return false;
-    if (!parse_json_value(js, val->scale_keyframes, "scale_keyframes", def.scale_keyframes)) return false;
+    if (!parse_json_value(
+            js, val->keyframes_times, "keyframes_times", def.keyframes_times))
+        return false;
+    if (!parse_json_value(js, val->translation_keyframes,
+            "translation_keyframes", def.translation_keyframes))
+        return false;
+    if (!parse_json_value(js, val->rotation_keyframes, "rotation_keyframes",
+            def.rotation_keyframes))
+        return false;
+    if (!parse_json_value(
+            js, val->scale_keyframes, "scale_keyframes", def.scale_keyframes))
+        return false;
     if (!parse_json_objref(js, val->node_targets, "node_targets", scn->nodes))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
@@ -2230,7 +2275,8 @@ bool dump_json_object(json& js, const yocto_scene* val, const yocto_scene* scn) 
 }
 
 // Procedural commands for scenes
-bool apply_json_procedural(const json& js, yocto_scene* val, const yocto_scene* scn) {
+bool apply_json_procedural(
+    const json& js, yocto_scene* val, const yocto_scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("random_instances")) {
         auto& jjs  = js.at("random_instances");
@@ -2263,7 +2309,7 @@ bool apply_json_procedural(const json& js, yocto_scene* val, const yocto_scene* 
                                            translation_frame(pos[i]) * ist->frame;
             val->instances.back()->shape    = ist->shape;
             val->instances.back()->material = ist->material;
-            val->instances.back()->surface   = ist->surface;
+            val->instances.back()->surface  = ist->surface;
         }
     }
     return true;
@@ -3054,7 +3100,8 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     return scn.release();
 }
 
-bool save_mtl(const string& filename, const yocto_scene* scn, bool flip_tr = true) {
+bool save_mtl(
+    const string& filename, const yocto_scene* scn, bool flip_tr = true) {
     // open
     auto fs = open(filename, "wt");
     if (!fs) return false;
@@ -3716,22 +3763,25 @@ bool gltf_to_scene(yocto_scene* scn, const json& gltf, const string& dirname) {
                     anm->name = (ganm.count("name") ? ganm.value("name", ""s) :
                                                       "anim") +
                                 std::to_string(aid++);
-                    anm->animation_group      = ganm.value("name", ""s);
-                    auto input_view = accessor_values(
+                    anm->animation_group = ganm.value("name", ""s);
+                    auto input_view      = accessor_values(
                         gltf.at("accessors").at(gsampler.value("input", -1)));
                     anm->keyframes_times.resize(input_view.size());
                     for (auto i = 0; i < input_view.size(); i++)
                         anm->keyframes_times[i] = input_view[i][0];
                     auto type = gsampler.value("interpolation", "LINEAR");
-                    if (type == "LINEAR") anm->interpolation_type = yocto_interpolation_type::linear;
-                    if (type == "STEP") anm->interpolation_type = yocto_interpolation_type::step;
+                    if (type == "LINEAR")
+                        anm->interpolation_type = yocto_interpolation_type::linear;
+                    if (type == "STEP")
+                        anm->interpolation_type = yocto_interpolation_type::step;
                     if (type == "CUBICSPLINE")
                         anm->interpolation_type = yocto_interpolation_type::bezier;
                     auto output_view = accessor_values(
                         gltf.at("accessors").at(gsampler.value("output", -1)));
                     switch (path) {
                         case 0: {  // translation
-                            anm->translation_keyframes.reserve(output_view.size());
+                            anm->translation_keyframes.reserve(
+                                output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
                                 anm->translation_keyframes.push_back(
                                     {(float)output_view[i][0],
@@ -3741,17 +3791,19 @@ bool gltf_to_scene(yocto_scene* scn, const json& gltf, const string& dirname) {
                         case 1: {  // rotation
                             anm->rotation_keyframes.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                anm->rotation_keyframes.push_back({(float)output_view[i][0],
-                                    (float)output_view[i][1],
-                                    (float)output_view[i][2],
-                                    (float)output_view[i][3]});
+                                anm->rotation_keyframes.push_back(
+                                    {(float)output_view[i][0],
+                                        (float)output_view[i][1],
+                                        (float)output_view[i][2],
+                                        (float)output_view[i][3]});
                         } break;
                         case 2: {  // scale
                             anm->scale_keyframes.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                anm->scale_keyframes.push_back({(float)output_view[i][0],
-                                    (float)output_view[i][1],
-                                    (float)output_view[i][2]});
+                                anm->scale_keyframes.push_back(
+                                    {(float)output_view[i][0],
+                                        (float)output_view[i][1],
+                                        (float)output_view[i][2]});
                         } break;
                         case 3: {  // weights
                             printf("weights not supported for now\n");
@@ -4252,11 +4304,11 @@ yocto_scene* load_pbrt_scene(
     auto dirname_ = get_dirname(filename);
 
     struct stack_item {
-        frame3f   frame     = identity_frame3f;
+        frame3f         frame     = identity_frame3f;
         yocto_material* mat       = nullptr;
         yocto_material* light_mat = nullptr;
-        float     focus = 1, aspect = 1;
-        bool      reverse = false;
+        float           focus = 1, aspect = 1;
+        bool            reverse = false;
     };
 
     // parse
@@ -4354,8 +4406,8 @@ yocto_scene* load_pbrt_scene(
         return vals;
     };
 
-    auto get_scaled_texture = [&txt_map, &get_vec3f](
-                                  const json& js) -> tuple<vec3f, yocto_texture*> {
+    auto get_scaled_texture =
+        [&txt_map, &get_vec3f](const json& js) -> tuple<vec3f, yocto_texture*> {
         if (js.is_string()) return {{1, 1, 1}, txt_map.at(js.get<string>())};
         return {get_vec3f(js), nullptr};
     };
@@ -5162,8 +5214,8 @@ bool serialize_bin_object(yocto_voltexture* tex, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(
-    yocto_environment* env, const yocto_scene* scn, file_stream& fs, bool save) {
+bool serialize_bin_object(yocto_environment* env, const yocto_scene* scn,
+    file_stream& fs, bool save) {
     if (!serialize_bin_value(env->name, fs, save)) return false;
     if (!serialize_bin_value(env->frame, fs, save)) return false;
     if (!serialize_bin_value(env->emission, fs, save)) return false;

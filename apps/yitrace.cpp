@@ -34,8 +34,8 @@
 // Application state
 struct app_state {
     // scene
-    unique_ptr<yocto_scene>    scn = nullptr;
-    unique_ptr<bvh_tree> bvh = nullptr;
+    unique_ptr<yocto_scene> scn = nullptr;
+    unique_ptr<bvh_tree>    bvh = nullptr;
 
     // rendering params
     string       filename   = "scene.json";
@@ -161,7 +161,8 @@ bool update(app_state* app) {
         if (get<0>(sel) == "shape") {
             for (auto sid = 0; sid < app->scn->shapes.size(); sid++) {
                 if (app->scn->shapes[sid] == get<1>(sel)) {
-                    refit_bvh((yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
+                    refit_bvh(
+                        (yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
                     break;
                 }
             }

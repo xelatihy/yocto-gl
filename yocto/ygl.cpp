@@ -3486,20 +3486,24 @@ void tesselate_subdivs(yocto_scene* scn) {
 }
 
 // Update animation transforms
-void update_transforms(yocto_animation* anm, float time, const string& anim_group) {
+void update_transforms(
+    yocto_animation* anm, float time, const string& anim_group) {
     if (anim_group != "" && anim_group != anm->animation_group) return;
 
     if (!anm->translation_keyframes.empty()) {
         auto val = vec3f{0, 0, 0};
         switch (anm->interpolation_type) {
             case yocto_interpolation_type::step:
-                val = eval_keyframed_step(anm->keyframes_times, anm->translation_keyframes, time);
+                val = eval_keyframed_step(
+                    anm->keyframes_times, anm->translation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = eval_keyframed_linear(anm->keyframes_times, anm->translation_keyframes, time);
+                val = eval_keyframed_linear(
+                    anm->keyframes_times, anm->translation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = eval_keyframed_bezier(anm->keyframes_times, anm->translation_keyframes, time);
+                val = eval_keyframed_bezier(
+                    anm->keyframes_times, anm->translation_keyframes, time);
                 break;
             default: throw runtime_error("should not have been here");
         }
@@ -3509,13 +3513,16 @@ void update_transforms(yocto_animation* anm, float time, const string& anim_grou
         auto val = vec4f{0, 0, 0, 1};
         switch (anm->interpolation_type) {
             case yocto_interpolation_type::step:
-                val = eval_keyframed_step(anm->keyframes_times, anm->rotation_keyframes, time);
+                val = eval_keyframed_step(
+                    anm->keyframes_times, anm->rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = eval_keyframed_linear(anm->keyframes_times, anm->rotation_keyframes, time);
+                val = eval_keyframed_linear(
+                    anm->keyframes_times, anm->rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = eval_keyframed_bezier(anm->keyframes_times, anm->rotation_keyframes, time);
+                val = eval_keyframed_bezier(
+                    anm->keyframes_times, anm->rotation_keyframes, time);
                 break;
         }
         for (auto target : anm->node_targets) target->rotation = val;
@@ -3524,13 +3531,16 @@ void update_transforms(yocto_animation* anm, float time, const string& anim_grou
         auto val = vec3f{1, 1, 1};
         switch (anm->interpolation_type) {
             case yocto_interpolation_type::step:
-                val = eval_keyframed_step(anm->keyframes_times, anm->scale_keyframes, time);
+                val = eval_keyframed_step(
+                    anm->keyframes_times, anm->scale_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = eval_keyframed_linear(anm->keyframes_times, anm->scale_keyframes, time);
+                val = eval_keyframed_linear(
+                    anm->keyframes_times, anm->scale_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = eval_keyframed_bezier(anm->keyframes_times, anm->scale_keyframes, time);
+                val = eval_keyframed_bezier(
+                    anm->keyframes_times, anm->scale_keyframes, time);
                 break;
         }
         for (auto target : anm->node_targets) target->scale = val;
@@ -3538,7 +3548,8 @@ void update_transforms(yocto_animation* anm, float time, const string& anim_grou
 }
 
 // Update node transforms
-void update_transforms(yocto_scene_node* nde, const frame3f& parent = identity_frame3f) {
+void update_transforms(
+    yocto_scene_node* nde, const frame3f& parent = identity_frame3f) {
     auto frame = parent * nde->local * translation_frame(nde->translation) *
                  rotation_frame(nde->rotation) * scaling_frame(nde->scale);
     if (nde->instance) nde->instance->frame = frame;
@@ -3793,8 +3804,8 @@ yocto_camera* make_bbox_camera(
 namespace ygl {
 
 // Instance intersection.
-scene_intersection intersect_ray(const yocto_instance* ist, const bvh_tree* sbvh,
-    const ray3f& ray, bool find_any) {
+scene_intersection intersect_ray(const yocto_instance* ist,
+    const bvh_tree* sbvh, const ray3f& ray, bool find_any) {
     auto iid  = 0;
     auto isec = scene_intersection();
     auto tray = transform_ray_inverse(ist->frame, ray);
@@ -3805,8 +3816,8 @@ scene_intersection intersect_ray(const yocto_instance* ist, const bvh_tree* sbvh
 }
 
 // Scene intersection.
-scene_intersection intersect_ray(
-    const yocto_scene* scn, const bvh_tree* bvh, const ray3f& ray, bool find_any) {
+scene_intersection intersect_ray(const yocto_scene* scn, const bvh_tree* bvh,
+    const ray3f& ray, bool find_any) {
     auto iid  = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(bvh, ray, find_any, isec.dist, iid, isec.ei, isec.uv))
@@ -3857,7 +3868,8 @@ vec4f eval_elem_tangsp(const yocto_shape* shp, int ei) {
 
 // Shape value interpolated using barycentric coordinates
 template <typename T>
-T eval_elem(const yocto_shape* shp, const vector<T>& vals, int ei, const vec2f& uv) {
+T eval_elem(
+    const yocto_shape* shp, const vector<T>& vals, int ei, const vec2f& uv) {
     if (vals.empty()) return {};
     if (!shp->triangles.empty()) {
         auto t = shp->triangles[ei];
@@ -3898,7 +3910,8 @@ vec4f eval_tangsp(const yocto_shape* shp, int ei, const vec2f& uv) {
     if (shp->tangent_spaces.empty()) return eval_elem_tangsp(shp, ei);
     return eval_elem(shp, shp->tangent_spaces, ei, uv);
 }
-vec3f eval_tangsp(const yocto_shape* shp, int ei, const vec2f& uv, bool& left_handed) {
+vec3f eval_tangsp(
+    const yocto_shape* shp, int ei, const vec2f& uv, bool& left_handed) {
     auto tangsp = (shp->tangent_spaces.empty()) ?
                       eval_elem_tangsp(shp, ei) :
                       eval_elem(shp, shp->tangent_spaces, ei, uv);
@@ -4133,8 +4146,8 @@ vec2i eval_image_size(const yocto_camera* cam, int yresolution) {
 }
 
 // Generates a ray from a camera.
-ray3f eval_camera_ray(const yocto_camera* cam, const vec2i& ij, const vec2i& imsize,
-    const vec2f& puv, const vec2f& luv) {
+ray3f eval_camera_ray(const yocto_camera* cam, const vec2i& ij,
+    const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return eval_camera_ray(cam, uv, luv);
 }
@@ -4244,8 +4257,8 @@ bsdf eval_bsdf(const yocto_instance* ist, int ei, const vec2f& uv) {
 bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
 
 // Sample a shape based on a distribution.
-tuple<int, vec2f> sample_shape(const yocto_shape* shp, const vector<float>& elem_cdf,
-    float re, const vec2f& ruv) {
+tuple<int, vec2f> sample_shape(const yocto_shape* shp,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elem_cdf.empty()) return {};
     if (!shp->triangles.empty()) {
@@ -4297,8 +4310,8 @@ vec3f eval_transmission(const yocto_material* vol, const vec3f& from,
     return {tr, tr, tr};
 }
 
-float sample_distance(const yocto_material* vol, const vec3f& from, const vec3f& dir,
-    int channel, rng_state& rng) {
+float sample_distance(const yocto_material* vol, const vec3f& from,
+    const vec3f& dir, int channel, rng_state& rng) {
     auto pos      = from;
     auto majorant = element_at(vol->volume_density, channel);
     if (majorant == 0) return maxf;
@@ -4479,8 +4492,8 @@ atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
 // Intersect a scene handling opacity.
-scene_intersection intersect_ray_cutout(const yocto_scene* scn, const bvh_tree* bvh,
-    const ray3f& ray_, rng_state& rng, int nbounces) {
+scene_intersection intersect_ray_cutout(const yocto_scene* scn,
+    const bvh_tree* bvh, const ray3f& ray_, rng_state& rng, int nbounces) {
     auto ray = ray_;
     for (auto b = 0; b < nbounces; b++) {
         _trace_nrays += 1;
@@ -4713,8 +4726,8 @@ float sample_delta_brdf_pdf(
 }
 
 // Sample pdf for an environment.
-float sample_environment_pdf(
-    const yocto_environment* env, const vector<float>& elem_cdf, const vec3f& i) {
+float sample_environment_pdf(const yocto_environment* env,
+    const vector<float>& elem_cdf, const vec3f& i) {
     auto txt = env->emission_texture;
     if (!elem_cdf.empty() && txt) {
         auto size     = eval_texture_size(txt);
@@ -4732,8 +4745,8 @@ float sample_environment_pdf(
 }
 
 // Picks a point on an environment.
-vec3f sample_environment(const yocto_environment* env, const vector<float>& elem_cdf,
-    float rel, const vec2f& ruv) {
+vec3f sample_environment(const yocto_environment* env,
+    const vector<float>& elem_cdf, float rel, const vec2f& ruv) {
     auto txt = env->emission_texture;
     if (!elem_cdf.empty() && txt) {
         auto idx  = sample_discrete(elem_cdf, rel);
@@ -5032,7 +5045,8 @@ vec3f eval_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 }
 
 // @Hack: air volume properties should be set in the scene struct.
-static yocto_instance* air = new yocto_instance{"air", {}, nullptr, new yocto_material{}, nullptr};
+static yocto_instance* air = new yocto_instance{
+    "air", {}, nullptr, new yocto_material{}, nullptr};
 
 // Iterative volume path tracing.
 vec3f trace_volpath(const yocto_scene* scn, const bvh_tree* bvh,
@@ -5769,8 +5783,9 @@ vec3f trace_func(const yocto_scene* scn, const bvh_tree* bvh,
 }
 
 // Trace a single sample
-vec4f trace_sample(trace_state* state, const yocto_scene* scn, const bvh_tree* bvh,
-    const trace_lights* lights, int i, int j, const trace_params& params) {
+vec4f trace_sample(trace_state* state, const yocto_scene* scn,
+    const bvh_tree* bvh, const trace_lights* lights, int i, int j,
+    const trace_params& params) {
     _trace_npaths += 1;
     auto  cam = scn->cameras.at(params.camid);
     auto& rng = pixel_at(state->rng, i, j);
@@ -5815,7 +5830,8 @@ trace_state* make_trace_state(const yocto_scene* scn, const trace_params& params
 }
 
 // Init trace lights
-trace_lights* make_trace_lights(const yocto_scene* scn, const trace_params& params) {
+trace_lights* make_trace_lights(
+    const yocto_scene* scn, const trace_params& params) {
     auto lights = new trace_lights();
 
     for (auto ist : scn->instances) {
@@ -5871,8 +5887,8 @@ image<vec4f> trace_image4f(const yocto_scene* scn, const bvh_tree* bvh,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-bool trace_samples(trace_state* state, const yocto_scene* scn, const bvh_tree* bvh,
-    const trace_lights* lights, const trace_params& params) {
+bool trace_samples(trace_state* state, const yocto_scene* scn,
+    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
     auto nbatch = min(params.nbatch, params.nsamples - state->sample);
     if (params.noparallel) {
         for (auto j = 0; j < state->img.height; j++) {
@@ -5913,8 +5929,8 @@ bool trace_samples(trace_state* state, const yocto_scene* scn, const bvh_tree* b
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* state, const yocto_scene* scn, const bvh_tree* bvh,
-    const trace_lights* lights, const trace_params& params) {
+void trace_async_start(trace_state* state, const yocto_scene* scn,
+    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
     // render preview image
     if (params.preview_ratio) {
         auto pparams        = params;
