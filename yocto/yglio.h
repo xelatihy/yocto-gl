@@ -584,33 +584,9 @@ template <typename T, int N>
 inline bool print_value(string& str, const frame<T, N>& v) {
     return print_value(str, (const std::array<T, N * (N + 1)>&)v);
 }
-template <typename T>
-inline bool print_value(string& str, const bbox1<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const bbox2<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const bbox3<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const bbox4<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const bbox<T, N>& v) {
+    return print_value(str, (const std::array<T, N * 2>&)v);
 }
 template <typename T, int N>
 inline bool print_value(string& str, const ray<T, N>& v) {
@@ -717,21 +693,9 @@ template <typename Archive, typename T, int N>
 inline bool _parse(Archive& ar, frame<T, N>& v) {
     return _parse(ar, (std::array<T, N * (N + 1)>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox1<T>& v) {
-    return _parse(ar, (std::array<T, 1>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox2<T>& v) {
-    return _parse(ar, (std::array<T, 4>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox3<T>& v) {
-    return _parse(ar, (std::array<T, 6>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox4<T>& v) {
-    return _parse(ar, (std::array<T, 8>&)v);
+template <typename Archive, typename T, int N>
+inline bool _parse(Archive& ar, bbox<T, N>& v) {
+    return _parse(ar, (std::array<T, N * 2>&)v);
 }
 template <typename Archive, typename T, int N>
 inline bool _parse(Archive& ar, ray<T, N>& v) {

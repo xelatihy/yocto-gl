@@ -52,7 +52,7 @@
 // matrix. Transform operations are better behaved with this representation.
 //
 // We represent coordinate bounds with axis-aligned bounding boxes with
-// `bbox1<T>`, `bbox2<T>`, `bbox3<T>`, `bbox4<T>`, with support for
+// `bbox<T, 1>`, `bbox<T, 2>`, `bbox<T, 3>`, `bbox<T, 4>`, with support for
 // expansion operations for points and other bounding boxes. We provide
 // operations to compute bounds for points, lines, triangles and quads.
 //
@@ -1215,39 +1215,43 @@ inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// DEscribes a range of values in N dimensions.
+template <typename T, int N>
+struct bbox;
+
 // Range of values in 1D.
 template <typename T>
-struct bbox1 {
+struct bbox<T, 1> {
     T min = maxt<T>();
     T max = mint<T>();
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
-struct bbox2 {
+struct bbox<T, 2> {
     vec<T, 2> min = {maxt<T>(), maxt<T>()};
     vec<T, 2> max = {mint<T>(), mint<T>()};
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
-struct bbox3 {
+struct bbox<T, 3> {
     vec<T, 3> min = {maxt<T>(), maxt<T>(), maxt<T>()};
     vec<T, 3> max = {mint<T>(), mint<T>(), mint<T>()};
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
 template <typename T>
-struct bbox4 {
+struct bbox<T, 4> {
     vec<T, 4> min = {maxt<T>(), maxt<T>(), maxt<T>(), maxt<T>()};
     vec<T, 4> max = {mint<T>(), mint<T>(), mint<T>(), mint<T>()};
 };
 
 // Type aliases
-using bbox1f = bbox1<float>;
-using bbox2f = bbox2<float>;
-using bbox3f = bbox3<float>;
-using bbox4f = bbox4<float>;
+using bbox1f = bbox<float, 1>;
+using bbox2f = bbox<float, 2>;
+using bbox3f = bbox<float, 3>;
+using bbox4f = bbox<float, 4>;
 
 // Empty bbox constant.
 const auto invalid_bbox1f = bbox1f();
@@ -1257,73 +1261,73 @@ const auto invalid_bbox4f = bbox4f();
 
 // Bounding box comparisons.
 template <typename T>
-inline bool operator==(const bbox1<T>& a, const bbox1<T>& b) {
+inline bool operator==(const bbox<T, 1>& a, const bbox<T, 1>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox1<T>& a, const bbox1<T>& b) {
+inline bool operator!=(const bbox<T, 1>& a, const bbox<T, 1>& b) {
     return a.min != b.min || a.max != b.max;
 }
 template <typename T>
-inline bool operator==(const bbox2<T>& a, const bbox2<T>& b) {
+inline bool operator==(const bbox<T, 2>& a, const bbox<T, 2>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox2<T>& a, const bbox2<T>& b) {
+inline bool operator!=(const bbox<T, 2>& a, const bbox<T, 2>& b) {
     return a.min != b.min || a.max != b.max;
 }
 template <typename T>
-inline bool operator==(const bbox3<T>& a, const bbox3<T>& b) {
+inline bool operator==(const bbox<T, 3>& a, const bbox<T, 3>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox3<T>& a, const bbox3<T>& b) {
+inline bool operator!=(const bbox<T, 3>& a, const bbox<T, 3>& b) {
     return a.min != b.min || a.max != b.max;
 }
 template <typename T>
-inline bool operator==(const bbox4<T>& a, const bbox4<T>& b) {
+inline bool operator==(const bbox<T, 4>& a, const bbox<T, 4>& b) {
     return a.min == b.min && a.max == b.max;
 }
 template <typename T>
-inline bool operator!=(const bbox4<T>& a, const bbox4<T>& b) {
+inline bool operator!=(const bbox<T, 4>& a, const bbox<T, 4>& b) {
     return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox1<T>& operator+=(bbox1<T>& a, T b) {
+inline bbox<T, 1>& operator+=(bbox<T, 1>& a, T b) {
     a.min = min(a.min, b);
     a.max = max(a.max, b);
     return a;
 }
 template <typename T>
-inline bbox1<T>& operator+=(bbox1<T>& a, const bbox1<T>& b) {
+inline bbox<T, 1>& operator+=(bbox<T, 1>& a, const bbox<T, 1>& b) {
     a.min = min(a.min, b.min);
     a.max = max(a.max, b.max);
     return a;
 }
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox2<T>& operator+=(bbox2<T>& a, const vec<T, 2>& b) {
+inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const vec<T, 2>& b) {
     a.min = {min(a.min.x, b.x), min(a.min.y, b.y)};
     a.max = {max(a.max.x, b.x), max(a.max.y, b.y)};
     return a;
 }
 template <typename T>
-inline bbox2<T>& operator+=(bbox2<T>& a, const bbox2<T>& b) {
+inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const bbox<T, 2>& b) {
     a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y)};
     a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y)};
     return a;
 }
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox3<T>& operator+=(bbox3<T>& a, const vec<T, 3>& b) {
+inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const vec<T, 3>& b) {
     a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)};
     a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z)};
     return a;
 }
 template <typename T>
-inline bbox3<T>& operator+=(bbox3<T>& a, const bbox3<T>& b) {
+inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const bbox<T, 3>& b) {
     a.min = {
         min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
     a.max = {
@@ -1332,7 +1336,7 @@ inline bbox3<T>& operator+=(bbox3<T>& a, const bbox3<T>& b) {
 }
 // Bounding box expansions with points and other boxes.
 template <typename T>
-inline bbox4<T>& operator+=(bbox4<T>& a, const vec<T, 4>& b) {
+inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const vec<T, 4>& b) {
     a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z),
         min(a.min.w, b.w)};
     a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z),
@@ -1340,7 +1344,7 @@ inline bbox4<T>& operator+=(bbox4<T>& a, const vec<T, 4>& b) {
     return a;
 }
 template <typename T>
-inline bbox4<T>& operator+=(bbox4<T>& a, const bbox4<T>& b) {
+inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
     a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y),
         min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
     a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y),
@@ -1350,40 +1354,40 @@ inline bbox4<T>& operator+=(bbox4<T>& a, const bbox4<T>& b) {
 
 // Primitive bounds.
 template <typename T>
-inline bbox3<T> point_bbox(const vec<T, 3>& p, T r = 0) {
-    auto bbox = bbox3<T>{};
-    bbox += p - vec3f{r, r, r};
-    bbox += p + vec3f{r, r, r};
-    return bbox;
+inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T r = 0) {
+    auto bounds = bbox<T, 3>{};
+    bounds += p - vec3f{r, r, r};
+    bounds += p + vec3f{r, r, r};
+    return bounds;
 }
 template <typename T>
-inline bbox3<T> line_bbox(
+inline bbox<T, 3> line_bbox(
     const vec<T, 3>& p0, const vec<T, 3>& p1, T r0 = 0, T r1 = 0) {
-    auto bbox = bbox3<T>{};
-    bbox += p0 - vec3f{r0, r0, r0};
-    bbox += p0 + vec3f{r0, r0, r0};
-    bbox += p1 - vec3f{r1, r1, r1};
-    bbox += p1 + vec3f{r1, r1, r1};
-    return bbox;
+    auto bounds = bbox<T, 3>{};
+    bounds += p0 - vec3f{r0, r0, r0};
+    bounds += p0 + vec3f{r0, r0, r0};
+    bounds += p1 - vec3f{r1, r1, r1};
+    bounds += p1 + vec3f{r1, r1, r1};
+    return bounds;
 }
 template <typename T>
-inline bbox3<T> triangle_bbox(
+inline bbox<T, 3> triangle_bbox(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
-    auto bbox = bbox3<T>{};
-    bbox += p0;
-    bbox += p1;
-    bbox += p2;
-    return bbox;
+    auto bounds = bbox<T, 3>{};
+    bounds += p0;
+    bounds += p1;
+    bounds += p2;
+    return bounds;
 }
 template <typename T>
-inline bbox3<T> quad_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1,
+inline bbox<T, 3> quad_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 3>& p3) {
-    auto bbox = bbox3<T>{};
-    bbox += p0;
-    bbox += p1;
-    bbox += p2;
-    bbox += p3;
-    return bbox;
+    auto bounds = bbox<T, 3>{};
+    bounds += p0;
+    bounds += p1;
+    bounds += p2;
+    bounds += p3;
+    return bounds;
 }
 
 }  // namespace ygl
@@ -1497,24 +1501,24 @@ inline ray<T, N> transform_ray(const mat<T, N + 1, N + 1>& a, const ray<T, N>& b
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox3<T> transform_bbox(const frame<T, 3>& a, const bbox3<T>& b) {
+inline bbox<T, 3> transform_bbox(const frame<T, 3>& a, const bbox<T, 3>& b) {
     auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
         vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
         vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
         vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
         vec3f{b.max.x, b.max.y, b.max.z}};
-    auto xformed = bbox3<T>();
+    auto xformed = bbox<T, 3>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
 }
 template <typename T>
-inline bbox3<T> transform_bbox(const mat<T, 4, 4>& a, const bbox3<T>& b) {
+inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
     auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
         vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
         vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
         vec3f{b.max.x, b.min.y, b.max.z}, vec3f{b.max.x, b.max.y, b.min.z},
         vec3f{b.max.x, b.max.y, b.max.z}};
-    auto xformed = bbox3<T>();
+    auto xformed = bbox<T, 3>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
 }
@@ -1546,7 +1550,7 @@ inline ray<T, N> transform_ray_inverse(const frame<T, N>& a, const ray<T, N>& b)
         transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox3<T> transform_bbox_inverse(const frame<T, 3>& a, const bbox3<T>& b) {
+inline bbox<T, 3> transform_bbox_inverse(const frame<T, 3>& a, const bbox<T, 3>& b) {
     return transform_bbox(inverse(a), b);
 }
 
