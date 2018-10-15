@@ -34,7 +34,7 @@
 // Application state
 struct app_state {
     // scene
-    unique_ptr<scene>    scn = nullptr;
+    unique_ptr<yocto_scene>    scn = nullptr;
     unique_ptr<bvh_tree> bvh = nullptr;
 
     // rendering params
@@ -161,7 +161,7 @@ bool update(app_state* app) {
         if (get<0>(sel) == "shape") {
             for (auto sid = 0; sid < app->scn->shapes.size(); sid++) {
                 if (app->scn->shapes[sid] == get<1>(sel)) {
-                    refit_bvh((shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
+                    refit_bvh((yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
                     break;
                 }
             }
@@ -290,7 +290,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     if (!quiet) printf("loading scene %s\n", app->filename.c_str());
     auto load_start = get_time();
-    app->scn        = unique_ptr<scene>(load_scene(app->filename));
+    app->scn        = unique_ptr<yocto_scene>(load_scene(app->filename));
     if (!app->scn) log_fatal("cannot load scene " + app->filename);
     if (!quiet)
         printf("loading in %s\n",

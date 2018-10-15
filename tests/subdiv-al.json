@@ -162,11 +162,11 @@
             }
         }
     ],
-    "subdivs": [
+    "surfaces": [
         {
             "name": "obj1",
             "filename": "meshes/obj1.obj",
-            "level": 4,
+            "subdivision_level": 4,
             "!!proc": {
                 "type": "cube"
             }
@@ -174,7 +174,7 @@
         {
             "name": "obj2",
             "filename": "meshes/obj2.obj",
-            "level": 2,
+            "subdivision_level": 2,
             "!!proc": {
                 "type": "suzanne"
             }
@@ -182,7 +182,7 @@
         {
             "name": "obj3",
             "filename": "meshes/obj3.obj",
-            "level": 4,
+            "subdivision_level": 4,
             "!!proc": {
                 "type": "cube"
             }
@@ -197,7 +197,7 @@
         {
             "name": "obj1",
             "shape": "obj1",
-            "sbd": "obj1",
+            "surface": "obj1",
             "material": "obj1",
             "!!proc": {
                 "translation": [
@@ -210,7 +210,7 @@
         {
             "name": "obj2",
             "shape": "obj2",
-            "sbd": "obj2",
+            "surface": "obj2",
             "material": "obj2",
             "!!proc": {
                 "translation": [
@@ -223,7 +223,7 @@
         {
             "name": "obj3",
             "shape": "obj3",
-            "sbd": "obj3",
+            "surface": "obj3",
             "material": "obj3",
             "!!proc": {
                 "translation": [

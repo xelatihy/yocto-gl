@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     log_info("loading scene {}", filename);
     auto load_start = get_time();
-    auto scn        = unique_ptr<scene>{load_scene(filename)};
+    auto scn        = unique_ptr<yocto_scene>{load_scene(filename)};
     if (!scn) log_fatal("cannot load scene {}", filename);
     log_info("loading in {}", format_duration(get_time() - load_start).c_str());
 

@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     check_cmdline(parser);
 
     // load scene
-    auto scn = unique_ptr<scene>{load_scene(filename, !notextures)};
+    auto scn = unique_ptr<yocto_scene>{load_scene(filename, !notextures)};
     if (!scn) log_fatal("cannot load scene {}", filename);
 
     // change texture names
