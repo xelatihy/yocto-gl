@@ -96,68 +96,6 @@
 #endif
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF STRING FORMAT UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Format duration string from nanoseconds
-string format_duration(int64_t duration) {
-    auto elapsed = duration / 1000000;  // milliseconds
-    auto hours   = (int)(elapsed / 3600000);
-    elapsed %= 3600000;
-    auto mins = (int)(elapsed / 60000);
-    elapsed %= 60000;
-    auto secs  = (int)(elapsed / 1000);
-    auto msecs = (int)(elapsed % 1000);
-    char buf[256];
-    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buf;
-}
-// Format a large integer number in human readable form
-string format_num(uint64_t num) {
-    auto rem = num % 1000;
-    auto div = num / 1000;
-    if (div > 0) return format_num(div) + "," + std::to_string(rem);
-    return std::to_string(rem);
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF LOGGING UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Logging configutation
-auto _log_console    = true;
-auto _log_filestream = (FILE*)nullptr;
-
-// Logs a message
-void log_message(const char* lbl, const char* msg) {
-    if (_log_console) {
-        printf("%s\n", msg);
-        fflush(stdout);
-    }
-    if (_log_filestream) {
-        fprintf(_log_filestream, "%s %s\n", lbl, msg);
-        fflush(_log_filestream);
-    }
-}
-
-// Configure the logging
-void set_log_console(bool enabled) { _log_console = enabled; }
-void set_log_file(const string& filename, bool append) {
-    if (_log_filestream) {
-        fclose(_log_filestream);
-        _log_filestream = nullptr;
-    }
-    if (filename.empty()) return;
-    _log_filestream = fopen(filename.c_str(), append ? "at" : "wt");
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PATH UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
