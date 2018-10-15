@@ -900,21 +900,21 @@ namespace ygl {
 // Small Fixed-size square matrices stored in column major format.
 template <typename T>
 struct mat2 {
-    vec<T, 2> x = {1, 0};
-    vec<T, 2> y = {0, 1};
+    vec<T, 2> x = {0, 0};
+    vec<T, 2> y = {0, 0};
 };
 template <typename T>
 struct mat3 {
-    vec<T, 3> x = {1, 0, 0};
-    vec<T, 3> y = {0, 1, 0};
-    vec<T, 3> z = {0, 0, 1};
+    vec<T, 3> x = {0, 0, 0};
+    vec<T, 3> y = {0, 0, 0};
+    vec<T, 3> z = {0, 0, 0};
 };
 template <typename T>
 struct mat4 {
-    vec<T, 4> x = {1, 0, 0, 0};
-    vec<T, 4> y = {0, 1, 0, 0};
-    vec<T, 4> z = {0, 0, 1, 0};
-    vec<T, 4> w = {0, 0, 0, 1};
+    vec<T, 4> x = {0, 0, 0, 0};
+    vec<T, 4> y = {0, 0, 0, 0};
+    vec<T, 4> z = {0, 0, 0, 0};
+    vec<T, 4> w = {0, 0, 0, 0};
 };
 
 // Type aliases.
@@ -923,9 +923,9 @@ using mat3f = mat3<float>;
 using mat4f = mat4<float>;
 
 // Identity matrices constants.
-const auto identity_mat2f = mat2f();
-const auto identity_mat3f = mat3f();
-const auto identity_mat4f = mat4f();
+const auto identity_mat2f = mat2f{{1,0},{0,1}};
+const auto identity_mat3f = mat3f{{1,0,0},{0,1,0},{0,0,1}};
+const auto identity_mat4f = mat4f{{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
 
 // Matrix comparisons.
 template <typename T>
