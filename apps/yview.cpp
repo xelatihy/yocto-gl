@@ -494,7 +494,7 @@ void draw_glshape(draw_glstate* state, const shape* shp, const material* mat,
         state->txts.at(mat->normal_texture), 5);
 
     auto& vbos = state->shps.at(shp);
-    set_gluniform(state->prog, "elem_faceted", (int)shp->norm.empty());
+    set_gluniform(state->prog, "elem_faceted", (int)shp->normals.empty());
     set_glvertexattrib(state->prog, "vert_pos", vbos.gl_pos, zero3f);
     set_glvertexattrib(state->prog, "vert_norm", vbos.gl_norm, zero3f);
     set_glvertexattrib(state->prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
@@ -571,13 +571,13 @@ void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
             auto area = 0.0f;
             if (!shp->triangles.empty()) {
                 for (auto t : shp->triangles)
-                    area += triangle_area(
-                        shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+                    area += triangle_area(shp->positions[t.x],
+                        shp->positions[t.y], shp->positions[t.z]);
             } else if (!shp->lines.empty()) {
                 for (auto l : shp->lines)
-                    area += line_length(shp->pos[l.x], shp->pos[l.y]);
+                    area += line_length(shp->positions[l.x], shp->positions[l.y]);
             } else {
-                area += shp->pos.size();
+                area += shp->positions.size();
             }
             auto ke = lgt->material->emission * area;
             lights_pos.push_back(transform_point(lgt->frame, pos));
@@ -616,26 +616,27 @@ draw_glstate* init_draw_state(glwindow* win) {
     state->prog          = make_glprogram(vertex, fragment);
     state->txts[nullptr] = {};
     for (auto txt : app->scn->textures) {
-        if (!txt->imgf.pixels.empty()) {
-            state->txts[txt] = make_gltexture(txt->imgf, true, true, true);
-        } else if (!txt->imgb.pixels.empty()) {
-            state->txts[txt] = make_gltexture(txt->imgb, txt->srgb, true, true);
+        if (!txt->hdr_image.pixels.empty()) {
+            state->txts[txt] = make_gltexture(txt->hdr_image, true, true, true);
+        } else if (!txt->ldr_image.pixels.empty()) {
+            state->txts[txt] = make_gltexture(
+                txt->ldr_image, !txt->ldr_as_linear, true, true);
         } else {
             printf("bad texture");
         }
     }
     for (auto& shp : app->scn->shapes) {
         auto vbos = glshape();
-        if (!shp->pos.empty())
-            vbos.gl_pos = make_glarraybuffer(shp->pos, false);
-        if (!shp->norm.empty())
-            vbos.gl_norm = make_glarraybuffer(shp->norm, false);
-        if (!shp->texcoord.empty())
-            vbos.gl_texcoord = make_glarraybuffer(shp->texcoord, false);
-        if (!shp->color.empty())
-            vbos.gl_color = make_glarraybuffer(shp->color, false);
-        if (!shp->tangsp.empty())
-            vbos.gl_tangsp = make_glarraybuffer(shp->tangsp, false);
+        if (!shp->positions.empty())
+            vbos.gl_pos = make_glarraybuffer(shp->positions, false);
+        if (!shp->normals.empty())
+            vbos.gl_norm = make_glarraybuffer(shp->normals, false);
+        if (!shp->texturecoords.empty())
+            vbos.gl_texcoord = make_glarraybuffer(shp->texturecoords, false);
+        if (!shp->colors.empty())
+            vbos.gl_color = make_glarraybuffer(shp->colors, false);
+        if (!shp->tangent_spaces.empty())
+            vbos.gl_tangsp = make_glarraybuffer(shp->tangent_spaces, false);
         if (!shp->points.empty())
             vbos.gl_points = make_glelementbuffer(shp->points, false);
         if (!shp->lines.empty())

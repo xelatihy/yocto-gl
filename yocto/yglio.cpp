@@ -977,26 +977,26 @@ bool load_scene_textures(
     scene* scn, const string& dirname, bool skip_missing, bool assign_opacity) {
     // load images
     for (auto txt : scn->textures) {
-        if (txt->path == "" || !txt->imgf.pixels.empty() ||
-            !txt->imgb.pixels.empty())
+        if (txt->filename == "" || !txt->hdr_image.pixels.empty() ||
+            !txt->ldr_image.pixels.empty())
             continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
+        auto filename = normalize_path(dirname + "/" + txt->filename);
         if (is_hdr_filename(filename)) {
-            txt->imgf = load_image4f(filename);
+            txt->hdr_image = load_image4f(filename);
         } else {
-            txt->imgb = load_image4b(filename);
+            txt->ldr_image = load_image4b(filename);
         }
-        if (txt->imgf.pixels.empty() && txt->imgb.pixels.empty()) {
+        if (txt->hdr_image.pixels.empty() && txt->ldr_image.pixels.empty()) {
             if (!skip_missing) return false;
         }
     }
 
     // load volumes
     for (auto txt : scn->voltextures) {
-        if (txt->path == "" || !txt->vol.voxels.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        txt->vol      = load_volume1f(filename);
-        if (txt->vol.voxels.empty()) {
+        if (txt->filename == "" || !txt->volume_data.voxels.empty()) continue;
+        auto filename    = normalize_path(dirname + "/" + txt->filename);
+        txt->volume_data = load_volume1f(filename);
+        if (txt->volume_data.voxels.empty()) {
             if (!skip_missing) return false;
         }
     }
@@ -1006,13 +1006,13 @@ bool load_scene_textures(
         auto has_opacity = unordered_map<texture*, bool>();
         for (auto& txt : scn->textures) {
             has_opacity[txt] = false;
-            for (auto& p : txt->imgf.pixels) {
+            for (auto& p : txt->hdr_image.pixels) {
                 if (p.w < 0.999f) {
                     has_opacity[txt] = true;
                     break;
                 }
             }
-            for (auto& p : txt->imgb.pixels) {
+            for (auto& p : txt->ldr_image.pixels) {
                 if (p.w < 255) {
                     has_opacity[txt] = true;
                     break;
@@ -1035,14 +1035,15 @@ bool save_scene_textures(
     const scene* scn, const string& dirname, bool skip_missing) {
     // save images
     for (auto txt : scn->textures) {
-        if (txt->imgf.pixels.empty() && txt->imgb.pixels.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
+        if (txt->hdr_image.pixels.empty() && txt->ldr_image.pixels.empty())
+            continue;
+        auto filename = normalize_path(dirname + "/" + txt->filename);
         if (is_hdr_filename(filename)) {
-            if (!save_image4f(filename, txt->imgf)) {
+            if (!save_image4f(filename, txt->hdr_image)) {
                 if (!skip_missing) return false;
             }
         } else {
-            if (!save_image4b(filename, txt->imgb)) {
+            if (!save_image4b(filename, txt->ldr_image)) {
                 if (!skip_missing) return false;
             }
         }
@@ -1050,9 +1051,9 @@ bool save_scene_textures(
 
     // save volumes
     for (auto txt : scn->voltextures) {
-        if (txt->vol.voxels.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + txt->path);
-        if (!save_volume1f(filename, txt->vol)) {
+        if (txt->volume_data.voxels.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + txt->filename);
+        if (!save_volume1f(filename, txt->volume_data)) {
             if (!skip_missing) return false;
         }
     }
@@ -1411,13 +1412,24 @@ bool dump_json_object(json& js, const texture* val, const scene* scn) {
     static const auto def = texture();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->path, "path", def.path)) return false;
-    if (!dump_json_value(js, val->clamp, "clamp", def.clamp)) return false;
-    if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
-    if (!dump_json_value(js, val->srgb, "srgb", def.srgb)) return false;
-    if (val->path == "") {
-        if (!dump_json_value(js, val->imgf, "imgf", def.imgf)) return false;
-        if (!dump_json_value(js, val->imgb, "imgb", def.imgb)) return false;
+    if (!dump_json_value(js, val->filename, "filename", def.filename))
+        return false;
+    if (!dump_json_value(
+            js, val->clamp_to_edge, "clamp_to_edge", def.clamp_to_edge))
+        return false;
+    if (!dump_json_value(js, val->height_scale, "height_scale", def.height_scale))
+        return false;
+    if (!dump_json_value(js, val->no_interpolation, "no_interpolation",
+            def.no_interpolation))
+        return false;
+    if (!dump_json_value(
+            js, val->ldr_as_linear, "ldr_as_linear", def.ldr_as_linear))
+        return false;
+    if (val->filename == "") {
+        if (!dump_json_value(js, val->hdr_image, "hdr_image", def.hdr_image))
+            return false;
+        if (!dump_json_value(js, val->ldr_image, "ldr_image", def.ldr_image))
+            return false;
     }
     return true;
 }
@@ -1431,40 +1443,41 @@ bool apply_json_procedural(const json& js, texture* val, const scene* scn) {
     auto width  = js.value("width", 512);
     auto height = js.value("height", 512);
     if (type == "grid") {
-        val->imgf = make_grid_image4f(width, height, js.value("tile", 8),
+        val->hdr_image = make_grid_image4f(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        val->imgf = make_checker_image4f(width, height, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+        val->hdr_image = make_checker_image4f(width, height,
+            js.value("tile", 8), js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val->imgf = make_bumpdimple_image4f(width, height, js.value("tile", 8));
+        val->hdr_image = make_bumpdimple_image4f(
+            width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
-        val->imgf = make_uvramp_image4f(width, height);
+        val->hdr_image = make_uvramp_image4f(width, height);
     } else if (type == "uvgrid") {
-        val->imgf = make_uvgrid_image4f(width, height);
+        val->hdr_image = make_uvgrid_image4f(width, height);
     } else if (type == "sky") {
         if (width < height * 2) width = height * 2;
-        val->imgf = make_sunsky_image4f(width, height,
+        val->hdr_image = make_sunsky_image4f(width, height,
             js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
             js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        is_hdr    = true;
+        is_hdr         = true;
     } else if (type == "noise") {
-        val->imgf = make_noise_image4f(
+        val->hdr_image = make_noise_image4f(
             width, height, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        val->imgf = make_fbm_image4f(width, height, js.value("scale", 1.0f),
+        val->hdr_image = make_fbm_image4f(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val->imgf = make_ridge_image4f(width, height, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("offset", 1.0f), js.value("octaves", 6),
-            js.value("wrap", true));
+        val->hdr_image = make_ridge_image4f(width, height,
+            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f), js.value("offset", 1.0f),
+            js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "turbulence") {
-        val->imgf = make_turbulence_image4f(width, height,
+        val->hdr_image = make_turbulence_image4f(width, height,
             js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
             js.value("gain", 0.5f), js.value("octaves", 6),
             js.value("wrap", true));
@@ -1472,20 +1485,21 @@ bool apply_json_procedural(const json& js, texture* val, const scene* scn) {
         throw runtime_error("unknown texture type " + type);
     }
     if (js.value("bump_to_normal", false)) {
-        val->imgf = bump_to_normal_map(val->imgf, js.value("bump_scale", 1.0f));
-        val->srgb = false;
+        val->hdr_image = bump_to_normal_map(
+            val->hdr_image, js.value("bump_scale", 1.0f));
+        val->ldr_as_linear = true;
     }
     if (!is_hdr) {
-        if (val->srgb) {
-            val->imgb = float_to_byte(linear_to_srgb(val->imgf));
+        if (!val->ldr_as_linear) {
+            val->ldr_image = float_to_byte(linear_to_srgb(val->hdr_image));
         } else {
-            val->imgb = float_to_byte(val->imgf);
+            val->ldr_image = float_to_byte(val->hdr_image);
         }
-        val->imgf = {};
+        val->hdr_image = {};
     }
-    if (val->path == "") {
-        auto ext  = (is_hdr) ? string("hdr") : string("png");
-        val->path = "textures/" + val->name + "." + ext;
+    if (val->filename == "") {
+        auto ext      = (is_hdr) ? string("hdr") : string("png");
+        val->filename = "textures/" + val->name + "." + ext;
     }
     return true;
 }
@@ -1495,12 +1509,23 @@ bool parse_json_object(const json& js, texture* val, const scene* scn) {
     static const auto def = texture();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->path, "path", def.path)) return false;
-    if (!parse_json_value(js, val->clamp, "clamp", def.clamp)) return false;
-    if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
-    if (!parse_json_value(js, val->srgb, "srgb", def.srgb)) return false;
-    if (!parse_json_value(js, val->imgf, "imgf", def.imgf)) return false;
-    if (!parse_json_value(js, val->imgb, "imgb", def.imgb)) return false;
+    if (!parse_json_value(js, val->filename, "filename", def.filename))
+        return false;
+    if (!parse_json_value(
+            js, val->clamp_to_edge, "clamp_to_edge", def.clamp_to_edge))
+        return false;
+    if (!parse_json_value(js, val->height_scale, "height_scale", def.height_scale))
+        return false;
+    if (!parse_json_value(js, val->no_interpolation, "no_interpolation",
+            def.no_interpolation))
+        return false;
+    if (!parse_json_value(
+            js, val->ldr_as_linear, "ldr_as_linear", def.ldr_as_linear))
+        return false;
+    if (!parse_json_value(js, val->hdr_image, "hdr_image", def.hdr_image))
+        return false;
+    if (!parse_json_value(js, val->ldr_image, "ldr_image", def.ldr_image))
+        return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
@@ -1510,10 +1535,16 @@ bool dump_json_object(json& js, const voltexture* val, const scene* scn) {
     static const auto def = voltexture();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->path, "path", def.path)) return false;
-    if (!dump_json_value(js, val->clamp, "clamp", def.clamp)) return false;
-    if (val->path == "") {
-        if (!val->vol.voxels.empty()) js["vol"] = val->vol;
+    if (!dump_json_value(js, val->filename, "filename", def.filename))
+        return false;
+    if (!dump_json_value(
+            js, val->clamp_to_edge, "clamp_to_edge", def.clamp_to_edge))
+        return false;
+    if (!dump_json_value(js, val->no_interpolation, "no_interpolation",
+            def.no_interpolation))
+        return false;
+    if (val->filename == "") {
+        if (!val->volume_data.voxels.empty()) js["vol"] = val->volume_data;
     }
     return true;
 }
@@ -1527,14 +1558,14 @@ bool apply_json_procedural(const json& js, voltexture* val, const scene* scn) {
     auto height = js.value("height", 512);
     auto depth  = js.value("depth", 512);
     if (type == "test_volume") {
-        val->vol = make_test_volume1f(width, height, depth,
+        val->volume_data = make_test_volume1f(width, height, depth,
             js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         throw runtime_error("unknown texture type " + type);
     }
-    if (val->path == "") {
-        auto ext  = string("vol");
-        val->path = "textures/" + val->name + "." + ext;
+    if (val->filename == "") {
+        auto ext      = string("vol");
+        val->filename = "textures/" + val->name + "." + ext;
     }
     return true;
 }
@@ -1544,8 +1575,16 @@ bool parse_json_object(const json& js, voltexture* val, const scene* scn) {
     static const auto def = voltexture();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->path, "path", def.path)) return false;
-    if (!parse_json_value(js, val->vol, "vol", def.vol)) return false;
+    if (!parse_json_value(js, val->filename, "filename", def.filename))
+        return false;
+    if (!parse_json_value(
+            js, val->clamp_to_edge, "clamp_to_edge", def.clamp_to_edge))
+        return false;
+    if (!parse_json_value(js, val->no_interpolation, "no_interpolation",
+            def.no_interpolation))
+        return false;
+    if (!parse_json_value(js, val->volume_data, "vol", def.volume_data))
+        return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
@@ -1700,21 +1739,27 @@ bool dump_json_object(json& js, const shape* val, const scene* scn) {
     static const auto def = shape();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->path, "path", def.path)) return false;
-    if (val->path == "") {
+    if (!dump_json_value(js, val->filename, "filename", def.filename))
+        return false;
+    if (val->filename == "") {
         if (!dump_json_value(js, val->points, "points", def.points))
             return false;
         if (!dump_json_value(js, val->lines, "lines", def.lines)) return false;
         if (!dump_json_value(js, val->triangles, "triangles", def.triangles))
             return false;
-        if (!dump_json_value(js, val->pos, "pos", def.pos)) return false;
-        if (!dump_json_value(js, val->norm, "norm", def.norm)) return false;
-        if (!dump_json_value(js, val->texcoord, "texcoord", def.texcoord))
+        if (!dump_json_value(js, val->positions, "positions", def.positions))
             return false;
-        if (!dump_json_value(js, val->color, "color", def.color)) return false;
+        if (!dump_json_value(js, val->normals, "normals", def.normals))
+            return false;
+        if (!dump_json_value(
+                js, val->texturecoords, "texturecoords", def.texturecoords))
+            return false;
+        if (!dump_json_value(js, val->colors, "colors", def.colors))
+            return false;
         if (!dump_json_value(js, val->radius, "radius", def.radius))
             return false;
-        if (!dump_json_value(js, val->tangsp, "tangsp", def.tangsp))
+        if (!dump_json_value(
+                js, val->tangent_spaces, "tangent_spaces", def.tangent_spaces))
             return false;
     }
     return true;
@@ -1788,7 +1833,7 @@ bool apply_json_procedural(const json& js, shape* val, const scene* scn) {
     } else if (type == "hairball") {
         auto base = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
         shp = make_hair(js.value("steps", vec2i{4, 65536}), base.triangles,
-            base.pos, base.norm, base.texcoord,
+            base.positions, base.normals, base.texturecoords,
             js.value("length", vec2f{0.2f, 0.2f}),
             js.value("radius", vec2f{0.001f, 0.001f}),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
@@ -1800,16 +1845,16 @@ bool apply_json_procedural(const json& js, shape* val, const scene* scn) {
         throw runtime_error("unknown shape type " + type);
     }
     if (js.value("flipyz", false)) {
-        for (auto& p : shp.pos) p = {p.x, p.z, p.y};
-        for (auto& n : shp.norm) n = {n.x, n.z, n.y};
+        for (auto& p : shp.positions) p = {p.x, p.z, p.y};
+        for (auto& n : shp.normals) n = {n.x, n.z, n.y};
     }
-    val->points    = shp.points;
-    val->lines     = shp.lines;
-    val->triangles = shp.triangles;
-    val->pos       = shp.pos;
-    val->norm      = shp.norm;
-    val->texcoord  = shp.texcoord;
-    val->radius    = shp.radius;
+    val->points        = shp.points;
+    val->lines         = shp.lines;
+    val->triangles     = shp.triangles;
+    val->positions     = shp.positions;
+    val->normals       = shp.normals;
+    val->texturecoords = shp.texturecoords;
+    val->radius        = shp.radius;
     return true;
 }
 
@@ -1818,18 +1863,24 @@ bool parse_json_object(const json& js, shape* val, const scene* scn) {
     static const auto def = shape();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->filename, "filename", def.filename))
+        return false;
     if (!parse_json_value(js, val->points, "points", def.points)) return false;
     if (!parse_json_value(js, val->lines, "lines", def.lines)) return false;
     if (!parse_json_value(js, val->triangles, "triangles", def.triangles))
         return false;
-    if (!parse_json_value(js, val->pos, "pos", def.pos)) return false;
-    if (!parse_json_value(js, val->norm, "norm", def.norm)) return false;
-    if (!parse_json_value(js, val->texcoord, "texcoord", def.texcoord))
+    if (!parse_json_value(js, val->positions, "positions", def.positions))
         return false;
-    if (!parse_json_value(js, val->color, "color", def.color)) return false;
+    if (!parse_json_value(js, val->normals, "normals", def.normals))
+        return false;
+    if (!parse_json_value(
+            js, val->texturecoords, "texturecoords", def.texturecoords))
+        return false;
+    if (!parse_json_value(js, val->colors, "color", def.colors)) return false;
     if (!parse_json_value(js, val->radius, "radius", def.radius)) return false;
-    if (!parse_json_value(js, val->tangsp, "tangsp", def.tangsp)) return false;
+    if (!parse_json_value(
+            js, val->tangent_spaces, "tangent_spaces", def.tangent_spaces))
+        return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
@@ -1839,7 +1890,8 @@ bool dump_json_object(json& js, const subdiv* val, const scene* scn) {
     static const auto def = subdiv();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->path, "path", def.path)) return false;
+    if (!dump_json_value(js, val->filename, "filename", def.filename))
+        return false;
     if (!dump_json_value(
             js, val->subdivision_level, "level", def.subdivision_level))
         return false;
@@ -1847,17 +1899,23 @@ bool dump_json_object(json& js, const subdiv* val, const scene* scn) {
         js["catmull_clark"] = val->catmull_clark;
     if (val->compute_normals != def.compute_normals)
         js["compute_normals"] = val->compute_normals;
-    if (val->path == "") {
-        if (!dump_json_value(js, val->quads_pos, "quads_pos", def.quads_pos))
+    if (val->filename == "") {
+        if (!dump_json_value(js, val->positions_quads, "positions_quads",
+                def.positions_quads))
             return false;
-        if (val->quads_texcoord != def.quads_texcoord)
-            js["quads_texcoord"] = val->quads_texcoord;
-        if (val->quads_color != def.quads_color)
-            js["quads_color"] = val->quads_color;
-        if (!dump_json_value(js, val->pos, "pos", def.pos)) return false;
-        if (!dump_json_value(js, val->texcoord, "texcoord", def.texcoord))
+        if (!dump_json_value(js, val->texturecoords_quads,
+                "texturecoords_quads", def.texturecoords_quads))
             return false;
-        if (!dump_json_value(js, val->color, "color", def.color)) return false;
+        if (!dump_json_value(
+                js, val->colors_quads, "colors_quads", def.colors_quads))
+            return false;
+        if (!dump_json_value(js, val->positions, "positions", def.positions))
+            return false;
+        if (!dump_json_value(
+                js, val->texturecoords, "texturecoords", def.texturecoords))
+            return false;
+        if (!dump_json_value(js, val->colors, "colors", def.colors))
+            return false;
     }
     return true;
 }
@@ -1874,21 +1932,21 @@ bool apply_json_procedural(const json& js, subdiv* val, const scene* scn) {
     } else if (type == "cube_open") {
         shp = make_fvcube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
-        shp.quads_pos.pop_back();
-        shp.quads_norm.pop_back();
+        shp.positions_quads.pop_back();
+        shp.normals_quads.pop_back();
         shp.quads_texcoord.pop_back();
     } else if (type == "suzanne") {
-        auto qshp     = make_suzanne(js.value("size", 2.0f), false);
-        shp.quads_pos = qshp.quads;
-        shp.pos       = qshp.pos;
+        auto qshp           = make_suzanne(js.value("size", 2.0f), false);
+        shp.positions_quads = qshp.quads;
+        shp.positions       = qshp.positions;
     } else {
         throw runtime_error("unknown shape type " + type);
     }
-    val->quads_pos      = shp.quads_pos;
-    val->pos            = shp.pos;
-    val->quads_texcoord = shp.quads_texcoord;
-    val->texcoord       = shp.texcoord;
-    if (val->path == "") val->path = "meshes/" + val->name + ".obj";
+    val->positions_quads     = shp.positions_quads;
+    val->positions           = shp.positions;
+    val->texturecoords_quads = shp.quads_texcoord;
+    val->texturecoords       = shp.texturecoords;
+    if (val->filename == "") val->filename = "meshes/" + val->name + ".obj";
     return true;
 }
 
@@ -1897,7 +1955,8 @@ bool parse_json_object(const json& js, subdiv* val, const scene* scn) {
     static const auto def = subdiv();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->filename, "filename", def.filename))
+        return false;
     if (!parse_json_value(js, val->subdivision_level, "subdivision_level",
             def.subdivision_level))
         return false;
@@ -1907,17 +1966,20 @@ bool parse_json_object(const json& js, subdiv* val, const scene* scn) {
     if (!parse_json_value(
             js, val->compute_normals, "compute_normals", def.compute_normals))
         return false;
-    if (!parse_json_value(js, val->quads_pos, "quads_pos", def.quads_pos))
+    if (!parse_json_value(
+            js, val->positions_quads, "positions_quads", def.positions_quads))
+        return false;
+    if (!parse_json_value(js, val->texturecoords_quads, "texturecoords_quads",
+            def.texturecoords_quads))
+        return false;
+    if (!parse_json_value(js, val->colors_quads, "colors_quads", def.colors_quads))
+        return false;
+    if (!parse_json_value(js, val->positions, positions, def.positions))
         return false;
     if (!parse_json_value(
-            js, val->quads_texcoord, "quads_texcoord", def.quads_texcoord))
+            js, val->texturecoords, "texturecoords", def.texturecoords))
         return false;
-    if (!parse_json_value(js, val->quads_color, "quads_color", def.quads_color))
-        return false;
-    if (!parse_json_value(js, val->pos, "pos", def.pos)) return false;
-    if (!parse_json_value(js, val->texcoord, "texcoord", def.texcoord))
-        return false;
-    if (!parse_json_value(js, val->color, "color", def.color)) return false;
+    if (!parse_json_value(js, val->colors, "colors", def.colors)) return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
@@ -1978,7 +2040,8 @@ bool dump_json_object(json& js, const environment* val, const scene* scn) {
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!dump_json_value(js, val->emission, "emission", def.emission))
         return false;
-    if (!dump_json_objref(js, val->emission_txt, "emission_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->emission_texture, "emission_txt", scn->textures))
         return false;
     return true;
 }
@@ -2001,7 +2064,8 @@ bool parse_json_object(const json& js, environment* val, const scene* scn) {
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!parse_json_value(js, val->emission, "emission", def.emission))
         return false;
-    if (!parse_json_objref(js, val->emission_txt, "emission_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->emission_texture, "emission_txt", scn->textures))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
@@ -2097,10 +2161,11 @@ bool dump_json_object(json& js, const animation* val, const scene* scn) {
     static const auto def = animation();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->path, "path", def.path)) return false;
+    if (!dump_json_value(js, val->filename, "filename", def.filename))
+        return false;
     if (!dump_json_value(js, val->group, "group", def.group)) return false;
     if (!dump_json_value(js, val->type, "type", def.type)) return false;
-    if (val->path == "") {
+    if (val->filename == "") {
         if (!dump_json_value(js, val->times, "times", def.times)) return false;
         if (val->translation != def.translation)
             js["translation"] = val->translation;
@@ -2129,7 +2194,8 @@ bool parse_json_object(const json& js, animation* val, const scene* scn) {
     static const auto def = animation();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->path, "path", def.path)) return false;
+    if (!parse_json_value(js, val->filename, "filename", def.filename))
+        return false;
     if (!parse_json_value(js, val->group, "group", def.group)) return false;
     if (!parse_json_value(js, val->type, "type", def.type)) return false;
     if (!parse_json_value(js, val->times, "times", def.times)) return false;
@@ -2182,8 +2248,8 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
         auto norm                = vector<vec3f>();
         auto texcoord            = vector<vec2f>();
         tie(pos, norm, texcoord) = sample_triangles_points(
-            base->shape->triangles, base->shape->pos, base->shape->norm,
-            base->shape->texcoord, num, seed);
+            base->shape->triangles, base->shape->positions,
+            base->shape->normals, base->shape->texturecoords, num, seed);
 
         auto nmap = unordered_map<instance*, int>();
         for (auto& ist : ists) nmap[ist.get()] = 0;
@@ -2258,23 +2324,24 @@ scene* load_json_scene(
     // load meshes
     auto dirname = get_dirname(filename);
     for (auto shp : scn->shapes) {
-        if (shp->path == "" || !shp->pos.empty()) continue;
-        auto filename = normalize_path(dirname + "/" + shp->path);
+        if (shp->filename == "" || !shp->positions.empty()) continue;
+        auto filename = normalize_path(dirname + "/" + shp->filename);
         if (!load_mesh(filename, shp->points, shp->lines, shp->triangles,
-                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius)) {
+                shp->positions, shp->normals, shp->texturecoords, shp->colors,
+                shp->radius)) {
             if (!skip_missing) return nullptr;
         }
     }
 
     // load suddivs
     for (auto sbd : scn->subdivs) {
-        if (sbd->path == "" || !sbd->pos.empty()) continue;
-        auto filename   = normalize_path(dirname + "/" + sbd->path);
+        if (sbd->filename == "" || !sbd->positions.empty()) continue;
+        auto filename   = normalize_path(dirname + "/" + sbd->filename);
         auto quads_norm = vector<vec4i>();
         auto norm       = vector<vec3f>();
-        if (!load_fvmesh(filename, sbd->quads_pos, sbd->pos, quads_norm, norm,
-                sbd->quads_texcoord, sbd->texcoord, sbd->quads_color,
-                sbd->color)) {
+        if (!load_fvmesh(filename, sbd->positions_quads, sbd->positions,
+                quads_norm, norm, sbd->texturecoords_quads, sbd->texturecoords,
+                sbd->colors_quads, sbd->colors)) {
             if (!skip_missing) return nullptr;
         }
     }
@@ -2315,21 +2382,22 @@ bool save_json_scene(const string& filename, const scene* scn,
     // save meshes
     auto dirname = get_dirname(filename);
     for (auto& shp : scn->shapes) {
-        if (shp->path == "") continue;
-        auto filename = normalize_path(dirname + "/" + shp->path);
+        if (shp->filename == "") continue;
+        auto filename = normalize_path(dirname + "/" + shp->filename);
         if (!save_mesh(filename, shp->points, shp->lines, shp->triangles,
-                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius)) {
+                shp->positions, shp->normals, shp->texturecoords, shp->colors,
+                shp->radius)) {
             if (!skip_missing) return false;
         }
     }
 
     // save subdivs
     for (auto& sbd : scn->subdivs) {
-        if (sbd->path == "") continue;
-        auto filename = normalize_path(dirname + "/" + sbd->path);
-        if (!save_fvmesh(filename, sbd->quads_pos, sbd->pos, {}, {},
-                sbd->quads_texcoord, sbd->texcoord, sbd->quads_color,
-                sbd->color)) {
+        if (sbd->filename == "") continue;
+        auto filename = normalize_path(dirname + "/" + sbd->filename);
+        if (!save_fvmesh(filename, sbd->positions_quads, sbd->positions, {}, {},
+                sbd->texturecoords_quads, sbd->texturecoords, sbd->colors_quads,
+                sbd->colors)) {
             if (!skip_missing) return false;
         }
     }
@@ -2763,9 +2831,9 @@ scene* load_obj_scene(const string& filename, bool load_textures,
     // add object if needed
     auto is_instance_empty = [](instance* ist) {
         if (ist->subdiv) {
-            return ist->subdiv->pos.empty();
+            return ist->subdiv->positions.empty();
         } else if (ist->shape) {
-            return ist->shape->pos.empty();
+            return ist->shape->positions.empty();
         } else {
             return true;
         }
@@ -2802,17 +2870,18 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         return ist;
     };
     // Parse texture options and name
-    auto add_texture = [&scn, &tmap](const obj_texture_info& info, bool srgb) {
+    auto add_texture = [&scn, &tmap](
+                           const obj_texture_info& info, bool force_linear) {
         if (info.path == "") return (texture*)nullptr;
         if (tmap.find(info.path) != tmap.end()) { return tmap.at(info.path); }
 
         // create texture
-        auto txt   = new texture();
-        txt->name  = info.path;
-        txt->path  = info.path;
-        txt->clamp = info.clamp;
-        txt->scale = info.scale;
-        txt->srgb  = srgb && !is_hdr_filename(info.path);
+        auto txt           = new texture();
+        txt->name          = info.path;
+        txt->filename      = info.path;
+        txt->clamp_to_edge = info.clamp;
+        txt->height_scale  = info.scale;
+        txt->ldr_as_linear = force_linear || is_hdr_filename(info.path);
         scn->textures.push_back(txt);
         tmap[info.path] = txt;
 
@@ -2824,9 +2893,9 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
 
         // create texture
-        auto txt  = new voltexture();
-        txt->name = info.path;
-        txt->path = info.path;
+        auto txt      = new voltexture();
+        txt->name     = info.path;
+        txt->filename = info.path;
         scn->voltextures.push_back(txt);
         vmap[info.path] = txt;
 
@@ -2837,12 +2906,15 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         for (auto& vert : verts) {
             auto it = vert_map.find(vert);
             if (it != vert_map.end()) continue;
-            auto nverts = (int)ist->shape->pos.size();
+            auto nverts = (int)ist->shape->positions.size();
             vert_map.insert(it, {vert, nverts});
-            if (vert.pos) ist->shape->pos.push_back(opos.at(vert.pos - 1));
+            if (vert.pos)
+                ist->shape->positions.push_back(opos.at(vert.pos - 1));
             if (vert.texcoord)
-                ist->shape->texcoord.push_back(otexcoord.at(vert.texcoord - 1));
-            if (vert.norm) ist->shape->norm.push_back(onorm.at(vert.norm - 1));
+                ist->shape->texturecoords.push_back(
+                    otexcoord.at(vert.texcoord - 1));
+            if (vert.norm)
+                ist->shape->normals.push_back(onorm.at(vert.norm - 1));
         }
     };
 
@@ -2907,16 +2979,16 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         mat->transmission           = omat.kt;
         mat->roughness              = omat.rs;
         mat->opacity                = omat.op;
-        mat->emission_texture       = add_texture(omat.ke_txt, true);
-        mat->diffuse_texture        = add_texture(omat.kd_txt, true);
-        mat->specular_texture       = add_texture(omat.ks_txt, true);
-        mat->transmission_texture   = add_texture(omat.kt_txt, true);
-        mat->opacity_texture        = add_texture(omat.op_txt, false);
-        mat->roughness_texture      = add_texture(omat.rs_txt, false);
-        mat->occlusion_texture      = add_texture(omat.occ_txt, false);
-        mat->bump_texture           = add_texture(omat.bump_txt, false);
-        mat->displacement_texture   = add_texture(omat.disp_txt, false);
-        mat->normal_texture         = add_texture(omat.norm_txt, false);
+        mat->emission_texture       = add_texture(omat.ke_txt, false);
+        mat->diffuse_texture        = add_texture(omat.kd_txt, false);
+        mat->specular_texture       = add_texture(omat.ks_txt, false);
+        mat->transmission_texture   = add_texture(omat.kt_txt, false);
+        mat->opacity_texture        = add_texture(omat.op_txt, true);
+        mat->roughness_texture      = add_texture(omat.rs_txt, true);
+        mat->occlusion_texture      = add_texture(omat.occ_txt, true);
+        mat->bump_texture           = add_texture(omat.bump_txt, true);
+        mat->displacement_texture   = add_texture(omat.disp_txt, true);
+        mat->normal_texture         = add_texture(omat.norm_txt, true);
         mat->volume_emission        = omat.ve;
         mat->volume_albedo          = omat.va;
         mat->volume_density         = omat.vd;
@@ -2937,10 +3009,10 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         scn->cameras.push_back(cam);
     };
     cb.environmnet = [&](const obj_environment& oenv) {
-        auto env          = new environment();
-        env->name         = oenv.name;
-        env->emission     = oenv.ke;
-        env->emission_txt = add_texture(oenv.ke_txt, true);
+        auto env              = new environment();
+        env->name             = oenv.name;
+        env->emission         = oenv.ke;
+        env->emission_texture = add_texture(oenv.ke_txt, true);
         scn->environments.push_back(env);
     };
 
@@ -3003,25 +3075,25 @@ bool save_mtl(const string& filename, const scene* scn, bool flip_tr = true) {
         if (mat->opacity != 1.0f) print(fs, "  d {}\n", mat->opacity);
         if (mat->roughness != -1.0f) print(fs, "  Pr {}\n", mat->roughness);
         if (mat->emission_texture)
-            print(fs, "  map_Ke {}\n", mat->emission_texture->path);
+            print(fs, "  map_Ke {}\n", mat->emission_texture->filename);
         if (mat->diffuse_texture)
-            print(fs, "  map_Kd {}\n", mat->diffuse_texture->path);
+            print(fs, "  map_Kd {}\n", mat->diffuse_texture->filename);
         if (mat->specular_texture)
-            print(fs, "  map_Ks {}\n", mat->specular_texture->path);
+            print(fs, "  map_Ks {}\n", mat->specular_texture->filename);
         if (mat->transmission_texture)
-            print(fs, "  map_Kt {}\n", mat->transmission_texture->path);
+            print(fs, "  map_Kt {}\n", mat->transmission_texture->filename);
         if (mat->opacity_texture && mat->opacity_texture != mat->diffuse_texture)
-            print(fs, "  map_d  {}\n", mat->opacity_texture->path);
+            print(fs, "  map_d  {}\n", mat->opacity_texture->filename);
         if (mat->roughness_texture)
-            print(fs, "  map_Pr {}\n", mat->roughness_texture->path);
+            print(fs, "  map_Pr {}\n", mat->roughness_texture->filename);
         if (mat->occlusion_texture)
-            print(fs, "  map_occ {}\n", mat->occlusion_texture->path);
+            print(fs, "  map_occ {}\n", mat->occlusion_texture->filename);
         if (mat->bump_texture)
-            print(fs, "  map_bump {}\n", mat->bump_texture->path);
+            print(fs, "  map_bump {}\n", mat->bump_texture->filename);
         if (mat->displacement_texture)
-            print(fs, "  map_disp {}\n", mat->displacement_texture->path);
+            print(fs, "  map_disp {}\n", mat->displacement_texture->filename);
         if (mat->normal_texture)
-            print(fs, "  map_norm {}\n", mat->normal_texture->path);
+            print(fs, "  map_norm {}\n", mat->normal_texture->filename);
         if (mat->volume_emission != zero3f)
             print(fs, "  Ve {}\n", mat->volume_emission);
         if (mat->volume_density != zero3f)
@@ -3030,7 +3102,7 @@ bool save_mtl(const string& filename, const scene* scn, bool flip_tr = true) {
             print(fs, "  Va {}\n", mat->volume_albedo);
         if (mat->volume_phaseg != 0) print(fs, "  Vg {}\n", mat->volume_phaseg);
         if (mat->volume_density_texture)
-            print(fs, "  map_Vd {}\n", mat->volume_density_texture->path);
+            print(fs, "  map_Vd {}\n", mat->volume_density_texture->filename);
         print(fs, "\n");
     }
 
@@ -3053,7 +3125,8 @@ bool save_objx(const string& filename, const scene* scn) {
     // environments
     for (auto env : scn->environments) {
         print(fs, "e {} {} {} {}\n", env->name.c_str(), env->emission,
-            ((env->emission_txt) ? env->emission_txt->path.c_str() : "\"\""),
+            ((env->emission_texture) ? env->emission_texture->filename.c_str() :
+                                       "\"\""),
             env->frame);
     }
 
@@ -3091,24 +3164,24 @@ bool save_obj(
             print(fs, "o {}\n", ist->name);
             if (ist->material) print(fs, "usemtl {}\n", ist->material->name);
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->shape->pos) print(fs, "v {}\n", p);
-                for (auto& n : ist->shape->norm) print(fs, "vn {}\n", n);
-                for (auto& t : ist->shape->texcoord)
+                for (auto& p : ist->shape->positions) print(fs, "v {}\n", p);
+                for (auto& n : ist->shape->normals) print(fs, "vn {}\n", n);
+                for (auto& t : ist->shape->texturecoords)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
-                for (auto& pp : ist->shape->pos) {
+                for (auto& pp : ist->shape->positions) {
                     print(fs, "v {}\n", transform_point(ist->frame, pp));
                 }
-                for (auto& nn : ist->shape->norm) {
+                for (auto& nn : ist->shape->normals) {
                     print(fs, "vn {}\n", transform_direction(ist->frame, nn));
                 }
-                for (auto& t : ist->shape->texcoord)
+                for (auto& t : ist->shape->texturecoords)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
-            auto mask = obj_vertex{1, ist->shape->texcoord.empty() ? 0 : 1,
-                ist->shape->norm.empty() ? 0 : 1};
+            auto mask = obj_vertex{1, ist->shape->texturecoords.empty() ? 0 : 1,
+                ist->shape->normals.empty() ? 0 : 1};
             auto vert = [mask, offset](int i) {
                 return obj_vertex{(i + offset.pos + 1) * mask.pos,
                     (i + offset.texcoord + 1) * mask.texcoord,
@@ -3122,34 +3195,34 @@ bool save_obj(
                 print(fs, "l {} {}\n", to_string(vert(l.x)),
                     to_string(vert(l.y)));
             }
-            offset.pos += ist->shape->pos.size();
-            offset.texcoord += ist->shape->texcoord.size();
-            offset.norm += ist->shape->norm.size();
+            offset.pos += ist->shape->positions.size();
+            offset.texcoord += ist->shape->texturecoords.size();
+            offset.norm += ist->shape->normals.size();
         } else {
             print(fs, "o {}\n", ist->name);
             if (ist->material) print(fs, "usemtl {}\n", ist->material->name);
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->subdiv->pos) print(fs, "v {}\n", p);
-                for (auto& t : ist->subdiv->texcoord)
+                for (auto& p : ist->subdiv->positions) print(fs, "v {}\n", p);
+                for (auto& t : ist->subdiv->texturecoords)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
-                for (auto& pp : ist->subdiv->pos) {
+                for (auto& pp : ist->subdiv->positions) {
                     auto p = transform_point(ist->frame, pp);
                     print(fs, "v {}\n", p);
                 }
-                for (auto& t : ist->subdiv->texcoord)
+                for (auto& t : ist->subdiv->texturecoords)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
-            if (!ist->subdiv->texcoord.empty()) {
+            if (!ist->subdiv->texturecoords.empty()) {
                 auto vert = [offset](int ip, int it) {
                     return obj_vertex{
                         ip + offset.pos + 1, it + offset.texcoord + 1, 0};
                 };
-                for (auto i = 0; i < ist->subdiv->quads_pos.size(); i++) {
-                    auto qp = ist->subdiv->quads_pos[i];
-                    auto qt = ist->subdiv->quads_texcoord[i];
+                for (auto i = 0; i < ist->subdiv->positions_quads.size(); i++) {
+                    auto qp = ist->subdiv->positions_quads[i];
+                    auto qt = ist->subdiv->texturecoords_quads[i];
                     if (qp.z == qp.w) {
                         print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
                             to_string(vert(qp.y, qt.y)),
@@ -3165,7 +3238,7 @@ bool save_obj(
                 auto vert = [offset](int ip) {
                     return obj_vertex{ip + offset.pos + 1, 0, 0};
                 };
-                for (auto& q : ist->subdiv->quads_pos) {
+                for (auto& q : ist->subdiv->positions_quads) {
                     if (q.z == q.w) {
                         print(fs, "f {} {} {}\n", to_string(vert(q.x)),
                             to_string(vert(q.y)), to_string(vert(q.z)));
@@ -3176,8 +3249,8 @@ bool save_obj(
                     }
                 }
             }
-            offset.pos += ist->subdiv->pos.size();
-            offset.texcoord += ist->subdiv->texcoord.size();
+            offset.pos += ist->subdiv->positions.size();
+            offset.texcoord += ist->subdiv->texturecoords.size();
         }
     }
 
@@ -3224,12 +3297,12 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
     // convert textures
     if (gltf.count("images")) {
         for (auto iid = 0; iid < gltf.at("images").size(); iid++) {
-            auto& gimg = gltf.at("images").at(iid);
-            auto  txt  = new texture();
-            txt->name  = gimg.value("name", ""s);
-            txt->path  = (startswith(gimg.value("uri", ""s), "data:")) ?
-                            string("[glTF-inline].png") :
-                            gimg.value("uri", ""s);
+            auto& gimg    = gltf.at("images").at(iid);
+            auto  txt     = new texture();
+            txt->name     = gimg.value("name", ""s);
+            txt->filename = (startswith(gimg.value("uri", ""s), "data:")) ?
+                                string("[glTF-inline].png") :
+                                gimg.value("uri", ""s);
             scn->textures.push_back(txt);
         }
     }
@@ -3261,7 +3334,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
     }
 
     // add a texture
-    auto add_texture = [scn, &gltf](const json& ginfo, bool srgb) {
+    auto add_texture = [scn, &gltf](const json& ginfo, bool force_linear) {
         if (!gltf.count("images") || !gltf.count("textures"))
             return (texture*)nullptr;
         if (ginfo.is_null() || ginfo.empty()) return (texture*)nullptr;
@@ -3272,11 +3345,12 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
         auto txt = scn->textures.at(gtxt.value("source", -1));
         if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
             return txt;
-        auto& gsmp = gltf.at("samplers").at(gtxt.value("sampler", -1));
-        txt->clamp = gsmp.value("wrapS", ""s) == "ClampToEdge" ||
-                     gsmp.value("wrapT", ""s) == "ClampToEdge";
-        txt->scale = gsmp.value("scale", 1.0f) * gsmp.value("strength", 1.0f);
-        txt->srgb  = srgb && !is_hdr_filename(txt->path);
+        auto& gsmp         = gltf.at("samplers").at(gtxt.value("sampler", -1));
+        txt->clamp_to_edge = gsmp.value("wrapS", ""s) == "ClampToEdge" ||
+                             gsmp.value("wrapT", ""s) == "ClampToEdge";
+        txt->height_scale = gsmp.value("scale", 1.0f) *
+                            gsmp.value("strength", 1.0f);
+        txt->ldr_as_linear = force_linear || is_hdr_filename(txt->filename);
         return txt;
     };
 
@@ -3289,11 +3363,9 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
             mat->emission = gmat.value("emissiveFactor", zero3f);
             if (gmat.count("emissiveTexture"))
                 mat->emission_texture = add_texture(
-                    gmat.at("emissiveTexture"), true);
-            if (gmat.count("extensions") && gmat.at("extensions")
-                                                .count("KHR_materials_"
-                                                       "pbrSpecularGlossines"
-                                                       "s")) {
+                    gmat.at("emissiveTexture"), false);
+            if (gmat.count("extensions") &&
+                gmat.at("extensions").count("KHR_materials_pbrSpecularGlossiness")) {
                 mat->base_metallic = false;
                 mat->gltf_textures = true;
                 auto& gsg          = gmat.at("extensions")
@@ -3305,10 +3377,10 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                 mat->roughness = 1 - gsg.value("glossinessFactor", 1.0f);
                 if (gsg.count("diffuseTexture"))
                     mat->diffuse_texture = add_texture(
-                        gsg.at("diffuseTexture"), true);
+                        gsg.at("diffuseTexture"), false);
                 if (gsg.count("specularGlossinessTexture"))
                     mat->specular_texture = add_texture(
-                        gsg.at("specularGlossinessTexture"), true);
+                        gsg.at("specularGlossinessTexture"), false);
                 mat->roughness_texture = mat->specular_texture;
             } else if (gmat.count("pbrMetallicRoughness")) {
                 mat->base_metallic = true;
@@ -3322,19 +3394,18 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                 mat->roughness = gmr.value("roughnessFactor", 1.0f);
                 if (gmr.count("baseColorTexture"))
                     mat->diffuse_texture = add_texture(
-                        gmr.at("baseColorTexture"), true);
+                        gmr.at("baseColorTexture"), false);
                 if (gmr.count("metallicRoughnessTexture"))
                     mat->specular_texture = add_texture(
-                        gmr.at("metallicRoughnessTexture"), false);
+                        gmr.at("metallicRoughnessTexture"), true);
                 mat->roughness_texture = mat->specular_texture;
             }
             if (gmat.count("occlusionTexture"))
                 mat->occlusion_texture = add_texture(
-                    gmat.at("occlusionTexture"), false);
+                    gmat.at("occlusionTexture"), true);
             if (gmat.count("normalTexture"))
-                mat->normal_texture = add_texture(
-                    gmat.at("normalTexture"), false);
-            mat->double_sided = gmat.value("doubleSided", false);
+                mat->normal_texture = add_texture(gmat.at("normalTexture"), true);
+            mat->double_sided = gmat.value("doubleSided", true);
             scn->materials.push_back(mat);
         }
     }
@@ -3412,34 +3483,34 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                                      .at(gattr_it.value().get<int>());
                     auto vals = accessor_values(gacc);
                     if (semantic == "POSITION") {
-                        shp->pos.reserve(vals.size());
+                        shp->positions.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            shp->pos.push_back({(float)vals[i][0],
+                            shp->positions.push_back({(float)vals[i][0],
                                 (float)vals[i][1], (float)vals[i][2]});
                     } else if (semantic == "NORMAL") {
-                        shp->norm.reserve(vals.size());
+                        shp->normals.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            shp->norm.push_back({(float)vals[i][0],
+                            shp->normals.push_back({(float)vals[i][0],
                                 (float)vals[i][1], (float)vals[i][2]});
                     } else if (semantic == "TEXCOORD" ||
                                semantic == "TEXCOORD_0") {
-                        shp->texcoord.reserve(vals.size());
+                        shp->texturecoords.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            shp->texcoord.push_back(
+                            shp->texturecoords.push_back(
                                 {(float)vals[i][0], (float)vals[i][1]});
                     } else if (semantic == "COLOR" || semantic == "COLOR_0") {
-                        shp->color.reserve(vals.size());
+                        shp->colors.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            shp->color.push_back(
+                            shp->colors.push_back(
                                 {(float)vals[i][0], (float)vals[i][1],
                                     (float)vals[i][2], (float)vals[i][3]});
                     } else if (semantic == "TANGENT") {
-                        shp->tangsp.reserve(vals.size());
+                        shp->tangent_spaces.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
-                            shp->tangsp.push_back(
+                            shp->tangent_spaces.push_back(
                                 {(float)vals[i][0], (float)vals[i][1],
                                     (float)vals[i][2], (float)vals[i][3]});
-                        for (auto& t : shp->tangsp) t.w = -t.w;
+                        for (auto& t : shp->tangent_spaces) t.w = -t.w;
                     } else if (semantic == "RADIUS") {
                         shp->radius.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
@@ -3453,35 +3524,35 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                 if (!gprim.count("indices")) {
                     if (mode == 4) {
                         // triangles
-                        shp->triangles.reserve(shp->pos.size() / 3);
-                        for (auto i = 0; i < shp->pos.size() / 3; i++)
+                        shp->triangles.reserve(shp->positions.size() / 3);
+                        for (auto i = 0; i < shp->positions.size() / 3; i++)
                             shp->triangles.push_back(
                                 {i * 3 + 0, i * 3 + 1, i * 3 + 2});
                     } else if (mode == 6) {
                         // triangle fan
-                        shp->triangles.reserve(shp->pos.size() - 2);
-                        for (auto i = 2; i < shp->pos.size(); i++)
+                        shp->triangles.reserve(shp->positions.size() - 2);
+                        for (auto i = 2; i < shp->positions.size(); i++)
                             shp->triangles.push_back({0, i - 1, i});
                     } else if (mode == 5) {
                         // triangle strip
-                        shp->triangles.reserve(shp->pos.size() - 2);
-                        for (auto i = 2; i < shp->pos.size(); i++)
+                        shp->triangles.reserve(shp->positions.size() - 2);
+                        for (auto i = 2; i < shp->positions.size(); i++)
                             shp->triangles.push_back({i - 2, i - 1, i});
                     } else if (mode == 1) {
                         // lines
-                        shp->lines.reserve(shp->pos.size() / 2);
-                        for (auto i = 0; i < shp->pos.size() / 2; i++)
+                        shp->lines.reserve(shp->positions.size() / 2);
+                        for (auto i = 0; i < shp->positions.size() / 2; i++)
                             shp->lines.push_back({i * 2 + 0, i * 2 + 1});
                     } else if (mode == 2) {
                         // line loop
-                        shp->lines.reserve(shp->pos.size());
-                        for (auto i = 1; i < shp->pos.size(); i++)
+                        shp->lines.reserve(shp->positions.size());
+                        for (auto i = 1; i < shp->positions.size(); i++)
                             shp->lines.push_back({i - 1, i});
-                        shp->lines.back() = {(int)shp->pos.size() - 1, 0};
+                        shp->lines.back() = {(int)shp->positions.size() - 1, 0};
                     } else if (mode == 3) {
                         // line strip
-                        shp->lines.reserve(shp->pos.size() - 1);
-                        for (auto i = 1; i < shp->pos.size(); i++)
+                        shp->lines.reserve(shp->positions.size() - 1);
+                        for (auto i = 1; i < shp->positions.size(); i++)
                             shp->lines.push_back({i - 1, i});
                     } else if (mode == -1 || mode == 0) {
                         // points
@@ -3814,7 +3885,7 @@ bool scene_to_gltf(const scene* scn, json& js) {
     for (auto& txt : scn->textures) {
         auto tjs = json(), ijs = json();
         tjs["source"] = (int)js["images"].size();
-        ijs["uri"]    = txt->path;
+        ijs["uri"]    = txt->filename;
         js["images"].push_back(ijs);
         js["textures"].push_back(tjs);
         tmap[txt] = (int)js["textures"].size() - 1;
@@ -3876,7 +3947,7 @@ bool scene_to_gltf(const scene* scn, json& js) {
         mjs["primitives"] = json::array();
         bjs["name"]       = shp->name;
         bjs["byteLength"] = 0;
-        bjs["uri"]        = replace_extension(shp->path, ".bin");
+        bjs["uri"]        = replace_extension(shp->filename, ".bin");
         auto mat_it       = shape_mats.find(shp);
         if (mat_it != shape_mats.end()) pjs["material"] = mat_it->second;
         auto add_accessor = [&js, &bjs, bid](
@@ -3900,14 +3971,14 @@ bool scene_to_gltf(const scene* scn, json& js) {
             js["bufferViews"].push_back(vjs);
             return (int)js["accessors"].size() - 1;
         };
-        auto nverts = (int)shp->pos.size();
-        if (!shp->pos.empty())
+        auto nverts = (int)shp->positions.size();
+        if (!shp->positions.empty())
             pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
-        if (!shp->norm.empty())
+        if (!shp->normals.empty())
             pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
-        if (!shp->texcoord.empty())
+        if (!shp->texturecoords.empty())
             pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
-        if (!shp->color.empty())
+        if (!shp->colors.empty())
             pjs["attributes"]["COLOR_0"] = add_accessor(nverts, "VEC4");
         if (!shp->radius.empty())
             pjs["attributes"]["RADIUS"] = add_accessor(nverts, "SCALAR");
@@ -3976,10 +4047,10 @@ bool save_gltf_mesh(const string& filename, const shape* shp) {
     auto fs = open(filename, "wb");
     if (!fs) return false;
 
-    if (!write_values(fs, shp->pos)) return false;
-    if (!write_values(fs, shp->norm)) return false;
-    if (!write_values(fs, shp->texcoord)) return false;
-    if (!write_values(fs, shp->color)) return false;
+    if (!write_values(fs, shp->positions)) return false;
+    if (!write_values(fs, shp->normals)) return false;
+    if (!write_values(fs, shp->texturecoords)) return false;
+    if (!write_values(fs, shp->colors)) return false;
     if (!write_values(fs, shp->radius)) return false;
     if (!write_values(fs, shp->lines)) return false;
     if (!write_values(fs, shp->triangles)) return false;
@@ -4000,8 +4071,8 @@ bool save_gltf_scene(const string& filename, const scene* scn,
     // meshes
     auto dirname = get_dirname(filename);
     for (auto& shp : scn->shapes) {
-        if (shp->path == "") continue;
-        auto filename = normalize_path(dirname + "/" + shp->path);
+        if (shp->filename == "") continue;
+        auto filename = normalize_path(dirname + "/" + shp->filename);
         filename      = replace_extension(filename, ".bin");
         if (!save_gltf_mesh(filename, shp)) {
             if (!skip_missing) return false;
@@ -4363,9 +4434,11 @@ scene* load_pbrt_scene(
                 txt_map[txt->name] = txt;
                 auto type          = jcmd.at("type").get<string>();
                 if (type == "imagemap") {
-                    txt->path = jcmd.at("filename").get<string>();
-                    if (get_extension(txt->path) == "pfm")
-                        txt->path = replace_extension(txt->path, ".hdr");
+                    txt->filename = jcmd.at("filename").get<string>();
+                    if (get_extension(txt->filename) == "pfm")
+                        txt->filename = replace_extension(txt->filename,
+                            ".hd"
+                            "r");
                 } else {
                     printf("%s texture not supported\n", type.c_str());
                 }
@@ -4406,9 +4479,8 @@ scene* load_pbrt_scene(
                     if (jcmd.count("opacity")) {
                         auto op         = vec3f{0, 0, 0};
                         auto op_txt     = (texture*)nullptr;
-                        tie(op, op_txt) = get_scaled_texture(
-                            jcmd.at("opacity"));
-                        mat->opacity         = (op.x + op.y + op.z) / 3;
+                        tie(op, op_txt) = get_scaled_texture(jcmd.at("opacity"));
+                        mat->opacity    = (op.x + op.y + op.z) / 3;
                         mat->opacity_texture = op_txt;
                     }
                     mat->roughness = 0;
@@ -4497,48 +4569,50 @@ scene* load_pbrt_scene(
             if (type == "plymesh") {
                 auto filename = jcmd.at("filename").get<string>();
                 shp->name     = get_filename(filename);
-                shp->path     = filename;
+                shp->filename = filename;
                 if (!load_ply_mesh(dirname_ + "/" + filename, shp->points,
-                        shp->lines, shp->triangles, shp->pos, shp->norm,
-                        shp->texcoord, shp->color, shp->radius))
+                        shp->lines, shp->triangles, shp->positions, shp->normals,
+                        shp->texturecoords, shp->colors, shp->radius))
                     return nullptr;
             } else if (type == "trianglemesh") {
-                shp->name = "mesh" + std::to_string(sid++);
-                shp->path = "models/" + shp->name + ".ply";
+                shp->name     = "mesh" + std::to_string(sid++);
+                shp->filename = "models/" + shp->name + ".ply";
                 if (jcmd.count("indices"))
                     shp->triangles = get_vector_vec3i(jcmd.at("indices"));
-                if (jcmd.count("P")) shp->pos = get_vector_vec3f(jcmd.at("P"));
-                if (jcmd.count("N")) shp->norm = get_vector_vec3f(jcmd.at("N"));
+                if (jcmd.count("P"))
+                    shp->positions = get_vector_vec3f(jcmd.at("P"));
+                if (jcmd.count("N"))
+                    shp->normals = get_vector_vec3f(jcmd.at("N"));
                 if (jcmd.count("uv"))
-                    shp->texcoord = get_vector_vec2f(jcmd.at("uv"));
+                    shp->texturecoords = get_vector_vec2f(jcmd.at("uv"));
             } else if (type == "sphere") {
-                shp->name   = "sphere" + std::to_string(sid++);
-                shp->path   = "models/" + shp->name + ".ply";
-                auto radius = 1.0f;
+                shp->name     = "sphere" + std::to_string(sid++);
+                shp->filename = "models/" + shp->name + ".ply";
+                auto radius   = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                auto sshp     = make_sphere({64, 32}, 2 * radius, {1, 1}, true);
-                shp->pos      = sshp.pos;
-                shp->norm     = sshp.norm;
-                shp->texcoord = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                auto sshp = make_sphere({64, 32}, 2 * radius, {1, 1}, true);
+                shp->positions     = sshp.positions;
+                shp->normals       = sshp.normals;
+                shp->texturecoords = sshp.texturecoords;
+                shp->triangles     = sshp.triangles;
             } else if (type == "disk") {
-                shp->name   = "disk" + std::to_string(sid++);
-                shp->path   = "models/" + shp->name + ".ply";
-                auto radius = 1.0f;
+                shp->name     = "disk" + std::to_string(sid++);
+                shp->filename = "models/" + shp->name + ".ply";
+                auto radius   = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 auto sshp      = make_disk({32, 16}, 2 * radius, {1, 1}, true);
-                shp->pos       = sshp.pos;
-                shp->norm      = sshp.norm;
-                shp->texcoord  = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->positions = sshp.positions;
+                shp->normals   = sshp.normals;
+                shp->texturecoords = sshp.texturecoords;
+                shp->triangles     = sshp.triangles;
             } else {
                 printf("%s shape not supported\n", type.c_str());
             }
             auto frame = stack.back().frame;
             auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
-            for (auto& p : shp->pos) p *= scl;
+            for (auto& p : shp->positions) p *= scl;
             frame = {normalize(frame.x), normalize(frame.y), normalize(frame.z),
                 frame.o};
             if (stack.back().reverse) {
@@ -4590,11 +4664,11 @@ scene* load_pbrt_scene(
                 if (jcmd.count("scale"))
                     env->emission *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {
-                    auto txt  = new texture();
-                    txt->path = jcmd.at("mapname").get<string>();
-                    txt->name = env->name;
+                    auto txt      = new texture();
+                    txt->filename = jcmd.at("mapname").get<string>();
+                    txt->name     = env->name;
                     scn->textures.push_back(txt);
-                    env->emission_txt = txt;
+                    env->emission_texture = txt;
                 }
                 scn->environments.push_back(env);
             } else if (type == "distant") {
@@ -4607,10 +4681,10 @@ scene* load_pbrt_scene(
                 auto dir       = normalize(from - to);
                 auto size      = distant_dist * sin(5 * pif / 180);
                 auto sshp      = make_quad({1, 1}, {size, size}, {1, 1}, true);
-                shp->pos       = sshp.pos;
-                shp->norm      = sshp.norm;
-                shp->texcoord  = sshp.texcoord;
-                shp->triangles = sshp.triangles;
+                shp->positions = sshp.positions;
+                shp->normals   = sshp.normals;
+                shp->texturecoords = sshp.texturecoords;
+                shp->triangles     = sshp.triangles;
                 scn->shapes.push_back(shp);
                 auto mat      = new material();
                 mat->name     = shp->name;
@@ -4746,7 +4820,7 @@ WorldEnd
         print(fs,
             "Texture \"{}\" \"spectrum\" \"imagemap\" "
             "\"string filename\" [\"{}\"]\n",
-            txt->name, txt->path);
+            txt->name, txt->filename);
     }
 
     // convert materials
@@ -4775,7 +4849,7 @@ WorldEnd
                 ist->material->emission);
         print(fs, "NamedMaterial \"{}\"\n", ist->material->name);
         print(fs, "Shape \"plymesh\" \"string filename\" [\"{}\"]\n",
-            ist->shape->path.c_str());
+            ist->shape->filename.c_str());
         print(fs, "TransformEnd\n");
         print(fs, "AttributeEnd\n");
     }
@@ -4796,10 +4870,11 @@ bool save_pbrt_scene(const string& filename, const scene* scn,
     // save meshes
     auto dirname = get_dirname(filename);
     for (auto& shp : scn->shapes) {
-        if (shp->path == "") continue;
-        auto filename = normalize_path(dirname + "/" + shp->path);
+        if (shp->filename == "") continue;
+        auto filename = normalize_path(dirname + "/" + shp->filename);
         if (!save_mesh(filename, shp->points, shp->lines, shp->triangles,
-                shp->pos, shp->norm, shp->texcoord, shp->color, shp->radius)) {
+                shp->positions, shp->normals, shp->texturecoords, shp->colors,
+                shp->radius)) {
             if (!skip_missing) return false;
         }
     }
@@ -4817,8 +4892,8 @@ bool save_pbrt_scene(const string& filename, const scene* scn,
 void pbrt_flipyz_scene(const scene* scn) {
     // flip meshes
     for (auto shp : scn->shapes) {
-        for (auto& p : shp->pos) swap(p.y, p.z);
-        for (auto& n : shp->norm) swap(n.y, n.z);
+        for (auto& p : shp->positions) swap(p.y, p.z);
+        for (auto& n : shp->normals) swap(n.y, n.z);
     }
     for (auto ist : scn->instances) {
         ist->frame = ist->frame *
@@ -5020,7 +5095,7 @@ bool serialize_bin_object(camera* cam, file_stream& fs, bool save) {
 }
 
 bool serialize_bin_object(bvh_tree* bvh, file_stream& fs, bool save) {
-    if (!serialize_bin_value(bvh->pos, fs, save)) return false;
+    if (!serialize_bin_value(bvh->positions, fs, save)) return false;
     if (!serialize_bin_value(bvh->radius, fs, save)) return false;
     if (!serialize_bin_value(bvh->points, fs, save)) return false;
     if (!serialize_bin_value(bvh->lines, fs, save)) return false;
@@ -5036,53 +5111,54 @@ bool serialize_bin_object(bvh_tree* bvh, file_stream& fs, bool save) {
 bool serialize_bin_object(
     shape* shp, const scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(shp->name, fs, save)) return false;
-    if (!serialize_bin_value(shp->path, fs, save)) return false;
+    if (!serialize_bin_value(shp->filename, fs, save)) return false;
     if (!serialize_bin_value(shp->points, fs, save)) return false;
     if (!serialize_bin_value(shp->lines, fs, save)) return false;
     if (!serialize_bin_value(shp->triangles, fs, save)) return false;
-    if (!serialize_bin_value(shp->pos, fs, save)) return false;
-    if (!serialize_bin_value(shp->norm, fs, save)) return false;
-    if (!serialize_bin_value(shp->texcoord, fs, save)) return false;
-    if (!serialize_bin_value(shp->color, fs, save)) return false;
+    if (!serialize_bin_value(shp->positions, fs, save)) return false;
+    if (!serialize_bin_value(shp->normals, fs, save)) return false;
+    if (!serialize_bin_value(shp->texturecoords, fs, save)) return false;
+    if (!serialize_bin_value(shp->colors, fs, save)) return false;
     if (!serialize_bin_value(shp->radius, fs, save)) return false;
-    if (!serialize_bin_value(shp->tangsp, fs, save)) return false;
+    if (!serialize_bin_value(shp->tangent_spaces, fs, save)) return false;
     return true;
 }
 
 bool serialize_bin_object(subdiv* sbd, file_stream& fs, bool save) {
     if (!serialize_bin_value(sbd->name, fs, save)) return false;
-    if (!serialize_bin_value(sbd->path, fs, save)) return false;
+    if (!serialize_bin_value(sbd->filename, fs, save)) return false;
     if (!serialize_bin_value(sbd->subdivision_level, fs, save)) return false;
     if (!serialize_bin_value(sbd->catmull_clark, fs, save)) return false;
     if (!serialize_bin_value(sbd->compute_normals, fs, save)) return false;
-    if (!serialize_bin_value(sbd->quads_pos, fs, save)) return false;
-    if (!serialize_bin_value(sbd->quads_texcoord, fs, save)) return false;
-    if (!serialize_bin_value(sbd->quads_color, fs, save)) return false;
-    if (!serialize_bin_value(sbd->crease_pos, fs, save)) return false;
-    if (!serialize_bin_value(sbd->crease_texcoord, fs, save)) return false;
-    if (!serialize_bin_value(sbd->pos, fs, save)) return false;
-    if (!serialize_bin_value(sbd->texcoord, fs, save)) return false;
-    if (!serialize_bin_value(sbd->color, fs, save)) return false;
+    if (!serialize_bin_value(sbd->positions_quads, fs, save)) return false;
+    if (!serialize_bin_value(sbd->texturecoords_quads, fs, save)) return false;
+    if (!serialize_bin_value(sbd->colors_quads, fs, save)) return false;
+    if (!serialize_bin_value(sbd->positions_creases, fs, save)) return false;
+    if (!serialize_bin_value(sbd->texturecoords_quads, fs, save)) return false;
+    if (!serialize_bin_value(sbd->positions, fs, save)) return false;
+    if (!serialize_bin_value(sbd->texturecoords, fs, save)) return false;
+    if (!serialize_bin_value(sbd->colors, fs, save)) return false;
     return true;
 }
 
 bool serialize_bin_object(texture* tex, file_stream& fs, bool save) {
     if (!serialize_bin_value(tex->name, fs, save)) return false;
-    if (!serialize_bin_value(tex->path, fs, save)) return false;
-    if (!serialize_bin_value(tex->imgf, fs, save)) return false;
-    if (!serialize_bin_value(tex->imgb, fs, save)) return false;
-    if (!serialize_bin_value(tex->clamp, fs, save)) return false;
-    if (!serialize_bin_value(tex->scale, fs, save)) return false;
-    if (!serialize_bin_value(tex->srgb, fs, save)) return false;
+    if (!serialize_bin_value(tex->filename, fs, save)) return false;
+    if (!serialize_bin_value(tex->hdr_image, fs, save)) return false;
+    if (!serialize_bin_value(tex->ldr_image, fs, save)) return false;
+    if (!serialize_bin_value(tex->clamp_to_edge, fs, save)) return false;
+    if (!serialize_bin_value(tex->height_scale, fs, save)) return false;
+    if (!serialize_bin_value(tex->no_interpolation, fs, save)) return false;
+    if (!serialize_bin_value(tex->ldr_as_linear, fs, save)) return false;
     if (!serialize_bin_value(tex->has_opacity, fs, save)) return false;
     return true;
 }
 
 bool serialize_bin_object(voltexture* tex, file_stream& fs, bool save) {
     if (!serialize_bin_value(tex->name, fs, save)) return false;
-    if (!serialize_bin_value(tex->path, fs, save)) return false;
-    if (!serialize_bin_value(tex->vol, fs, save)) return false;
-    if (!serialize_bin_value(tex->clamp, fs, save)) return false;
+    if (!serialize_bin_value(tex->filename, fs, save)) return false;
+    if (!serialize_bin_value(tex->volume_data, fs, save)) return false;
+    if (!serialize_bin_value(tex->clamp_to_edge, fs, save)) return false;
     return true;
 }
 
@@ -5091,7 +5167,7 @@ bool serialize_bin_object(
     if (!serialize_bin_value(env->name, fs, save)) return false;
     if (!serialize_bin_value(env->frame, fs, save)) return false;
     if (!serialize_bin_value(env->emission, fs, save)) return false;
-    if (!serialize_bin_handle(env->emission_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(env->emission_texture, scn->textures, fs, save))
         return false;
     return true;
 }

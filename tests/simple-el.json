@@ -26,7 +26,7 @@
     "textures": [
         {
             "name": "floor",
-            "path": "textures/floor.png",
+            "filename": "textures/floor.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "grid"
@@ -34,7 +34,7 @@
         },
         {
             "name": "uvgrid",
-            "path": "textures/uvgrid.png",
+            "filename": "textures/uvgrid.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "uvgrid"
@@ -42,7 +42,7 @@
         },
         {
             "name": "sky",
-            "path": "textures/sky.hdr",
+            "filename": "textures/sky.hdr",
             "!!proc": {
                 "type": "sky"
             }
@@ -107,28 +107,28 @@
     "shapes": [
         {
             "name": "floor",
-            "path": "meshes/floor.ply",
+            "filename": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }
         },
         {
             "name": "obj1",
-            "path": "meshes/obj1.ply",
+            "filename": "meshes/obj1.ply",
             "!!proc": {
                 "type": "sphere_flipcap"
             }
         },
         {
             "name": "obj2",
-            "path": "meshes/obj2.ply",
+            "filename": "meshes/obj2.ply",
             "!!proc": {
                 "type": "sphere_cube"
             }
         },
         {
             "name": "obj3",
-            "path": "meshes/obj3.ply",
+            "filename": "meshes/obj3.ply",
             "!!proc": {
                 "type": "cube_rounded"
             }

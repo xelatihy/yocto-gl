@@ -2225,18 +2225,18 @@ const int bvh_max_prims = 4;
 // indices refer to primitives for leaf nodes or other nodes for internal
 // nodes. See bvh_tree for more details.
 struct bvh_node {
-    bbox3f   bbox;                  // bounds
-    uint32_t prims[bvh_max_prims];  // primitives
-    uint16_t count;                 // number of prims
-    bool     internal;              // whether it is an internal node or a leaf
-    uint8_t  split_axis;            // split axis
+    bbox3f   bbox;
+    uint16_t num_primitives;
+    bool     is_internal;
+    uint8_t  split_axis;
+    uint32_t primitive_ids[bvh_max_prims];
 };
 
 // Instance for a scene BVH.
 struct bvh_instance {
-    frame3f frame     = identity_frame3f;  // frame
-    frame3f frame_inv = identity_frame3f;  // frame inverse
-    int     sid       = -1;                // shape index
+    frame3f frame         = identity_frame3f;
+    frame3f frame_inverse = identity_frame3f;
+    int     shape_id      = -1;
 };
 
 // BVH tree, stored as a node array. The tree structure is encoded using array
@@ -2251,23 +2251,23 @@ struct bvh_instance {
 // call `build_bvh()`.
 struct bvh_tree {
     // data for shape BVH
-    vector<vec3f> pos;        // Positions for shape BVHs.
-    vector<float> radius;     // Radius for shape BVHs.
-    vector<int>   points;     // Points for shape BVHs.
-    vector<vec2i> lines;      // Lines for shape BVHs.
-    vector<vec3i> triangles;  // Triangles for shape BVHs.
-    vector<vec4i> quads;      // Quads for shape BVHs.
+    vector<vec3f> positions;
+    vector<float> radius;
+    vector<int>   points;
+    vector<vec2i> lines;
+    vector<vec3i> triangles;
+    vector<vec4i> quads;
 
     // data for instance BVH
-    vector<bvh_instance> instances;   // instances
-    vector<bvh_tree*>    shape_bvhs;  // shape bvhs
+    vector<bvh_instance> instances;
+    vector<bvh_tree*>    shape_bvhs;
 
     // optional application specific data to key from a pointer to internal ids
     unordered_map<void*, int> instance_ids;
     unordered_map<void*, int> shape_ids;
 
-    // bvh nodes
-    vector<bvh_node> nodes;  // Internal nodes.
+    // bvh internal nodes
+    vector<bvh_node> nodes;
 
     // Embree opaque data
     void* embree_bvh = nullptr;
@@ -2309,27 +2309,31 @@ namespace ygl {
 
 // Shape data returned by make_<shape> functions.
 struct make_shape_data {
-    vector<vec3f> pos;       // positions
-    vector<vec3f> norm;      // normals/tangents
-    vector<vec2f> texcoord;  // texture coordinates
-    vector<float> radius;    // radius for lines and points
+    // vertex data
+    vector<vec3f> positions;
+    vector<vec3f> normals;
+    vector<vec2f> texturecoords;
+    vector<float> radius;
 
-    vector<int>   points;     // points
-    vector<vec2i> lines;      // lines
-    vector<vec3i> triangles;  // triangles
-    vector<vec4i> quads;      // quads
-    vector<vec4i> beziers;    // beziers
+    // elements data
+    vector<int>   points;
+    vector<vec2i> lines;
+    vector<vec3i> triangles;
+    vector<vec4i> quads;
+    vector<vec4i> beziers;
 };
 
 // Shape data returned by make_fv<shape> functions.
 struct make_fvshape_data {
-    vector<vec3f> pos;       // positions
-    vector<vec3f> norm;      // normals/tangents
-    vector<vec2f> texcoord;  // texture coordinates
+    // Vertex data
+    vector<vec3f> positions;
+    vector<vec3f> normals;
+    vector<vec2f> texturecoords;
 
-    vector<vec4i> quads_pos;       // facevarying quads for pos
-    vector<vec4i> quads_norm;      // facevarying quads for norm
-    vector<vec4i> quads_texcoord;  // facevarying quads for texcoord
+    // Faces swith different topology for each data
+    vector<vec4i> positions_quads;
+    vector<vec4i> normals_quads;
+    vector<vec4i> quads_texcoord;
 };
 
 // Make examples shapes that are not watertight (besides quads).
@@ -2412,9 +2416,9 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
-    int       width  = 0;   // image width
-    int       height = 0;   // image height
-    vector<T> pixels = {};  // image pixels
+    int       width  = 0;
+    int       height = 0;
+    vector<T> pixels = {};
 
     // constructors
     image() : width{0}, height{0}, pixels() {}
@@ -2685,10 +2689,10 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
-    int       width  = 0;   // volume width
-    int       height = 0;   // volume height
-    int       depth  = 0;   // volume height
-    vector<T> voxels = {};  // volume voxels
+    int       width  = 0;
+    int       height = 0;
+    int       depth  = 0;
+    vector<T> voxels = {};
 
     // constructors
     volume() : width{0}, height{0}, depth{0}, voxels() {}
@@ -2729,122 +2733,133 @@ namespace ygl {
 // forward declaration
 struct bvh_tree;
 
-// Camera.
+// Camera based on a simple lens model. The camera is placed using a frame.
+// Camera projection is described in photorgaphics terms. In particular,
+// we specify fil size (35mm by default), the focal lengthm the focus
+// distance and the lens_aperture. All values are in meters.
 struct camera {
-    string  name           = "";                // name
-    frame3f frame          = identity_frame3f;  // transform frame
-    bool    orthographic   = false;             // orthographic
-    vec2f   film_size      = {0.036f, 0.024f};  // film size (default: 35mm)
-    float   focal_length   = 0.050f;            // focal length (defaut: 50 mm)
-    float   focus_distance = maxf;  // focal distance (default: infinite)
-    float   lens_aperture  = 0;     // lens aperture
+    string  name           = "";
+    frame3f frame          = identity_frame3f;
+    bool    orthographic   = false;
+    vec2f   film_size      = {0.036f, 0.024f};
+    float   focal_length   = 0.050f;
+    float   focus_distance = maxf;
+    float   lens_aperture  = 0;
 };
 
-// Texture containing either an LDR or HDR image.
+// Texture containing either an LDR or HDR image. Textures are rendered
+// using linear interpolation (unless `no_interoilation` is set) and
+// weith tiling (unless `clamp_to_edge` is set). HdR images are encoded
+// in linear color space, while LDRs are encoded as sRGB. The latter
+// conversion can be disabled with `ldr_as_linear` for example to render
+// normal maps.
 struct texture {
-    string       name        = "";     // name
-    string       path        = "";     // file path
-    image<vec4f> imgf        = {};     // hdr image in linear color space
-    image<vec4b> imgb        = {};     // ldr image in srgb color space
-    bool         clamp       = false;  // clamp textures coordinates
-    bool         linear      = true;   // use bilinear interpolation
-    float        scale       = 1;      // scale for occ, normal, bumps
-    bool         srgb        = true;   // gamma correction for ldr textures
-    bool         has_opacity = false;  // check whether alpha != 0
+    string       name             = "";
+    string       filename         = "";
+    image<vec4f> hdr_image        = {};
+    image<vec4b> ldr_image        = {};
+    bool         clamp_to_edge    = false;
+    bool         no_interpolation = false;
+    float        height_scale     = 1;
+    bool         ldr_as_linear    = false;
+    bool         has_opacity      = false;
 };
 
-// Volumetric texture containing either an HDR image.
+// Volumetric texture containing a float only volume data. See texture
+// above for other propoerties.
 struct voltexture {
-    string        name   = "";     // name
-    string        path   = "";     // file path
-    volume<float> vol    = {};     // volume
-    bool          clamp  = false;  // clamp textures coordinates
-    bool          linear = true;   // use trilinear interpolation
+    string        name             = "";
+    string        filename         = "";
+    volume<float> volume_data      = {};
+    bool          clamp_to_edge    = false;
+    bool          no_interpolation = false;
 };
 
 // Material for surfaces, lines and triangles.
 // For surfaces, uses a microfacet model with thin sheet transmission.
-// The model is based on glTF for compatibility and adapted to OBJ.
+// The model is based on OBJ, but contains glTF compatibility.
+// For the documentation on the values, please see the OBJ format.
 struct material {
-    string name          = "";     // name
+    string name          = "";
     bool   base_metallic = false;  // base-metallic parametrization
     bool   gltf_textures = false;  // glTF packed textures
     bool   double_sided  = false;  // double sided rendering
 
     // base values
-    vec3f emission     = {0, 0, 0};  // emission color
-    vec3f diffuse      = {0, 0, 0};  // diffuse/base color
-    vec3f specular     = {0, 0, 0};  // specular color / metallic factor
-    vec3f transmission = {0, 0, 0};  // transmission color
-    float roughness    = 0.0001;     // roughness mapped as glTF
-    float opacity      = 1;          // opacity
-    bool  fresnel = true;  // whether to use fresnel in reflections/transmission
-    bool  refract = false;  // whether to use use refraction in tranmission
+    vec3f emission     = {0, 0, 0};
+    vec3f diffuse      = {0, 0, 0};
+    vec3f specular     = {0, 0, 0};
+    vec3f transmission = {0, 0, 0};
+    float roughness    = 0.0001;
+    float opacity      = 1;
+    bool  fresnel      = true;
+    bool  refract      = false;
 
     // textures
-    texture* emission_texture     = nullptr;  // emission texture
-    texture* diffuse_texture      = nullptr;  // diffuse texture
-    texture* specular_texture     = nullptr;  // specular texture
-    texture* transmission_texture = nullptr;  // transmission texture
-    texture* roughness_texture    = nullptr;  // roughness texture
-    texture* opacity_texture      = nullptr;  // opacity texture
-    texture* occlusion_texture    = nullptr;  // occlusion texture
-    texture* bump_texture         = nullptr;  // bump map texture (heighfield)
-    texture* displacement_texture = nullptr;  // displacement map texture
-    texture* normal_texture       = nullptr;  // normal texture
+    texture* emission_texture     = nullptr;
+    texture* diffuse_texture      = nullptr;
+    texture* specular_texture     = nullptr;
+    texture* transmission_texture = nullptr;
+    texture* roughness_texture    = nullptr;
+    texture* opacity_texture      = nullptr;
+    texture* occlusion_texture    = nullptr;
+    texture* bump_texture         = nullptr;
+    texture* displacement_texture = nullptr;
+    texture* normal_texture       = nullptr;
 
     // volume properties
-    vec3f volume_emission = {0, 0, 0};  // volume emission
-    vec3f volume_albedo   = {0, 0, 0};  // albedo: scattering / (absorption +
-                                        // scattering)
-    vec3f volume_density = {0, 0, 0};   // density: absorption + scattering
-    float volume_phaseg  = 0;           // phase function shape
+    // albedo = scattering / (absorption + scattering)
+    // density = absorption + scattering
+    vec3f volume_emission = {0, 0, 0};
+    vec3f volume_albedo   = {0, 0, 0};
+    vec3f volume_density  = {0, 0, 0};
+    float volume_phaseg   = 0;
 
     // volume textures
-    voltexture* volume_density_texture = nullptr;  // density
+    voltexture* volume_density_texture = nullptr;
 };
 
 // Shape data represented as an indexed meshes of elements.
-// May contain either tringles, lines or a set of vertices.
+// May contain only one of tringles, lines or points.
 struct shape {
-    string name = "";  // name
-    string path = "";  // path for glTF buffers
+    string name     = "";
+    string filename = "";
 
     // primitives
-    vector<int>   points    = {};  // points
-    vector<vec2i> lines     = {};  // lines
-    vector<vec3i> triangles = {};  // triangles
+    vector<int>   points    = {};
+    vector<vec2i> lines     = {};
+    vector<vec3i> triangles = {};
 
     // vertex data
-    vector<vec3f> pos      = {};  // positions
-    vector<vec3f> norm     = {};  // normals/tangents
-    vector<vec2f> texcoord = {};  // texcoord coordinates
-    vector<vec4f> color    = {};  // colors
-    vector<float> radius   = {};  // radia for lines/points
-    vector<vec4f> tangsp   = {};  // tangent space for triangles
+    vector<vec3f> positions      = {};
+    vector<vec3f> normals        = {};
+    vector<vec2f> texturecoords  = {};
+    vector<vec4f> colors         = {};
+    vector<float> radius         = {};
+    vector<vec4f> tangent_spaces = {};
 };
 
 // Subdivision surface.
 struct subdiv {
-    string name              = "";    // name
-    string path              = "";    // path for glTF buffers
-    int    subdivision_level = 0;     // subdivision level
-    bool   catmull_clark     = true;  // catmull clark subdiv
-    bool   compute_normals   = true;  // faceted subdivision
+    string name              = "";
+    string filename          = "";
+    int    subdivision_level = 0;
+    bool   catmull_clark     = true;
+    bool   compute_normals   = true;
 
-    // primitives
-    vector<vec4i> quads_pos      = {};  // quads for position
-    vector<vec4i> quads_texcoord = {};  // quads for texture coordinates
-    vector<vec4i> quads_color    = {};  // quads for color
+    // primitives for each vertex propoerty
+    vector<vec4i> positions_quads     = {};
+    vector<vec4i> texturecoords_quads = {};
+    vector<vec4i> colors_quads        = {};
 
     // creases
-    vector<vec3i> crease_pos      = {};  // crease for position
-    vector<vec3i> crease_texcoord = {};  // crease for texture coordinates
+    vector<vec3i> positions_creases     = {};
+    vector<vec3i> texturecoords_creases = {};
 
     // vertex data
-    vector<vec3f> pos      = {};  // positions
-    vector<vec2f> texcoord = {};  // texcoord coordinates
-    vector<vec4f> color    = {};  // colors
+    vector<vec3f> positions     = {};
+    vector<vec2f> texturecoords = {};
+    vector<vec4f> colors        = {};
 };
 
 // Shape instance.
@@ -2858,10 +2873,10 @@ struct instance {
 
 // Environment map.
 struct environment {
-    string   name         = "";                // name
-    frame3f  frame        = identity_frame3f;  // transform frame
-    vec3f    emission     = {0, 0, 0};         // emission color
-    texture* emission_txt = nullptr;           // emission texture
+    string   name             = "";                // name
+    frame3f  frame            = identity_frame3f;  // transform frame
+    vec3f    emission         = {0, 0, 0};         // emission color
+    texture* emission_texture = nullptr;           // emission texture
 };
 
 // Node in a transform hierarchy.
@@ -2887,7 +2902,7 @@ enum struct animation_type { linear, step, bezier };
 // Keyframe data.
 struct animation {
     string                name        = "";  // name
-    string                path        = "";  // path for glTF buffer
+    string                filename    = "";  // path for glTF buffer
     string                group       = "";  // group
     animation_type        type        = animation_type::linear;  // type
     vector<float>         times       = {};  // keyframe times
@@ -2944,8 +2959,7 @@ void merge_into(const scene* merge_into, scene* merge_from);
 namespace ygl {
 
 // Update node transforms.
-void update_transforms(
-    scene* scn, float time = 0, const string& anim_group = "");
+void update_transforms(scene* scn, float time = 0, const string& anim_group = "");
 // Compute animation range.
 vec2f compute_animation_range(const scene* scn, const string& anim_group = "");
 
@@ -2992,14 +3006,14 @@ inline material* make_default_material(const string& name) {
 // Add a sky environment
 inline environment* make_sky_environment(
     const string& name, float sun_angle = pif / 4) {
-    auto txt          = new texture();
-    txt->name         = name;
-    txt->path         = "textures/" + name + ".hdr";
-    txt->imgf         = make_sunsky_image4f(1024, 512, sun_angle);
-    auto env          = new environment();
-    env->name         = name;
-    env->emission     = {1, 1, 1};
-    env->emission_txt = txt;
+    auto txt              = new texture();
+    txt->name             = name;
+    txt->filename         = "textures/" + name + ".hdr";
+    txt->hdr_image        = make_sunsky_image4f(1024, 512, sun_angle);
+    auto env              = new environment();
+    env->name             = name;
+    env->emission         = {1, 1, 1};
+    env->emission_texture = txt;
     return env;
 }
 
@@ -3165,7 +3179,7 @@ struct trace_params {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<instance*>                    lights;         // instance lights
+    vector<instance*>                    instances;      // instance lights
     vector<environment*>                 environments;   // environments lights
     unordered_map<shape*, vector<float>> shape_cdf;      // shape cdfs
     unordered_map<environment*, vector<float>> env_cdf;  // env cdfs

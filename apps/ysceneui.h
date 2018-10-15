@@ -80,7 +80,7 @@ inline void draw_scene_tree_glwidgets_rec<material>(
 template <>
 inline void draw_scene_tree_glwidgets_rec<environment>(
     glwindow* win, const string& lbl_, environment* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "ke", val->emission_txt, sel);
+    draw_glwidgets_scene_tree(win, "ke", val->emission_texture, sel);
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<node>(
@@ -172,14 +172,14 @@ inline bool draw_glwidgets_scene_inspector(
     glwindow* win, texture* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_textinput_glwidget(win, "path", val->path);
-    edited += draw_checkbox_glwidget(win, "clamp", val->clamp);
-    edited += draw_slider_glwidget(win, "scale", val->scale, 0, 1);
-    edited += draw_checkbox_glwidget(win, "srgb", val->srgb);
-    draw_label_glwidgets(
-        win, "hdr", "%d x %d", val->imgf.width, val->imgf.height);
-    draw_label_glwidgets(
-        win, "ldr", "%d x %d", val->imgb.width, val->imgb.height);
+    edited += draw_textinput_glwidget(win, "path", val->filename);
+    edited += draw_checkbox_glwidget(win, "clamp_to_edge", val->clamp_to_edge);
+    edited += draw_slider_glwidget(win, "scale", val->height_scale, 0, 1);
+    edited += draw_checkbox_glwidget(win, "ldr_as_linear", val->ldr_as_linear);
+    draw_label_glwidgets(win, "hdr_image", "%d x %d", val->hdr_image.width,
+        val->hdr_image.height);
+    draw_label_glwidgets(win, "ldr_image", "%d x %d", val->ldr_image.width,
+        val->ldr_image.height);
     return edited;
 }
 
@@ -187,36 +187,40 @@ inline bool draw_glwidgets_scene_inspector(
     glwindow* win, material* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_coloredit_glwidget(win, "ke", val->emission);  // TODO: HDR
-    edited += draw_coloredit_glwidget(win, "kd", val->diffuse);
-    edited += draw_coloredit_glwidget(win, "ks", val->specular);
-    edited += draw_coloredit_glwidget(win, "kt", val->transmission);
-    edited += draw_slider_glwidget(win, "rs", val->roughness, 0, 1);
-    edited += draw_slider_glwidget(win, "op", val->opacity, 0, 1);
+    edited += draw_coloredit_glwidget(win, "emission", val->emission);  // TODO:
+                                                                        // HDR
+    edited += draw_coloredit_glwidget(win, "diffuse", val->diffuse);
+    edited += draw_coloredit_glwidget(win, "specular", val->specular);
+    edited += draw_coloredit_glwidget(win, "transmission", val->transmission);
+    edited += draw_slider_glwidget(win, "roughness", val->roughness, 0, 1);
+    edited += draw_slider_glwidget(win, "opacity", val->opacity, 0, 1);
     edited += draw_checkbox_glwidget(win, "fresnel", val->fresnel);
     continue_glwidgets_line(win);
     edited += draw_checkbox_glwidget(win, "refract", val->refract);
-    edited += draw_coloredit_glwidget(win, "vd", val->volume_density);  // 0, 10
-    edited += draw_coloredit_glwidget(win, "va", val->volume_albedo);   // 0, 1
-    edited += draw_slider_glwidget(win, "vg", val->volume_phaseg, -1, 1);
+    edited += draw_coloredit_glwidget(
+        win, "volume_density", val->volume_density);  // 0, 10
+    edited += draw_coloredit_glwidget(
+        win, "volume_albedo", val->volume_albedo);  // 0, 1
+    edited += draw_slider_glwidget(
+        win, "volume_phaseg", val->volume_phaseg, -1, 1);
     edited += draw_combobox_glwidget(
-        win, "ke txt", val->emission_texture, scn->textures, true);
+        win, "emission_texture", val->emission_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "kd txt", val->diffuse_texture, scn->textures, true);
+        win, "diffuse_texture", val->diffuse_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "ks txt", val->specular_texture, scn->textures, true);
+        win, "specular_texture", val->specular_texture, scn->textures, true);
+    edited += draw_combobox_glwidget(win, "transmission_texture",
+        val->transmission_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "kt txt", val->transmission_texture, scn->textures, true);
+        win, "opacity_texture", val->opacity_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "op txt", val->opacity_texture, scn->textures, true);
+        win, "roughness_texture", val->roughness_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "rs txt", val->roughness_texture, scn->textures, true);
+        win, "bump_texture", val->bump_texture, scn->textures, true);
+    edited += draw_combobox_glwidget(win, "displacement_texture",
+        val->displacement_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "bump txt", val->bump_texture, scn->textures, true);
-    edited += draw_combobox_glwidget(
-        win, "disp txt", val->displacement_texture, scn->textures, true);
-    edited += draw_combobox_glwidget(
-        win, "norm txt", val->normal_texture, scn->textures, true);
+        win, "normal_texture", val->normal_texture, scn->textures, true);
     edited += draw_checkbox_glwidget(win, "base metallic", val->base_metallic);
     edited += draw_checkbox_glwidget(win, "glTF textures", val->gltf_textures);
     return edited;
@@ -225,15 +229,15 @@ inline bool draw_glwidgets_scene_inspector(
 inline bool draw_glwidgets_scene_inspector(glwindow* win, shape* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_textinput_glwidget(win, "path", val->path);
+    edited += draw_textinput_glwidget(win, "path", val->filename);
     draw_label_glwidgets(win, "lines", "%ld", val->lines.size());
     draw_label_glwidgets(win, "triangles", "%ld", val->triangles.size());
-    draw_label_glwidgets(win, "pos", "%ld", val->pos.size());
-    draw_label_glwidgets(win, "norm", "%ld", val->norm.size());
-    draw_label_glwidgets(win, "texcoord", "%ld", val->texcoord.size());
-    draw_label_glwidgets(win, "color", "%ld", val->color.size());
+    draw_label_glwidgets(win, "pos", "%ld", val->positions.size());
+    draw_label_glwidgets(win, "norm", "%ld", val->normals.size());
+    draw_label_glwidgets(win, "texcoord", "%ld", val->texturecoords.size());
+    draw_label_glwidgets(win, "color", "%ld", val->colors.size());
     draw_label_glwidgets(win, "radius", "%ld", val->radius.size());
-    draw_label_glwidgets(win, "tangsp", "%ld", val->tangsp.size());
+    draw_label_glwidgets(win, "tangsp", "%ld", val->tangent_spaces.size());
     return edited;
 }
 
@@ -246,13 +250,13 @@ inline bool draw_glwidgets_scene_inspector(
     continue_glwidgets_line(win);
     edited += draw_checkbox_glwidget(
         win, "compute normals", val->compute_normals);
-    draw_label_glwidgets(win, "quads pos", "%ld", val->quads_pos.size());
+    draw_label_glwidgets(win, "quads pos", "%ld", val->positions_quads.size());
     draw_label_glwidgets(
-        win, "quads texcoord", "%ld", val->quads_texcoord.size());
-    draw_label_glwidgets(win, "quads color", "%ld", val->quads_color.size());
-    draw_label_glwidgets(win, "pos", "%ld", val->pos.size());
-    draw_label_glwidgets(win, "texcoord", "%ld", val->texcoord.size());
-    draw_label_glwidgets(win, "color", "%ld", val->color.size());
+        win, "quads texcoord", "%ld", val->texturecoords_quads.size());
+    draw_label_glwidgets(win, "quads color", "%ld", val->colors_quads.size());
+    draw_label_glwidgets(win, "pos", "%ld", val->positions.size());
+    draw_label_glwidgets(win, "texcoord", "%ld", val->texturecoords.size());
+    draw_label_glwidgets(win, "color", "%ld", val->colors.size());
     return edited;
 }
 
@@ -281,7 +285,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
     edited += draw_coloredit_glwidget(win, "ke", val->emission);  // TODO: HDR
     edited += draw_combobox_glwidget(
-        win, "ke txt", val->emission_txt, scn->textures, true);
+        win, "ke txt", val->emission_texture, scn->textures, true);
     return edited;
 }
 
@@ -309,7 +313,7 @@ inline bool draw_glwidgets_scene_inspector(
     glwindow* win, animation* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_textinput_glwidget(win, "path", val->path);
+    edited += draw_textinput_glwidget(win, "path", val->filename);
     edited += draw_textinput_glwidget(win, "group", val->group);
     // edited += draw_combobox_glwidget(win, "type", &val->type,
     // animation_type_names());

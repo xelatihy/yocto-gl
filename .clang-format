@@ -25,6 +25,7 @@ BinPackParameters: true
 BreakBeforeBinaryOperators: None
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializersBeforeComma: true
+BreakStringLiterals: false
 
 Cpp11BracedListStyle: true
 

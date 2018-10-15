@@ -26,7 +26,7 @@
     "textures": [
         {
             "name": "floor",
-            "path": "textures/floor.png",
+            "filename": "textures/floor.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "grid"
@@ -34,7 +34,7 @@
         },
         {
             "name": "uvgrid",
-            "path": "textures/uvgrid.png",
+            "filename": "textures/uvgrid.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "uvgrid"
@@ -116,22 +116,22 @@
     "shapes": [
         {
             "name": "floor",
-            "path": "meshes/floor.ply",
+            "filename": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }
         },
         {
             "name": "obj1",
-            "path": "models/stanford-bunny.obj"
+            "filename": "models/stanford-bunny.obj"
         },
         {
             "name": "obj2",
-            "path": "models/utah-teapot.obj"
+            "filename": "models/utah-teapot.obj"
         },
         {
             "name": "obj3",
-            "path": "models/cube-subdiv.obj"
+            "filename": "models/cube-subdiv.obj"
         },
         {
             "name": "light1",

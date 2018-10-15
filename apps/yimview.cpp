@@ -172,9 +172,8 @@ void add_new_image(app_state* app, const string& filename, const string& outname
     float exposure = 0, bool filmic = false, bool srgb = true) {
     auto img      = new app_image();
     img->filename = filename;
-    img->outname  = (outname == "") ?
-                       replace_extension(filename, ".display.png") :
-                       outname;
+    img->outname = (outname == "") ? replace_extension(filename, ".display.png") :
+                                     outname;
     img->name        = get_filename(filename);
     img->is_hdr      = is_hdr_filename(filename);
     img->exposure    = exposure;

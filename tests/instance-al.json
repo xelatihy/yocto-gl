@@ -53,7 +53,7 @@
     "shapes": [
         {
             "name": "floor",
-            "path": "meshes/floor.ply",
+            "filename": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }

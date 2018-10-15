@@ -304,7 +304,8 @@ int main(int argc, char* argv[]) {
     if (!quiet) printf("adding scene elements\n");
     if (add_skyenv && app->scn->environments.empty()) {
         app->scn->environments.push_back(make_sky_environment("sky"));
-        app->scn->textures.push_back(app->scn->environments.back()->emission_txt);
+        app->scn->textures.push_back(
+            app->scn->environments.back()->emission_texture);
     }
     if (double_sided)
         for (auto mat : app->scn->materials) mat->double_sided = true;
@@ -329,7 +330,7 @@ int main(int argc, char* argv[]) {
         make_trace_lights(app->scn.get(), app->params));
 
     // fix renderer type if no lights
-    if (app->lights->lights.empty() && app->lights->environments.empty() &&
+    if (app->lights->instances.empty() && app->lights->environments.empty() &&
         app->params.tracer != trace_type::eyelight) {
         if (!quiet)
             printf("no lights presents, switching to eyelight shader\n");

@@ -1424,17 +1424,19 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
         }
 
         // make an internal node
-        node.internal   = true;
-        node.split_axis = split_axis;
-        node.count      = 2;
-        node.prims[0]   = make_bvh_node(nodes, prims, start, mid, high_quality);
-        node.prims[1]   = make_bvh_node(nodes, prims, mid, end, high_quality);
+        node.is_internal      = true;
+        node.split_axis       = split_axis;
+        node.num_primitives   = 2;
+        node.primitive_ids[0] = make_bvh_node(
+            nodes, prims, start, mid, high_quality);
+        node.primitive_ids[1] = make_bvh_node(
+            nodes, prims, mid, end, high_quality);
     } else {
         // Make a leaf node
-        node.internal = false;
-        node.count    = end - start;
-        for (auto i = 0; i < node.count; i++)
-            node.prims[i] = prims[start + i].primid;
+        node.is_internal    = false;
+        node.num_primitives = end - start;
+        for (auto i = 0; i < node.num_primitives; i++)
+            node.primitive_ids[i] = prims[start + i].primid;
     }
 
     // return nodeid
@@ -1447,26 +1449,26 @@ void build_bvh(bvh_tree* bvh, bool high_quality) {
     auto prims = vector<bvh_prim>();
     if (!bvh->points.empty()) {
         for (auto& p : bvh->points) {
-            prims.push_back({point_bbox(bvh->pos[p], bvh->radius[p])});
+            prims.push_back({point_bbox(bvh->positions[p], bvh->radius[p])});
         }
     } else if (!bvh->lines.empty()) {
         for (auto& l : bvh->lines) {
-            prims.push_back({line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+            prims.push_back({line_bbox(bvh->positions[l.x], bvh->positions[l.y],
                 bvh->radius[l.x], bvh->radius[l.y])});
         }
     } else if (!bvh->triangles.empty()) {
         for (auto& t : bvh->triangles) {
-            prims.push_back(
-                {triangle_bbox(bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z])});
+            prims.push_back({triangle_bbox(bvh->positions[t.x],
+                bvh->positions[t.y], bvh->positions[t.z])});
         }
     } else if (!bvh->quads.empty()) {
         for (auto& q : bvh->quads) {
-            prims.push_back({quad_bbox(
-                bvh->pos[q.x], bvh->pos[q.y], bvh->pos[q.z], bvh->pos[q.w])});
+            prims.push_back({quad_bbox(bvh->positions[q.x], bvh->positions[q.y],
+                bvh->positions[q.z], bvh->positions[q.w])});
         }
     } else if (!bvh->instances.empty()) {
         for (auto& ist : bvh->instances) {
-            auto sbvh = bvh->shape_bvhs[ist.sid];
+            auto sbvh = bvh->shape_bvhs[ist.shape_id];
             prims.push_back({transform_bbox(ist.frame, sbvh->nodes[0].bbox)});
         }
     }
@@ -1489,38 +1491,38 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
     // refit
     auto& node = bvh->nodes[nodeid];
     node.bbox  = invalid_bbox3f;
-    if (node.internal) {
+    if (node.is_internal) {
         for (auto i = 0; i < 2; i++) {
-            refit_bvh(bvh, node.prims[i]);
-            node.bbox += bvh->nodes[node.prims[i]].bbox;
+            refit_bvh(bvh, node.primitive_ids[i]);
+            node.bbox += bvh->nodes[node.primitive_ids[i]].bbox;
         }
     } else if (!bvh->triangles.empty()) {
-        for (auto i = 0; i < node.count; i++) {
-            auto& t = bvh->triangles[node.prims[i]];
+        for (auto i = 0; i < node.num_primitives; i++) {
+            auto& t = bvh->triangles[node.primitive_ids[i]];
             node.bbox += triangle_bbox(
-                bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z]);
+                bvh->positions[t.x], bvh->positions[t.y], bvh->positions[t.z]);
         }
     } else if (!bvh->quads.empty()) {
-        for (auto i = 0; i < node.count; i++) {
-            auto& t = bvh->quads[node.prims[i]];
-            node.bbox += quad_bbox(
-                bvh->pos[t.x], bvh->pos[t.y], bvh->pos[t.z], bvh->pos[t.w]);
+        for (auto i = 0; i < node.num_primitives; i++) {
+            auto& t = bvh->quads[node.primitive_ids[i]];
+            node.bbox += quad_bbox(bvh->positions[t.x], bvh->positions[t.y],
+                bvh->positions[t.z], bvh->positions[t.w]);
         }
     } else if (!bvh->lines.empty()) {
-        for (auto i = 0; i < node.count; i++) {
-            auto& l = bvh->lines[node.prims[i]];
-            node.bbox += line_bbox(bvh->pos[l.x], bvh->pos[l.y],
+        for (auto i = 0; i < node.num_primitives; i++) {
+            auto& l = bvh->lines[node.primitive_ids[i]];
+            node.bbox += line_bbox(bvh->positions[l.x], bvh->positions[l.y],
                 bvh->radius[l.x], bvh->radius[l.y]);
         }
     } else if (!bvh->points.empty()) {
-        for (auto i = 0; i < node.count; i++) {
-            auto& p = bvh->points[node.prims[i]];
-            node.bbox += point_bbox(bvh->pos[p], bvh->radius[p]);
+        for (auto i = 0; i < node.num_primitives; i++) {
+            auto& p = bvh->points[node.primitive_ids[i]];
+            node.bbox += point_bbox(bvh->positions[p], bvh->radius[p]);
         }
     } else if (!bvh->instances.empty()) {
-        for (auto i = 0; i < node.count; i++) {
-            auto& ist  = bvh->instances[node.prims[i]];
-            auto  sbvh = bvh->shape_bvhs[ist.sid];
+        for (auto i = 0; i < node.num_primitives; i++) {
+            auto& ist  = bvh->instances[node.primitive_ids[i]];
+            auto  sbvh = bvh->shape_bvhs[ist.shape_id];
             node.bbox += transform_bbox(ist.frame, sbvh->nodes[0].bbox);
         }
     } else {
@@ -1681,64 +1683,65 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
-        if (node.internal) {
+        if (node.is_internal) {
             // for internal nodes, attempts to proceed along the
             // split axis from smallest to largest nodes
             if ((&ray_dsign.x)[node.split_axis]) {
-                node_stack[node_cur++] = node.prims[0];
-                node_stack[node_cur++] = node.prims[1];
+                node_stack[node_cur++] = node.primitive_ids[0];
+                node_stack[node_cur++] = node.primitive_ids[1];
             } else {
-                node_stack[node_cur++] = node.prims[1];
-                node_stack[node_cur++] = node.prims[0];
+                node_stack[node_cur++] = node.primitive_ids[1];
+                node_stack[node_cur++] = node.primitive_ids[0];
             }
         } else if (!bvh->triangles.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& t = bvh->triangles[node.prims[i]];
-                if (intersect_triangle(ray, bvh->pos[t.x], bvh->pos[t.y],
-                        bvh->pos[t.z], dist, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& t = bvh->triangles[node.primitive_ids[i]];
+                if (intersect_triangle(ray, bvh->positions[t.x],
+                        bvh->positions[t.y], bvh->positions[t.z], dist, uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->quads.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& t = bvh->quads[node.prims[i]];
-                if (intersect_quad(ray, bvh->pos[t.x], bvh->pos[t.y],
-                        bvh->pos[t.z], bvh->pos[t.w], dist, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& t = bvh->quads[node.primitive_ids[i]];
+                if (intersect_quad(ray, bvh->positions[t.x], bvh->positions[t.y],
+                        bvh->positions[t.z], bvh->positions[t.w], dist, uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->lines.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& l = bvh->lines[node.prims[i]];
-                if (intersect_line(ray, bvh->pos[l.x], bvh->pos[l.y],
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& l = bvh->lines[node.primitive_ids[i]];
+                if (intersect_line(ray, bvh->positions[l.x], bvh->positions[l.y],
                         bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->points.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& p = bvh->points[node.prims[i]];
-                if (intersect_point(ray, bvh->pos[p], bvh->radius[p], dist, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& p = bvh->points[node.primitive_ids[i]];
+                if (intersect_point(
+                        ray, bvh->positions[p], bvh->radius[p], dist, uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->instances.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& ist = bvh->instances[node.prims[i]];
-                if (intersect_bvh(bvh->shape_bvhs[ist.sid],
-                        transform_ray(ist.frame_inv, ray), find_any, dist, iid,
-                        eid, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& ist = bvh->instances[node.primitive_ids[i]];
+                if (intersect_bvh(bvh->shape_bvhs[ist.shape_id],
+                        transform_ray(ist.frame_inverse, ray), find_any, dist,
+                        iid, eid, uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    iid      = node.prims[i];
+                    iid      = node.primitive_ids[i];
                 }
             }
         } else {
@@ -1773,62 +1776,63 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
-        if (node.internal) {
+        if (node.is_internal) {
             // internal node
-            node_stack[node_cur++] = node.prims[0];
-            node_stack[node_cur++] = node.prims[1];
+            node_stack[node_cur++] = node.primitive_ids[0];
+            node_stack[node_cur++] = node.primitive_ids[1];
         } else if (!bvh->triangles.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& t = bvh->triangles[node.prims[i]];
-                if (overlap_triangle(pos, max_dist, bvh->pos[t.x],
-                        bvh->pos[t.y], bvh->pos[t.z], bvh->radius[t.x],
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& t = bvh->triangles[node.primitive_ids[i]];
+                if (overlap_triangle(pos, max_dist, bvh->positions[t.x],
+                        bvh->positions[t.y], bvh->positions[t.z], bvh->radius[t.x],
                         bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->quads.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& q = bvh->quads[node.prims[i]];
-                if (overlap_quad(pos, max_dist, bvh->pos[q.x], bvh->pos[q.y],
-                        bvh->pos[q.z], bvh->pos[q.w], bvh->radius[q.x],
-                        bvh->radius[q.y], bvh->radius[q.z], bvh->radius[q.w],
-                        dist, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& q = bvh->quads[node.primitive_ids[i]];
+                if (overlap_quad(pos, max_dist, bvh->positions[q.x],
+                        bvh->positions[q.y], bvh->positions[q.z],
+                        bvh->positions[q.w], bvh->radius[q.x], bvh->radius[q.y],
+                        bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->lines.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& l = bvh->lines[node.prims[i]];
-                if (overlap_line(pos, max_dist, bvh->pos[l.x], bvh->pos[l.y],
-                        bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& l = bvh->lines[node.primitive_ids[i]];
+                if (overlap_line(pos, max_dist, bvh->positions[l.x],
+                        bvh->positions[l.y], bvh->radius[l.x], bvh->radius[l.y],
+                        dist, uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->points.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& p = bvh->points[node.prims[i]];
-                if (overlap_point(
-                        pos, max_dist, bvh->pos[p], bvh->radius[p], dist, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& p = bvh->points[node.primitive_ids[i]];
+                if (overlap_point(pos, max_dist, bvh->positions[p],
+                        bvh->radius[p], dist, uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.prims[i];
+                    eid      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh->instances.empty()) {
-            for (auto i = 0; i < node.count; i++) {
-                auto& ist = bvh->instances[node.prims[i]];
-                if (overlap_bvh(bvh->shape_bvhs[ist.sid],
-                        transform_point(ist.frame_inv, pos), max_dist, find_any,
-                        dist, iid, eid, uv)) {
+            for (auto i = 0; i < node.num_primitives; i++) {
+                auto& ist = bvh->instances[node.primitive_ids[i]];
+                if (overlap_bvh(bvh->shape_bvhs[ist.shape_id],
+                        transform_point(ist.frame_inverse, pos), max_dist,
+                        find_any, dist, iid, eid, uv)) {
                     hit      = true;
                     max_dist = dist;
-                    iid      = node.prims[i];
+                    iid      = node.primitive_ids[i];
                 }
             }
         } else {
@@ -1914,16 +1918,16 @@ namespace ygl {
 make_shape_data make_quad(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles) {
     auto shp = make_shape_data();
-    shp.pos.resize((steps.x + 1) * (steps.y + 1));
-    shp.norm.resize((steps.x + 1) * (steps.y + 1));
-    shp.texcoord.resize((steps.x + 1) * (steps.y + 1));
+    shp.positions.resize((steps.x + 1) * (steps.y + 1));
+    shp.normals.resize((steps.x + 1) * (steps.y + 1));
+    shp.texturecoords.resize((steps.x + 1) * (steps.y + 1));
     for (auto j = 0; j <= steps.y; j++) {
         for (auto i = 0; i <= steps.x; i++) {
             auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
-            shp.pos[j * (steps.x + 1) + i] = {
+            shp.positions[j * (steps.x + 1) + i] = {
                 (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-            shp.norm[j * (steps.x + 1) + i]     = {0, 0, 1};
-            shp.texcoord[j * (steps.x + 1) + i] = uv * uvsize;
+            shp.normals[j * (steps.x + 1) + i]       = {0, 0, 1};
+            shp.texturecoords[j * (steps.x + 1) + i] = uv * uvsize;
         }
     }
 
@@ -1955,8 +1959,8 @@ make_shape_data make_quad(const vec2i& steps, const vec2f& size,
 make_shape_data make_floor(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles) {
     auto shp = make_quad(steps, size, uvsize, as_triangles);
-    for (auto& p : shp.pos) p = {p.x, p.z, p.y};
-    for (auto& n : shp.norm) n = {n.x, n.z, n.y};
+    for (auto& p : shp.positions) p = {p.x, p.z, p.y};
+    for (auto& n : shp.normals) n = {n.x, n.z, n.y};
     return shp;
 }
 
@@ -1967,7 +1971,7 @@ make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
     for (auto i = 0; i <= steps.z; i++) {
         qshps[i] = make_quad(
             {steps.x, steps.y}, {size.x, size.y}, uvsize, as_triangles);
-        for (auto& p : qshps[i].pos)
+        for (auto& p : qshps[i].positions)
             p.z = (-0.5f + (float)i / steps.z) * size.z;
     }
     return merge_shape_data(qshps);
@@ -1980,44 +1984,50 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
     // + z
     qshps[0] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
-    for (auto i = 0; i < qshps[0].pos.size(); i++) {
-        qshps[0].pos[i]  = {qshps[0].pos[i].x, qshps[0].pos[i].y, size.z / 2};
-        qshps[0].norm[i] = {0, 0, 1};
+    for (auto i = 0; i < qshps[0].positions.size(); i++) {
+        qshps[0].positions[i] = {
+            qshps[0].positions[i].x, qshps[0].positions[i].y, size.z / 2};
+        qshps[0].normals[i] = {0, 0, 1};
     }
     // - z
     qshps[1] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
-    for (auto i = 0; i < qshps[1].pos.size(); i++) {
-        qshps[1].pos[i]  = {-qshps[1].pos[i].x, qshps[1].pos[i].y, -size.z / 2};
-        qshps[1].norm[i] = {0, 0, -1};
+    for (auto i = 0; i < qshps[1].positions.size(); i++) {
+        qshps[1].positions[i] = {
+            -qshps[1].positions[i].x, qshps[1].positions[i].y, -size.z / 2};
+        qshps[1].normals[i] = {0, 0, -1};
     }
     // + x
     qshps[2] = make_quad({steps.y, steps.z}, {size.y, size.z},
         {uvsize.y, uvsize.z}, as_triangles);
-    for (auto i = 0; i < qshps[2].pos.size(); i++) {
-        qshps[2].pos[i]  = {size.x / 2, qshps[2].pos[i].y, -qshps[2].pos[i].x};
-        qshps[2].norm[i] = {1, 0, 0};
+    for (auto i = 0; i < qshps[2].positions.size(); i++) {
+        qshps[2].positions[i] = {
+            size.x / 2, qshps[2].positions[i].y, -qshps[2].positions[i].x};
+        qshps[2].normals[i] = {1, 0, 0};
     }
     // - x
     qshps[3] = make_quad({steps.y, steps.z}, {size.y, size.z},
         {uvsize.y, uvsize.z}, as_triangles);
-    for (auto i = 0; i < qshps[3].pos.size(); i++) {
-        qshps[3].pos[i]  = {-size.x / 2, qshps[3].pos[i].y, qshps[3].pos[i].x};
-        qshps[3].norm[i] = {-1, 0, 0};
+    for (auto i = 0; i < qshps[3].positions.size(); i++) {
+        qshps[3].positions[i] = {
+            -size.x / 2, qshps[3].positions[i].y, qshps[3].positions[i].x};
+        qshps[3].normals[i] = {-1, 0, 0};
     }
     // + y
     qshps[4] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
-    for (auto i = 0; i < qshps[4].pos.size(); i++) {
-        qshps[4].pos[i]  = {qshps[4].pos[i].x, size.y / 2, -qshps[4].pos[i].y};
-        qshps[4].norm[i] = {0, 1, 0};
+    for (auto i = 0; i < qshps[4].positions.size(); i++) {
+        qshps[4].positions[i] = {
+            qshps[4].positions[i].x, size.y / 2, -qshps[4].positions[i].y};
+        qshps[4].normals[i] = {0, 1, 0};
     }
     // - y
     qshps[5] = make_quad({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
-    for (auto i = 0; i < qshps[5].pos.size(); i++) {
-        qshps[5].pos[i]  = {qshps[5].pos[i].x, -size.y / 2, qshps[5].pos[i].y};
-        qshps[5].norm[i] = {0, -1, 0};
+    for (auto i = 0; i < qshps[5].positions.size(); i++) {
+        qshps[5].positions[i] = {
+            qshps[5].positions[i].x, -size.y / 2, qshps[5].positions[i].y};
+        qshps[5].normals[i] = {0, -1, 0};
     }
     return merge_shape_data(qshps);
 }
@@ -2027,32 +2037,33 @@ make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool as_triangles) {
     auto shp = make_cube(steps, size, uvsize, as_triangles);
     auto c   = size / 2 - vec3f{radius, radius, radius};
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto pc = vec3f{
-            fabs(shp.pos[i].x), fabs(shp.pos[i].y), fabs(shp.pos[i].z)};
-        auto ps = vec3f{shp.pos[i].x < 0 ? -1.0f : 1.0f,
-            shp.pos[i].y < 0 ? -1.0f : 1.0f, shp.pos[i].z < 0 ? -1.0f : 1.0f};
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto pc = vec3f{fabs(shp.positions[i].x), fabs(shp.positions[i].y),
+            fabs(shp.positions[i].z)};
+        auto ps = vec3f{shp.positions[i].x < 0 ? -1.0f : 1.0f,
+            shp.positions[i].y < 0 ? -1.0f : 1.0f,
+            shp.positions[i].z < 0 ? -1.0f : 1.0f};
         if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
-            auto pn     = normalize(pc - c);
-            shp.pos[i]  = c + radius * pn;
-            shp.norm[i] = pn;
+            auto pn          = normalize(pc - c);
+            shp.positions[i] = c + radius * pn;
+            shp.normals[i]   = pn;
         } else if (pc.x >= c.x && pc.y >= c.y) {
-            auto pn     = normalize((pc - c) * vec3f{1, 1, 0});
-            shp.pos[i]  = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
-            shp.norm[i] = pn;
+            auto pn          = normalize((pc - c) * vec3f{1, 1, 0});
+            shp.positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+            shp.normals[i]   = pn;
         } else if (pc.x >= c.x && pc.z >= c.z) {
-            auto pn     = normalize((pc - c) * vec3f{1, 0, 1});
-            shp.pos[i]  = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
-            shp.norm[i] = pn;
+            auto pn          = normalize((pc - c) * vec3f{1, 0, 1});
+            shp.positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+            shp.normals[i]   = pn;
         } else if (pc.y >= c.y && pc.z >= c.z) {
-            auto pn     = normalize((pc - c) * vec3f{0, 1, 1});
-            shp.pos[i]  = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
-            shp.norm[i] = pn;
+            auto pn          = normalize((pc - c) * vec3f{0, 1, 1});
+            shp.positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+            shp.normals[i]   = pn;
         } else {
             continue;
         }
-        shp.pos[i] *= ps;
-        shp.norm[i] *= ps;
+        shp.positions[i] *= ps;
+        shp.normals[i] *= ps;
     }
     return shp;
 }
@@ -2061,13 +2072,13 @@ make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
 make_shape_data make_sphere(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto uv     = shp.texcoord[i];
-        auto a      = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        auto p      = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-        shp.pos[i]  = p * (size / 2);
-        shp.norm[i] = normalize(p);
-        shp.texcoord[i] = uv * uvsize;
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto uv = shp.texturecoords[i];
+        auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
+        auto p  = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        shp.positions[i]     = p * (size / 2);
+        shp.normals[i]       = normalize(p);
+        shp.texturecoords[i] = uv * uvsize;
     }
     return shp;
 }
@@ -2077,10 +2088,10 @@ make_shape_data make_sphere_cube(
     int steps, float size, float uvsize, bool as_triangles) {
     auto shp = make_cube({steps, steps, steps}, {1, 1, 1},
         {uvsize, uvsize, uvsize}, as_triangles);
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto p      = shp.pos[i];
-        shp.pos[i]  = normalize(p) * (size / 2);
-        shp.norm[i] = normalize(p);
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto p           = shp.positions[i];
+        shp.positions[i] = normalize(p) * (size / 2);
+        shp.normals[i]   = normalize(p);
     }
     return shp;
 }
@@ -2089,15 +2100,15 @@ make_shape_data make_sphere_cube(
 make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool as_triangles) {
     auto shp = make_sphere(steps, size, uvsize, as_triangles);
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        if (shp.pos[i].z > zflip.y) {
-            shp.pos[i].z  = 2 * zflip.y - shp.pos[i].z;
-            shp.norm[i].x = -shp.norm[i].x;
-            shp.norm[i].y = -shp.norm[i].y;
-        } else if (shp.pos[i].z < zflip.x) {
-            shp.pos[i].z  = 2 * zflip.x - shp.pos[i].z;
-            shp.norm[i].x = -shp.norm[i].x;
-            shp.norm[i].y = -shp.norm[i].y;
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        if (shp.positions[i].z > zflip.y) {
+            shp.positions[i].z = 2 * zflip.y - shp.positions[i].z;
+            shp.normals[i].x   = -shp.normals[i].x;
+            shp.normals[i].y   = -shp.normals[i].y;
+        } else if (shp.positions[i].z < zflip.x) {
+            shp.positions[i].z = 2 * zflip.x - shp.positions[i].z;
+            shp.normals[i].x   = -shp.normals[i].x;
+            shp.normals[i].y   = -shp.normals[i].y;
         }
     }
     return shp;
@@ -2107,12 +2118,13 @@ make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
 make_shape_data make_disk(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto uv    = shp.texcoord[i];
-        auto phi   = 2 * pif * uv.x;
-        shp.pos[i] = {cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
-        shp.norm[i]     = {0, 0, 1};
-        shp.texcoord[i] = uv * uvsize;
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto uv          = shp.texturecoords[i];
+        auto phi         = 2 * pif * uv.x;
+        shp.positions[i] = {
+            cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
+        shp.normals[i]       = {0, 0, 1};
+        shp.texturecoords[i] = uv * uvsize;
     }
     return shp;
 }
@@ -2121,13 +2133,13 @@ make_shape_data make_disk(
 make_shape_data make_disk_quad(
     int steps, float size, float uvsize, bool as_triangles) {
     auto shp = make_quad({steps, steps}, {2, 2}, {uvsize, uvsize}, as_triangles);
-    for (auto i = 0; i < shp.pos.size(); i++) {
+    for (auto i = 0; i < shp.positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
-        auto xy = vec2f{shp.pos[i].x, shp.pos[i].y};
+        auto xy = vec2f{shp.positions[i].x, shp.positions[i].y};
         auto uv = vec2f{
             xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-        shp.pos[i] = {uv.x * size / 2, uv.y * size / 2, 0};
+        shp.positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
     return shp;
 }
@@ -2139,10 +2151,10 @@ make_shape_data make_disk_bulged(
     if (height == 0) return shp;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto pn     = normalize(shp.pos[i] - center);
-        shp.pos[i]  = center + pn * radius;
-        shp.norm[i] = pn;
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto pn          = normalize(shp.positions[i] - center);
+        shp.positions[i] = center + pn * radius;
+        shp.normals[i]   = pn;
     }
     return shp;
 }
@@ -2151,13 +2163,13 @@ make_shape_data make_disk_bulged(
 make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles) {
     auto shp = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto uv         = shp.texcoord[i];
-        auto phi        = 2 * pif * uv.x;
-        shp.pos[i]      = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto uv              = shp.texturecoords[i];
+        auto phi             = 2 * pif * uv.x;
+        shp.positions[i]     = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
             (uv.y - 0.5f) * size.y};
-        shp.norm[i]     = {cos(phi), sin(phi), 0};
-        shp.texcoord[i] = uv * uvsize;
+        shp.normals[i]       = {cos(phi), sin(phi), 0};
+        shp.texturecoords[i] = uv * uvsize;
     }
     return shp;
 }
@@ -2172,15 +2184,15 @@ make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
     // top
     qshps[1] = make_disk(
         {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
-    for (auto i = 0; i < qshps[1].pos.size(); i++) {
-        qshps[1].pos[i].z = size.y / 2;
+    for (auto i = 0; i < qshps[1].positions.size(); i++) {
+        qshps[1].positions[i].z = size.y / 2;
     }
     // bottom
     qshps[2] = make_disk(
         {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
-    for (auto i = 0; i < qshps[2].pos.size(); i++) {
-        qshps[2].pos[i].z = -size.y / 2;
-        qshps[2].norm[i]  = -qshps[2].norm[i];
+    for (auto i = 0; i < qshps[2].positions.size(); i++) {
+        qshps[2].positions[i].z = -size.y / 2;
+        qshps[2].normals[i]     = -qshps[2].normals[i];
     }
     for (auto i = 0; i < qshps[2].quads.size(); i++)
         swap(qshps[2].quads[i].x, qshps[2].quads[i].z);
@@ -2193,17 +2205,17 @@ make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, float radius, bool as_triangles) {
     auto shp = make_cylinder(steps, size, uvsize, as_triangles);
     auto c   = size / 2 - vec2f{radius, radius};
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto phi = atan2(shp.pos[i].y, shp.pos[i].x);
-        auto r   = length(vec2f{shp.pos[i].x, shp.pos[i].y});
-        auto z   = shp.pos[i].z;
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto phi = atan2(shp.positions[i].y, shp.positions[i].x);
+        auto r   = length(vec2f{shp.positions[i].x, shp.positions[i].y});
+        auto z   = shp.positions[i].z;
         auto pc  = vec2f{r, fabs(z)};
         auto ps  = (z < 0) ? -1.0f : 1.0f;
         if (pc.x >= c.x && pc.y >= c.y) {
-            auto pn     = normalize(pc - c);
-            shp.pos[i]  = {cos(phi) * c.x + radius * pn.x,
+            auto pn          = normalize(pc - c);
+            shp.positions[i] = {cos(phi) * c.x + radius * pn.x,
                 sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
-            shp.norm[i] = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
+            shp.normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
         } else {
             continue;
         }
@@ -2225,13 +2237,14 @@ make_shape_data make_geodesic_sphere(
         {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1},
         {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
     auto        shp       = make_shape_data();
-    shp.pos               = pos;
+    shp.positions         = pos;
     shp.triangles         = triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        tie(shp.triangles, shp.pos) = subdivide_triangles(shp.triangles, shp.pos);
+        tie(shp.triangles, shp.positions) = subdivide_triangles(
+            shp.triangles, shp.positions);
     }
-    for (auto& p : shp.pos) p = normalize(p) * size / 2;
-    shp.norm = shp.pos;
+    for (auto& p : shp.positions) p = normalize(p) * size / 2;
+    shp.normals = shp.positions;
     return shp;
 }
 
@@ -2239,14 +2252,15 @@ make_shape_data make_geodesic_sphere(
 // coordinates.
 make_fvshape_data make_fvcube(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshp                       = make_cube(steps, size, uvsize, false);
-    auto fvshp                      = make_fvshape_data{};
-    tie(fvshp.quads_pos, fvshp.pos) = weld_quads(qshp.quads, qshp.pos,
+    auto qshp  = make_cube(steps, size, uvsize, false);
+    auto fvshp = make_fvshape_data{};
+    tie(fvshp.positions_quads, fvshp.positions) = weld_quads(qshp.quads,
+        qshp.positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    fvshp.quads_norm                = qshp.quads;
-    fvshp.norm                      = qshp.norm;
-    fvshp.quads_texcoord            = qshp.quads;
-    fvshp.texcoord                  = qshp.texcoord;
+    fvshp.normals_quads                         = qshp.quads;
+    fvshp.normals                               = qshp.normals;
+    fvshp.quads_texcoord                        = qshp.quads;
+    fvshp.texturecoords                         = qshp.texturecoords;
     return fvshp;
 }
 
@@ -2670,9 +2684,9 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
         {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
         {319, 321, 503, 389}, {504, 322, 320, 390}};
 
-    auto shp = make_shape_data();
-    shp.pos  = suzanne_pos;
-    for (auto& p : shp.pos) p *= size / 2;
+    auto shp      = make_shape_data();
+    shp.positions = suzanne_pos;
+    for (auto& p : shp.positions) p *= size / 2;
     if (!as_triangles) {
         shp.quads = suzanne_quads;
         for (auto& t : suzanne_triangles) {
@@ -2693,8 +2707,8 @@ make_shape_data make_cube(const vec3f& size, bool as_triangles) {
         {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
     static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
     auto        shp          = make_shape_data();
-    shp.pos                  = cube_pos;
-    for (auto& p : shp.pos) p *= size / 2;
+    shp.positions            = cube_pos;
+    for (auto& p : shp.positions) p *= size / 2;
     if (!as_triangles) {
         shp.quads = cube_quads;
     } else {
@@ -2712,27 +2726,27 @@ make_shape_data make_lines(const vec2i& steps, const vec2f& size,
     auto fid    = [steps](int i, int j) { return j * steps.x + i; };
 
     auto shp = make_shape_data();
-    shp.pos.resize(nverts);
-    shp.norm.resize(nverts);
-    shp.texcoord.resize(nverts);
+    shp.positions.resize(nverts);
+    shp.normals.resize(nverts);
+    shp.texturecoords.resize(nverts);
     shp.radius.resize(nverts);
     if (steps.y > 1) {
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i <= steps.x; i++) {
-                auto uv            = vec2f{i / (float)steps.x,
+                auto uv                  = vec2f{i / (float)steps.x,
                     j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
-                shp.pos[vid(i, j)] = {
+                shp.positions[vid(i, j)] = {
                     (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-                shp.norm[vid(i, j)]     = {1, 0, 0};
-                shp.texcoord[vid(i, j)] = uv * uvsize;
+                shp.normals[vid(i, j)]       = {1, 0, 0};
+                shp.texturecoords[vid(i, j)] = uv * uvsize;
             }
         }
     } else {
         for (auto i = 0; i <= steps.x; i++) {
-            auto uv                 = vec2f{i / (float)steps.x, 0};
-            shp.pos[vid(i, 0)]      = {(uv.x - 0.5f) * size.x, 0, 0};
-            shp.norm[vid(i, 0)]     = {1, 0, 0};
-            shp.texcoord[vid(i, 0)] = uv * uvsize;
+            auto uv                      = vec2f{i / (float)steps.x, 0};
+            shp.positions[vid(i, 0)]     = {(uv.x - 0.5f) * size.x, 0, 0};
+            shp.normals[vid(i, 0)]       = {1, 0, 0};
+            shp.texturecoords[vid(i, 0)] = uv * uvsize;
         }
     }
 
@@ -2751,12 +2765,12 @@ make_shape_data make_points(int num, float uvsize, float point_radius) {
     auto shp = make_shape_data();
     shp.points.resize(num);
     for (auto i = 0; i < num; i++) shp.points[i] = i;
-    shp.pos.assign(num, {0, 0, 0});
-    shp.norm.assign(num, {0, 0, 1});
-    shp.texcoord.assign(num, {0, 0});
+    shp.positions.assign(num, {0, 0, 0});
+    shp.normals.assign(num, {0, 0, 1});
+    shp.texturecoords.assign(num, {0, 0});
     shp.radius.assign(num, point_radius);
-    for (auto i = 0; i < shp.texcoord.size(); i++)
-        shp.texcoord[i] = {(float)i / (float)num, 0};
+    for (auto i = 0; i < shp.texturecoords.size(); i++)
+        shp.texturecoords[i] = {(float)i / (float)num, 0};
     return shp;
 }
 
@@ -2765,20 +2779,20 @@ make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
     float point_radius, uint64_t seed) {
     auto shp = make_points(num, uvsize, point_radius);
     auto rng = make_rng(seed);
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        shp.pos[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        shp.positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
     }
     return shp;
 }
 
 // Make a point.
 make_shape_data make_point(float point_radius) {
-    auto shp     = make_shape_data();
-    shp.points   = {0};
-    shp.pos      = {{0, 0, 0}};
-    shp.norm     = {{0, 0, 1}};
-    shp.texcoord = {{0, 0}};
-    shp.radius   = {point_radius};
+    auto shp          = make_shape_data();
+    shp.points        = {0};
+    shp.positions     = {{0, 0, 0}};
+    shp.normals       = {{0, 0, 1}};
+    shp.texturecoords = {{0, 0}};
+    shp.radius        = {point_radius};
     return shp;
 }
 
@@ -2791,9 +2805,9 @@ make_shape_data make_bezier_circle(float size) {
         {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
     static auto circle_beziers = vector<vec4i>{
         {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
-    auto shp    = make_shape_data();
-    shp.pos     = circle_pos;
-    shp.beziers = circle_beziers;
+    auto shp      = make_shape_data();
+    shp.positions = circle_pos;
+    shp.beziers   = circle_beziers;
     return shp;
 }
 
@@ -2828,31 +2842,32 @@ make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
     }
 
     auto shp = make_lines(steps, {1, 1}, {1, 1});
-    for (auto i = 0; i < shp.pos.size(); i++) {
-        auto u        = shp.texcoord[i].x;
-        auto bidx     = i / (steps.x + 1);
-        shp.pos[i]    = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
-        shp.norm[i]   = bnorm[bidx];
-        shp.radius[i] = lerp(rad.x, rad.y, u);
+    for (auto i = 0; i < shp.positions.size(); i++) {
+        auto u           = shp.texturecoords[i].x;
+        auto bidx        = i / (steps.x + 1);
+        shp.positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
+        shp.normals[i]   = bnorm[bidx];
+        shp.radius[i]    = lerp(rad.x, rad.y, u);
         if (clump.x > 0) {
-            shp.pos[i] = shp.pos[i] +
-                         (shp.pos[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
-                             shp.pos[i]) *
-                             u * clump.x;
+            shp.positions[i] = shp.positions[i] +
+                               (shp.positions[i + (cidx[bidx] - bidx) * (steps.x + 1)] -
+                                   shp.positions[i]) *
+                                   u * clump.x;
         }
         if (noise.x > 0) {
-            auto nx = perlin_noise(shp.pos[i] * noise.y + vec3f{0, 0, 0}) *
+            auto nx = perlin_noise(shp.positions[i] * noise.y + vec3f{0, 0, 0}) *
                       noise.x;
-            auto ny = perlin_noise(shp.pos[i] * noise.y + vec3f{3, 7, 11}) *
+            auto ny = perlin_noise(shp.positions[i] * noise.y + vec3f{3, 7, 11}) *
                       noise.x;
-            auto nz = perlin_noise(shp.pos[i] * noise.y + vec3f{13, 17, 19}) *
+            auto nz = perlin_noise(
+                          shp.positions[i] * noise.y + vec3f{13, 17, 19}) *
                       noise.x;
-            shp.pos[i] += {nx, ny, nz};
+            shp.positions[i] += {nx, ny, nz};
         }
     }
 
     if (clump.x > 0 || noise.x > 0 || rotation.x > 0)
-        shp.norm = compute_tangents(shp.lines, shp.pos);
+        shp.normals = compute_tangents(shp.lines, shp.positions);
     return shp;
 }
 
@@ -2860,7 +2875,7 @@ make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
 make_shape_data merge_shape_data(const vector<make_shape_data>& shapes) {
     auto shp = make_shape_data();
     for (auto& sshp : shapes) {
-        auto nverts = (int)shp.pos.size();
+        auto nverts = (int)shp.positions.size();
         for (auto& v : sshp.points) shp.points.push_back(v + nverts);
         for (auto& v : sshp.lines)
             shp.lines.push_back({v.x + nverts, v.y + nverts});
@@ -2872,9 +2887,9 @@ make_shape_data merge_shape_data(const vector<make_shape_data>& shapes) {
         for (auto& v : sshp.beziers)
             shp.beziers.push_back(
                 {v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
-        for (auto& v : sshp.pos) shp.pos.push_back(v);
-        for (auto& v : sshp.norm) shp.norm.push_back(v);
-        for (auto& v : sshp.texcoord) shp.texcoord.push_back(v);
+        for (auto& v : sshp.positions) shp.positions.push_back(v);
+        for (auto& v : sshp.normals) shp.normals.push_back(v);
+        for (auto& v : sshp.texturecoords) shp.texturecoords.push_back(v);
         for (auto& v : sshp.radius) shp.radius.push_back(v);
     }
     return shp;
@@ -3426,7 +3441,7 @@ scene::~scene() {
 // Computes a shape bounding box.
 bbox3f compute_bbox(const shape* shp) {
     auto bbox = invalid_bbox3f;
-    for (auto p : shp->pos) bbox += p;
+    for (auto p : shp->positions) bbox += p;
     return bbox;
 }
 
@@ -3443,12 +3458,12 @@ bbox3f compute_bbox(const scene* scn) {
 // Updates tesselation.
 void tesselate_subdiv(const subdiv* sbd, shape* shp) {
     shp->name           = sbd->name;
-    auto quads_pos      = sbd->quads_pos;
-    auto quads_texcoord = sbd->quads_texcoord;
-    auto quads_color    = sbd->quads_color;
-    auto pos            = sbd->pos;
-    auto texcoord       = sbd->texcoord;
-    auto color          = sbd->color;
+    auto quads_pos      = sbd->positions_quads;
+    auto quads_texcoord = sbd->texturecoords_quads;
+    auto quads_color    = sbd->colors_quads;
+    auto pos            = sbd->positions;
+    auto texcoord       = sbd->texturecoords;
+    auto color          = sbd->colors;
     for (auto l = 0; l < sbd->subdivision_level; l++) {
         tie(quads_pos, pos)           = subdivide_catmullclark(quads_pos, pos);
         tie(quads_texcoord, texcoord) = subdivide_catmullclark(
@@ -3458,9 +3473,9 @@ void tesselate_subdiv(const subdiv* sbd, shape* shp) {
     auto norm = vector<vec3f>();
     if (sbd->compute_normals) norm = compute_normals(quads_pos, pos);
     auto quads = quads_pos;
-    convert_face_varying(quads, shp->pos, shp->norm, shp->texcoord, shp->color,
-        quads_pos, quads_pos, quads_texcoord, quads_color, pos, norm, texcoord,
-        color);
+    convert_face_varying(quads, shp->positions, shp->normals,
+        shp->texturecoords, shp->colors, quads_pos, quads_pos, quads_texcoord,
+        quads_color, pos, norm, texcoord, color);
     shp->triangles = convert_quads_to_triangles(quads);
 }
 void tesselate_subdivs(scene* scn) {
@@ -3558,11 +3573,11 @@ vec2f compute_animation_range(const scene* scn, const string& anim_group) {
 // Generate a distribution for sampling a shape uniformly based on area/length.
 vector<float> compute_shape_cdf(const shape* shp) {
     if (!shp->triangles.empty()) {
-        return sample_triangles_cdf(shp->triangles, shp->pos);
+        return sample_triangles_cdf(shp->triangles, shp->positions);
     } else if (!shp->lines.empty()) {
-        return sample_lines_cdf(shp->lines, shp->pos);
-    } else if (!shp->pos.empty()) {
-        return sample_points_cdf(shp->pos.size());
+        return sample_lines_cdf(shp->lines, shp->positions);
+    } else if (!shp->positions.empty()) {
+        return sample_points_cdf(shp->positions.size());
     } else {
         throw runtime_error("empty shape not supported");
     }
@@ -3570,11 +3585,11 @@ vector<float> compute_shape_cdf(const shape* shp) {
 
 // Update environment CDF for sampling.
 vector<float> compute_environment_cdf(const environment* env) {
-    auto txt = env->emission_txt;
+    auto txt = env->emission_texture;
     if (!txt) return {};
     auto size     = eval_texture_size(txt);
     auto elem_cdf = vector<float>(size.x * size.y);
-    if (!txt->imgf.pixels.empty()) {
+    if (!txt->hdr_image.pixels.empty()) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
@@ -3594,7 +3609,7 @@ bvh_tree* build_bvh(const shape* shp, bool high_quality, bool embree) {
     auto bvh = new bvh_tree();
 
     // set data
-    bvh->pos       = shp->pos;
+    bvh->positions = shp->positions;
     bvh->radius    = shp->radius;
     bvh->points    = shp->points;
     bvh->lines     = shp->lines;
@@ -3634,8 +3649,8 @@ bvh_tree* build_bvh(const scene* scn, bool high_quality, bool embree) {
 
 // Refits a shape BVH
 void refit_bvh(const shape* shp, bvh_tree* bvh) {
-    bvh->pos    = shp->pos;
-    bvh->radius = shp->radius;
+    bvh->positions = shp->positions;
+    bvh->radius    = shp->radius;
     refit_bvh(bvh);
 }
 
@@ -3678,17 +3693,19 @@ void add_missing_names(scene* scn) {
 // Add missing tangent space if needed.
 void add_missing_tangent_space(scene* scn) {
     for (auto ist : scn->instances) {
-        if (!ist->shape->tangsp.empty() || ist->shape->texcoord.empty())
+        if (!ist->shape->tangent_spaces.empty() ||
+            ist->shape->texturecoords.empty())
             continue;
         if (!ist->material ||
             (!ist->material->normal_texture && !ist->material->bump_texture))
             continue;
         if (!ist->shape->triangles.empty()) {
-            if (ist->shape->norm.empty())
-                ist->shape->norm = compute_normals(
-                    ist->shape->triangles, ist->shape->pos);
-            ist->shape->tangsp = compute_tangent_space(ist->shape->triangles,
-                ist->shape->pos, ist->shape->norm, ist->shape->texcoord);
+            if (ist->shape->normals.empty())
+                ist->shape->normals = compute_normals(
+                    ist->shape->triangles, ist->shape->positions);
+            ist->shape->tangent_spaces = compute_tangent_space(
+                ist->shape->triangles, ist->shape->positions,
+                ist->shape->normals, ist->shape->texturecoords);
         } else {
             throw runtime_error("type not supported");
         }
@@ -3730,7 +3747,7 @@ vector<string> validate(const scene* scn, bool skip_textures) {
     };
     auto check_empty_textures = [&errs](const vector<texture*>& vals) {
         for (auto val : vals) {
-            if (val->imgf.pixels.empty() && val->imgb.pixels.empty())
+            if (val->hdr_image.pixels.empty() && val->ldr_image.pixels.empty())
                 errs.push_back("empty texture " + val->name);
         }
     };
@@ -3803,10 +3820,11 @@ vec3f eval_elem_norm(const shape* shp, int ei) {
     auto norm = zero3f;
     if (!shp->triangles.empty()) {
         auto t = shp->triangles[ei];
-        norm   = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        norm   = triangle_normal(
+            shp->positions[t.x], shp->positions[t.y], shp->positions[t.z]);
     } else if (!shp->lines.empty()) {
         auto l = shp->lines[ei];
-        norm   = line_tangent(shp->pos[l.x], shp->pos[l.y]);
+        norm   = line_tangent(shp->positions[l.x], shp->positions[l.y]);
     } else {
         norm = {0, 0, 1};
     }
@@ -3818,15 +3836,16 @@ vec4f eval_elem_tangsp(const shape* shp, int ei) {
     auto tangsp = zero4f;
     if (!shp->triangles.empty()) {
         auto t    = shp->triangles[ei];
-        auto norm = triangle_normal(shp->pos[t.x], shp->pos[t.y], shp->pos[t.z]);
+        auto norm = triangle_normal(
+            shp->positions[t.x], shp->positions[t.y], shp->positions[t.z]);
         auto txty = tuple<vec3f, vec3f>();
-        if (shp->texcoord.empty()) {
-            txty = triangle_tangents_fromuv(shp->pos[t.x], shp->pos[t.y],
-                shp->pos[t.z], {0, 0}, {1, 0}, {0, 1});
+        if (shp->texturecoords.empty()) {
+            txty = triangle_tangents_fromuv(shp->positions[t.x],
+                shp->positions[t.y], shp->positions[t.z], {0, 0}, {1, 0}, {0, 1});
         } else {
-            txty = triangle_tangents_fromuv(shp->pos[t.x], shp->pos[t.y],
-                shp->pos[t.z], shp->texcoord[t.x], shp->texcoord[t.y],
-                shp->texcoord[t.z]);
+            txty = triangle_tangents_fromuv(shp->positions[t.x],
+                shp->positions[t.y], shp->positions[t.z], shp->texturecoords[t.x],
+                shp->texturecoords[t.y], shp->texturecoords[t.z]);
         }
         auto tx = get<0>(txty), ty = get<1>(txty);
         tx     = orthonormalize(tx, norm);
@@ -3848,7 +3867,7 @@ T eval_elem(const shape* shp, const vector<T>& vals, int ei, const vec2f& uv) {
         return interpolate_line(vals[l.x], vals[l.y], uv.x);
     } else if (!shp->points.empty()) {
         return vals[shp->points[ei]];
-    } else if (!shp->pos.empty()) {
+    } else if (!shp->positions.empty()) {
         return vals[ei];
     } else {
         return {};
@@ -3857,31 +3876,32 @@ T eval_elem(const shape* shp, const vector<T>& vals, int ei, const vec2f& uv) {
 
 // Shape values interpolated using barycentric coordinates
 vec3f eval_pos(const shape* shp, int ei, const vec2f& uv) {
-    return eval_elem(shp, shp->pos, ei, uv);
+    return eval_elem(shp, shp->positions, ei, uv);
 }
 vec3f eval_norm(const shape* shp, int ei, const vec2f& uv) {
-    if (shp->norm.empty()) return eval_elem_norm(shp, ei);
-    return normalize(eval_elem(shp, shp->norm, ei, uv));
+    if (shp->normals.empty()) return eval_elem_norm(shp, ei);
+    return normalize(eval_elem(shp, shp->normals, ei, uv));
 }
 vec2f eval_texcoord(const shape* shp, int ei, const vec2f& uv) {
-    if (shp->texcoord.empty()) return uv;
-    return eval_elem(shp, shp->texcoord, ei, uv);
+    if (shp->texturecoords.empty()) return uv;
+    return eval_elem(shp, shp->texturecoords, ei, uv);
 }
 vec4f eval_color(const shape* shp, int ei, const vec2f& uv) {
-    if (shp->color.empty()) return {1, 1, 1, 1};
-    return eval_elem(shp, shp->color, ei, uv);
+    if (shp->colors.empty()) return {1, 1, 1, 1};
+    return eval_elem(shp, shp->colors, ei, uv);
 }
 float eval_radius(const shape* shp, int ei, const vec2f& uv) {
     if (shp->radius.empty()) return 0.001f;
     return eval_elem(shp, shp->radius, ei, uv);
 }
 vec4f eval_tangsp(const shape* shp, int ei, const vec2f& uv) {
-    if (shp->tangsp.empty()) return eval_elem_tangsp(shp, ei);
-    return eval_elem(shp, shp->tangsp, ei, uv);
+    if (shp->tangent_spaces.empty()) return eval_elem_tangsp(shp, ei);
+    return eval_elem(shp, shp->tangent_spaces, ei, uv);
 }
 vec3f eval_tangsp(const shape* shp, int ei, const vec2f& uv, bool& left_handed) {
-    auto tangsp = (shp->tangsp.empty()) ? eval_elem_tangsp(shp, ei) :
-                                          eval_elem(shp, shp->tangsp, ei, uv);
+    auto tangsp = (shp->tangent_spaces.empty()) ?
+                      eval_elem_tangsp(shp, ei) :
+                      eval_elem(shp, shp->tangent_spaces, ei, uv);
     left_handed = tangsp.w < 0;
     return {tangsp.x, tangsp.y, tangsp.z};
 }
@@ -3953,8 +3973,8 @@ vec3f eval_direction(const environment* env, const vec2f& uv) {
 // Evaluate the environment color.
 vec3f eval_environment(const environment* env, const vec3f& w) {
     auto ke = env->emission;
-    if (env->emission_txt) {
-        ke *= xyz(eval_texture(env->emission_txt, eval_texcoord(env, w)));
+    if (env->emission_texture) {
+        ke *= xyz(eval_texture(env->emission_texture, eval_texcoord(env, w)));
     }
     return ke;
 }
@@ -3967,10 +3987,10 @@ vec3f eval_environment(const scene* scn, const vec3f& w) {
 
 // Check texture size
 vec2i eval_texture_size(const texture* txt) {
-    if (!txt->imgf.pixels.empty()) {
-        return {txt->imgf.width, txt->imgf.height};
-    } else if (!txt->imgb.pixels.empty()) {
-        return {txt->imgb.width, txt->imgb.height};
+    if (!txt->hdr_image.pixels.empty()) {
+        return {txt->hdr_image.width, txt->hdr_image.height};
+    } else if (!txt->ldr_image.pixels.empty()) {
+        return {txt->ldr_image.width, txt->ldr_image.height};
     } else {
         return zero2i;
     }
@@ -3978,12 +3998,12 @@ vec2i eval_texture_size(const texture* txt) {
 
 // Lookup a texture value
 vec4f lookup_texture(const texture* txt, int i, int j) {
-    if (!txt->imgf.pixels.empty()) {
-        return pixel_at(txt->imgf, i, j);
-    } else if (!txt->imgb.pixels.empty() && txt->srgb) {
-        return srgb_to_linear(byte_to_float(pixel_at(txt->imgb, i, j)));
-    } else if (!txt->imgb.pixels.empty() && !txt->srgb) {
-        return byte_to_float(pixel_at(txt->imgb, i, j));
+    if (!txt->hdr_image.pixels.empty()) {
+        return pixel_at(txt->hdr_image, i, j);
+    } else if (!txt->ldr_image.pixels.empty() && !txt->ldr_as_linear) {
+        return srgb_to_linear(byte_to_float(pixel_at(txt->ldr_image, i, j)));
+    } else if (!txt->ldr_image.pixels.empty() && txt->ldr_as_linear) {
+        return byte_to_float(pixel_at(txt->ldr_image, i, j));
     } else {
         return zero4f;
     }
@@ -3992,7 +4012,7 @@ vec4f lookup_texture(const texture* txt, int i, int j) {
 // Evaluate a texture
 vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     if (!txt) return {1, 1, 1, 1};
-    if (txt->imgf.pixels.empty() && txt->imgb.pixels.empty())
+    if (txt->hdr_image.pixels.empty() && txt->ldr_image.pixels.empty())
         return {1, 1, 1, 1};
 
     // get image width/height
@@ -4001,7 +4021,7 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
 
     // get coordinates normalized for tiling
     auto s = 0.0f, t = 0.0f;
-    if (txt->clamp) {
+    if (txt->clamp_to_edge) {
         s = clamp(texcoord.x, 0.0f, 1.0f) * width;
         t = clamp(texcoord.y, 0.0f, 1.0f) * height;
     } else {
@@ -4017,7 +4037,7 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
     auto u = s - i, v = t - j;
 
     // nearest-neighbor interpolation
-    if (!txt->linear) {
+    if (txt->no_interpolation) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         return lookup_texture(txt, i, j);
@@ -4032,8 +4052,8 @@ vec4f eval_texture(const texture* txt, const vec2f& texcoord) {
 
 // Lookup a texture value
 float lookup_voltexture(const voltexture* txt, int i, int j, int k) {
-    if (txt->vol.voxels.empty()) {
-        return voxel_at(txt->vol, i, j, k);
+    if (txt->volume_data.voxels.empty()) {
+        return voxel_at(txt->volume_data, i, j, k);
     } else {
         return 0;
     }
@@ -4041,12 +4061,12 @@ float lookup_voltexture(const voltexture* txt, int i, int j, int k) {
 
 // Evaluate a volume texture
 float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
-    if (!txt || txt->vol.voxels.empty()) return 1;
+    if (!txt || txt->volume_data.voxels.empty()) return 1;
 
     // get image width/height
-    auto width  = txt->vol.width;
-    auto height = txt->vol.height;
-    auto depth  = txt->vol.depth;
+    auto width  = txt->volume_data.width;
+    auto height = txt->volume_data.height;
+    auto depth  = txt->volume_data.depth;
 
     // get coordinates normalized for tiling
     auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
@@ -4061,7 +4081,7 @@ float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
     auto u = s - i, v = t - j, w = r - k;
 
     // nearest-neighbor interpolation
-    if (!txt->linear) {
+    if (txt->no_interpolation) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         k = w < 0.5 ? k : min(k + 1, depth - 1);
@@ -4232,7 +4252,7 @@ tuple<int, vec2f> sample_shape(const shape* shp, const vector<float>& elem_cdf,
         return sample_triangles(elem_cdf, re, ruv);
     } else if (!shp->lines.empty()) {
         return {get<0>(sample_lines(elem_cdf, re, ruv.x)), ruv};
-    } else if (!shp->pos.empty()) {
+    } else if (!shp->positions.empty()) {
         return {sample_points(elem_cdf, re), ruv};
     } else {
         return {0, zero2f};
@@ -4403,12 +4423,12 @@ void print_stats(const scene* scn) {
     for (auto shp : scn->shapes) {
         elem_lines += shp->lines.size();
         elem_triangles += shp->triangles.size();
-        vert_pos += shp->pos.size();
-        vert_norm += shp->norm.size();
-        vert_texcoord += shp->texcoord.size();
-        vert_color += shp->color.size();
+        vert_pos += shp->positions.size();
+        vert_norm += shp->normals.size();
+        vert_texcoord += shp->texturecoords.size();
+        vert_color += shp->colors.size();
         vert_radius += shp->radius.size();
-        vert_tangsp += shp->tangsp.size();
+        vert_tangsp += shp->tangent_spaces.size();
     }
     memory_elems = elem_lines * sizeof(vec2i) + elem_triangles * sizeof(vec3i);
     memory_verts = vert_pos * sizeof(vec3f) + vert_norm * sizeof(vec3f) +
@@ -4416,8 +4436,8 @@ void print_stats(const scene* scn) {
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
 
     for (auto txt : scn->textures) {
-        texel_hdr += txt->imgf.width * txt->imgf.height;
-        texel_ldr += txt->imgb.width * txt->imgb.height;
+        texel_hdr += txt->hdr_image.width * txt->hdr_image.height;
+        texel_ldr += txt->ldr_image.width * txt->ldr_image.height;
     }
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
@@ -4695,7 +4715,7 @@ float sample_delta_brdf_pdf(
 // Sample pdf for an environment.
 float sample_environment_pdf(
     const environment* env, const vector<float>& elem_cdf, const vec3f& i) {
-    auto txt = env->emission_txt;
+    auto txt = env->emission_texture;
     if (!elem_cdf.empty() && txt) {
         auto size     = eval_texture_size(txt);
         auto texcoord = eval_texcoord(env, i);
@@ -4714,7 +4734,7 @@ float sample_environment_pdf(
 // Picks a point on an environment.
 vec3f sample_environment(const environment* env, const vector<float>& elem_cdf,
     float rel, const vec2f& ruv) {
-    auto txt = env->emission_txt;
+    auto txt = env->emission_texture;
     if (!elem_cdf.empty() && txt) {
         auto idx  = sample_discrete(elem_cdf, rel);
         auto size = eval_texture_size(txt);
@@ -4745,14 +4765,14 @@ float sample_light_pdf(const instance* ist, const vector<float>& elem_cdf,
 // Sample lights wrt solid angle
 vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& p, float lrn, float rel, const vec2f& ruv) {
-    auto nlights = (int)(lights->lights.size() + lights->environments.size());
+    auto nlights = (int)(lights->instances.size() + lights->environments.size());
     auto idx     = sample_index(nlights, lrn);
-    if (idx < lights->lights.size()) {
-        auto  lgt      = lights->lights[idx];
+    if (idx < lights->instances.size()) {
+        auto  lgt      = lights->instances[idx];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         return sample_light(lgt, elem_cdf, p, rel, ruv);
     } else {
-        auto  lgt      = lights->environments[idx - lights->lights.size()];
+        auto  lgt      = lights->environments[idx - lights->instances.size()];
         auto& elem_cdf = lights->env_cdf.at(lgt);
         return sample_environment(lgt, elem_cdf, rel, ruv);
     }
@@ -4761,10 +4781,10 @@ vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
 // Sample lights pdf
 float sample_lights_pdf(const scene* scn, const trace_lights* lights,
     const bvh_tree* bvh, const vec3f& p, const vec3f& i) {
-    auto nlights = (int)(lights->lights.size() + lights->environments.size());
+    auto nlights = (int)(lights->instances.size() + lights->environments.size());
     auto pdf     = 0.0f;
     // instances
-    for (auto lgt : lights->lights) {
+    for (auto lgt : lights->instances) {
         // get cdf and bvh
         auto  sbvh     = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shape)];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
@@ -4827,16 +4847,16 @@ vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
     auto  i      = zero3f;
     vec3f weight = vec3f{1, 1, 1};
 
-    auto nlights = (int)(lights->lights.size() + lights->environments.size());
+    auto nlights = (int)(lights->instances.size() + lights->environments.size());
     auto idx     = sample_index(nlights, rand1f(rng));
     pdf          = 1.0 / nlights;
-    if (idx < lights->lights.size()) {
-        auto  lgt      = lights->lights[idx];
+    if (idx < lights->instances.size()) {
+        auto  lgt      = lights->instances[idx];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
         pdf *= 1.0 / elem_cdf.back();
     } else {
-        auto  lgt      = lights->environments[idx - lights->lights.size()];
+        auto  lgt      = lights->environments[idx - lights->instances.size()];
         auto& elem_cdf = lights->env_cdf.at(lgt);
         i = sample_environment(lgt, elem_cdf, rand1f(rng), rand2f(rng));
         pdf *= sample_environment_pdf(lgt, elem_cdf, i);
@@ -4913,7 +4933,8 @@ vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
 vec3f trace_path(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->lights.empty() && lights->environments.empty()) return zero3f;
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto l        = zero3f;
@@ -4950,7 +4971,7 @@ vec3f trace_path(const scene* scn, const bvh_tree* bvh,
 
         // direct
         if (!is_delta_bsdf(f) &&
-            (!lights->lights.empty() || !lights->environments.empty())) {
+            (!lights->instances.empty() || !lights->environments.empty())) {
             auto i = (rand1f(rng) < 0.5f) ?
                          sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
                              rand2f(rng)) :
@@ -5017,7 +5038,8 @@ static instance* air = new instance{"air", {}, nullptr, new material{}, nullptr}
 vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->lights.empty() && lights->environments.empty()) return zero3f;
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto radiance = zero3f;
@@ -5213,7 +5235,8 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
 vec3f trace_path_naive(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->lights.empty() && lights->environments.empty()) return zero3f;
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto l      = zero3f;
@@ -5277,7 +5300,8 @@ vec3f trace_path_naive(const scene* scn, const bvh_tree* bvh,
 vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->lights.empty() && lights->environments.empty()) return zero3f;
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // initialize
     auto l        = zero3f;
@@ -5314,9 +5338,9 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         }
 
         // direct
-        if (!is_delta_bsdf(f) && !lights->lights.empty()) {
-            auto  lgt      = lights->lights[sample_index(
-                lights->lights.size(), rand1f(rng))];
+        if (!is_delta_bsdf(f) && !lights->instances.empty()) {
+            auto  lgt      = lights->instances[sample_index(
+                lights->instances.size(), rand1f(rng))];
             auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
             auto  eid      = 0;
             auto  euv      = zero2f;
@@ -5328,9 +5352,9 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
             auto isec = intersect_ray_cutout(
                 scn, bvh, make_ray(p, i), rng, nbounces);
             if (isec.ist == lgt && isec.ei == eid) {
-                auto larea   = elem_cdf.back();
-                auto pdf     = sample_index_pdf(lights->lights.size()) / larea;
-                auto le      = eval_emission(lgt, eid, euv);
+                auto larea = elem_cdf.back();
+                auto pdf   = sample_index_pdf(lights->instances.size()) / larea;
+                auto le    = eval_emission(lgt, eid, euv);
                 auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
                 auto gterm   = fabs(dot(ln, i)) / dot(lp - p, lp - p);
                 if (pdf != 0) l += weight * le * brdfcos * gterm / pdf;
@@ -5367,7 +5391,8 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
 vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->lights.empty() && lights->environments.empty()) return zero3f;
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // intersect scene
     auto isec = intersect_ray_cutout(scn, bvh, ray, rng, nbounces);
@@ -5424,7 +5449,8 @@ vec3f trace_direct(const scene* scn, const bvh_tree* bvh,
 vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->lights.empty() && lights->environments.empty()) return zero3f;
+    if (lights->instances.empty() && lights->environments.empty())
+        return zero3f;
 
     // intersect scene
     auto isec = intersect_ray_cutout(scn, bvh, ray, rng, nbounces);
@@ -5447,8 +5473,9 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
     l += eval_emission(isec.ist, isec.ei, isec.uv);
 
     // direct
-    if (!is_delta_bsdf(f) && !lights->lights.empty()) {
-        auto lgt = lights->lights[sample_index(lights->lights.size(), rand1f(rng))];
+    if (!is_delta_bsdf(f) && !lights->instances.empty()) {
+        auto  lgt      = lights->instances[sample_index(
+            lights->instances.size(), rand1f(rng))];
         auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         auto  eid      = 0;
         auto  euv      = zero2f;
@@ -5460,7 +5487,7 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
         auto isec = intersect_ray_cutout(scn, bvh, make_ray(p, i), rng, nbounces);
         if (isec.ist == lgt && isec.ei == eid) {
             auto larea   = elem_cdf.back();
-            auto pdf     = sample_index_pdf(lights->lights.size()) / larea;
+            auto pdf     = sample_index_pdf(lights->instances.size()) / larea;
             auto le      = eval_emission(lgt, eid, euv);
             auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
             auto gterm   = fabs(dot(ln, i)) / dot(lp - p, lp - p);
@@ -5794,7 +5821,7 @@ trace_lights* make_trace_lights(const scene* scn, const trace_params& params) {
     for (auto ist : scn->instances) {
         if (!ist->material || ist->material->emission == zero3f) continue;
         if (ist->shape->triangles.empty()) continue;
-        lights->lights.push_back(ist);
+        lights->instances.push_back(ist);
         lights->shape_cdf[ist->shape] = compute_shape_cdf(ist->shape);
     }
 

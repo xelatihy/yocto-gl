@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
     log_info("adding scene elements");
     if (add_skyenv && scn->environments.empty()) {
         scn->environments.push_back(make_sky_environment("sky"));
-        scn->textures.push_back(scn->environments.back()->emission_txt);
+        scn->textures.push_back(scn->environments.back()->emission_texture);
     }
     if (double_sided)
         for (auto mat : scn->materials) mat->double_sided = true;

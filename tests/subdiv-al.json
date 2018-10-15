@@ -26,7 +26,7 @@
     "textures": [
         {
             "name": "floor",
-            "path": "textures/floor.png",
+            "filename": "textures/floor.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "grid"
@@ -34,7 +34,7 @@
         },
         {
             "name": "uvgrid",
-            "path": "textures/uvgrid.png",
+            "filename": "textures/uvgrid.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "uvgrid"
@@ -115,28 +115,28 @@
     "shapes": [
         {
             "name": "floor",
-            "path": "meshes/floor.ply",
+            "filename": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }
         },
         {
             "name": "obj1",
-            "path": "meshes/obj1.ply",
+            "filename": "meshes/obj1.ply",
             "!!proc": {
                 "type": "cube"
             }
         },
         {
             "name": "obj2",
-            "path": "meshes/obj2.ply",
+            "filename": "meshes/obj2.ply",
             "!!proc": {
                 "type": "suzanne"
             }
         },
         {
             "name": "obj3",
-            "path": "meshes/obj3.ply",
+            "filename": "meshes/obj3.ply",
             "!!proc": {
                 "type": "cube"
             }
@@ -165,7 +165,7 @@
     "subdivs": [
         {
             "name": "obj1",
-            "path": "meshes/obj1.obj",
+            "filename": "meshes/obj1.obj",
             "level": 4,
             "!!proc": {
                 "type": "cube"
@@ -173,7 +173,7 @@
         },
         {
             "name": "obj2",
-            "path": "meshes/obj2.obj",
+            "filename": "meshes/obj2.obj",
             "level": 2,
             "!!proc": {
                 "type": "suzanne"
@@ -181,7 +181,7 @@
         },
         {
             "name": "obj3",
-            "path": "meshes/obj3.obj",
+            "filename": "meshes/obj3.obj",
             "level": 4,
             "!!proc": {
                 "type": "cube"
