@@ -112,8 +112,6 @@ inline bool print(const string& fmt, const Args&... args) {
 // Parse a list of space separated values.
 template <typename... Args>
 inline bool parse(const string& str, Args&... args);
-template <typename... Args>
-inline bool parse(FILE* fs, Args&... args);
 
 }  // namespace ygl
 
@@ -562,130 +560,35 @@ inline bool print_value(string& str, double val) {
     return true;
 }
 
+template <typename T, size_t N>
+inline bool print_value(string& str, const std::array<T, N>& val) {
+    for (auto i = 0; i < N; i++) {
+        if (i) str += " ";
+        str += std::to_string(val[i]);
+    }
+    return true;
+}
+
 // Print compound types.
-template <typename T>
-inline bool print_value(string& str, const vec2<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const vec<T, N>& v) {
+    return print_value(str, (const std::array<T, N>&)v);
 }
-template <typename T>
-inline bool print_value(string& str, const vec3<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    return true;
+template <typename T, int N, int M>
+inline bool print_value(string& str, const mat<T, N, M>& v) {
+    return print_value(str, (const std::array<T, N * M>&)v);
 }
-template <typename T>
-inline bool print_value(string& str, const vec4<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.w)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const frame<T, N>& v) {
+    return print_value(str, (const std::array<T, N*(N + 1)>&)v);
 }
-template <typename T>
-inline bool print_value(string& str, const mat2<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const bbox<T, N>& v) {
+    return print_value(str, (const std::array<T, N * 2>&)v);
 }
-template <typename T>
-inline bool print_value(string& str, const mat3<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const mat4<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.w)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const frame2<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.o)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const frame3<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.o)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const bbox1<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const bbox2<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const bbox3<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const bbox4<T>& v) {
-    if (!print_value(str, v.min)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.max)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const ray2<T>& v) {
-    if (!print_value(str, v.o)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.d)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmin)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmax)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const ray3<T>& v) {
-    if (!print_value(str, v.o)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.d)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmin)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.tmax)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const ray<T, N>& v) {
+    return print_value(str, (const std::array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.
@@ -754,94 +657,44 @@ inline bool _parse(const char*& str, double& val) {
     return true;
 }
 
-// Prints basic types to stream
-inline bool _parse(FILE* fs, string& val) {
-    char buf[4096];
-    if (fscanf(fs, "%4095s", buf) != 1) return false;
-    val = buf;
-    return true;
-}
-inline bool _parse(FILE* fs, int& val) { return fscanf(fs, "%d", &val) == 1; }
-inline bool _parse(FILE* fs, float& val) { return fscanf(fs, "%f", &val) == 1; }
-inline bool _parse(FILE* fs, double& val) {
-    return fscanf(fs, "%lf", &val) == 1;
-}
-
 // Print compound types
-template <typename Archive, typename T, size_t N>
-inline bool _parse(Archive& ar, std::array<T, N>& val) {
+template <typename T, size_t N>
+inline bool _parse(const char*& str, std::array<T, N>& val) {
     for (auto i = 0; i < N; i++) {
-        if (!_parse(ar, val[i])) return false;
+        if (!_parse(str, val[i])) return false;
     }
     return true;
 }
 // Data acess
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec2<T>& v) {
-    return _parse(ar, (std::array<T, 2>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, vec<T, N>& v) {
+    return _parse(str, (std::array<T, N>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec3<T>& v) {
-    return _parse(ar, (std::array<T, 3>&)v);
+template <typename T, int N, int M>
+inline bool _parse(const char*& str, mat<T, N, M>& v) {
+    return _parse(str, (std::array<T, N * M>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, vec4<T>& v) {
-    return _parse(ar, (std::array<T, 4>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, frame<T, N>& v) {
+    return _parse(str, (std::array<T, N*(N + 1)>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, mat2<T>& v) {
-    return _parse(ar, (std::array<T, 4>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, bbox<T, N>& v) {
+    return _parse(str, (std::array<T, N * 2>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, mat3<T>& v) {
-    return _parse(ar, (std::array<T, 9>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, mat4<T>& v) {
-    return _parse(ar, (std::array<T, 16>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, frame2<T>& v) {
-    return _parse(ar, (std::array<T, 6>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, frame3<T>& v) {
-    return _parse(ar, (std::array<T, 12>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox1<T>& v) {
-    return _parse(ar, (std::array<T, 1>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox2<T>& v) {
-    return _parse(ar, (std::array<T, 4>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox3<T>& v) {
-    return _parse(ar, (std::array<T, 6>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, bbox4<T>& v) {
-    return _parse(ar, (std::array<T, 8>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, ray2<T>& v) {
-    return _parse(ar, (std::array<T, 6>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, ray3<T>& v) {
-    return _parse(ar, (std::array<T, 8>&)v);
+template <typename T, int N>
+inline bool _parse(const char*& str, ray<T, N>& v) {
+    return _parse(str, (std::array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.
-template <typename Archive>
-inline bool _parse_next(Archive& ar) {
+inline bool _parse_next(const char*& str) {
     return true;
 }
-template <typename Archive, typename Arg, typename... Args>
-inline bool _parse_next(Archive& ar, Arg& arg, Args&... args) {
-    if (!_parse(ar, arg)) return false;
-    return _parse_next(ar, args...);
+template <typename Arg, typename... Args>
+inline bool _parse_next(const char*& str, Arg& arg, Args&... args) {
+    if (!_parse(str, arg)) return false;
+    return _parse_next(str, args...);
 }
 
 // Returns trus if this is white space
@@ -856,12 +709,6 @@ inline bool parse(const string& str, Args&... args) {
     auto str_ = str.c_str();
     if (!_parse_next(str_, args...)) return false;
     return _is_whitespace(str_);
-}
-
-// Parse a list of space separated values.
-template <typename... Args>
-inline bool parse(FILE* fs, Args&... args) {
-    return _parse_next(fs, args...);
 }
 
 }  // namespace ygl
