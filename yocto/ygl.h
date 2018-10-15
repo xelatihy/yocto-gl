@@ -3089,24 +3089,24 @@ float lookup_voltexture(const yocto_voltexture* texture, int i, int j, int k);
 float eval_voltexture(const yocto_voltexture* texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float eval_camera_fovy(const yocto_camera* cam);
-float eval_camera_aspect(const yocto_camera* cam);
+float eval_camera_fovy(const yocto_camera* camera);
+float eval_camera_aspect(const yocto_camera* camera);
 void  set_camera_fovy(
-     yocto_camera* cam, float fovy, float aspect, float width = 0.036f);
-vec2i eval_image_size(const yocto_camera* cam, int yresolution);
+     yocto_camera* camera, float fovy, float aspect, float width = 0.036f);
+vec2i eval_image_size(const yocto_camera* camera, int yresolution);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
-ray3f eval_camera_ray(const yocto_camera* cam, const vec2f& uv, const vec2f& luv);
+ray3f eval_camera_ray(const yocto_camera* camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const yocto_camera* cam, const vec2i& ij,
+ray3f eval_camera_ray(const yocto_camera* camera, const vec2i& ij,
     const vec2i& imsize, const vec2f& puv, const vec2f& luv);
 // Generates a ray from a camera for pixel index `idx`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f eval_camera_ray(const yocto_camera* cam, int idx, const vec2i& imsize,
+ray3f eval_camera_ray(const yocto_camera* camera, int idx, const vec2i& imsize,
     const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,

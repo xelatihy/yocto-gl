@@ -2731,15 +2731,15 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
 
         // possible token values
         if (cmd == "c") {
-            auto cam     = obj_camera();
-            cam.name     = parse_string(ss);
-            cam.ortho    = parse_bool(ss);
-            cam.film     = parse_vec2f(ss);
-            cam.focal    = parse_float(ss);
-            cam.focus    = parse_float(ss);
-            cam.aperture = parse_float(ss);
-            cam.frame    = parse_frame3f(ss);
-            if (cb.camera) cb.camera(cam);
+            auto camera     = obj_camera();
+            camera.name     = parse_string(ss);
+            camera.ortho    = parse_bool(ss);
+            camera.film     = parse_vec2f(ss);
+            camera.focal    = parse_float(ss);
+            camera.focus    = parse_float(ss);
+            camera.aperture = parse_float(ss);
+            camera.frame    = parse_frame3f(ss);
+            if (cb.camera) cb.camera(camera);
         } else if (cmd == "e") {
             auto environment        = obj_environment();
             environment.name        = parse_string(ss);
@@ -3044,15 +3044,15 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         mmap[mat->name] = mat;
     };
     cb.camera = [&](const obj_camera& ocam) {
-        auto cam            = new yocto_camera();
-        cam->name           = ocam.name;
-        cam->orthographic   = ocam.ortho;
-        cam->film_size      = ocam.film;
-        cam->focal_length   = ocam.focal;
-        cam->focus_distance = ocam.focus;
-        cam->lens_aperture  = ocam.aperture;
-        cam->frame          = ocam.frame;
-        scene->cameras.push_back(cam);
+        auto camera            = new yocto_camera();
+        camera->name           = ocam.name;
+        camera->orthographic   = ocam.ortho;
+        camera->film_size      = ocam.film;
+        camera->focal_length   = ocam.focal;
+        camera->focus_distance = ocam.focus;
+        camera->lens_aperture  = ocam.aperture;
+        camera->frame          = ocam.frame;
+        scene->cameras.push_back(camera);
     };
     cb.environmnet = [&](const obj_environment& oenv) {
         auto environment              = new yocto_environment();
@@ -3163,10 +3163,10 @@ bool save_objx(const string& filename, const yocto_scene* scene) {
     if (!fs) return false;
 
     // cameras
-    for (auto cam : scene->cameras) {
-        print(fs, "c {} {} {} {} {} {} {}\n", cam->name, (int)cam->orthographic,
-            cam->film_size, cam->focal_length, cam->focus_distance,
-            cam->lens_aperture, cam->frame);
+    for (auto camera : scene->cameras) {
+        print(fs, "c {} {} {} {} {} {} {}\n", camera->name, (int)camera->orthographic,
+            camera->film_size, camera->focal_length, camera->focus_distance,
+            camera->lens_aperture, camera->frame);
     }
 
     // environments
@@ -3670,24 +3670,24 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
     if (gltf.count("cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
             auto& gcam        = gltf.at("cameras").at(cid);
-            auto  cam         = new yocto_camera();
-            cam->name         = gcam.value("name", ""s);
-            cam->orthographic = gcam.value("type", ""s) == "orthographic";
-            if (cam->orthographic) {
+            auto  camera         = new yocto_camera();
+            camera->name         = gcam.value("name", ""s);
+            camera->orthographic = gcam.value("type", ""s) == "orthographic";
+            if (camera->orthographic) {
                 printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
-                set_camera_fovy(cam, ortho.value("ymag", 0.0f),
+                set_camera_fovy(camera, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
-                cam->focus_distance = maxf;
-                cam->lens_aperture  = 0;
+                camera->focus_distance = maxf;
+                camera->lens_aperture  = 0;
             } else {
                 auto persp = gcam.value("perspective", json::object());
-                set_camera_fovy(cam, persp.value("yfov", 1.0f),
+                set_camera_fovy(camera, persp.value("yfov", 1.0f),
                     persp.value("aspectRatio", 1.0f));
-                cam->focus_distance = maxf;
-                cam->lens_aperture  = 0;
+                camera->focus_distance = maxf;
+                camera->lens_aperture  = 0;
             }
-            scene->cameras.push_back(cam);
+            scene->cameras.push_back(camera);
         }
     }
 
@@ -3878,10 +3878,10 @@ yocto_scene* load_gltf_scene(
 
     // fix cameras
     auto bbox = compute_bbox(scene.get());
-    for (auto cam : scene->cameras) {
+    for (auto camera : scene->cameras) {
         auto center = (bbox.min + bbox.max) / 2;
-        auto dist   = dot(-cam->frame.z, center - cam->frame.o);
-        if (dist > 0) cam->focus_distance = dist;
+        auto dist   = dot(-camera->frame.z, center - camera->frame.o);
+        if (dist > 0) camera->focus_distance = dist;
     }
 
     // done
@@ -3914,21 +3914,21 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
 
     // convert cameras
     auto cmap = unordered_map<yocto_camera*, int>();
-    for (auto cam : scene->cameras) {
+    for (auto camera : scene->cameras) {
         auto cjs    = json();
-        cjs["name"] = cam->name;
-        if (!cam->orthographic) {
+        cjs["name"] = camera->name;
+        if (!camera->orthographic) {
             cjs["type"]                       = "perspective";
-            cjs["perspective"]["aspectRatio"] = cam->film_size.x /
-                                                cam->film_size.y;
+            cjs["perspective"]["aspectRatio"] = camera->film_size.x /
+                                                camera->film_size.y;
             cjs["perspective"]["znear"] = 0.01f;
         } else {
             cjs["type"]                  = "orthographic";
-            cjs["orthographic"]["xmag"]  = cam->film_size.x / 2;
-            cjs["orthographic"]["ymag"]  = cam->film_size.y / 2;
+            cjs["orthographic"]["xmag"]  = camera->film_size.x / 2;
+            cjs["orthographic"]["ymag"]  = camera->film_size.y / 2;
             cjs["orthographic"]["znear"] = 0.01f;
         }
-        cmap[cam] = (int)js["cameras"].size();
+        cmap[camera] = (int)js["cameras"].size();
         js["cameras"].push_back(cjs);
     }
 
@@ -4074,11 +4074,11 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
 
     // nodes from instances
     if (scene->nodes.empty()) {
-        for (auto cam : scene->cameras) {
+        for (auto camera : scene->cameras) {
             auto njs      = json();
-            njs["name"]   = cam->name;
-            njs["camera"] = cmap.at(cam);
-            njs["matrix"] = frame_to_mat(cam->frame);
+            njs["name"]   = camera->name;
+            njs["camera"] = cmap.at(camera);
+            njs["matrix"] = frame_to_mat(camera->frame);
             js["nodes"].push_back(njs);
         }
         for (auto instance : scene->instances) {
@@ -4455,11 +4455,11 @@ yocto_scene* load_pbrt_scene(
             stack.back().aspect = jcmd.at("xresolution").get<float>() /
                                   jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            auto cam            = new yocto_camera();
-            cam->name           = "cam" + std::to_string(cid++);
-            cam->frame          = inverse(stack.back().frame);
-            cam->frame.z        = -cam->frame.z;
-            cam->focus_distance = stack.back().focus;
+            auto camera            = new yocto_camera();
+            camera->name           = "camera" + std::to_string(cid++);
+            camera->frame          = inverse(stack.back().frame);
+            camera->frame.z        = -camera->frame.z;
+            camera->focus_distance = stack.back().focus;
             auto aspect         = stack.back().aspect;
             auto fovy           = 1.0f;
             auto type           = jcmd.at("type").get<string>();
@@ -4468,8 +4468,8 @@ yocto_scene* load_pbrt_scene(
             } else {
                 printf("%s camera not supported\n", type.c_str());
             }
-            set_camera_fovy(cam, fovy, aspect);
-            scene->cameras.push_back(cam);
+            set_camera_fovy(camera, fovy, aspect);
+            scene->cameras.push_back(camera);
         } else if (cmd == "Texture") {
             auto found = false;
             auto name  = jcmd.at("name").get<string>();
@@ -4777,11 +4777,11 @@ yocto_scene* load_pbrt_scene(
         }
     }
     if (use_hierarchy) {
-        for (auto cam : scene->cameras) {
+        for (auto camera : scene->cameras) {
             auto node    = new yocto_scene_node();
-            node->name   = cam->name;
-            node->local  = cam->frame;
-            node->camera = cam;
+            node->name   = camera->name;
+            node->local  = camera->frame;
+            node->camera = camera;
             scene->nodes.insert(scene->nodes.begin(), node);
         }
         for (auto environment : scene->environments) {
@@ -4846,13 +4846,13 @@ WorldEnd
 #endif
 
     // convert camera and settings
-    auto cam  = scene->cameras.front();
-    auto from = cam->frame.o;
-    auto to   = cam->frame.o - cam->frame.z;
-    auto up   = cam->frame.y;
+    auto camera  = scene->cameras.front();
+    auto from = camera->frame.o;
+    auto to   = camera->frame.o - camera->frame.z;
+    auto up   = camera->frame.y;
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
-        eval_camera_fovy(cam) * 180 / pif);
+        eval_camera_fovy(camera) * 180 / pif);
 
     // save renderer
     print(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
@@ -4861,8 +4861,8 @@ WorldEnd
     print(fs,
         "Film \"image\" \"string filename\" [\"{}\"] "
         "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), eval_image_size(cam, 512).x,
-        eval_image_size(cam, 512).y);
+        replace_extension(filename, "exr"), eval_image_size(camera, 512).x,
+        eval_image_size(camera, 512).y);
 
     // start world
     print(fs, "WorldBegin\n");
@@ -5135,14 +5135,14 @@ bool serialize_bin_handle(
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-bool serialize_bin_object(yocto_camera* cam, file_stream& fs, bool save) {
-    if (!serialize_bin_value(cam->name, fs, save)) return false;
-    if (!serialize_bin_value(cam->frame, fs, save)) return false;
-    if (!serialize_bin_value(cam->orthographic, fs, save)) return false;
-    if (!serialize_bin_value(cam->film_size, fs, save)) return false;
-    if (!serialize_bin_value(cam->focal_length, fs, save)) return false;
-    if (!serialize_bin_value(cam->focus_distance, fs, save)) return false;
-    if (!serialize_bin_value(cam->lens_aperture, fs, save)) return false;
+bool serialize_bin_object(yocto_camera* camera, file_stream& fs, bool save) {
+    if (!serialize_bin_value(camera->name, fs, save)) return false;
+    if (!serialize_bin_value(camera->frame, fs, save)) return false;
+    if (!serialize_bin_value(camera->orthographic, fs, save)) return false;
+    if (!serialize_bin_value(camera->film_size, fs, save)) return false;
+    if (!serialize_bin_value(camera->focal_length, fs, save)) return false;
+    if (!serialize_bin_value(camera->focus_distance, fs, save)) return false;
+    if (!serialize_bin_value(camera->lens_aperture, fs, save)) return false;
     return true;
 }
 

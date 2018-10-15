@@ -86,7 +86,7 @@ template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_scene_node>(
     glwindow* win, const string& lbl_, yocto_scene_node* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "instance", val->instance, sel);
-    draw_glwidgets_scene_tree(win, "cam", val->camera, sel);
+    draw_glwidgets_scene_tree(win, "camera", val->camera, sel);
     draw_glwidgets_scene_tree(win, "environment", val->environment, sel);
     draw_glwidgets_scene_tree(win, "par", val->parent, sel);
     auto cid = 0;
@@ -305,7 +305,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "translation", val->translation, -10, 10);
     edited += draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 10);
-    edited += draw_combobox_glwidget(win, "cam", val->camera, scene->cameras, true);
+    edited += draw_combobox_glwidget(win, "camera", val->camera, scene->cameras, true);
     edited += draw_combobox_glwidget(
         win, "instance", val->instance, scene->instances, true);
     edited += draw_combobox_glwidget(
@@ -341,7 +341,7 @@ inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
 #if 0
     if (test_scn) {
         draw_add_elem_glwidgets(
-            scene, "cam", scene->cameras, test_scn->cameras, sel, update_list);
+            scene, "camera", scene->cameras, test_scn->cameras, sel, update_list);
         draw_add_elem_glwidgets(scene, "texture", scene->textures,
             test_scn->textures, sel, update_list);
         draw_add_elem_glwidgets(scene, "mat", scene->materials,
@@ -369,10 +369,10 @@ inline bool draw_glwidgets_scene_inspector(glwindow* win, const string& lbl,
 
     auto update_len = update_list.size();
 
-    for (auto cam : scene->cameras) {
-        if (cam != sel) continue;
-        if (draw_glwidgets_scene_inspector(win, cam, scene))
-            update_list.push_back({"camera", cam});
+    for (auto camera : scene->cameras) {
+        if (camera != sel) continue;
+        if (draw_glwidgets_scene_inspector(win, camera, scene))
+            update_list.push_back({"camera", camera});
     }
     for (auto shape : scene->shapes) {
         if (shape != sel) continue;

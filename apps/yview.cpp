@@ -77,7 +77,7 @@ struct app_state {
 };
 
 void draw_glscene(draw_glstate* state, const yocto_scene* scene,
-    const yocto_camera* cam, const vec2i& viewport_size,
+    const yocto_camera* camera, const vec2i& viewport_size,
     const void* highlighted, bool eyelight, bool wireframe, bool edges,
     float exposure, float gamma, float near_plane, float far_plane);
 
@@ -109,9 +109,9 @@ void draw(glwindow* win) {
     }
     app->update_list.clear();
 
-    auto cam = app->scene->cameras.at(app->camid);
+    auto camera = app->scene->cameras.at(app->camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    draw_glscene(app->state.get(), app->scene.get(), cam, framebuffer_size,
+    draw_glscene(app->state.get(), app->scene.get(), camera, framebuffer_size,
         app->selection, app->eyelight, app->wireframe, app->edges,
         app->exposure, app->gamma, app->near_plane, app->far_plane);
 
@@ -122,7 +122,7 @@ void draw(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "view")) {
-            draw_combobox_glwidget(win, "camera", cam, app->scene->cameras, false);
+            draw_combobox_glwidget(win, "camera", camera, app->scene->cameras, false);
             draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
             draw_checkbox_glwidget(win, "eyelight", app->eyelight);
             continue_glwidgets_line(win);
@@ -539,20 +539,20 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
 
 // Display a scene
 void draw_glscene(draw_glstate* state, const yocto_scene* scene,
-    const yocto_camera* cam, const vec2i& viewport_size,
+    const yocto_camera* camera, const vec2i& viewport_size,
     const void* highlighted, bool eyelight, bool wireframe, bool edges,
     float exposure, float gamma, float near_plane, float far_plane) {
     set_glviewport(viewport_size);
 
-    auto camera_view = frame_to_mat(inverse(cam->frame));
+    auto camera_view = frame_to_mat(inverse(camera->frame));
     // auto camera_proj =
-    //         perspective_mat(eval_camera_fovy(cam),
+    //         perspective_mat(eval_camera_fovy(camera),
     //             (float)viewport_size.x / (float)viewport_size.y, near_plane);
-    auto camera_proj = perspective_mat(eval_camera_fovy(cam),
+    auto camera_proj = perspective_mat(eval_camera_fovy(camera),
         (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
     bind_glprogram(state->prog);
-    set_gluniform(state->prog, "cam_pos", cam->frame.o);
+    set_gluniform(state->prog, "cam_pos", camera->frame.o);
     set_gluniform(state->prog, "cam_xform_inv", camera_view);
     set_gluniform(state->prog, "cam_proj", camera_proj);
     set_gluniform(state->prog, "eyelight", (int)eyelight);
@@ -652,9 +652,9 @@ draw_glstate* init_draw_state(glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto cam    = app->scene->cameras.at(app->camid);
-    auto width  = clamp(eval_image_size(cam, app->resolution).x, 256, 1440),
-         height = clamp(eval_image_size(cam, app->resolution).y, 256, 1440);
+    auto camera    = app->scene->cameras.at(app->camid);
+    auto width  = clamp(eval_image_size(camera, app->resolution).x, 256, 1440),
+         height = clamp(eval_image_size(camera, app->resolution).y, 256, 1440);
     auto win    = make_glwindow(width, height, "yview", app, draw);
 
     // init widget
@@ -686,9 +686,9 @@ void run_ui(app_state* app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto cam = app->scene->cameras.at(app->camid);
-            camera_turntable(cam->frame, cam->focus_distance, rotate, dolly, pan);
-            app->update_list.push_back({"camera", cam});
+            auto camera = app->scene->cameras.at(app->camid);
+            camera_turntable(camera->frame, camera->focus_distance, rotate, dolly, pan);
+            app->update_list.push_back({"camera", camera});
         }
 
         // animation

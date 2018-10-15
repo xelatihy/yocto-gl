@@ -3692,7 +3692,7 @@ void add_missing_names(yocto_scene* scene) {
             }
         }
     };
-    fix_names(scene->cameras, "cam");
+    fix_names(scene->cameras, "camera");
     fix_names(scene->shapes, "shape");
     fix_names(scene->textures, "texture");
     fix_names(scene->materials, "mat");
@@ -3781,19 +3781,19 @@ yocto_camera* make_bbox_camera(
     auto bbox_center    = (bbox.max + bbox.min) / 2.0f;
     auto bbox_size      = bbox.max - bbox.min;
     auto bbox_msize     = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto cam            = new yocto_camera();
-    cam->name           = name;
+    auto camera            = new yocto_camera();
+    camera->name           = name;
     auto camera_dir     = vec3f{1, 0.4f, 1};
     auto from           = camera_dir * bbox_msize + bbox_center;
     auto to             = bbox_center;
     auto up             = vec3f{0, 1, 0};
-    cam->frame          = lookat_frame(from, to, up);
-    cam->orthographic   = false;
-    cam->film_size      = film;
-    cam->focal_length   = focal;
-    cam->focus_distance = length(from - to);
-    cam->lens_aperture  = 0;
-    return cam;
+    camera->frame          = lookat_frame(from, to, up);
+    camera->orthographic   = false;
+    camera->film_size      = film;
+    camera->focal_length   = focal;
+    camera->focus_distance = length(from - to);
+    camera->lens_aperture  = 0;
+    return camera;
 }
 
 }  // namespace ygl
@@ -4113,51 +4113,51 @@ float eval_voltexture(const yocto_voltexture* texture, const vec3f& texcoord) {
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float eval_camera_fovy(const yocto_camera* cam) {
-    return 2 * std::atan(cam->film_size.y / (2 * cam->focal_length));
+float eval_camera_fovy(const yocto_camera* camera) {
+    return 2 * std::atan(camera->film_size.y / (2 * camera->focal_length));
 }
-void set_camera_fovy(yocto_camera* cam, float fovy, float aspect, float width) {
-    cam->film_size    = {width, width / aspect};
-    cam->focal_length = cam->film_size.y / (2 * std::tan(fovy / 2));
+void set_camera_fovy(yocto_camera* camera, float fovy, float aspect, float width) {
+    camera->film_size    = {width, width / aspect};
+    camera->focal_length = camera->film_size.y / (2 * std::tan(fovy / 2));
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
-ray3f eval_camera_ray(const yocto_camera* cam, const vec2f& uv, const vec2f& luv) {
-    auto dist = cam->focal_length;
-    if (cam->focus_distance < maxf) {
-        dist = cam->focal_length * cam->focus_distance /
-               (cam->focus_distance - cam->focal_length);
+ray3f eval_camera_ray(const yocto_camera* camera, const vec2f& uv, const vec2f& luv) {
+    auto dist = camera->focal_length;
+    if (camera->focus_distance < maxf) {
+        dist = camera->focal_length * camera->focus_distance /
+               (camera->focus_distance - camera->focal_length);
     }
-    auto e = vec3f{luv.x * cam->lens_aperture, luv.y * cam->lens_aperture, 0};
-    // auto q = vec3f{cam->width * (uv.x - 0.5f),
-    //     cam->height * (uv.y - 0.5f), dist};
+    auto e = vec3f{luv.x * camera->lens_aperture, luv.y * camera->lens_aperture, 0};
+    // auto q = vec3f{camera->width * (uv.x - 0.5f),
+    //     camera->height * (uv.y - 0.5f), dist};
     // X flipped for mirror
-    auto q   = vec3f{cam->film_size.x * (0.5f - uv.x),
-        cam->film_size.y * (uv.y - 0.5f), dist};
-    auto ray = make_ray(transform_point(cam->frame, e),
-        transform_direction(cam->frame, normalize(e - q)));
+    auto q   = vec3f{camera->film_size.x * (0.5f - uv.x),
+        camera->film_size.y * (uv.y - 0.5f), dist};
+    auto ray = make_ray(transform_point(camera->frame, e),
+        transform_direction(camera->frame, normalize(e - q)));
     return ray;
 }
 
-vec2i eval_image_size(const yocto_camera* cam, int yresolution) {
-    return {(int)round(yresolution * cam->film_size.x / cam->film_size.y),
+vec2i eval_image_size(const yocto_camera* camera, int yresolution) {
+    return {(int)round(yresolution * camera->film_size.x / camera->film_size.y),
         yresolution};
 }
 
 // Generates a ray from a camera.
-ray3f eval_camera_ray(const yocto_camera* cam, const vec2i& ij,
+ray3f eval_camera_ray(const yocto_camera* camera, const vec2i& ij,
     const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
-    return eval_camera_ray(cam, uv, luv);
+    return eval_camera_ray(camera, uv, luv);
 }
 
 // Generates a ray from a camera.
-ray3f eval_camera_ray(const yocto_camera* cam, int idx, const vec2i& imsize,
+ray3f eval_camera_ray(const yocto_camera* camera, int idx, const vec2i& imsize,
     const vec2f& puv, const vec2f& luv) {
     auto ij = vec2i{idx % imsize.x, idx / imsize.x};
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
-    return eval_camera_ray(cam, uv, luv);
+    return eval_camera_ray(camera, uv, luv);
 }
 
 // Evaluates material parameters.
@@ -5787,9 +5787,9 @@ vec4f trace_sample(trace_state* state, const yocto_scene* scene,
     const bvh_tree* bvh, const trace_lights* lights, int i, int j,
     const trace_params& params) {
     _trace_npaths += 1;
-    auto  cam = scene->cameras.at(params.camera_id);
+    auto  camera = scene->cameras.at(params.camera_id);
     auto& rng = pixel_at(state->random_number_generators, i, j);
-    auto  ray = eval_camera_ray(cam, {i, j},
+    auto  ray = eval_camera_ray(camera, {i, j},
         {state->rendered_image.width, state->rendered_image.height}, rand2f(rng), rand2f(rng));
     auto  hit = false;
     auto  l   = trace_func(
@@ -5819,8 +5819,8 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
 // Init trace state
 trace_state* make_trace_state(const yocto_scene* scene, const trace_params& params) {
     auto state     = new trace_state();
-    auto cam       = scene->cameras[params.camera_id];
-    auto size      = eval_image_size(cam, params.vertical_resolution);
+    auto camera       = scene->cameras[params.camera_id];
+    auto size      = eval_image_size(camera, params.vertical_resolution);
     state->rendered_image     = image<vec4f>{size.x, size.y, zero4f};
     state->display_image = image<vec4f>{size.x, size.y, zero4f};
     state->accumulation_buffer     = image<vec4f>{size.x, size.y, zero4f};
