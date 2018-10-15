@@ -580,25 +580,9 @@ template <typename T, int N, int M>
 inline bool print_value(string& str, const mat<T, N, M>& v) {
     return print_value(str, (const std::array<T, N * M>&)v);
 }
-template <typename T>
-inline bool print_value(string& str, const frame2<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.o)) return false;
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const frame3<T>& v) {
-    if (!print_value(str, v.x)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.y)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.z)) return false;
-    if (!print_value(str, " ")) return false;
-    if (!print_value(str, v.o)) return false;
-    return true;
+template <typename T, int N>
+inline bool print_value(string& str, const frame<T, N>& v) {
+    return print_value(str, (const std::array<T, N * (N + 1)>&)v);
 }
 template <typename T>
 inline bool print_value(string& str, const bbox1<T>& v) {
@@ -747,13 +731,9 @@ template <typename Archive, typename T, int N, int M>
 inline bool _parse(Archive& ar, mat<T, N, M>& v) {
     return _parse(ar, (std::array<T, N * M>&)v);
 }
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, frame2<T>& v) {
-    return _parse(ar, (std::array<T, 6>&)v);
-}
-template <typename Archive, typename T>
-inline bool _parse(Archive& ar, frame3<T>& v) {
-    return _parse(ar, (std::array<T, 12>&)v);
+template <typename Archive, typename T, int N>
+inline bool _parse(Archive& ar, frame<T, N>& v) {
+    return _parse(ar, (std::array<T, N * (N + 1)>&)v);
 }
 template <typename Archive, typename T>
 inline bool _parse(Archive& ar, bbox1<T>& v) {

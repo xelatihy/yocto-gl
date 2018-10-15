@@ -46,8 +46,8 @@
 // constructed by column.
 //
 // To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame2<T>`,
-// `frame3<T>`. The structure store three coordinate axes and the origin.
+// coordinate frames, aka rigid transforms, represented as `frame<T, 2>`,
+// `frame<T, 3>`. The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are better behaved with this representation.
 //
@@ -1083,14 +1083,18 @@ inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
 namespace ygl {
 
 // Rigid frames stored as a column-major affine transform matrix.
+template<typename T, int N>
+struct frame;
+
+// Rigid frames stored as a column-major affine transform matrix.
 template <typename T>
-struct frame2 {
+struct frame<T, 2> {
     vec<T, 2> x = {1, 0};
     vec<T, 2> y = {0, 1};
     vec<T, 2> o = {0, 0};
 };
 template <typename T>
-struct frame3 {
+struct frame<T, 3> {
     vec<T, 3> x = {1, 0, 0};
     vec<T, 3> y = {0, 1, 0};
     vec<T, 3> z = {0, 0, 1};
@@ -1098,8 +1102,8 @@ struct frame3 {
 };
 
 // Type aliases.
-using frame2f = frame2<float>;
-using frame3f = frame3<float>;
+using frame2f = frame<float, 2>;
+using frame3f = frame<float, 3>;
 
 // Indentity frames.
 const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
@@ -1108,14 +1112,14 @@ const auto identity_frame3f = frame3f{
 
 // Frame construction from axis.
 template <typename T>
-inline frame3<T> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
+inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
     auto z = normalize(v);
     auto x = normalize(orthogonal(z));
     auto y = normalize(cross(z, x));
     return {x, y, z, o};
 }
 template <typename T>
-inline frame3<T> make_frame_fromzx(
+inline frame<T, 3> make_frame_fromzx(
     const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
@@ -1125,7 +1129,23 @@ inline frame3<T> make_frame_fromzx(
 
 // Frame to matrix conversion.
 template <typename T>
-inline mat<T, 4, 4> frame_to_mat(const frame3<T>& a) {
+inline mat<T, 3, 3> frame_to_mat(const frame<T, 2>& a) {
+    return {
+        {a.x.x, a.x.y, 0},
+        {a.y.x, a.y.y, 0},
+        {a.o.x, a.o.y, 1},
+    };
+}
+template <typename T>
+inline frame<T, 2> mat_to_frame(const mat<T, 3, 3>& a) {
+    return {
+        {a.x.x, a.x.y},
+        {a.y.x, a.y.y},
+        {a.z.x, a.z.y},
+    };
+}
+template <typename T>
+inline mat<T, 4, 4> frame_to_mat(const frame<T, 3>& a) {
     return {
         {a.x.x, a.x.y, a.x.z, 0},
         {a.y.x, a.y.y, a.y.z, 0},
@@ -1134,7 +1154,7 @@ inline mat<T, 4, 4> frame_to_mat(const frame3<T>& a) {
     };
 }
 template <typename T>
-inline frame3<T> mat_to_frame(const mat<T, 4, 4>& a) {
+inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
     return {
         {a.x.x, a.x.y, a.x.z},
         {a.y.x, a.y.y, a.y.z},
@@ -1145,44 +1165,44 @@ inline frame3<T> mat_to_frame(const mat<T, 4, 4>& a) {
 
 // Frame comparisons.
 template <typename T>
-inline bool operator==(const frame2<T>& a, const frame2<T>& b) {
+inline bool operator==(const frame<T, 2>& a, const frame<T, 2>& b) {
     return a.x == b.x && a.y == b.y && a.o == b.o;
 }
 template <typename T>
-inline bool operator!=(const frame2<T>& a, const frame2<T>& b) {
+inline bool operator!=(const frame<T, 2>& a, const frame<T, 2>& b) {
     return !(a == b);
 }
 template <typename T>
-inline bool operator==(const frame3<T>& a, const frame3<T>& b) {
+inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
     return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
 }
 template <typename T>
-inline bool operator!=(const frame3<T>& a, const frame3<T>& b) {
+inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
     return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
 template <typename T>
-inline frame2<T> operator*(const frame2<T>& a, const frame2<T>& b) {
+inline frame<T, 2> operator*(const frame<T, 2>& a, const frame<T, 2>& b) {
     auto rot = mat<T, 2, 2>{a.x, a.y} * mat<T, 2, 2>{b.x, b.y};
     auto pos = mat<T, 2, 2>{a.x, a.y} * b.o + a.o;
     return {rot.x, rot.y, pos};
 }
 template <typename T>
-inline frame3<T> operator*(const frame3<T>& a, const frame3<T>& b) {
+inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b) {
     auto rot = mat<T, 3, 3>{a.x, a.y, a.z} * mat<T, 3, 3>{b.x, b.y, b.z};
     auto pos = mat<T, 3, 3>{a.x, a.y, a.z} * b.o + a.o;
     return {rot.x, rot.y, rot.z, pos};
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T>
-inline frame2<T> inverse(const frame2<T>& a, bool is_rigid = true) {
+inline frame<T, 2> inverse(const frame<T, 2>& a, bool is_rigid = true) {
     auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y}) :
                              inverse(mat<T, 2, 2>{a.x, a.y});
     return {minv.x, minv.y, -(minv * a.o)};
 }
 template <typename T>
-inline frame3<T> inverse(const frame3<T>& a, bool is_rigid = true) {
+inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true) {
     auto minv = (is_rigid) ? transpose(mat<T, 3, 3>{a.x, a.y, a.z}) :
                              inverse(mat<T, 3, 3>{a.x, a.y, a.z});
     return {minv.x, minv.y, minv.z, -(minv * a.o)};
@@ -1436,36 +1456,36 @@ inline vec<T, 3> transform_vector(const mat<T, 4, 4>& a, const vec<T, 3>& b) {
     auto tvb = a * vec4f{b.x, b.y, b.z, 0};
     return vec<T, 3>{tvb.x, tvb.y, tvb.z};
 }
-template <typename T>
-inline vec<T, 3> transform_direction(const mat<T, 4, 4>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_direction(const mat<T, 4, 4>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
 
 // Transforms points, vectors and directions by frames.
 template <typename T>
-inline vec<T, 2> transform_point(const frame2<T>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b) {
     return a.x * b.x + a.y * b.y + a.o;
 }
 template <typename T>
-inline vec<T, 3> transform_point(const frame3<T>& a, const vec<T, 3>& b) {
+inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
 }
 template <typename T>
-inline vec<T, 2> transform_vector(const frame2<T>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b) {
     return a.x * b.x + a.y * b.y;
 }
 template <typename T>
-inline vec<T, 3> transform_vector(const frame3<T>& a, const vec<T, 3>& b) {
+inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
-template <typename T>
-inline vec<T, 3> transform_direction(const frame3<T>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
 
 // Transforms rays and bounding boxes by matrices.
 template <typename T>
-inline ray3<T> transform_ray(const frame3<T>& a, const ray3<T>& b) {
+inline ray3<T> transform_ray(const frame<T, 3>& a, const ray3<T>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
@@ -1473,7 +1493,7 @@ inline ray3<T> transform_ray(const mat<T, 4, 4>& a, const ray3<T>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox3<T> transform_bbox(const frame3<T>& a, const bbox3<T>& b) {
+inline bbox3<T> transform_bbox(const frame<T, 3>& a, const bbox3<T>& b) {
     auto corners = {vec3f{b.min.x, b.min.y, b.min.z},
         vec3f{b.min.x, b.min.y, b.max.z}, vec3f{b.min.x, b.max.y, b.min.z},
         vec3f{b.min.x, b.max.y, b.max.z}, vec3f{b.max.x, b.min.y, b.min.z},
@@ -1497,46 +1517,46 @@ inline bbox3<T> transform_bbox(const mat<T, 4, 4>& a, const bbox3<T>& b) {
 
 // Inverse transforms by frames, assuming they are rigid transforms.
 template <typename T>
-inline vec<T, 2> transform_point_inverse(const frame2<T>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_point_inverse(const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
 }
 template <typename T>
-inline vec3f transform_point_inverse(const frame3<T>& a, const vec3f& b) {
+inline vec3f transform_point_inverse(const frame<T, 3>& a, const vec3f& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
 }
 template <typename T>
-inline vec<T, 2> transform_vector_inverse(const frame2<T>& a, const vec<T, 2>& b) {
+inline vec<T, 2> transform_vector_inverse(const frame<T, 2>& a, const vec<T, 2>& b) {
     return {dot(b, a.x), dot(b, a.y)};
 }
 template <typename T>
-inline vec3f transform_vector_inverse(const frame3<T>& a, const vec3f& b) {
+inline vec3f transform_vector_inverse(const frame<T, 3>& a, const vec3f& b) {
     return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
 }
 template <typename T>
-inline vec3f transform_direction_inverse(const frame3<T>& a, const vec3f& b) {
+inline vec3f transform_direction_inverse(const frame<T, 3>& a, const vec3f& b) {
     return normalize(transform_vector_inverse(a, b));
 }
 template <typename T>
-inline ray3<T> transform_ray_inverse(const frame3<T>& a, const ray3<T>& b) {
+inline ray3<T> transform_ray_inverse(const frame<T, 3>& a, const ray3<T>& b) {
     return {transform_point_inverse(a, b.o),
         transform_direction_inverse(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
-inline bbox3<T> transform_bbox_inverse(const frame3<T>& a, const bbox3<T>& b) {
+inline bbox3<T> transform_bbox_inverse(const frame<T, 3>& a, const bbox3<T>& b) {
     return transform_bbox(inverse(a), b);
 }
 
 // Translation, scaling and rotations transforms.
 template <typename T>
-inline frame3<T> translation_frame(const vec<T, 3>& a) {
+inline frame<T, 3> translation_frame(const vec<T, 3>& a) {
     return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
 }
 template <typename T>
-inline frame3<T> scaling_frame(const vec<T, 3>& a) {
+inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
     return {{a.x, 0, 0}, {0, a.y, 0}, {0, 0, a.z}, {0, 0, 0}};
 }
 template <typename T>
-inline frame3<T> rotation_frame(const vec<T, 3>& axis, T angle) {
+inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
     auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
     return {{c + (1 - c) * vv.x * vv.x, (1 - c) * vv.x * vv.y + s * vv.z,
@@ -1548,7 +1568,7 @@ inline frame3<T> rotation_frame(const vec<T, 3>& axis, T angle) {
         {0, 0, 0}};
 }
 template <typename T>
-inline frame3<T> rotation_frame(const vec<T, 4>& quat) {
+inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
     auto v = quat;
     return {{v.w * v.w + v.x * v.x - v.y * v.y - v.z * v.z,
                 (v.x * v.y + v.z * v.w) * 2, (v.z * v.x - v.y * v.w) * 2},
@@ -1560,13 +1580,13 @@ inline frame3<T> rotation_frame(const vec<T, 4>& quat) {
         {0, 0, 0}};
 }
 template <typename T>
-inline frame3<T> rotation_frame(const mat<T, 3, 3>& rot) {
+inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
     return {rot.x, rot.y, rot.z, {0, 0, 0}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
-inline frame3<T> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
+inline frame<T, 3> lookat_frame(const vec<T, 3>& eye, const vec<T, 3>& center,
     const vec<T, 3>& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
