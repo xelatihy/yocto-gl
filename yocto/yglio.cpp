@@ -1022,8 +1022,9 @@ bool load_scene_textures(
             }
         }
         for (auto& mat : scn->materials) {
-            if (mat->kd_txt && !mat->op_txt && has_opacity.at(mat->kd_txt))
-                mat->op_txt = mat->kd_txt;
+            if (mat->diffuse_texture && !mat->opacity_texture &&
+                has_opacity.at(mat->diffuse_texture))
+                mat->opacity_texture = mat->diffuse_texture;
         }
     }
 
@@ -1358,11 +1359,11 @@ bool parse_json_procedural(
 bool apply_json_procedural(const json& js, camera* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from") || js.count("to")) {
-        auto from  = js.value("from", zero3f);
-        auto to    = js.value("to", zero3f);
-        auto up    = js.value("up", vec3f{0, 1, 0});
-        val->frame = lookat_frame(from, to, up);
-        val->focus = length(from - to);
+        auto from           = js.value("from", zero3f);
+        auto to             = js.value("to", zero3f);
+        auto up             = js.value("up", vec3f{0, 1, 0});
+        val->frame          = lookat_frame(from, to, up);
+        val->focus_distance = length(from - to);
     }
     return true;
 }
@@ -1373,11 +1374,19 @@ bool dump_json_object(json& js, const camera* val, const scene* scn) {
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!dump_json_value(js, val->ortho, "ortho", def.ortho)) return false;
-    if (!dump_json_value(js, val->film, "film", def.film)) return false;
-    if (!dump_json_value(js, val->focal, "focal", def.focal)) return false;
-    if (!dump_json_value(js, val->focus, "focus", def.focus)) return false;
-    if (!dump_json_value(js, val->aperture, "aperture", def.aperture))
+    if (!dump_json_value(
+            js, val->orthographic, "orthographic", def.orthographic))
+        return false;
+    if (!dump_json_value(js, val->film_size, "film_size", def.film_size))
+        return false;
+    if (!dump_json_value(
+            js, val->focal_length, "focal_length", def.focal_length))
+        return false;
+    if (!dump_json_value(
+            js, val->focus_distance, "focus_distance", def.focus_distance))
+        return false;
+    if (!dump_json_value(
+            js, val->lens_aperture, "lens_aperture", def.lens_aperture))
         return false;
     return true;
 }
@@ -1388,10 +1397,16 @@ bool parse_json_object(const json& js, camera* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!parse_json_value(js, val->film, "film", def.film)) return false;
-    if (!parse_json_value(js, val->focal, "focal", def.focal)) return false;
-    if (!parse_json_value(js, val->focus, "focus", def.focus)) return false;
-    if (!parse_json_value(js, val->aperture, "aperture", def.aperture))
+    if (!parse_json_value(js, val->film_size, "film_size", def.film_size))
+        return false;
+    if (!parse_json_value(
+            js, val->focal_length, "focal_length", def.focal_length))
+        return false;
+    if (!parse_json_value(
+            js, val->focus_distance, "focus_distance", def.focus_distance))
+        return false;
+    if (!parse_json_value(
+            js, val->lens_aperture, "lens_aperture", def.lens_aperture))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
@@ -1552,37 +1567,54 @@ bool dump_json_object(json& js, const material* val, const scene* scn) {
         js["gltf_textures"] = val->gltf_textures;
     if (val->double_sided != def.double_sided)
         js["double_sided"] = val->double_sided;
-    if (!dump_json_value(js, val->ke, "ke", def.ke)) return false;
-    if (!dump_json_value(js, val->kd, "kd", def.kd)) return false;
-    if (!dump_json_value(js, val->ks, "ks", def.ks)) return false;
-    if (!dump_json_value(js, val->kt, "kt", def.kt)) return false;
-    if (!dump_json_value(js, val->rs, "rs", def.rs)) return false;
-    if (!dump_json_value(js, val->op, "op", def.op)) return false;
+    if (!dump_json_value(js, val->emission, "emission", def.emission))
+        return false;
+    if (!dump_json_value(js, val->diffuse, "diffuse", def.diffuse))
+        return false;
+    if (!dump_json_value(js, val->specular, "specular", def.specular))
+        return false;
+    if (!dump_json_value(
+            js, val->transmission, "transmission", def.transmission))
+        return false;
+    if (!dump_json_value(js, val->roughness, "roughness", def.roughness))
+        return false;
+    if (!dump_json_value(js, val->opacity, "opacity", def.opacity))
+        return false;
     if (!dump_json_value(js, val->fresnel, "fresnel", def.fresnel))
         return false;
     if (!dump_json_value(js, val->refract, "refract", def.refract))
         return false;
-    if (!dump_json_objref(js, val->ke_txt, "ke_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->emission_texture, "emission_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->kd_txt, "kd_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->diffuse_texture, "diffuse_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->ks_txt, "ks_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->specular_texture, "specular_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->kt_txt, "kt_txt", scn->textures))
+    if (!dump_json_objref(js, val->transmission_texture, "transmission_texture",
+            scn->textures))
         return false;
-    if (!dump_json_objref(js, val->rs_txt, "rs_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->roughness_texture, "roughness_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->op_txt, "op_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->opacity_texture, "opacity_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->occ_txt, "occ_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->occlusion_texture, "occlusion_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->bump_txt, "bump_txt", scn->textures))
+    if (!dump_json_objref(js, val->bump_texture, "bump_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->disp_txt, "disp_txt", scn->textures))
+    if (!dump_json_objref(js, val->displacement_texture, "displacement_texture",
+            scn->textures))
         return false;
-    if (!dump_json_objref(js, val->norm_txt, "norm_txt", scn->textures))
+    if (!dump_json_objref(
+            js, val->normal_texture, "normal_texture", scn->textures))
         return false;
-    if (!dump_json_objref(js, val->vd_txt, "vd_txt", scn->voltextures))
+    if (!dump_json_objref(js, val->volume_density_texture,
+            "volume_density_texture", scn->voltextures))
         return false;
     return true;
 }
@@ -1607,41 +1639,66 @@ bool parse_json_object(const json& js, material* val, const scene* scn) {
     if (!parse_json_value(
             js, val->double_sided, "double_sided", def.double_sided))
         return false;
-    if (!parse_json_value(js, val->ke, "ke", def.ke)) return false;
-    if (!parse_json_value(js, val->kd, "kd", def.kd)) return false;
-    if (!parse_json_value(js, val->ks, "ks", def.ks)) return false;
-    if (!parse_json_value(js, val->kt, "kt", def.kt)) return false;
-    if (!parse_json_value(js, val->rs, "rs", def.rs)) return false;
-    if (!parse_json_value(js, val->op, "op", def.op)) return false;
-    if (!parse_json_value(js, val->ve, "ve", def.ve)) return false;
-    if (!parse_json_value(js, val->va, "va", def.va)) return false;
-    if (!parse_json_value(js, val->vd, "vd", def.vd)) return false;
-    if (!parse_json_value(js, val->vg, "vg", def.vg)) return false;
+    if (!parse_json_value(js, val->emission, "emission", def.emission))
+        return false;
+    if (!parse_json_value(js, val->diffuse, "diffuse", def.diffuse))
+        return false;
+    if (!parse_json_value(js, val->specular, "specular", def.specular))
+        return false;
+    if (!parse_json_value(
+            js, val->transmission, "transmission", def.transmission))
+        return false;
+    if (!parse_json_value(js, val->roughness, "roughness", def.roughness))
+        return false;
+    if (!parse_json_value(js, val->opacity, "opacity", def.opacity))
+        return false;
+    if (!parse_json_value(
+            js, val->volume_emission, "volume_emission", def.volume_emission))
+        return false;
+    if (!parse_json_value(
+            js, val->volume_albedo, "volume_albedo", def.volume_albedo))
+        return false;
+    if (!parse_json_value(
+            js, val->volume_density, "volume_density", def.volume_density))
+        return false;
+    if (!parse_json_value(
+            js, val->volume_phaseg, "volume_phaseg", def.volume_phaseg))
+        return false;
     if (!parse_json_value(js, val->fresnel, "fresnel", def.fresnel))
         return false;
     if (!parse_json_value(js, val->refract, "refract", def.refract))
         return false;
-    if (!parse_json_objref(js, val->ke_txt, "ke_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->emission_texture, "emission_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->kd_txt, "kd_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->diffuse_texture, "diffuse_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->ks_txt, "ks_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->specular_texture, "specular_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->kt_txt, "kt_txt", scn->textures))
+    if (!parse_json_objref(js, val->transmission_texture,
+            "transmission_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->rs_txt, "rs_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->roughness_texture, "roughness_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->op_txt, "op_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->opacity_texture, "opacity_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->occ_txt, "occ_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->occlusion_texture, "occlusion_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->bump_txt, "bump_txt", scn->textures))
+    if (!parse_json_objref(js, val->bump_texture, "bump_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->disp_txt, "disp_txt", scn->textures))
+    if (!parse_json_objref(js, val->displacement_texture,
+            "displacement_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->norm_txt, "norm_txt", scn->textures))
+    if (!parse_json_objref(
+            js, val->normal_texture, "normal_texture", scn->textures))
         return false;
-    if (!parse_json_objref(js, val->vd_txt, "vd_txt", scn->voltextures))
+    if (!parse_json_objref(js, val->volume_density_texture,
+            "volume_density_texture", scn->voltextures))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
@@ -1794,7 +1851,9 @@ bool dump_json_object(json& js, const subdiv* val, const scene* scn) {
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->path, "path", def.path)) return false;
-    if (!dump_json_value(js, val->level, "level", def.level)) return false;
+    if (!dump_json_value(
+            js, val->subdivision_level, "level", def.subdivision_level))
+        return false;
     if (val->catmull_clark != def.catmull_clark)
         js["catmull_clark"] = val->catmull_clark;
     if (val->compute_normals != def.compute_normals)
@@ -1852,7 +1911,9 @@ bool parse_json_object(const json& js, subdiv* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->path, "path", def.path)) return false;
-    if (!parse_json_value(js, val->level, "level", def.level)) return false;
+    if (!parse_json_value(
+            js, val->subdivision_level, "subdivision_level", def.subdivision_level))
+        return false;
     if (!parse_json_value(
             js, val->catmull_clark, "catmull_clark", def.catmull_clark))
         return false;
@@ -1880,9 +1941,10 @@ bool dump_json_object(json& js, const instance* val, const scene* scn) {
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!dump_json_objref(js, val->shp, "shp", scn->shapes)) return false;
-    if (!dump_json_objref(js, val->mat, "mat", scn->materials)) return false;
-    if (!dump_json_objref(js, val->sbd, "sbd", scn->subdivs)) return false;
+    if (!dump_json_objref(js, val->shape, "shape", scn->shapes)) return false;
+    if (!dump_json_objref(js, val->material, "material", scn->materials))
+        return false;
+    if (!dump_json_objref(js, val->subdiv, "subdiv", scn->subdivs)) return false;
     return true;
 }
 
@@ -1911,9 +1973,10 @@ bool parse_json_object(const json& js, instance* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!parse_json_objref(js, val->shp, "shp", scn->shapes)) return false;
-    if (!parse_json_objref(js, val->sbd, "sbd", scn->subdivs)) return false;
-    if (!parse_json_objref(js, val->mat, "mat", scn->materials)) return false;
+    if (!parse_json_objref(js, val->shape, "shape", scn->shapes)) return false;
+    if (!parse_json_objref(js, val->subdiv, "subdiv", scn->subdivs)) return false;
+    if (!parse_json_objref(js, val->material, "material", scn->materials))
+        return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
 }
@@ -1924,8 +1987,8 @@ bool dump_json_object(json& js, const environment* val, const scene* scn) {
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!dump_json_value(js, val->ke, "ke", def.ke)) return false;
-    if (val->ke_txt != def.ke_txt) js["ke_txt"]["name"] = val->ke_txt->name;
+    if (!dump_json_value(js, val->emission, "emission", def.emission)) return false;
+    if (!dump_json_objref(js, val->emission_txt, "emission_txt", scn->textures)) return false;
     return true;
 }
 
@@ -1945,8 +2008,8 @@ bool parse_json_object(const json& js, environment* val, const scene* scn) {
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!parse_json_value(js, val->ke, "ke", def.ke)) return false;
-    if (!parse_json_objref(js, val->ke_txt, "ke_txt", scn->textures))
+    if (!parse_json_value(js, val->emission, "emission", def.emission)) return false;
+    if (!parse_json_objref(js, val->emission_txt, "emission_txt", scn->textures))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
@@ -1966,9 +2029,11 @@ bool dump_json_object(json& js, const node* val, const scene* scn) {
     if (!dump_json_value(js, val->weights, "weights", def.weights))
         return false;
     if (!dump_json_objref(js, val->parent, "parent", scn->nodes)) return false;
-    if (!dump_json_objref(js, val->cam, "cam", scn->cameras)) return false;
-    if (!dump_json_objref(js, val->ist, "ist", scn->instances)) return false;
-    if (!dump_json_objref(js, val->env, "env", scn->environments)) return false;
+    if (!dump_json_objref(js, val->camera, "camera", scn->cameras)) return false;
+    if (!dump_json_objref(js, val->instance, "instance", scn->instances))
+        return false;
+    if (!dump_json_objref(js, val->environment, "environment", scn->environments))
+        return false;
     return true;
 }
 
@@ -1998,9 +2063,10 @@ bool parse_json_object(const json& js, node* val, const scene* scn) {
     if (!parse_json_value(js, val->weights, "weights", def.weights))
         return false;
     if (!parse_json_objref(js, val->parent, "parent", scn->nodes)) return false;
-    if (!parse_json_objref(js, val->ist, "ist", scn->instances)) return false;
-    if (!parse_json_objref(js, val->cam, "cam", scn->cameras)) return false;
-    if (!parse_json_objref(js, val->env, "env", scn->environments))
+    if (!parse_json_objref(js, val->instance, "instance", scn->instances))
+        return false;
+    if (!parse_json_objref(js, val->camera, "camera", scn->cameras)) return false;
+    if (!parse_json_objref(js, val->environment, "environment", scn->environments))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scn)) return false;
     return true;
@@ -2121,8 +2187,9 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
         auto pos                 = vector<vec3f>();
         auto norm                = vector<vec3f>();
         auto texcoord            = vector<vec2f>();
-        tie(pos, norm, texcoord) = sample_triangles_points(base->shp->triangles,
-            base->shp->pos, base->shp->norm, base->shp->texcoord, num, seed);
+        tie(pos, norm, texcoord) = sample_triangles_points(
+            base->shape->triangles, base->shape->pos, base->shape->norm,
+            base->shape->texcoord, num, seed);
 
         auto nmap = unordered_map<instance*, int>();
         for (auto& ist : ists) nmap[ist.get()] = 0;
@@ -2135,9 +2202,9 @@ bool apply_json_procedural(const json& js, scene* val, const scene* scn) {
             val->instances.back()->frame = base->frame *
                                            translation_frame(pos[i]) *
                                            ist->frame;
-            val->instances.back()->shp = ist->shp;
-            val->instances.back()->mat = ist->mat;
-            val->instances.back()->sbd = ist->sbd;
+            val->instances.back()->shape    = ist->shape;
+            val->instances.back()->material = ist->material;
+            val->instances.back()->subdiv   = ist->subdiv;
         }
     }
     return true;
@@ -2702,10 +2769,10 @@ scene* load_obj_scene(const string& filename, bool load_textures,
 
     // add object if needed
     auto is_instance_empty = [](instance* ist) {
-        if (ist->sbd) {
-            return ist->sbd->pos.empty();
-        } else if (ist->shp) {
-            return ist->shp->pos.empty();
+        if (ist->subdiv) {
+            return ist->subdiv->pos.empty();
+        } else if (ist->shape) {
+            return ist->shape->pos.empty();
         } else {
             return true;
         }
@@ -2717,8 +2784,8 @@ scene* load_obj_scene(const string& filename, bool load_textures,
             !is_instance_empty(scn->instances.back())) {
             auto ist = new instance();
             scn->instances.push_back(ist);
-            ist->shp = new shape();
-            scn->shapes.push_back(ist->shp);
+            ist->shape = new shape();
+            scn->shapes.push_back(ist->shape);
         }
         name_map[objname] += 1;
         auto name = (name_map[objname] == 1) ?
@@ -2727,13 +2794,13 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         if (objname == "") name = "object" + name;
         auto ist  = scn->instances.back();
         ist->name = name;
-        if (ist->shp) ist->shp->name = ist->name;
-        if (ist->sbd) ist->sbd->name = ist->name;
+        if (ist->shape) ist->shape->name = ist->name;
+        if (ist->subdiv) ist->subdiv->name = ist->name;
         if (matname != "") {
             auto it = mmap.find(matname);
             if (it == mmap.end())
                 throw runtime_error("missing material " + matname);
-            ist->mat = it->second;
+            ist->material = it->second;
         }
         vert_map.clear();
         pos_map.clear();
@@ -2778,12 +2845,12 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         for (auto& vert : verts) {
             auto it = vert_map.find(vert);
             if (it != vert_map.end()) continue;
-            auto nverts = (int)ist->shp->pos.size();
+            auto nverts = (int)ist->shape->pos.size();
             vert_map.insert(it, {vert, nverts});
-            if (vert.pos) ist->shp->pos.push_back(opos.at(vert.pos - 1));
+            if (vert.pos) ist->shape->pos.push_back(opos.at(vert.pos - 1));
             if (vert.texcoord)
-                ist->shp->texcoord.push_back(otexcoord.at(vert.texcoord - 1));
-            if (vert.norm) ist->shp->norm.push_back(onorm.at(vert.norm - 1));
+                ist->shape->texcoord.push_back(otexcoord.at(vert.texcoord - 1));
+            if (vert.norm) ist->shape->norm.push_back(onorm.at(vert.norm - 1));
         }
     };
 
@@ -2798,19 +2865,19 @@ scene* load_obj_scene(const string& filename, bool load_textures,
     cb.face     = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
         for (auto i = 2; i < verts.size(); i++)
-            ist->shp->triangles.push_back({vert_map.at(verts[0]),
+            ist->shape->triangles.push_back({vert_map.at(verts[0]),
                 vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
         for (auto i = 1; i < verts.size(); i++)
-            ist->shp->lines.push_back(
+            ist->shape->lines.push_back(
                 {vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
     };
     cb.point = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
         for (auto i = 0; i < verts.size(); i++)
-            ist->shp->points.push_back(vert_map.at(verts[i]));
+            ist->shape->points.push_back(vert_map.at(verts[i]));
     };
     cb.object = [&](const string& name) {
         oname     = name;
@@ -2836,52 +2903,52 @@ scene* load_obj_scene(const string& filename, bool load_textures,
         if (split_material) {
             ist = add_instance(scn.get(), oname, matname, gname, smoothing);
         } else {
-            if (matname != "") ist->mat = mmap.at(matname);
+            if (matname != "") ist->material = mmap.at(matname);
         }
     };
     cb.material = [&](const obj_material& omat) {
-        auto mat      = new material();
-        mat->name     = omat.name;
-        mat->ke       = omat.ke;
-        mat->kd       = omat.kd;
-        mat->ks       = omat.ks;
-        mat->kt       = omat.kt;
-        mat->rs       = omat.rs;
-        mat->op       = omat.op;
-        mat->ke_txt   = add_texture(omat.ke_txt, true);
-        mat->kd_txt   = add_texture(omat.kd_txt, true);
-        mat->ks_txt   = add_texture(omat.ks_txt, true);
-        mat->kt_txt   = add_texture(omat.kt_txt, true);
-        mat->op_txt   = add_texture(omat.op_txt, false);
-        mat->rs_txt   = add_texture(omat.rs_txt, false);
-        mat->occ_txt  = add_texture(omat.occ_txt, false);
-        mat->bump_txt = add_texture(omat.bump_txt, false);
-        mat->disp_txt = add_texture(omat.disp_txt, false);
-        mat->norm_txt = add_texture(omat.norm_txt, false);
-        mat->ve       = omat.ve;
-        mat->va       = omat.va;
-        mat->vd       = omat.vd;
-        mat->vg       = omat.vg;
-        mat->vd_txt   = add_voltexture(omat.vd_txt, false);
+        auto mat                    = new material();
+        mat->name                   = omat.name;
+        mat->emission               = omat.ke;
+        mat->diffuse                = omat.kd;
+        mat->specular               = omat.ks;
+        mat->transmission           = omat.kt;
+        mat->roughness              = omat.rs;
+        mat->opacity                = omat.op;
+        mat->emission_texture       = add_texture(omat.ke_txt, true);
+        mat->diffuse_texture        = add_texture(omat.kd_txt, true);
+        mat->specular_texture       = add_texture(omat.ks_txt, true);
+        mat->transmission_texture   = add_texture(omat.kt_txt, true);
+        mat->opacity_texture        = add_texture(omat.op_txt, false);
+        mat->roughness_texture      = add_texture(omat.rs_txt, false);
+        mat->occlusion_texture      = add_texture(omat.occ_txt, false);
+        mat->bump_texture           = add_texture(omat.bump_txt, false);
+        mat->displacement_texture   = add_texture(omat.disp_txt, false);
+        mat->normal_texture         = add_texture(omat.norm_txt, false);
+        mat->volume_emission        = omat.ve;
+        mat->volume_albedo          = omat.va;
+        mat->volume_density         = omat.vd;
+        mat->volume_phaseg          = omat.vg;
+        mat->volume_density_texture = add_voltexture(omat.vd_txt, false);
         scn->materials.push_back(mat);
         mmap[mat->name] = mat;
     };
     cb.camera = [&](const obj_camera& ocam) {
-        auto cam      = new camera();
-        cam->name     = ocam.name;
-        cam->ortho    = ocam.ortho;
-        cam->film     = ocam.film;
-        cam->focal    = ocam.focal;
-        cam->focus    = ocam.focus;
-        cam->aperture = ocam.aperture;
-        cam->frame    = ocam.frame;
+        auto cam            = new camera();
+        cam->name           = ocam.name;
+        cam->orthographic   = ocam.ortho;
+        cam->film_size      = ocam.film;
+        cam->focal_length   = ocam.focal;
+        cam->focus_distance = ocam.focus;
+        cam->lens_aperture  = ocam.aperture;
+        cam->frame          = ocam.frame;
         scn->cameras.push_back(cam);
     };
     cb.environmnet = [&](const obj_environment& oenv) {
-        auto env    = new environment();
-        env->name   = oenv.name;
-        env->ke     = oenv.ke;
-        env->ke_txt = add_texture(oenv.ke_txt, true);
+        auto env          = new environment();
+        env->name         = oenv.name;
+        env->emission     = oenv.ke;
+        env->emission_txt = add_texture(oenv.ke_txt, true);
         scn->environments.push_back(env);
     };
 
@@ -2893,13 +2960,13 @@ scene* load_obj_scene(const string& filename, bool load_textures,
     for (auto idx = 0; idx < scn->instances.size(); idx++) {
         if (!is_instance_empty(scn->instances[idx])) continue;
         auto ist = scn->instances[idx];
-        if (ist->shp) {
+        if (ist->shape) {
             scn->shapes.erase(
-                std::find(scn->shapes.begin(), scn->shapes.end(), ist->shp));
+                std::find(scn->shapes.begin(), scn->shapes.end(), ist->shape));
         }
-        if (ist->sbd) {
-            scn->subdivs.erase(
-                std::find(scn->subdivs.begin(), scn->subdivs.end(), ist->sbd));
+        if (ist->subdiv) {
+            scn->subdivs.erase(std::find(
+                scn->subdivs.begin(), scn->subdivs.end(), ist->subdiv));
         }
         scn->instances.erase(scn->instances.begin() + idx);
         idx--;
@@ -2932,31 +2999,46 @@ bool save_mtl(const string& filename, const scene* scn, bool flip_tr = true) {
     for (auto mat : scn->materials) {
         print(fs, "newmtl {}\n", mat->name);
         print(fs, "  illum 2\n");
-        if (mat->ke != zero3f) print(fs, "  Ke {}\n", mat->ke);
-        if (mat->kd != zero3f) print(fs, "  Kd {}\n", mat->kd);
-        if (mat->ks != zero3f) print(fs, "  Ks {}\n", mat->ks);
-        if (mat->kt != zero3f) print(fs, "  Kt {}\n", mat->kt);
-        if (mat->rs != 1.0f)
+        if (mat->emission != zero3f) print(fs, "  Ke {}\n", mat->emission);
+        if (mat->diffuse != zero3f) print(fs, "  Kd {}\n", mat->diffuse);
+        if (mat->specular != zero3f) print(fs, "  Ks {}\n", mat->specular);
+        if (mat->transmission != zero3f)
+            print(fs, "  Kt {}\n", mat->transmission);
+        if (mat->roughness != 1.0f)
             print(fs, "  Ns {}\n",
-                (int)clamp(2 / pow(mat->rs + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f));
-        if (mat->op != 1.0f) print(fs, "  d {}\n", mat->op);
-        if (mat->rs != -1.0f) print(fs, "  Pr {}\n", mat->rs);
-        if (mat->ke_txt) print(fs, "  map_Ke {}\n", mat->ke_txt->path);
-        if (mat->kd_txt) print(fs, "  map_Kd {}\n", mat->kd_txt->path);
-        if (mat->ks_txt) print(fs, "  map_Ks {}\n", mat->ks_txt->path);
-        if (mat->kt_txt) print(fs, "  map_Kt {}\n", mat->kt_txt->path);
-        if (mat->op_txt && mat->op_txt != mat->kd_txt)
-            print(fs, "  map_d  {}\n", mat->op_txt->path);
-        if (mat->rs_txt) print(fs, "  map_Pr {}\n", mat->rs_txt->path);
-        if (mat->occ_txt) print(fs, "  map_occ {}\n", mat->occ_txt->path);
-        if (mat->bump_txt) print(fs, "  map_bump {}\n", mat->bump_txt->path);
-        if (mat->disp_txt) print(fs, "  map_disp {}\n", mat->disp_txt->path);
-        if (mat->norm_txt) print(fs, "  map_norm {}\n", mat->norm_txt->path);
-        if (mat->ve != zero3f) print(fs, "  Ve {}\n", mat->ve);
-        if (mat->vd != zero3f) print(fs, "  Vd {}\n", mat->vd);
-        if (mat->va != zero3f) print(fs, "  Va {}\n", mat->va);
-        if (mat->vg != 0) print(fs, "  Vg {}\n", mat->vg);
-        if (mat->vd_txt) print(fs, "  map_Vd {}\n", mat->vd_txt->path);
+                (int)clamp(
+                    2 / pow(mat->roughness + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f));
+        if (mat->opacity != 1.0f) print(fs, "  d {}\n", mat->opacity);
+        if (mat->roughness != -1.0f) print(fs, "  Pr {}\n", mat->roughness);
+        if (mat->emission_texture)
+            print(fs, "  map_Ke {}\n", mat->emission_texture->path);
+        if (mat->diffuse_texture)
+            print(fs, "  map_Kd {}\n", mat->diffuse_texture->path);
+        if (mat->specular_texture)
+            print(fs, "  map_Ks {}\n", mat->specular_texture->path);
+        if (mat->transmission_texture)
+            print(fs, "  map_Kt {}\n", mat->transmission_texture->path);
+        if (mat->opacity_texture && mat->opacity_texture != mat->diffuse_texture)
+            print(fs, "  map_d  {}\n", mat->opacity_texture->path);
+        if (mat->roughness_texture)
+            print(fs, "  map_Pr {}\n", mat->roughness_texture->path);
+        if (mat->occlusion_texture)
+            print(fs, "  map_occ {}\n", mat->occlusion_texture->path);
+        if (mat->bump_texture)
+            print(fs, "  map_bump {}\n", mat->bump_texture->path);
+        if (mat->displacement_texture)
+            print(fs, "  map_disp {}\n", mat->displacement_texture->path);
+        if (mat->normal_texture)
+            print(fs, "  map_norm {}\n", mat->normal_texture->path);
+        if (mat->volume_emission != zero3f)
+            print(fs, "  Ve {}\n", mat->volume_emission);
+        if (mat->volume_density != zero3f)
+            print(fs, "  Vd {}\n", mat->volume_density);
+        if (mat->volume_albedo != zero3f)
+            print(fs, "  Va {}\n", mat->volume_albedo);
+        if (mat->volume_phaseg != 0) print(fs, "  Vg {}\n", mat->volume_phaseg);
+        if (mat->volume_density_texture)
+            print(fs, "  map_Vd {}\n", mat->volume_density_texture->path);
         print(fs, "\n");
     }
 
@@ -2971,14 +3053,16 @@ bool save_objx(const string& filename, const scene* scn) {
 
     // cameras
     for (auto cam : scn->cameras) {
-        print(fs, "c {} {} {} {} {} {} {}\n", cam->name, (int)cam->ortho,
-            cam->film, cam->focal, cam->focus, cam->aperture, cam->frame);
+        print(fs, "c {} {} {} {} {} {} {}\n", cam->name, (int)cam->orthographic,
+            cam->film_size, cam->focal_length, cam->focus_distance,
+            cam->lens_aperture, cam->frame);
     }
 
     // environments
     for (auto env : scn->environments) {
-        print(fs, "e {} {} {} {}\n", env->name.c_str(), env->ke,
-            ((env->ke_txt) ? env->ke_txt->path.c_str() : "\"\""), env->frame);
+        print(fs, "e {} {} {} {}\n", env->name.c_str(), env->emission,
+            ((env->emission_txt) ? env->emission_txt->path.c_str() : "\"\""),
+            env->frame);
     }
 
     // done
@@ -3011,69 +3095,69 @@ bool save_obj(
     // shapes
     auto offset = obj_vertex{0, 0, 0};
     for (auto ist : scn->instances) {
-        if (!ist->sbd) {
+        if (!ist->subdiv) {
             print(fs, "o {}\n", ist->name);
-            if (ist->mat) print(fs, "usemtl {}\n", ist->mat->name);
+            if (ist->material) print(fs, "usemtl {}\n", ist->material->name);
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->shp->pos) print(fs, "v {}\n", p);
-                for (auto& n : ist->shp->norm) print(fs, "vn {}\n", n);
-                for (auto& t : ist->shp->texcoord)
+                for (auto& p : ist->shape->pos) print(fs, "v {}\n", p);
+                for (auto& n : ist->shape->norm) print(fs, "vn {}\n", n);
+                for (auto& t : ist->shape->texcoord)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
-                for (auto& pp : ist->shp->pos) {
+                for (auto& pp : ist->shape->pos) {
                     print(fs, "v {}\n", transform_point(ist->frame, pp));
                 }
-                for (auto& nn : ist->shp->norm) {
+                for (auto& nn : ist->shape->norm) {
                     print(fs, "vn {}\n", transform_direction(ist->frame, nn));
                 }
-                for (auto& t : ist->shp->texcoord)
+                for (auto& t : ist->shape->texcoord)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
-            auto mask = obj_vertex{1, ist->shp->texcoord.empty() ? 0 : 1,
-                ist->shp->norm.empty() ? 0 : 1};
+            auto mask = obj_vertex{1, ist->shape->texcoord.empty() ? 0 : 1,
+                ist->shape->norm.empty() ? 0 : 1};
             auto vert = [mask, offset](int i) {
                 return obj_vertex{(i + offset.pos + 1) * mask.pos,
                     (i + offset.texcoord + 1) * mask.texcoord,
                     (i + offset.norm + 1) * mask.norm};
             };
-            for (auto& t : ist->shp->triangles) {
+            for (auto& t : ist->shape->triangles) {
                 print(fs, "f {} {} {}\n", to_string(vert(t.x)),
                     to_string(vert(t.y)), to_string(vert(t.z)));
             }
-            for (auto& l : ist->shp->lines) {
+            for (auto& l : ist->shape->lines) {
                 print(fs, "l {} {}\n", to_string(vert(l.x)),
                     to_string(vert(l.y)));
             }
-            offset.pos += ist->shp->pos.size();
-            offset.texcoord += ist->shp->texcoord.size();
-            offset.norm += ist->shp->norm.size();
+            offset.pos += ist->shape->pos.size();
+            offset.texcoord += ist->shape->texcoord.size();
+            offset.norm += ist->shape->norm.size();
         } else {
             print(fs, "o {}\n", ist->name);
-            if (ist->mat) print(fs, "usemtl {}\n", ist->mat->name);
+            if (ist->material) print(fs, "usemtl {}\n", ist->material->name);
             if (ist->frame == identity_frame3f) {
-                for (auto& p : ist->sbd->pos) print(fs, "v {}\n", p);
-                for (auto& t : ist->sbd->texcoord)
+                for (auto& p : ist->subdiv->pos) print(fs, "v {}\n", p);
+                for (auto& t : ist->subdiv->texcoord)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
-                for (auto& pp : ist->sbd->pos) {
+                for (auto& pp : ist->subdiv->pos) {
                     auto p = transform_point(ist->frame, pp);
                     print(fs, "v {}\n", p);
                 }
-                for (auto& t : ist->sbd->texcoord)
+                for (auto& t : ist->subdiv->texcoord)
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
-            if (!ist->sbd->texcoord.empty()) {
+            if (!ist->subdiv->texcoord.empty()) {
                 auto vert = [offset](int ip, int it) {
                     return obj_vertex{
                         ip + offset.pos + 1, it + offset.texcoord + 1, 0};
                 };
-                for (auto i = 0; i < ist->sbd->quads_pos.size(); i++) {
-                    auto qp = ist->sbd->quads_pos[i];
-                    auto qt = ist->sbd->quads_texcoord[i];
+                for (auto i = 0; i < ist->subdiv->quads_pos.size(); i++) {
+                    auto qp = ist->subdiv->quads_pos[i];
+                    auto qt = ist->subdiv->quads_texcoord[i];
                     if (qp.z == qp.w) {
                         print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
                             to_string(vert(qp.y, qt.y)),
@@ -3089,7 +3173,7 @@ bool save_obj(
                 auto vert = [offset](int ip) {
                     return obj_vertex{ip + offset.pos + 1, 0, 0};
                 };
-                for (auto& q : ist->sbd->quads_pos) {
+                for (auto& q : ist->subdiv->quads_pos) {
                     if (q.z == q.w) {
                         print(fs, "f {} {} {}\n", to_string(vert(q.x)),
                             to_string(vert(q.y)), to_string(vert(q.z)));
@@ -3100,8 +3184,8 @@ bool save_obj(
                     }
                 }
             }
-            offset.pos += ist->sbd->pos.size();
-            offset.texcoord += ist->sbd->texcoord.size();
+            offset.pos += ist->subdiv->pos.size();
+            offset.texcoord += ist->subdiv->texcoord.size();
         }
     }
 
@@ -3207,12 +3291,13 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
     // convert materials
     if (gltf.count("materials")) {
         for (auto mid = 0; mid < gltf.at("materials").size(); mid++) {
-            auto& gmat = gltf.at("materials").at(mid);
-            auto  mat  = new material();
-            mat->name  = gmat.value("name", ""s);
-            mat->ke    = gmat.value("emissiveFactor", zero3f);
+            auto& gmat    = gltf.at("materials").at(mid);
+            auto  mat     = new material();
+            mat->name     = gmat.value("name", ""s);
+            mat->emission = gmat.value("emissiveFactor", zero3f);
             if (gmat.count("emissiveTexture"))
-                mat->ke_txt = add_texture(gmat.at("emissiveTexture"), true);
+                mat->emission_texture = add_texture(
+                    gmat.at("emissiveTexture"), true);
             if (gmat.count("extensions") && gmat.at("extensions")
                                                 .count("KHR_materials_"
                                                        "pbrSpecularGlossines"
@@ -3221,38 +3306,42 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
                 mat->gltf_textures = true;
                 auto& gsg          = gmat.at("extensions")
                                 .at("KHR_materials_pbrSpecularGlossiness");
-                auto kb = gsg.value("diffuseFactor", vec4f{1, 1, 1, 1});
-                mat->kd = {kb.x, kb.y, kb.z};
-                mat->op = kb.w;
-                mat->ks = gsg.value("specularFactor", vec3f{1, 1, 1});
-                mat->rs = 1 - gsg.value("glossinessFactor", 1.0f);
+                auto kb        = gsg.value("diffuseFactor", vec4f{1, 1, 1, 1});
+                mat->diffuse   = {kb.x, kb.y, kb.z};
+                mat->opacity   = kb.w;
+                mat->specular  = gsg.value("specularFactor", vec3f{1, 1, 1});
+                mat->roughness = 1 - gsg.value("glossinessFactor", 1.0f);
                 if (gsg.count("diffuseTexture"))
-                    mat->kd_txt = add_texture(gsg.at("diffuseTexture"), true);
+                    mat->diffuse_texture = add_texture(
+                        gsg.at("diffuseTexture"), true);
                 if (gsg.count("specularGlossinessTexture"))
-                    mat->ks_txt = add_texture(
+                    mat->specular_texture = add_texture(
                         gsg.at("specularGlossinessTexture"), true);
-                mat->rs_txt = mat->ks_txt;
+                mat->roughness_texture = mat->specular_texture;
             } else if (gmat.count("pbrMetallicRoughness")) {
                 mat->base_metallic = true;
                 mat->gltf_textures = true;
                 auto& gmr          = gmat.at("pbrMetallicRoughness");
-                auto  kb = gmr.value("baseColorFactor", vec4f{1, 1, 1, 1});
-                mat->kd  = {kb.x, kb.y, kb.z};
-                mat->op  = kb.w;
-                auto km  = gmr.value("metallicFactor", 1.0f);
-                mat->ks  = {km, km, km};
-                mat->rs  = gmr.value("roughnessFactor", 1.0f);
+                auto  kb      = gmr.value("baseColorFactor", vec4f{1, 1, 1, 1});
+                mat->diffuse  = {kb.x, kb.y, kb.z};
+                mat->opacity  = kb.w;
+                auto km       = gmr.value("metallicFactor", 1.0f);
+                mat->specular = {km, km, km};
+                mat->roughness = gmr.value("roughnessFactor", 1.0f);
                 if (gmr.count("baseColorTexture"))
-                    mat->kd_txt = add_texture(gmr.at("baseColorTexture"), true);
+                    mat->diffuse_texture = add_texture(
+                        gmr.at("baseColorTexture"), true);
                 if (gmr.count("metallicRoughnessTexture"))
-                    mat->ks_txt = add_texture(
+                    mat->specular_texture = add_texture(
                         gmr.at("metallicRoughnessTexture"), false);
-                mat->rs_txt = mat->ks_txt;
+                mat->roughness_texture = mat->specular_texture;
             }
             if (gmat.count("occlusionTexture"))
-                mat->occ_txt = add_texture(gmat.at("occlusionTexture"), false);
+                mat->occlusion_texture = add_texture(
+                    gmat.at("occlusionTexture"), false);
             if (gmat.count("normalTexture"))
-                mat->norm_txt = add_texture(gmat.at("normalTexture"), false);
+                mat->normal_texture = add_texture(
+                    gmat.at("normalTexture"), false);
             mat->double_sided = gmat.value("doubleSided", false);
             scn->materials.push_back(mat);
         }
@@ -3470,23 +3559,23 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
     // convert cameras
     if (gltf.count("cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
-            auto& gcam = gltf.at("cameras").at(cid);
-            auto  cam  = new camera();
-            cam->name  = gcam.value("name", ""s);
-            cam->ortho = gcam.value("type", ""s) == "orthographic";
-            if (cam->ortho) {
+            auto& gcam        = gltf.at("cameras").at(cid);
+            auto  cam         = new camera();
+            cam->name         = gcam.value("name", ""s);
+            cam->orthographic = gcam.value("type", ""s) == "orthographic";
+            if (cam->orthographic) {
                 printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
                 set_camera_fovy(cam, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
-                cam->focus    = maxf;
-                cam->aperture = 0;
+                cam->focus_distance = maxf;
+                cam->lens_aperture  = 0;
             } else {
                 auto persp = gcam.value("perspective", json::object());
                 set_camera_fovy(cam, persp.value("yfov", 1.0f),
                     persp.value("aspectRatio", 1.0f));
-                cam->focus    = maxf;
-                cam->aperture = 0;
+                cam->focus_distance = maxf;
+                cam->lens_aperture  = 0;
             }
             scn->cameras.push_back(cam);
         }
@@ -3499,7 +3588,7 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
             auto  nde  = new node();
             nde->name  = gnde.value("name", ""s);
             if (gnde.count("camera"))
-                nde->cam = scn->cameras[gnde.value("camera", 0)];
+                nde->camera = scn->cameras[gnde.value("camera", 0)];
             nde->translation = gnde.value("translation", zero3f);
             nde->rotation    = gnde.value("rotation", vec4f{0, 0, 0, 1});
             nde->scale       = gnde.value("scale", vec3f{1, 1, 1});
@@ -3524,21 +3613,21 @@ bool gltf_to_scene(scene* scn, const json& gltf, const string& dirname) {
             auto& shps = meshes.at(gnde.value("mesh", 0));
             if (shps.empty()) continue;
             if (shps.size() == 1) {
-                nde->ist       = new instance();
-                nde->ist->name = nde->name;
-                nde->ist->shp  = get<0>(shps[0]);
-                nde->ist->mat  = get<1>(shps[0]);
-                scn->instances.push_back(nde->ist);
+                nde->instance           = new instance();
+                nde->instance->name     = nde->name;
+                nde->instance->shape    = get<0>(shps[0]);
+                nde->instance->material = get<1>(shps[0]);
+                scn->instances.push_back(nde->instance);
             } else {
                 for (auto shp : shps) {
-                    auto child       = new node();
-                    child->name      = nde->name + "_" + get<0>(shp)->name;
-                    child->parent    = nde;
-                    child->ist       = new instance();
-                    child->ist->name = child->name;
-                    child->ist->shp  = get<0>(shp);
-                    child->ist->mat  = get<1>(shp);
-                    scn->instances.push_back(child->ist);
+                    auto child            = new node();
+                    child->name           = nde->name + "_" + get<0>(shp)->name;
+                    child->parent         = nde;
+                    child->instance       = new instance();
+                    child->instance->name = child->name;
+                    child->instance->shape    = get<0>(shp);
+                    child->instance->material = get<1>(shp);
+                    scn->instances.push_back(child->instance);
                 }
             }
         }
@@ -3679,7 +3768,7 @@ scene* load_gltf_scene(
     for (auto cam : scn->cameras) {
         auto center = (bbox.min + bbox.max) / 2;
         auto dist   = dot(-cam->frame.z, center - cam->frame.o);
-        if (dist > 0) cam->focus = dist;
+        if (dist > 0) cam->focus_distance = dist;
     }
 
     // done
@@ -3715,14 +3804,15 @@ bool scene_to_gltf(const scene* scn, json& js) {
     for (auto cam : scn->cameras) {
         auto cjs    = json();
         cjs["name"] = cam->name;
-        if (!cam->ortho) {
+        if (!cam->orthographic) {
             cjs["type"]                       = "perspective";
-            cjs["perspective"]["aspectRatio"] = cam->film.x / cam->film.y;
-            cjs["perspective"]["znear"]       = 0.01f;
+            cjs["perspective"]["aspectRatio"] = cam->film_size.x /
+                                                cam->film_size.y;
+            cjs["perspective"]["znear"] = 0.01f;
         } else {
             cjs["type"]                  = "orthographic";
-            cjs["orthographic"]["xmag"]  = cam->film.x / 2;
-            cjs["orthographic"]["ymag"]  = cam->film.y / 2;
+            cjs["orthographic"]["xmag"]  = cam->film_size.x / 2;
+            cjs["orthographic"]["ymag"]  = cam->film_size.y / 2;
             cjs["orthographic"]["znear"] = 0.01f;
         }
         cmap[cam] = (int)js["cameras"].size();
@@ -3746,35 +3836,39 @@ bool scene_to_gltf(const scene* scn, json& js) {
         auto mjs           = json();
         mjs["name"]        = mat->name;
         mjs["doubleSided"] = mat->double_sided;
-        if (mat->ke != zero3f) mjs["emissiveFactor"] = mat->ke;
-        if (mat->ke_txt) mjs["emissiveTexture"]["index"] = tmap.at(mat->ke_txt);
-        auto kd = vec4f{mat->kd.x, mat->kd.y, mat->kd.z, mat->op};
+        if (mat->emission != zero3f) mjs["emissiveFactor"] = mat->emission;
+        if (mat->emission_texture)
+            mjs["emissiveTexture"]["index"] = tmap.at(mat->emission_texture);
+        auto kd = vec4f{
+            mat->diffuse.x, mat->diffuse.y, mat->diffuse.z, mat->opacity};
         if (mat->base_metallic) {
             auto mmjs               = json();
             mmjs["baseColorFactor"] = kd;
-            mmjs["metallicFactor"]  = mat->ks.x;
-            mmjs["roughnessFactor"] = mat->rs;
-            if (mat->kd_txt)
-                mmjs["baseColorTexture"]["index"] = tmap.at(mat->kd_txt);
-            if (mat->ks_txt)
-                mmjs["metallicRoughnessTexture"]["index"] = tmap.at(mat->ks_txt);
+            mmjs["metallicFactor"]  = mat->specular.x;
+            mmjs["roughnessFactor"] = mat->roughness;
+            if (mat->diffuse_texture)
+                mmjs["baseColorTexture"]["index"] = tmap.at(
+                    mat->diffuse_texture);
+            if (mat->specular_texture)
+                mmjs["metallicRoughnessTexture"]["index"] = tmap.at(
+                    mat->specular_texture);
             mjs["pbrMetallicRoughness"] = mmjs;
         } else {
             auto mmjs                = json();
             mmjs["diffuseFactor"]    = kd;
-            mmjs["specularFactor"]   = mat->ks;
-            mmjs["glossinessFactor"] = 1 - mat->rs;
-            if (mat->kd_txt)
-                mmjs["diffuseTexture"]["index"] = tmap.at(mat->kd_txt);
-            if (mat->ks_txt)
+            mmjs["specularFactor"]   = mat->specular;
+            mmjs["glossinessFactor"] = 1 - mat->roughness;
+            if (mat->diffuse_texture)
+                mmjs["diffuseTexture"]["index"] = tmap.at(mat->diffuse_texture);
+            if (mat->specular_texture)
                 mmjs["specularGlossinessTexture"]["index"] = tmap.at(
-                    mat->ks_txt);
+                    mat->specular_texture);
             mjs["extensions"]["KHR_materials_pbrSpecularGlossiness"] = mmjs;
         }
-        if (mat->norm_txt)
-            mjs["normalTexture"]["index"] = tmap.at(mat->norm_txt);
-        if (mat->occ_txt)
-            mjs["occlusionTexture"]["index"] = tmap.at(mat->occ_txt);
+        if (mat->normal_texture)
+            mjs["normalTexture"]["index"] = tmap.at(mat->normal_texture);
+        if (mat->occlusion_texture)
+            mjs["occlusionTexture"]["index"] = tmap.at(mat->occlusion_texture);
         js["materials"].push_back(mjs);
         mmap[mat] = (int)js["materials"].size() - 1;
     }
@@ -3782,7 +3876,7 @@ bool scene_to_gltf(const scene* scn, json& js) {
     // determine shape materials
     auto shape_mats = unordered_map<shape*, int>();
     for (auto ist : scn->instances)
-        if (ist->mat) shape_mats[ist->shp] = mmap.at(ist->mat);
+        if (ist->material) shape_mats[ist->shape] = mmap.at(ist->material);
 
     // shapes
     auto smap = unordered_map<shape*, int>();
@@ -3853,8 +3947,8 @@ bool scene_to_gltf(const scene* scn, json& js) {
         njs["translation"] = nde->translation;
         njs["rotation"]    = nde->rotation;
         njs["scale"]       = nde->scale;
-        if (nde->cam) njs["camera"] = cmap.at(nde->cam);
-        if (nde->ist) njs["mesh"] = smap.at(nde->ist->shp);
+        if (nde->camera) njs["camera"] = cmap.at(nde->camera);
+        if (nde->instance) njs["mesh"] = smap.at(nde->instance->shape);
         if (!nde->children.empty()) {
             njs["children"] = json::array();
             for (auto& c : nde->children) njs["children"].push_back(nmap.at(c));
@@ -3878,7 +3972,7 @@ bool scene_to_gltf(const scene* scn, json& js) {
         for (auto ist : scn->instances) {
             auto njs      = json();
             njs["name"]   = ist->name;
-            njs["mesh"]   = smap.at(ist->shp);
+            njs["mesh"]   = smap.at(ist->shape);
             njs["matrix"] = frame_to_mat(ist->frame);
             js["nodes"].push_back(njs);
         }
@@ -4249,14 +4343,14 @@ scene* load_pbrt_scene(
             stack.back().aspect = jcmd.at("xresolution").get<float>() /
                                   jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            auto cam     = new camera();
-            cam->name    = "cam" + std::to_string(cid++);
-            cam->frame   = inverse(stack.back().frame);
-            cam->frame.z = -cam->frame.z;
-            cam->focus   = stack.back().focus;
-            auto aspect  = stack.back().aspect;
-            auto fovy    = 1.0f;
-            auto type    = jcmd.at("type").get<string>();
+            auto cam            = new camera();
+            cam->name           = "cam" + std::to_string(cid++);
+            cam->frame          = inverse(stack.back().frame);
+            cam->frame.z        = -cam->frame.z;
+            cam->focus_distance = stack.back().focus;
+            auto aspect         = stack.back().aspect;
+            auto fovy           = 1.0f;
+            auto type           = jcmd.at("type").get<string>();
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pif / 180;
             } else {
@@ -4312,57 +4406,57 @@ scene* load_pbrt_scene(
                 if (jcmd.count("type")) type = jcmd.at("type").get<string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
-                        tie(mat->kd, mat->kd_txt) = get_scaled_texture(
-                            jcmd.at("Kd"));
+                        tie(mat->diffuse, mat->diffuse_texture) =
+                            get_scaled_texture(jcmd.at("Kd"));
                     if (jcmd.count("Ks"))
-                        tie(mat->ks, mat->ks_txt) = get_scaled_texture(
-                            jcmd.at("Ks"));
+                        tie(mat->specular, mat->specular_texture) =
+                            get_scaled_texture(jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        tie(mat->kt, mat->kt_txt) = get_scaled_texture(
-                            jcmd.at("Kt"));
+                        tie(mat->transmission, mat->transmission_texture) =
+                            get_scaled_texture(jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op         = vec3f{0, 0, 0};
                         auto op_txt     = (texture*)nullptr;
                         tie(op, op_txt) = get_scaled_texture(
                             jcmd.at("opacity"));
-                        mat->op     = (op.x + op.y + op.z) / 3;
-                        mat->op_txt = op_txt;
+                        mat->opacity         = (op.x + op.y + op.z) / 3;
+                        mat->opacity_texture = op_txt;
                     }
-                    mat->rs = 0;
+                    mat->roughness = 0;
                 } else if (type == "matte") {
-                    mat->kd = {1, 1, 1};
+                    mat->diffuse = {1, 1, 1};
                     if (jcmd.count("Kd"))
-                        tie(mat->kd, mat->kd_txt) = get_scaled_texture(
-                            jcmd.at("Kd"));
-                    mat->rs = 1;
+                        tie(mat->diffuse, mat->diffuse_texture) =
+                            get_scaled_texture(jcmd.at("Kd"));
+                    mat->roughness = 1;
                 } else if (type == "mirror") {
-                    mat->kd = {0, 0, 0};
-                    mat->ks = {1, 1, 1};
-                    mat->rs = 0;
+                    mat->diffuse   = {0, 0, 0};
+                    mat->specular  = {1, 1, 1};
+                    mat->roughness = 0;
                 } else if (type == "metal") {
-                    auto eta = get_vec3f(jcmd.at("eta"));
-                    auto k   = get_vec3f(jcmd.at("k"));
-                    mat->ks  = fresnel_metal(1, eta, k);
-                    mat->rs  = 0;
+                    auto eta       = get_vec3f(jcmd.at("eta"));
+                    auto k         = get_vec3f(jcmd.at("k"));
+                    mat->specular  = fresnel_metal(1, eta, k);
+                    mat->roughness = 0;
                 } else if (type == "substrate") {
                     if (jcmd.count("Kd"))
-                        tie(mat->kd, mat->kd_txt) = get_scaled_texture(
-                            jcmd.at("Kd"));
-                    mat->ks = {0.04f, 0.04f, 0.04f};
+                        tie(mat->diffuse, mat->diffuse_texture) =
+                            get_scaled_texture(jcmd.at("Kd"));
+                    mat->specular = {0.04f, 0.04f, 0.04f};
                     if (jcmd.count("Ks"))
-                        tie(mat->ks, mat->ks_txt) = get_scaled_texture(
-                            jcmd.at("Ks"));
-                    mat->rs = 0;
+                        tie(mat->specular, mat->specular_texture) =
+                            get_scaled_texture(jcmd.at("Ks"));
+                    mat->roughness = 0;
                 } else if (type == "glass") {
-                    mat->ks = {0.04f, 0.04f, 0.04f};
-                    mat->kt = {1, 1, 1};
+                    mat->specular     = {0.04f, 0.04f, 0.04f};
+                    mat->transmission = {1, 1, 1};
                     if (jcmd.count("Ks"))
-                        tie(mat->ks, mat->ks_txt) = get_scaled_texture(
-                            jcmd.at("Ks"));
+                        tie(mat->specular, mat->specular_texture) =
+                            get_scaled_texture(jcmd.at("Ks"));
                     if (jcmd.count("Kt"))
-                        tie(mat->kt, mat->kt_txt) = get_scaled_texture(
-                            jcmd.at("Kt"));
-                    mat->rs = 0;
+                        tie(mat->transmission, mat->transmission_texture) =
+                            get_scaled_texture(jcmd.at("Kt"));
+                    mat->roughness = 0;
                 } else if (type == "mix") {
                     printf("mix material not properly supported\n");
                     if (jcmd.count("namedmaterial1")) {
@@ -4374,14 +4468,14 @@ scene* load_pbrt_scene(
                         printf("mix material missing front material\n");
                     }
                 } else {
-                    mat->kd = {1, 0, 0};
+                    mat->diffuse = {1, 0, 0};
                     printf("%s material not supported\n", type.c_str());
                 }
                 if (jcmd.count("uroughness")) {
                     auto remap = js.count("remaproughness") &&
                                  js.at("remaproughness").get<bool>();
                     if (jcmd.count("uroughness"))
-                        mat->rs = jcmd.at("uroughness").get<float>();
+                        mat->roughness = jcmd.at("uroughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
                     if (remap) printf("remap roughness not supported\n");
                 }
@@ -4389,13 +4483,14 @@ scene* load_pbrt_scene(
                     auto remap = js.count("remaproughness") &&
                                  js.at("remaproughness").get<bool>();
                     if (jcmd.count("roughness"))
-                        mat->rs = jcmd.at("roughness").get<float>();
+                        mat->roughness = jcmd.at("roughness").get<float>();
                     // if (!remap) mat->rs = mat->rs * mat->rs;
                     if (remap) printf("remap roughness not supported\n");
                 }
                 if (stack.back().light_mat) {
-                    mat->ke     = stack.back().light_mat->ke;
-                    mat->ke_txt = stack.back().light_mat->ke_txt;
+                    mat->emission         = stack.back().light_mat->emission;
+                    mat->emission_texture = stack.back()
+                                                .light_mat->emission_texture;
                 }
             }
         } else if (cmd == "NamedMaterial") {
@@ -4403,8 +4498,8 @@ scene* load_pbrt_scene(
             if (stack.back().light_mat) {
                 auto mat = new material(*stack.back().mat);
                 mat->name += "_" + std::to_string(lid++);
-                mat->ke     = stack.back().light_mat->ke;
-                mat->ke_txt = stack.back().light_mat->ke_txt;
+                mat->emission         = stack.back().light_mat->emission;
+                mat->emission_texture = stack.back().light_mat->emission_texture;
                 scn->materials.push_back(mat);
                 stack.back().mat = mat;
             }
@@ -4462,11 +4557,11 @@ scene* load_pbrt_scene(
                 for (auto& t : shp->triangles) swap(t.y, t.z);
             }
             scn->shapes.push_back(shp);
-            auto ist   = new instance();
-            ist->name  = shp->name;
-            ist->frame = frame;
-            ist->shp   = shp;
-            ist->mat   = stack.back().mat;
+            auto ist      = new instance();
+            ist->name     = shp->name;
+            ist->frame    = frame;
+            ist->shape    = shp;
+            ist->material = stack.back().mat;
             if (cur_object != "") {
                 objects[cur_object].push_back(ist);
             } else {
@@ -4482,14 +4577,14 @@ scene* load_pbrt_scene(
                 ist->name = shp->name + "_ist" +
                             std::to_string(instances[shp->name]);
                 ist->frame = stack.back().frame * shp->frame;
-                ist->shp   = shp->shp;
+                ist->shape = shp->shape;
                 scn->instances.push_back(ist);
             }
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<string>();
             if (type == "diffuse") {
                 auto lmat              = new material();
-                lmat->ke               = get_vec3f(jcmd.at("L"));
+                lmat->emission         = get_vec3f(jcmd.at("L"));
                 stack.back().light_mat = lmat;
             } else {
                 printf("%s area light not supported\n", type.c_str());
@@ -4503,14 +4598,15 @@ scene* load_pbrt_scene(
                 // stack.back().frame;
                 env->frame = stack.back().frame * frame3f{{0, 0, 1}, {0, 1, 0},
                                                       {1, 0, 0}, {0, 0, 0}};
-                env->ke    = {1, 1, 1};
-                if (jcmd.count("scale")) env->ke *= get_vec3f(jcmd.at("scale"));
+                env->emission = {1, 1, 1};
+                if (jcmd.count("scale"))
+                    env->emission *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {
                     auto txt  = new texture();
                     txt->path = jcmd.at("mapname").get<string>();
                     txt->name = env->name;
                     scn->textures.push_back(txt);
-                    env->ke_txt = txt;
+                    env->emission_txt = txt;
                 }
                 scn->environments.push_back(env);
             } else if (type == "distant") {
@@ -4528,18 +4624,19 @@ scene* load_pbrt_scene(
                 shp->texcoord  = sshp.texcoord;
                 shp->triangles = sshp.triangles;
                 scn->shapes.push_back(shp);
-                auto mat  = new material();
-                mat->name = shp->name;
-                mat->ke   = {1, 1, 1};
-                if (jcmd.count("L")) mat->ke *= get_vec3f(jcmd.at("L"));
-                if (jcmd.count("scale")) mat->ke *= get_vec3f(jcmd.at("scale"));
-                mat->ke *= (distant_dist * distant_dist) / (size * size);
+                auto mat      = new material();
+                mat->name     = shp->name;
+                mat->emission = {1, 1, 1};
+                if (jcmd.count("L")) mat->emission *= get_vec3f(jcmd.at("L"));
+                if (jcmd.count("scale"))
+                    mat->emission *= get_vec3f(jcmd.at("scale"));
+                mat->emission *= (distant_dist * distant_dist) / (size * size);
                 scn->materials.push_back(mat);
-                auto ist   = new instance();
-                ist->name  = shp->name;
-                ist->shp   = shp;
-                ist->mat   = mat;
-                ist->frame = stack.back().frame *
+                auto ist      = new instance();
+                ist->name     = shp->name;
+                ist->shape    = shp;
+                ist->material = mat;
+                ist->frame    = stack.back().frame *
                              lookat_frame(
                                  dir * distant_dist, zero3f, {0, 1, 0}, true);
                 scn->instances.push_back(ist);
@@ -4568,17 +4665,17 @@ scene* load_pbrt_scene(
     }
     if (use_hierarchy) {
         for (auto cam : scn->cameras) {
-            auto nde   = new node();
-            nde->name  = cam->name;
-            nde->local = cam->frame;
-            nde->cam   = cam;
+            auto nde    = new node();
+            nde->name   = cam->name;
+            nde->local  = cam->frame;
+            nde->camera = cam;
             scn->nodes.insert(scn->nodes.begin(), nde);
         }
         for (auto env : scn->environments) {
-            auto nde   = new node();
-            nde->name  = env->name;
-            nde->local = env->frame;
-            nde->env   = env;
+            auto nde         = new node();
+            nde->name        = env->name;
+            nde->local       = env->frame;
+            nde->environment = env;
             scn->nodes.push_back(nde);
         }
     }
@@ -4669,15 +4766,15 @@ WorldEnd
     for (auto mat : scn->materials) {
         print(fs, "MakeNamedMaterial \"{}\" ", mat->name);
         print(fs, "\"string type\" \"{}\" ", "uber");
-        if (mat->kd_txt)
-            print(fs, "\"texture Kd\" [\"{}\"] ", mat->kd_txt->name);
+        if (mat->diffuse_texture)
+            print(fs, "\"texture Kd\" [\"{}\"] ", mat->diffuse_texture->name);
         else
-            print(fs, "\"rgb Kd\" [{}] ", mat->kd);
-        if (mat->ks_txt)
-            print(fs, "\"texture Ks\" [\"{}\"] ", mat->ks_txt->name);
+            print(fs, "\"rgb Kd\" [{}] ", mat->diffuse);
+        if (mat->specular_texture)
+            print(fs, "\"texture Ks\" [\"{}\"] ", mat->specular_texture->name);
         else
-            print(fs, "\"rgb Ks\" [{}] ", mat->ks);
-        print(fs, "\"float roughness\" [{}] ", mat->rs);
+            print(fs, "\"rgb Ks\" [{}] ", mat->specular);
+        print(fs, "\"float roughness\" [{}] ", mat->roughness);
         print(fs, "\n");
     }
 
@@ -4686,12 +4783,12 @@ WorldEnd
         print(fs, "AttributeBegin\n");
         print(fs, "TransformBegin\n");
         print(fs, "ConcatTransform [{}]\n", frame_to_mat(ist->frame));
-        if (ist->mat->ke != zero3f)
+        if (ist->material->emission != zero3f)
             print(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ {} ]\n",
-                ist->mat->ke);
-        print(fs, "NamedMaterial \"{}\"\n", ist->mat->name);
+                ist->material->emission);
+        print(fs, "NamedMaterial \"{}\"\n", ist->material->name);
         print(fs, "Shape \"plymesh\" \"string filename\" [\"{}\"]\n",
-            ist->shp->path.c_str());
+            ist->shape->path.c_str());
         print(fs, "TransformEnd\n");
         print(fs, "AttributeEnd\n");
     }
@@ -4927,11 +5024,11 @@ bool serialize_bin_handle(
 bool serialize_bin_object(camera* cam, file_stream& fs, bool save) {
     if (!serialize_bin_value(cam->name, fs, save)) return false;
     if (!serialize_bin_value(cam->frame, fs, save)) return false;
-    if (!serialize_bin_value(cam->ortho, fs, save)) return false;
-    if (!serialize_bin_value(cam->film, fs, save)) return false;
-    if (!serialize_bin_value(cam->focal, fs, save)) return false;
-    if (!serialize_bin_value(cam->focus, fs, save)) return false;
-    if (!serialize_bin_value(cam->aperture, fs, save)) return false;
+    if (!serialize_bin_value(cam->orthographic, fs, save)) return false;
+    if (!serialize_bin_value(cam->film_size, fs, save)) return false;
+    if (!serialize_bin_value(cam->focal_length, fs, save)) return false;
+    if (!serialize_bin_value(cam->focus_distance, fs, save)) return false;
+    if (!serialize_bin_value(cam->lens_aperture, fs, save)) return false;
     return true;
 }
 
@@ -4968,7 +5065,7 @@ bool serialize_bin_object(
 bool serialize_bin_object(subdiv* sbd, file_stream& fs, bool save) {
     if (!serialize_bin_value(sbd->name, fs, save)) return false;
     if (!serialize_bin_value(sbd->path, fs, save)) return false;
-    if (!serialize_bin_value(sbd->level, fs, save)) return false;
+    if (!serialize_bin_value(sbd->subdivision_level, fs, save)) return false;
     if (!serialize_bin_value(sbd->catmull_clark, fs, save)) return false;
     if (!serialize_bin_value(sbd->compute_normals, fs, save)) return false;
     if (!serialize_bin_value(sbd->quads_pos, fs, save)) return false;
@@ -5006,8 +5103,8 @@ bool serialize_bin_object(
     environment* env, const scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(env->name, fs, save)) return false;
     if (!serialize_bin_value(env->frame, fs, save)) return false;
-    if (!serialize_bin_value(env->ke, fs, save)) return false;
-    if (!serialize_bin_handle(env->ke_txt, scn->textures, fs, save))
+    if (!serialize_bin_value(env->emission, fs, save)) return false;
+    if (!serialize_bin_handle(env->emission_txt, scn->textures, fs, save))
         return false;
     return true;
 }
@@ -5018,39 +5115,42 @@ bool serialize_bin_object(
     if (!serialize_bin_value(mat->base_metallic, fs, save)) return false;
     if (!serialize_bin_value(mat->gltf_textures, fs, save)) return false;
     if (!serialize_bin_value(mat->double_sided, fs, save)) return false;
-    if (!serialize_bin_value(mat->ke, fs, save)) return false;
-    if (!serialize_bin_value(mat->kd, fs, save)) return false;
-    if (!serialize_bin_value(mat->ks, fs, save)) return false;
-    if (!serialize_bin_value(mat->kt, fs, save)) return false;
-    if (!serialize_bin_value(mat->rs, fs, save)) return false;
-    if (!serialize_bin_value(mat->op, fs, save)) return false;
+    if (!serialize_bin_value(mat->emission, fs, save)) return false;
+    if (!serialize_bin_value(mat->diffuse, fs, save)) return false;
+    if (!serialize_bin_value(mat->specular, fs, save)) return false;
+    if (!serialize_bin_value(mat->transmission, fs, save)) return false;
+    if (!serialize_bin_value(mat->roughness, fs, save)) return false;
+    if (!serialize_bin_value(mat->opacity, fs, save)) return false;
     if (!serialize_bin_value(mat->fresnel, fs, save)) return false;
     if (!serialize_bin_value(mat->refract, fs, save)) return false;
-    if (!serialize_bin_handle(mat->ke_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->emission_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->kd_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->diffuse_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->ks_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->specular_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->kt_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(
+            mat->transmission_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->rs_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->roughness_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->op_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->opacity_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->occ_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->occlusion_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->bump_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->bump_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->disp_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(
+            mat->displacement_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_handle(mat->norm_txt, scn->textures, fs, save))
+    if (!serialize_bin_handle(mat->normal_texture, scn->textures, fs, save))
         return false;
-    if (!serialize_bin_value(mat->ve, fs, save)) return false;
-    if (!serialize_bin_value(mat->va, fs, save)) return false;
-    if (!serialize_bin_value(mat->vd, fs, save)) return false;
-    if (!serialize_bin_value(mat->vg, fs, save)) return false;
-    if (!serialize_bin_handle(mat->vd_txt, scn->voltextures, fs, save))
+    if (!serialize_bin_value(mat->volume_emission, fs, save)) return false;
+    if (!serialize_bin_value(mat->volume_albedo, fs, save)) return false;
+    if (!serialize_bin_value(mat->volume_density, fs, save)) return false;
+    if (!serialize_bin_value(mat->volume_phaseg, fs, save)) return false;
+    if (!serialize_bin_handle(
+            mat->volume_density_texture, scn->voltextures, fs, save))
         return false;
     return true;
 };
@@ -5059,9 +5159,11 @@ bool serialize_bin_object(
     instance* ist, const scene* scn, file_stream& fs, bool save) {
     if (!serialize_bin_value(ist->name, fs, save)) return false;
     if (!serialize_bin_value(ist->frame, fs, save)) return false;
-    if (!serialize_bin_handle(ist->shp, scn->shapes, fs, save)) return false;
-    if (!serialize_bin_handle(ist->mat, scn->materials, fs, save)) return false;
-    if (!serialize_bin_handle(ist->sbd, scn->subdivs, fs, save)) return false;
+    if (!serialize_bin_handle(ist->shape, scn->shapes, fs, save)) return false;
+    if (!serialize_bin_handle(ist->material, scn->materials, fs, save))
+        return false;
+    if (!serialize_bin_handle(ist->subdiv, scn->subdivs, fs, save))
+        return false;
     return true;
 };
 

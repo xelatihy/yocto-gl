@@ -62,32 +62,32 @@ inline void draw_glwidgets_scene_tree(
 template <>
 inline void draw_scene_tree_glwidgets_rec<instance>(
     glwindow* win, const string& lbl_, instance* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "shp", val->shp, sel);
-    draw_glwidgets_scene_tree(win, "sbd", val->sbd, sel);
-    draw_glwidgets_scene_tree(win, "mat", val->mat, sel);
+    draw_glwidgets_scene_tree(win, "shp", val->shape, sel);
+    draw_glwidgets_scene_tree(win, "sbd", val->subdiv, sel);
+    draw_glwidgets_scene_tree(win, "mat", val->material, sel);
 }
 
 template <>
 inline void draw_scene_tree_glwidgets_rec<material>(
     glwindow* win, const string& lbl_, material* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel);
-    draw_glwidgets_scene_tree(win, "kd", val->kd_txt, sel);
-    draw_glwidgets_scene_tree(win, "ks", val->ks_txt, sel);
-    draw_glwidgets_scene_tree(win, "bump", val->bump_txt, sel);
-    draw_glwidgets_scene_tree(win, "disp", val->disp_txt, sel);
-    draw_glwidgets_scene_tree(win, "norm", val->norm_txt, sel);
+    draw_glwidgets_scene_tree(win, "ke", val->emission_texture, sel);
+    draw_glwidgets_scene_tree(win, "kd", val->diffuse_texture, sel);
+    draw_glwidgets_scene_tree(win, "ks", val->specular_texture, sel);
+    draw_glwidgets_scene_tree(win, "bump", val->bump_texture, sel);
+    draw_glwidgets_scene_tree(win, "disp", val->displacement_texture, sel);
+    draw_glwidgets_scene_tree(win, "norm", val->normal_texture, sel);
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<environment>(
     glwindow* win, const string& lbl_, environment* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "ke", val->ke_txt, sel);
+    draw_glwidgets_scene_tree(win, "ke", val->emission_txt, sel);
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<node>(
     glwindow* win, const string& lbl_, node* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "ist", val->ist, sel);
-    draw_glwidgets_scene_tree(win, "cam", val->cam, sel);
-    draw_glwidgets_scene_tree(win, "env", val->env, sel);
+    draw_glwidgets_scene_tree(win, "ist", val->instance, sel);
+    draw_glwidgets_scene_tree(win, "cam", val->camera, sel);
+    draw_glwidgets_scene_tree(win, "env", val->environment, sel);
     draw_glwidgets_scene_tree(win, "par", val->parent, sel);
     auto cid = 0;
     for (auto ch : val->children) {
@@ -158,11 +158,12 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.y", val->frame.y.x, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z.x, -1, 1);
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o.x, -10, 10);
-    edited += draw_checkbox_glwidget(win, "ortho", val->ortho);
-    edited += draw_slider_glwidget(win, "film", val->film, 0.01f, 1);
-    edited += draw_slider_glwidget(win, "focal", val->focal, 0.01f, 1);
-    edited += draw_slider_glwidget(win, "focus", val->focus, 0.01f, 1000);
-    edited += draw_slider_glwidget(win, "aperture", val->aperture, 0, 5);
+    edited += draw_checkbox_glwidget(win, "ortho", val->orthographic);
+    edited += draw_slider_glwidget(win, "film", val->film_size, 0.01f, 1);
+    edited += draw_slider_glwidget(win, "focal", val->focal_length, 0.01f, 1);
+    edited += draw_slider_glwidget(
+        win, "focus", val->focus_distance, 0.01f, 1000);
+    edited += draw_slider_glwidget(win, "aperture", val->lens_aperture, 0, 5);
     return edited;
 }
 
@@ -186,36 +187,36 @@ inline bool draw_glwidgets_scene_inspector(
     glwindow* win, material* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
-    edited += draw_coloredit_glwidget(win, "kd", val->kd);
-    edited += draw_coloredit_glwidget(win, "ks", val->ks);
-    edited += draw_coloredit_glwidget(win, "kt", val->kt);
-    edited += draw_slider_glwidget(win, "rs", val->rs, 0, 1);
-    edited += draw_slider_glwidget(win, "op", val->op, 0, 1);
+    edited += draw_coloredit_glwidget(win, "ke", val->emission);  // TODO: HDR
+    edited += draw_coloredit_glwidget(win, "kd", val->diffuse);
+    edited += draw_coloredit_glwidget(win, "ks", val->specular);
+    edited += draw_coloredit_glwidget(win, "kt", val->transmission);
+    edited += draw_slider_glwidget(win, "rs", val->roughness, 0, 1);
+    edited += draw_slider_glwidget(win, "op", val->opacity, 0, 1);
     edited += draw_checkbox_glwidget(win, "fresnel", val->fresnel);
     continue_glwidgets_line(win);
     edited += draw_checkbox_glwidget(win, "refract", val->refract);
-    edited += draw_coloredit_glwidget(win, "vd", val->vd);  // 0, 10
-    edited += draw_coloredit_glwidget(win, "va", val->va);  // 0, 1
-    edited += draw_slider_glwidget(win, "vg", val->vg, -1, 1);
+    edited += draw_coloredit_glwidget(win, "vd", val->volume_density);  // 0, 10
+    edited += draw_coloredit_glwidget(win, "va", val->volume_albedo);   // 0, 1
+    edited += draw_slider_glwidget(win, "vg", val->volume_phaseg, -1, 1);
     edited += draw_combobox_glwidget(
-        win, "ke txt", val->ke_txt, scn->textures, true);
+        win, "ke txt", val->emission_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "kd txt", val->kd_txt, scn->textures, true);
+        win, "kd txt", val->diffuse_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "ks txt", val->ks_txt, scn->textures, true);
+        win, "ks txt", val->specular_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "kt txt", val->kt_txt, scn->textures, true);
+        win, "kt txt", val->transmission_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "op txt", val->op_txt, scn->textures, true);
+        win, "op txt", val->opacity_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "rs txt", val->rs_txt, scn->textures, true);
+        win, "rs txt", val->roughness_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "bump txt", val->bump_txt, scn->textures, true);
+        win, "bump txt", val->bump_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "disp txt", val->disp_txt, scn->textures, true);
+        win, "disp txt", val->displacement_texture, scn->textures, true);
     edited += draw_combobox_glwidget(
-        win, "norm txt", val->norm_txt, scn->textures, true);
+        win, "norm txt", val->normal_texture, scn->textures, true);
     edited += draw_checkbox_glwidget(win, "base metallic", val->base_metallic);
     edited += draw_checkbox_glwidget(win, "glTF textures", val->gltf_textures);
     return edited;
@@ -241,7 +242,7 @@ inline bool draw_glwidgets_scene_inspector(
     glwindow* win, subdiv* val, scene* scn) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_slider_glwidget(win, "level", val->level, 0, 10);
+    edited += draw_slider_glwidget(win, "level", val->subdivision_level, 0, 10);
     edited += draw_checkbox_glwidget(win, "catmull-clark", val->catmull_clark);
     continue_glwidgets_line(win);
     edited += draw_checkbox_glwidget(
@@ -264,9 +265,11 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
-    edited += draw_combobox_glwidget(win, "shp", val->shp, scn->shapes, true);
-    edited += draw_combobox_glwidget(win, "sbd", val->sbd, scn->subdivs, true);
-    edited += draw_combobox_glwidget(win, "mat", val->mat, scn->materials, true);
+    edited += draw_combobox_glwidget(win, "shp", val->shape, scn->shapes, true);
+    edited += draw_combobox_glwidget(
+        win, "sbd", val->subdiv, scn->subdivs, true);
+    edited += draw_combobox_glwidget(
+        win, "mat", val->material, scn->materials, true);
     return edited;
 }
 
@@ -278,9 +281,9 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
-    edited += draw_coloredit_glwidget(win, "ke", val->ke);  // TODO: HDR
+    edited += draw_coloredit_glwidget(win, "ke", val->emission);  // TODO: HDR
     edited += draw_combobox_glwidget(
-        win, "ke txt", val->ke_txt, scn->textures, true);
+        win, "ke txt", val->emission_txt, scn->textures, true);
     return edited;
 }
 
@@ -298,10 +301,12 @@ inline bool draw_glwidgets_scene_inspector(
         win, "translation", val->translation, -10, 10);
     edited += draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
     edited += draw_slider_glwidget(win, "scale", val->scale, 0, 10);
-    edited += draw_combobox_glwidget(win, "cam", val->cam, scn->cameras, true);
-    edited += draw_combobox_glwidget(win, "ist", val->ist, scn->instances, true);
     edited += draw_combobox_glwidget(
-        win, "env", val->env, scn->environments, true);
+        win, "cam", val->camera, scn->cameras, true);
+    edited += draw_combobox_glwidget(
+        win, "ist", val->instance, scn->instances, true);
+    edited += draw_combobox_glwidget(
+        win, "env", val->environment, scn->environments, true);
     return edited;
 }
 

@@ -2738,13 +2738,13 @@ struct bvh_tree;
 
 // Camera.
 struct camera {
-    string  name     = "";                // name
-    frame3f frame    = identity_frame3f;  // transform frame
-    bool    ortho    = false;             // orthographic
-    vec2f   film     = {0.036f, 0.024f};  // film size (default: 35mm)
-    float   focal    = 0.050f;            // focal length (defaut: 50 mm)
-    float   focus    = maxf;              // focal distance (default: infinite)
-    float   aperture = 0;                 // lens aperture
+    string  name           = "";                // name
+    frame3f frame          = identity_frame3f;  // transform frame
+    bool    orthographic   = false;             // orthographic
+    vec2f   film_size      = {0.036f, 0.024f};  // film size (default: 35mm)
+    float   focal_length   = 0.050f;            // focal length (defaut: 50 mm)
+    float   focus_distance = maxf;  // focal distance (default: infinite)
+    float   lens_aperture  = 0;     // lens aperture
 };
 
 // Texture containing either an LDR or HDR image.
@@ -2779,35 +2779,36 @@ struct material {
     bool   double_sided  = false;  // double sided rendering
 
     // base values
-    vec3f ke      = {0, 0, 0};  // emission color
-    vec3f kd      = {0, 0, 0};  // diffuse/base color
-    vec3f ks      = {0, 0, 0};  // specular color / metallic factor
-    vec3f kt      = {0, 0, 0};  // transmission color
-    float rs      = 0.0001;     // roughness mapped as glTF
-    float op      = 1;          // opacity
+    vec3f emission     = {0, 0, 0};  // emission color
+    vec3f diffuse      = {0, 0, 0};  // diffuse/base color
+    vec3f specular     = {0, 0, 0};  // specular color / metallic factor
+    vec3f transmission = {0, 0, 0};  // transmission color
+    float roughness    = 0.0001;     // roughness mapped as glTF
+    float opacity      = 1;          // opacity
     bool  fresnel = true;  // whether to use fresnel in reflections/transmission
     bool  refract = false;  // whether to use use refraction in tranmission
 
     // textures
-    texture* ke_txt   = nullptr;  // emission texture
-    texture* kd_txt   = nullptr;  // diffuse texture
-    texture* ks_txt   = nullptr;  // specular texture
-    texture* kt_txt   = nullptr;  // transmission texture
-    texture* rs_txt   = nullptr;  // roughness texture
-    texture* op_txt   = nullptr;  // opacity texture
-    texture* occ_txt  = nullptr;  // occlusion texture
-    texture* bump_txt = nullptr;  // bump map texture (heighfield)
-    texture* disp_txt = nullptr;  // displacement map texture (heighfield)
-    texture* norm_txt = nullptr;  // normal texture
+    texture* emission_texture     = nullptr;  // emission texture
+    texture* diffuse_texture      = nullptr;  // diffuse texture
+    texture* specular_texture     = nullptr;  // specular texture
+    texture* transmission_texture = nullptr;  // transmission texture
+    texture* roughness_texture    = nullptr;  // roughness texture
+    texture* opacity_texture      = nullptr;  // opacity texture
+    texture* occlusion_texture    = nullptr;  // occlusion texture
+    texture* bump_texture         = nullptr;  // bump map texture (heighfield)
+    texture* displacement_texture = nullptr;  // displacement map texture
+    texture* normal_texture       = nullptr;  // normal texture
 
     // volume properties
-    vec3f ve = {0, 0, 0};  // volume emission
-    vec3f va = {0, 0, 0};  // albedo: scattering / (absorption + scattering)
-    vec3f vd = {0, 0, 0};  // density: absorption + scattering
-    float vg = 0;          // phase function shape
+    vec3f volume_emission = {0, 0, 0};  // volume emission
+    vec3f volume_albedo   = {0, 0, 0};  // albedo: scattering / (absorption +
+                                        // scattering)
+    vec3f volume_density = {0, 0, 0};   // density: absorption + scattering
+    float volume_phaseg  = 0;           // phase function shape
 
     // volume textures
-    voltexture* vd_txt = nullptr;  // density
+    voltexture* volume_density_texture = nullptr;  // density
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -2832,11 +2833,11 @@ struct shape {
 
 // Subdivision surface.
 struct subdiv {
-    string name            = "";    // name
-    string path            = "";    // path for glTF buffers
-    int    level           = 0;     // subdivision level
-    bool   catmull_clark   = true;  // catmull clark subdiv
-    bool   compute_normals = true;  // faceted subdivision
+    string name              = "";    // name
+    string path              = "";    // path for glTF buffers
+    int    subdivision_level = 0;     // subdivision level
+    bool   catmull_clark     = true;  // catmull clark subdiv
+    bool   compute_normals   = true;  // faceted subdivision
 
     // primitives
     vector<vec4i> quads_pos      = {};  // quads for position
@@ -2855,19 +2856,19 @@ struct subdiv {
 
 // Shape instance.
 struct instance {
-    string    name  = "";                // name
-    frame3f   frame = identity_frame3f;  // transform frame
-    shape*    shp   = nullptr;           // shape
-    material* mat   = nullptr;           // material
-    subdiv*   sbd   = nullptr;           // subdivision shape
+    string    name     = "";                // name
+    frame3f   frame    = identity_frame3f;  // transform frame
+    shape*    shape    = nullptr;           // shape
+    material* material = nullptr;           // material
+    subdiv*   subdiv   = nullptr;           // subdivision shape
 };
 
 // Environment map.
 struct environment {
-    string   name   = "";                // name
-    frame3f  frame  = identity_frame3f;  // transform frame
-    vec3f    ke     = {0, 0, 0};         // emission color
-    texture* ke_txt = nullptr;           // emission texture
+    string   name         = "";                // name
+    frame3f  frame        = identity_frame3f;  // transform frame
+    vec3f    emission     = {0, 0, 0};         // emission color
+    texture* emission_txt = nullptr;           // emission texture
 };
 
 // Node in a transform hierarchy.
@@ -2879,9 +2880,9 @@ struct node {
     vec4f         rotation    = {0, 0, 0, 1};      // rotation
     vec3f         scale       = {1, 1, 1};         // scale
     vector<float> weights     = {};                // morph weights
-    camera*       cam         = nullptr;           // camera
-    instance*     ist         = nullptr;           // instance
-    environment*  env         = nullptr;           // environment
+    camera*       camera      = nullptr;           // camera
+    instance*     instance    = nullptr;           // instance
+    environment*  environment = nullptr;           // environment
 
     // compute properties
     vector<node*> children = {};  // child nodes
@@ -2989,23 +2990,23 @@ camera* make_bbox_camera(const string& name, const bbox3f& bbox,
     const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
 // make default material
 inline material* make_default_material(const string& name) {
-    auto mat  = new material();
-    mat->name = name;
-    mat->kd   = {0.2f, 0.2f, 0.2f};
+    auto mat     = new material();
+    mat->name    = name;
+    mat->diffuse = {0.2f, 0.2f, 0.2f};
     return mat;
 }
 
 // Add a sky environment
 inline environment* make_sky_environment(
     const string& name, float sun_angle = pif / 4) {
-    auto txt    = new texture();
-    txt->name   = name;
-    txt->path   = "textures/" + name + ".hdr";
-    txt->imgf   = make_sunsky_image4f(1024, 512, sun_angle);
-    auto env    = new environment();
-    env->name   = name;
-    env->ke     = {1, 1, 1};
-    env->ke_txt = txt;
+    auto txt          = new texture();
+    txt->name         = name;
+    txt->path         = "textures/" + name + ".hdr";
+    txt->imgf         = make_sunsky_image4f(1024, 512, sun_angle);
+    auto env          = new environment();
+    env->name         = name;
+    env->emission     = {1, 1, 1};
+    env->emission_txt = txt;
     return env;
 }
 

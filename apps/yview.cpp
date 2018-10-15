@@ -474,24 +474,24 @@ void draw_glshape(draw_glstate* state, const shape* shp, const material* mat,
     if (mat->base_metallic) mtype = 2;
     if (mat->gltf_textures) mtype = (mat->base_metallic) ? 2 : 3;
     set_gluniform(state->prog, "mat_type", mtype);
-    set_gluniform(state->prog, "mat_ke", mat->ke);
-    set_gluniform(state->prog, "mat_kd", mat->kd);
-    set_gluniform(state->prog, "mat_ks", mat->ks);
-    set_gluniform(state->prog, "mat_rs", mat->rs);
-    set_gluniform(state->prog, "mat_op", mat->op);
+    set_gluniform(state->prog, "mat_ke", mat->emission);
+    set_gluniform(state->prog, "mat_kd", mat->diffuse);
+    set_gluniform(state->prog, "mat_ks", mat->specular);
+    set_gluniform(state->prog, "mat_rs", mat->roughness);
+    set_gluniform(state->prog, "mat_op", mat->opacity);
     set_gluniform(state->prog, "mat_double_sided", (int)mat->double_sided);
     set_gluniform_texture(state->prog, "mat_ke_txt", "mat_ke_txt_on",
-        state->txts.at(mat->ke_txt), 0);
+        state->txts.at(mat->emission_texture), 0);
     set_gluniform_texture(state->prog, "mat_kd_txt", "mat_kd_txt_on",
-        state->txts.at(mat->kd_txt), 1);
+        state->txts.at(mat->diffuse_texture), 1);
     set_gluniform_texture(state->prog, "mat_ks_txt", "mat_ks_txt_on",
-        state->txts.at(mat->ks_txt), 2);
+        state->txts.at(mat->specular_texture), 2);
     set_gluniform_texture(state->prog, "mat_rs_txt", "mat_rs_txt_on",
-        state->txts.at(mat->rs_txt), 3);
+        state->txts.at(mat->roughness_texture), 3);
     set_gluniform_texture(state->prog, "mat_op_txt", "mat_op_txt_on",
-        state->txts.at(mat->op_txt), 4);
+        state->txts.at(mat->opacity_texture), 4);
     set_gluniform_texture(state->prog, "mat_norm_txt", "mat_norm_txt_on",
-        state->txts.at(mat->norm_txt), 5);
+        state->txts.at(mat->normal_texture), 5);
 
     auto& vbos = state->shps.at(shp);
     set_gluniform(state->prog, "elem_faceted", (int)shp->norm.empty());
@@ -563,9 +563,9 @@ void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
         for (auto lgt : scn->instances) {
-            if (lgt->mat->ke == zero3f) continue;
+            if (lgt->material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto shp  = lgt->shp;
+            auto shp  = lgt->shape;
             auto bbox = compute_bbox(shp);
             auto pos  = (bbox.max + bbox.min) / 2;
             auto area = 0.0f;
@@ -579,7 +579,7 @@ void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
             } else {
                 area += shp->pos.size();
             }
-            auto ke = lgt->mat->ke * area;
+            auto ke = lgt->material->emission * area;
             lights_pos.push_back(transform_point(lgt->frame, pos));
             lights_ke.push_back(ke);
             lights_type.push_back(0);
@@ -600,9 +600,9 @@ void draw_glscene(draw_glstate* state, const scene* scn, const camera* cam,
 
     if (wireframe) set_glwireframe(true);
     for (auto ist : scn->instances) {
-        draw_glshape(state, ist->shp, ist->mat, frame_to_mat(ist->frame),
-            ist == highlighted || ist->shp == highlighted ||
-                ist->mat == highlighted,
+        draw_glshape(state, ist->shape, ist->material, frame_to_mat(ist->frame),
+            ist == highlighted || ist->shape == highlighted ||
+                ist->material == highlighted,
             eyelight, edges);
     }
 
@@ -686,7 +686,8 @@ void run_ui(app_state* app) {
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto cam = app->scn->cameras.at(app->camid);
-            camera_turntable(cam->frame, cam->focus, rotate, dolly, pan);
+            camera_turntable(
+                cam->frame, cam->focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", cam});
         }
 

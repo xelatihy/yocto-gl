@@ -3445,7 +3445,7 @@ bbox3f compute_bbox(const scene* scn) {
     for (auto shp : scn->shapes) sbbox[shp] = compute_bbox(shp);
     auto bbox = invalid_bbox3f;
     for (auto ist : scn->instances)
-        bbox += transform_bbox(ist->frame, sbbox[ist->shp]);
+        bbox += transform_bbox(ist->frame, sbbox[ist->shape]);
     return bbox;
 }
 
@@ -3458,7 +3458,7 @@ void tesselate_subdiv(const subdiv* sbd, shape* shp) {
     auto pos            = sbd->pos;
     auto texcoord       = sbd->texcoord;
     auto color          = sbd->color;
-    for (auto l = 0; l < sbd->level; l++) {
+    for (auto l = 0; l < sbd->subdivision_level; l++) {
         tie(quads_pos, pos)           = subdivide_catmullclark(quads_pos, pos);
         tie(quads_texcoord, texcoord) = subdivide_catmullclark(
             quads_texcoord, texcoord, true);
@@ -3474,8 +3474,8 @@ void tesselate_subdiv(const subdiv* sbd, shape* shp) {
 }
 void tesselate_subdivs(scene* scn) {
     for (auto ist : scn->instances) {
-        if (!ist->sbd) continue;
-        tesselate_subdiv(ist->sbd, ist->shp);
+        if (!ist->subdiv) continue;
+        tesselate_subdiv(ist->subdiv, ist->shape);
     }
 }
 
@@ -3535,9 +3535,9 @@ void update_transforms(animation* anm, float time, const string& anim_group) {
 void update_transforms(node* nde, const frame3f& parent = identity_frame3f) {
     auto frame = parent * nde->local * translation_frame(nde->translation) *
                  rotation_frame(nde->rotation) * scaling_frame(nde->scale);
-    if (nde->ist) nde->ist->frame = frame;
-    if (nde->cam) nde->cam->frame = frame;
-    if (nde->env) nde->env->frame = frame;
+    if (nde->instance) nde->instance->frame = frame;
+    if (nde->camera) nde->camera->frame = frame;
+    if (nde->environment) nde->environment->frame = frame;
     for (auto child : nde->children) update_transforms(child, frame);
 }
 
@@ -3579,7 +3579,7 @@ vector<float> compute_shape_cdf(const shape* shp) {
 
 // Update environment CDF for sampling.
 vector<float> compute_environment_cdf(const environment* env) {
-    auto txt = env->ke_txt;
+    auto txt = env->emission_txt;
     if (!txt) return {};
     auto size     = eval_texture_size(txt);
     auto elem_cdf = vector<float>(size.x * size.y);
@@ -3629,8 +3629,8 @@ bvh_tree* build_bvh(const scene* scn, bool high_quality, bool embree) {
 
     // instances
     for (auto ist : scn->instances) {
-        bvh->instances.push_back(
-            {ist->frame, inverse(ist->frame, false), bvh->shape_ids[ist->shp]});
+        bvh->instances.push_back({ist->frame, inverse(ist->frame, false),
+            bvh->shape_ids[ist->shape]});
         bvh->instance_ids[ist] = (int)bvh->instances.size() - 1;
     }
 
@@ -3656,7 +3656,7 @@ void refit_bvh(const scene* scn, bvh_tree* bvh) {
     for (auto iid = 0; iid < scn->instances.size(); iid++) {
         auto ist            = scn->instances[iid];
         bvh->instances[iid] = {
-            ist->frame, inverse(ist->frame), shape_ids[ist->shp]};
+            ist->frame, inverse(ist->frame), shape_ids[ist->shape]};
     }
     refit_bvh(bvh);
 }
@@ -3687,14 +3687,17 @@ void add_missing_names(scene* scn) {
 // Add missing tangent space if needed.
 void add_missing_tangent_space(scene* scn) {
     for (auto ist : scn->instances) {
-        if (!ist->shp->tangsp.empty() || ist->shp->texcoord.empty()) continue;
-        if (!ist->mat || (!ist->mat->norm_txt && !ist->mat->bump_txt)) continue;
-        if (!ist->shp->triangles.empty()) {
-            if (ist->shp->norm.empty())
-                ist->shp->norm = compute_normals(
-                    ist->shp->triangles, ist->shp->pos);
-            ist->shp->tangsp = compute_tangent_space(ist->shp->triangles,
-                ist->shp->pos, ist->shp->norm, ist->shp->texcoord);
+        if (!ist->shape->tangsp.empty() || ist->shape->texcoord.empty())
+            continue;
+        if (!ist->material ||
+            (!ist->material->normal_texture && !ist->material->bump_texture))
+            continue;
+        if (!ist->shape->triangles.empty()) {
+            if (ist->shape->norm.empty())
+                ist->shape->norm = compute_normals(
+                    ist->shape->triangles, ist->shape->pos);
+            ist->shape->tangsp = compute_tangent_space(ist->shape->triangles,
+                ist->shape->pos, ist->shape->norm, ist->shape->texcoord);
         } else {
             throw runtime_error("type not supported");
         }
@@ -3705,12 +3708,12 @@ void add_missing_tangent_space(scene* scn) {
 void add_missing_materials(scene* scn) {
     auto mat = (material*)nullptr;
     for (auto ist : scn->instances) {
-        if (ist->mat) continue;
+        if (ist->material) continue;
         if (!mat) {
             mat = make_default_material("<default>");
             scn->materials.push_back(mat);
         }
-        ist->mat = mat;
+        ist->material = mat;
     }
 }
 
@@ -3756,21 +3759,21 @@ vector<string> validate(const scene* scn, bool skip_textures) {
 // add missing camera
 camera* make_bbox_camera(
     const string& name, const bbox3f& bbox, const vec2f& film, float focal) {
-    auto bbox_center = (bbox.max + bbox.min) / 2.0f;
-    auto bbox_size   = bbox.max - bbox.min;
-    auto bbox_msize  = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto cam         = new camera();
-    cam->name        = name;
-    auto camera_dir  = vec3f{1, 0.4f, 1};
-    auto from        = camera_dir * bbox_msize + bbox_center;
-    auto to          = bbox_center;
-    auto up          = vec3f{0, 1, 0};
-    cam->frame       = lookat_frame(from, to, up);
-    cam->ortho       = false;
-    cam->film        = film;
-    cam->focal       = focal;
-    cam->focus       = length(from - to);
-    cam->aperture    = 0;
+    auto bbox_center    = (bbox.max + bbox.min) / 2.0f;
+    auto bbox_size      = bbox.max - bbox.min;
+    auto bbox_msize     = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
+    auto cam            = new camera();
+    cam->name           = name;
+    auto camera_dir     = vec3f{1, 0.4f, 1};
+    auto from           = camera_dir * bbox_msize + bbox_center;
+    auto to             = bbox_center;
+    auto up             = vec3f{0, 1, 0};
+    cam->frame          = lookat_frame(from, to, up);
+    cam->orthographic   = false;
+    cam->film_size      = film;
+    cam->focal_length   = focal;
+    cam->focus_distance = length(from - to);
+    cam->lens_aperture  = 0;
     return cam;
 }
 
@@ -3894,47 +3897,49 @@ vec3f eval_tangsp(const shape* shp, int ei, const vec2f& uv, bool& left_handed) 
 
 // Instance values interpolated using barycentric coordinates.
 vec3f eval_pos(const instance* ist, int ei, const vec2f& uv) {
-    return transform_point(ist->frame, eval_pos(ist->shp, ei, uv));
+    return transform_point(ist->frame, eval_pos(ist->shape, ei, uv));
 }
 vec3f eval_norm(const instance* ist, int ei, const vec2f& uv) {
-    return transform_direction(ist->frame, eval_norm(ist->shp, ei, uv));
+    return transform_direction(ist->frame, eval_norm(ist->shape, ei, uv));
 }
 vec2f eval_texcoord(const instance* ist, int ei, const vec2f& uv) {
-    return eval_texcoord(ist->shp, ei, uv);
+    return eval_texcoord(ist->shape, ei, uv);
 }
 vec4f eval_color(const instance* ist, int ei, const vec2f& uv) {
-    return eval_color(ist->shp, ei, uv);
+    return eval_color(ist->shape, ei, uv);
 }
 float eval_radius(const instance* ist, int ei, const vec2f& uv) {
-    return eval_radius(ist->shp, ei, uv);
+    return eval_radius(ist->shape, ei, uv);
 }
 vec3f eval_tangsp(
     const instance* ist, int ei, const vec2f& uv, bool& left_handed) {
     return transform_direction(
-        ist->frame, eval_tangsp(ist->shp, ei, uv, left_handed));
+        ist->frame, eval_tangsp(ist->shape, ei, uv, left_handed));
 }
 // Instance element values.
 vec3f eval_elem_norm(const instance* ist, int ei) {
-    return transform_direction(ist->frame, eval_elem_norm(ist->shp, ei));
+    return transform_direction(ist->frame, eval_elem_norm(ist->shape, ei));
 }
 // Shading normals including material perturbations.
 vec3f eval_shading_norm(
     const instance* ist, int ei, const vec2f& uv, const vec3f& o) {
-    if (!ist->shp->triangles.empty()) {
+    if (!ist->shape->triangles.empty()) {
         auto n = eval_norm(ist, ei, uv);
-        if (ist->mat && ist->mat->norm_txt) {
+        if (ist->material && ist->material->normal_texture) {
             auto texcoord    = eval_texcoord(ist, ei, uv);
             auto left_handed = false;
-            auto txt         = xyz(eval_texture(ist->mat->norm_txt, texcoord));
-            txt              = txt * 2 - vec3f{1, 1, 1};
+            auto txt         = xyz(
+                eval_texture(ist->material->normal_texture, texcoord));
+            txt   = txt * 2 - vec3f{1, 1, 1};
             txt.y = -txt.y;  // flip vertical axis to align green with image up
             auto tu = orthonormalize(eval_tangsp(ist, ei, uv, left_handed), n);
             auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
             n       = normalize(txt.x * tu + txt.y * tv + txt.z * n);
         }
-        if (ist->mat && ist->mat->double_sided && dot(n, o) < 0) n = -n;
+        if (ist->material && ist->material->double_sided && dot(n, o) < 0)
+            n = -n;
         return n;
-    } else if (!ist->shp->lines.empty()) {
+    } else if (!ist->shape->lines.empty()) {
         return orthonormalize(o, eval_norm(ist, ei, uv));
     } else {
         return o;
@@ -3957,9 +3962,9 @@ vec3f eval_direction(const environment* env, const vec2f& uv) {
 }
 // Evaluate the environment color.
 vec3f eval_environment(const environment* env, const vec3f& w) {
-    auto ke = env->ke;
-    if (env->ke_txt) {
-        ke *= xyz(eval_texture(env->ke_txt, eval_texcoord(env, w)));
+    auto ke = env->emission;
+    if (env->emission_txt) {
+        ke *= xyz(eval_texture(env->emission_txt, eval_texcoord(env, w)));
     }
     return ke;
 }
@@ -4086,33 +4091,35 @@ float eval_voltexture(const voltexture* txt, const vec3f& texcoord) {
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float eval_camera_fovy(const camera* cam) {
-    return 2 * std::atan(cam->film.y / (2 * cam->focal));
+    return 2 * std::atan(cam->film_size.y / (2 * cam->focal_length));
 }
 void set_camera_fovy(camera* cam, float fovy, float aspect, float width) {
-    cam->film  = {width, width / aspect};
-    cam->focal = cam->film.y / (2 * std::tan(fovy / 2));
+    cam->film_size    = {width, width / aspect};
+    cam->focal_length = cam->film_size.y / (2 * std::tan(fovy / 2));
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 ray3f eval_camera_ray(const camera* cam, const vec2f& uv, const vec2f& luv) {
-    auto dist = cam->focal;
-    if (cam->focus < maxf) {
-        dist = cam->focal * cam->focus / (cam->focus - cam->focal);
+    auto dist = cam->focal_length;
+    if (cam->focus_distance < maxf) {
+        dist = cam->focal_length * cam->focus_distance /
+               (cam->focus_distance - cam->focal_length);
     }
-    auto e = vec3f{luv.x * cam->aperture, luv.y * cam->aperture, 0};
+    auto e = vec3f{luv.x * cam->lens_aperture, luv.y * cam->lens_aperture, 0};
     // auto q = vec3f{cam->width * (uv.x - 0.5f),
     //     cam->height * (uv.y - 0.5f), dist};
     // X flipped for mirror
-    auto q = vec3f{
-        cam->film.x * (0.5f - uv.x), cam->film.y * (uv.y - 0.5f), dist};
+    auto q   = vec3f{cam->film_size.x * (0.5f - uv.x),
+        cam->film_size.y * (uv.y - 0.5f), dist};
     auto ray = make_ray(transform_point(cam->frame, e),
         transform_direction(cam->frame, normalize(e - q)));
     return ray;
 }
 
 vec2i eval_image_size(const camera* cam, int yresolution) {
-    return {(int)round(yresolution * cam->film.x / cam->film.y), yresolution};
+    return {(int)round(yresolution * cam->film_size.x / cam->film_size.y),
+        yresolution};
 }
 
 // Generates a ray from a camera.
@@ -4132,66 +4139,82 @@ ray3f eval_camera_ray(const camera* cam, int idx, const vec2i& imsize,
 
 // Evaluates material parameters.
 vec3f eval_emission(const instance* ist, int ei, const vec2f& uv) {
-    if (!ist || !ist->mat) return zero3f;
-    return ist->mat->ke * xyz(eval_color(ist, ei, uv)) *
-           xyz(eval_texture(ist->mat->ke_txt, eval_texcoord(ist, ei, uv)));
+    if (!ist || !ist->material) return zero3f;
+    return ist->material->emission * xyz(eval_color(ist, ei, uv)) *
+           xyz(eval_texture(
+               ist->material->emission_texture, eval_texcoord(ist, ei, uv)));
 }
 vec3f eval_diffuse(const instance* ist, int ei, const vec2f& uv) {
-    if (!ist || !ist->mat) return zero3f;
-    if (!ist->mat->base_metallic) {
-        return ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-               xyz(eval_texture(ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
+    if (!ist || !ist->material) return zero3f;
+    if (!ist->material->base_metallic) {
+        return ist->material->diffuse * xyz(eval_color(ist, ei, uv)) *
+               xyz(eval_texture(
+                   ist->material->diffuse_texture, eval_texcoord(ist, ei, uv)));
     } else {
-        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-                  xyz(eval_texture(
-                      ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+        auto kb = ist->material->diffuse * xyz(eval_color(ist, ei, uv)) *
+                  xyz(eval_texture(ist->material->diffuse_texture,
+                      eval_texcoord(ist, ei, uv)));
+        auto km = ist->material->specular.x *
+                  eval_texture(ist->material->specular_texture,
+                      eval_texcoord(ist, ei, uv))
+                      .z;
         return kb * (1 - km);
     }
 }
 vec3f eval_specular(const instance* ist, int ei, const vec2f& uv) {
-    if (!ist || !ist->mat) return zero3f;
-    if (!ist->mat->base_metallic) {
-        return ist->mat->ks * xyz(eval_color(ist, ei, uv)) *
-               xyz(eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)));
+    if (!ist || !ist->material) return zero3f;
+    if (!ist->material->base_metallic) {
+        return ist->material->specular * xyz(eval_color(ist, ei, uv)) *
+               xyz(eval_texture(ist->material->specular_texture,
+                   eval_texcoord(ist, ei, uv)));
     } else {
-        auto kb = ist->mat->kd * xyz(eval_color(ist, ei, uv)) *
-                  xyz(eval_texture(
-                      ist->mat->kd_txt, eval_texcoord(ist, ei, uv)));
-        auto km = ist->mat->ks.x *
-                  eval_texture(ist->mat->ks_txt, eval_texcoord(ist, ei, uv)).z;
+        auto kb = ist->material->diffuse * xyz(eval_color(ist, ei, uv)) *
+                  xyz(eval_texture(ist->material->diffuse_texture,
+                      eval_texcoord(ist, ei, uv)));
+        auto km = ist->material->specular.x *
+                  eval_texture(ist->material->specular_texture,
+                      eval_texcoord(ist, ei, uv))
+                      .z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
 float eval_roughness(const instance* ist, int ei, const vec2f& uv) {
-    if (!ist || !ist->mat) return 1;
-    if (!ist->mat->base_metallic) {
-        if (!ist->mat->gltf_textures) {
-            auto rs = ist->mat->rs *
-                      eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).x;
+    if (!ist || !ist->material) return 1;
+    if (!ist->material->base_metallic) {
+        if (!ist->material->gltf_textures) {
+            auto rs = ist->material->roughness *
+                      eval_texture(ist->material->roughness_texture,
+                          eval_texcoord(ist, ei, uv))
+                          .x;
             return rs * rs;
         } else {
-            auto gs = (1 - ist->mat->rs) *
-                      eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).w;
+            auto gs = (1 - ist->material->roughness) *
+                      eval_texture(ist->material->roughness_texture,
+                          eval_texcoord(ist, ei, uv))
+                          .w;
             auto rs = 1 - gs;
             return rs * rs;
         }
     } else {
-        auto rs = ist->mat->rs *
-                  eval_texture(ist->mat->rs_txt, eval_texcoord(ist, ei, uv)).y;
+        auto rs = ist->material->roughness *
+                  eval_texture(ist->material->roughness_texture,
+                      eval_texcoord(ist, ei, uv))
+                      .y;
         return rs * rs;
     }
 }
 vec3f eval_transmission(const instance* ist, int ei, const vec2f& uv) {
-    if (!ist || !ist->mat) return zero3f;
-    return ist->mat->kt * xyz(eval_color(ist, ei, uv)) *
-           xyz(eval_texture(ist->mat->kt_txt, eval_texcoord(ist, ei, uv)));
+    if (!ist || !ist->material) return zero3f;
+    return ist->material->transmission * xyz(eval_color(ist, ei, uv)) *
+           xyz(eval_texture(ist->material->transmission_texture,
+               eval_texcoord(ist, ei, uv)));
 }
 float eval_opacity(const instance* ist, int ei, const vec2f& uv) {
-    if (!ist || !ist->mat) return 1;
-    return ist->mat->op * eval_color(ist->shp, ei, uv).w *
-           eval_texture(ist->mat->op_txt, eval_texcoord(ist, ei, uv)).w;
+    if (!ist || !ist->material) return 1;
+    return ist->material->opacity * eval_color(ist->shape, ei, uv).w *
+           eval_texture(
+               ist->material->opacity_texture, eval_texcoord(ist, ei, uv))
+               .w;
 }
 
 // Evaluates the bsdf at a location.
@@ -4201,7 +4224,7 @@ bsdf eval_bsdf(const instance* ist, int ei, const vec2f& uv) {
     f.ks      = eval_specular(ist, ei, uv);
     f.kt      = eval_transmission(ist, ei, uv);
     f.rs      = eval_roughness(ist, ei, uv);
-    f.refract = (ist && ist->mat) ? ist->mat->refract : false;
+    f.refract = (ist && ist->material) ? ist->material->refract : false;
     if (f.kd != zero3f) {
         f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
     } else if (f.rs <= 0.03f * 0.03f)
@@ -4234,16 +4257,17 @@ tuple<int, vec2f> sample_shape(const shape* shp, const vector<float>& elem_cdf,
 namespace ygl {
 
 bool is_volume_homogeneus(const material* vol) {
-    return vol->vd_txt == nullptr;
+    return vol->volume_density_texture == nullptr;
 }
 
 bool has_volume_color(const material* vol) {
-    return !(vol->vd.x == vol->vd.y && vol->vd.y == vol->vd.z);
+    return !(vol->volume_density.x == vol->volume_density.y &&
+             vol->volume_density.y == vol->volume_density.z);
 }
 
 vec3f eval_transmission(const material* vol, const vec3f& from,
     const vec3f& dir, float dist, int channel, rng_state& rng) {
-    auto& vd = vol->vd;
+    auto& vd = vol->volume_density;
     if (is_volume_homogeneus(vol))
         return vec3f{exp(-dist * vd.x), exp(-dist * vd.y), exp(-dist * vd.z)};
 
@@ -4255,7 +4279,8 @@ vec3f eval_transmission(const material* vol, const vec3f& from,
         t += step;
         if (t >= dist) break;
         pos += dir * step;
-        auto density = vol->vd * eval_voltexture(vol->vd_txt, pos);
+        auto density = vol->volume_density *
+                       eval_voltexture(vol->volume_density_texture, pos);
         tr *= 1.0f -
               max(0.0f, element_at(density, channel) / element_at(vd, channel));
     }
@@ -4265,7 +4290,7 @@ vec3f eval_transmission(const material* vol, const vec3f& from,
 float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
     int channel, rng_state& rng) {
     auto pos      = from;
-    auto majorant = element_at(vol->vd, channel);
+    auto majorant = element_at(vol->volume_density, channel);
     if (majorant == 0) return maxf;
 
     // delta tracking
@@ -4278,7 +4303,8 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
 
         pos += dir * step;
         dist += step;
-        auto density = vol->vd * eval_voltexture(vol->vd_txt, pos);
+        auto density = vol->volume_density *
+                       eval_voltexture(vol->volume_density_texture, pos);
 
         if (element_at(density, channel) / majorant >= rand1f(rng)) return dist;
 
@@ -4290,7 +4316,7 @@ float sample_distance(const material* vol, const vec3f& from, const vec3f& dir,
 
 float sample_distance(const instance* ist, const bbox3f& bbox,
     const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
-    if (ist->mat->vd == zero3f) return maxf;
+    if (ist->material->volume_density == zero3f) return maxf;
 
     // Transform coordinates so that every position in the bounding box of the
     // instance is mapped to the cube [-1,1]^3 (the same space of volume texture
@@ -4300,7 +4326,7 @@ float sample_distance(const instance* ist, const bbox3f& bbox,
     auto froml = transform_point_inverse(frame, from) / scale;
     auto dirl  = transform_direction_inverse(frame, dir) / scale;
     auto ll    = length(dirl);
-    auto dist  = sample_distance(ist->mat, froml, dirl / ll, channel, rng);
+    auto dist  = sample_distance(ist->material, froml, dirl / ll, channel, rng);
     return dist * ll;
 }
 
@@ -4680,7 +4706,7 @@ float sample_delta_brdf_pdf(
 // Sample pdf for an environment.
 float sample_environment_pdf(
     const environment* env, const vector<float>& elem_cdf, const vec3f& i) {
-    auto txt = env->ke_txt;
+    auto txt = env->emission_txt;
     if (!elem_cdf.empty() && txt) {
         auto size     = eval_texture_size(txt);
         auto texcoord = eval_texcoord(env, i);
@@ -4699,7 +4725,7 @@ float sample_environment_pdf(
 // Picks a point on an environment.
 vec3f sample_environment(const environment* env, const vector<float>& elem_cdf,
     float rel, const vec2f& ruv) {
-    auto txt = env->ke_txt;
+    auto txt = env->emission_txt;
     if (!elem_cdf.empty() && txt) {
         auto idx  = sample_discrete(elem_cdf, rel);
         auto size = eval_texture_size(txt);
@@ -4714,14 +4740,14 @@ vec3f sample_environment(const environment* env, const vector<float>& elem_cdf,
 // Picks a point on a light.
 vec3f sample_light(const instance* ist, const vector<float>& elem_cdf,
     const vec3f& p, float rel, const vec2f& ruv) {
-    auto sample = sample_shape(ist->shp, elem_cdf, rel, ruv);
+    auto sample = sample_shape(ist->shape, elem_cdf, rel, ruv);
     return normalize(eval_pos(ist, get<0>(sample), get<1>(sample)) - p);
 }
 
 // Sample pdf for a light point.
 float sample_light_pdf(const instance* ist, const vector<float>& elem_cdf,
     const vec3f& p, const vec3f& i, const vec3f& lp, const vec3f& ln) {
-    if (ist->mat->ke == zero3f) return 0;
+    if (ist->material->emission == zero3f) return 0;
     // prob triangle * area triangle = area triangle mesh
     auto area = elem_cdf.back();
     return dot(lp - p, lp - p) / (fabs(dot(ln, i)) * area);
@@ -4734,7 +4760,7 @@ vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
     auto idx     = sample_index(nlights, lrn);
     if (idx < lights->lights.size()) {
         auto  lgt      = lights->lights[idx];
-        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         return sample_light(lgt, elem_cdf, p, rel, ruv);
     } else {
         auto  lgt      = lights->environments[idx - lights->lights.size()];
@@ -4751,8 +4777,8 @@ float sample_lights_pdf(const scene* scn, const trace_lights* lights,
     // instances
     for (auto lgt : lights->lights) {
         // get cdf and bvh
-        auto  sbvh     = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shp)];
-        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        auto  sbvh     = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shape)];
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         // check all intersection
         auto ray  = make_ray(p, i);
         auto isec = intersect_ray(lgt, sbvh, ray);
@@ -4817,7 +4843,7 @@ vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
     pdf          = 1.0 / nlights;
     if (idx < lights->lights.size()) {
         auto  lgt      = lights->lights[idx];
-        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
         pdf *= 1.0 / elem_cdf.back();
     } else {
@@ -4840,9 +4866,9 @@ vec3f direct_illumination(const scene* scn, const bvh_tree* bvh,
         auto emission = eval_emission(isec.ist, isec.ei, isec.uv);
 
         instance* medium = mediums.back();
-        if (medium->mat->vd != zero3f)
+        if (medium->material->volume_density != zero3f)
             weight *= eval_transmission(
-                medium->mat, lp, i, isec.dist, channel, rng);
+                medium->material, lp, i, isec.dist, channel, rng);
 
         // Hack: Uncomment this or the result will be biased
         // If mediums refracts, the transmission ray won't reach the sampled
@@ -5035,15 +5061,15 @@ vec3f trace_volpath(const scene* scn, const bvh_tree* bvh,
     int bounce = 0;
     while (bounce < nbounces) {
         auto        medium = mediums.back();
-        const auto& ve     = medium->mat->ve;
-        const auto& va     = medium->mat->va;
-        const auto& vd     = medium->mat->vd;
-        const auto& vg     = medium->mat->vg;
+        const auto& ve     = medium->material->volume_emission;
+        const auto& va     = medium->material->volume_albedo;
+        const auto& vd     = medium->material->volume_density;
+        const auto& vg     = medium->material->volume_phaseg;
 
         // If medium has color but must use delta tracking, integrate only the
         // sampled spectrum.
-        if (!single_channel && has_volume_color(medium->mat) &&
-            !is_volume_homogeneus(medium->mat)) {
+        if (!single_channel && has_volume_color(medium->material) &&
+            !is_volume_homogeneus(medium->material)) {
             element_at(weight, ch) *= 3;
             element_at(weight, (ch + 1) % 3) = 0;
             element_at(weight, (ch + 2) % 3) = 0;
@@ -5304,11 +5330,11 @@ vec3f trace_path_nomis(const scene* scn, const bvh_tree* bvh,
         if (!is_delta_bsdf(f) && !lights->lights.empty()) {
             auto  lgt      = lights->lights[sample_index(
                 lights->lights.size(), rand1f(rng))];
-            auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+            auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
             auto  eid      = 0;
             auto  euv      = zero2f;
             tie(eid, euv)  = sample_shape(
-                lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
+                lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
             auto lp   = eval_pos(lgt, eid, euv);
             auto i    = normalize(lp - p);
             auto ln   = eval_shading_norm(lgt, eid, euv, -i);
@@ -5438,11 +5464,11 @@ vec3f trace_direct_nomis(const scene* scn, const bvh_tree* bvh,
     if (!is_delta_bsdf(f) && !lights->lights.empty()) {
         auto lgt =
             lights->lights[sample_index(lights->lights.size(), rand1f(rng))];
-        auto& elem_cdf = lights->shape_cdf.at(lgt->shp);
+        auto& elem_cdf = lights->shape_cdf.at(lgt->shape);
         auto  eid      = 0;
         auto  euv      = zero2f;
         tie(eid, euv)  = sample_shape(
-            lgt->shp, elem_cdf, rand1f(rng), rand2f(rng));
+            lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
         auto lp   = eval_pos(lgt, eid, euv);
         auto i    = normalize(lp - p);
         auto ln   = eval_shading_norm(lgt, eid, euv, -i);
@@ -5784,14 +5810,14 @@ trace_lights* make_trace_lights(const scene* scn, const trace_params& params) {
     auto lights = new trace_lights();
 
     for (auto ist : scn->instances) {
-        if (!ist->mat || ist->mat->ke == zero3f) continue;
-        if (ist->shp->triangles.empty()) continue;
+        if (!ist->material || ist->material->emission == zero3f) continue;
+        if (ist->shape->triangles.empty()) continue;
         lights->lights.push_back(ist);
-        lights->shape_cdf[ist->shp] = compute_shape_cdf(ist->shp);
+        lights->shape_cdf[ist->shape] = compute_shape_cdf(ist->shape);
     }
 
     for (auto env : scn->environments) {
-        if (env->ke == zero3f) continue;
+        if (env->emission == zero3f) continue;
         lights->environments.push_back(env);
         lights->env_cdf[env] = compute_environment_cdf(env);
     }

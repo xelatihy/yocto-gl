@@ -688,9 +688,7 @@ inline bool _parse(const char*& str, ray<T, N>& v) {
 }
 
 // Prints a string.
-inline bool _parse_next(const char*& str) {
-    return true;
-}
+inline bool _parse_next(const char*& str) { return true; }
 template <typename Arg, typename... Args>
 inline bool _parse_next(const char*& str, Arg& arg, Args&... args) {
     if (!_parse(str, arg)) return false;
