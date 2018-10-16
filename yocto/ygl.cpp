@@ -3605,10 +3605,12 @@ vec2f compute_animation_range(const yocto_scene* scene, const string& anim_group
 vector<float> compute_shape_cdf(const yocto_shape* shape) {
     if (!shape->triangles.empty()) {
         return sample_triangles_cdf(shape->triangles, shape->positions);
+    } else if (!shape->quads.empty()) {
+        return sample_quads_cdf(shape->quads, shape->positions);
     } else if (!shape->lines.empty()) {
         return sample_lines_cdf(shape->lines, shape->positions);
-    } else if (!shape->positions.empty()) {
-        return sample_points_cdf(shape->positions.size());
+    } else if (!shape->points.empty()) {
+        return sample_points_cdf(shape->points.size());
     } else {
         throw runtime_error("empty shape not supported");
     }
@@ -4310,6 +4312,8 @@ tuple<int, vec2f> sample_shape(const yocto_shape* shape,
     if (elem_cdf.empty()) return {};
     if (!shape->triangles.empty()) {
         return sample_triangles(elem_cdf, re, ruv);
+    } else if (!shape->quads.empty()) {
+        return sample_quads(elem_cdf, re, ruv);
     } else if (!shape->lines.empty()) {
         return {get<0>(sample_lines(elem_cdf, re, ruv.x)), ruv};
     } else if (!shape->positions.empty()) {
@@ -5936,7 +5940,7 @@ trace_lights* make_trace_lights(
     for (auto instance : scene->instances) {
         if (!instance->material || instance->material->emission == zero3f)
             continue;
-        if (instance->shape->triangles.empty()) continue;
+        if(instance->shape->triangles.empty() && instance->shape->quads.empty()) continue;
         lights->instances.push_back(instance);
         lights->shapes_cdfs[instance->shape] = compute_shape_cdf(instance->shape);
     }
