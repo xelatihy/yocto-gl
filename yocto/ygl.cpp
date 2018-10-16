@@ -5940,7 +5940,8 @@ trace_lights* make_trace_lights(
     for (auto instance : scene->instances) {
         if (!instance->material || instance->material->emission == zero3f)
             continue;
-        if(instance->shape->triangles.empty() && instance->shape->quads.empty()) continue;
+        if (instance->shape->triangles.empty() && instance->shape->quads.empty())
+            continue;
         lights->instances.push_back(instance);
         lights->shapes_cdfs[instance->shape] = compute_shape_cdf(instance->shape);
     }
