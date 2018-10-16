@@ -4436,8 +4436,8 @@ void merge_into(yocto_scene* merge_into, yocto_scene* merge_from) {
 void print_stats(const yocto_scene* scene) {
     // using long long instead of uint64_t to avoid printf macros
     auto num_cameras      = (long long)0;
-    auto num_shape_groups = (long long)0;
     auto num_shapes       = (long long)0;
+    auto num_surfaces     = (long long)0;
     auto num_instances    = (long long)0;
     auto num_materials    = (long long)0;
     auto num_textures     = (long long)0;
@@ -4445,8 +4445,10 @@ void print_stats(const yocto_scene* scene) {
     auto num_nodes        = (long long)0;
     auto num_animations   = (long long)0;
 
+    auto elem_points     = (long long)0;
     auto elem_lines     = (long long)0;
     auto elem_triangles = (long long)0;
+    auto elem_quads = (long long)0;
     auto vert_pos       = (long long)0;
     auto vert_norm      = (long long)0;
     auto vert_texcoord  = (long long)0;
@@ -4465,6 +4467,7 @@ void print_stats(const yocto_scene* scene) {
 
     num_cameras      = scene->cameras.size();
     num_shapes       = scene->shapes.size();
+    num_shapes       = scene->surfaces.size();
     num_materials    = scene->materials.size();
     num_textures     = scene->textures.size();
     num_environments = scene->environments.size();
@@ -4473,8 +4476,10 @@ void print_stats(const yocto_scene* scene) {
     num_animations   = scene->animations.size();
 
     for (auto shape : scene->shapes) {
+        elem_points += shape->points.size();
         elem_lines += shape->lines.size();
         elem_triangles += shape->triangles.size();
+        elem_quads += shape->quads.size();
         vert_pos += shape->positions.size();
         vert_norm += shape->normals.size();
         vert_texcoord += shape->texturecoords.size();
@@ -4494,16 +4499,19 @@ void print_stats(const yocto_scene* scene) {
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
     printf("num_cameras: %lld\n", num_cameras);
-    printf("num_shape_groups: %lld\n", num_shape_groups);
     printf("num_shapes: %lld\n", num_shapes);
+    printf("num_surface: %lld\n", num_surfaces);
     printf("num_instances: %lld\n", num_instances);
     printf("num_materials: %lld\n", num_materials);
     printf("num_textures: %lld\n", num_textures);
     printf("num_environments: %lld\n", num_environments);
     printf("num_nodes: %lld\n", num_nodes);
     printf("num_animations: %lld\n", num_animations);
+
+    printf("elem_points: %lld\n", elem_points);
     printf("elem_lines: %lld\n", elem_lines);
     printf("elem_triangles: %lld\n", elem_triangles);
+    printf("elem_quads: %lld\n", elem_quads);
     printf("vert_pos: %lld\n", vert_pos);
     printf("vert_norm: %lld\n", vert_norm);
     printf("vert_texcoord: %lld\n", vert_texcoord);
