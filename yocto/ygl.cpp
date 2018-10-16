@@ -3493,11 +3493,9 @@ void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
     }
     auto norm = vector<vec3f>();
     if (surface->compute_normals) norm = compute_normals(quads_pos, pos);
-    auto quads = quads_pos;
-    convert_face_varying(quads, shape->positions, shape->normals,
+    convert_face_varying(shape->quads, shape->positions, shape->normals,
         shape->texturecoords, shape->colors, quads_pos, quads_pos,
         quads_texcoord, quads_color, pos, norm, texcoord, color);
-    shape->triangles = convert_quads_to_triangles(quads);
 }
 void tesselate_subdivs(yocto_scene* scene) {
     for (auto instance : scene->instances) {
