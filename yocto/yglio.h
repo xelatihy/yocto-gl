@@ -326,34 +326,37 @@ bool         save_ybin_scene(const string& filename, const yocto_scene* scene,
 namespace ygl {
 
 // Load/Save a mesh
-bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius);
+bool load_mesh(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4f>& color, vector<float>& radius, bool force_triangles);
 bool save_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color,
-    const vector<float>& radius, bool ascii = false);
+    const vector<vec4i>& quads, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord,
+    const vector<vec4f>& color, const vector<float>& radius, bool ascii = false);
 
 // Load/Save a ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
-    vector<float>& radius);
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4f>& color, vector<float>& radius, bool force_triangles);
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color,
-    const vector<float>& radius, bool ascii = false);
+    const vector<vec4i>& quads, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord,
+    const vector<vec4f>& color, const vector<float>& radius, bool ascii = false);
 
 // Load/Save an OBJ mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord = true);
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    bool force_triangles, bool flip_texcoord = true);
 bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, bool flip_texcoord = true);
+    const vector<vec4i>& quads, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord,
+    bool flip_texcoord = true);
 
 }  // namespace ygl
 
