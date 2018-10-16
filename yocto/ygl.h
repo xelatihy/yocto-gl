@@ -2398,6 +2398,7 @@ make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
 make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
     const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
@@ -2820,7 +2821,7 @@ struct yocto_material {
 };
 
 // Shape data represented as an indexed meshes of elements.
-// May contain only one of tringles, lines or points.
+// May contain either points, lines, triangles and quads.
 struct yocto_shape {
     string name     = "";
     string filename = "";
@@ -2829,6 +2830,7 @@ struct yocto_shape {
     vector<int>   points    = {};
     vector<vec2i> lines     = {};
     vector<vec3i> triangles = {};
+    vector<vec4i> quads     = {};
 
     // vertex data
     vector<vec3f> positions     = {};

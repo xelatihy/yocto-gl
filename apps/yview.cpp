@@ -34,7 +34,7 @@
 struct glshape {
     glarraybuffer gl_pos = {}, gl_norm = {}, gl_texcoord = {}, gl_color = {},
                   gl_tangsp   = {};
-    glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {};
+    glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {}, gl_quads = {};
 };
 
 struct draw_glstate {
@@ -517,6 +517,10 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
         set_gluniform(state->prog, "elem_type", 3);
         draw_gltriangles(vbos.gl_triangles, shape->triangles.size());
     }
+    if (!shape->quads.empty()) {
+        set_gluniform(state->prog, "elem_type", 3);
+        draw_gltriangles(vbos.gl_quads, shape->quads.size()*2);
+    }
 
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
@@ -648,6 +652,8 @@ draw_glstate* init_draw_state(glwindow* win) {
             vbos.gl_lines = make_glelementbuffer(shape->lines, false);
         if (!shape->triangles.empty())
             vbos.gl_triangles = make_glelementbuffer(shape->triangles, false);
+        if (!shape->quads.empty())
+            vbos.gl_quads = make_glelementbuffer(convert_quads_to_triangles(shape->quads), false);
         state->shps[shape] = vbos;
     }
     return state;

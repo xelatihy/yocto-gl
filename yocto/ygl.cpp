@@ -2815,15 +2815,19 @@ make_shape_data make_bezier_circle(float size) {
 }
 
 // Make a hair ball around a shape
-make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
+make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles, 
+    const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
     const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
+    auto alltriangles = striangles;
+    auto quads_triangles = convert_quads_to_triangles(squads);
+    alltriangles.insert(alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
     tie(bpos, bnorm, btexcoord) = sample_triangles_points(
-        striangles, spos, snorm, stexcoord, steps.y, seed);
+        alltriangles, spos, snorm, stexcoord, steps.y, seed);
 
     auto rng  = make_rng(seed, 3);
     auto blen = vector<float>(bpos.size());

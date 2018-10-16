@@ -1764,6 +1764,8 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scene
         if (!dump_json_value(js, val->lines, "lines", def.lines)) return false;
         if (!dump_json_value(js, val->triangles, "triangles", def.triangles))
             return false;
+        if (!dump_json_value(js, val->quads, "quads", def.quads))
+            return false;
         if (!dump_json_value(js, val->positions, "positions", def.positions))
             return false;
         if (!dump_json_value(js, val->normals, "normals", def.normals))
@@ -1789,76 +1791,77 @@ bool apply_json_procedural(
     auto type = js.value("type", ""s);
     if (type == "") return true;
     auto shape = make_shape_data();
+    auto as_triangles = js.value("as_triangles", false);
     if (type == "quad") {
         shape = make_quad(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), as_triangles);
     } else if (type == "quady") {
         shape = make_quad(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), as_triangles);
     } else if (type == "quad_stack") {
         shape = make_quad_stack(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}),
-            true);
+            as_triangles);
     } else if (type == "cube") {
         shape = make_cube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), true);
+            js.value("uvsize", vec3f{1, 1, 1}), as_triangles);
     } else if (type == "cube_rounded") {
         shape = make_cube_rounded(js.value("steps", vec3i{32, 32, 32}),
             js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f), true);
+            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f), as_triangles);
     } else if (type == "sphere") {
         shape = make_sphere(js.value("steps", vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), as_triangles);
     } else if (type == "sphere_cube") {
         shape = make_sphere_cube(js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), true);
+            js.value("uvsize", 1.0f), as_triangles);
     } else if (type == "sphere_flipcap") {
         shape = make_sphere_flipcap(js.value("steps", vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
-            js.value("zflip", vec2f{-0.75f, +0.75f}), true);
+            js.value("zflip", vec2f{-0.75f, +0.75f}), as_triangles);
     } else if (type == "disk") {
         shape = make_disk(js.value("steps", vec2i{32, 16}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), as_triangles);
     } else if (type == "disk_quad") {
         shape = make_disk_quad(js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), true);
+            js.value("uvsize", 1.0f), as_triangles);
     } else if (type == "disk_bulged") {
         shape = make_disk_bulged(js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), js.value("height", 0.25f), true);
+            js.value("uvsize", 1.0f), js.value("height", 0.25f), as_triangles);
     } else if (type == "cylinder_side") {
         shape = make_cylinder_side(js.value("steps", vec2i{64, 32}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec2f{1, 1}), true);
+            js.value("uvsize", vec2f{1, 1}), as_triangles);
     } else if (type == "cylinder") {
         shape = make_cylinder(js.value("steps", vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), true);
+            js.value("uvsize", vec3f{1, 1, 1}), as_triangles);
     } else if (type == "cylinder_rounded") {
         shape = make_cylinder_rounded(js.value("steps", vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f), true);
+            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f), as_triangles);
     } else if (type == "sphere_geodesic") {
         shape = make_geodesic_sphere(
-            js.value("tesselation", 4), js.value("size", 2.0f), true);
+            js.value("tesselation", 4), js.value("size", 2.0f), as_triangles);
     } else if (type == "floor") {
         shape = make_floor(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}),
-            true);
+            as_triangles);
     } else if (type == "matball") {
         shape = make_sphere(js.value("steps", vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), as_triangles);
     } else if (type == "hairball") {
-        auto base = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
-        shape = make_hair(js.value("steps", vec2i{4, 65536}), base.triangles,
+        auto base = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
+        shape = make_hair(js.value("steps", vec2i{4, 65536}), base.triangles, base.quads,
             base.positions, base.normals, base.texturecoords,
             js.value("length", vec2f{0.2f, 0.2f}),
             js.value("radius", vec2f{0.001f, 0.001f}),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
-        shape = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
+        shape = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
     } else if (type == "suzanne") {
-        shape = make_suzanne(js.value("size", 2.0f), true);
+        shape = make_suzanne(js.value("size", 2.0f), as_triangles);
     } else {
         throw runtime_error("unknown shape type " + type);
     }
@@ -1869,6 +1872,7 @@ bool apply_json_procedural(
     val->points        = shape.points;
     val->lines         = shape.lines;
     val->triangles     = shape.triangles;
+    val->quads         = shape.quads;
     val->positions     = shape.positions;
     val->normals       = shape.normals;
     val->texturecoords = shape.texturecoords;
