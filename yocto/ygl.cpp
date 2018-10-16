@@ -3856,6 +3856,10 @@ vec3f eval_element_normal(const yocto_shape* shape, int ei) {
         auto t = shape->triangles[ei];
         norm   = triangle_normal(shape->positions[t.x], shape->positions[t.y],
             shape->positions[t.z]);
+    } else if (!shape->quads.empty()) {
+        auto q = shape->quads[ei];
+        norm   = quad_normal(shape->positions[q.x], shape->positions[q.y],
+            shape->positions[q.z], shape->positions[q.w]);
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
         norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
@@ -3996,6 +4000,8 @@ vec3f eval_shading_normal(
             dot(n, o) < 0)
             n = -n;
         return n;
+    } else if (!instance->shape->quads.empty()) {
+        return eval_normal(instance, ei, uv);
     } else if (!instance->shape->lines.empty()) {
         return orthonormalize(o, eval_normal(instance, ei, uv));
     } else {
