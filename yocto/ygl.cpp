@@ -299,8 +299,9 @@ vector<vec3f> compute_tangents(
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto& l : lines) {
         auto n = line_tangent(pos[l.x], pos[l.y]);
-        norm[l.x] += n;
-        norm[l.y] += n;
+        auto a = line_length(pos[l.x], pos[l.y]);
+        norm[l.x] += n * a;
+        norm[l.y] += n * a;
     }
     for (auto& n : norm) n = normalize(n);
     return norm;
@@ -312,9 +313,10 @@ vector<vec3f> compute_normals(
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto& t : triangles) {
         auto n = triangle_normal(pos[t.x], pos[t.y], pos[t.z]);
-        norm[t.x] += n;
-        norm[t.y] += n;
-        norm[t.z] += n;
+        auto a = triangle_area(pos[t.x], pos[t.y], pos[t.z]);
+        norm[t.x] += n * a;
+        norm[t.y] += n * a;
+        norm[t.z] += n * a;
     }
     for (auto& n : norm) n = normalize(n);
     return norm;
@@ -326,9 +328,10 @@ vector<vec3f> compute_normals(
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto q : quads) {
         auto n = quad_normal(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
-        norm[q.x] += n;
-        norm[q.y] += n;
-        norm[q.z] += n;
+        auto a = quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+        norm[q.x] += n * a;
+        norm[q.y] += n * a;
+        norm[q.z] += n * a;
         if (q.z != q.w) norm[q.w] += n;
     }
     for (auto& n : norm) n = normalize(n);
@@ -502,6 +505,14 @@ vector<vec3i> convert_quads_to_triangles(
         }
 #endif
     return triangles;
+}
+
+// Convert triangles to quads by creating degenerate quads
+vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles) {
+    auto quads = vector<vec4i>();
+    quads.reserve(triangles.size());
+    for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
+    return quads;
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
@@ -2816,14 +2827,19 @@ make_shape_data make_bezier_circle(float size) {
 
 // Make a hair ball around a shape
 make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
-    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
+    auto          alltriangles    = striangles;
+    auto          quads_triangles = convert_quads_to_triangles(squads);
+    alltriangles.insert(
+        alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
     tie(bpos, bnorm, btexcoord) = sample_triangles_points(
-        striangles, spos, snorm, stexcoord, steps.y, seed);
+        alltriangles, spos, snorm, stexcoord, steps.y, seed);
 
     auto rng  = make_rng(seed, 3);
     auto blen = vector<float>(bpos.size());
@@ -3477,11 +3493,9 @@ void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
     }
     auto norm = vector<vec3f>();
     if (surface->compute_normals) norm = compute_normals(quads_pos, pos);
-    auto quads = quads_pos;
-    convert_face_varying(quads, shape->positions, shape->normals,
+    convert_face_varying(shape->quads, shape->positions, shape->normals,
         shape->texturecoords, shape->colors, quads_pos, quads_pos,
         quads_texcoord, quads_color, pos, norm, texcoord, color);
-    shape->triangles = convert_quads_to_triangles(quads);
 }
 void tesselate_subdivs(yocto_scene* scene) {
     for (auto instance : scene->instances) {
@@ -3592,10 +3606,12 @@ vec2f compute_animation_range(const yocto_scene* scene, const string& anim_group
 vector<float> compute_shape_cdf(const yocto_shape* shape) {
     if (!shape->triangles.empty()) {
         return sample_triangles_cdf(shape->triangles, shape->positions);
+    } else if (!shape->quads.empty()) {
+        return sample_quads_cdf(shape->quads, shape->positions);
     } else if (!shape->lines.empty()) {
         return sample_lines_cdf(shape->lines, shape->positions);
-    } else if (!shape->positions.empty()) {
-        return sample_points_cdf(shape->positions.size());
+    } else if (!shape->points.empty()) {
+        return sample_points_cdf(shape->points.size());
     } else {
         throw runtime_error("empty shape not supported");
     }
@@ -3632,6 +3648,7 @@ bvh_tree* build_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
     bvh->points    = shape->points;
     bvh->lines     = shape->lines;
     bvh->triangles = shape->triangles;
+    bvh->quads     = shape->quads;
 
     // build bvh
     build_bvh(bvh, high_quality, embree);
@@ -3842,6 +3859,10 @@ vec3f eval_element_normal(const yocto_shape* shape, int ei) {
         auto t = shape->triangles[ei];
         norm   = triangle_normal(shape->positions[t.x], shape->positions[t.y],
             shape->positions[t.z]);
+    } else if (!shape->quads.empty()) {
+        auto q = shape->quads[ei];
+        norm   = quad_normal(shape->positions[q.x], shape->positions[q.y],
+            shape->positions[q.z], shape->positions[q.w]);
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
         norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
@@ -3885,13 +3906,15 @@ T eval_elem(
     if (!shape->triangles.empty()) {
         auto t = shape->triangles[ei];
         return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
+    } else if (!shape->quads.empty()) {
+        auto q = shape->quads[ei];
+        if(q.w == q.z) return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
         return interpolate_line(vals[l.x], vals[l.y], uv.x);
     } else if (!shape->points.empty()) {
         return vals[shape->points[ei]];
-    } else if (!shape->positions.empty()) {
-        return vals[ei];
     } else {
         return {};
     }
@@ -3981,6 +4004,8 @@ vec3f eval_shading_normal(
             dot(n, o) < 0)
             n = -n;
         return n;
+    } else if (!instance->shape->quads.empty()) {
+        return eval_normal(instance, ei, uv);
     } else if (!instance->shape->lines.empty()) {
         return orthonormalize(o, eval_normal(instance, ei, uv));
     } else {
@@ -4289,6 +4314,8 @@ tuple<int, vec2f> sample_shape(const yocto_shape* shape,
     if (elem_cdf.empty()) return {};
     if (!shape->triangles.empty()) {
         return sample_triangles(elem_cdf, re, ruv);
+    } else if (!shape->quads.empty()) {
+        return sample_quads(elem_cdf, re, ruv);
     } else if (!shape->lines.empty()) {
         return {get<0>(sample_lines(elem_cdf, re, ruv.x)), ruv};
     } else if (!shape->positions.empty()) {
@@ -4424,8 +4451,8 @@ void merge_into(yocto_scene* merge_into, yocto_scene* merge_from) {
 void print_stats(const yocto_scene* scene) {
     // using long long instead of uint64_t to avoid printf macros
     auto num_cameras      = (long long)0;
-    auto num_shape_groups = (long long)0;
     auto num_shapes       = (long long)0;
+    auto num_surfaces     = (long long)0;
     auto num_instances    = (long long)0;
     auto num_materials    = (long long)0;
     auto num_textures     = (long long)0;
@@ -4433,8 +4460,10 @@ void print_stats(const yocto_scene* scene) {
     auto num_nodes        = (long long)0;
     auto num_animations   = (long long)0;
 
+    auto elem_points    = (long long)0;
     auto elem_lines     = (long long)0;
     auto elem_triangles = (long long)0;
+    auto elem_quads     = (long long)0;
     auto vert_pos       = (long long)0;
     auto vert_norm      = (long long)0;
     auto vert_texcoord  = (long long)0;
@@ -4453,6 +4482,7 @@ void print_stats(const yocto_scene* scene) {
 
     num_cameras      = scene->cameras.size();
     num_shapes       = scene->shapes.size();
+    num_shapes       = scene->surfaces.size();
     num_materials    = scene->materials.size();
     num_textures     = scene->textures.size();
     num_environments = scene->environments.size();
@@ -4461,8 +4491,10 @@ void print_stats(const yocto_scene* scene) {
     num_animations   = scene->animations.size();
 
     for (auto shape : scene->shapes) {
+        elem_points += shape->points.size();
         elem_lines += shape->lines.size();
         elem_triangles += shape->triangles.size();
+        elem_quads += shape->quads.size();
         vert_pos += shape->positions.size();
         vert_norm += shape->normals.size();
         vert_texcoord += shape->texturecoords.size();
@@ -4482,16 +4514,19 @@ void print_stats(const yocto_scene* scene) {
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
     printf("num_cameras: %lld\n", num_cameras);
-    printf("num_shape_groups: %lld\n", num_shape_groups);
     printf("num_shapes: %lld\n", num_shapes);
+    printf("num_surface: %lld\n", num_surfaces);
     printf("num_instances: %lld\n", num_instances);
     printf("num_materials: %lld\n", num_materials);
     printf("num_textures: %lld\n", num_textures);
     printf("num_environments: %lld\n", num_environments);
     printf("num_nodes: %lld\n", num_nodes);
     printf("num_animations: %lld\n", num_animations);
+
+    printf("elem_points: %lld\n", elem_points);
     printf("elem_lines: %lld\n", elem_lines);
     printf("elem_triangles: %lld\n", elem_triangles);
+    printf("elem_quads: %lld\n", elem_quads);
     printf("vert_pos: %lld\n", vert_pos);
     printf("vert_norm: %lld\n", vert_norm);
     printf("vert_texcoord: %lld\n", vert_texcoord);
@@ -5907,7 +5942,8 @@ trace_lights* make_trace_lights(
     for (auto instance : scene->instances) {
         if (!instance->material || instance->material->emission == zero3f)
             continue;
-        if (instance->shape->triangles.empty()) continue;
+        if (instance->shape->triangles.empty() && instance->shape->quads.empty())
+            continue;
         lights->instances.push_back(instance);
         lights->shapes_cdfs[instance->shape] = compute_shape_cdf(instance->shape);
     }

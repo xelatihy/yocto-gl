@@ -237,6 +237,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_textinput_glwidget(win, "path", val->filename);
     draw_label_glwidgets(win, "lines", "%ld", val->lines.size());
     draw_label_glwidgets(win, "triangles", "%ld", val->triangles.size());
+    draw_label_glwidgets(win, "quads", "%ld", val->quads.size());
     draw_label_glwidgets(win, "pos", "%ld", val->positions.size());
     draw_label_glwidgets(win, "norm", "%ld", val->normals.size());
     draw_label_glwidgets(win, "texcoord", "%ld", val->texturecoords.size());

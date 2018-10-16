@@ -274,6 +274,10 @@
 #define YGL_EMBREE 1
 #endif
 
+#ifndef YGL_QUADS_AS_TRIANGLES
+#define YGL_QUADS_AS_TRIANGLES 1
+#endif
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -1945,8 +1949,16 @@ inline T interpolate_triangle(
 template <typename T>
 inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
-           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+    #if YGL_QUADS_AS_TRIANGLES
+        if(uv.x + uv.y <= 1) {
+            return interpolate_triangle(p0, p1, p3, uv);            
+        } else {
+            return interpolate_triangle(p2,p3,p1, 1-uv);
+        }
+    #else
+        return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+            p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+    #endif
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
@@ -2027,6 +2039,8 @@ vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 // Quads have to be consecutive one row after another.
 vector<vec3i> convert_quads_to_triangles(
     const vector<vec4i>& quads, int row_length);
+// Convert triangles to quads by creating degenerate quads
+vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
 vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
@@ -2130,6 +2144,15 @@ inline vector<float> sample_quads_cdf(
 inline tuple<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete(cdf, re), ruv};
+}
+inline tuple<int, vec2f> sample_quads(const vector<vec4i>& quads,
+    const vector<float>& cdf, float re, const vec2f& ruv) {
+    auto ei = sample_discrete(cdf, re);
+    if(quads[ei].z == quads[ei].w) {
+        return {ei, sample_triangle(ruv)};
+    } else {
+        return {ei, ruv};
+    }
 }
 
 // Samples a set of points over a triangle mesh uniformly. Returns pos, norm
@@ -2398,10 +2421,11 @@ make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
 make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
-    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
+    const vec2f& rotation = zero2f, int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
 make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
@@ -2820,7 +2844,7 @@ struct yocto_material {
 };
 
 // Shape data represented as an indexed meshes of elements.
-// May contain only one of tringles, lines or points.
+// May contain either points, lines, triangles and quads.
 struct yocto_shape {
     string name     = "";
     string filename = "";
@@ -2829,6 +2853,7 @@ struct yocto_shape {
     vector<int>   points    = {};
     vector<vec2i> lines     = {};
     vector<vec3i> triangles = {};
+    vector<vec4i> quads     = {};
 
     // vertex data
     vector<vec3f> positions     = {};

@@ -1764,6 +1764,7 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scene
         if (!dump_json_value(js, val->lines, "lines", def.lines)) return false;
         if (!dump_json_value(js, val->triangles, "triangles", def.triangles))
             return false;
+        if (!dump_json_value(js, val->quads, "quads", def.quads)) return false;
         if (!dump_json_value(js, val->positions, "positions", def.positions))
             return false;
         if (!dump_json_value(js, val->normals, "normals", def.normals))
@@ -1788,77 +1789,86 @@ bool apply_json_procedural(
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
-    auto shape = make_shape_data();
+    auto shape        = make_shape_data();
+    auto as_triangles = js.value("as_triangles", false);
     if (type == "quad") {
         shape = make_quad(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
+            as_triangles);
     } else if (type == "quady") {
         shape = make_quad(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}),
+            as_triangles);
     } else if (type == "quad_stack") {
         shape = make_quad_stack(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}),
-            true);
+            as_triangles);
     } else if (type == "cube") {
         shape = make_cube(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), true);
+            js.value("uvsize", vec3f{1, 1, 1}), as_triangles);
     } else if (type == "cube_rounded") {
         shape = make_cube_rounded(js.value("steps", vec3i{32, 32, 32}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f), true);
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}),
+            js.value("radius", 0.3f), as_triangles);
     } else if (type == "sphere") {
         shape = make_sphere(js.value("steps", vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
+            as_triangles);
     } else if (type == "sphere_cube") {
         shape = make_sphere_cube(js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), true);
+            js.value("uvsize", 1.0f), as_triangles);
     } else if (type == "sphere_flipcap") {
         shape = make_sphere_flipcap(js.value("steps", vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
-            js.value("zflip", vec2f{-0.75f, +0.75f}), true);
+            js.value("zflip", vec2f{-0.75f, +0.75f}), as_triangles);
     } else if (type == "disk") {
         shape = make_disk(js.value("steps", vec2i{32, 16}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
+            as_triangles);
     } else if (type == "disk_quad") {
         shape = make_disk_quad(js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), true);
+            js.value("uvsize", 1.0f), as_triangles);
     } else if (type == "disk_bulged") {
         shape = make_disk_bulged(js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), js.value("height", 0.25f), true);
+            js.value("uvsize", 1.0f), js.value("height", 0.25f), as_triangles);
     } else if (type == "cylinder_side") {
         shape = make_cylinder_side(js.value("steps", vec2i{64, 32}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec2f{1, 1}), true);
+            js.value("uvsize", vec2f{1, 1}), as_triangles);
     } else if (type == "cylinder") {
         shape = make_cylinder(js.value("steps", vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), true);
+            js.value("uvsize", vec3f{1, 1, 1}), as_triangles);
     } else if (type == "cylinder_rounded") {
         shape = make_cylinder_rounded(js.value("steps", vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f), true);
+            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f),
+            as_triangles);
     } else if (type == "sphere_geodesic") {
         shape = make_geodesic_sphere(
-            js.value("tesselation", 4), js.value("size", 2.0f), true);
+            js.value("tesselation", 4), js.value("size", 2.0f), as_triangles);
     } else if (type == "floor") {
         shape = make_floor(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}),
-            true);
+            as_triangles);
     } else if (type == "matball") {
         shape = make_sphere(js.value("steps", vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}), true);
+            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
+            as_triangles);
     } else if (type == "hairball") {
-        auto base = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
+        auto base = make_sphere_cube(
+            32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
         shape = make_hair(js.value("steps", vec2i{4, 65536}), base.triangles,
-            base.positions, base.normals, base.texturecoords,
+            base.quads, base.positions, base.normals, base.texturecoords,
             js.value("length", vec2f{0.2f, 0.2f}),
             js.value("radius", vec2f{0.001f, 0.001f}),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
-        shape = make_sphere_cube(32, js.value("size", 2.0f) * 0.8f, 1, true);
+        shape = make_sphere_cube(
+            32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
     } else if (type == "suzanne") {
-        shape = make_suzanne(js.value("size", 2.0f), true);
+        shape = make_suzanne(js.value("size", 2.0f), as_triangles);
     } else {
         throw runtime_error("unknown shape type " + type);
     }
@@ -1869,6 +1879,7 @@ bool apply_json_procedural(
     val->points        = shape.points;
     val->lines         = shape.lines;
     val->triangles     = shape.triangles;
+    val->quads         = shape.quads;
     val->positions     = shape.positions;
     val->normals       = shape.normals;
     val->texturecoords = shape.texturecoords;
@@ -1888,6 +1899,7 @@ bool parse_json_object(
     if (!parse_json_value(js, val->lines, "lines", def.lines)) return false;
     if (!parse_json_value(js, val->triangles, "triangles", def.triangles))
         return false;
+    if (!parse_json_value(js, val->quads, "quads", def.quads)) return false;
     if (!parse_json_value(js, val->positions, "positions", def.positions))
         return false;
     if (!parse_json_value(js, val->normals, "normals", def.normals))
@@ -2394,8 +2406,8 @@ yocto_scene* load_json_scene(
         if (shape->filename == "" || !shape->positions.empty()) continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
         if (!load_mesh(filename, shape->points, shape->lines, shape->triangles,
-                shape->positions, shape->normals, shape->texturecoords,
-                shape->colors, shape->radius)) {
+                shape->quads, shape->positions, shape->normals,
+                shape->texturecoords, shape->colors, shape->radius, false)) {
             if (!skip_missing) return nullptr;
         }
     }
@@ -2452,8 +2464,8 @@ bool save_json_scene(const string& filename, const yocto_scene* scene,
         if (shape->filename == "") continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
         if (!save_mesh(filename, shape->points, shape->lines, shape->triangles,
-                shape->positions, shape->normals, shape->texturecoords,
-                shape->colors, shape->radius)) {
+                shape->quads, shape->positions, shape->normals,
+                shape->texturecoords, shape->colors, shape->radius)) {
             if (!skip_missing) return false;
         }
     }
@@ -2996,9 +3008,15 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
-        for (auto i = 2; i < verts.size(); i++)
-            instance->shape->triangles.push_back({vert_map.at(verts[0]),
-                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        if (verts.size() == 4) {
+            instance->shape->quads.push_back(
+                {vert_map.at(verts[0]), vert_map.at(verts[1]),
+                    vert_map.at(verts[2]), vert_map.at(verts[3])});
+        } else {
+            for (auto i = 2; i < verts.size(); i++)
+                instance->shape->triangles.push_back({vert_map.at(verts[0]),
+                    vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
@@ -3266,13 +3284,26 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                     (i + offset.texcoord + 1) * mask.texcoord,
                     (i + offset.norm + 1) * mask.norm};
             };
-            for (auto& t : instance->shape->triangles) {
-                print(fs, "f {} {} {}\n", to_string(vert(t.x)),
-                    to_string(vert(t.y)), to_string(vert(t.z)));
+            for (auto& p : instance->shape->points) {
+                print(fs, "p {}\n", to_string(vert(p)));
             }
             for (auto& l : instance->shape->lines) {
                 print(fs, "l {} {}\n", to_string(vert(l.x)),
                     to_string(vert(l.y)));
+            }
+            for (auto& t : instance->shape->triangles) {
+                print(fs, "f {} {} {}\n", to_string(vert(t.x)),
+                    to_string(vert(t.y)), to_string(vert(t.z)));
+            }
+            for (auto& q : instance->shape->quads) {
+                if (q.z == q.w) {
+                    print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                        to_string(vert(q.y)), to_string(vert(q.z)));
+                } else {
+                    print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                        to_string(vert(q.y)), to_string(vert(q.z)),
+                        to_string(vert(q.w)));
+                }
             }
             offset.pos += instance->shape->positions.size();
             offset.texcoord += instance->shape->texturecoords.size();
@@ -4079,6 +4110,11 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
             pjs["attributes"]["COLOR_0"] = add_accessor(nverts, "VEC4");
         if (!shape->radius.empty())
             pjs["attributes"]["RADIUS"] = add_accessor(nverts, "SCALAR");
+        if (!shape->points.empty()) {
+            pjs["indices"] = add_accessor(
+                (int)shape->points.size(), "SCALAR", true);
+            pjs["mode"] = 1;
+        }
         if (!shape->lines.empty()) {
             pjs["indices"] = add_accessor(
                 (int)shape->lines.size() * 2, "SCALAR", true);
@@ -4087,6 +4123,12 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         if (!shape->triangles.empty()) {
             pjs["indices"] = add_accessor(
                 (int)shape->triangles.size() * 3, "SCALAR", true);
+            pjs["mode"] = 4;
+        }
+        if (!shape->quads.empty()) {
+            auto triangles = convert_quads_to_triangles(shape->quads);
+            pjs["indices"] = add_accessor(
+                (int)triangles.size() * 3, "SCALAR", true);
             pjs["mode"] = 4;
         }
         mjs["primitives"].push_back(pjs);
@@ -4150,8 +4192,11 @@ bool save_gltf_mesh(const string& filename, const yocto_shape* shape) {
     if (!write_values(fs, shape->texturecoords)) return false;
     if (!write_values(fs, shape->colors)) return false;
     if (!write_values(fs, shape->radius)) return false;
+    if (!write_values(fs, shape->points)) return false;
     if (!write_values(fs, shape->lines)) return false;
     if (!write_values(fs, shape->triangles)) return false;
+    if (!write_values(fs, convert_quads_to_triangles(shape->quads)))
+        return false;
 
     return true;
 }
@@ -4669,9 +4714,9 @@ yocto_scene* load_pbrt_scene(
                 shape->name     = get_filename(filename);
                 shape->filename = filename;
                 if (!load_ply_mesh(dirname_ + "/" + filename, shape->points,
-                        shape->lines, shape->triangles, shape->positions,
-                        shape->normals, shape->texturecoords, shape->colors,
-                        shape->radius))
+                        shape->lines, shape->triangles, shape->quads,
+                        shape->positions, shape->normals, shape->texturecoords,
+                        shape->colors, shape->radius, false))
                     return nullptr;
             } else if (type == "trianglemesh") {
                 shape->name     = "mesh" + std::to_string(sid++);
@@ -4975,8 +5020,8 @@ bool save_pbrt_scene(const string& filename, const yocto_scene* scene,
         if (shape->filename == "") continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
         if (!save_mesh(filename, shape->points, shape->lines, shape->triangles,
-                shape->positions, shape->normals, shape->texturecoords,
-                shape->colors, shape->radius)) {
+                shape->quads, shape->positions, shape->normals,
+                shape->texturecoords, shape->colors, shape->radius)) {
             if (!skip_missing) return false;
         }
     }
@@ -5380,11 +5425,13 @@ namespace ygl {
 
 // Reset mesh data
 void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius) {
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
+    vector<float>& radius) {
     points    = {};
     lines     = {};
     triangles = {};
+    quads     = {};
     pos       = {};
     norm      = {};
     texcoord  = {};
@@ -5392,20 +5439,36 @@ void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
     radius    = {};
 }
 
+// merge quads and triangles
+void merge_triangles_and_quads(
+    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
+    if (quads.empty()) return;
+    if (force_triangles) {
+        auto qtriangles = convert_quads_to_triangles(quads);
+        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
+        quads = {};
+    } else {
+        auto tquads = convert_triangles_to_quads(triangles);
+        quads.insert(quads.end(), tquads.begin(), tquads.end());
+        triangles = {};
+    }
+}
+
 // Load ply mesh
-bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius) {
+bool load_mesh(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4f>& color, vector<float>& radius, bool force_triangles) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        return load_ply_mesh(filename, points, lines, triangles, pos, norm,
-            texcoord, color, radius);
+        return load_ply_mesh(filename, points, lines, triangles, quads, pos,
+            norm, texcoord, color, radius, force_triangles);
     } else if (ext == "obj" || ext == "OBJ") {
-        return load_obj_mesh(
-            filename, points, lines, triangles, pos, norm, texcoord);
+        return load_obj_mesh(filename, points, lines, triangles, quads, pos,
+            norm, texcoord, force_triangles);
     } else {
-        reset_mesh_data(
-            points, lines, triangles, pos, norm, texcoord, color, radius);
+        reset_mesh_data(points, lines, triangles, quads, pos, norm, texcoord,
+            color, radius);
         return false;
     }
 }
@@ -5413,16 +5476,16 @@ bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines
 // Save ply mesh
 bool save_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color,
-    const vector<float>& radius, bool ascii) {
+    const vector<vec4i>& quads, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord,
+    const vector<vec4f>& color, const vector<float>& radius, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        return save_ply_mesh(filename, points, lines, triangles, pos, norm,
-            texcoord, color, radius, ascii);
+        return save_ply_mesh(filename, points, lines, triangles, quads, pos,
+            norm, texcoord, color, radius, ascii);
     } else if (ext == "obj" || ext == "OBJ") {
         return save_obj_mesh(
-            filename, points, lines, triangles, pos, norm, texcoord);
+            filename, points, lines, triangles, quads, pos, norm, texcoord);
     } else {
         return false;
     }
@@ -5562,11 +5625,12 @@ ply_data* load_ply(const string& filename) {
 
 // Load ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
-    vector<float>& radius) {
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4f>& color, vector<float>& radius, bool force_triangles) {
     // clear
-    reset_mesh_data(points, lines, triangles, pos, norm, texcoord, color, radius);
+    reset_mesh_data(
+        points, lines, triangles, quads, pos, norm, texcoord, color, radius);
 
     // load ply
     auto ply = unique_ptr<ply_data>{load_ply(filename)};
@@ -5615,12 +5679,19 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
             if (prop.name == "vertex_indices") {
                 for (auto fid = 0; fid < count; fid++) {
                     auto& list = prop.lists[fid];
-                    for (auto i = 2; i < (int)prop.scalars[fid]; i++)
-                        triangles.push_back({list[0], list[i - 1], list[i]});
+                    auto  num  = (int)prop.scalars[fid];
+                    if (num == 4) {
+                        quads.push_back({list[0], list[1], list[2], list[3]});
+                    } else {
+                        for (auto i = 2; i < num; i++)
+                            triangles.push_back({list[0], list[i - 1], list[i]});
+                    }
                 }
             }
         }
     }
+
+    merge_triangles_and_quads(triangles, quads, force_triangles);
 
     // done
     return true;
@@ -5629,9 +5700,9 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
 // Save ply mesh
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color,
-    const vector<float>& radius, bool ascii) {
+    const vector<vec4i>& quads, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord,
+    const vector<vec4f>& color, const vector<float>& radius, bool ascii) {
     auto fs = open(filename, "wb");
     if (!fs) return false;
 
@@ -5654,12 +5725,12 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
             "property float red\nproperty float green\nproperty float "
             "blue\nproperty float alpha\n");
     if (!radius.empty()) print(fs, "property float radius\n");
-    if (!triangles.empty()) {
-        print(fs, "element face {}\n", (int)triangles.size());
-        print(fs, "property list uchar int vertex_indices\n");
-    }
     if (!lines.empty()) {
         print(fs, "element line {}\n", (int)lines.size());
+        print(fs, "property list uchar int vertex_indices\n");
+    }
+    if (!triangles.empty() || !quads.empty()) {
+        print(fs, "element face {}\n", (int)triangles.size() + (int)quads.size());
         print(fs, "property list uchar int vertex_indices\n");
     }
     print(fs, "end_header\n");
@@ -5677,9 +5748,14 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         }
 
         // write face data
-        for (auto i = 0; i < triangles.size(); i++)
-            print(fs, "3 {}\n", triangles[i]);
-        for (auto i = 0; i < lines.size(); i++) print(fs, "2 {}\n", lines[i]);
+        for (auto& l : lines) print(fs, "2 {}\n", l);
+        for (auto& t : triangles) print(fs, "3 {}\n", t);
+        for (auto& q : quads) {
+            if (q.z == q.w)
+                print(fs, "3 {}\n", xyz(q));
+            else
+                print(fs, "4 {}\n", q);
+        }
     } else {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
@@ -5691,15 +5767,26 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         }
 
         // write face data
-        for (auto i = 0; i < triangles.size(); i++) {
-            auto n = (byte)3;
-            write_value(fs, n);
-            write_value(fs, triangles[i]);
-        }
-        for (auto i = 0; i < lines.size(); i++) {
+        for (auto& l : lines) {
             auto n = (byte)2;
             write_value(fs, n);
-            write_value(fs, lines[i]);
+            write_value(fs, l);
+        }
+        for (auto& t : triangles) {
+            auto n = (byte)3;
+            write_value(fs, n);
+            write_value(fs, t);
+        }
+        for (auto& q : quads) {
+            if (q.z == q.w) {
+                auto n = (byte)3;
+                write_value(fs, n);
+                write_value(fs, xyz(q));
+            } else {
+                auto n = (byte)4;
+                write_value(fs, n);
+                write_value(fs, q);
+            }
         }
     }
 
@@ -5709,12 +5796,14 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 
 // Load ply mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord) {
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    bool flip_texcoord, bool force_triangles) {
     // clear
     auto color  = vector<vec4f>{};
     auto radius = vector<float>{};
-    reset_mesh_data(points, lines, triangles, pos, norm, texcoord, color, radius);
+    reset_mesh_data(
+        points, lines, triangles, quads, pos, norm, texcoord, color, radius);
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -5744,9 +5833,14 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
     cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
-        for (auto i = 2; i < verts.size(); i++)
-            triangles.push_back({vert_map.at(verts[0]),
-                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        if (verts.size() == 4) {
+            quads.push_back({vert_map.at(verts[0]), vert_map.at(verts[1]),
+                vert_map.at(verts[2]), vert_map.at(verts[3])});
+        } else {
+            for (auto i = 2; i < verts.size(); i++)
+                triangles.push_back({vert_map.at(verts[0]),
+                    vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
@@ -5759,6 +5853,9 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
             points.push_back(vert_map.at(verts[i]));
     };
 
+    // merging quads and triangles
+    merge_triangles_and_quads(triangles, quads, force_triangles);
+
     // load obj
     return load_obj(filename, cb, true, true, flip_texcoord);
 }
@@ -5766,8 +5863,8 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
 // Load ply mesh
 bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, bool flip_texcoord) {
+    const vector<vec4i>& quads, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, bool flip_texcoord) {
     auto fs = open(filename, "wt");
     if (!fs) return false;
 
@@ -5780,13 +5877,25 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
         return obj_vertex{
             (i + 1) * mask.pos, (i + 1) * mask.texcoord, (i + 1) * mask.norm};
     };
-    for (auto& t : triangles)
-        print(fs, "f {} {} {}\n", to_string(vert(t.x)).c_str(),
-            to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
-    for (auto& l : lines)
+    for (auto& p : points) { print(fs, "p {}\n", to_string(vert(p)).c_str()); }
+    for (auto& l : lines) {
         print(fs, "l {} {}\n", to_string(vert(l.x)).c_str(),
             to_string(vert(l.y)).c_str());
-    for (auto& p : points) print(fs, "p {}\n", to_string(vert(p)).c_str());
+    }
+    for (auto& t : triangles) {
+        print(fs, "f {} {} {}\n", to_string(vert(t.x)).c_str(),
+            to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+    }
+    for (auto& q : quads) {
+        if (q.z == q.w) {
+            print(fs, "f {} {} {}\n", to_string(vert(q.x)).c_str(),
+                to_string(vert(q.y)).c_str(), to_string(vert(q.z)).c_str());
+        } else {
+            print(fs, "f {} {} {} {}\n", to_string(vert(q.x)).c_str(),
+                to_string(vert(q.y)).c_str(), to_string(vert(q.z)).c_str(),
+                to_string(vert(q.w)).c_str());
+        }
+    }
 
     return true;
 }
