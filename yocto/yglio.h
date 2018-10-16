@@ -251,8 +251,7 @@ image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
 // Loads/saves a 4 channel byte image in sRGB color space.
 image<vec4b> load_image4b(const string& filename);
 bool         save_image4b(const string& filename, const image<vec4b>& img);
-bool         load_image4b_from_memory(
-            const byte* data, int data_size, image<vec4b>& img);
+bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
 image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
 
 // Load 4 channel images with shortened api. Returns empty image on error;
@@ -281,43 +280,43 @@ bool          save_volume1f(const string& filename, const volume<float>& vol);
 namespace ygl {
 
 // Load/save a scene in the supported formats.
-scene* load_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_scene(const string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool         save_scene(const string& filename, const yocto_scene* scene,
+            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene in the builtin JSON format.
-scene* load_json_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_json_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_json_scene(const string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool         save_json_scene(const string& filename, const yocto_scene* scene,
+            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to OBJ.
-scene* load_obj_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_obj_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true, bool split_shapes = true);
-bool   save_obj_scene(const string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool         save_obj_scene(const string& filename, const yocto_scene* scene,
+            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to glTF.
-scene* load_gltf_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_gltf_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_gltf_scene(const string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool         save_gltf_scene(const string& filename, const yocto_scene* scene,
+            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-scene* load_pbrt_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_pbrt_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_pbrt_scene(const string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool         save_pbrt_scene(const string& filename, const yocto_scene* scene,
+            bool save_textures = true, bool skip_missing = true);
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
-scene* load_ybin_scene(const string& filename, bool load_textures = true,
+yocto_scene* load_ybin_scene(const string& filename, bool load_textures = true,
     bool skip_missing = true);
-bool   save_ybin_scene(const string& filename, const scene* scn,
-      bool save_textures = true, bool skip_missing = true);
+bool         save_ybin_scene(const string& filename, const yocto_scene* scene,
+            bool save_textures = true, bool skip_missing = true);
 
 }  // namespace ygl
 
@@ -688,9 +687,7 @@ inline bool _parse(const char*& str, ray<T, N>& v) {
 }
 
 // Prints a string.
-inline bool _parse_next(const char*& str) {
-    return true;
-}
+inline bool _parse_next(const char*& str) { return true; }
 template <typename Arg, typename... Args>
 inline bool _parse_next(const char*& str, Arg& arg, Args&... args) {
     if (!_parse(str, arg)) return false;

@@ -25,6 +25,7 @@ BinPackParameters: true
 BreakBeforeBinaryOperators: None
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializersBeforeComma: true
+BreakStringLiterals: false
 
 Cpp11BracedListStyle: true
 
@@ -33,10 +34,10 @@ PointerAlignment: Left
 
 IndentWrappedFunctionNames: false
 
-PenaltyBreakAssignment: 200
-PenaltyBreakBeforeFirstCallParameter: 200
+PenaltyBreakAssignment: 1000
+PenaltyBreakBeforeFirstCallParameter: 1000
 PenaltyBreakComment: 30
 PenaltyBreakFirstLessLess: 30
 PenaltyBreakString: 30
-PenaltyExcessCharacter: 30
-PenaltyReturnTypeOnItsOwnLine: 200
+PenaltyExcessCharacter: 10
+PenaltyReturnTypeOnItsOwnLine: 1000

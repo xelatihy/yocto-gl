@@ -172,9 +172,8 @@ void add_new_image(app_state* app, const string& filename, const string& outname
     float exposure = 0, bool filmic = false, bool srgb = true) {
     auto img      = new app_image();
     img->filename = filename;
-    img->outname  = (outname == "") ?
-                       replace_extension(filename, ".display.png") :
-                       outname;
+    img->outname = (outname == "") ? replace_extension(filename, ".display.png") :
+                                     outname;
     img->name        = get_filename(filename);
     img->is_hdr      = is_hdr_filename(filename);
     img->exposure    = exposure;
@@ -217,8 +216,7 @@ void draw_glwidgets(glwindow* win) {
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "adjust")) {
-            edited += draw_slider_glwidget(
-                win, "exposure", img->exposure, -5, 5);
+            edited += draw_slider_glwidget(win, "exposure", img->exposure, -5, 5);
             edited += draw_checkbox_glwidget(win, "filmic", img->filmic);
             edited += draw_checkbox_glwidget(win, "srgb", img->srgb);
             end_header_glwidget(win);
@@ -301,9 +299,8 @@ void run_ui(app_state* app) {
     init_glwidgets(win);
 
     // center image
-    center_image4f(img->imcenter, img->imscale,
-        {img->img.width, img->img.height}, {width, height},
-        img->img.width > width || img->img.height > height);
+    center_image4f(img->imcenter, img->imscale, {img->img.width, img->img.height},
+        {width, height}, img->img.width > width || img->img.height > height);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;

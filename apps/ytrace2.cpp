@@ -37,18 +37,19 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
-    params.camid       = parse_arg(parser, "--camera", 0, "Camera index.");
-    params.yresolution = parse_arg(
+    params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
+    params.vertical_resolution = parse_arg(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    params.nsamples = parse_arg(
+    params.num_samples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    params.tracer   = parse_arge(parser, "--tracer,-t", trace_type::path,
+    params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,
         "Trace type.", trace_type_names);
-    params.nbounces = parse_arg(
+    params.max_bounces   = parse_arg(
         parser, "--nbounces", 8, "Maximum number of bounces.");
-    params.noparallel = parse_arg(
+    params.no_parallel = parse_arg(
         parser, "--noparallel", false, "Disable parallel execution.");
-    params.nbatch = parse_arg(parser, "--nbatch,-b", 16, "Samples per batch.");
+    params.samples_per_batch = parse_arg(
+        parser, "--nbatch,-b", 16, "Samples per batch.");
     auto save_batch = parse_arg(
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
@@ -63,48 +64,52 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     printf("loading scene %s\n", filename.c_str());
-    auto scn = load_scene(filename);
-    if (!scn) {
+    auto scene = load_scene(filename);
+    if (!scene) {
         printf("could not load %s\n", filename.c_str());
         exit(1);
     }
 
     // tesselate
     printf("tesselating scene elements\n");
-    tesselate_subdivs(scn);
+    tesselate_subdivs(scene);
 
     // build bvh
     printf("building bvh\n");
-    auto bvh = build_bvh(scn, true, embree);
+    auto bvh = build_bvh(scene, true, embree);
 
     // init renderer
     printf("initializing lights\n");
-    auto lights = make_trace_lights(scn, params);
+    auto lights = make_trace_lights(scene, params);
 
     // initialize rendering objects
     printf("initializing tracer data\n");
-    auto state = make_trace_state(scn, params);
+    auto state = make_trace_state(scene, params);
 
     // render
     printf("rendering image\n");
     auto done = false;
     while (!done) {
-        printf("rendering sample %d/%d\n", state->sample, params.nsamples);
-        done = trace_samples(state, scn, bvh, lights, params);
+        printf("rendering sample %d/%d\n", state->current_sample,
+            params.num_samples);
+        done = trace_samples(state, scene, bvh, lights, params);
         if (save_batch) {
-            auto filename = replace_extension(imfilename,
-                to_string(state->sample) + "." + get_extension(imfilename));
+            auto filename = replace_extension(
+                imfilename, to_string(state->current_sample) + "." +
+                                get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
-            save_tonemapped_image(filename, state->img, exposure, gamma, filmic);
+            save_tonemapped_image(
+                filename, state->rendered_image, exposure, gamma, filmic);
         }
     }
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
-    save_tonemapped_image(imfilename, state->img, exposure, gamma, filmic);
+    save_tonemapped_image(
+        imfilename, state->rendered_image, exposure, gamma, filmic);
 
     // cleanup
-    delete scn;
+    delete scene;
     delete state;
     delete bvh;
     delete lights;

@@ -25,9 +25,9 @@
                     3.9
                 ]
             ],
-            "focal": 0.035,
-            "aperture": 0.0,
-            "film": [
+            "focal_length": 0.035,
+            "lens_aperture": 0.0,
+            "film_size": [
                 0.024,
                 0.024
             ]
@@ -37,7 +37,7 @@
     "materials": [
         {
             "name": "floor",
-            "kd": [
+            "diffuse": [
                 0.725,
                 0.71,
                 0.68
@@ -45,7 +45,7 @@
         },
         {
             "name": "ceiling",
-            "kd": [
+            "diffuse": [
                 0.725,
                 0.71,
                 0.68
@@ -53,7 +53,7 @@
         },
         {
             "name": "backwall",
-            "kd": [
+            "diffuse": [
                 0.725,
                 0.71,
                 0.68
@@ -61,7 +61,7 @@
         },
         {
             "name": "rightwall",
-            "kd": [
+            "diffuse": [
                 0.14,
                 0.45,
                 0.091
@@ -69,7 +69,7 @@
         },
         {
             "name": "leftwall",
-            "kd": [
+            "diffuse": [
                 0.63,
                 0.065,
                 0.05
@@ -77,7 +77,7 @@
         },
         {
             "name": "shortbox",
-            "kd": [
+            "diffuse": [
                 0.725,
                 0.71,
                 0.68
@@ -85,7 +85,7 @@
         },
         {
             "name": "tallbox",
-            "kd": [
+            "diffuse": [
                 0.725,
                 0.71,
                 0.68
@@ -93,7 +93,7 @@
         },
         {
             "name": "light",
-            "ke": [
+            "emission": [
                 17,
                 12,
                 4
@@ -103,7 +103,7 @@
     "shapes": [
         {
             "name": "floor",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     0,
@@ -140,7 +140,7 @@
         },
         {
             "name": "ceiling",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     2,
@@ -177,7 +177,7 @@
         },
         {
             "name": "backwall",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     0,
@@ -214,7 +214,7 @@
         },
         {
             "name": "rightwall",
-            "pos": [
+            "positions": [
                 [
                     1,
                     0,
@@ -251,7 +251,7 @@
         },
         {
             "name": "leftwall",
-            "pos": [
+            "positions": [
                 [
                     -1,
                     0,
@@ -288,7 +288,7 @@
         },
         {
             "name": "shortbox",
-            "pos": [
+            "positions": [
                 [
                     0.53,
                     0.6,
@@ -475,7 +475,7 @@
         },
         {
             "name": "tallbox",
-            "pos": [
+            "positions": [
                 [
                     -0.53,
                     1.2,
@@ -662,7 +662,7 @@
         },
         {
             "name": "light",
-            "pos": [
+            "positions": [
                 [
                     -0.25,
                     1.99,
@@ -701,43 +701,43 @@
     "instances": [
         {
             "name": "floor",
-            "shp": "floor",
-            "mat": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "ceiling",
-            "shp": "ceiling",
-            "mat": "ceiling"
+            "shape": "ceiling",
+            "material": "ceiling"
         },
         {
             "name": "backwall",
-            "shp": "backwall",
-            "mat": "backwall"
+            "shape": "backwall",
+            "material": "backwall"
         },
         {
             "name": "rightwall",
-            "shp": "rightwall",
-            "mat": "rightwall"
+            "shape": "rightwall",
+            "material": "rightwall"
         },
         {
             "name": "leftwall",
-            "shp": "leftwall",
-            "mat": "leftwall"
+            "shape": "leftwall",
+            "material": "leftwall"
         },
         {
             "name": "shortbox",
-            "shp": "shortbox",
-            "mat": "shortbox"
+            "shape": "shortbox",
+            "material": "shortbox"
         },
         {
             "name": "tallbox",
-            "shp": "tallbox",
-            "mat": "tallbox"
+            "shape": "tallbox",
+            "material": "tallbox"
         },
         {
             "name": "light",
-            "shp": "light",
-            "mat": "light"
+            "shape": "light",
+            "material": "light"
         }
     ],
     "environments": []

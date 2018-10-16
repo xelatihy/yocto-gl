@@ -3,8 +3,8 @@
     "cameras": [
         {
             "name": "cam",
-            "focal": 0.06,
-            "aperture": 0.0,
+            "focal_length": 0.06,
+            "lens_aperture": 0.0,
             "!!proc": {
                 "from": [
                     0,
@@ -17,7 +17,7 @@
                     0
                 ]
             },
-            "film": [
+            "film_size": [
                 0.036,
                 0.015
             ]
@@ -26,7 +26,7 @@
     "textures": [
         {
             "name": "floor",
-            "path": "textures/floor.png",
+            "filename": "textures/floor.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "grid"
@@ -34,7 +34,7 @@
         },
         {
             "name": "uvgrid",
-            "path": "textures/uvgrid.png",
+            "filename": "textures/uvgrid.png",
             "gamma": 2.2,
             "!!proc": {
                 "type": "uvgrid"
@@ -44,61 +44,61 @@
     "materials": [
         {
             "name": "floor",
-            "kd": [
+            "diffuse": [
                 0.7,
                 0.7,
                 0.7
             ],
-            "kd_txt": "floor"
+            "diffuse_texture": "floor"
         },
         {
             "name": "obj1",
-            "kd": [
+            "diffuse": [
                 1,
                 1,
                 1
             ],
-            "ks": [
+            "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "rs": 0.1,
-            "kd_txt": "uvgrid"
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
             "name": "obj2",
-            "kd": [
+            "diffuse": [
                 1,
                 1,
                 1
             ],
-            "ks": [
+            "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "rs": 0.1,
-            "kd_txt": "uvgrid"
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
             "name": "obj3",
-            "kd": [
+            "diffuse": [
                 1,
                 1,
                 1
             ],
-            "ks": [
+            "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "rs": 0.1,
-            "kd_txt": "uvgrid"
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
             "name": "light1",
-            "ke": [
+            "emission": [
                 20,
                 20,
                 20
@@ -106,7 +106,7 @@
         },
         {
             "name": "light2",
-            "ke": [
+            "emission": [
                 20,
                 20,
                 20
@@ -116,22 +116,22 @@
     "shapes": [
         {
             "name": "floor",
-            "path": "meshes/floor.ply",
+            "filename": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }
         },
         {
             "name": "obj1",
-            "path": "models/stanford-bunny.obj"
+            "filename": "models/stanford-bunny.obj"
         },
         {
             "name": "obj2",
-            "path": "models/utah-teapot.obj"
+            "filename": "models/utah-teapot.obj"
         },
         {
             "name": "obj3",
-            "path": "models/cube-subdiv.obj"
+            "filename": "models/cube-subdiv.obj"
         },
         {
             "name": "light1",
@@ -157,13 +157,13 @@
     "instances": [
         {
             "name": "floor",
-            "shp": "floor",
-            "mat": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "obj1",
-            "shp": "obj1",
-            "mat": "obj1",
+            "shape": "obj1",
+            "material": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -174,8 +174,8 @@
         },
         {
             "name": "obj2",
-            "shp": "obj2",
-            "mat": "obj2",
+            "shape": "obj2",
+            "material": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -186,8 +186,8 @@
         },
         {
             "name": "obj3",
-            "shp": "obj3",
-            "mat": "obj3",
+            "shape": "obj3",
+            "material": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -198,8 +198,8 @@
         },
         {
             "name": "light1",
-            "shp": "light1",
-            "mat": "light1",
+            "shape": "light1",
+            "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -215,8 +215,8 @@
         },
         {
             "name": "light2",
-            "shp": "light2",
-            "mat": "light2",
+            "shape": "light2",
+            "material": "light2",
             "!!proc": {
                 "from": [
                     4,
