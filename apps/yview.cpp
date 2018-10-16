@@ -579,6 +579,11 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
                 for (auto t : shape->triangles)
                     area += triangle_area(shape->positions[t.x],
                         shape->positions[t.y], shape->positions[t.z]);
+            } else if (!shape->quads.empty()) {
+                for (auto q : shape->quads)
+                    area += quad_area(shape->positions[q.x],
+                        shape->positions[q.y], shape->positions[q.z], 
+                        shape->positions[q.w]);
             } else if (!shape->lines.empty()) {
                 for (auto l : shape->lines)
                     area += line_length(

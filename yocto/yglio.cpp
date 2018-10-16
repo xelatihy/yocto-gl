@@ -3000,9 +3000,15 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
-        for (auto i = 2; i < verts.size(); i++)
-            instance->shape->triangles.push_back({vert_map.at(verts[0]),
-                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        if(verts.size() == 4) {
+            instance->shape->quads.push_back({vert_map.at(verts[0]),
+                vert_map.at(verts[1]), vert_map.at(verts[2]), 
+                vert_map.at(verts[3])});
+        } else {
+            for (auto i = 2; i < verts.size(); i++)
+                instance->shape->triangles.push_back({vert_map.at(verts[0]),
+                    vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
@@ -3270,13 +3276,26 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                     (i + offset.texcoord + 1) * mask.texcoord,
                     (i + offset.norm + 1) * mask.norm};
             };
-            for (auto& t : instance->shape->triangles) {
-                print(fs, "f {} {} {}\n", to_string(vert(t.x)),
-                    to_string(vert(t.y)), to_string(vert(t.z)));
+            for (auto& p : instance->shape->points) {
+                print(fs, "p {}\n", to_string(vert(p)));
             }
             for (auto& l : instance->shape->lines) {
                 print(fs, "l {} {}\n", to_string(vert(l.x)),
                     to_string(vert(l.y)));
+            }
+            for (auto& t : instance->shape->triangles) {
+                print(fs, "f {} {} {}\n", to_string(vert(t.x)),
+                    to_string(vert(t.y)), to_string(vert(t.z)));
+            }
+            for (auto& q : instance->shape->quads) {
+                if(q.z == q.w) {
+                    print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                        to_string(vert(q.y)), to_string(vert(q.z)));
+                } else {
+                    print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                        to_string(vert(q.y)), to_string(vert(q.z)), 
+                        to_string(vert(q.w)));
+                }
             }
             offset.pos += instance->shape->positions.size();
             offset.texcoord += instance->shape->texturecoords.size();
@@ -4083,6 +4102,11 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
             pjs["attributes"]["COLOR_0"] = add_accessor(nverts, "VEC4");
         if (!shape->radius.empty())
             pjs["attributes"]["RADIUS"] = add_accessor(nverts, "SCALAR");
+        if (!shape->points.empty()) {
+            pjs["indices"] = add_accessor(
+                (int)shape->points.size(), "SCALAR", true);
+            pjs["mode"] = 1;
+        }
         if (!shape->lines.empty()) {
             pjs["indices"] = add_accessor(
                 (int)shape->lines.size() * 2, "SCALAR", true);
@@ -4091,6 +4115,12 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         if (!shape->triangles.empty()) {
             pjs["indices"] = add_accessor(
                 (int)shape->triangles.size() * 3, "SCALAR", true);
+            pjs["mode"] = 4;
+        }
+        if (!shape->quads.empty()) {
+            auto triangles = convert_quads_to_triangles(shape->quads);
+            pjs["indices"] = add_accessor(
+                (int)triangles.size() * 3, "SCALAR", true);
             pjs["mode"] = 4;
         }
         mjs["primitives"].push_back(pjs);
@@ -4154,8 +4184,10 @@ bool save_gltf_mesh(const string& filename, const yocto_shape* shape) {
     if (!write_values(fs, shape->texturecoords)) return false;
     if (!write_values(fs, shape->colors)) return false;
     if (!write_values(fs, shape->radius)) return false;
+    if (!write_values(fs, shape->points)) return false;
     if (!write_values(fs, shape->lines)) return false;
     if (!write_values(fs, shape->triangles)) return false;
+    if (!write_values(fs, convert_quads_to_triangles(shape->quads))) return false;
 
     return true;
 }
