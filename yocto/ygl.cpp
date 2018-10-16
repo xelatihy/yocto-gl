@@ -299,8 +299,9 @@ vector<vec3f> compute_tangents(
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto& l : lines) {
         auto n = line_tangent(pos[l.x], pos[l.y]);
-        norm[l.x] += n;
-        norm[l.y] += n;
+        auto a = line_length(pos[l.x], pos[l.y]);
+        norm[l.x] += n * a;
+        norm[l.y] += n * a;
     }
     for (auto& n : norm) n = normalize(n);
     return norm;
@@ -312,9 +313,10 @@ vector<vec3f> compute_normals(
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto& t : triangles) {
         auto n = triangle_normal(pos[t.x], pos[t.y], pos[t.z]);
-        norm[t.x] += n;
-        norm[t.y] += n;
-        norm[t.z] += n;
+        auto a = triangle_area(pos[t.x], pos[t.y], pos[t.z]);
+        norm[t.x] += n * a;
+        norm[t.y] += n * a;
+        norm[t.z] += n * a;
     }
     for (auto& n : norm) n = normalize(n);
     return norm;
@@ -326,9 +328,10 @@ vector<vec3f> compute_normals(
     auto norm = vector<vec3f>(pos.size(), zero3f);
     for (auto q : quads) {
         auto n = quad_normal(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
-        norm[q.x] += n;
-        norm[q.y] += n;
-        norm[q.z] += n;
+        auto a = quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+        norm[q.x] += n * a;
+        norm[q.y] += n * a;
+        norm[q.z] += n * a;
         if (q.z != q.w) norm[q.w] += n;
     }
     for (auto& n : norm) n = normalize(n);
