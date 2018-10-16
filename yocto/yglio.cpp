@@ -1892,6 +1892,8 @@ bool parse_json_object(
     if (!parse_json_value(js, val->lines, "lines", def.lines)) return false;
     if (!parse_json_value(js, val->triangles, "triangles", def.triangles))
         return false;
+    if (!parse_json_value(js, val->quads, "quads", def.quads))
+        return false;
     if (!parse_json_value(js, val->positions, "positions", def.positions))
         return false;
     if (!parse_json_value(js, val->normals, "normals", def.normals))
@@ -5670,7 +5672,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
                     if(num == 4) {
                         quads.push_back({list[0], list[1], list[2], list[3]});
                     } else {
-                        for (auto i = 2; i < (int)prop.scalars[fid]; i++)
+                        for (auto i = 2; i < num; i++)
                             triangles.push_back({list[0], list[i - 1], list[i]});
                     }
                 }
