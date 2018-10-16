@@ -3644,6 +3644,7 @@ bvh_tree* build_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
     bvh->points    = shape->points;
     bvh->lines     = shape->lines;
     bvh->triangles = shape->triangles;
+    bvh->quads = shape->quads;
 
     // build bvh
     build_bvh(bvh, high_quality, embree);
@@ -3897,13 +3898,14 @@ T eval_elem(
     if (!shape->triangles.empty()) {
         auto t = shape->triangles[ei];
         return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
+    } else if (!shape->quads.empty()) {
+        auto q = shape->quads[ei];
+        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
         return interpolate_line(vals[l.x], vals[l.y], uv.x);
     } else if (!shape->points.empty()) {
         return vals[shape->points[ei]];
-    } else if (!shape->positions.empty()) {
-        return vals[ei];
     } else {
         return {};
     }
