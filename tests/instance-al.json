@@ -3,8 +3,8 @@
     "cameras": [
         {
             "name": "cam",
-            "focal": 0.06,
-            "aperture": 0.0,
+            "focal_length": 0.06,
+            "lens_aperture": 0.0,
             "!!proc": {
                 "from": [
                     0,
@@ -17,7 +17,7 @@
                     0
                 ]
             },
-            "film": [
+            "film_size": [
                 0.036,
                 0.015
             ]
@@ -27,7 +27,7 @@
     "materials": [
         {
             "name": "floor",
-            "kd": [
+            "diffuse": [
                 0.7,
                 0.7,
                 0.7
@@ -35,7 +35,7 @@
         },
         {
             "name": "light1",
-            "ke": [
+            "emission": [
                 20,
                 20,
                 20
@@ -43,7 +43,7 @@
         },
         {
             "name": "light2",
-            "ke": [
+            "emission": [
                 20,
                 20,
                 20
@@ -53,7 +53,7 @@
     "shapes": [
         {
             "name": "floor",
-            "path": "meshes/floor.ply",
+            "filename": "meshes/floor.ply",
             "!!proc": {
                 "type": "floor"
             }
@@ -82,13 +82,13 @@
     "instances": [
         {
             "name": "floor",
-            "shp": "floor",
-            "mat": "floor"
+            "shape": "floor",
+            "material": "floor"
         },
         {
             "name": "light1",
-            "shp": "light1",
-            "mat": "light1",
+            "shape": "light1",
+            "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -104,8 +104,8 @@
         },
         {
             "name": "light2",
-            "shp": "light2",
-            "mat": "light2",
+            "shape": "light2",
+            "material": "light2",
             "!!proc": {
                 "from": [
                     4,

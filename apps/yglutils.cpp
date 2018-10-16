@@ -123,10 +123,10 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
 
 gltexture make_gltexture(
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
-    auto txt = gltexture();
+    auto texture = gltexture();
     assert(glGetError() == GL_NO_ERROR);
-    glGenTextures(1, &txt.tid);
-    glBindTexture(GL_TEXTURE_2D, txt.tid);
+    glGenTextures(1, &texture.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.tid);
     if (as_float) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.width, img.height, 0,
             GL_RGBA, GL_FLOAT, img.pixels.data());
@@ -147,13 +147,13 @@ gltexture make_gltexture(
             (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
-    return txt;
+    return texture;
 }
 
-void update_gltexture(gltexture& txt, const image<vec4f>& img, bool as_float,
-    bool linear, bool mipmap) {
+void update_gltexture(gltexture& texture, const image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
-    glBindTexture(GL_TEXTURE_2D, txt.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
         GL_FLOAT, img.pixels.data());
     if (mipmap) {
@@ -173,10 +173,10 @@ void update_gltexture(gltexture& txt, const image<vec4f>& img, bool as_float,
 
 gltexture make_gltexture(
     const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
-    auto txt = gltexture();
+    auto texture = gltexture();
     assert(glGetError() == GL_NO_ERROR);
-    glGenTextures(1, &txt.tid);
-    glBindTexture(GL_TEXTURE_2D, txt.tid);
+    glGenTextures(1, &texture.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.tid);
     if (as_srgb) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.width, img.height, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
@@ -197,13 +197,13 @@ gltexture make_gltexture(
             (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
-    return txt;
+    return texture;
 }
 
-void update_gltexture(gltexture& txt, const image<vec4b>& img, bool as_srgb,
+void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
-    glBindTexture(GL_TEXTURE_2D, txt.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.tid);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
         GL_UNSIGNED_BYTE, img.pixels.data());
     if (mipmap) {
@@ -335,24 +335,25 @@ void set_gluniform(int loc, const frame3f& val) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(int loc, const gltexture& txt, int unit) {
+void set_gluniform_texture(int loc, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
     glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, txt.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.tid);
     glUniform1i(loc, unit);
     assert(glGetError() == GL_NO_ERROR);
 }
 
 void set_gluniform_texture(
-    glprogram& prog, const char* var, const gltexture& txt, int unit) {
-    set_gluniform_texture(get_gluniform_location(prog, var), txt, unit);
+    glprogram& prog, const char* var, const gltexture& texture, int unit) {
+    set_gluniform_texture(get_gluniform_location(prog, var), texture, unit);
 }
 
-void set_gluniform_texture(int loc, int loc_on, const gltexture& txt, int unit) {
+void set_gluniform_texture(
+    int loc, int loc_on, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
-    if (txt.tid) {
+    if (texture.tid) {
         glActiveTexture(GL_TEXTURE0 + unit);
-        glBindTexture(GL_TEXTURE_2D, txt.tid);
+        glBindTexture(GL_TEXTURE_2D, texture.tid);
         glUniform1i(loc, unit);
         glUniform1i(loc_on, 1);
     } else {
@@ -362,9 +363,9 @@ void set_gluniform_texture(int loc, int loc_on, const gltexture& txt, int unit) 
 }
 
 void set_gluniform_texture(glprogram& prog, const char* var, const char* var_on,
-    const gltexture& txt, int unit) {
+    const gltexture& texture, int unit) {
     set_gluniform_texture(get_gluniform_location(prog, var),
-        get_gluniform_location(prog, var_on), txt, unit);
+        get_gluniform_location(prog, var_on), texture, unit);
 }
 
 int get_glvertexattrib_location(const glprogram& prog, const char* name) {
@@ -648,8 +649,8 @@ bool draw_button_glwidget(glwindow* win, const char* lbl) {
     return ImGui::Button(lbl);
 }
 
-void draw_label_glwidgets(glwindow* win, const char* lbl, const string& txt) {
-    ImGui::LabelText(lbl, "%s", txt.c_str());
+void draw_label_glwidgets(glwindow* win, const char* lbl, const string& texture) {
+    ImGui::LabelText(lbl, "%s", texture.c_str());
 }
 
 void draw_label_glwidgets(glwindow* win, const char* lbl, const char* fmt, ...) {

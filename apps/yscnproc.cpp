@@ -48,7 +48,7 @@ int main(int argc, char** argv) {
     auto notextures = parse_arg(
         parser, "--notextures", false, "Disable textures.");
     auto uniform_txt = parse_arg(
-        parser, "--uniform-txt", false, "uniform texture formats");
+        parser, "--uniform-texture", false, "uniform texture formats");
     auto output = parse_arg(
         parser, "--output,-o", "out.json"s, "output scene", true);
     auto filename = parse_arg(
@@ -56,14 +56,14 @@ int main(int argc, char** argv) {
     check_cmdline(parser);
 
     // load scene
-    auto scn = unique_ptr<scene>{load_scene(filename, !notextures)};
-    if (!scn) log_fatal("cannot load scene {}", filename);
+    auto scene = unique_ptr<yocto_scene>{load_scene(filename, !notextures)};
+    if (!scene) log_fatal("cannot load scene {}", filename);
 
     // change texture names
     if (uniform_txt) {
-        for (auto txt : scn->textures) {
-            auto ext = get_extension(txt->path);
-            if (is_hdr_filename(txt->path)) {
+        for (auto texture : scene->textures) {
+            auto ext = get_extension(texture->filename);
+            if (is_hdr_filename(texture->filename)) {
                 if (ext == "hdr" || ext == "exr") continue;
                 if (ext == "pfm")
                     replace_extension(filename, "hdr");
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
         log_fatal("cannot create directory " + get_dirname(output));
 
     // save scene
-    if (!save_scene(output, scn.get(), !notextures))
+    if (!save_scene(output, scene.get(), !notextures))
         log_fatal("cannot save scene %" + output);
 
     // done
