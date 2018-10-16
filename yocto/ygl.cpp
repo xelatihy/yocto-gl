@@ -2823,17 +2823,18 @@ make_shape_data make_bezier_circle(float size) {
 }
 
 // Make a hair ball around a shape
-make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles, 
-    const vector<vec4i>& squads,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
-    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
+make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
-    auto alltriangles = striangles;
-    auto quads_triangles = convert_quads_to_triangles(squads);
-    alltriangles.insert(alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
+    auto          alltriangles    = striangles;
+    auto          quads_triangles = convert_quads_to_triangles(squads);
+    alltriangles.insert(
+        alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
     tie(bpos, bnorm, btexcoord) = sample_triangles_points(
         alltriangles, spos, snorm, stexcoord, steps.y, seed);
 
@@ -3644,7 +3645,7 @@ bvh_tree* build_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
     bvh->points    = shape->points;
     bvh->lines     = shape->lines;
     bvh->triangles = shape->triangles;
-    bvh->quads = shape->quads;
+    bvh->quads     = shape->quads;
 
     // build bvh
     build_bvh(bvh, high_quality, embree);
@@ -4447,10 +4448,10 @@ void print_stats(const yocto_scene* scene) {
     auto num_nodes        = (long long)0;
     auto num_animations   = (long long)0;
 
-    auto elem_points     = (long long)0;
+    auto elem_points    = (long long)0;
     auto elem_lines     = (long long)0;
     auto elem_triangles = (long long)0;
-    auto elem_quads = (long long)0;
+    auto elem_quads     = (long long)0;
     auto vert_pos       = (long long)0;
     auto vert_norm      = (long long)0;
     auto vert_texcoord  = (long long)0;

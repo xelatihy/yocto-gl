@@ -34,7 +34,8 @@
 struct glshape {
     glarraybuffer gl_pos = {}, gl_norm = {}, gl_texcoord = {}, gl_color = {},
                   gl_tangsp   = {};
-    glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {}, gl_quads = {};
+    glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {},
+                    gl_quads = {};
 };
 
 struct draw_glstate {
@@ -519,7 +520,7 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
     }
     if (!shape->quads.empty()) {
         set_gluniform(state->prog, "elem_type", 3);
-        draw_gltriangles(vbos.gl_quads, shape->quads.size()*2);
+        draw_gltriangles(vbos.gl_quads, shape->quads.size() * 2);
     }
 
 #if 0
@@ -582,7 +583,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
             } else if (!shape->quads.empty()) {
                 for (auto q : shape->quads)
                     area += quad_area(shape->positions[q.x],
-                        shape->positions[q.y], shape->positions[q.z], 
+                        shape->positions[q.y], shape->positions[q.z],
                         shape->positions[q.w]);
             } else if (!shape->lines.empty()) {
                 for (auto l : shape->lines)
@@ -658,7 +659,8 @@ draw_glstate* init_draw_state(glwindow* win) {
         if (!shape->triangles.empty())
             vbos.gl_triangles = make_glelementbuffer(shape->triangles, false);
         if (!shape->quads.empty())
-            vbos.gl_quads = make_glelementbuffer(convert_quads_to_triangles(shape->quads), false);
+            vbos.gl_quads = make_glelementbuffer(
+                convert_quads_to_triangles(shape->quads), false);
         state->shps[shape] = vbos;
     }
     return state;
