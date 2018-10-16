@@ -2027,6 +2027,8 @@ vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 // Quads have to be consecutive one row after another.
 vector<vec3i> convert_quads_to_triangles(
     const vector<vec4i>& quads, int row_length);
+// Convert triangles to quads by creating degenerate quads
+vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
 vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);

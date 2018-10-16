@@ -2397,9 +2397,9 @@ yocto_scene* load_json_scene(
     for (auto shape : scene->shapes) {
         if (shape->filename == "" || !shape->positions.empty()) continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
-        if (!load_mesh(filename, shape->points, shape->lines, shape->triangles,
+        if (!load_mesh(filename, shape->points, shape->lines, shape->triangles, shape->quads,
                 shape->positions, shape->normals, shape->texturecoords,
-                shape->colors, shape->radius)) {
+                shape->colors, shape->radius, false)) {
             if (!skip_missing) return nullptr;
         }
     }
@@ -2455,7 +2455,7 @@ bool save_json_scene(const string& filename, const yocto_scene* scene,
     for (auto& shape : scene->shapes) {
         if (shape->filename == "") continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
-        if (!save_mesh(filename, shape->points, shape->lines, shape->triangles,
+        if (!save_mesh(filename, shape->points, shape->lines, shape->triangles, shape->quads,
                 shape->positions, shape->normals, shape->texturecoords,
                 shape->colors, shape->radius)) {
             if (!skip_missing) return false;
@@ -4673,9 +4673,9 @@ yocto_scene* load_pbrt_scene(
                 shape->name     = get_filename(filename);
                 shape->filename = filename;
                 if (!load_ply_mesh(dirname_ + "/" + filename, shape->points,
-                        shape->lines, shape->triangles, shape->positions,
+                        shape->lines, shape->triangles, shape->quads, shape->positions,
                         shape->normals, shape->texturecoords, shape->colors,
-                        shape->radius))
+                        shape->radius, false))
                     return nullptr;
             } else if (type == "trianglemesh") {
                 shape->name     = "mesh" + std::to_string(sid++);
@@ -4978,7 +4978,7 @@ bool save_pbrt_scene(const string& filename, const yocto_scene* scene,
     for (auto& shape : scene->shapes) {
         if (shape->filename == "") continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
-        if (!save_mesh(filename, shape->points, shape->lines, shape->triangles,
+        if (!save_mesh(filename, shape->points, shape->lines, shape->triangles, shape->quads,
                 shape->positions, shape->normals, shape->texturecoords,
                 shape->colors, shape->radius)) {
             if (!skip_missing) return false;
@@ -5384,11 +5384,12 @@ namespace ygl {
 
 // Reset mesh data
 void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& pos, vector<vec3f>& norm,
     vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius) {
     points    = {};
     lines     = {};
     triangles = {};
+    quads     = {};
     pos       = {};
     norm      = {};
     texcoord  = {};
@@ -5396,37 +5397,51 @@ void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
     radius    = {};
 }
 
+// merge quads and triangles
+void merge_triangles_and_quads(vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
+    if(quads.empty()) return;
+    if(force_triangles) {
+        auto qtriangles = convert_quads_to_triangles(quads);
+        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
+        quads = {};
+    } else {
+        auto tquads = convert_triangles_to_quads(triangles);
+        quads.insert(quads.end(), tquads.begin(), tquads.end());
+        triangles = {};
+    }
+}
+
 // Load ply mesh
 bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec3f>& pos, vector<vec3f>& norm,
-    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius) {
+    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& pos, vector<vec3f>& norm,
+    vector<vec2f>& texcoord, vector<vec4f>& color, vector<float>& radius, bool force_triangles) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        return load_ply_mesh(filename, points, lines, triangles, pos, norm,
-            texcoord, color, radius);
+        return load_ply_mesh(filename, points, lines, triangles, quads, pos, norm,
+            texcoord, color, radius, force_triangles);
     } else if (ext == "obj" || ext == "OBJ") {
         return load_obj_mesh(
-            filename, points, lines, triangles, pos, norm, texcoord);
+            filename, points, lines, triangles, quads, pos, norm, texcoord, force_triangles);
     } else {
         reset_mesh_data(
-            points, lines, triangles, pos, norm, texcoord, color, radius);
+            points, lines, triangles, quads, pos, norm, texcoord, color, radius);
         return false;
     }
 }
 
 // Save ply mesh
 bool save_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles, const vector<vec4i>& quads,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, const vector<vec4f>& color,
     const vector<float>& radius, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        return save_ply_mesh(filename, points, lines, triangles, pos, norm,
+        return save_ply_mesh(filename, points, lines, triangles, quads, pos, norm,
             texcoord, color, radius, ascii);
     } else if (ext == "obj" || ext == "OBJ") {
         return save_obj_mesh(
-            filename, points, lines, triangles, pos, norm, texcoord);
+            filename, points, lines, triangles, quads, pos, norm, texcoord);
     } else {
         return false;
     }
@@ -5566,11 +5581,11 @@ ply_data* load_ply(const string& filename) {
 
 // Load ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& pos,
     vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
-    vector<float>& radius) {
+    vector<float>& radius, bool force_triangles) {
     // clear
-    reset_mesh_data(points, lines, triangles, pos, norm, texcoord, color, radius);
+    reset_mesh_data(points, lines, triangles, quads, pos, norm, texcoord, color, radius);
 
     // load ply
     auto ply = unique_ptr<ply_data>{load_ply(filename)};
@@ -5619,12 +5634,19 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
             if (prop.name == "vertex_indices") {
                 for (auto fid = 0; fid < count; fid++) {
                     auto& list = prop.lists[fid];
-                    for (auto i = 2; i < (int)prop.scalars[fid]; i++)
-                        triangles.push_back({list[0], list[i - 1], list[i]});
+                    auto num = (int)prop.scalars[fid];
+                    if(num == 4) {
+                        quads.push_back({list[0], list[1], list[2], list[3]});
+                    } else {
+                        for (auto i = 2; i < (int)prop.scalars[fid]; i++)
+                            triangles.push_back({list[0], list[i - 1], list[i]});
+                    }
                 }
             }
         }
     }
+
+    merge_triangles_and_quads(triangles, quads, force_triangles);
 
     // done
     return true;
@@ -5632,7 +5654,8 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
 
 // Save ply mesh
 bool save_ply_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles, 
+    const vector<vec4i>& quads,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, const vector<vec4f>& color,
     const vector<float>& radius, bool ascii) {
@@ -5658,12 +5681,12 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
             "property float red\nproperty float green\nproperty float "
             "blue\nproperty float alpha\n");
     if (!radius.empty()) print(fs, "property float radius\n");
-    if (!triangles.empty()) {
-        print(fs, "element face {}\n", (int)triangles.size());
-        print(fs, "property list uchar int vertex_indices\n");
-    }
     if (!lines.empty()) {
         print(fs, "element line {}\n", (int)lines.size());
+        print(fs, "property list uchar int vertex_indices\n");
+    }
+    if (!triangles.empty() || !quads.empty()) {
+        print(fs, "element face {}\n", (int)triangles.size() + (int)quads.size());
         print(fs, "property list uchar int vertex_indices\n");
     }
     print(fs, "end_header\n");
@@ -5681,9 +5704,11 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         }
 
         // write face data
-        for (auto i = 0; i < triangles.size(); i++)
-            print(fs, "3 {}\n", triangles[i]);
-        for (auto i = 0; i < lines.size(); i++) print(fs, "2 {}\n", lines[i]);
+        for (auto& l : lines) print(fs, "2 {}\n", l);
+        for (auto& t : triangles) print(fs, "3 {}\n", t);
+        for (auto& q : quads) {
+            if(q.z == q.w) print(fs, "3 {}\n", xyz(q)); else print(fs, "4 {}\n", q);
+        }
     } else {
         // write vertex data
         for (auto i = 0; i < pos.size(); i++) {
@@ -5695,15 +5720,26 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         }
 
         // write face data
-        for (auto i = 0; i < triangles.size(); i++) {
-            auto n = (byte)3;
-            write_value(fs, n);
-            write_value(fs, triangles[i]);
-        }
-        for (auto i = 0; i < lines.size(); i++) {
+        for (auto& l : lines) {
             auto n = (byte)2;
             write_value(fs, n);
-            write_value(fs, lines[i]);
+            write_value(fs, l);
+        }
+        for (auto& t : triangles) {
+            auto n = (byte)3;
+            write_value(fs, n);
+            write_value(fs, t);
+        }
+        for (auto& q : quads) {
+            if(q.z == q.w) {
+                auto n = (byte)3;
+                write_value(fs, n);
+                write_value(fs, xyz(q));
+            } else {
+                auto n = (byte)4;
+                write_value(fs, n);
+                write_value(fs, q);
+            }
         }
     }
 
@@ -5713,12 +5749,12 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 
 // Load ply mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord) {
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& pos,
+    vector<vec3f>& norm, vector<vec2f>& texcoord, bool flip_texcoord, bool force_triangles) {
     // clear
     auto color  = vector<vec4f>{};
     auto radius = vector<float>{};
-    reset_mesh_data(points, lines, triangles, pos, norm, texcoord, color, radius);
+    reset_mesh_data(points, lines, triangles, quads, pos, norm, texcoord, color, radius);
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -5748,9 +5784,16 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
     cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
-        for (auto i = 2; i < verts.size(); i++)
-            triangles.push_back({vert_map.at(verts[0]),
-                vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        if(verts.size() == 4) {
+            quads.push_back({vert_map.at(verts[0]), 
+                             vert_map.at(verts[1]), 
+                             vert_map.at(verts[2]), 
+                             vert_map.at(verts[3])});
+        } else {
+            for (auto i = 2; i < verts.size(); i++)
+                triangles.push_back({vert_map.at(verts[0]),
+                    vert_map.at(verts[i - 1]), vert_map.at(verts[i])});
+        }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
@@ -5763,13 +5806,16 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
             points.push_back(vert_map.at(verts[i]));
     };
 
+    // merging quads and triangles
+    merge_triangles_and_quads(triangles, quads, force_triangles);
+
     // load obj
     return load_obj(filename, cb, true, true, flip_texcoord);
 }
 
 // Load ply mesh
 bool save_obj_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
+    const vector<vec2i>& lines, const vector<vec3i>& triangles, const vector<vec4i>& quads,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord, bool flip_texcoord) {
     auto fs = open(filename, "wt");
@@ -5784,13 +5830,24 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
         return obj_vertex{
             (i + 1) * mask.pos, (i + 1) * mask.texcoord, (i + 1) * mask.norm};
     };
-    for (auto& t : triangles)
-        print(fs, "f {} {} {}\n", to_string(vert(t.x)).c_str(),
-            to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
-    for (auto& l : lines)
+    for (auto& p : points) { print(fs, "p {}\n", to_string(vert(p)).c_str()); }
+    for (auto& l : lines) {
         print(fs, "l {} {}\n", to_string(vert(l.x)).c_str(),
             to_string(vert(l.y)).c_str());
-    for (auto& p : points) print(fs, "p {}\n", to_string(vert(p)).c_str());
+    }
+    for (auto& t : triangles) {
+        print(fs, "f {} {} {}\n", to_string(vert(t.x)).c_str(),
+            to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+    }
+    for (auto& q : quads) {
+        if(q.z == q.w) {
+            print(fs, "f {} {} {}\n", to_string(vert(q.x)).c_str(),
+                to_string(vert(q.y)).c_str(), to_string(vert(q.z)).c_str());
+        } else {
+            print(fs, "f {} {} {} {}\n", to_string(vert(q.x)).c_str(),
+                to_string(vert(q.y)).c_str(), to_string(vert(q.z)).c_str(), to_string(vert(q.w)).c_str());
+        }
+    }
 
     return true;
 }

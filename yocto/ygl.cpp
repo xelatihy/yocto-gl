@@ -504,6 +504,14 @@ vector<vec3i> convert_quads_to_triangles(
     return triangles;
 }
 
+// Convert triangles to quads by creating degenerate quads
+vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles) {
+    auto quads = vector<vec4i>();
+    quads.reserve(triangles.size());
+    for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
+    return quads;
+}
+
 // Convert beziers to lines using 3 lines for each bezier.
 vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
     auto lines = vector<vec2i>();
