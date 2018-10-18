@@ -518,9 +518,9 @@ enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
 
 // ply property
 struct ply_property {
-    string                     name    = "";
-    ply_type                   type    = ply_type::ply_float;
-    vector<float>              scalars = {};
+    string                name    = "";
+    ply_type              type    = ply_type::ply_float;
+    vector<float>         scalars = {};
     vector<array<int, 8>> lists   = {};
 };
 

@@ -5736,50 +5736,52 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 
     auto get_channel = [](const auto& data, int channel_index) -> vector<float> {
         auto channel = vector<float>(data.size());
-        for(auto i = 0; i < channel.size(); i ++) 
+        for (auto i = 0; i < channel.size(); i++)
             channel[i] = (&data[i].x)[channel_index];
         return channel;
     };
 
-    if(!pos.empty()) {
-        if(!ply.hasElement("vertex")) ply.addElement("vertex", pos.size());
+    if (!pos.empty()) {
+        if (!ply.hasElement("vertex")) ply.addElement("vertex", pos.size());
         ply.getElement("vertex").addProperty("x", get_channel(pos, 0));
         ply.getElement("vertex").addProperty("y", get_channel(pos, 1));
         ply.getElement("vertex").addProperty("z", get_channel(pos, 2));
     }
 
-    if(!norm.empty()) {
-        if(!ply.hasElement("vertex")) ply.addElement("vertex", norm.size());
+    if (!norm.empty()) {
+        if (!ply.hasElement("vertex")) ply.addElement("vertex", norm.size());
         ply.getElement("vertex").addProperty("nx", get_channel(norm, 0));
         ply.getElement("vertex").addProperty("ny", get_channel(norm, 1));
         ply.getElement("vertex").addProperty("nz", get_channel(norm, 2));
     }
 
-    if(!texcoord.empty()) {
-        if(!ply.hasElement("vertex")) ply.addElement("vertex", texcoord.size());
+    if (!texcoord.empty()) {
+        if (!ply.hasElement("vertex"))
+            ply.addElement("vertex", texcoord.size());
         ply.getElement("vertex").addProperty("u", get_channel(texcoord, 0));
         ply.getElement("vertex").addProperty("v", get_channel(texcoord, 1));
     }
 
-    if(!color.empty()) {
-        if(!ply.hasElement("vertex")) ply.addElement("vertex", color.size());
+    if (!color.empty()) {
+        if (!ply.hasElement("vertex")) ply.addElement("vertex", color.size());
         ply.getElement("vertex").addProperty("red", get_channel(color, 0));
         ply.getElement("vertex").addProperty("green", get_channel(color, 1));
         ply.getElement("vertex").addProperty("blue", get_channel(color, 2));
         ply.getElement("vertex").addProperty("alpha", get_channel(color, 3));
     }
 
-    if(!radius.empty()) {
-        if(!ply.hasElement("vertex")) ply.addElement("vertex", radius.size());
+    if (!radius.empty()) {
+        if (!ply.hasElement("vertex")) ply.addElement("vertex", radius.size());
         ply.getElement("vertex").addProperty("radius", radius);
     }
 
-    if(!triangles.empty() || !quads.empty()) {
-        if(!ply.hasElement("face")) ply.addElement("face", triangles.size() + quads.size());
+    if (!triangles.empty() || !quads.empty()) {
+        if (!ply.hasElement("face"))
+            ply.addElement("face", triangles.size() + quads.size());
         auto face_property = vector<vector<int>>();
-        for(auto t : triangles) face_property.push_back({t.x, t.y, t.z});
-        for(auto q : quads) {
-            if(q.z == q.w) {
+        for (auto t : triangles) face_property.push_back({t.x, t.y, t.z});
+        for (auto q : quads) {
+            if (q.z == q.w) {
                 face_property.push_back({q.x, q.y, q.z});
             } else {
                 face_property.push_back({q.x, q.y, q.z, q.w});
@@ -5788,19 +5790,17 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         ply.getElement("face").addListProperty("vertex_indices", face_property);
     }
 
-    if(!lines.empty()) {
-        if(!ply.hasElement("line")) ply.addElement("line", lines.size());
+    if (!lines.empty()) {
+        if (!ply.hasElement("line")) ply.addElement("line", lines.size());
         auto line_property = vector<vector<int>>();
-        for(auto l : lines) line_property.push_back({l.x, l.y});
+        for (auto l : lines) line_property.push_back({l.x, l.y});
         ply.getElement("line").addListProperty("vertex_indices", line_property);
     }
 
     // save
     try {
         ply.write(filename, ascii ? DataFormat::ASCII : DataFormat::Binary);
-    } catch(...) {
-        return false;
-    }
+    } catch (...) { return false; }
 
     return true;
 }
