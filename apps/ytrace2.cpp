@@ -53,8 +53,8 @@ int main(int argc, char* argv[]) {
     auto save_batch = parse_arg(
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "Hdr gamma");
     auto filmic   = parse_arg(parser, "--filmic", false, "Hdr filmic");
+    auto srgb    = parse_arg(parser, "--no-srgb", true, "No srgb");
     auto embree   = parse_arg(parser, "--embree", false, "Use Embree ratracer");
     auto imfilename = parse_arg(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
@@ -99,14 +99,14 @@ int main(int argc, char* argv[]) {
                                 get_extension(imfilename));
             printf("saving image %s\n", filename.c_str());
             save_tonemapped_image(
-                filename, state->rendered_image, exposure, gamma, filmic);
+                filename, state->rendered_image, exposure, filmic, srgb);
         }
     }
 
     // save image
     printf("saving image %s\n", imfilename.c_str());
     save_tonemapped_image(
-        imfilename, state->rendered_image, exposure, gamma, filmic);
+        imfilename, state->rendered_image, exposure, filmic, srgb);
 
     // cleanup
     delete scene;
