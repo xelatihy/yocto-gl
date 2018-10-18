@@ -283,6 +283,7 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>  // for std::upper_bound
+#include <array>
 #include <atomic>
 #include <cctype>
 #include <cfloat>
@@ -327,6 +328,7 @@ using std::sqrt;
 using std::swap;
 using std::tan;
 
+using std::array;
 using std::atomic;
 using std::function;
 using std::make_unique;
@@ -1949,16 +1951,16 @@ inline T interpolate_triangle(
 template <typename T>
 inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-    #if YGL_QUADS_AS_TRIANGLES
-        if(uv.x + uv.y <= 1) {
-            return interpolate_triangle(p0, p1, p3, uv);            
-        } else {
-            return interpolate_triangle(p2,p3,p1, 1-uv);
-        }
-    #else
-        return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
-            p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
-    #endif
+#if YGL_QUADS_AS_TRIANGLES
+    if (uv.x + uv.y <= 1) {
+        return interpolate_triangle(p0, p1, p3, uv);
+    } else {
+        return interpolate_triangle(p2, p3, p1, 1 - uv);
+    }
+#else
+    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+#endif
 }
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
@@ -2148,7 +2150,7 @@ inline tuple<int, vec2f> sample_quads(
 inline tuple<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
     auto ei = sample_discrete(cdf, re);
-    if(quads[ei].z == quads[ei].w) {
+    if (quads[ei].z == quads[ei].w) {
         return {ei, sample_triangle(ruv)};
     } else {
         return {ei, ruv};
