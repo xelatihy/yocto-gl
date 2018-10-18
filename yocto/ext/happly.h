@@ -682,7 +682,7 @@ public:
    * @param data The data for the property. Must have the same length as the number of elements.
    */
   template <class T>
-  void addProperty(std::string propertyName, std::vector<T>& data) {
+  void addProperty(std::string propertyName, const std::vector<T>& data) {
 
     if (data.size() != count) {
       throw std::runtime_error("PLY write: new property " + propertyName + " has size which does not match element");
