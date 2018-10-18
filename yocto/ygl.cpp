@@ -1655,7 +1655,7 @@ bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
 #endif
 
 // Build a BVH from a set of primitives.
-void build_bvh(bvh_tree* bvh, bool high_quality, bool embree) {
+void build_bvh_embree(bvh_tree* bvh, bool high_quality, bool embree) {
 #if YGL_EMBREE
     if (embree) return build_embree_bvh(bvh);
 #endif
@@ -3651,7 +3651,7 @@ bvh_tree* build_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
     bvh->quads     = shape->quads;
 
     // build bvh
-    build_bvh(bvh, high_quality, embree);
+    build_bvh_embree(bvh, high_quality, embree);
 
     // done
     return bvh;
@@ -3676,7 +3676,7 @@ bvh_tree* build_bvh(const yocto_scene* scene, bool high_quality, bool embree) {
     }
 
     // build bvh
-    build_bvh(bvh, high_quality, embree);
+    build_bvh_embree(bvh, high_quality, embree);
 
     // done
     return bvh;

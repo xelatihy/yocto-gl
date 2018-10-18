@@ -4,4 +4,4 @@ cd build/release
 cmake ../.. -GNinja
 cmake --build .
 
-ctest -V
+ctest -j 4
