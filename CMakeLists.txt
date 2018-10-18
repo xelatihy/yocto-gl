@@ -125,10 +125,10 @@ endforeach()
 foreach(filename "simple-al.json")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-eyelight-${filename}
-             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.eyelight.png ${resdir}/ytrace/${name}.eyelight.png "-t eyelight -s 1 -r 360"
+             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.eyelight.png ${resdir}/ytrace/${name}.eyelight.png "-t eyelight -s 4 -r 360"
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
-    # add_test(NAME ytrace-path-${filename}
-    #     COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}-path.png ${resdir}/ytrace/${name}-path.png "-t path -s 1 -r 360"
-    #     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
+    add_test(NAME ytrace-path-${filename}
+             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.path.png ${resdir}/ytrace/${name}.path.png "-t path -s 4 -r 360"
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 endif(YOCTO_TESTING)
