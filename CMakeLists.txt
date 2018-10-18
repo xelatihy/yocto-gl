@@ -111,9 +111,24 @@ endif(YOCTO_OPENGL)
 
 if(YOCTO_TESTING)
 enable_testing()
+set(test-yimproc ${CMAKE_SOURCE_DIR}/tests/run-tests/test-yimproc.sh)
+set(test-ytrace ${CMAKE_SOURCE_DIR}/tests/run-tests/test-ytrace.sh)
+set(testdir ${CMAKE_SOURCE_DIR}/tests)
+set(outdir ${CMAKE_SOURCE_DIR}/tests/run-tests/output)
+set(resdir ${CMAKE_SOURCE_DIR}/tests/run-tests/result)
 foreach(filename "uvgrid.png")
+    get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
-             COMMAND ${CMAKE_SOURCE_DIR}/scripts/test-yimproc.sh ${filename} ${filename}
+             COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc/${name}.png ${resdir}/yimproc/${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
+endforeach()
+foreach(filename "simple-al.json")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-eyelight-${filename}
+             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.eyelight.png ${resdir}/ytrace/${name}.eyelight.png "-t eyelight -s 1 -r 360"
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
+    # add_test(NAME ytrace-path-${filename}
+    #     COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}-path.png ${resdir}/ytrace/${name}-path.png "-t path -s 1 -r 360"
+    #     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 endif(YOCTO_TESTING)
