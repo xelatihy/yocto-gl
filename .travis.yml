@@ -10,10 +10,10 @@ group: edge
 matrix:
   include:
 
-  - os: osx
-    osx_image: xcode9.2
-    env:
-      - CMAKE_OPTIONS="-DYOCTO_EMBREE=OFF"
+  # - os: osx
+  #   osx_image: xcode9.2
+  #   env:
+  #     - CMAKE_OPTIONS="-DYOCTO_EMBREE=OFF"
 
   - os: osx
     osx_image: xcode10
@@ -44,22 +44,21 @@ matrix:
         sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
         packages: ['g++-7', 'clang-5.0', 'ninja-build']
 
-  - os: linux
-    compiler: gcc
-    env:
-      - COMPILER=g++-8
-      - CMAKE_OPTIONS="-DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF"
-    addons:
-      apt:
-        # sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
-        # packages: ['g++-7', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
-        sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
-        packages: ['g++-8', 'ninja-build']
+  # - os: linux
+  #   compiler: gcc
+  #   env:
+  #     - COMPILER=g++-8
+  #     - CMAKE_OPTIONS="-DYOCTO_OPENGL=OFF -DYOCTO_EMBREE=OFF"
+  #   addons:
+  #     apt:
+  #       # sources: ['ubuntu-toolchain-r-test', 'sourceline': 'deb http://ppa.launchpad.net/keithw/glfw3/ubuntu trusty main']
+  #       # packages: ['g++-7', 'ninja-build', 'libgl1-mesa-dev', 'libglew-dev', 'libglfw3-dev']
+  #       sources: ['ubuntu-toolchain-r-test', 'llvm-toolchain-trusty-5.0']
+  #       packages: ['g++-8', 'ninja-build']
 
 branches:
   only:
     - master
-    - development
 
 script:
   # get CMake and Ninja (only for systems with brew - macOS)
@@ -80,4 +79,5 @@ script:
   # compile and execute unit tests
   - mkdir -p build && cd build
   - cmake .. ${CMAKE_OPTIONS} -GNinja && cmake --build . --config Release
+  - ctest -j 4
   - cd ..
