@@ -57,8 +57,8 @@ int main(int argc, char* argv[]) {
     auto save_batch = parse_arg(
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto gamma    = parse_arg(parser, "--gamma,-g", 2.2f, "Hdr gamma");
     auto filmic   = parse_arg(parser, "--filmic", false, "Hdr filmic");
+    auto srgb    = parse_arg(parser, "--no-srgb", true, "No srgb");
     auto embree   = parse_arg(parser, "--embree", false, "Use Embree ratracer");
     auto double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
                                 get_extension(imfilename));
             log_info("saving image {}", filename.c_str());
             if (!save_tonemapped_image(
-                    filename, state->rendered_image, exposure, gamma, filmic))
+                    filename, state->rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);
         }
     }
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
     // save image
     log_info("saving image {}", imfilename.c_str());
     if (!save_tonemapped_image(
-            imfilename, state->rendered_image, exposure, gamma, filmic))
+            imfilename, state->rendered_image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);
 
     // done
