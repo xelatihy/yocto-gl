@@ -300,6 +300,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <array>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -339,6 +340,7 @@ using std::tuple;
 using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
+using std::array;
 using namespace std::string_literals;
 
 using byte = unsigned char;
