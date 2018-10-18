@@ -183,6 +183,8 @@ struct file_stream {
     file_stream()                   = default;
     file_stream(const file_stream&) = delete;
     file_stream& operator=(const file_stream&) = delete;
+    file_stream(file_stream&&) = default;
+    file_stream& operator=(file_stream&&) = default;
 
     ~file_stream() {
         if (fs) {
@@ -256,16 +258,6 @@ bool write_values(file_stream& fs, const vector<T>& vals) {
     return true;
 }
 
-// Write to file
-bool write_values(file_stream& fs, const string& vals) {
-    if (!fs) return false;
-    if (fwrite(vals.data(), 1, vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
 // Print shortcut
 template <typename... Args>
 bool print(file_stream& fs, const string& fmt, const Args&... args) {
@@ -300,16 +292,6 @@ template <typename T>
 bool read_values(file_stream& fs, vector<T>& vals) {
     if (!fs) return false;
     if (fread(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Read binary data to fill the whole buffer
-bool read_values(file_stream& fs, string& vals) {
-    if (!fs) return false;
-    if (fread(vals.data(), 1, vals.size(), fs.fs) != vals.size()) {
         log_io_error("cannot read from {}", fs.filename);
         return false;
     }
@@ -5092,17 +5074,19 @@ bool serialize_bin_value(vector<T>& vec, file_stream& fs, bool save) {
 }
 
 // Serialize string
-bool serialize_bin_value(string& vec, file_stream& fs, bool save) {
+bool serialize_bin_value(string& str, file_stream& fs, bool save) {
     if (save) {
-        auto count = (size_t)vec.size();
+        auto count = (size_t)str.size();
         if (!write_value(fs, count)) return false;
+        auto vec = vector<char>(str.begin(), str.end());
         if (!write_values(fs, vec)) return false;
         return true;
     } else {
         auto count = (size_t)0;
         if (!read_value(fs, count)) return false;
-        vec = string(count, ' ');
+        auto vec = vector<char>(count);
         if (!read_values(fs, vec)) return false;
+        str = {vec.begin(), vec.end()};
         return true;
     }
 }
