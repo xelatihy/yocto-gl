@@ -4306,7 +4306,9 @@ bsdf eval_bsdf(const yocto_instance* instance, int ei, const vec2f& uv) {
         f.rs = 0;
     return f;
 }
-bool is_delta_bsdf(const bsdf& f) { return f.rs == 0 && f.kd == zero3f; }
+bool is_delta_bsdf(const bsdf& f) {
+    return f.rs == 0 && f.kd == zero3f && (f.ks != zero3f || f.kt != zero3f);
+}
 
 // Sample a shape based on a distribution.
 tuple<int, vec2f> sample_shape(const yocto_shape* shape,
