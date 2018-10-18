@@ -183,6 +183,8 @@ struct file_stream {
     file_stream()                   = default;
     file_stream(const file_stream&) = delete;
     file_stream& operator=(const file_stream&) = delete;
+    file_stream(file_stream&&) = default;
+    file_stream& operator=(file_stream&&) = default;
 
     ~file_stream() {
         if (fs) {
