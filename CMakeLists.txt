@@ -4,6 +4,7 @@ project (yocto-gl)
 
 option(YOCTO_OPENGL "Build OpenGL apps" ON)
 option(YOCTO_EMBREE "Use Intel's Embree raytracer" OFF)
+option(YOCTO_TESTING "Enable testing" ON)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -105,3 +106,38 @@ if(YOCTO_OPENGL)
     target_link_libraries(yitrace ygl yopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
     target_link_libraries(yimview ygl yopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)
+
+if(YOCTO_TESTING)
+enable_testing()
+add_executable(yimdiff tests/run-tests/yimdiff.cpp)
+target_link_libraries(yimdiff ygl)
+set(test-yimproc ${CMAKE_SOURCE_DIR}/tests/run-tests/test-yimproc.sh)
+set(test-ytrace ${CMAKE_SOURCE_DIR}/tests/run-tests/test-ytrace.sh)
+set(testdir ${CMAKE_SOURCE_DIR}/tests)
+set(outdir ${CMAKE_SOURCE_DIR}/tests/run-tests/output)
+set(resdir ${CMAKE_SOURCE_DIR}/tests/run-tests/result)
+foreach(filename "uvgrid.png")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yimproc-${filename}
+             COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc/${name}.png ${resdir}/yimproc/${name}.png
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
+endforeach()
+foreach(filename "simple-al.json" "subdiv-al.json")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-eyelight-${filename}
+             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.eyelight.png ${resdir}/ytrace/${name}.eyelight.png "-t eyelight -s 4 -r 360"
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}) 
+endforeach()
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "hairball-al.json")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-path-${filename}
+             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.path.png ${resdir}/ytrace/${name}.path.png "-t path -s 4 -r 360"
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
+endforeach()
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "hairball-al.json")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-direct-${filename}
+             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.direct.png ${resdir}/ytrace/${name}.direct.png "-t direct -s 4 -r 360"
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
+endforeach()
+endif(YOCTO_TESTING)
