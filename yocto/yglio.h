@@ -83,8 +83,14 @@
 #include <cstdio>
 #include <cstdlib>
 
+// use fast parsing in OBJ
 #ifndef YGL_FASTPARSE
 #define YGL_FASTPARSE 1
+#endif
+
+// use Happly library for PLY format rather than our library
+#ifndef YGL_HAPPLY
+#define YGL_HAPPLY 1
 #endif
 
 // -----------------------------------------------------------------------------
@@ -512,10 +518,10 @@ enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
 
 // ply property
 struct ply_property {
-    string                     name    = "";
-    ply_type                   type    = ply_type::ply_float;
-    vector<float>              scalars = {};
-    vector<std::array<int, 8>> lists   = {};
+    string                name    = "";
+    ply_type              type    = ply_type::ply_float;
+    vector<float>         scalars = {};
+    vector<array<int, 8>> lists   = {};
 };
 
 // ply element
@@ -563,7 +569,7 @@ inline bool print_value(string& str, double val) {
 }
 
 template <typename T, size_t N>
-inline bool print_value(string& str, const std::array<T, N>& val) {
+inline bool print_value(string& str, const array<T, N>& val) {
     for (auto i = 0; i < N; i++) {
         if (i) str += " ";
         str += std::to_string(val[i]);
@@ -574,23 +580,23 @@ inline bool print_value(string& str, const std::array<T, N>& val) {
 // Print compound types.
 template <typename T, int N>
 inline bool print_value(string& str, const vec<T, N>& v) {
-    return print_value(str, (const std::array<T, N>&)v);
+    return print_value(str, (const array<T, N>&)v);
 }
 template <typename T, int N, int M>
 inline bool print_value(string& str, const mat<T, N, M>& v) {
-    return print_value(str, (const std::array<T, N * M>&)v);
+    return print_value(str, (const array<T, N * M>&)v);
 }
 template <typename T, int N>
 inline bool print_value(string& str, const frame<T, N>& v) {
-    return print_value(str, (const std::array<T, N*(N + 1)>&)v);
+    return print_value(str, (const array<T, N*(N + 1)>&)v);
 }
 template <typename T, int N>
 inline bool print_value(string& str, const bbox<T, N>& v) {
-    return print_value(str, (const std::array<T, N * 2>&)v);
+    return print_value(str, (const array<T, N * 2>&)v);
 }
 template <typename T, int N>
 inline bool print_value(string& str, const ray<T, N>& v) {
-    return print_value(str, (const std::array<T, N * 2 + 2>&)v);
+    return print_value(str, (const array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.
@@ -661,7 +667,7 @@ inline bool _parse(const char*& str, double& val) {
 
 // Print compound types
 template <typename T, size_t N>
-inline bool _parse(const char*& str, std::array<T, N>& val) {
+inline bool _parse(const char*& str, array<T, N>& val) {
     for (auto i = 0; i < N; i++) {
         if (!_parse(str, val[i])) return false;
     }
@@ -670,23 +676,23 @@ inline bool _parse(const char*& str, std::array<T, N>& val) {
 // Data acess
 template <typename T, int N>
 inline bool _parse(const char*& str, vec<T, N>& v) {
-    return _parse(str, (std::array<T, N>&)v);
+    return _parse(str, (array<T, N>&)v);
 }
 template <typename T, int N, int M>
 inline bool _parse(const char*& str, mat<T, N, M>& v) {
-    return _parse(str, (std::array<T, N * M>&)v);
+    return _parse(str, (array<T, N * M>&)v);
 }
 template <typename T, int N>
 inline bool _parse(const char*& str, frame<T, N>& v) {
-    return _parse(str, (std::array<T, N*(N + 1)>&)v);
+    return _parse(str, (array<T, N*(N + 1)>&)v);
 }
 template <typename T, int N>
 inline bool _parse(const char*& str, bbox<T, N>& v) {
-    return _parse(str, (std::array<T, N * 2>&)v);
+    return _parse(str, (array<T, N * 2>&)v);
 }
 template <typename T, int N>
 inline bool _parse(const char*& str, ray<T, N>& v) {
-    return _parse(str, (std::array<T, N * 2 + 2>&)v);
+    return _parse(str, (array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.

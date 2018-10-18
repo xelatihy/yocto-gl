@@ -3908,7 +3908,8 @@ T eval_elem(
         return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
     } else if (!shape->quads.empty()) {
         auto q = shape->quads[ei];
-        if(q.w == q.z) return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+        if (q.w == q.z)
+            return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
         return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
