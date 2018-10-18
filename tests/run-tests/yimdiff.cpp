@@ -30,8 +30,8 @@
 // Compare two images are returns either 0 or 1.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
+#include "../../yocto/ygl.h"
+#include "../../yocto/yglio.h"
 using namespace ygl;
 
 int main(int argc, char* argv[]) {
