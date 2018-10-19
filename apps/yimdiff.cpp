@@ -34,33 +34,35 @@
 #include "../yocto/yglio.h"
 using namespace ygl;
 
-image<vec4f> diff_image(const image<vec4f>& a, const image<vec4f>& b) {
-    auto diff = image<vec4f>(a.width, a.height);
+template<typename T>
+image<vec<T, 4>> compute_diff_image(const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
+    auto diff = image<vec<T, 4>>(a.width, a.height);
     for (auto i = 0; i < a.width * a.height; i++) {
-        diff.pixels[i] = {abs(a.pixels[i].x - b.pixels[i].x),
-            abs(a.pixels[i].y - b.pixels[i].y),
-            abs(a.pixels[i].z - b.pixels[i].z),
-            abs(a.pixels[i].w - b.pixels[i].w)};
-    }
-    return diff;
-}
-
-image<vec4b> diff_image(const image<vec4b>& a, const image<vec4b>& b) {
-    auto diff = image<vec4b>(a.width, a.height);
-    for (auto i = 0; i < a.width * a.height; i++) {
-        diff.pixels[i] = {(byte)abs(a.pixels[i].x - b.pixels[i].x),
-            (byte)abs(a.pixels[i].y - b.pixels[i].y),
-            (byte)abs(a.pixels[i].z - b.pixels[i].z),
-            (byte)abs(a.pixels[i].w - b.pixels[i].w)};
+        diff.pixels[i] = {(T)abs(a.pixels[i].x - b.pixels[i].x),
+            (T)abs(a.pixels[i].y - b.pixels[i].y),
+            (T)abs(a.pixels[i].z - b.pixels[i].z),
+            (T)abs(a.pixels[i].w - b.pixels[i].w)};
     }
     return diff;
 }
 
 template<typename T>
-T max_diff_value(const image<T>& diff) {
-    auto max_value = T{0,0,0,0};
-    for(auto c : diff.pixels) max_value = {max(c.x, max_value.x), max(c.y, max_value.y), max(c.z, max_value.z), max(c.w, max_value.w)};
+vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
+    auto max_value = vec<T, 4>{0,0,0,0};
+    for(auto c : diff.pixels) {
+        max_value = {max(c.x, max_value.x), max(c.y, max_value.y), max(c.z, max_value.z), max(c.w, max_value.w)};
+    }
     return max_value;
+}
+
+template<typename T>
+image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
+    auto display = image<vec<T, 4>>(diff.width, diff.height);
+    for(auto i = 0; i < diff.pixels.size(); i ++) {
+        auto diff_value = max(diff.pixels[i]);
+        display.pixels[i] = {diff_value, diff_value, diff_value, alpha};
+    }
+    return display;
 }
 
 int main(int argc, char* argv[]) {
@@ -84,10 +86,10 @@ int main(int argc, char* argv[]) {
         if (img2.pixels.empty()) log_fatal("cannot open image {}", filename2);
         if (img1.width != img2.width || img1.height != img2.height)
             log_fatal("image size differs");
-        auto diff = diff_image(img1, img2);
+        auto diff = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
-            if (!save_image4f(output, diff))
+            if (!save_image4f(output, display_diff(diff, 1.0f)))
                 log_fatal("cannot save image {}", output);
         }
         if(max(max_diff) > threshold) log_fatal("image content differs");
@@ -99,10 +101,10 @@ int main(int argc, char* argv[]) {
         if (img1.width != img2.width || img1.height != img2.height)
             log_fatal("image size differs");
         if (img1.pixels != img2.pixels) log_fatal("image content differs");
-        auto diff = diff_image(img1, img2);
+        auto diff = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
-            if (!save_image4b(output, diff))
+            if (!save_image4b(output, display_diff(diff, (byte)255)))
                 log_fatal("cannot save image {}", output);
         }
         if(max(max_diff) > threshold) log_fatal("image content differs");
