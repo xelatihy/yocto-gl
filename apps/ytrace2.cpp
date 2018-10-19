@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
     auto filmic   = parse_arg(parser, "--filmic", false, "Hdr filmic");
-    auto srgb    = parse_arg(parser, "--no-srgb", true, "No srgb");
+    auto srgb     = parse_arg(parser, "--no-srgb", true, "No srgb");
     auto embree   = parse_arg(parser, "--embree", false, "Use Embree ratracer");
     auto imfilename = parse_arg(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
