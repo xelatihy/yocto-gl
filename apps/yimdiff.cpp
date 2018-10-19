@@ -92,7 +92,10 @@ int main(int argc, char* argv[]) {
             if (!save_image4f(output, display_diff(diff, 1.0f)))
                 log_fatal("cannot save image {}", output);
         }
-        if(max(max_diff) > threshold) log_fatal("image content differs");
+        if(max(max_diff) > threshold) {
+            log_info("image max difference: {}", max_diff);
+            log_fatal("image content differs");
+        }
     } else if (!is_hdr_filename(filename1) && !is_hdr_filename(filename2)) {
         auto img1 = load_image4b(filename1);
         if (img1.pixels.empty()) log_fatal("cannot open image {}", filename1);
@@ -100,14 +103,16 @@ int main(int argc, char* argv[]) {
         if (img2.pixels.empty()) log_fatal("cannot open image {}", filename2);
         if (img1.width != img2.width || img1.height != img2.height)
             log_fatal("image size differs");
-        if (img1.pixels != img2.pixels) log_fatal("image content differs");
         auto diff = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
             if (!save_image4b(output, display_diff(diff, (byte)255)))
                 log_fatal("cannot save image {}", output);
         }
-        if(max(max_diff) > threshold) log_fatal("image content differs");
+        if(max(max_diff) > threshold) {
+            log_info("image max difference: {}", max_diff);
+            log_fatal("image content differs");
+        }
     } else {
         log_fatal("different image types");
     }
