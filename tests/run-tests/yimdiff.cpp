@@ -37,6 +37,7 @@ using namespace ygl;
 int main(int argc, char* argv[]) {
     // parse command line
     auto parser  = make_cmdline_parser(argc, argv, "Compares two images", "yimdiff");
+    auto threshold = parse_arg(parser, "--threshold,-t", 0.1f, "Thhhreshold");
     auto output = parse_arg(
         parser, "--output,-o", "out.png"s, "output image filename", false);
     auto filename1 = parse_arg(
@@ -53,7 +54,18 @@ int main(int argc, char* argv[]) {
         if(img2.pixels.empty()) log_fatal("cannot open image {}", filename2);
         if(img1.width != img2.width || img1.height != img2.height) 
             log_fatal("image size differs");
-        if(img1.pixels != img2.pixels) 
+        auto different = false;
+        if(threshold) {
+            for(auto i = 0; i < img1.width * img1.height; i++) {
+                auto c1 = img1.pixels[i], c2 = img2.pixels[i];
+                auto d = max(max(max(abs(c1.x-c2.x), abs(c1.y-c2.y)), abs(c1.z-c2.z)), abs(c1.w-c2.w));
+                if(d < threshold) continue;
+                different = true;
+            }
+        } else {
+            different = img1.pixels != img2.pixels;
+        }
+        if(different) 
             log_fatal("image content differs");
         // if(!output.empty()) {
         //     if(!save_image4f(output, diff)) log_fatal("cannot save image {}", output);
@@ -66,6 +78,19 @@ int main(int argc, char* argv[]) {
         if(img1.width != img2.width || img1.height != img2.height) 
             log_fatal("image size differs");
         if(img1.pixels != img2.pixels) 
+            log_fatal("image content differs");
+        auto different = false;
+        if(threshold) {
+            for(auto i = 0; i < img1.width * img1.height; i++) {
+                auto c1 = img1.pixels[i], c2 = img2.pixels[i];
+                auto d = max(max(max(abs(c1.x-c2.x), abs(c1.y-c2.y)), abs(c1.z-c2.z)), abs(c1.w-c2.w));
+                if(d < threshold * 255) continue;
+                different = true;
+            }
+        } else {
+            different = img1.pixels != img2.pixels;
+        }
+        if(different) 
             log_fatal("image content differs");
         // if(!output.empty()) {
         //     if(!save_image4f(output, diff)) log_fatal("cannot save image {}", output);
