@@ -4577,13 +4577,14 @@ scene_intersection intersect_ray_cutout(const yocto_scene* scene,
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera* camera, const vec2i& ij,
     const vec2i& imsize, rng_state& rng) {
+    printf("%llu %llu\n", rng.state, rng.inc);
     auto puv = rand2f(rng); // force order of evaluation with assignments
     auto luv = rand2f(rng); // force order of evaluation with assignments
-    // return eval_camera_ray(camera, ij, imsize, puv, luv);
-    printf("%f %f %f %f %llu %llu\n", puv.x, puv.y, luv.x, luv.y, rng.state, rng.inc);
-    auto ray = eval_camera_ray(camera, ij, imsize, puv, luv);
-    printf("%f %f %f\n", ray.d.x, ray.d.y, ray.d.z);
-    return ray;
+    return eval_camera_ray(camera, ij, imsize, puv, luv);
+    // printf("%d %d %f %f %f %f %llu %llu\n", ij.x, ij.y, puv.x, puv.y, luv.x, luv.y, rng.state, rng.inc);
+    // auto ray = eval_camera_ray(camera, ij, imsize, puv, luv);
+    // printf("%f %f %f\n", ray.d.x, ray.d.y, ray.d.z);
+    // return ray;
 }
 
 // Check if we are near the mirror direction.
@@ -5745,6 +5746,8 @@ vec3f trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh,
     auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
     auto l    = zero3f;
 
+    printf("%d %f %f\n", isec.element_id, isec.element_uv.x, isec.element_uv.y);
+
     // handle environment
     if (!isec.instance) {
         for (auto environment : scene->environments)
@@ -5967,6 +5970,7 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
                                                                       // rand
         }
     }
+    printf("%llu %llu\n", rngs.pixels[0].state, rngs.pixels[0].inc);
     return rngs;
 }
 
