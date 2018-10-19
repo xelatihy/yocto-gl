@@ -4574,6 +4574,14 @@ scene_intersection intersect_ray_cutout(const yocto_scene* scene,
     return {};
 }
 
+// Sample camera
+ray3f sample_camera_ray(const yocto_camera* camera, const vec2i& ij,
+    const vec2i& imsize, rng_state& rng) {
+    auto puv = rand2f(rng);  // force order of evaluation with assignments
+    auto luv = rand2f(rng);  // force order of evaluation with assignments
+    return eval_camera_ray(camera, ij, imsize, puv, luv);
+}
+
 // Check if we are near the mirror direction.
 inline bool check_near_mirror(vec3f n, vec3f o, vec3f i) {
     return fabs(dot(i, normalize(n * 2.0f * dot(o, n) - o)) - 1) < 0.001f;
@@ -4715,6 +4723,13 @@ vec3f sample_brdf(
 }
 
 // Picks a direction based on the BRDF
+vec3f sample_brdf(const bsdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
+    auto rnl = rand1f(rng);  // force order of evaluation with assignments
+    auto rni = rand2f(rng);  // force order of evaluation with assignments
+    return sample_brdf(f, n, o, rnl, rni);
+}
+
+// Picks a direction based on the BRDF
 vec3f sample_delta_brdf(
     const bsdf& f, const vec3f& n, const vec3f& o, float rnl, const vec2f& rn) {
     if (!is_delta_bsdf(f)) return zero3f;
@@ -4743,6 +4758,14 @@ vec3f sample_delta_brdf(
     else {
         return zero3f;
     }
+}
+
+// Picks a direction based on the BRDF
+vec3f sample_delta_brdf(
+    const bsdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
+    auto rnl = rand1f(rng);  // force order of evaluation with assignments
+    auto rni = rand2f(rng);  // force order of evaluation with assignments
+    return sample_delta_brdf(f, n, o, rnl, rni);
 }
 
 // Compute the weight for sampling the BRDF
@@ -4826,11 +4849,25 @@ vec3f sample_environment(const yocto_environment* environment,
     }
 }
 
+vec3f sample_environment(const yocto_environment* environment,
+    const vector<float>& elem_cdf, rng_state& rng) {
+    auto rel = rand1f(rng);  // force order of evaluation with assignments
+    auto ruv = rand2f(rng);  // force order of evaluation with assignments
+    return sample_environment(environment, elem_cdf, rel, ruv);
+}
+
 // Picks a point on a light.
 vec3f sample_light(const yocto_instance* instance,
     const vector<float>& elem_cdf, const vec3f& p, float rel, const vec2f& ruv) {
     auto sample = sample_shape(instance->shape, elem_cdf, rel, ruv);
     return normalize(eval_position(instance, get<0>(sample), get<1>(sample)) - p);
+}
+
+vec3f sample_light(const yocto_instance* instance,
+    const vector<float>& elem_cdf, const vec3f& p, rng_state& rng) {
+    auto rel = rand1f(rng);  // force order of evaluation with assignments
+    auto ruv = rand2f(rng);  // force order of evaluation with assignments
+    return sample_light(instance, elem_cdf, p, rel, ruv);
 }
 
 // Sample pdf for a light point.
@@ -4845,9 +4882,9 @@ float sample_light_pdf(const yocto_instance* instance,
 
 // Sample lights wrt solid angle
 vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
-    const vec3f& p, float lrn, float rel, const vec2f& ruv) {
+    const vec3f& p, float rlg, float rel, const vec2f& ruv) {
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
-    auto idx     = sample_index(nlights, lrn);
+    auto idx     = sample_index(nlights, rlg);
     if (idx < lights->instances.size()) {
         auto  lgt      = lights->instances[idx];
         auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
@@ -4857,6 +4894,14 @@ vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
         auto& elem_cdf = lights->environment_cdfs.at(lgt);
         return sample_environment(lgt, elem_cdf, rel, ruv);
     }
+}
+
+vec3f sample_lights(const trace_lights* lights, const bvh_tree* bvh,
+    const vec3f& p, rng_state& rng) {
+    auto rlg = rand1f(rng);  // force order of evaluation with assignments
+    auto rel = rand1f(rng);  // force order of evaluation with assignments
+    auto ruv = rand2f(rng);  // force order of evaluation with assignments
+    return sample_lights(lights, bvh, p, rlg, rel, ruv);
 }
 
 // Sample lights pdf
@@ -4936,12 +4981,12 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     if (idx < lights->instances.size()) {
         auto  lgt      = lights->instances[idx];
         auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
-        i = sample_light(lgt, elem_cdf, p, rand1f(rng), rand2f(rng));
+        i              = sample_light(lgt, elem_cdf, p, rng);
         pdf *= 1.0 / elem_cdf.back();
     } else {
         auto  lgt      = lights->environments[idx - lights->instances.size()];
         auto& elem_cdf = lights->environment_cdfs.at(lgt);
-        i = sample_environment(lgt, elem_cdf, rand1f(rng), rand2f(rng));
+        i              = sample_environment(lgt, elem_cdf, rng);
         pdf *= sample_environment_pdf(lgt, elem_cdf, i);
         auto isec = intersect_ray_cutout(scene, bvh, make_ray(p, i), rng, 10);
         if (isec.instance == nullptr) {
@@ -5061,10 +5106,8 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
         // direct
         if (!is_delta_bsdf(f) &&
             (!lights->instances.empty() || !lights->environments.empty())) {
-            auto i = (rand1f(rng) < 0.5f) ?
-                         sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
-                             rand2f(rng)) :
-                         sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            auto i = (rand1f(rng) < 0.5f) ? sample_lights(lights, bvh, p, rng) :
+                                            sample_brdf(f, n, o, rng);
             auto isec = intersect_ray_cutout(
                 scene, bvh, make_ray(p, i), rng, nbounces);
             auto le = (isec.instance) ? eval_emission(isec.instance,
@@ -5082,11 +5125,11 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
         if (!is_delta_bsdf(f)) {
-            i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_brdf(f, n, o, rng);
             brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
             pdf     = sample_brdf_pdf(f, n, o, i);
         } else {
-            i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_delta_brdf(f, n, o, rng);
             brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf     = sample_delta_brdf_pdf(f, n, o, i);
         }
@@ -5245,11 +5288,11 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
             vec3f i, brdfcos;
             float pdf = 0;
             if (!is_delta_bsdf(f)) {
-                i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+                i       = sample_brdf(f, n, o, rng);
                 brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
                 pdf     = sample_brdf_pdf(f, n, o, i);
             } else {
-                i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+                i       = sample_delta_brdf(f, n, o, rng);
                 brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
                 pdf     = sample_delta_brdf_pdf(f, n, o, i);
             }
@@ -5371,11 +5414,11 @@ vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh,
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
         if (!is_delta_bsdf(f)) {
-            i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_brdf(f, n, o, rng);
             brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
             pdf     = sample_brdf_pdf(f, n, o, i);
         } else {
-            i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_delta_brdf(f, n, o, rng);
             brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf     = sample_delta_brdf_pdf(f, n, o, i);
         }
@@ -5464,11 +5507,11 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
         auto i = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
         if (!is_delta_bsdf(f)) {
-            i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_brdf(f, n, o, rng);
             brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
             pdf     = sample_brdf_pdf(f, n, o, i);
         } else {
-            i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+            i       = sample_delta_brdf(f, n, o, rng);
             brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
             pdf     = sample_delta_brdf_pdf(f, n, o, i);
         }
@@ -5517,10 +5560,8 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
 
     // direct
     if (!is_delta_bsdf(f)) {
-        auto i = (rand1f(rng) < 0.5f) ?
-                     sample_lights(lights, bvh, p, rand1f(rng), rand1f(rng),
-                         rand2f(rng)) :
-                     sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        auto i = (rand1f(rng) < 0.5f) ? sample_lights(lights, bvh, p, rng) :
+                                        sample_brdf(f, n, o, rng);
         auto isec = intersect_ray_cutout(
             scene, bvh, make_ray(p, i), rng, nbounces);
         auto le = (isec.instance) ? eval_emission(isec.instance,
@@ -5536,7 +5577,7 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
 
     // deltas
     if (is_delta_bsdf(f)) {
-        auto i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        auto i       = sample_delta_brdf(f, n, o, rng);
         auto brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
         auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
         l += brdfcos *
@@ -5603,7 +5644,7 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh,
 
     // environment
     if (!is_delta_bsdf(f) && !lights->environments.empty()) {
-        auto i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        auto i       = sample_brdf(f, n, o, rng);
         auto brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
         auto pdf     = sample_brdf_pdf(f, n, o, i);
         auto le      = zero3f;
@@ -5614,7 +5655,7 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh,
 
     // deltas
     if (is_delta_bsdf(f)) {
-        auto i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        auto i       = sample_delta_brdf(f, n, o, rng);
         auto brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
         auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
         if (pdf != 0)
@@ -5660,11 +5701,11 @@ vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh,
     auto i = zero3f, brdfcos = zero3f;
     auto pdf = 0.0f;
     if (!is_delta_bsdf(f)) {
-        i       = sample_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        i       = sample_brdf(f, n, o, rng);
         brdfcos = eval_bsdf(f, n, o, i) * fabs(dot(n, i));
         pdf     = sample_brdf_pdf(f, n, o, i);
     } else {
-        i       = sample_delta_brdf(f, n, o, rand1f(rng), rand2f(rng));
+        i       = sample_delta_brdf(f, n, o, rng);
         brdfcos = eval_delta_brdf(f, n, o, i) * fabs(dot(n, i));
         pdf     = sample_delta_brdf_pdf(f, n, o, i);
     }
@@ -5894,9 +5935,8 @@ vec4f trace_sample(trace_state* state, const yocto_scene* scene,
     _trace_npaths += 1;
     auto  camera = scene->cameras.at(params.camera_id);
     auto& rng    = pixel_at(state->random_number_generators, i, j);
-    auto  ray    = eval_camera_ray(camera, {i, j},
-        {state->rendered_image.width, state->rendered_image.height},
-        rand2f(rng), rand2f(rng));
+    auto  ray    = sample_camera_ray(camera, {i, j},
+        {state->rendered_image.width, state->rendered_image.height}, rng);
     auto  hit    = false;
     auto  l = trace_func(scene, bvh, lights, params.sample_tracer, ray, rng,
         params.max_bounces, &hit);
@@ -6007,12 +6047,14 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
     if (params.no_parallel) {
         for (auto j = 0; j < state->rendered_image.height; j++) {
             for (auto i = 0; i < state->rendered_image.width; i++) {
-                pixel_at(state->rendered_image, i, j) *= state->current_sample;
-                for (auto s = 0; s < nbatch; s++)
-                    pixel_at(state->rendered_image, i, j) += trace_sample(
+                for (auto s = 0; s < nbatch; s++) {
+                    pixel_at(state->accumulation_buffer, i, j) += trace_sample(
                         state, scene, bvh, lights, i, j, params);
-                pixel_at(state->rendered_image, i, j) /= state->current_sample +
-                                                         nbatch;
+                    pixel_at(state->samples_per_pixel, i, j) += 1;
+                }
+                pixel_at(state->rendered_image, i,
+                    j) = pixel_at(state->accumulation_buffer, i, j) /
+                         pixel_at(state->samples_per_pixel, i, j);
                 pixel_at(state->display_image, i, j) = tonemap_filmic(
                     pixel_at(state->rendered_image, i, j),
                     params.display_exposure, params.display_filmic,
@@ -6027,13 +6069,15 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
                 for (auto j = tid; j < state->rendered_image.height;
                      j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
+                        for (auto s = 0; s < nbatch; s++) {
+                            pixel_at(state->accumulation_buffer, i,
+                                j) += trace_sample(state, scene, bvh, lights, i,
+                                j, params);
+                            pixel_at(state->samples_per_pixel, i, j) += 1;
+                        }
                         pixel_at(state->rendered_image, i,
-                            j) *= state->current_sample;
-                        for (auto s = 0; s < nbatch; s++)
-                            pixel_at(state->rendered_image, i, j) += trace_sample(
-                                state, scene, bvh, lights, i, j, params);
-                        pixel_at(state->rendered_image, i,
-                            j) /= state->current_sample + nbatch;
+                            j) = pixel_at(state->accumulation_buffer, i, j) /
+                                 pixel_at(state->samples_per_pixel, i, j);
                         pixel_at(state->display_image, i, j) = tonemap_filmic(
                             pixel_at(state->rendered_image, i, j),
                             params.display_exposure, params.display_filmic,
@@ -6082,10 +6126,12 @@ void trace_async_start(trace_state* state, const yocto_scene* scene,
                      j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
                         if (state->async_stop_flag) return;
-                        pixel_at(state->rendered_image, i, j) *= s;
-                        pixel_at(state->rendered_image, i, j) += trace_sample(
+                        pixel_at(state->accumulation_buffer, i, j) += trace_sample(
                             state, scene, bvh, lights, i, j, params);
-                        pixel_at(state->rendered_image, i, j) /= s + 1;
+                        pixel_at(state->samples_per_pixel, i, j) += 1;
+                        pixel_at(state->rendered_image, i,
+                            j) = pixel_at(state->accumulation_buffer, i, j) /
+                                 pixel_at(state->samples_per_pixel, i, j);
                         pixel_at(state->display_image, i, j) = tonemap_filmic(
                             pixel_at(state->rendered_image, i, j),
                             params.display_exposure, params.display_filmic,

@@ -1743,9 +1743,18 @@ inline float rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state& rng) { return {rand1f(rng), rand1f(rng)}; }
+inline vec2f rand2f(rng_state& rng) { 
+    // force order of evaluation by using separate assignments.
+    auto x = rand1f(rng);
+    auto y = rand1f(rng);
+    return {x, y};
+}
 inline vec3f rand3f(rng_state& rng) {
-    return {rand1f(rng), rand1f(rng), rand1f(rng)};
+    // force order of evaluation by using separate assignments.
+    auto x = rand1f(rng);
+    auto y = rand1f(rng);
+    auto z = rand1f(rng);
+    return {x, y, z};
 }
 
 }  // namespace ygl
