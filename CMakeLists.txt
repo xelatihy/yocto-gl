@@ -120,25 +120,15 @@ set(diffdir ${CMAKE_SOURCE_DIR}/tests/run-tests/difference)
 foreach(filename "uvgrid.png")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
-             COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc/${name}.png ${resdir}/yimproc/${name}.png ${diffdir}/yimproc/${name}.png
+             COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
-foreach(filename "simple-al.json" "subdiv-al.json")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-eyelight-${filename}
-             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.eyelight.png ${resdir}/ytrace/${name}.eyelight.png ${diffdir}/ytrace/${name}.eyelight.png "-t eyelight -s 4 -r 360"
-             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}) 
-endforeach()
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "hairball-al.json")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-path-${filename}
-             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.path.png ${resdir}/ytrace/${name}.path.png  ${diffdir}/ytrace/${name}.path.png "-t path -s 4 -r 360"
-             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
-endforeach()
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "hairball-al.json")
-    get_filename_component(name ${filename} NAME_WE)
-    add_test(NAME ytrace-direct-${filename}
-             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.direct.png ${resdir}/ytrace/${name}.direct.png ${diffdir}/ytrace/${name}.direct.png "-t direct -s 4 -r 360"
-             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
-endforeach()
+foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomis")
+    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "hairball-al.json")
+        get_filename_component(name ${filename} NAME_WE)
+        add_test(NAME ytrace-${tracer}-${filename}
+                COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 360"
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}) 
+    endforeach()
+endforeach(tracer)
 endif(YOCTO_TESTING)

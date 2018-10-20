@@ -340,8 +340,7 @@ int main(int argc, char* argv[]) {
         make_trace_lights(app->scene.get(), app->params));
 
     // fix renderer type if no lights
-    if (app->lights->instances.empty() && app->lights->environments.empty() &&
-        app->params.sample_tracer != trace_type::eyelight) {
+    if (!app->lights && app->params.sample_tracer != trace_type::eyelight) {
         if (!quiet)
             printf("no lights presents, switching to eyelight shader\n");
         app->params.sample_tracer = trace_type::eyelight;
