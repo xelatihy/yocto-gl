@@ -1755,7 +1755,7 @@ inline float rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state& rng) { 
+inline vec2f rand2f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
     auto x = rand1f(rng);
     auto y = rand1f(rng);
@@ -1862,16 +1862,16 @@ inline int sample_index(int size, float r) {
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
 // Sample an index with uniform distribution.
-template<typename T>
+template <typename T>
 inline T sample_element(const vector<T>& elements, float r) {
-    if(elements.empty()) return {};
+    if (elements.empty()) return {};
     auto size = (int)elements.size();
     return elements[clamp((int)(r * size), 0, size - 1)];
 }
-template<typename T>
-inline float sample_element_pdf(const vector<T>& elements) { 
-    if(elements.empty()) return 0;
-    return 1.0f / (int)elements.size(); 
+template <typename T>
+inline float sample_element_pdf(const vector<T>& elements) {
+    if (elements.empty()) return 0;
+    return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
@@ -3188,7 +3188,8 @@ struct microfacet_brdf {
     float rs      = 1;       // roughness
     bool  refract = false;   // whether to use refraction in transmission
 };
-microfacet_brdf eval_brdf(const yocto_instance* instance, int ei, const vec2f& uv);
+microfacet_brdf eval_brdf(
+    const yocto_instance* instance, int ei, const vec2f& uv);
 bool is_bsdf_delta(const microfacet_brdf& f);
 
 // Check volume properties.
