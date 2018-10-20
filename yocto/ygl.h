@@ -736,9 +736,21 @@ inline T length(const vec<T, N>& a) {
     return sqrt(dot(a, a));
 }
 template <typename T, int N>
+inline T length_square(const vec<T, N>& a) {
+    return dot(a, a);
+}
+template <typename T, int N>
 inline vec<T, N> normalize(const vec<T, N>& a) {
     auto l = length(a);
     return (l) ? a / l : a;
+}
+template <typename T, int N>
+inline T distance(const vec<T, N>& a, const vec<T, N>& b) {
+    return length(a - b);
+}
+template <typename T, int N>
+inline T distance_square(const vec<T, N>& a, const vec<T, N>& b) {
+    return length_square(a - b);
 }
 
 // Vector angles and slerps.

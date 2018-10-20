@@ -4863,6 +4863,39 @@ float sample_delta_brdf_pdf(
     return pdf;
 }
 
+// Picks a point on a light.
+trace_point sample_light_point(const yocto_instance* instance,
+    const vector<float>& elem_cdf, const vec3f& position, float rel, const vec2f& ruv) {
+    auto element_id = 0;
+    auto element_uv = zero2f;
+    tie(element_id, element_uv) = sample_shape(instance->shape, elem_cdf, rel, ruv);
+    auto point = trace_point();
+    point.instance = (yocto_instance*)instance;
+    point.position = eval_position(instance, element_id, element_uv);
+    auto direction = normalize(position - point.position);
+    point.normal = eval_shading_normal(instance, element_id, element_uv, direction);
+    point.texturecoord = eval_texturecoord(instance, element_id, element_uv);
+    point.emission = eval_emission(instance, element_id, element_uv);
+    point.brdf = eval_brdf(instance, element_id, element_uv);
+    point.opacity = eval_opacity(instance, element_id, element_uv);
+    return point;
+}
+
+trace_point sample_light_point(const yocto_instance* instance,
+    const vector<float>& elem_cdf, const vec3f& position, rng_state& rng) {
+    auto rel = rand1f(rng);  // force order of evaluation with assignments
+    auto ruv = rand2f(rng);  // force order of evaluation with assignments
+    return sample_light_point(instance, elem_cdf, position, rel, ruv);
+}
+
+// Sample pdf for a light point.
+float sample_light_point_pdf(const yocto_instance* instance,
+    const vector<float>& elem_cdf, const vec3f& position, const trace_point& trace_point) {
+    if (instance->material->emission == zero3f) return 0;
+    // prob triangle * area triangle = area triangle mesh
+    return 1 / elem_cdf.back();
+}
+
 // Sample pdf for an environment.
 float sample_environment_pdf(const yocto_environment* environment,
     const vector<float>& elem_cdf, const vec3f& i) {
@@ -5166,7 +5199,7 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
         // intersect next point
         auto next_point = trace_ray_with_opacity(scene, bvh, point.position, incoming, rng, nbounces);
         if(is_brdf_delta(point.brdf)) radiance += weight * next_point.emission;
-        if(!point.instance || is_brdf_zero(next_point.brdf)) break;
+        if(!next_point.instance || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point = next_point;
@@ -5401,7 +5434,6 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
 vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-
     // intersect ray
     auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
     if (!point.instance) return point.emission;
@@ -5442,7 +5474,7 @@ vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh,
         // intersect next point
         auto next_point = trace_ray_with_opacity(scene, bvh, point.position, incoming, rng, nbounces);
         radiance += weight * next_point.emission;
-        if(!point.instance || is_brdf_zero(next_point.brdf)) break;
+        if(!next_point.instance || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point = next_point;
@@ -5454,83 +5486,45 @@ vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh,
 
 // Recursive path tracing.
 vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const ray3f& ray_, rng_state& rng, int nbounces,
+    const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty())
-        return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return point.emission;
+    if (hit) *hit = true;
 
     // initialize
-    auto l        = zero3f;
+    auto radiance = point.emission;
     auto weight   = vec3f{1, 1, 1};
-    auto emission = true;
-    auto ray      = ray_;
+    auto outgoing = -ray.d;
 
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
-        // intersect ray
-        auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
-        if (!isec.instance) {
-            for (auto environment : lights->environments)
-                l += weight * eval_emission(environment, ray.d);
-            break;
-        }
-        if (hit) *hit = true;
-
-        // point
-        auto o = -ray.d;
-        auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-        auto n = eval_shading_normal(
-            isec.instance, isec.element_id, isec.element_uv, o);
-        auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
-        // emission
-        if (emission)
-            l += weight *
-                 eval_emission(isec.instance, isec.element_id, isec.element_uv);
-
-        // early exit and russian roulette
-        if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
-
         // direct
-        if (!is_brdf_delta(f) && !lights->instances.empty()) {
-            auto  lgt      = lights->instances[sample_index(
-                lights->instances.size(), rand1f(rng))];
-            auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
-            auto  eid      = 0;
-            auto  euv      = zero2f;
-            tie(eid, euv)  = sample_shape(
-                lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
-            auto lp   = eval_position(lgt, eid, euv);
-            auto i    = normalize(lp - p);
-            auto ln   = eval_shading_normal(lgt, eid, euv, -i);
-            auto isec = intersect_ray_cutout(
-                scene, bvh, make_ray(p, i), rng, nbounces);
-            if (isec.instance == lgt && isec.element_id == eid) {
-                auto larea = elem_cdf.back();
-                auto pdf   = sample_index_pdf(lights->instances.size()) / larea;
-                auto le    = eval_emission(lgt, eid, euv);
-                auto brdfcos = eval_brdf_cosine(f, n, o, i);
-                auto gterm   = fabs(dot(ln, i)) / dot(lp - p, lp - p);
-                if (pdf != 0) l += weight * le * brdfcos * gterm / pdf;
+        if (!is_brdf_delta(point.brdf) && lights) {
+            auto light      = lights->instances[sample_index(lights->instances.size(), rand1f(rng))];
+            auto light_point = sample_light_point(light, lights->shapes_cdfs.at(light->shape), point.position, rng);
+            auto light_pdf   = sample_light_point_pdf(light, lights->shapes_cdfs.at(light->shape), point.position, light_point) * sample_index_pdf(lights->instances.size());
+            auto incoming    = normalize(light_point.position - point.position);
+            auto intersection_point = trace_ray_with_opacity(scene, bvh, point.position, incoming, rng, nbounces);
+            if (light_pdf && light_point.instance == intersection_point.instance) {
+                auto brdfcos = eval_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+                auto gterm   = abs(dot(light_point.normal, incoming)) / distance_square(light_point.position, point.position);
+                radiance += weight * light_point.emission * brdfcos * gterm / light_pdf;
             }
         }
 
         // continue path
-        auto i = zero3f, brdfcos = zero3f;
+        auto incoming = zero3f, brdfcos = zero3f;
         auto pdf = 0.0f;
-        if (!is_brdf_delta(f)) {
-            i       = sample_brdf(f, n, o, rng);
-            brdfcos = eval_brdf_cosine(f, n, o, i);
-            pdf     = sample_brdf_pdf(f, n, o, i);
+        if (!is_brdf_delta(point.brdf)) {
+            incoming       = sample_brdf(point.brdf, point.normal, outgoing, rng);
+            brdfcos = eval_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+            pdf     = sample_brdf_pdf(point.brdf, point.normal, outgoing, incoming);
         } else {
-            i       = sample_delta_brdf(f, n, o, rng);
-            brdfcos = eval_delta_brdf_cosine(f, n, o, i);
-            pdf     = sample_delta_brdf_pdf(f, n, o, i);
+            incoming       = sample_delta_brdf(point.brdf, point.normal, outgoing, rng);
+            brdfcos = eval_delta_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+            pdf     = sample_delta_brdf_pdf(point.brdf, point.normal, outgoing, incoming);
         }
 
         // accumulate weight
@@ -5538,12 +5532,24 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
         weight *= brdfcos / pdf;
         if (weight == zero3f) break;
 
-        // setup next ray
-        ray      = make_ray(p, i);
-        emission = is_brdf_delta(f);
+        // russian roulette
+        if (bounce > 2) {
+            auto rrprob = 1.0f - min(max(weight), 0.95f);
+            if (rand1f(rng) < rrprob) break;
+            weight *= 1 / (1 - rrprob);
+        }
+
+        // intersect next point
+        auto next_point = trace_ray_with_opacity(scene, bvh, point.position, incoming, rng, nbounces);
+        if(!next_point.instance || is_brdf_delta(point.brdf)) radiance += weight * next_point.emission;
+        if(!next_point.instance || is_brdf_zero(next_point.brdf)) break;
+
+        // setup next iteration
+        point = next_point;
+        outgoing = -incoming;
     }
 
-    return l;
+    return radiance;
 }
 
 // Direct illumination.
