@@ -130,5 +130,5 @@ foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomi
                 COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.${tracer}.png ${resdir}/ytrace/${name}.${tracer}.png ${diffdir}/ytrace/${name}.${tracer}.png "-t ${tracer} -s 4 -r 360"
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}) 
     endforeach()
-endforeach(algorithm)
+endforeach(tracer)
 endif(YOCTO_TESTING)
