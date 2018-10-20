@@ -5749,33 +5749,20 @@ vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh,
 vec3f trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
-    auto l    = zero3f;
-
-    // handle environment
-    if (!isec.instance) {
-        for (auto environment : scene->environments)
-            l += eval_emission(environment, ray.d);
-        return l;
-    }
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return point.emission;
     if (hit) *hit = true;
 
-    // point
-    auto o = -ray.d;
-    // auto p = eval_pos(isec.instance, isec.ei, isec.uv);
-    auto n = eval_shading_normal(
-        isec.instance, isec.element_id, isec.element_uv, o);
-    auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
-    // emission
-    l += eval_emission(isec.instance, isec.element_id, isec.element_uv);
+    // initialize
+    auto radiance = point.emission;
+    auto outgoing = -ray.d;
 
     // microfacet_brdf * light
-    l += eval_brdf_cosine(f, n, o, o) * pif;
+    radiance += eval_brdf_cosine(point.brdf, point.normal, outgoing, outgoing) * pif;
 
     // done
-    return l;
+    return radiance;
 }
 
 // Debug previewing.
