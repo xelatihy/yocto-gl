@@ -3156,19 +3156,19 @@ float eval_roughness(const yocto_instance* instance, int ei, const vec2f& uv);
 float eval_opacity(const yocto_instance* instance, int ei, const vec2f& uv);
 
 // Material values packed into a convenience structure.
-struct bsdf {
+struct microfacet_brdf {
     vec3f kd      = zero3f;  // diffuse
     vec3f ks      = zero3f;  // specular
     vec3f kt      = zero3f;  // transmission
     float rs      = 1;       // roughness
     bool  refract = false;   // whether to use refraction in transmission
 };
-bsdf eval_bsdf(const yocto_instance* instance, int ei, const vec2f& uv);
-bool is_delta_bsdf(const bsdf& f);
+microfacet_brdf eval_brdf(const yocto_instance* instance, int ei, const vec2f& uv);
+bool is_bsdf_delta(const microfacet_brdf& f);
 
 // Check volume properties.
 bool is_volume_homogeneus(const yocto_material* vol);
-bool has_volume_color(const yocto_material* vol);
+bool is_volume_colored(const yocto_material* vol);
 
 }  // namespace ygl
 
