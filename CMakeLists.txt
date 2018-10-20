@@ -120,14 +120,14 @@ set(diffdir ${CMAKE_SOURCE_DIR}/tests/run-tests/difference)
 foreach(filename "uvgrid.png")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
-             COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc/${name}.png ${resdir}/yimproc/${name}.png ${diffdir}/yimproc/${name}.png
+             COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomis")
     foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "hairball-al.json")
         get_filename_component(name ${filename} NAME_WE)
         add_test(NAME ytrace-${tracer}-${filename}
-                COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace/${name}.${tracer}.png ${resdir}/ytrace/${name}.${tracer}.png ${diffdir}/ytrace/${name}.${tracer}.png "-t ${tracer} -s 4 -r 360"
+                COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 360"
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}) 
     endforeach()
 endforeach(tracer)
