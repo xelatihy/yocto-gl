@@ -4571,10 +4571,11 @@ trace_point trace_ray(const yocto_scene* scene,
     const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
     auto isec = intersect_ray(scene, bvh, make_ray(position, direction));
     auto point = trace_point();
-    if(point.instance) {
+    if(isec.instance) {
         point.instance = isec.instance;
         point.position = eval_position(isec.instance, isec.element_id, isec.element_uv);
-        point.normal = eval_normal(isec.instance, isec.element_id, isec.element_uv);
+        point.normal = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, -direction);
+        point.emission = eval_emission(isec.instance, isec.element_id, isec.element_uv);
         point.brdf = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
         point.opacity = eval_opacity(isec.instance, isec.element_id, isec.element_uv);
     } else {
@@ -5110,7 +5111,7 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
         return zero3f;
 
     // initialize
-    auto l        = zero3f;
+    auto radiance        = zero3f;
     auto weight   = vec3f{1, 1, 1};
     auto emission = true;
     auto ray      = ray_;
@@ -5118,24 +5119,22 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
     // trace  path
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // intersect ray
-        auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
-        if (!isec.instance) {
-            if (emission) l += weight * eval_emission(scene, ray.d);
+        auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+        if (!point.instance) {
+            if (emission) radiance += weight * point.emission;
             break;
         }
         if (hit) *hit = true;
 
         // point
         auto o = -ray.d;
-        auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-        auto n = eval_shading_normal(
-            isec.instance, isec.element_id, isec.element_uv, o);
-        auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
+        auto p = point.position;
+        auto n = point.normal;
+        auto f = point.brdf;
 
         // emission
         if (emission)
-            l += weight *
-                 eval_emission(isec.instance, isec.element_id, isec.element_uv);
+            radiance += weight * point.emission;
 
         // early exit and russian roulette
         if (f.kd + f.ks + f.kt == zero3f || bounce >= nbounces - 1) break;
@@ -5159,7 +5158,7 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
             if (le * brdfcos != zero3f) {
                 auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i) +
                            0.5f * sample_lights_pdf(scene, lights, bvh, p, i);
-                if (pdf != 0) l += weight * le * brdfcos / pdf;
+                if (pdf != 0) radiance += weight * le * brdfcos / pdf;
             }
         }
 
@@ -5186,7 +5185,7 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
         emission = is_bsdf_delta(f);
     }
 
-    return l;
+    return radiance;
 }
 
 // Evaluates the weight after sampling distance in a medium.
