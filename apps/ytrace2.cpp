@@ -82,6 +82,12 @@ int main(int argc, char* argv[]) {
     printf("initializing lights\n");
     auto lights = make_trace_lights(scene, params);
 
+    // fix renderer type if no lights
+    if (!lights && params.sample_tracer != trace_type::eyelight) {
+        printf("no lights presents, switching to eyelight shader\n");
+        params.sample_tracer = trace_type::eyelight;
+    }
+
     // initialize rendering objects
     printf("initializing tracer data\n");
     auto state = make_trace_state(scene, params);

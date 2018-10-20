@@ -736,9 +736,21 @@ inline T length(const vec<T, N>& a) {
     return sqrt(dot(a, a));
 }
 template <typename T, int N>
+inline T length_square(const vec<T, N>& a) {
+    return dot(a, a);
+}
+template <typename T, int N>
 inline vec<T, N> normalize(const vec<T, N>& a) {
     auto l = length(a);
     return (l) ? a / l : a;
+}
+template <typename T, int N>
+inline T distance(const vec<T, N>& a, const vec<T, N>& b) {
+    return length(a - b);
+}
+template <typename T, int N>
+inline T distance_square(const vec<T, N>& a, const vec<T, N>& b) {
+    return length_square(a - b);
 }
 
 // Vector angles and slerps.
@@ -1743,7 +1755,7 @@ inline float rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state& rng) { 
+inline vec2f rand2f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
     auto x = rand1f(rng);
     auto y = rand1f(rng);
@@ -1848,6 +1860,19 @@ inline int sample_index(int size, float r) {
     return clamp((int)(r * size), 0, size - 1);
 }
 inline float sample_index_pdf(int size) { return 1.0f / size; }
+
+// Sample an index with uniform distribution.
+template <typename T>
+inline T sample_element(const vector<T>& elements, float r) {
+    if (elements.empty()) return {};
+    auto size = (int)elements.size();
+    return elements[clamp((int)(r * size), 0, size - 1)];
+}
+template <typename T>
+inline float sample_element_pdf(const vector<T>& elements) {
+    if (elements.empty()) return 0;
+    return 1.0f / (int)elements.size();
+}
 
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete(const vector<float>& cdf, float r) {
@@ -3006,10 +3031,16 @@ bbox3f compute_bbox(const yocto_shape* shape);
 bbox3f compute_bbox(const yocto_scene* scene);
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-vector<float> compute_shape_cdf(const yocto_shape* shape);
+vector<float> compute_shape_element_cdf(const yocto_shape* shape);
 // Generate a distribution for sampling an environment texture uniformly
 // based on angle and texture intensity.
-vector<float> compute_environment_cdf(const yocto_environment* environment);
+vector<float> compute_environment_texel_cdf(const yocto_environment* environment);
+
+// Sample a shape based on a distribution.
+tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
+tuple<int, vec2f> sample_environment_texel(const yocto_environment* environment,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
 
 // Updates/refits bvh.
 bvh_tree* build_bvh(
@@ -3109,7 +3140,7 @@ vec3f eval_shading_normal(
     const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
-vec2f eval_texcoord(const yocto_environment* environment, const vec3f& i);
+vec2f eval_texturecoord(const yocto_environment* environment, const vec3f& i);
 // Evaluate the incoming direction from the uv.
 vec3f eval_direction(const yocto_environment* environment, const vec2f& uv);
 // Evaluate the environment emission.
@@ -3156,19 +3187,20 @@ float eval_roughness(const yocto_instance* instance, int ei, const vec2f& uv);
 float eval_opacity(const yocto_instance* instance, int ei, const vec2f& uv);
 
 // Material values packed into a convenience structure.
-struct bsdf {
+struct microfacet_brdf {
     vec3f kd      = zero3f;  // diffuse
     vec3f ks      = zero3f;  // specular
     vec3f kt      = zero3f;  // transmission
     float rs      = 1;       // roughness
     bool  refract = false;   // whether to use refraction in transmission
 };
-bsdf eval_bsdf(const yocto_instance* instance, int ei, const vec2f& uv);
-bool is_delta_bsdf(const bsdf& f);
+microfacet_brdf eval_brdf(
+    const yocto_instance* instance, int ei, const vec2f& uv);
+bool is_bsdf_delta(const microfacet_brdf& f);
 
 // Check volume properties.
 bool is_volume_homogeneus(const yocto_material* vol);
-bool has_volume_color(const yocto_material* vol);
+bool is_volume_colored(const yocto_material* vol);
 
 }  // namespace ygl
 

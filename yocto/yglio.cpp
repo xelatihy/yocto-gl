@@ -2066,7 +2066,7 @@ bool dump_json_object(
     if (!dump_json_value(js, val->emission, "emission", def.emission))
         return false;
     if (!dump_json_objref(
-            js, val->emission_texture, "emission_txt", scene->textures))
+            js, val->emission_texture, "emission_texture", scene->textures))
         return false;
     return true;
 }
@@ -2092,7 +2092,7 @@ bool parse_json_object(
     if (!parse_json_value(js, val->emission, "emission", def.emission))
         return false;
     if (!parse_json_objref(
-            js, val->emission_texture, "emission_txt", scene->textures))
+            js, val->emission_texture, "emission_texture", scene->textures))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scene)) return false;
     return true;
