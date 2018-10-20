@@ -4564,6 +4564,7 @@ struct trace_point {
     yocto_instance* instance = nullptr;
     vec3f position = zero3f;
     vec3f normal = zero3f;
+    vec2f texturecoord = zero2f;
     vec3f emission = zero3f;
     microfacet_brdf brdf = {};
     float opacity = 1;
@@ -4578,6 +4579,7 @@ trace_point trace_ray(const yocto_scene* scene,
         point.instance = isec.instance;
         point.position = eval_position(isec.instance, isec.element_id, isec.element_uv);
         point.normal = eval_shading_normal(isec.instance, isec.element_id, isec.element_uv, -direction);
+        point.texturecoord = eval_texturecoord(isec.instance, isec.element_id, isec.element_uv);
         point.emission = eval_emission(isec.instance, isec.element_id, isec.element_uv);
         point.brdf = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
         point.opacity = eval_opacity(isec.instance, isec.element_id, isec.element_uv);
@@ -5769,117 +5771,92 @@ vec3f trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh,
 vec3f trace_debug_normal(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scene, bvh, ray);
-    if (!isec.instance) return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return zero3f;
     if (hit) *hit = true;
 
-    // point
-    auto o = -ray.d;
-    auto n = eval_shading_normal(
-        isec.instance, isec.element_id, isec.element_uv, o);
-
     // shade
-    return n * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+    return point.normal * 0.5f + 0.5f;
 }
 
 // Debug frontfacing.
 vec3f trace_debug_frontfacing(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scene, bvh, ray);
-    if (!isec.instance) return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return zero3f;
     if (hit) *hit = true;
 
-    // point
-    auto o = -ray.d;
-    auto n = eval_shading_normal(
-        isec.instance, isec.element_id, isec.element_uv, o);
-
     // shade
-    return dot(n, o) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
+    auto outgoing = -ray.d;
+    return dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0};
 }
 
 // Debug previewing.
 vec3f trace_debug_albedo(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scene, bvh, ray);
-    if (!isec.instance) return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return zero3f;
     if (hit) *hit = true;
 
-    // point
-    auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
     // shade
-    return f.kd + f.ks + f.kt;
+    return point.brdf.kd + point.brdf.ks + point.brdf.kt;
 }
 
 // Debug previewing.
 vec3f trace_debug_diffuse(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scene, bvh, ray);
-    if (!isec.instance) return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return zero3f;
     if (hit) *hit = true;
 
-    // point
-    auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
     // shade
-    return f.kd;
+    return point.brdf.kd;
 }
 
 // Debug previewing.
 vec3f trace_debug_specular(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scene, bvh, ray);
-    if (!isec.instance) return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return zero3f;
     if (hit) *hit = true;
 
-    // point
-    auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
     // shade
-    return f.ks;
+    return point.brdf.ks;
 }
 
 // Debug previewing.
 vec3f trace_debug_roughness(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scene, bvh, ray);
-    if (!isec.instance) return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return zero3f;
     if (hit) *hit = true;
 
-    // point
-    auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
     // shade
-    return {f.rs, f.rs, f.rs};
+    return {point.brdf.rs, point.brdf.rs, point.brdf.rs};
 }
 
 // Debug previewing.
 vec3f trace_debug_texcoord(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    // intersect scene
-    auto isec = intersect_ray(scene, bvh, ray);
-    if (!isec.instance) return zero3f;
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return zero3f;
     if (hit) *hit = true;
 
-    // point
-    auto texcoord = eval_texturecoord(
-        isec.instance, isec.element_id, isec.element_uv);
-
     // shade
-    return {texcoord.x, texcoord.y, 0};
+    return {point.texturecoord.x, point.texturecoord.y, 0};
 }
 
 // Trace a single ray from the camera using the given algorithm.

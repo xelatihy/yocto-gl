@@ -3109,7 +3109,7 @@ vec3f eval_shading_normal(
     const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
-vec2f eval_texcoord(const yocto_environment* environment, const vec3f& i);
+vec2f eval_texturecoord(const yocto_environment* environment, const vec3f& i);
 // Evaluate the incoming direction from the uv.
 vec3f eval_direction(const yocto_environment* environment, const vec2f& uv);
 // Evaluate the environment emission.
