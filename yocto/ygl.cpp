@@ -4896,6 +4896,19 @@ float sample_light_point_pdf(const yocto_instance* instance,
     return 1 / elem_cdf.back();
 }
 
+// Sample a point from all shape lights.
+trace_point sample_lights_point(const trace_lights* lights, const vec3f& position, rng_state& rng) {
+    if(lights->instances.empty()) return {};
+    auto light      = lights->instances[sample_index(lights->instances.size(), rand1f(rng))];
+    return sample_light_point(light, lights->shapes_cdfs.at(light->shape), position, rng);
+}
+
+// Sample pdf for a light point.
+float sample_lights_point_pdf(const trace_lights* lights, const vec3f& position, const trace_point& light_point) {
+    if(lights->instances.empty()) return 0;
+    return sample_light_point_pdf(light_point.instance, lights->shapes_cdfs.at(light_point.instance->shape), position, light_point) * sample_index_pdf(lights->instances.size());
+}
+
 // Sample pdf for an environment.
 float sample_environment_pdf(const yocto_environment* environment,
     const vector<float>& elem_cdf, const vec3f& i) {
@@ -5502,15 +5515,14 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
     for (auto bounce = 0; bounce < nbounces; bounce++) {
         // direct
         if (!is_brdf_delta(point.brdf) && lights) {
-            auto light      = lights->instances[sample_index(lights->instances.size(), rand1f(rng))];
-            auto light_point = sample_light_point(light, lights->shapes_cdfs.at(light->shape), point.position, rng);
-            auto light_pdf   = sample_light_point_pdf(light, lights->shapes_cdfs.at(light->shape), point.position, light_point) * sample_index_pdf(lights->instances.size());
+            auto light_point = sample_lights_point(lights, point.position, rng);
+            auto light_pdf   = sample_lights_point_pdf(lights, point.position, light_point);
             auto incoming    = normalize(light_point.position - point.position);
             auto intersection_point = trace_ray_with_opacity(scene, bvh, point.position, incoming, rng, nbounces);
             if (light_pdf && light_point.instance == intersection_point.instance) {
                 auto brdfcos = eval_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
-                auto gterm   = abs(dot(light_point.normal, incoming)) / distance_square(light_point.position, point.position);
-                radiance += weight * light_point.emission * brdfcos * gterm / light_pdf;
+                auto geometric_term   = abs(dot(light_point.normal, incoming)) / distance_square(light_point.position, point.position);
+                radiance += weight * light_point.emission * brdfcos * geometric_term / light_pdf;
             }
         }
 
