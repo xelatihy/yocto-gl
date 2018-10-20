@@ -1861,6 +1861,19 @@ inline int sample_index(int size, float r) {
 }
 inline float sample_index_pdf(int size) { return 1.0f / size; }
 
+// Sample an index with uniform distribution.
+template<typename T>
+inline T sample_element(const vector<T>& elements, float r) {
+    if(elements.empty()) return {};
+    auto size = (int)elements.size();
+    return elements[clamp((int)(r * size), 0, size - 1)];
+}
+template<typename T>
+inline float sample_element_pdf(const vector<T>& elements) { 
+    if(elements.empty()) return 0;
+    return 1.0f / (int)elements.size(); 
+}
+
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete(const vector<float>& cdf, float r) {
     r        = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);

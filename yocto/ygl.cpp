@@ -5607,80 +5607,48 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
 vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty())
-        return zero3f;
-
-    // intersect scene
-    auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
-    auto l    = zero3f;
-
-    // handle environment
-    if (!isec.instance) {
-        for (auto environment : lights->environments)
-            l += eval_emission(environment, ray.d);
-        return l;
-    }
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return point.emission;
     if (hit) *hit = true;
 
-    // point
-    auto o = -ray.d;
-    auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-    auto n = eval_shading_normal(
-        isec.instance, isec.element_id, isec.element_uv, o);
-    auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
-    // emission
-    l += eval_emission(isec.instance, isec.element_id, isec.element_uv);
+    // initialize
+    auto radiance = point.emission;
+    auto outgoing = -ray.d;
 
     // direct
-    if (!is_brdf_delta(f) && !lights->instances.empty()) {
-        auto  lgt      = lights->instances[sample_index(
-            lights->instances.size(), rand1f(rng))];
-        auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
-        auto  eid      = 0;
-        auto  euv      = zero2f;
-        tie(eid, euv)  = sample_shape(
-            lgt->shape, elem_cdf, rand1f(rng), rand2f(rng));
-        auto lp   = eval_position(lgt, eid, euv);
-        auto i    = normalize(lp - p);
-        auto ln   = eval_shading_normal(lgt, eid, euv, -i);
-        auto isec = intersect_ray_cutout(
-            scene, bvh, make_ray(p, i), rng, nbounces);
-        if (isec.instance == lgt && isec.element_id == eid) {
-            auto larea   = elem_cdf.back();
-            auto pdf     = sample_index_pdf(lights->instances.size()) / larea;
-            auto le      = eval_emission(lgt, eid, euv);
-            auto brdfcos = eval_brdf_cosine(f, n, o, i);
-            auto gterm   = fabs(dot(ln, i)) / dot(lp - p, lp - p);
-            if (pdf != 0) l += le * brdfcos * gterm / pdf;
+    if (!is_brdf_delta(point.brdf) && lights && !lights->instances.empty()) {
+        auto light_point = sample_lights_point(lights, point.position, rng);
+        auto light_pdf   = sample_lights_point_pdf(lights, point.position, light_point);
+        auto incoming    = normalize(light_point.position - point.position);
+        auto intersection_point = trace_ray_with_opacity(scene, bvh, point.position, incoming, rng, nbounces);
+        if (light_pdf && light_point.instance == intersection_point.instance) {
+            auto brdfcos = eval_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+            auto geometric_term   = abs(dot(light_point.normal, incoming)) / distance_square(light_point.position, point.position);
+            radiance += light_point.emission * brdfcos * geometric_term / light_pdf;
         }
     }
 
-    // environment
-    if (!is_brdf_delta(f) && !lights->environments.empty()) {
-        auto i       = sample_brdf(f, n, o, rng);
-        auto brdfcos = eval_brdf_cosine(f, n, o, i);
-        auto pdf     = sample_brdf_pdf(f, n, o, i);
-        auto le      = zero3f;
-        for (auto environment : scene->environments)
-            le += eval_emission(environment, i);
-        if (pdf != 0) l += le * brdfcos / pdf;
+    // environments
+    if (!is_brdf_delta(point.brdf) && lights && !lights->environments.empty()) {
+        auto environment = sample_element(lights->environments, rand1f(rng));
+        auto incoming       = sample_environment(environment, lights->environment_cdfs.at(environment), rng);
+        auto brdfcos = eval_delta_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+        auto pdf     = sample_environment_pdf(environment, lights->environment_cdfs.at(environment), incoming) * sample_element_pdf(lights->environments);
+        auto emission = eval_emission(scene, incoming);
+        radiance += emission * brdfcos / pdf; 
     }
 
     // deltas
-    if (is_brdf_delta(f)) {
-        auto i       = sample_delta_brdf(f, n, o, rng);
-        auto brdfcos = eval_delta_brdf_cosine(f, n, o, i);
-        auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
-        if (pdf != 0)
-            l += brdfcos *
-                 trace_direct(
-                     scene, bvh, lights, ray, rng, nbounces - 1, nullptr) /
-                 pdf;
+    if (is_brdf_delta(point.brdf)) {
+        auto incoming       = sample_delta_brdf(point.brdf, point.normal, outgoing, rng);
+        auto brdfcos = eval_delta_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+        auto pdf     = sample_delta_brdf_pdf(point.brdf, point.normal, outgoing, incoming);
+        radiance += brdfcos * trace_direct_nomis(scene, bvh, lights, make_ray(point.position, incoming), rng, nbounces - 1, nullptr) / pdf;
     }
 
     // done
-    return l;
+    return radiance;
 }
 
 // Environment illumination only with no shadows.
