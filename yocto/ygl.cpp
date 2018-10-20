@@ -4556,6 +4556,48 @@ namespace ygl {
 atomic<uint64_t> _trace_npaths{0};
 atomic<uint64_t> _trace_nrays{0};
 
+// Trace point
+struct trace_point {
+    yocto_instance* instance = nullptr;
+    vec3f position = zero3f;
+    vec3f normal = zero3f;
+    vec3f emission = zero3f;
+    microfacet_brdf brdf = {};
+    float opacity = 1;
+};
+
+// Intersects a ray and returns a point
+trace_point trace_ray(const yocto_scene* scene,
+    const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
+    auto isec = intersect_ray(scene, bvh, make_ray(position, direction));
+    auto point = trace_point();
+    if(point.instance) {
+        point.instance = isec.instance;
+        point.position = eval_position(isec.instance, isec.element_id, isec.element_uv);
+        point.normal = eval_normal(isec.instance, isec.element_id, isec.element_uv);
+        point.brdf = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
+        point.opacity = eval_opacity(isec.instance, isec.element_id, isec.element_uv);
+    } else {
+        point.emission = eval_emission(scene, direction);
+    }
+    _trace_nrays += 1;
+    return point;
+}
+
+// Intersects a ray and returns a point accounting for opacity treated as coveregae
+trace_point trace_ray_with_opacity(const yocto_scene* scene,
+    const bvh_tree* bvh, const vec3f& position_, const vec3f& direction, rng_state& rng, int nbounces) {
+    auto position = position_;
+    for (auto b = 0; b < nbounces; b++) {
+        auto point = trace_ray(scene, bvh, position, direction);
+        if (!point.instance) return point;
+        if (point.opacity > 0.999f) return point;
+        if (rand1f(rng) < point.opacity) return point;
+        position = point.position;
+    }
+    return {};
+}
+
 // Intersect a scene handling opacity.
 scene_intersection intersect_ray_cutout(const yocto_scene* scene,
     const bvh_tree* bvh, const ray3f& ray_, rng_state& rng, int nbounces) {
