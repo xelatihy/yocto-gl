@@ -5106,6 +5106,18 @@ float sample_lights_or_brdf_direction_pdf(const trace_lights* lights,
                       brdf, normal, outgoing, incoming);
 }
 
+// Russian roulette
+bool sample_russian_roulette(const vec3f& weight, int bounce, rng_state& rng, int min_bounce = 2) {
+    if (bounce <= min_bounce) return false;
+    auto rrprob = 1.0f - min(max(weight), 0.95f);
+    return rand1f(rng) < rrprob;
+}
+float sample_russian_roulette_pdf(const vec3f& weight, int bounce, int min_bounce = 2) {
+    if (bounce <= min_bounce) return 1;
+    auto rrprob = 1.0f - min(max(weight), 0.95f);
+    return 1 - rrprob;
+}
+
 // Test occlusion.
 vec3f eval_transmission(const yocto_scene* scene, const bvh_tree* bvh,
     const vec3f& from, const vec3f& to, int max_bounces) {
@@ -5274,11 +5286,8 @@ tuple<vec3f, bool> trace_path(const yocto_scene* scene, const bvh_tree* bvh,
         if (weight == zero3f) break;
 
         // russian roulette
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
+        if(sample_russian_roulette(weight, bounce, rng)) break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(
@@ -5545,11 +5554,8 @@ tuple<vec3f, bool> trace_path_naive(const yocto_scene* scene, const bvh_tree* bv
         if (weight == zero3f) break;
 
         // russian roulette
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
+        if(sample_russian_roulette(weight, bounce, rng)) break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(
@@ -5616,11 +5622,8 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene, const bvh_tree* bv
         if (weight == zero3f) break;
 
         // russian roulette
-        if (bounce > 2) {
-            auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
-            weight *= 1 / (1 - rrprob);
-        }
+        if(sample_russian_roulette(weight, bounce, rng)) break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(
