@@ -78,6 +78,12 @@ int main(int argc, char* argv[]) {
     printf("building bvh\n");
     auto bvh = build_bvh(scene, true, embree);
 
+    // fix renderer type if no lights
+    if (!lights && params.sample_tracer != trace_type::eyelight) {
+        printf("no lights presents, switching to eyelight shader\n");
+        params.sample_tracer = trace_type::eyelight;
+    }
+
     // init renderer
     printf("initializing lights\n");
     auto lights = make_trace_lights(scene, params);

@@ -103,6 +103,12 @@ int main(int argc, char* argv[]) {
     auto lights = unique_ptr<trace_lights>{
         make_trace_lights(scene.get(), params)};
 
+    // fix renderer type if no lights
+    if (!lights && params.sample_tracer != trace_type::eyelight) {
+        log_info("no lights presents, switching to eyelight shader");
+        params.sample_tracer = trace_type::eyelight;
+    }
+
     // initialize rendering objects
     log_info("initializing tracer data");
     auto state = unique_ptr<trace_state>{make_trace_state(scene.get(), params)};

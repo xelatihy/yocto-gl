@@ -5995,7 +5995,7 @@ trace_state* make_trace_state(
 // Init trace lights
 trace_lights* make_trace_lights(
     const yocto_scene* scene, const trace_params& params) {
-    auto lights = new trace_lights();
+    auto lights = make_unique<trace_lights>();
 
     for (auto instance : scene->instances) {
         if (!instance->material || instance->material->emission == zero3f)
@@ -6013,7 +6013,8 @@ trace_lights* make_trace_lights(
             environment);
     }
 
-    return lights;
+    if(lights->instances.empty() && lights->environments.empty()) return nullptr;
+    return lights.release();
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
