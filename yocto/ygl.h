@@ -449,12 +449,6 @@ inline T& element_at(vec<T, 3>& v, int i) {
     return *(&v.x + i);
 }
 
-// Convenience initialization
-template<typename T, typename T1>
-inline vec<T, 4> make_vec(const vec<T, 3>& xyz, T1 w) {
-    return {xyz.x, xyz.y, xyz.z, (T)w};
-}
-
 // Access xyz component of a vec4 typically used for color operation.
 template <typename T>
 inline vec<T, 3>& xyz(const vec<T, 4>& a) {
