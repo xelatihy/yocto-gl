@@ -5556,60 +5556,39 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
 vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const ray3f& ray, rng_state& rng, int nbounces,
     bool* hit) {
-    if (lights->instances.empty() && lights->environments.empty())
-        return zero3f;
-
-    // intersect scene
-    auto isec = intersect_ray_cutout(scene, bvh, ray, rng, nbounces);
-    auto l    = zero3f;
-
-    // handle environment
-    if (!isec.instance) {
-        for (auto environment : scene->environments)
-            l += eval_emission(environment, ray.d);
-        return l;
-    }
+    // intersect ray
+    auto point = trace_ray_with_opacity(scene, bvh, ray.o, ray.d, rng, nbounces);
+    if (!point.instance) return point.emission;
     if (hit) *hit = true;
 
-    // point
-    auto o = -ray.d;
-    auto p = eval_position(isec.instance, isec.element_id, isec.element_uv);
-    auto n = eval_shading_normal(
-        isec.instance, isec.element_id, isec.element_uv, o);
-    auto f = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-
-    // emission
-    l += eval_emission(isec.instance, isec.element_id, isec.element_uv);
+    // initialize
+    auto radiance = point.emission;
+    auto outgoing = -ray.d;
 
     // direct
-    if (!is_brdf_delta(f)) {
-        auto i = (rand1f(rng) < 0.5f) ? sample_lights(lights, bvh, p, rng) :
-                                        sample_brdf(f, n, o, rng);
-        auto isec = intersect_ray_cutout(
-            scene, bvh, make_ray(p, i), rng, nbounces);
-        auto le = (isec.instance) ? eval_emission(isec.instance,
-                                        isec.element_id, isec.element_uv) :
-                                    eval_emission(scene, i);
-        auto brdfcos = eval_brdf_cosine(f, n, o, i);
-        if (le * brdfcos != zero3f) {
-            auto pdf = 0.5f * sample_brdf_pdf(f, n, o, i) +
-                       0.5f * sample_lights_pdf(scene, lights, bvh, p, i);
-            if (pdf != 0) l += le * brdfcos / pdf;
+    if (!is_brdf_delta(point.brdf) && lights) {
+        auto incoming = (rand1f(rng) < 0.5f) ? sample_lights(lights, bvh, point.position, rng) :
+                                        sample_brdf(point.brdf, point.normal, outgoing, rng);
+        auto light_point = trace_ray_with_opacity(
+            scene, bvh, point.position, incoming, rng, nbounces);
+        auto brdfcos = eval_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+        if (light_point.emission * brdfcos != zero3f) {
+            auto pdf = 0.5f * sample_brdf_pdf(point.brdf, point.normal, outgoing, incoming) +
+                        0.5f * sample_lights_pdf(scene, lights, bvh, point.position, incoming);
+            if (pdf != 0) radiance += light_point.emission * brdfcos / pdf;
         }
     }
 
     // deltas
-    if (is_brdf_delta(f)) {
-        auto i       = sample_delta_brdf(f, n, o, rng);
-        auto brdfcos = eval_delta_brdf_cosine(f, n, o, i);
-        auto pdf     = sample_delta_brdf_pdf(f, n, o, i);
-        l += brdfcos *
-             trace_direct(scene, bvh, lights, ray, rng, nbounces - 1, nullptr) /
-             pdf;
+    if (is_brdf_delta(point.brdf) && nbounces) {
+        auto incoming       = sample_delta_brdf(point.brdf, point.normal, outgoing, rng);
+        auto brdfcos = eval_delta_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
+        auto pdf     = sample_delta_brdf_pdf(point.brdf, point.normal, outgoing, incoming);
+        radiance += brdfcos * trace_direct(scene, bvh, lights, make_ray(point.position, incoming), rng, nbounces - 1, nullptr) / pdf;
     }
 
     // done
-    return l;
+    return radiance;
 }
 
 // Direct illumination.
