@@ -185,7 +185,7 @@
                 1,
                 1
             ],
-            "ke_txt": "sky"
+            "emission_texture": "sky"
         }
     ]
 }
