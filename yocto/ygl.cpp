@@ -4686,13 +4686,13 @@ float eval_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i) {
 vec3f eval_brdf_cosine(
     const microfacet_brdf& f, const vec3f& n, const vec3f& o, const vec3f& i) {
     if (is_brdf_delta(f)) return zero3f;
-    auto brdfcos = zero3f;
+    auto brdf_cosine = zero3f;
 
     // diffuse
     if (f.kd != zero3f && dot(n, o) * dot(n, i) > 0) {
         auto h = normalize(i + o);
         auto F = fresnel_schlick(f.ks, h, o);
-        brdfcos += f.kd * (vec3f{1, 1, 1} - F) / pif;
+        brdf_cosine += f.kd * (vec3f{1, 1, 1} - F) / pif;
     }
 
     // specular
@@ -4701,7 +4701,7 @@ vec3f eval_brdf_cosine(
         auto F = fresnel_schlick(f.ks, h, o);
         auto D = eval_ggx_dist(f.rs, n, h);
         auto G = eval_ggx_sm(f.rs, n, o, i);
-        brdfcos += F * D * G / (4 * fabs(dot(n, o)) * fabs(dot(n, i)));
+        brdf_cosine += F * D * G / (4 * fabs(dot(n, o)) * fabs(dot(n, i)));
     }
 
     // transmission (thin sheet)
@@ -4711,11 +4711,11 @@ vec3f eval_brdf_cosine(
         auto F  = fresnel_schlick(f.ks, h, o);
         auto D  = eval_ggx_dist(f.rs, n, h);
         auto G  = eval_ggx_sm(f.rs, n, o, ir);
-        brdfcos += f.kt * (vec3f{1, 1, 1} - F) * D * G /
-                   (4 * fabs(dot(n, o)) * fabs(dot(n, ir)));
+        brdf_cosine += f.kt * (vec3f{1, 1, 1} - F) * D * G /
+                       (4 * fabs(dot(n, o)) * fabs(dot(n, ir)));
     }
 
-    return brdfcos * abs(dot(n, i));
+    return brdf_cosine * abs(dot(n, i));
 }
 
 // Evaluates the BRDF assuming that it is called only from the directions
@@ -5020,7 +5020,7 @@ vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
 }
 
 // Sample lights pdf
-float sample_lights_direction_pdf(const yocto_scene* scene,
+float sample_lights_direction_pdf(
     const trace_lights* lights, const bvh_tree* bvh, const vec3f& p,
     const vec3f& i) {
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
@@ -5053,6 +5053,27 @@ float sample_lights_direction_pdf(const yocto_scene* scene,
                sample_index_pdf(nlights);
     }
     return pdf;
+}
+
+// Sample a direction accoding to either ligts or brdf
+vec3f sample_lights_or_brdf_direction(const trace_lights* lights,
+    const bvh_tree* bvh, const microfacet_brdf& brdf, const vec3f& position,
+    const vec3f& normal, const vec3f& outgoing, rng_state& rng) {
+    auto rmode = rand1f(rng);
+    if (rmode < 0.5f) {
+        return sample_lights_direction(lights, bvh, position, rng);
+    } else {
+        return sample_brdf_direction(brdf, normal, outgoing, rng);
+    }
+}
+
+// Pdf for direction sampling
+float sample_lights_or_brdf_direction_pdf(
+    const trace_lights* lights, const bvh_tree* bvh,
+    const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
+    return 0.5f * sample_lights_direction_pdf(
+                      lights, bvh, position, incoming) +
+           0.5f * sample_brdf_direction_pdf(brdf, normal, outgoing, incoming);
 }
 
 // Test occlusion.
@@ -5196,38 +5217,31 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
         if (!is_brdf_delta(point.brdf) && lights) {
-            auto incoming = (rand1f(rng) < 0.5f) ?
-                                sample_lights_direction(
-                                    lights, bvh, point.position, rng) :
-                                sample_brdf_direction(
-                                    point.brdf, point.normal, outgoing, rng);
+            auto incoming = sample_lights_or_brdf_direction(lights, bvh,
+                point.brdf, point.position, point.normal, outgoing, rng);
+            auto pdf      = sample_lights_or_brdf_direction_pdf(
+                lights, bvh, point.brdf, point.position, point.normal, outgoing, incoming);
             auto light_point = trace_ray_with_opacity(
                 scene, bvh, point.position, incoming, rng, max_bounces);
-            auto brdfcos = eval_brdf_cosine(
+            auto brdf_cosine = eval_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
-            if (light_point.emission * brdfcos != zero3f) {
-                auto pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
-                                      point.normal, outgoing, incoming) +
-                           0.5f * sample_lights_direction_pdf(scene, lights,
-                                      bvh, point.position, incoming);
-                if (pdf != 0)
-                    radiance += weight * light_point.emission * brdfcos / pdf;
-            }
+            if (pdf)
+                radiance += weight * light_point.emission * brdf_cosine / pdf;
         }
 
         // continue path
-        auto incoming = zero3f, brdfcos = zero3f;
+        auto incoming = zero3f, brdf_cosine = zero3f;
         auto pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
             incoming = sample_brdf_direction(
                 point.brdf, point.normal, outgoing, rng);
-            brdfcos = eval_brdf_cosine(
+            brdf_cosine = eval_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
             pdf = sample_brdf_direction_pdf(
                 point.brdf, point.normal, outgoing, incoming);
         } else {
             incoming = sample_delta_brdf(point.brdf, point.normal, outgoing, rng);
-            brdfcos = eval_delta_brdf_cosine(
+            brdf_cosine = eval_delta_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
             pdf = sample_delta_brdf_pdf(
                 point.brdf, point.normal, outgoing, incoming);
@@ -5235,7 +5249,7 @@ vec3f trace_path(const yocto_scene* scene, const bvh_tree* bvh,
 
         // accumulate weight
         if (pdf == 0) break;
-        weight *= brdfcos / pdf;
+        weight *= brdf_cosine / pdf;
         if (weight == zero3f) break;
 
         // russian roulette
@@ -5390,31 +5404,31 @@ vec3f trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
                 vec3f i = direct_illumination(
                     scene, bvh, lights, p, ch, mediums, rng, pdf, direct);
                 if (pdf != 0) {
-                    auto brdfcos = eval_brdf_cosine(f, n, o, i);
-                    radiance += weight * direct * brdfcos / pdf;
+                    auto brdf_cosine = eval_brdf_cosine(f, n, o, i);
+                    radiance += weight * direct * brdf_cosine / pdf;
                     emission = false;
                 }
             } else
                 emission = true;
 
             // continue path
-            vec3f i, brdfcos;
+            vec3f i, brdf_cosine;
             float pdf = 0;
             if (!is_brdf_delta(f)) {
-                i       = sample_brdf_direction(f, n, o, rng);
-                brdfcos = eval_brdf_cosine(f, n, o, i);
-                pdf     = sample_brdf_direction_pdf(f, n, o, i);
+                i           = sample_brdf_direction(f, n, o, rng);
+                brdf_cosine = eval_brdf_cosine(f, n, o, i);
+                pdf         = sample_brdf_direction_pdf(f, n, o, i);
             } else {
-                i       = sample_delta_brdf(f, n, o, rng);
-                brdfcos = eval_delta_brdf_cosine(f, n, o, i);
-                pdf     = sample_delta_brdf_pdf(f, n, o, i);
+                i           = sample_delta_brdf(f, n, o, rng);
+                brdf_cosine = eval_delta_brdf_cosine(f, n, o, i);
+                pdf         = sample_delta_brdf_pdf(f, n, o, i);
             }
             auto ndi = dot(n, i);
             auto ndo = dot(n, o);
 
             // accumulate weight
             if (pdf == 0) break;
-            weight *= brdfcos / pdf;
+            weight *= brdf_cosine / pdf;
             if (weight == zero3f) break;
             ray.o            = p;
             ray.d            = i;
@@ -5499,18 +5513,18 @@ vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh,
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // continue path
-        auto incoming = zero3f, brdfcos = zero3f;
+        auto incoming = zero3f, brdf_cosine = zero3f;
         auto pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
             incoming = sample_brdf_direction(
                 point.brdf, point.normal, outgoing, rng);
-            brdfcos = eval_brdf_cosine(
+            brdf_cosine = eval_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
             pdf = sample_brdf_direction_pdf(
                 point.brdf, point.normal, outgoing, incoming);
         } else {
             incoming = sample_delta_brdf(point.brdf, point.normal, outgoing, rng);
-            brdfcos = eval_delta_brdf_cosine(
+            brdf_cosine = eval_delta_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
             pdf = sample_delta_brdf_pdf(
                 point.brdf, point.normal, outgoing, incoming);
@@ -5518,7 +5532,7 @@ vec3f trace_path_naive(const yocto_scene* scene, const bvh_tree* bvh,
 
         // accumulate weight
         if (pdf == 0) break;
-        weight *= brdfcos / pdf;
+        weight *= brdf_cosine / pdf;
         if (weight == zero3f) break;
 
         // russian roulette
@@ -5568,29 +5582,29 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
             auto intersection_point = trace_ray_with_opacity(
                 scene, bvh, point.position, incoming, rng, max_bounces);
             if (light_pdf && light_point.instance == intersection_point.instance) {
-                auto brdfcos = eval_brdf_cosine(
+                auto brdf_cosine = eval_brdf_cosine(
                     point.brdf, point.normal, outgoing, incoming);
                 auto geometric_term = abs(dot(light_point.normal, incoming)) /
                                       distance_square(
                                           light_point.position, point.position);
-                radiance += weight * light_point.emission * brdfcos *
+                radiance += weight * light_point.emission * brdf_cosine *
                             geometric_term / light_pdf;
             }
         }
 
         // continue path
-        auto incoming = zero3f, brdfcos = zero3f;
+        auto incoming = zero3f, brdf_cosine = zero3f;
         auto pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
             incoming = sample_brdf_direction(
                 point.brdf, point.normal, outgoing, rng);
-            brdfcos = eval_brdf_cosine(
+            brdf_cosine = eval_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
             pdf = sample_brdf_direction_pdf(
                 point.brdf, point.normal, outgoing, incoming);
         } else {
             incoming = sample_delta_brdf(point.brdf, point.normal, outgoing, rng);
-            brdfcos = eval_delta_brdf_cosine(
+            brdf_cosine = eval_delta_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
             pdf = sample_delta_brdf_pdf(
                 point.brdf, point.normal, outgoing, incoming);
@@ -5598,7 +5612,7 @@ vec3f trace_path_nomis(const yocto_scene* scene, const bvh_tree* bvh,
 
         // accumulate weight
         if (pdf == 0) break;
-        weight *= brdfcos / pdf;
+        weight *= brdf_cosine / pdf;
         if (weight == zero3f) break;
 
         // russian roulette
@@ -5639,32 +5653,26 @@ vec3f trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
 
     // direct
     if (!is_brdf_delta(point.brdf) && lights) {
-        auto incoming = (rand1f(rng) < 0.5f) ? sample_lights_direction(lights,
-                                                   bvh, point.position, rng) :
-                                               sample_brdf_direction(point.brdf,
-                                                   point.normal, outgoing, rng);
+        auto incoming = sample_lights_or_brdf_direction(lights, bvh, point.brdf,
+            point.position, point.normal, outgoing, rng);
+        auto pdf      = sample_lights_or_brdf_direction_pdf(
+            lights, bvh, point.brdf, point.position, point.normal, outgoing, incoming);
         auto light_point = trace_ray_with_opacity(
             scene, bvh, point.position, incoming, rng, max_bounces);
-        auto brdfcos = eval_brdf_cosine(
+        auto brdf_cosine = eval_brdf_cosine(
             point.brdf, point.normal, outgoing, incoming);
-        if (light_point.emission * brdfcos != zero3f) {
-            auto pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
-                                  point.normal, outgoing, incoming) +
-                       0.5f * sample_lights_direction_pdf(
-                                  scene, lights, bvh, point.position, incoming);
-            if (pdf != 0) radiance += light_point.emission * brdfcos / pdf;
-        }
+        if (pdf) radiance += light_point.emission * brdf_cosine / pdf;
     }
 
     // deltas
     if (is_brdf_delta(point.brdf) && max_bounces) {
         auto incoming = sample_delta_brdf(
             point.brdf, point.normal, outgoing, rng);
-        auto brdfcos = eval_delta_brdf_cosine(
+        auto brdf_cosine = eval_delta_brdf_cosine(
             point.brdf, point.normal, outgoing, incoming);
         auto pdf = sample_delta_brdf_pdf(
             point.brdf, point.normal, outgoing, incoming);
-        radiance += brdfcos *
+        radiance += brdf_cosine *
                     trace_direct(scene, bvh, lights,
                         make_ray(point.position, incoming), rng,
                         max_bounces - 1, nullptr) /
@@ -5698,12 +5706,12 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh,
         auto intersection_point = trace_ray_with_opacity(
             scene, bvh, point.position, incoming, rng, max_bounces);
         if (light_pdf && light_point.instance == intersection_point.instance) {
-            auto brdfcos = eval_brdf_cosine(
+            auto brdf_cosine = eval_brdf_cosine(
                 point.brdf, point.normal, outgoing, incoming);
             auto geometric_term = abs(dot(light_point.normal, incoming)) /
                                   distance_square(
                                       light_point.position, point.position);
-            radiance += light_point.emission * brdfcos * geometric_term /
+            radiance += light_point.emission * brdf_cosine * geometric_term /
                         light_pdf;
         }
     }
@@ -5713,24 +5721,24 @@ vec3f trace_direct_nomis(const yocto_scene* scene, const bvh_tree* bvh,
         auto environment = sample_element(lights->environments, rand1f(rng));
         auto incoming    = sample_environment_direction(
             environment, lights->environment_cdfs.at(environment), rng);
-        auto brdfcos = eval_delta_brdf_cosine(
+        auto brdf_cosine = eval_delta_brdf_cosine(
             point.brdf, point.normal, outgoing, incoming);
         auto pdf = sample_environment_direction_pdf(environment,
                        lights->environment_cdfs.at(environment), incoming) *
                    sample_element_pdf(lights->environments);
         auto emission = eval_emission(scene, incoming);
-        radiance += emission * brdfcos / pdf;
+        radiance += emission * brdf_cosine / pdf;
     }
 
     // deltas
     if (is_brdf_delta(point.brdf)) {
         auto incoming = sample_delta_brdf(
             point.brdf, point.normal, outgoing, rng);
-        auto brdfcos = eval_delta_brdf_cosine(
+        auto brdf_cosine = eval_delta_brdf_cosine(
             point.brdf, point.normal, outgoing, incoming);
         auto pdf = sample_delta_brdf_pdf(
             point.brdf, point.normal, outgoing, incoming);
-        radiance += brdfcos *
+        radiance += brdf_cosine *
                     trace_direct_nomis(scene, bvh, lights,
                         make_ray(point.position, incoming), rng,
                         max_bounces - 1, nullptr) /
@@ -5756,23 +5764,24 @@ vec3f trace_environment(const yocto_scene* scene, const bvh_tree* bvh,
     auto outgoing = -ray.d;
 
     // continue path
-    auto incoming = zero3f, brdfcos = zero3f;
+    auto incoming = zero3f, brdf_cosine = zero3f;
     auto pdf = 0.0f;
     if (!is_brdf_delta(point.brdf)) {
         incoming = sample_brdf_direction(point.brdf, point.normal, outgoing, rng);
-        brdfcos = eval_brdf_cosine(point.brdf, point.normal, outgoing, incoming);
-        pdf     = sample_brdf_direction_pdf(
+        brdf_cosine = eval_brdf_cosine(
+            point.brdf, point.normal, outgoing, incoming);
+        pdf = sample_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, incoming);
     } else {
         incoming = sample_delta_brdf(point.brdf, point.normal, outgoing, rng);
-        brdfcos  = eval_delta_brdf_cosine(
+        brdf_cosine = eval_delta_brdf_cosine(
             point.brdf, point.normal, outgoing, incoming);
         pdf = sample_delta_brdf_pdf(point.brdf, point.normal, outgoing, incoming);
     }
 
     // accumulate environment illumination
-    if (pdf != 0 && brdfcos != zero3f) {
-        radiance += brdfcos * eval_emission(scene, incoming) / pdf;
+    if (pdf != 0 && brdf_cosine != zero3f) {
+        radiance += brdf_cosine * eval_emission(scene, incoming) / pdf;
     }
 
     // done
