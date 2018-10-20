@@ -3031,10 +3031,16 @@ bbox3f compute_bbox(const yocto_shape* shape);
 bbox3f compute_bbox(const yocto_scene* scene);
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-vector<float> compute_shape_cdf(const yocto_shape* shape);
+vector<float> compute_shape_element_cdf(const yocto_shape* shape);
 // Generate a distribution for sampling an environment texture uniformly
 // based on angle and texture intensity.
-vector<float> compute_environment_cdf(const yocto_environment* environment);
+vector<float> compute_environment_texel_cdf(const yocto_environment* environment);
+
+// Sample a shape based on a distribution.
+tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
+tuple<int, vec2f> sample_environment_texel(const yocto_environment* environment,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
 
 // Updates/refits bvh.
 bvh_tree* build_bvh(

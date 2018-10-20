@@ -3603,7 +3603,7 @@ vec2f compute_animation_range(const yocto_scene* scene, const string& anim_group
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-vector<float> compute_shape_cdf(const yocto_shape* shape) {
+vector<float> compute_shape_element_cdf(const yocto_shape* shape) {
     if (!shape->triangles.empty()) {
         return sample_triangles_cdf(shape->triangles, shape->positions);
     } else if (!shape->quads.empty()) {
@@ -3618,7 +3618,7 @@ vector<float> compute_shape_cdf(const yocto_shape* shape) {
 }
 
 // Update environment CDF for sampling.
-vector<float> compute_environment_cdf(const yocto_environment* environment) {
+vector<float> compute_environment_texel_cdf(const yocto_environment* environment) {
     auto texture = environment->emission_texture;
     if (!texture) return {};
     auto size     = eval_texture_size(texture);
@@ -4315,7 +4315,7 @@ bool is_brdf_zero(const microfacet_brdf& f) {
 }
 
 // Sample a shape based on a distribution.
-tuple<int, vec2f> sample_shape(const yocto_shape* shape,
+tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elem_cdf.empty()) return {};
@@ -4910,7 +4910,7 @@ trace_point sample_light_point(const yocto_instance* instance,
     const vec2f& ruv) {
     auto element_id             = 0;
     auto element_uv             = zero2f;
-    tie(element_id, element_uv) = sample_shape(
+    tie(element_id, element_uv) = sample_shape_element(
         instance->shape, elem_cdf, rel, ruv);
     auto point     = trace_point();
     point.instance = (yocto_instance*)instance;
@@ -5005,7 +5005,7 @@ vec3f sample_environment_direction(const yocto_environment* environment,
 // Picks a point on a light.
 vec3f sample_light_direction(const yocto_instance* instance,
     const vector<float>& elem_cdf, const vec3f& p, float rel, const vec2f& ruv) {
-    auto sample = sample_shape(instance->shape, elem_cdf, rel, ruv);
+    auto sample = sample_shape_element(instance->shape, elem_cdf, rel, ruv);
     return normalize(eval_position(instance, get<0>(sample), get<1>(sample)) - p);
 }
 
@@ -6003,13 +6003,13 @@ trace_lights* make_trace_lights(
         if (instance->shape->triangles.empty() && instance->shape->quads.empty())
             continue;
         lights->instances.push_back(instance);
-        lights->shapes_cdfs[instance->shape] = compute_shape_cdf(instance->shape);
+        lights->shapes_cdfs[instance->shape] = compute_shape_element_cdf(instance->shape);
     }
 
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
         lights->environments.push_back(environment);
-        lights->environment_cdfs[environment] = compute_environment_cdf(
+        lights->environment_cdfs[environment] = compute_environment_texel_cdf(
             environment);
     }
 
