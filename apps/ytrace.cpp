@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
     // build bvh
     log_info("building bvh");
     auto bvh_start = get_time();
-    auto bvh       = unique_ptr<bvh_tree>{build_bvh(scene.get(), true, embree)};
+    auto bvh = unique_ptr<bvh_tree>{make_scene_bvh(scene.get(), true, embree)};
     log_info(
         "building bvh in {}", format_duration(get_time() - bvh_start).c_str());
 

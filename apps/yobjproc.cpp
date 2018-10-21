@@ -31,12 +31,12 @@
 using namespace ygl;
 
 string to_string(const obj_vertex& v) {
-    auto s = std::to_string(v.pos);
-    if (v.texcoord) {
-        s += "/" + std::to_string(v.texcoord);
-        if (v.norm) s += "/" + std::to_string(v.norm);
+    auto s = std::to_string(v.position);
+    if (v.texturecoord) {
+        s += "/" + std::to_string(v.texturecoord);
+        if (v.normal) s += "/" + std::to_string(v.normal);
     } else {
-        if (v.norm) s += "//" + std::to_string(v.norm);
+        if (v.normal) s += "//" + std::to_string(v.normal);
     }
     return s;
 }

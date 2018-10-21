@@ -110,8 +110,8 @@ void draw_glwidgets(glwindow* win) {
             draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app->state->rendered_image.width &&
                 ij.y >= 0 && ij.y < app->state->rendered_image.height) {
-                draw_coloredit_glwidget(win, "pixel",
-                    pixel_at(app->state->rendered_image, ij.x, ij.y));
+                draw_coloredit_glwidget(
+                    win, "pixel", at(app->state->rendered_image, ij.x, ij.y));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_glwidget(win, "pixel", zero4f_);
@@ -138,7 +138,7 @@ void draw(glwindow* win) {
     auto fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    center_image4f(app->imcenter, app->imscale,
+    center_image(app->imcenter, app->imscale,
         {app->state->display_image.width, app->state->display_image.height},
         win_size, app->zoom_to_fit);
     if (!app->gl_txt) {
@@ -167,19 +167,19 @@ bool update(app_state* app) {
         if (get<0>(sel) == "shape") {
             for (auto sid = 0; sid < app->scene->shapes.size(); sid++) {
                 if (app->scene->shapes[sid] == get<1>(sel)) {
-                    refit_bvh(
+                    refit_shape_bvh(
                         (yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
                     break;
                 }
             }
-            refit_bvh(app->scene.get(), app->bvh.get());
+            refit_scene_bvh(app->scene.get(), app->bvh.get());
         }
         if (get<0>(sel) == "instance") {
-            refit_bvh(app->scene.get(), app->bvh.get());
+            refit_scene_bvh(app->scene.get(), app->bvh.get());
         }
         if (get<0>(sel) == "node") {
             update_transforms(app->scene.get(), 0);
-            refit_bvh(app->scene.get(), app->bvh.get());
+            refit_scene_bvh(app->scene.get(), app->bvh.get());
         }
     }
     app->update_list.clear();
@@ -321,7 +321,7 @@ int main(int argc, char* argv[]) {
         for (auto mat : app->scene->materials) mat->double_sided = true;
     if (app->scene->cameras.empty())
         app->scene->cameras.push_back(
-            make_bbox_camera("<view>", compute_bounding_box(app->scene.get())));
+            make_bbox_camera("<view>", compute_scene_bounds(app->scene.get())));
     add_missing_names(app->scene.get());
     for (auto& err : validate_scene(app->scene.get()))
         printf("warning: %s\n", err.c_str());
@@ -329,7 +329,8 @@ int main(int argc, char* argv[]) {
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = get_time();
-    app->bvh = unique_ptr<bvh_tree>(build_bvh(app->scene.get(), true, embree));
+    app->bvh       = unique_ptr<bvh_tree>(
+        make_scene_bvh(app->scene.get(), true, embree));
     if (!quiet)
         printf("building bvh in %s\n",
             format_duration(get_time() - bvh_start).c_str());

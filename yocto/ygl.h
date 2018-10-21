@@ -97,19 +97,23 @@
 // 4. compute smooth normals and tangents with `compute_vertex_normals()`
 //   `compute_vertex_tangents()`
 // 5. compute tangent frames from texture coordinates with
-//    `compute_tangent_space()`
+//    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_cube()`, `make_sphere()`, `make_quad()`,
-//    `make_fvcube()`, `make_hair()`, `make_suzanne()`, `make_lines()`,
-//    `make_points()`, `make_sphere_cube()`, `make_cube_rounded()`,
-//    `make_sphere_flipcap()`, `make_cylinder()`, `make_cylinder_rounded()`,
-//    `make_disk()`, `make_cylinder_side()`, `make_disk_quad()`
+// 6. create shapes with `make_cube_shape()`, `make_sphere_shape()`,
+// `make_quad_shape()`,
+//    `make_cube_fvshape()`, `make_hair_shape()`, `make_suzanne_shape()`,
+//    `make_lines_shape()`, `make_points_shape()`, `make_sphere_cube_shape()`,
+//    `make_cube_rounded_shape()`, `make_sphere_flipcap_shape()`,
+//    `make_cylinder_shape()`, `make_cylinder_rounded_shape()`,
+//    `make_disk_shape()`, `make_cylinder_side_shape()`, `make_disk_quad_shape()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
-// 8. shape sampling with `sample_points()`, `sample_lines()`,
-//    `sample_triangles()`; initialize the sampling CDFs with
-//    `sample_points_cdf()`, `sample_lines_cdf()`, `sample_triangles_cdf()`
-// 9.  sample a could of point over a surface with `sample_triangles_points()`
+// 8. shape sampling with `sample_points_element()`, `sample_lines_element()`,
+//    `sample_triangles_element()`; initialize the sampling CDFs with
+//    `sample_points_element_cdf()`, `sample_lines_element_cdf()`,
+//    `sample_triangles_element_cdf()`
+// 9.  sample a could of point over a surface with
+// `sample_triangles_element_points()`
 // 10. get edges and boundaries with `get_edges()`
 // 11. convert quads to triangles with `convert_quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
@@ -129,17 +133,20 @@
 //     1. initialize the random number generator with `make_rng()`
 //     2. advance the random number state with `advance_rng()`
 //     3. if necessary, you can reseed the rng with `seed_rng()`
-//     4. generate random integers in an interval with `rand1i()`
+//     4. generate random integers in an interval with `get_random_int()`
 //     5. generate random floats and double in the [0,1) range with
-//        `rand1f()`, `rand2f()`, `rand3f()`, `next_rand1d()`
+//        `get_random_float()`, `get_random_vec2f()`, `get_random_vec3f()`,
+//        `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
 // 3. Monte Carlo support: warp functions from [0,1)^k domains to domains
-//    commonly used in path tracing. In particular, use `sample_hemisphere()`,
-//    `sample_sphere()`, `sample_hemisphere_cosine()`,
-//    `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
-//    `sample_triangle()`, `sample_discrete()`. For each warp, you can compute
+//    commonly used in path tracing. In particular, use
+//    `sample_hemisphere_direction()`, `sample_sphere_direction()`,
+//    `sample_hemisphere_direction_cosine()`,
+//    `sample_hemisphere_direction_cospower()`. `sample_disk_point()`.
+//    `sample_cylinder_point()`. `sample_triangle()`,
+//    `sample_discrete_distribution()`. For each warp, you can compute
 //     the PDF with `sample_xxx_pdf()`.
 //
 //
@@ -199,12 +206,12 @@
 //
 // 1. load a scene with Yocto/GLIO,
 // 2. add missing data with `add_XXX()` functions
-// 3. use compute_bounding_box()` to compute element bounds
-// 4. can merge scene together with `merge_into()`
-// 5. make scene elements with `make_XXX()` functions
-// 8. for ray-intersection and closest point queries, a BVH can be created with
-//    `update_bvh()` and refit with `refit_bvh()`
-// 9. compute interpolated values over scene elements with `evaluate_XXX()`
+// 3. use `compute_shape_box()/compute_scene_box()` to compute element bounds
+// 4. can merge scene together with `merge_scene()`
+// 6. for ray-intersection and closest point queries, a BVH can be created with
+//    `make_shape_bvh()/make_scene_bvh()` and refit with
+//    `refit_shape_bvh()/refit_scene_bvh()`
+// 7. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
 //
 //
@@ -355,8 +362,8 @@ inline T max(const T& x, const T& y) {
     return (x > y) ? x : y;
 }
 template <typename T>
-inline T clamp(const T& x, const T& min_, const T& max_) {
-    return min(max(x, min_), max_);
+inline T clamp(const T& value, const T& min_, const T& max_) {
+    return min(max(value, min_), max_);
 }
 template <typename T, typename T1>
 inline T lerp(const T& a, const T& b, T1 u) {
@@ -440,23 +447,61 @@ const auto zero4i = vec4i{0, 0, 0, 0};
 const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Access component by index.
-template <typename T>
-inline const T& element_at(const vec<T, 3>& v, int i) {
+template <typename T, int N>
+inline T& at(vec<T, N>& v, int i) {
     return *(&v.x + i);
 }
-template <typename T>
-inline T& element_at(vec<T, 3>& v, int i) {
+template <typename T, int N>
+inline const T& at(const vec<T, N>& v, int i) {
     return *(&v.x + i);
+}
+template <int I, typename T, int N>
+inline T& get(vec<T, N>& v) {
+    return *(&v.x + N);
+}
+template <int I, typename T, int N>
+inline const T& get(const vec<T, N>& v) {
+    return *(&v.x + N);
 }
 
 // Access xyz component of a vec4 typically used for color operation.
 template <typename T>
-inline vec<T, 3>& xyz(const vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
+inline vec<T, 3>& xyz(const vec<T, 4>& v) {
+    return (vec<T, 3>&)v;
 }
 template <typename T>
-inline vec<T, 3>& xyz(vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
+inline vec<T, 3>& xyz(vec<T, 4>& v) {
+    return (vec<T, 3>&)v;
+}
+
+// Iteration and data
+template <typename T, int N>
+int size(const vec<T, N>& v) {
+    return N;
+}
+template <typename T, int N>
+T* begin(vec<T, N>& v) {
+    return &v.x;
+}
+template <typename T, int N>
+const T* begin(const vec<T, N>& v) {
+    return &v.x;
+}
+template <typename T, int N>
+T* end(vec<T, N>& v) {
+    return &v.x + N;
+}
+template <typename T, int N>
+const T* end(const vec<T, N>& v) {
+    return &v.x + N;
+}
+template <typename T, int N>
+T* data(vec<T, N>& v) {
+    return &v.x;
+}
+template <typename T, int N>
+const T* data(const vec<T, N>& v) {
+    return &v.x;
 }
 
 // Vector comparison operations.
@@ -787,30 +832,34 @@ inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
 
 // Reflected and refracted vector.
 template <typename T>
-inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n) {
-    return -w + 2 * dot(n, w) * n;
+inline vec<T, 3> reflect(const vec<T, 3>& direction, const vec<T, 3>& normal) {
+    return -direction + 2 * dot(normal, direction) * normal;
 }
 template <typename T, typename T1>
-inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
+inline vec<T, 3> refract(
+    const vec<T, 3>& direction, const vec<T, 3>& normal, T1 eta) {
     // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
-    auto k = 1 - eta * eta * max(0.0f, 1 - dot(n, w) * dot(n, w));
+    auto k = 1 -
+             eta * eta *
+                 max(0.0f, 1 - dot(normal, direction) * dot(normal, direction));
     if (k < 0) return {0, 0, 0};  // tir
-    return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
+    return -direction * eta + (eta * dot(normal, direction) - sqrt(k)) * normal;
 }
 
 // Max element and clamp.
 template <typename T, typename T1, typename T2>
-inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max)};
+inline vec<T, 2> clamp(const vec<T, 2>& value, T1 min, T2 max) {
+    return {clamp(value.x, min, max), clamp(value.y, min, max)};
 }
 template <typename T, typename T1, typename T2>
-inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
+inline vec<T, 3> clamp(const vec<T, 3>& value, T1 min, T2 max) {
+    return {clamp(value.x, min, max), clamp(value.y, min, max),
+        clamp(value.z, min, max)};
 }
 template <typename T, typename T1, typename T2>
-inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-        clamp(x.w, min, max)};
+inline vec<T, 4> clamp(const vec<T, 4>& value, T1 min, T2 max) {
+    return {clamp(value.x, min, max), clamp(value.y, min, max),
+        clamp(value.z, min, max), clamp(value.w, min, max)};
 }
 template <typename T>
 inline T max(const vec<T, 2>& a) {
@@ -1371,14 +1420,14 @@ inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
 
 // Primitive bounds.
 template <typename T>
-inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T r = 0) {
+inline bbox<T, 3> point_bounds(const vec<T, 3>& p, T r = 0) {
     auto bounds = bbox<T, 3>{};
     bounds += p - vec3f{r, r, r};
     bounds += p + vec3f{r, r, r};
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> line_bbox(
+inline bbox<T, 3> line_bounds(
     const vec<T, 3>& p0, const vec<T, 3>& p1, T r0 = 0, T r1 = 0) {
     auto bounds = bbox<T, 3>{};
     bounds += p0 - vec3f{r0, r0, r0};
@@ -1388,7 +1437,7 @@ inline bbox<T, 3> line_bbox(
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> triangle_bbox(
+inline bbox<T, 3> triangle_bounds(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
     auto bounds = bbox<T, 3>{};
     bounds += p0;
@@ -1397,7 +1446,7 @@ inline bbox<T, 3> triangle_bbox(
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> quad_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1,
+inline bbox<T, 3> quad_bounds(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 3>& p3) {
     auto bounds = bbox<T, 3>{};
     bounds += p0;
@@ -1635,17 +1684,17 @@ inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
         {0, 0, -2 * f * n / (f - n), 0}};
 }
 template <typename T>
-inline mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
+inline mat<T, 4, 4> orthographic_mat(T l, T r, T b, T t, T n, T f) {
     return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
         {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 template <typename T>
-inline mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
-    return ortho_mat(left, right, bottom, top, -1, 1);
+inline mat<T, 4, 4> orthographic2d_mat(T left, T right, T bottom, T top) {
+    return orthographic_mat(left, right, bottom, top, -1, 1);
 }
 template <typename T>
-inline mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
+inline mat<T, 4, 4> orthographic_mat(T xmag, T ymag, T near, T far) {
     return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
         {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
 }
@@ -1698,7 +1747,7 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 }
 
 // Center image and autofit.
-inline void center_image4f(vec2f& center, float& scale, const vec2i& imsize,
+inline void center_image(vec2f& center, float& scale, const vec2i& imsize,
     const vec2i& winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
         scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
@@ -1743,8 +1792,10 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   rand1i(rng_state& rng, int n) { return advance_rng(rng) % n; }
-inline float rand1f(rng_state& rng) {
+inline int get_random_int(rng_state& rng, int n) {
+    return advance_rng(rng) % n;
+}
+inline float get_random_float(rng_state& rng) {
     union {
         uint32_t u;
         float    f;
@@ -1755,17 +1806,17 @@ inline float rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state& rng) {
+inline vec2f get_random_vec2f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = rand1f(rng);
-    auto y = rand1f(rng);
+    auto x = get_random_float(rng);
+    auto y = get_random_float(rng);
     return {x, y};
 }
-inline vec3f rand3f(rng_state& rng) {
+inline vec3f get_random_vec3f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = rand1f(rng);
-    auto y = rand1f(rng);
-    auto z = rand1f(rng);
+    auto x = get_random_float(rng);
+    auto y = get_random_float(rng);
+    auto z = get_random_float(rng);
     return {x, y, z};
 }
 
@@ -1777,112 +1828,113 @@ inline vec3f rand3f(rng_state& rng) {
 namespace ygl {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv) {
+inline vec3f sample_hemisphere_direction(const vec2f& ruv) {
     auto z   = ruv.y;
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_pdf(const vec3f& w) {
-    return (w.z <= 0) ? 0 : 1 / (2 * pif);
+inline float sample_hemisphere_direction_pdf(const vec3f& direction) {
+    return (direction.z <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv) {
+inline vec3f sample_sphere_direction(const vec2f& ruv) {
     auto z   = 2 * ruv.y - 1;
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
-
-// Sample spherical coordinates uniformly.
-inline vec2f sample_spherical(const vec2f& ruv) {
-    // BUG: FIXME this is not uniform at all!!!!
-    return {ruv.x, ruv.y};
+inline float sample_sphere_direction_pdf(const vec3f& w) {
+    return 1 / (4 * pif);
 }
-inline float sample_spherical_pdf(const vec2f& w) { return 1 / (4 * pif); }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cosine(const vec2f& ruv) {
+inline vec3f sample_hemisphere_direction_cosine(const vec2f& ruv) {
     auto z   = sqrt(ruv.y);
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cosine_pdf(const vec3f& w) {
-    return (w.z <= 0) ? 0 : w.z / pif;
+inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction) {
+    return (direction.z <= 0) ? 0 : direction.z / pif;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float n, const vec2f& ruv) {
-    auto z   = pow(ruv.y, 1 / (n + 1));
+inline vec3f sample_hemisphere_direction_cospower(
+    float exponent, const vec2f& ruv) {
+    auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cospower_pdf(float n, const vec3f& w) {
-    return (w.z <= 0) ? 0 : pow(w.z, n) * (n + 1) / (2 * pif);
+inline float sample_hemisphere_direction_cospower_pdf(
+    float exponent, const vec3f& direction) {
+    return (direction.z <= 0) ?
+               0 :
+               pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.
-inline vec3f sample_disk(const vec2f& ruv) {
+inline vec3f sample_disk_point(const vec2f& ruv) {
     auto r   = sqrt(ruv.y);
     auto phi = 2 * pif * ruv.x;
     return {cos(phi) * r, sin(phi) * r, 0};
 }
-inline float sample_disk_pdf() { return 1 / pif; }
+inline float sample_disk_point_pdf() { return 1 / pif; }
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv) {
+inline vec3f sample_cylinder_point(const vec2f& ruv) {
     auto phi = 2 * pif * ruv.x;
     return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-inline float sample_cylinder_pdf() { return 1 / pif; }
+inline float sample_cylinder_point_pdf() { return 1 / pif; }
 
-// Sample a point uniformly on a triangle.
-inline vec2f sample_triangle(const vec2f& ruv) {
+// Sample a point uniformly on a triangle returning the baricentric coordinates.
+inline vec2f sample_triangle_coordinates(const vec2f& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
-inline vec3f sample_triangle(
+
+// Sample a point uniformly on a triangle.
+inline vec3f sample_triangle_point(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
-    auto uv = sample_triangle(ruv);
+    auto uv = sample_triangle_coordinates(ruv);
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
+inline float sample_triangle_point_pdf(
     const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-inline int sample_index(int size, float r) {
+inline int sample_uniform_index(int size, float r) {
     return clamp((int)(r * size), 0, size - 1);
 }
-inline float sample_index_pdf(int size) { return 1.0f / size; }
+inline float sample_uniform_index_pdf(int size) { return 1.0f / size; }
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline T sample_element(const vector<T>& elements, float r) {
+inline T sample_uniform_element(const vector<T>& elements, float r) {
     if (elements.empty()) return {};
     auto size = (int)elements.size();
     return elements[clamp((int)(r * size), 0, size - 1)];
 }
 template <typename T>
-inline float sample_element_pdf(const vector<T>& elements) {
+inline float sample_uniform_element_pdf(const vector<T>& elements) {
     if (elements.empty()) return 0;
     return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r) {
+inline int sample_discrete_distribution(const vector<float>& cdf, float r) {
     r        = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+inline float sample_discrete_distribution_pdf(const vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -2021,28 +2073,29 @@ namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 vector<vec3f> compute_vertex_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& pos);
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
 vector<vec3f> compute_vertex_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
 vector<vec3f> compute_vertex_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& pos);
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord);
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
 tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
 
@@ -2085,10 +2138,10 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 // and face ids and filled vectors for pos, norm and texcoord.
 void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
     vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
-    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
-    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color);
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec4i>& quads_colors,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, const vector<vec4f>& colors);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
@@ -2115,88 +2168,94 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quad
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& pos, float threshold);
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos, float threshold);
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& pos, float threshold);
+    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold);
 
 // Pick a point in a point set uniformly.
-inline int sample_points(int npoints, float re) {
-    return sample_index(npoints, re);
+inline int sample_points_element(int npoints, float re) {
+    return sample_uniform_index(npoints, re);
 }
-inline vector<float> sample_points_cdf(int npoints) {
+inline vector<float> sample_points_element_cdf(int npoints) {
     auto cdf = vector<float>(npoints);
     for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
     return cdf;
 }
-inline int sample_points(const vector<float>& cdf, float re) {
-    return sample_discrete(cdf, re);
+inline int sample_points_element(const vector<float>& cdf, float re) {
+    return sample_discrete_distribution(cdf, re);
 }
 
 // Pick a point on lines uniformly.
-inline vector<float> sample_lines_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos) {
+inline vector<float> sample_lines_element_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
     auto cdf = vector<float>(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
-        auto w = line_length(pos[l.x], pos[l.y]);
+        auto w = line_length(positions[l.x], positions[l.y]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
     return cdf;
 }
-inline tuple<int, float> sample_lines(
+inline tuple<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru) {
-    return {sample_discrete(cdf, re), ru};
+    return {sample_discrete_distribution(cdf, re), ru};
 }
 
 // Pick a point on a triangle mesh uniformly.
-inline vector<float> sample_triangles_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
+inline vector<float> sample_triangles_element_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto cdf = vector<float>(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
-        auto w = triangle_area(pos[t.x], pos[t.y], pos[t.z]);
+        auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
     return cdf;
 }
-inline tuple<int, vec2f> sample_triangles(
+inline tuple<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete(cdf, re), sample_triangle(ruv)};
+    return {sample_discrete_distribution(cdf, re),
+        sample_triangle_coordinates(ruv)};
 }
 
 // Pick a point on a quad mesh uniformly.
-inline vector<float> sample_quads_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos) {
+inline vector<float> sample_quads_element_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
     auto cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
-        auto w = quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+        auto w = quad_area(
+            positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
     return cdf;
 }
-inline tuple<int, vec2f> sample_quads(
+inline tuple<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete(cdf, re), ruv};
+    return {sample_discrete_distribution(cdf, re), ruv};
 }
-inline tuple<int, vec2f> sample_quads(const vector<vec4i>& quads,
+inline tuple<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    auto ei = sample_discrete(cdf, re);
+    auto ei = sample_discrete_distribution(cdf, re);
     if (quads[ei].z == quads[ei].w) {
-        return {ei, sample_triangle(ruv)};
+        return {ei, sample_triangle_coordinates(ruv)};
     } else {
         return {ei, ruv};
     }
 }
 
-// Samples a set of points over a triangle mesh uniformly. Returns pos, norm
-// and texcoord of the sampled points.
+// Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
+// norm and texcoord of the sampled points.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
-    int seed = 7);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed = 7);
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed = 7);
 
 }  // namespace ygl
 
@@ -2392,63 +2451,65 @@ struct make_fvshape_data {
     // Faces swith different topology for each data
     vector<vec4i> positions_quads;
     vector<vec4i> normals_quads;
-    vector<vec4i> quads_texcoord;
+    vector<vec4i> quads_texturecoords;
 };
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-make_shape_data make_quad(const vec2i& steps, const vec2f& size,
+make_shape_data make_quad_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
+make_shape_data make_quad_stack_shape(const vec3i& steps, const vec3f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_floor(const vec2i& steps, const vec2f& size,
+make_shape_data make_floor_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cube(const vec3i& steps, const vec3f& size,
+make_shape_data make_cube_shape(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
+make_shape_data make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_sphere(
+make_shape_data make_sphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_sphere_cube(
+make_shape_data make_sphere_cube_shape(
     int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
+make_shape_data make_sphere_flipcap_shape(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool as_triangles);
-make_shape_data make_disk(
+make_shape_data make_disk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_disk_quad(
+make_shape_data make_disk_quad_shape(
     int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_disk_bulged(
+make_shape_data make_disk_bulged_shape(
     int steps, float size, float uvsize, float height, bool as_triangles);
-make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
+make_shape_data make_cylinder_side_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
+make_shape_data make_cylinder_shape(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
-    const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_geodesic_sphere(
+make_shape_data make_cylinder_rounded_shape(const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius, bool as_triangles);
+make_shape_data make_geodesic_sphere_shape(
     int tesselation, float size, bool as_triangles);
 
 // Make examples shapes with are watertight (good for subdivs).
 // Returns (triangles, quads, pos)
-make_shape_data make_suzanne(float size, bool as_triangles);
-make_shape_data make_cube(const vec3f& size, bool as_triangles);
+make_shape_data make_suzanne_shape(float size, bool as_triangles);
+make_shape_data make_cube_shape(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_fvshape_data make_fvcube(
+make_fvshape_data make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-make_shape_data make_lines(const vec2i& steps, const vec2f& size,
+make_shape_data make_lines_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-make_shape_data make_point(float point_radius = 0.001f);
-make_shape_data make_points(int num, float uvsize, float point_radius = 0.001f);
-make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
-    float point_radius = 0.001f, uint64_t seed = 0);
+make_shape_data make_point_shape(float point_radius = 0.001f);
+make_shape_data make_points_shape(
+    int num, float uvsize, float point_radius = 0.001f);
+make_shape_data make_random_points_shape(int num, const vec3f& size,
+    float uvsize, float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
+make_shape_data make_bezier_circle_shape(
+    vector<vec4i>& beziers, vector<vec3f>& pos);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -2456,12 +2517,12 @@ make_shape_data make_bezier_circle(vector<vec4i>& beziers, vector<vec3f>& pos);
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
-    const vec2f& rotation = zero2f, int seed = 7);
+make_shape_data make_hair_shape(const vec2i& steps,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
+    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
 make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
@@ -2490,11 +2551,11 @@ struct image {
 
 // Element access.
 template <typename T>
-inline T& pixel_at(image<T>& img, int i, int j) {
+inline T& at(image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 }
 template <typename T>
-inline const T& pixel_at(const image<T>& img, int i, int j) {
+inline const T& at(const image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 }
 
@@ -2765,11 +2826,11 @@ struct volume {
 
 // Element access
 template <typename T>
-T& voxel_at(volume<T>& vol, int i, int j, int k) {
+T& at(volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 template <typename T>
-const T& voxel_at(const volume<T>& vol, int i, int j, int k) {
+const T& at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 
@@ -3011,7 +3072,7 @@ void print_stats(const yocto_scene* scene);
 
 // Merge scene into one another. Note that the objects are _moved_ from
 // merge_from to merged_into, so merge_from will be empty after this function.
-void merge_into(const yocto_scene* merge_into, yocto_scene* merge_from);
+void merge_scene(yocto_scene* merge_into, yocto_scene* merge_from);
 
 // make camera
 yocto_camera* make_bbox_camera(const string& name, const bbox3f& bbox,
@@ -3041,35 +3102,29 @@ inline yocto_environment* make_sky_environment(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// UPDATES TO COMPUTED PROPERTIES
+// EVALUATION OF SCENE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
 // Update node transforms.
 void update_transforms(
     yocto_scene* scene, float time = 0, const string& anim_group = "");
+
 // Compute animation range.
 vec2f compute_animation_range(
     const yocto_scene* scene, const string& anim_group = "");
 
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// EVALUATION OF SCENE PROPERTIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
 // Computes shape/scene approximate bounds.
-bbox3f compute_bounding_box(const yocto_shape* shape);
-bbox3f compute_bounding_box(const yocto_scene* scene);
+bbox3f compute_shape_bounds(const yocto_shape* shape);
+bbox3f compute_scene_bounds(const yocto_scene* scene);
 
 // Updates/refits bvh.
-bvh_tree* build_bvh(
+bvh_tree* make_shape_bvh(
     const yocto_shape* shape, bool high_quality, bool embree = false);
-bvh_tree* build_bvh(
+bvh_tree* make_scene_bvh(
     const yocto_scene* scene, bool high_quality, bool embree = false);
-void refit_bvh(const yocto_shape* shape, bvh_tree* bvh);
-void refit_bvh(const yocto_scene* scene, bvh_tree* bvh);
+void refit_shape_bvh(const yocto_shape* shape, bvh_tree* bvh);
+void refit_scene_bvh(const yocto_scene* scene, bvh_tree* bvh);
 
 // Updates tesselation.
 void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape);
