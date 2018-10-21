@@ -5017,13 +5017,28 @@ vec3f sample_instance_light_direction(const yocto_instance* instance,
 }
 
 // Sample pdf for a light point.
-float sample_instance_light_direction_pdf(const yocto_instance* instance,
-    const vector<float>& elem_cdf, const vec3f& p, const vec3f& i,
-    const vec3f& lp, const vec3f& ln) {
+float sample_instance_light_direction_pdf(const yocto_instance* instance, 
+    const vector<float>& elem_cdf, const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
     if (instance->material->emission == zero3f) return 0;
-    // prob triangle * area triangle = area triangle mesh
-    auto area = elem_cdf.back();
-    return dot(lp - p, lp - p) / (fabs(dot(ln, i)) * area);
+    // check all intersection
+    auto pdf = 0.0f;
+    auto ray  = make_ray(position, direction);
+    auto  shape_bvh     = bvh->shape_bvhs[bvh->shape_ids.at(instance->shape)];
+    auto isec = intersect_ray(instance, shape_bvh, ray);
+    while (isec.instance) {
+        // accumulate pdf
+        auto light_position = eval_position(
+            isec.instance, isec.element_id, isec.element_uv);
+        auto light_normal = eval_shading_normal(
+            isec.instance, isec.element_id, isec.element_uv, direction);
+        // prob triangle * area triangle = area triangle mesh
+        auto area = elem_cdf.back();
+        pdf += distance_square(light_position, position) / (abs(dot(light_normal, direction)) * area);
+        // continue
+        ray  = make_ray(light_position, direction);
+        isec = intersect_ray(instance, shape_bvh, ray);
+    }
+    return pdf;
 }
 
 // Sample lights wrt solid angle
@@ -5052,34 +5067,19 @@ vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
 
 // Sample lights pdf
 float sample_lights_direction_pdf(const trace_lights* lights,
-    const bvh_tree* bvh, const vec3f& p, const vec3f& i) {
+    const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
     auto pdf     = 0.0f;
     // instances
     for (auto lgt : lights->instances) {
-        // get cdf and bvh
-        auto  sbvh     = bvh->shape_bvhs[bvh->shape_ids.at(lgt->shape)];
         auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
-        // check all intersection
-        auto ray  = make_ray(p, i);
-        auto isec = intersect_ray(lgt, sbvh, ray);
-        while (isec.instance) {
-            // accumulate pdf
-            auto lp = eval_position(
-                isec.instance, isec.element_id, isec.element_uv);
-            auto ln = eval_normal(
-                isec.instance, isec.element_id, isec.element_uv);
-            pdf += sample_instance_light_direction_pdf(lgt, elem_cdf, p, i, lp, ln) *
-                   sample_index_pdf(nlights);
-            // continue
-            ray  = make_ray(lp, i);
-            isec = intersect_ray(lgt, sbvh, ray);
-        }
+        pdf += sample_instance_light_direction_pdf(lgt, elem_cdf, bvh, position, direction) *
+                sample_index_pdf(nlights);
     }
     // environments
     for (auto lgt : lights->environments) {
         auto& elem_cdf = lights->environment_cdfs.at(lgt);
-        pdf += sample_environment_light_direction_pdf(lgt, elem_cdf, i) *
+        pdf += sample_environment_light_direction_pdf(lgt, elem_cdf, direction) *
                sample_index_pdf(nlights);
     }
     return pdf;
