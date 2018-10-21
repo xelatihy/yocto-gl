@@ -573,7 +573,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
             if (lgt->material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto shape = lgt->shape;
-            auto bbox  = compute_bounding_box(shape);
+            auto bbox  = compute_shape_bounds(shape);
             auto pos   = (bbox.max + bbox.min) / 2;
             auto area  = 0.0f;
             if (!shape->triangles.empty()) {
