@@ -763,7 +763,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-image<vec4f> load_image4f(const string& filename) {
+image<vec4f> load_image4f_nolog(const string& filename) {
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
         return load_exr_image4f(filename);
@@ -784,9 +784,13 @@ image<vec4f> load_image4f(const string& filename) {
         return {};
     }
 }
+image<vec4f> load_image4f(const string& filename) {
+    auto scope = log_trace_scoped("loading image {}", filename);
+    return load_image4f_nolog(filename);
+}
 
 // Saves an hdr image.
-bool save_image4f(const string& filename, const image<vec4f>& img) {
+bool save_image4f_nolog(const string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         return save_png_image4b(filename, float_to_byte(linear_to_srgb(img)));
@@ -807,14 +811,22 @@ bool save_image4f(const string& filename, const image<vec4f>& img) {
         return false;
     }
 }
-
-// Loads an hdr image.
-image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
-    return load_stbi_image4f_from_memory(data, data_size);
+bool save_image4f(const string& filename, const image<vec4f>& img) {
+    auto scope = log_trace_scoped("saving image {}", filename);
+    return save_image4f_nolog(filename, img);
 }
 
 // Loads an hdr image.
-image<vec4b> load_image4b(const string& filename) {
+image<vec4f> load_image4f_from_memory_nolog(const byte* data, int data_size) {
+    return load_stbi_image4f_from_memory(data, data_size);
+}
+image<vec4f> load_image4f_from_memory(const byte* data, int data_size) {
+    auto scope = log_trace_scoped("loading image in memory");
+    return load_image4f_from_memory_nolog(data, data_size);
+}
+
+// Loads an hdr image.
+image<vec4b> load_image4b_nolog(const string& filename) {
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
         return float_to_byte(linear_to_srgb(load_exr_image4f(filename)));
@@ -835,9 +847,13 @@ image<vec4b> load_image4b(const string& filename) {
         return {};
     }
 }
+image<vec4b> load_image4b(const string& filename) {
+    auto scope = log_trace_scoped("loading image {}", filename);
+    return load_image4b_nolog(filename);
+}
 
 // Saves an ldr image.
-bool save_image4b(const string& filename, const image<vec4b>& img) {
+bool save_image4b_nolog(const string& filename, const image<vec4b>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         return save_png_image4b(filename, img);
@@ -858,10 +874,18 @@ bool save_image4b(const string& filename, const image<vec4b>& img) {
         return false;
     }
 }
+bool save_image4b(const string& filename, const image<vec4b>& img) {
+    auto scope = log_trace_scoped("saving image {}", filename);
+    return save_image4b_nolog(filename, img);
+}
 
 // Loads an ldr image.
-image<vec4b> load_image4b_from_memory(const byte* data, int data_size) {
+image<vec4b> load_image4b_from_memory_nolog(const byte* data, int data_size) {
     return load_stb_image4b_from_memory(data, data_size);
+}
+image<vec4b> load_image4b_from_memory(const byte* data, int data_size) {
+    auto scope = log_trace_scoped("loading image in memory");
+    return load_image4b_from_memory_nolog(data, data_size);
 }
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
@@ -897,7 +921,7 @@ image<vec4f> resize_image(const image<vec4f>& img, int width, int height) {
 namespace ygl {
 
 // Loads volume data from binary format.
-volume<float> load_volume1f(const string& filename) {
+volume<float> load_volume1f_nolog(const string& filename) {
     auto fs = open(filename, "r");
     if (!fs) return {};
     auto size = zero3i;
@@ -906,15 +930,23 @@ volume<float> load_volume1f(const string& filename) {
     if (!read_values(fs, vol.voxels)) return {};
     return vol;
 }
+volume<float> load_volume1f(const string& filename) {
+    auto scope = log_trace_scoped("loading volume {}", filename);
+    return load_volume1f_nolog(filename);
+}
 
 // Saves volume data in binary format.
-bool save_volume1f(const string& filename, const volume<float>& vol) {
+bool save_volume1f_nolog(const string& filename, const volume<float>& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
     auto size = vec3i{vol.width, vol.height, vol.depth};
     if (!write_value(fs, size)) return false;
     if (!write_values(fs, vol.voxels)) return false;
     return true;
+}
+bool save_volume1f(const string& filename, const volume<float>& vol) {
+    auto scope = log_trace_scoped("saving volume {}", filename);
+    return save_volume1f_nolog(filename, vol);
 }
 
 }  // namespace ygl
@@ -973,9 +1005,9 @@ bool load_scene_textures(yocto_scene* scene, const string& dirname,
             continue;
         auto filename = normalize_path(dirname + "/" + texture->filename);
         if (is_hdr_filename(filename)) {
-            texture->hdr_image = load_image4f(filename);
+            texture->hdr_image = load_image4f_nolog(filename);
         } else {
-            texture->ldr_image = load_image4b(filename);
+            texture->ldr_image = load_image4b_nolog(filename);
         }
         if (texture->hdr_image.pixels.empty() &&
             texture->ldr_image.pixels.empty()) {
@@ -988,7 +1020,7 @@ bool load_scene_textures(yocto_scene* scene, const string& dirname,
         if (texture->filename == "" || !texture->volume_data.voxels.empty())
             continue;
         auto filename = normalize_path(dirname + "/" + texture->filename);
-        texture->volume_data = load_volume1f(filename);
+        texture->volume_data = load_volume1f_nolog(filename);
         if (texture->volume_data.voxels.empty()) {
             if (!skip_missing) return false;
         }
@@ -1032,11 +1064,11 @@ bool save_scene_textures(
             continue;
         auto filename = normalize_path(dirname + "/" + texture->filename);
         if (is_hdr_filename(filename)) {
-            if (!save_image4f(filename, texture->hdr_image)) {
+            if (!save_image4f_nolog(filename, texture->hdr_image)) {
                 if (!skip_missing) return false;
             }
         } else {
-            if (!save_image4b(filename, texture->ldr_image)) {
+            if (!save_image4b_nolog(filename, texture->ldr_image)) {
                 if (!skip_missing) return false;
             }
         }
@@ -1046,7 +1078,7 @@ bool save_scene_textures(
     for (auto texture : scene->voltextures) {
         if (texture->volume_data.voxels.empty()) continue;
         auto filename = normalize_path(dirname + "/" + texture->filename);
-        if (!save_volume1f(filename, texture->volume_data)) {
+        if (!save_volume1f_nolog(filename, texture->volume_data)) {
             if (!skip_missing) return false;
         }
     }
