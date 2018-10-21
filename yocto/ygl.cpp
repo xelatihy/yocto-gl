@@ -4603,7 +4603,9 @@ atomic<uint64_t> _trace_nrays{0};
 
 // Trace point
 struct trace_point {
-    yocto_instance* instance     = nullptr;
+    const yocto_instance* instance     = nullptr;
+    int element_id = 0;
+    vec2f element_uv = zero2f;
     vec3f           position     = zero3f;
     vec3f           normal       = zero3f;
     vec2f           texturecoord = zero2f;
@@ -4612,29 +4614,38 @@ struct trace_point {
     float           opacity      = 1;
 };
 
+// Make a trace point
+trace_point make_trace_point(const yocto_instance* instance, int element_id, const vec2f& element_uv, const vec3f& shading_direction = zero3f) {
+    auto point = trace_point();
+    point.instance = instance;
+    point.element_id = element_id;
+    point.element_uv = element_uv;
+    point.position = eval_position(
+        instance, element_id, element_uv);
+    point.normal = eval_shading_normal(
+        instance, element_id, element_uv, -shading_direction);
+    point.texturecoord = eval_texturecoord(
+        instance, element_id, element_uv);
+    point.emission = eval_emission(
+        instance, element_id, element_uv);
+    point.brdf = eval_brdf(instance, element_id, element_uv);
+    point.opacity = eval_opacity(
+        instance, element_id, element_uv);
+        return point;
+}
+
 // Intersects a ray and returns a point
 trace_point trace_ray(const yocto_scene* scene, const bvh_tree* bvh,
     const vec3f& position, const vec3f& direction) {
     auto isec  = intersect_ray(scene, bvh, make_ray(position, direction));
-    auto point = trace_point();
-    if (isec.instance) {
-        point.instance = isec.instance;
-        point.position = eval_position(
-            isec.instance, isec.element_id, isec.element_uv);
-        point.normal = eval_shading_normal(
-            isec.instance, isec.element_id, isec.element_uv, -direction);
-        point.texturecoord = eval_texturecoord(
-            isec.instance, isec.element_id, isec.element_uv);
-        point.emission = eval_emission(
-            isec.instance, isec.element_id, isec.element_uv);
-        point.brdf = eval_brdf(isec.instance, isec.element_id, isec.element_uv);
-        point.opacity = eval_opacity(
-            isec.instance, isec.element_id, isec.element_uv);
-    } else {
-        point.emission = eval_emission(scene, direction);
-    }
     _trace_nrays += 1;
-    return point;
+    if (isec.instance) {
+        return make_trace_point(isec.instance, isec.element_id, isec.element_uv, direction);
+    } else {
+        auto point = trace_point();
+        point.emission = eval_emission(scene, direction);
+        return point;
+    }
 }
 
 // Intersects a ray and returns a point accounting for opacity treated as
@@ -4947,22 +4958,16 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 
 // Picks a point on a light.
 trace_point sample_light_point(const yocto_instance* instance,
-    const vector<float>& elem_cdf, const vec3f& position, float rel,
+    const vector<float>& elements_cdf, const vec3f& position, float rel,
     const vec2f& ruv) {
-    auto element_id             = 0;
-    auto element_uv             = zero2f;
+    auto element_id = 0;
+    auto element_uv = zero2f;
     tie(element_id, element_uv) = sample_shape_element(
-        instance->shape, elem_cdf, rel, ruv);
-    auto point     = trace_point();
-    point.instance = (yocto_instance*)instance;
-    point.position = eval_position(instance, element_id, element_uv);
+        instance->shape, elements_cdf, rel, ruv);
+    auto point = make_trace_point(instance, element_id, element_uv);
     auto direction = normalize(position - point.position);
     point.normal   = eval_shading_normal(
         instance, element_id, element_uv, direction);
-    point.texturecoord = eval_texturecoord(instance, element_id, element_uv);
-    point.emission     = eval_emission(instance, element_id, element_uv);
-    point.brdf         = eval_brdf(instance, element_id, element_uv);
-    point.opacity      = eval_opacity(instance, element_id, element_uv);
     return point;
 }
 
@@ -4975,11 +4980,10 @@ trace_point sample_light_point(const yocto_instance* instance,
 
 // Sample pdf for a light point.
 float sample_light_point_pdf(const yocto_instance* instance,
-    const vector<float>& elem_cdf, const vec3f& position,
-    const trace_point& trace_point) {
+    const vector<float>& elements_cdf, const vec3f& position,
+    const trace_point& point) {
     if (instance->material->emission == zero3f) return 0;
-    // prob triangle * area triangle = area triangle mesh
-    return 1 / elem_cdf.back();
+    return sample_shape_element_pdf(instance->shape, elements_cdf, point.element_id, point.element_uv);
 }
 
 // Sample a point from all shape lights.
