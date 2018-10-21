@@ -1440,8 +1440,7 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
                                     return (&a.center.x)[split_axis] < middle;
                                 }) -
                             prims.data());
-                if (mid == start || mid == end)
-                    throw runtime_error("bad build");
+                if (mid == start || mid == end) { log_error("bad BVH build"); }
             } else {
                 // split along largest
                 auto largest_axis = 0;
@@ -1584,7 +1583,7 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
             node.bbox += transform_bbox(instance.frame, sbvh->nodes[0].bbox);
         }
     } else {
-        throw runtime_error("empty bvh");
+        log_error("empty bvh");
     }
 }
 
@@ -1626,9 +1625,9 @@ void build_embree_bvh(bvh_tree* bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (!bvh->points.empty()) {
-        throw runtime_error("embree does not support points");
+        log_error("embree does not support points");
     } else if (!bvh->lines.empty()) {
-        throw runtime_error("not yet implemented");
+        log_error("not yet implemented");
     } else if (!bvh->triangles.empty()) {
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -1643,7 +1642,7 @@ void build_embree_bvh(bvh_tree* bvh) {
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!bvh->quads.empty()) {
-        throw runtime_error("not yet implemented");
+        log_error("not yet implemented");
     } else if (!bvh->instances.empty()) {
         for (auto iid = 0; iid < bvh->instances.size(); iid++) {
             auto instance    = bvh->instances[iid];
@@ -1661,9 +1660,7 @@ void build_embree_bvh(bvh_tree* bvh) {
     bvh->embree_bvh = embree_scene;
 }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
-void refit_embree_bvh(bvh_tree* bvh) {
-    throw runtime_error("not yet implemented");
-}
+void refit_embree_bvh(bvh_tree* bvh) { log_error("not yet implemented"); }
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
     RTCRayHit embree_ray;
@@ -1696,7 +1693,8 @@ void refit_embree_bvh(bvh_tree* bvh) { return refit_bvh(bvh); }
 // Intersect BVH using Embree
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
-    throw runtime_error("this should not have been called");
+    log_error("this should not have been called");
+    return false;
 }
 #endif
 
@@ -1803,7 +1801,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 }
             }
         } else {
-            throw runtime_error("empty bvh");
+            log_error("empty bvh");
         }
 
         // check for early exit
@@ -1894,7 +1892,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 }
             }
         } else {
-            throw runtime_error("empty bvh");
+            log_error("empty bvh");
         }
 
         // check for early exit
@@ -3545,6 +3543,8 @@ void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
         quads_texturecoords, quads_colors, pos, norm, texcoord, color);
 }
 void tesselate_subdivs(yocto_scene* scene) {
+    if (scene->surfaces.empty()) return;
+    auto scope = log_trace_scoped("tesselating surfaces");
     for (auto instance : scene->instances) {
         if (!instance->surface) continue;
         tesselate_subdiv(instance->surface, instance->shape);
@@ -3571,7 +3571,7 @@ void update_transforms(
                 val = evaluate_keyframed_bezier(animation->keyframes_times,
                     animation->translation_keyframes, time);
                 break;
-            default: throw runtime_error("should not have been here");
+            default: log_error("should not have been here");
         }
         for (auto target : animation->node_targets) target->translation = val;
     }
@@ -3660,7 +3660,8 @@ vector<float> compute_shape_elements_cdf(const yocto_shape* shape) {
     } else if (!shape->points.empty()) {
         return sample_points_element_cdf(shape->points.size());
     } else {
-        throw runtime_error("empty shape not supported");
+        log_error("empty shape not supported");
+        return {};
     }
 }
 
@@ -3704,7 +3705,7 @@ vector<float> compute_environment_texels_cdf(
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
     } else {
-        throw runtime_error("empty texture");
+        log_error("empty texture");
     }
     return elem_cdf;
 }
@@ -3768,6 +3769,7 @@ bvh_tree* make_shape_bvh(
 // Build a scene BVH
 bvh_tree* make_scene_bvh(
     const yocto_scene* scene, bool high_quality, bool embree) {
+    auto scope = log_trace_scoped("building scene bvh");
     // create bvh
     auto bvh = new bvh_tree();
 
@@ -3851,7 +3853,7 @@ void add_missing_tangent_space(yocto_scene* scene) {
                 instance->shape->triangles, instance->shape->positions,
                 instance->shape->normals, instance->shape->texturecoords);
         } else {
-            throw runtime_error("type not supported");
+            log_error("type not supported");
         }
     }
 }
@@ -3884,16 +3886,18 @@ vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
         auto used = unordered_map<string, int>();
         for (auto val : vals) used[val->name] += 1;
         for (auto& kv : used) {
-            if (kv.first == "")
+            if (kv.first == "") {
                 errs.push_back("empty " + base + " name");
-            else if (kv.second > 1)
+            } else if (kv.second > 1) {
                 errs.push_back("duplicated " + base + " name " + kv.first);
+            }
         }
     };
     auto check_empty_textures = [&errs](const vector<yocto_texture*>& vals) {
         for (auto val : vals) {
-            if (val->hdr_image.pixels.empty() && val->ldr_image.pixels.empty())
+            if (val->hdr_image.pixels.empty() && val->ldr_image.pixels.empty()) {
                 errs.push_back("empty texture " + val->name);
+            }
         }
     };
 
@@ -3907,6 +3911,12 @@ vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
     if (!skip_textures) check_empty_textures(scene->textures);
 
     return errs;
+}
+
+// Logs validations errors
+void log_validation_errors(const yocto_scene* scene, bool skip_textures) {
+    for (auto err : validate_scene(scene, skip_textures))
+        log_error(err + " [validation]");
 }
 
 // add missing camera
@@ -5174,7 +5184,7 @@ vec3f sample_light_direction(const trace_light* light, const bvh_tree* bvh,
         return sample_environment_direction(
             light->environment, light->elements_cdf, rel, ruv);
     } else {
-        throw runtime_error("bad light");
+        log_error("bad light");
         return zero3f;
     }
 }
@@ -5207,7 +5217,7 @@ float sample_light_direction_pdf(const trace_light* light, const bvh_tree* bvh,
         return sample_environment_direction_pdf(
             light->environment, light->elements_cdf, direction);
     } else {
-        throw runtime_error("bad light");
+        log_error("bad light");
         return 0;
     }
 }
@@ -6088,7 +6098,6 @@ tuple<vec3f, bool> trace_func(const yocto_scene* scene, const bvh_tree* bvh,
         case trace_type::debug_roughness:
             return trace_debug_roughness(
                 scene, bvh, lights, position, direction, rng, max_bounces);
-        default: throw runtime_error("should not have gotten here");
     }
     return {zero3f, false};
 }
@@ -6133,6 +6142,7 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
 // Init trace state
 trace_state* make_trace_state(
     const yocto_scene* scene, const trace_params& params) {
+    auto scope  = log_trace_scoped("making trace state");
     auto state  = new trace_state();
     auto camera = scene->cameras[params.camera_id];
     auto size   = evaluate_image_size(camera, params.vertical_resolution);
@@ -6148,6 +6158,7 @@ trace_state* make_trace_state(
 // Init trace lights
 trace_lights* make_trace_lights(
     const yocto_scene* scene, const trace_params& params) {
+    auto scope  = log_trace_scoped("making trace lights");
     auto lights = make_unique<trace_lights>();
 
     for (auto instance : scene->instances) {
@@ -6179,6 +6190,7 @@ trace_lights::~trace_lights() {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const trace_params& params) {
+    auto scope = log_trace_scoped("tracing image");
     auto state = make_trace_state(scene, params);
 
     if (params.no_parallel) {
@@ -6216,6 +6228,8 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 bool trace_samples(trace_state* state, const yocto_scene* scene,
     const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
+    auto scope = log_trace_scoped(
+        "tracing samples {}/{}", state->current_sample, params.num_samples);
     auto nbatch = min(
         params.samples_per_batch, params.num_samples - state->current_sample);
     if (params.no_parallel) {
@@ -6267,6 +6281,7 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
 // Starts an anyncrhounous renderer.
 void trace_async_start(trace_state* state, const yocto_scene* scene,
     const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
+    log_trace("start tracing async");
     // render preview image
     if (params.preview_ratio) {
         auto pparams                = params;

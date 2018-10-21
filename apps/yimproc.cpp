@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = load_image4f(filename);
-    if (img.pixels.empty()) log_fatal("cannot load image " + filename);
+    if (img.pixels.empty()) log_fatal("cannot load image {}", filename);
 
     // set alpha
     if (alpha_filename != "") {
@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
         if (alpha.pixels.empty())
             log_fatal("cannot load image {}", alpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
-            log_fatal("bad image size\n");
+            log_fatal("bad image size");
             exit(1);
         }
         for (auto j = 0; j < img.height; j++)
@@ -176,9 +176,9 @@ int main(int argc, char* argv[]) {
     if (coloralpha_filename != "") {
         auto alpha = load_image4f(coloralpha_filename);
         if (alpha.pixels.empty())
-            log_fatal("cannot load image " + coloralpha_filename);
+            log_fatal("cannot load image {}", coloralpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
-            log_fatal("bad image size\n");
+            log_fatal("bad image size");
             exit(1);
         }
         for (auto j = 0; j < img.height; j++)
@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
     if (tonemap) img = tonemap_filmic(img, exposure, filmic, srgb);
 
     // save
-    if (!save_image4f(output, img)) log_fatal("cannot save image " + output);
+    if (!save_image4f(output, img)) log_fatal("cannot save image {}", output);
 
     // done
     return 0;

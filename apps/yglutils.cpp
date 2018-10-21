@@ -83,7 +83,8 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(prog.vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(prog.vid, 10000, 0, errbuf);
-        throw runtime_error(string("shader not compiled\n\n") + errbuf);
+        log_error("shader not compiled with error\n{}", errbuf);
+        return {};
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -95,7 +96,8 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
     glGetShaderiv(prog.fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(prog.fid, 10000, 0, errbuf);
-        throw runtime_error(string("shader not compiled\n\n") + errbuf);
+        log_error("shader not compiled with error\n{}", errbuf);
+        return {};
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -109,12 +111,14 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
     glGetProgramiv(prog.pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
-        throw runtime_error(string("program not linked\n\n") + errbuf);
+        log_error("program not linked with error\n{}", errbuf);
+        return {};
     }
     glGetProgramiv(prog.pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
-        throw runtime_error(string("program not linked\n\n") + errbuf);
+        log_error("program not linked with error\n{}", errbuf);
+        return {};
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -508,7 +512,7 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
 glwindow* make_glwindow(int width, int height, const char* title,
     void* user_pointer, std::function<void(glwindow*)> refresh_cb) {
     // init glfw
-    if (!glfwInit()) throw runtime_error("cannot open glwindow");
+    if (!glfwInit()) log_fatal("cannot initialize windowing system");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -530,7 +534,7 @@ glwindow* make_glwindow(int width, int height, const char* title,
     win->refresh_cb = refresh_cb;
 
     // init gl extensions
-    if (!gladLoadGL()) throw runtime_error("cannot initialize glad");
+    if (!gladLoadGL()) log_fatal("cannot initialize OpenGL extensions");
 
     return win.release();
 }

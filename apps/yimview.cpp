@@ -100,7 +100,7 @@ void update_stats_async(app_image* img) {
 }
 
 void update_display_async(app_image* img) {
-    auto start        = get_time();
+    auto scope        = log_trace_scoped("computing display image");
     img->display_done = false;
     img->texture_done = false;
     if (img->img.width * img->img.height > 1024 * 1024) {
@@ -129,15 +129,10 @@ void update_display_async(app_image* img) {
         }
     }
     img->display_done = true;
-    if (!img->display_stop) {
-        printf("display: %s\n", format_duration(get_time() - start).c_str());
-        fflush(stdout);
-    }
 }
 
 // load image
 void load_image_async(app_image* img) {
-    auto start        = get_time();
     img->load_done    = false;
     img->stats_done   = false;
     img->display_done = false;
@@ -145,10 +140,8 @@ void load_image_async(app_image* img) {
     img->error_msg    = "";
     img->img          = load_image4f(img->filename);
     if (img->img.pixels.empty()) img->error_msg = "cannot load image";
-    img->load_done = true;
-    img->display   = img->img;
-    printf("load: %s\n", format_duration(get_time() - start).c_str());
-    fflush(stdout);
+    img->load_done      = true;
+    img->display        = img->img;
     img->display_thread = thread(update_display_async, img);
     img->stats_thread   = thread(update_stats_async, img);
 }

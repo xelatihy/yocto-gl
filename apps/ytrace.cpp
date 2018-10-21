@@ -71,35 +71,25 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    log_info("loading scene {}", filename);
-    auto load_start = get_time();
-    auto scene      = unique_ptr<yocto_scene>{load_scene(filename)};
+    auto scene = unique_ptr<yocto_scene>{load_scene(filename)};
     if (!scene) log_fatal("cannot load scene {}", filename);
-    log_info("loading in {}", format_duration(get_time() - load_start).c_str());
 
     // tesselate
-    log_info("tesselating scene elements");
     tesselate_subdivs(scene.get());
 
     // add components
-    log_info("adding scene elements");
     if (add_skyenv && scene->environments.empty()) {
         scene->environments.push_back(make_sky_environment("sky"));
         scene->textures.push_back(scene->environments.back()->emission_texture);
     }
     if (double_sided)
         for (auto mat : scene->materials) mat->double_sided = true;
-    for (auto& err : validate_scene(scene.get())) log_error("warning: {}", err);
+    log_validation_errors(scene.get());
 
     // build bvh
-    log_info("building bvh");
-    auto bvh_start = get_time();
     auto bvh = unique_ptr<bvh_tree>{make_scene_bvh(scene.get(), true, embree)};
-    log_info(
-        "building bvh in {}", format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
-    log_info("initializing lights");
     auto lights = unique_ptr<trace_lights>{
         make_trace_lights(scene.get(), params)};
 
@@ -110,36 +100,26 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    log_info("initializing tracer data");
     auto state = unique_ptr<trace_state>{make_trace_state(scene.get(), params)};
 
     // render
-    log_info("rendering image");
-    auto render_start = get_time();
-    auto done         = false;
+    auto done  = false;
+    auto scope = log_trace_begin("rendering image");
     while (!done) {
-        log_info("rendering sample {}/{}", state->current_sample,
-            params.num_samples);
-        auto block_start = get_time();
-        done             = trace_samples(
+        done = trace_samples(
             state.get(), scene.get(), bvh.get(), lights.get(), params);
-        log_info("rendering block in {}",
-            format_duration(get_time() - block_start).c_str());
         if (save_batch) {
             auto filename = replace_extension(
                 imfilename, to_string(state->current_sample) + "." +
                                 get_extension(imfilename));
-            log_info("saving image {}", filename.c_str());
             if (!save_tonemapped_image(
                     filename, state->rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);
         }
     }
-    log_info("rendering image in {}",
-        format_duration(get_time() - render_start).c_str());
+    log_trace_end(scope);
 
     // save image
-    log_info("saving image {}", imfilename.c_str());
     if (!save_tonemapped_image(
             imfilename, state->rendered_image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);

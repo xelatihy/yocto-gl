@@ -733,7 +733,10 @@ void run_ui(app_state* app) {
 unordered_map<string, unordered_map<string, string>> load_ini(
     const string& filename) {
     auto f = fopen(filename.c_str(), "rt");
-    if (!f) throw runtime_error("cannot open " + filename);
+    if (!f) {
+        log_error("cannot open {}", filename);
+        return {};
+    }
     auto ret       = unordered_map<string, unordered_map<string, string>>();
     auto cur_group = string();
     ret[""]        = {};
@@ -745,7 +748,10 @@ unordered_map<string, unordered_map<string, string>> load_ini(
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
         if (line.front() == '[') {
-            if (line.back() != ']') throw runtime_error("bad INI format");
+            if (line.back() != ']') {
+                log_error("bad INI format");
+                return {};
+            }
             cur_group      = line.substr(1, line.length() - 2);
             ret[cur_group] = {};
         } else if (line.find('=') != line.npos) {
@@ -753,7 +759,8 @@ unordered_map<string, unordered_map<string, string>> load_ini(
             auto val            = line.substr(line.find('=') + 1);
             ret[cur_group][var] = val;
         } else {
-            throw runtime_error("bad INI format");
+            log_error("bad INI format");
+            return {};
         }
     }
 
