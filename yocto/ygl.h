@@ -440,32 +440,48 @@ const auto zero4i = vec4i{0, 0, 0, 0};
 const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Access component by index.
-template <typename T>
-inline const T& at(const vec<T, 3>& v, int i) {
-    return *(&v.x + i);
-}
-template <typename T>
-inline T& at(vec<T, 3>& v, int i) {
+template <typename T, int N>
+inline T& at(vec<T, N>& v, int i) {
     return *(&v.x + i);
 }
 template <typename T, int N>
-inline const T& get(const vec<T, 3>& v) {
+inline const T& at(const vec<T, N>& v, int i) {
+    return *(&v.x + i);
+}
+template <int I, typename T, int N>
+inline T& get(vec<T, N>& v) {
     return *(&v.x + N);
 }
-template <typename T, int N>
-inline T& get(vec<T, 3>& v) {
+template <int I, typename T, int N>
+inline const T& get(const vec<T, N>& v) {
     return *(&v.x + N);
 }
 
 // Access xyz component of a vec4 typically used for color operation.
 template <typename T>
-inline vec<T, 3>& xyz(const vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
+inline vec<T, 3>& xyz(const vec<T, 4>& v) {
+    return (vec<T, 3>&)v;
 }
 template <typename T>
-inline vec<T, 3>& xyz(vec<T, 4>& a) {
-    return (vec<T, 3>&)a;
+inline vec<T, 3>& xyz(vec<T, 4>& v) {
+    return (vec<T, 3>&)v;
 }
+
+// Iteration and data
+template <typename T, int N>
+int size(const vec<T, N>& v) { return N; }
+template <typename T, int N> 
+T* begin(vec<T, N>& v) { return &v.x; }
+template <typename T, int N>
+const T* begin(const vec<T, N>& v) { return &v.x; }
+template <typename T, int N>
+T* end(vec<T, N>& v) { return &v.x + N; }
+template <typename T, int N>
+const T* end(const vec<T, N>& v) { return &v.x + N; }
+template <typename T, int N> 
+T* data(vec<T, N>& v) { return &v.x; }
+template <typename T, int N>
+const T* data(const vec<T, N>& v) { return &v.x; }
 
 // Vector comparison operations.
 template <typename T>
