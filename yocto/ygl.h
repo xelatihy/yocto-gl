@@ -3256,12 +3256,18 @@ struct trace_params {
     int        random_seed         = trace_default_seed;
 };
 
+// Trace lights
+struct trace_light {
+    yocto_instance* instance = nullptr;
+    yocto_environment* environment = nullptr;
+    vector<float> elements_cdf = {};
+};
+
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<yocto_instance*>                          instances;
-    vector<yocto_environment*>                       environments;
-    unordered_map<yocto_shape*, vector<float>>       shapes_cdfs;
-    unordered_map<yocto_environment*, vector<float>> environment_cdfs;
+    vector<trace_light*>                          instances;
+    vector<trace_light*>                       environments;
+    ~trace_lights();
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
