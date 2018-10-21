@@ -3689,7 +3689,9 @@ inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
     }
 
     // pan if necessary
-    if (pan.x || pan.y) { frame.o += frame.x * pan.x + frame.y * pan.y; }
+    if (pan.x || pan.y) {
+        frame.o += frame.x * pan.x + frame.y * pan.y;
+    }
 }
 
 // FPS camera for UI navigation for a frame parametrization.

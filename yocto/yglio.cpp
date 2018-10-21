@@ -1220,7 +1220,9 @@ bool dump_json_value(json& js, const T& val) {
     try {
         js = val;
         return true;
-    } catch (...) { return false; }
+    } catch (...) {
+        return false;
+    }
 }
 
 // Dumps a json value
@@ -1236,7 +1238,9 @@ bool parse_json_value(const json& js, T& val) {
     try {
         val = js.get<T>();
         return true;
-    } catch (...) { return false; }
+    } catch (...) {
+        return false;
+    }
 }
 
 // Dumps a json value
@@ -2230,7 +2234,9 @@ bool parse_json_value(const json& js, yocto_interpolation_type& val) {
     if (!parse_json_value(js, vals)) return false;
     try {
         val = names.at(js.get<string>());
-    } catch (...) { return false; }
+    } catch (...) {
+        return false;
+    }
     return true;
 }
 
@@ -2974,7 +2980,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         if (instance->surface) instance->surface->name = instance->name;
         if (matname != "") {
             auto it = mmap.find(matname);
-            if (it == mmap.end()) { log_error("missing material {}", matname); }
+            if (it == mmap.end()) {
+                log_error("missing material {}", matname);
+            }
             instance->material = it->second;
         }
         vert_map.clear();
@@ -2987,7 +2995,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     auto add_texture = [&scene, &tmap](
                            const obj_texture_info& info, bool force_linear) {
         if (info.path == "") return (yocto_texture*)nullptr;
-        if (tmap.find(info.path) != tmap.end()) { return tmap.at(info.path); }
+        if (tmap.find(info.path) != tmap.end()) {
+            return tmap.at(info.path);
+        }
 
         // create texture
         auto texture           = new yocto_texture();
@@ -3005,7 +3015,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     auto add_voltexture = [&scene, &vmap](
                               const obj_texture_info& info, bool srgb) {
         if (info.path == "") return (yocto_voltexture*)nullptr;
-        if (vmap.find(info.path) != vmap.end()) { return vmap.at(info.path); }
+        if (vmap.find(info.path) != vmap.end()) {
+            return vmap.at(info.path);
+        }
 
         // create texture
         auto texture      = new yocto_voltexture();
@@ -3468,7 +3480,9 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
             if (startswith(uri, "data:")) {
                 // assume it is base64 and find ','
                 auto pos = uri.find(',');
-                if (pos == uri.npos) { return false; }
+                if (pos == uri.npos) {
+                    return false;
+                }
                 // decode
                 auto data_char = base64_decode(uri.substr(pos + 1));
                 data = vector<unsigned char>((unsigned char*)data_char.c_str(),
@@ -3478,7 +3492,9 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                 data          = load_binary(filename);
                 if (data.empty()) return false;
             }
-            if (gbuf.value("byteLength", -1) != data.size()) { return false; }
+            if (gbuf.value("byteLength", -1) != data.size()) {
+                return false;
+            }
         }
     }
 
@@ -3577,7 +3593,9 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
         if (type == "VEC3") ncomp = 3;
         if (type == "VEC4") ncomp = 4;
         auto compSize = 1;
-        if (compTypeNum == 5122 || compTypeNum == 5123) { compSize = 2; }
+        if (compTypeNum == 5122 || compTypeNum == 5123) {
+            compSize = 2;
+        }
         if (compTypeNum == 5124 || compTypeNum == 5125 || compTypeNum == 5126) {
             compSize = 4;
         }
@@ -3970,7 +3988,9 @@ yocto_scene* load_gltf_scene(
     try {
         if (!gltf_to_scene(scene.get(), js, get_dirname(filename)))
             return nullptr;
-    } catch (...) { return nullptr; }
+    } catch (...) {
+        return nullptr;
+    }
 
     // load textures
     auto dirname = get_dirname(filename);
@@ -4243,7 +4263,9 @@ bool save_gltf_scene(const string& filename, const yocto_scene* scene,
     auto js = json();
     try {
         if (!scene_to_gltf(scene, js)) return false;
-    } catch (...) { return false; }
+    } catch (...) {
+        return false;
+    }
     if (!save_json(filename, js)) return false;
 
     // meshes
@@ -4349,7 +4371,9 @@ bool pbrt_to_json(const string& filename, json& js) {
             auto name = parse_string(tokens, i);
             js[name]  = json::array();
             parse_param(tokens, i, js.at(name));
-            if (js.at(name).size() == 1) { js.at(name) = js.at(name).at(0); }
+            if (js.at(name).size() == 1) {
+                js.at(name) = js.at(name).at(0);
+            }
         }
     };
     auto parse_param_numbers = [&](const vector<string>& tokens, int& i,
@@ -4435,7 +4459,9 @@ yocto_scene* load_pbrt_scene(
     auto js = json();
     try {
         if (!pbrt_to_json(filename, js)) return nullptr;
-    } catch (...) { return nullptr; }
+    } catch (...) {
+        return nullptr;
+    }
 
     auto dirname_ = get_dirname(filename);
 
@@ -5845,7 +5871,9 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     // save
     try {
         ply.write(filename, ascii ? DataFormat::ASCII : DataFormat::Binary);
-    } catch (...) { return false; }
+    } catch (...) {
+        return false;
+    }
 
     return true;
 }
@@ -6110,7 +6138,9 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
         return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texturecoord,
             (i + 1) * mask.normal};
     };
-    for (auto& p : points) { print(fs, "p {}\n", to_string(vert(p)).c_str()); }
+    for (auto& p : points) {
+        print(fs, "p {}\n", to_string(vert(p)).c_str());
+    }
     for (auto& l : lines) {
         print(fs, "l {} {}\n", to_string(vert(l.x)).c_str(),
             to_string(vert(l.y)).c_str());
