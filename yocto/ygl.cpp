@@ -1698,6 +1698,7 @@ void refit_embree_bvh(bvh_tree* bvh) { return refit_bvh(bvh); }
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
     log_error("this should not have been called");
+    return false;
 }
 #endif
 
@@ -3662,6 +3663,7 @@ vector<float> compute_shape_elements_cdf(const yocto_shape* shape) {
         return sample_points_element_cdf(shape->points.size());
     } else {
         log_error("empty shape not supported");
+        return {};
     }
 }
 

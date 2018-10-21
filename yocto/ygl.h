@@ -294,6 +294,7 @@
 #include <atomic>
 #include <cctype>
 #include <cfloat>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -308,7 +309,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <chrono>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -443,7 +443,7 @@ inline int64_t get_time() {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Log info/error/fatal message
+// Log info/error/fatal/trace message
 template <typename... Args>
 inline void log_info(const string& fmt, const Args&... args);
 template <typename... Args>
@@ -454,6 +454,17 @@ inline void log_fatal(const string& fmt, const Args&... args);
 // Setup logging
 inline void set_log_console(bool enabled);
 inline void set_log_file(const string& filename, bool append = false);
+
+// Log traces for timing and program debugging
+struct log_scope;
+template <typename... Args>
+inline void log_trace(const string& fmt, const Args&... args);
+template <typename... Args>
+inline log_scope log_trace_begin(const string& fmt, const Args&... args);
+template <typename... Args>
+inline void log_trace_end(log_scope& scope);
+template <typename... Args>
+inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 
 }  // namespace ygl
 
@@ -3902,7 +3913,7 @@ inline void log_message(const char* lbl, const char* msg) {
     }
 }
 
-// Log info/error/fatal message
+// Log info/error/fatal/trace message
 template <typename... Args>
 inline void log_info(const string& fmt, const Args&... args) {
     log_message("INFO ", format(fmt, args...).c_str());
@@ -3915,6 +3926,37 @@ template <typename... Args>
 inline void log_fatal(const string& fmt, const Args&... args) {
     log_message("FATAL", format(fmt, args...).c_str());
     exit(1);
+}
+
+// Log traces for timing and program debugging
+struct log_scope {
+    string   message    = "";
+    uint64_t start_time = 0;
+    bool     scoped     = false;
+    ~log_scope();
+};
+template <typename... Args>
+inline void log_trace(const string& fmt, const Args&... args) {
+    log_message("TRACE", format(fmt, args...).c_str());
+}
+template <typename... Args>
+inline log_scope log_trace_begin(const string& fmt, const Args&... args) {
+    auto message = format(fmt, args...);
+    log_trace(message + " [started]");
+    return { message, get_time(), false };
+}
+template <typename... Args>
+inline void log_trace_end(log_scope& scope) {
+    log_trace(scope.message + "[ended: " + format_duration(get_time() - scope.start_time) + "]");
+}
+template <typename... Args>
+inline log_scope log_trace_scoped(const string& fmt, const Args&... args) {
+    auto message = format(fmt, args...);
+    log_trace(message + " [started]");
+    return { message, get_time(), true };
+}
+inline log_scope::~log_scope() {
+    if(scoped) log_trace_end(*this);
 }
 
 // Configure the logging
