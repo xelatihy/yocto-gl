@@ -3075,7 +3075,7 @@ image<vec4f> make_grid_image4f(
         for (int i = 0; i < img.width; i++) {
             auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
                      j % tile == tile - 1;
-            pixel_at(img, i, j) = (c) ? c0 : c1;
+            at(img, i, j) = (c) ? c0 : c1;
         }
     }
     return img;
@@ -3089,7 +3089,7 @@ image<vec4f> make_checker_image4f(
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
             auto c              = (i / tile + j / tile) % 2 == 0;
-            pixel_at(img, i, j) = (c) ? c0 : c1;
+            at(img, i, j) = (c) ? c0 : c1;
         }
     }
     return img;
@@ -3107,7 +3107,7 @@ image<vec4f> make_bumpdimple_image4f(int width, int height, int tiles) {
                      sqrt(float(tile * tile) / 4);
             auto h = 0.5f;
             if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
-            pixel_at(img, i, j) = {h, h, h, 1};
+            at(img, i, j) = {h, h, h, 1};
         }
     }
     return img;
@@ -3120,7 +3120,7 @@ image<vec4f> make_ramp_image4f(
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
             auto u              = (float)i / (float)img.width;
-            pixel_at(img, i, j) = c0 * (1 - u) + c1 * u;
+            at(img, i, j) = c0 * (1 - u) + c1 * u;
         }
     }
     return img;
@@ -3134,7 +3134,7 @@ image<vec4f> make_gammaramp_imagef(int width, int height) {
             auto u = j / float(img.height - 1);
             if (i < img.width / 3) u = pow(u, 2.2f);
             if (i > (img.width * 2) / 3) u = pow(u, 1 / 2.2f);
-            pixel_at(img, i, j) = {u, u, u, 1};
+            at(img, i, j) = {u, u, u, 1};
         }
     }
     return img;
@@ -3146,7 +3146,7 @@ image<vec4f> make_uvramp_image4f(int width, int height) {
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            pixel_at(img, i, j) = {
+            at(img, i, j) = {
                 i / (float)(img.width - 1), j / (float)(img.height - 1), 0, 1};
         }
     }
@@ -3175,7 +3175,7 @@ image<vec4f> make_uvgrid_image4f(int width, int height, int tiles, bool colored)
                 ps = 0.2f;
             }
             auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
-            pixel_at(img, i, img.height - j - 1) = {rgb.x, rgb.y, rgb.z, 1};
+            at(img, i, img.height - j - 1) = {rgb.x, rgb.y, rgb.z, 1};
         }
     }
     return img;
@@ -3188,8 +3188,8 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
             auto i1 = (i + 1) % img.width, j1 = (j + 1) % img.height;
-            auto p00 = pixel_at(img, i, j), p10 = pixel_at(img, i1, j),
-                 p01 = pixel_at(img, i, j1);
+            auto p00 = at(img, i, j), p10 = at(img, i1, j),
+                 p01 = at(img, i, j1);
             auto g00 = (p00.x + p00.y + p00.z) / 3;
             auto g01 = (p01.x + p01.y + p01.z) / 3;
             auto g10 = (p10.x + p10.y + p10.z) / 3;
@@ -3197,7 +3197,7 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
                 scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
             n.y = -n.y;  // make green pointing up, even if y axis points down
             n   = normalize(n) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            pixel_at(norm, i, j) = {n.x, n.y, n.z, 1};
+            at(norm, i, j) = {n.x, n.y, n.z, 1};
         }
     }
     return norm;
@@ -3298,7 +3298,7 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma          = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
             auto col            = sky(theta, gamma) + sun(theta, gamma);
-            pixel_at(img, i, j) = {col.x, col.y, col.z, 1};
+            at(img, i, j) = {col.x, col.y, col.z, 1};
         }
     }
 
@@ -3307,7 +3307,7 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
         for (auto j = 0; j < img.height / 2; j++) {
             auto theta = pif * ((j + 0.5f) / img.height);
             for (int i = 0; i < img.width; i++) {
-                auto pxl   = pixel_at(img, i, j);
+                auto pxl   = at(img, i, j);
                 auto le    = vec3f{pxl.x, pxl.y, pxl.z};
                 auto angle = sin(theta) * 4 * pif / (img.width * img.height);
                 ground += le * (ground_albedo / pif) * cos(theta) * angle;
@@ -3315,7 +3315,7 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
         }
         for (auto j = img.height / 2; j < img.height; j++) {
             for (int i = 0; i < img.width; i++) {
-                pixel_at(img, i, j) = {ground.x, ground.y, ground.z, 1};
+                at(img, i, j) = {ground.x, ground.y, ground.z, 1};
             }
         }
     }
@@ -3338,7 +3338,7 @@ image<vec4f> make_lights_image4f(int width, int height, const vec3f& le,
                 auto lphi = 2 * pif * (l + 0.5f) / nlights;
                 inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
             }
-            pixel_at(img, i, j) = {le.x, le.y, le.z, 1};
+            at(img, i, j) = {le.x, le.y, le.z, 1};
         }
     }
     return img;
@@ -3354,7 +3354,7 @@ image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
                      scale;
             auto g              = perlin_noise(p, wrap3i);
             g                   = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            pixel_at(img, i, j) = {g, g, g, 1};
+            at(img, i, j) = {g, g, g, 1};
         }
     }
     return img;
@@ -3371,7 +3371,7 @@ image<vec4f> make_fbm_image4f(int width, int height, float scale,
                      scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            pixel_at(img, i, j) = {g, g, g, 1};
+            at(img, i, j) = {g, g, g, 1};
         }
     }
     return img;
@@ -3389,7 +3389,7 @@ image<vec4f> make_ridge_image4f(int width, int height, float scale,
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g                   = clamp(g, 0.0f, 1.0f);
-            pixel_at(img, i, j) = {g, g, g, 1};
+            at(img, i, j) = {g, g, g, 1};
         }
     }
     return img;
@@ -3407,7 +3407,7 @@ image<vec4f> make_turbulence_image4f(int width, int height, float scale,
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
             g                   = clamp(g, 0.0f, 1.0f);
-            pixel_at(img, i, j) = {g, g, g, 1};
+            at(img, i, j) = {g, g, g, 1};
         }
     }
     return img;
@@ -3431,7 +3431,7 @@ volume<float> make_test_volume1f(
                     i / (float)width, j / (float)height, k / (float)depth};
                 float val = pow(
                     max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
-                voxel_at(vol, i, j, k) = clamp(val, 0.0f, 1.0f);
+                at(vol, i, j, k) = clamp(val, 0.0f, 1.0f);
             }
         }
     }
@@ -4121,11 +4121,11 @@ vec2i evaluate_texture_size(const yocto_texture* texture) {
 // Lookup a texture value
 vec4f lookup_texture(const yocto_texture* texture, int i, int j) {
     if (!texture->hdr_image.pixels.empty()) {
-        return pixel_at(texture->hdr_image, i, j);
+        return at(texture->hdr_image, i, j);
     } else if (!texture->ldr_image.pixels.empty() && !texture->ldr_as_linear) {
-        return srgb_to_linear(byte_to_float(pixel_at(texture->ldr_image, i, j)));
+        return srgb_to_linear(byte_to_float(at(texture->ldr_image, i, j)));
     } else if (!texture->ldr_image.pixels.empty() && texture->ldr_as_linear) {
-        return byte_to_float(pixel_at(texture->ldr_image, i, j));
+        return byte_to_float(at(texture->ldr_image, i, j));
     } else {
         return zero4f;
     }
@@ -4175,7 +4175,7 @@ vec4f evaluate_texture(const yocto_texture* texture, const vec2f& texcoord) {
 // Lookup a texture value
 float lookup_voltexture(const yocto_voltexture* texture, int i, int j, int k) {
     if (texture->volume_data.voxels.empty()) {
-        return voxel_at(texture->volume_data, i, j, k);
+        return at(texture->volume_data, i, j, k);
     } else {
         return 0;
     }
@@ -4407,14 +4407,14 @@ vec3f evaluate_transmission(const yocto_material* vol, const vec3f& from,
     auto tr = 1.0f, t = 0.0f;
     auto pos = from;
     while (true) {
-        auto step = -log(1 - rand1f(rng)) / element_at(vd, channel);
+        auto step = -log(1 - rand1f(rng)) / at(vd, channel);
         t += step;
         if (t >= dist) break;
         pos += dir * step;
         auto density = vol->volume_density *
                        evaluate_voltexture(vol->volume_density_texture, pos);
         tr *= 1.0f -
-              max(0.0f, element_at(density, channel) / element_at(vd, channel));
+              max(0.0f, at(density, channel) / at(vd, channel));
     }
     return {tr, tr, tr};
 }
@@ -4422,7 +4422,7 @@ vec3f evaluate_transmission(const yocto_material* vol, const vec3f& from,
 float sample_distance(const yocto_material* vol, const vec3f& from,
     const vec3f& dir, int channel, rng_state& rng) {
     auto pos      = from;
-    auto majorant = element_at(vol->volume_density, channel);
+    auto majorant = at(vol->volume_density, channel);
     if (majorant == 0) return maxf;
 
     // delta tracking
@@ -4438,7 +4438,7 @@ float sample_distance(const yocto_material* vol, const vec3f& from,
         auto density = vol->volume_density *
                        evaluate_voltexture(vol->volume_density_texture, pos);
 
-        if (element_at(density, channel) / majorant >= rand1f(rng)) return dist;
+        if (at(density, channel) / majorant >= rand1f(rng)) return dist;
 
         // Escape from volume.
         if (pos.x > 1 || pos.y > 1 || pos.z > 1) return maxf;
@@ -5402,15 +5402,15 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
     auto weight = zero3f;
 
     // For the sampled channel, transmission / pdf == 1.0
-    element_at(weight, ch) = 1.0;
+    at(weight, ch) = 1.0;
 
     // Compute weight for the remaining channels i.
     // In order to avoid numerical nasties (NaNs) transmission / pdf is
     // evaluated. transmission[i] = exp(-dist * vd[i]) pdf             =
     // exp(-dist * vd[channel])
     int i = (ch + 1) % 3, j = (ch + 2) % 3;
-    element_at(weight, i) = exp(-dist * (element_at(vd, i) - element_at(vd, ch)));
-    element_at(weight, j) = exp(-dist * (element_at(vd, j) - element_at(vd, ch)));
+    at(weight, i) = exp(-dist * (at(vd, i) - at(vd, ch)));
+    at(weight, j) = exp(-dist * (at(vd, j) - at(vd, ch)));
     return weight;
 }
 
@@ -5463,9 +5463,9 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         // sampled spectrum.
         if (!single_channel && is_volume_colored(medium->material) &&
             !is_volume_homogeneus(medium->material)) {
-            element_at(weight, ch) *= 3;
-            element_at(weight, (ch + 1) % 3) = 0;
-            element_at(weight, (ch + 2) % 3) = 0;
+            at(weight, ch) *= 3;
+            at(weight, (ch + 1) % 3) = 0;
+            at(weight, (ch + 2) % 3) = 0;
             single_channel                   = true;
         }
 
@@ -5579,7 +5579,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         // medium interaction
         else {
             ray.o += ray.d * dist;
-            float scattering_prob = element_at(va, ch);
+            float scattering_prob = at(va, ch);
 
             // absorption and emission
             if (rand1f(rng) >= scattering_prob) {
@@ -6051,7 +6051,7 @@ vec4f trace_sample(trace_state* state, const yocto_scene* scene,
     const trace_params& params) {
     _trace_npaths += 1;
     auto  camera       = scene->cameras.at(params.camera_id);
-    auto& rng          = pixel_at(state->random_number_generators, i, j);
+    auto& rng          = at(state->random_number_generators, i, j);
     auto  ray          = sample_camera_ray(camera, {i, j},
         {state->rendered_image.width, state->rendered_image.height}, rng);
     auto  radiance     = zero3f;
@@ -6074,7 +6074,7 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
     int  rseed = 1301081;  // large prime
     for (auto j = 0; j < rngs.height; j++) {
         for (auto i = 0; i < rngs.width; i++) {
-            pixel_at(rngs, i, j) = make_rng(seed, rseed + 1);
+            at(rngs, i, j) = make_rng(seed, rseed + 1);
             rseed = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd
                                                                       // rand
         }
@@ -6137,9 +6137,9 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
         for (auto j = 0; j < state->rendered_image.height; j++) {
             for (auto i = 0; i < state->rendered_image.width; i++) {
                 for (auto s = 0; s < params.num_samples; s++)
-                    pixel_at(state->rendered_image, i, j) += trace_sample(
+                    at(state->rendered_image, i, j) += trace_sample(
                         state, scene, bvh, lights, i, j, params);
-                pixel_at(state->rendered_image, i, j) /= params.num_samples;
+                at(state->rendered_image, i, j) /= params.num_samples;
             }
         }
     } else {
@@ -6151,9 +6151,9 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
                      j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
                         for (auto s = 0; s < params.num_samples; s++)
-                            pixel_at(state->rendered_image, i, j) += trace_sample(
+                            at(state->rendered_image, i, j) += trace_sample(
                                 state, scene, bvh, lights, i, j, params);
-                        pixel_at(
+                        at(
                             state->rendered_image, i, j) /= params.num_samples;
                     }
                 }
@@ -6175,15 +6175,15 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
         for (auto j = 0; j < state->rendered_image.height; j++) {
             for (auto i = 0; i < state->rendered_image.width; i++) {
                 for (auto s = 0; s < nbatch; s++) {
-                    pixel_at(state->accumulation_buffer, i, j) += trace_sample(
+                    at(state->accumulation_buffer, i, j) += trace_sample(
                         state, scene, bvh, lights, i, j, params);
-                    pixel_at(state->samples_per_pixel, i, j) += 1;
+                    at(state->samples_per_pixel, i, j) += 1;
                 }
-                pixel_at(state->rendered_image, i,
-                    j) = pixel_at(state->accumulation_buffer, i, j) /
-                         pixel_at(state->samples_per_pixel, i, j);
-                pixel_at(state->display_image, i, j) = tonemap_filmic(
-                    pixel_at(state->rendered_image, i, j),
+                at(state->rendered_image, i,
+                    j) = at(state->accumulation_buffer, i, j) /
+                         at(state->samples_per_pixel, i, j);
+                at(state->display_image, i, j) = tonemap_filmic(
+                    at(state->rendered_image, i, j),
                     params.display_exposure, params.display_filmic,
                     params.display_srgb);
             }
@@ -6197,16 +6197,16 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
                      j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
                         for (auto s = 0; s < nbatch; s++) {
-                            pixel_at(state->accumulation_buffer, i,
+                            at(state->accumulation_buffer, i,
                                 j) += trace_sample(state, scene, bvh, lights, i,
                                 j, params);
-                            pixel_at(state->samples_per_pixel, i, j) += 1;
+                            at(state->samples_per_pixel, i, j) += 1;
                         }
-                        pixel_at(state->rendered_image, i,
-                            j) = pixel_at(state->accumulation_buffer, i, j) /
-                                 pixel_at(state->samples_per_pixel, i, j);
-                        pixel_at(state->display_image, i, j) = tonemap_filmic(
-                            pixel_at(state->rendered_image, i, j),
+                        at(state->rendered_image, i,
+                            j) = at(state->accumulation_buffer, i, j) /
+                                 at(state->samples_per_pixel, i, j);
+                        at(state->display_image, i, j) = tonemap_filmic(
+                            at(state->rendered_image, i, j),
                             params.display_exposure, params.display_filmic,
                             params.display_srgb);
                     }
@@ -6236,8 +6236,8 @@ void trace_async_start(trace_state* state, const yocto_scene* scene,
             for (auto i = 0; i < state->rendered_image.width; i++) {
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
-                pixel_at(state->rendered_image, i, j) = pixel_at(pimg, pi, pj);
-                pixel_at(state->display_image, i, j) = pixel_at(pdisplay, pi, pj);
+                at(state->rendered_image, i, j) = at(pimg, pi, pj);
+                at(state->display_image, i, j) = at(pdisplay, pi, pj);
             }
         }
     }
@@ -6253,14 +6253,14 @@ void trace_async_start(trace_state* state, const yocto_scene* scene,
                      j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
                         if (state->async_stop_flag) return;
-                        pixel_at(state->accumulation_buffer, i, j) += trace_sample(
+                        at(state->accumulation_buffer, i, j) += trace_sample(
                             state, scene, bvh, lights, i, j, params);
-                        pixel_at(state->samples_per_pixel, i, j) += 1;
-                        pixel_at(state->rendered_image, i,
-                            j) = pixel_at(state->accumulation_buffer, i, j) /
-                                 pixel_at(state->samples_per_pixel, i, j);
-                        pixel_at(state->display_image, i, j) = tonemap_filmic(
-                            pixel_at(state->rendered_image, i, j),
+                        at(state->samples_per_pixel, i, j) += 1;
+                        at(state->rendered_image, i,
+                            j) = at(state->accumulation_buffer, i, j) /
+                                 at(state->samples_per_pixel, i, j);
+                        at(state->display_image, i, j) = tonemap_filmic(
+                            at(state->rendered_image, i, j),
                             params.display_exposure, params.display_filmic,
                             params.display_srgb);
                     }

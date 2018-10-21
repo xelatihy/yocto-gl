@@ -441,12 +441,20 @@ const auto zero4b = vec4b{0, 0, 0, 0};
 
 // Access component by index.
 template <typename T>
-inline const T& element_at(const vec<T, 3>& v, int i) {
+inline const T& at(const vec<T, 3>& v, int i) {
     return *(&v.x + i);
 }
 template <typename T>
-inline T& element_at(vec<T, 3>& v, int i) {
+inline T& at(vec<T, 3>& v, int i) {
     return *(&v.x + i);
+}
+template <typename T, int N>
+inline const T& get(const vec<T, 3>& v) {
+    return *(&v.x + N);
+}
+template <typename T, int N>
+inline T& get(vec<T, 3>& v) {
+    return *(&v.x + N);
 }
 
 // Access xyz component of a vec4 typically used for color operation.
@@ -2490,11 +2498,11 @@ struct image {
 
 // Element access.
 template <typename T>
-inline T& pixel_at(image<T>& img, int i, int j) {
+inline T& at(image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 }
 template <typename T>
-inline const T& pixel_at(const image<T>& img, int i, int j) {
+inline const T& at(const image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 }
 
@@ -2765,11 +2773,11 @@ struct volume {
 
 // Element access
 template <typename T>
-T& voxel_at(volume<T>& vol, int i, int j, int k) {
+T& at(volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 template <typename T>
-const T& voxel_at(const volume<T>& vol, int i, int j, int k) {
+const T& at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 
