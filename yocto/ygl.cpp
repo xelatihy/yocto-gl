@@ -5017,14 +5017,15 @@ vec3f sample_instance_light_direction(const yocto_instance* instance,
 }
 
 // Sample pdf for a light point.
-float sample_instance_light_direction_pdf(const yocto_instance* instance, 
-    const vector<float>& elem_cdf, const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
+float sample_instance_light_direction_pdf(const yocto_instance* instance,
+    const vector<float>& elem_cdf, const bvh_tree* bvh, const vec3f& position,
+    const vec3f& direction) {
     if (instance->material->emission == zero3f) return 0;
     // check all intersection
-    auto pdf = 0.0f;
-    auto ray  = make_ray(position, direction);
-    auto  shape_bvh     = bvh->shape_bvhs[bvh->shape_ids.at(instance->shape)];
-    auto isec = intersect_ray(instance, shape_bvh, ray);
+    auto pdf       = 0.0f;
+    auto ray       = make_ray(position, direction);
+    auto shape_bvh = bvh->shape_bvhs[bvh->shape_ids.at(instance->shape)];
+    auto isec      = intersect_ray(instance, shape_bvh, ray);
     while (isec.instance) {
         // accumulate pdf
         auto light_position = eval_position(
@@ -5033,7 +5034,8 @@ float sample_instance_light_direction_pdf(const yocto_instance* instance,
             isec.instance, isec.element_id, isec.element_uv, direction);
         // prob triangle * area triangle = area triangle mesh
         auto area = elem_cdf.back();
-        pdf += distance_square(light_position, position) / (abs(dot(light_normal, direction)) * area);
+        pdf += distance_square(light_position, position) /
+               (abs(dot(light_normal, direction)) * area);
         // continue
         ray  = make_ray(light_position, direction);
         isec = intersect_ray(instance, shape_bvh, ray);
@@ -5073,8 +5075,9 @@ float sample_lights_direction_pdf(const trace_lights* lights,
     // instances
     for (auto lgt : lights->instances) {
         auto& elem_cdf = lights->shapes_cdfs.at(lgt->shape);
-        pdf += sample_instance_light_direction_pdf(lgt, elem_cdf, bvh, position, direction) *
-                sample_index_pdf(nlights);
+        pdf += sample_instance_light_direction_pdf(
+                   lgt, elem_cdf, bvh, position, direction) *
+               sample_index_pdf(nlights);
     }
     // environments
     for (auto lgt : lights->environments) {
@@ -5821,10 +5824,9 @@ tuple<vec3f, bool> trace_debug_frontfacing(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance)
-        return {zero3f, false};
+    if (!point.instance) return {zero3f, false};
 
-            // shade
+    // shade
     auto outgoing = -direction;
     return {dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0} : vec3f{1, 0, 0},
         true};
