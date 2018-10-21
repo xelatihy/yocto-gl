@@ -1983,8 +1983,8 @@ bool parse_json_object(
     if (!parse_json_value(
             js, val->catmull_clark, "catmull_clark", def.catmull_clark))
         return false;
-    if (!parse_json_value(
-            js, val->compute_vertex_normals, "compute_vertex_normals", def.compute_vertex_normals))
+    if (!parse_json_value(js, val->compute_vertex_normals,
+            "compute_vertex_normals", def.compute_vertex_normals))
         return false;
     if (!parse_json_value(
             js, val->positions_quads, "positions_quads", def.positions_quads))
@@ -5265,7 +5265,8 @@ bool serialize_bin_object(yocto_surface* surface, file_stream& fs, bool save) {
     if (!serialize_bin_value(surface->subdivision_level, fs, save))
         return false;
     if (!serialize_bin_value(surface->catmull_clark, fs, save)) return false;
-    if (!serialize_bin_value(surface->compute_vertex_normals, fs, save)) return false;
+    if (!serialize_bin_value(surface->compute_vertex_normals, fs, save))
+        return false;
     if (!serialize_bin_value(surface->positions_quads, fs, save)) return false;
     if (!serialize_bin_value(surface->texturecoords_quads, fs, save))
         return false;

@@ -2685,7 +2685,8 @@ image<vec4f> make_turbulence_image4f(int width, int height, float scale = 1,
 namespace ygl {
 
 // Find the first keyframe value that is greater than the argument.
-inline int evaluate_keyframed_index(const vector<float>& times, const float& time) {
+inline int evaluate_keyframed_index(
+    const vector<float>& times, const float& time) {
     for (auto i = 0; i < times.size(); i++)
         if (times[i] > time) return i;
     return (int)times.size();
@@ -2902,11 +2903,11 @@ struct yocto_shape {
 
 // Subdivision surface.
 struct yocto_surface {
-    string name              = "";
-    string filename          = "";
-    int    subdivision_level = 0;
-    bool   catmull_clark     = true;
-    bool   compute_vertex_normals   = true;
+    string name                   = "";
+    string filename               = "";
+    int    subdivision_level      = 0;
+    bool   catmull_clark          = true;
+    bool   compute_vertex_normals = true;
 
     // primitives for each vertex propoerty
     vector<vec4i> positions_quads     = {};
@@ -3051,7 +3052,7 @@ void update_transforms(
 vec2f compute_animation_range(
     const yocto_scene* scene, const string& anim_group = "");
 
-} // namespace ygl
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // EVALUATION OF SCENE PROPERTIES
@@ -3081,7 +3082,8 @@ void add_missing_tangent_space(yocto_scene* scene);
 void add_missing_materials(yocto_scene* scene);
 void add_missing_cameras(yocto_scene* scene);
 // Checks for validity of the scene.
-vector<string> validate_scene(const yocto_scene* scene, bool skip_textures = false);
+vector<string> validate_scene(
+    const yocto_scene* scene, bool skip_textures = false);
 
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
@@ -3116,7 +3118,8 @@ vec4f evaluate_element_tangentspace(const yocto_shape* shape, int ei);
 // Handles defaults if data is missing.
 vec3f evaluate_position(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_normal(const yocto_instance* instance, int ei, const vec2f& uv);
-vec2f evaluate_texturecoord(const yocto_instance* instance, int ei, const vec2f& uv);
+vec2f evaluate_texturecoord(
+    const yocto_instance* instance, int ei, const vec2f& uv);
 vec4f evaluate_color(const yocto_instance* instance, int ei, const vec2f& uv);
 float evaluate_radius(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_tangentspace(
@@ -3162,15 +3165,16 @@ ray3f evaluate_camera_ray(const yocto_camera* camera, const vec2i& ij,
 // Generates a ray from a camera for pixel index `idx`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f evaluate_camera_ray(const yocto_camera* camera, int idx, const vec2i& imsize,
-    const vec2f& puv, const vec2f& luv);
+ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
+    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
 vec3f evaluate_emission(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_diffuse(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_specular(const yocto_instance* instance, int ei, const vec2f& uv);
-vec3f evaluate_transmission(const yocto_instance* instance, int ei, const vec2f& uv);
+vec3f evaluate_transmission(
+    const yocto_instance* instance, int ei, const vec2f& uv);
 float evaluate_roughness(const yocto_instance* instance, int ei, const vec2f& uv);
 float evaluate_opacity(const yocto_instance* instance, int ei, const vec2f& uv);
 
@@ -3258,15 +3262,15 @@ struct trace_params {
 
 // Trace lights
 struct trace_light {
-    yocto_instance* instance = nullptr;
-    yocto_environment* environment = nullptr;
-    vector<float> elements_cdf = {};
+    yocto_instance*    instance     = nullptr;
+    yocto_environment* environment  = nullptr;
+    vector<float>      elements_cdf = {};
 };
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<trace_light*>                          instances;
-    vector<trace_light*>                       environments;
+    vector<trace_light*> instances;
+    vector<trace_light*> environments;
     ~trace_lights();
 };
 

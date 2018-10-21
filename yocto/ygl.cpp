@@ -4990,8 +4990,8 @@ trace_point sample_light_point(
     auto point = sample_instance_point(
         light->instance, light->elements_cdf, rel, ruv);
     auto direction = normalize(position - point.position);
-    point.normal = evaluate_shading_normal(light->instance, 
-        point.element_id, point.element_uv, direction);
+    point.normal   = evaluate_shading_normal(
+        light->instance, point.element_id, point.element_uv, direction);
     return point;
 }
 
@@ -5249,13 +5249,16 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     auto idx     = sample_index(nlights, rand1f(rng));
     pdf          = 1.0 / nlights;
     if (idx < lights->instances.size()) {
-        auto  light    = lights->instances[idx];
-        i              = sample_instance_direction(light->instance, light->elements_cdf, p, rand1f(rng), rand2f(rng));
+        auto light = lights->instances[idx];
+        i          = sample_instance_direction(
+            light->instance, light->elements_cdf, p, rand1f(rng), rand2f(rng));
         pdf *= 1.0 / light->elements_cdf.back();
     } else {
-        auto  light    = lights->environments[idx - lights->instances.size()];
-        i = sample_environment_direction(light->environment, light->elements_cdf, rand1f(rng), rand2f(rng));
-        pdf *= sample_environment_direction_pdf(light->environment, light->elements_cdf, i);
+        auto light = lights->environments[idx - lights->instances.size()];
+        i          = sample_environment_direction(
+            light->environment, light->elements_cdf, rand1f(rng), rand2f(rng));
+        pdf *= sample_environment_direction_pdf(
+            light->environment, light->elements_cdf, i);
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, i), rng, 10);
         if (isec.instance == nullptr) {
@@ -5811,11 +5814,18 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
 
     // environments
     if (!is_brdf_delta(point.brdf) && lights && !lights->environments.empty()) {
-        auto next_direction = sample_brdf_direction(point.brdf, point.normal, outgoing, rng); 
-        auto brdf_cosine = evaluate_brdf_cosine(point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_brdf_direction_pdf(point.brdf, point.normal, outgoing, next_direction);
+        auto next_direction = sample_brdf_direction(
+            point.brdf, point.normal, outgoing, rng);
+        auto brdf_cosine = evaluate_brdf_cosine(
+            point.brdf, point.normal, outgoing, next_direction);
+        auto next_pdf = sample_brdf_direction_pdf(
+            point.brdf, point.normal, outgoing, next_direction);
         auto emission = evaluate_emission(scene, next_direction);
-        radiance += emission * brdf_cosine / next_pdf;
+        if (next_pdf &&
+            !intersect_scene_with_opacity(scene, bvh,
+                make_ray(point.position, next_direction), rng, max_bounces)
+                 .instance)
+            radiance += emission * brdf_cosine / next_pdf;
     }
 
     // deltas
@@ -6098,15 +6108,13 @@ trace_lights* make_trace_lights(
         if (instance->shape->triangles.empty() && instance->shape->quads.empty())
             continue;
         lights->instances.push_back(new trace_light{
-            instance, nullptr, compute_shape_elements_cdf(
-            instance->shape)});
+            instance, nullptr, compute_shape_elements_cdf(instance->shape)});
     }
 
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
         lights->environments.push_back(new trace_light{
-            nullptr, environment, compute_environment_texels_cdf(
-            environment)});
+            nullptr, environment, compute_environment_texels_cdf(environment)});
     }
 
     if (lights->instances.empty() && lights->environments.empty())
@@ -6116,8 +6124,8 @@ trace_lights* make_trace_lights(
 
 // cleanup
 trace_lights::~trace_lights() {
-    for(auto v : instances) delete v;
-    for(auto v : environments) delete v;
+    for (auto v : instances) delete v;
+    for (auto v : environments) delete v;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
