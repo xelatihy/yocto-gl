@@ -1440,8 +1440,9 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
                                     return (&a.center.x)[split_axis] < middle;
                                 }) -
                             prims.data());
-                if (mid == start || mid == end)
-                    throw runtime_error("bad build");
+                if (mid == start || mid == end) {
+                    log_error("bad BVH build");
+                }
             } else {
                 // split along largest
                 auto largest_axis = 0;
@@ -1584,7 +1585,7 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
             node.bbox += transform_bbox(instance.frame, sbvh->nodes[0].bbox);
         }
     } else {
-        throw runtime_error("empty bvh");
+        log_error("empty bvh");
     }
 }
 
@@ -1626,9 +1627,9 @@ void build_embree_bvh(bvh_tree* bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (!bvh->points.empty()) {
-        throw runtime_error("embree does not support points");
+        log_error("embree does not support points");
     } else if (!bvh->lines.empty()) {
-        throw runtime_error("not yet implemented");
+        log_error("not yet implemented");
     } else if (!bvh->triangles.empty()) {
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -1643,7 +1644,7 @@ void build_embree_bvh(bvh_tree* bvh) {
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!bvh->quads.empty()) {
-        throw runtime_error("not yet implemented");
+        log_error("not yet implemented");
     } else if (!bvh->instances.empty()) {
         for (auto iid = 0; iid < bvh->instances.size(); iid++) {
             auto instance    = bvh->instances[iid];
@@ -1662,7 +1663,7 @@ void build_embree_bvh(bvh_tree* bvh) {
 }
 // Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
 void refit_embree_bvh(bvh_tree* bvh) {
-    throw runtime_error("not yet implemented");
+    log_error("not yet implemented");
 }
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
@@ -1696,7 +1697,7 @@ void refit_embree_bvh(bvh_tree* bvh) { return refit_bvh(bvh); }
 // Intersect BVH using Embree
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
     float& dist, int& iid, int& eid, vec2f& uv) {
-    throw runtime_error("this should not have been called");
+    log_error("this should not have been called");
 }
 #endif
 
@@ -1803,7 +1804,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 }
             }
         } else {
-            throw runtime_error("empty bvh");
+            log_error("empty bvh");
         }
 
         // check for early exit
@@ -1894,7 +1895,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 }
             }
         } else {
-            throw runtime_error("empty bvh");
+            log_error("empty bvh");
         }
 
         // check for early exit
@@ -3571,7 +3572,7 @@ void update_transforms(
                 val = evaluate_keyframed_bezier(animation->keyframes_times,
                     animation->translation_keyframes, time);
                 break;
-            default: throw runtime_error("should not have been here");
+            default: log_error("should not have been here");
         }
         for (auto target : animation->node_targets) target->translation = val;
     }
@@ -3660,7 +3661,7 @@ vector<float> compute_shape_elements_cdf(const yocto_shape* shape) {
     } else if (!shape->points.empty()) {
         return sample_points_element_cdf(shape->points.size());
     } else {
-        throw runtime_error("empty shape not supported");
+        log_error("empty shape not supported");
     }
 }
 
@@ -3704,7 +3705,7 @@ vector<float> compute_environment_texels_cdf(
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
     } else {
-        throw runtime_error("empty texture");
+        log_error("empty texture");
     }
     return elem_cdf;
 }
@@ -3851,7 +3852,7 @@ void add_missing_tangent_space(yocto_scene* scene) {
                 instance->shape->triangles, instance->shape->positions,
                 instance->shape->normals, instance->shape->texturecoords);
         } else {
-            throw runtime_error("type not supported");
+            log_error("type not supported");
         }
     }
 }
@@ -5174,7 +5175,7 @@ vec3f sample_light_direction(const trace_light* light, const bvh_tree* bvh,
         return sample_environment_direction(
             light->environment, light->elements_cdf, rel, ruv);
     } else {
-        throw runtime_error("bad light");
+        log_error("bad light");
         return zero3f;
     }
 }
@@ -5207,7 +5208,7 @@ float sample_light_direction_pdf(const trace_light* light, const bvh_tree* bvh,
         return sample_environment_direction_pdf(
             light->environment, light->elements_cdf, direction);
     } else {
-        throw runtime_error("bad light");
+        log_error("bad light");
         return 0;
     }
 }
@@ -6088,7 +6089,6 @@ tuple<vec3f, bool> trace_func(const yocto_scene* scene, const bvh_tree* bvh,
         case trace_type::debug_roughness:
             return trace_debug_roughness(
                 scene, bvh, lights, position, direction, rng, max_bounces);
-        default: throw runtime_error("should not have gotten here");
     }
     return {zero3f, false};
 }

@@ -108,11 +108,15 @@ string normalize_path(const string& filename_) {
     auto filename = filename_;
     for (auto& c : filename)
         if (c == '\\') c = '/';
-    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/')
-        throw runtime_error("no absolute paths");
+    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+        log_error("absolute paths are not supported");
+        return filename_;
+    }
     if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-        filename[3] == '/')
-        throw runtime_error("no absolute paths");
+        filename[3] == '/') {
+        log_error("absolute paths are not supported");
+        return filename_;
+    }
     auto pos = (size_t)0;
     while ((pos = filename.find("//")) != filename.npos)
         filename = filename.substr(0, pos) + filename.substr(pos + 1);
@@ -874,7 +878,7 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 
 // Resize image.
 image<vec4f> resize_image(const image<vec4f>& img, int width, int height) {
-    if (!width && !height) throw runtime_error("bad image size");
+    if (!width && !height) { log_error("bad image size in resize_image"); return img; }
     if (!width) width = (int)round(img.width * (height / (float)img.height));
     if (!height) height = (int)round(img.height * (width / (float)img.width));
     auto res_img = image<vec4f>{width, height};
@@ -1478,7 +1482,8 @@ bool apply_json_procedural(
             js.value("gain", 0.5f), js.value("octaves", 6),
             js.value("wrap", true));
     } else {
-        throw runtime_error("unknown texture type " + type);
+        log_error("unknown texture type {}", type);
+        return false;
     }
     if (js.value("bump_to_normal", false)) {
         val->hdr_image = bump_to_normal_map(
@@ -1560,7 +1565,8 @@ bool apply_json_procedural(
         val->volume_data = make_test_volume1f(width, height, depth,
             js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
-        throw runtime_error("unknown texture type " + type);
+        log_error("unknown texture type {}", type);
+        return false;
     }
     if (val->filename == "") {
         auto ext      = string("vol");
@@ -1857,7 +1863,8 @@ bool apply_json_procedural(
     } else if (type == "suzanne") {
         shape = make_suzanne_shape(js.value("size", 2.0f), as_triangles);
     } else {
-        throw runtime_error("unknown shape type " + type);
+        log_error("unknown shape type {}", type);
+        return false;
     }
     if (js.value("flipyz", false)) {
         for (auto& p : shape.positions) p = {p.x, p.z, p.y};
@@ -1960,7 +1967,8 @@ bool apply_json_procedural(
         shape.positions_quads = qshp.quads;
         shape.positions       = qshp.positions;
     } else {
-        throw runtime_error("unknown shape type " + type);
+        log_error("unknown shape type {}", type);
+        return false;
     }
     val->positions_quads     = shape.positions_quads;
     val->positions           = shape.positions;
@@ -2929,8 +2937,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         if (instance->surface) instance->surface->name = instance->name;
         if (matname != "") {
             auto it = mmap.find(matname);
-            if (it == mmap.end())
-                throw runtime_error("missing material " + matname);
+            if (it == mmap.end()) {
+                log_error("missing material {}", matname);
+            }
             instance->material = it->second;
         }
         vert_map.clear();
@@ -3665,7 +3674,7 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                         // points
                         printf("points not supported\n");
                     } else {
-                        throw runtime_error("unknown primitive type");
+                        log_error("unknown primitive type");
                     }
                 } else {
                     auto indices = accessor_values(
@@ -3716,7 +3725,7 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                         // points
                         printf("points not supported\n");
                     } else {
-                        throw runtime_error("unknown primitive type");
+                        log_error("unknown primitive type");
                     }
                 }
                 auto mat = (gprim.count("material")) ?
@@ -4260,7 +4269,7 @@ bool pbrt_to_json(const string& filename, json& js) {
                std::isdigit(tok[0]);
     };
     auto parse_string = [](const vector<string>& tokens, int& i) -> string {
-        if (tokens[i][0] != '"') throw runtime_error("string expected");
+        if (tokens[i][0] != '"') { log_error("string expected"); return ""; }
         auto tok = tokens[i++];
         tok      = tok.substr(1, tok.size() - 2);
         if (tok.find('|') != tok.npos) tok = tok.substr(tok.find('|') + 1);
@@ -4285,7 +4294,7 @@ bool pbrt_to_json(const string& filename, json& js) {
                 i++;
                 if (!list) break;
             } else {
-                if (!first && !list) throw runtime_error("bad params");
+                if (!first && !list) { log_error("bad params"); break; }
                 js.push_back(atof(tokens[i].c_str()));
                 i++;
                 if (!list) break;
@@ -4333,7 +4342,7 @@ bool pbrt_to_json(const string& filename, json& js) {
     auto tokens = split(pbrt);
     auto i      = 0;
     while (i < tokens.size()) {
-        if (!is_cmd(tokens, i)) throw runtime_error("command expected");
+        if (!is_cmd(tokens, i)) { runtime_error("command expected"); break; }
         auto& tok   = tokens[i++];
         auto  jcmd  = json::object();
         jcmd["cmd"] = tok;
@@ -4365,7 +4374,7 @@ bool pbrt_to_json(const string& filename, json& js) {
                    tok == "AttributeEnd" || tok == "TransformEnd" ||
                    tok == "ObjectEnd" || tok == "ReverseOrientation") {
         } else {
-            throw runtime_error("unsupported command " + tok);
+            log_error("unsupported command {}", tok);
         }
         js.push_back(jcmd);
     }
@@ -5531,9 +5540,9 @@ ply_data* load_ply(const string& filename) {
                 auto count_type = parse_string(ss);
                 auto elem_type  = parse_string(ss);
                 if (count_type != "uchar" && count_type != "uint8")
-                    throw runtime_error("unsupported ply list type");
+                    log_error("unsupported ply list type");
                 if (elem_type != "int")
-                    throw runtime_error("unsupported ply list type");
+                    log_error("unsupported ply list type");
                 prop.type = ply_type::ply_int_list;
             } else if (type == "float") {
                 prop.type = ply_type::ply_float;
