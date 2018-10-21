@@ -2794,7 +2794,7 @@ make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
     auto shape = make_points(num, uvsize, point_radius);
     auto rng   = make_rng(seed);
     for (auto i = 0; i < shape.positions.size(); i++) {
-        shape.positions[i] = (next_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+        shape.positions[i] = (get_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
     }
     return shape;
 }
@@ -4692,8 +4692,8 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera* camera, const vec2i& ij,
     const vec2i& imsize, rng_state& rng) {
-    auto puv = next_random_vec2f(rng);  // force order of evaluation with assignments
-    auto luv = next_random_vec2f(rng);  // force order of evaluation with assignments
+    auto puv = get_random_vec2f(rng);  // force order of evaluation with assignments
+    auto luv = get_random_vec2f(rng);  // force order of evaluation with assignments
     return evaluate_camera_ray(camera, ij, imsize, puv, luv);
 }
 
@@ -4853,7 +4853,7 @@ vec3f sample_smooth_brdf_direction(const microfacet_brdf& f, const vec3f& n,
 vec3f sample_smooth_brdf_direction(
     const microfacet_brdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
     auto rnl = get_random_float(rng);  // force order of evaluation with assignments
-    auto rni = next_random_vec2f(rng);  // force order of evaluation with assignments
+    auto rni = get_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_smooth_brdf_direction(f, n, o, rnl, rni);
 }
 
@@ -4892,7 +4892,7 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& f, const vec3f& n,
 vec3f sample_delta_brdf_direction(
     const microfacet_brdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
     auto rnl = get_random_float(rng);  // force order of evaluation with assignments
-    auto rni = next_random_vec2f(rng);  // force order of evaluation with assignments
+    auto rni = get_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_delta_brdf_direction(f, n, o, rnl, rni);
 }
 
@@ -4986,7 +4986,7 @@ trace_point sample_light_point(
     const trace_light* light, const vec3f& position, rng_state& rng) {
     if (!light->instance) return {};
     auto rel   = get_random_float(rng);  // force order of evaluation with assignments
-    auto ruv   = next_random_vec2f(rng);  // force order of evaluation with assignments
+    auto ruv   = get_random_vec2f(rng);  // force order of evaluation with assignments
     auto point = sample_instance_point(
         light->instance, light->elements_cdf, rel, ruv);
     auto direction = normalize(position - point.position);
@@ -5065,7 +5065,7 @@ vec3f sample_environment_light_direction(const yocto_environment* environment,
 vec3f sample_environment_light_direction(const yocto_environment* environment,
     const vector<float>& elem_cdf, rng_state& rng) {
     auto rel = get_random_float(rng);  // force order of evaluation with assignments
-    auto ruv = next_random_vec2f(rng);  // force order of evaluation with assignments
+    auto ruv = get_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_environment_light_direction(environment, elem_cdf, rel, ruv);
 }
 
@@ -5137,7 +5137,7 @@ vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& p, rng_state& rng) {
     auto rlg = get_random_float(rng);  // force order of evaluation with assignments
     auto rel = get_random_float(rng);  // force order of evaluation with assignments
-    auto ruv = next_random_vec2f(rng);  // force order of evaluation with assignments
+    auto ruv = get_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_lights_direction(lights, bvh, p, rlg, rel, ruv);
 }
 
@@ -5251,12 +5251,12 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     if (idx < lights->instances.size()) {
         auto light = lights->instances[idx];
         i          = sample_instance_direction(
-            light->instance, light->elements_cdf, p, get_random_float(rng), next_random_vec2f(rng));
+            light->instance, light->elements_cdf, p, get_random_float(rng), get_random_vec2f(rng));
         pdf *= 1.0 / light->elements_cdf.back();
     } else {
         auto light = lights->environments[idx - lights->instances.size()];
         i          = sample_environment_direction(
-            light->environment, light->elements_cdf, get_random_float(rng), next_random_vec2f(rng));
+            light->environment, light->elements_cdf, get_random_float(rng), get_random_vec2f(rng));
         pdf *= sample_environment_direction_pdf(
             light->environment, light->elements_cdf, i);
         auto isec = intersect_scene_with_opacity(
@@ -5604,7 +5604,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
             }
 
             // indirect
-            vec3f i = sample_phase_function(vg, next_random_vec2f(rng));
+            vec3f i = sample_phase_function(vg, get_random_vec2f(rng));
             weight *= va;
             ray.d = transform_direction(make_frame_fromz(zero3f, ray.d), i);
         }
@@ -6471,7 +6471,7 @@ float integrate_func2_base(
     function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = next_random_vec2f(rng);
+        auto r = get_random_vec2f(rng);
         auto x = a + r * (b - a);
         integral += f(x) * (b.x - a.x) * (b.y - a.y);
     }
@@ -6500,7 +6500,7 @@ float integrate_func2_importance(function<float(vec2f)> f,
     rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = next_random_vec2f(rng);
+        auto r = get_random_vec2f(rng);
         auto x = warp(r);
         integral += f(x) / pdf(x);
     }

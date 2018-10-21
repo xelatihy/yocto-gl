@@ -131,7 +131,7 @@
 //     3. if necessary, you can reseed the rng with `seed_rng()`
 //     4. generate random integers in an interval with `get_random_int()`
 //     5. generate random floats and double in the [0,1) range with
-//        `get_random_float()`, `next_random_vec2f()`, `next_random_vec3f()`, `next_rand1d()`
+//        `get_random_float()`, `get_random_vec2f()`, `get_random_vec3f()`, `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
@@ -355,8 +355,8 @@ inline T max(const T& x, const T& y) {
     return (x > y) ? x : y;
 }
 template <typename T>
-inline T clamp(const T& x, const T& min_, const T& max_) {
-    return min(max(x, min_), max_);
+inline T clamp(const T& value, const T& min_, const T& max_) {
+    return min(max(value, min_), max_);
 }
 template <typename T, typename T1>
 inline T lerp(const T& a, const T& b, T1 u) {
@@ -811,30 +811,30 @@ inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
 
 // Reflected and refracted vector.
 template <typename T>
-inline vec<T, 3> reflect(const vec<T, 3>& w, const vec<T, 3>& n) {
-    return -w + 2 * dot(n, w) * n;
+inline vec<T, 3> reflect(const vec<T, 3>& direction, const vec<T, 3>& normal) {
+    return -direction + 2 * dot(normal, direction) * normal;
 }
 template <typename T, typename T1>
-inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
+inline vec<T, 3> refract(const vec<T, 3>& direction, const vec<T, 3>& normal, T1 eta) {
     // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
-    auto k = 1 - eta * eta * max(0.0f, 1 - dot(n, w) * dot(n, w));
+    auto k = 1 - eta * eta * max(0.0f, 1 - dot(normal, direction) * dot(normal, direction));
     if (k < 0) return {0, 0, 0};  // tir
-    return -w * eta + (eta * dot(n, w) - sqrt(k)) * n;
+    return -direction * eta + (eta * dot(normal, direction) - sqrt(k)) * normal;
 }
 
 // Max element and clamp.
 template <typename T, typename T1, typename T2>
-inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max)};
+inline vec<T, 2> clamp(const vec<T, 2>& value, T1 min, T2 max) {
+    return {clamp(value.x, min, max), clamp(value.y, min, max)};
 }
 template <typename T, typename T1, typename T2>
-inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
+inline vec<T, 3> clamp(const vec<T, 3>& value, T1 min, T2 max) {
+    return {clamp(value.x, min, max), clamp(value.y, min, max), clamp(value.z, min, max)};
 }
 template <typename T, typename T1, typename T2>
-inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-        clamp(x.w, min, max)};
+inline vec<T, 4> clamp(const vec<T, 4>& value, T1 min, T2 max) {
+    return {clamp(value.x, min, max), clamp(value.y, min, max), clamp(value.z, min, max),
+        clamp(value.w, min, max)};
 }
 template <typename T>
 inline T max(const vec<T, 2>& a) {
@@ -1659,17 +1659,17 @@ inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
         {0, 0, -2 * f * n / (f - n), 0}};
 }
 template <typename T>
-inline mat<T, 4, 4> ortho_mat(T l, T r, T b, T t, T n, T f) {
+inline mat<T, 4, 4> orthographic_mat(T l, T r, T b, T t, T n, T f) {
     return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
         {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 template <typename T>
-inline mat<T, 4, 4> ortho2d_mat(T left, T right, T bottom, T top) {
-    return ortho_mat(left, right, bottom, top, -1, 1);
+inline mat<T, 4, 4> orthographic2d_mat(T left, T right, T bottom, T top) {
+    return orthographic_mat(left, right, bottom, top, -1, 1);
 }
 template <typename T>
-inline mat<T, 4, 4> ortho_mat(T xmag, T ymag, T near, T far) {
+inline mat<T, 4, 4> orthographic_mat(T xmag, T ymag, T near, T far) {
     return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
         {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
 }
@@ -1779,13 +1779,13 @@ inline float get_random_float(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f next_random_vec2f(rng_state& rng) {
+inline vec2f get_random_vec2f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
     auto x = get_random_float(rng);
     auto y = get_random_float(rng);
     return {x, y};
 }
-inline vec3f next_random_vec3f(rng_state& rng) {
+inline vec3f get_random_vec3f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
     auto x = get_random_float(rng);
     auto y = get_random_float(rng);
