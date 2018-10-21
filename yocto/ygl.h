@@ -2040,11 +2040,11 @@ namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 vector<vec3f> compute_vertex_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& pos);
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
 vector<vec3f> compute_vertex_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
 vector<vec3f> compute_vertex_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& pos);
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
@@ -2052,16 +2052,16 @@ vector<vec3f> compute_vertex_normals(
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
 vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord);
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
 tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
 
@@ -2104,10 +2104,10 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 // and face ids and filled vectors for pos, norm and texcoord.
 void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
     vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
-    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
-    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color);
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec4i>& quads_colors,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, const vector<vec4f>& colors);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
@@ -2134,11 +2134,11 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quad
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& pos, float threshold);
+    const vector<vec3f>& positions, float threshold);
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos, float threshold);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, float threshold);
 tuple<vector<vec4i>, vector<vec3f>> weld_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& pos, float threshold);
+    const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold);
 
 // Pick a point in a point set uniformly.
 inline int sample_points_element(int npoints, float re) {
@@ -2155,11 +2155,11 @@ inline int sample_points_element(const vector<float>& cdf, float re) {
 
 // Pick a point on lines uniformly.
 inline vector<float> sample_lines_element_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& pos) {
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
     auto cdf = vector<float>(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
-        auto w = line_length(pos[l.x], pos[l.y]);
+        auto w = line_length(positions[l.x], positions[l.y]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
     return cdf;
@@ -2171,11 +2171,11 @@ inline tuple<int, float> sample_lines_element(
 
 // Pick a point on a triangle mesh uniformly.
 inline vector<float> sample_triangles_element_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto cdf = vector<float>(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
-        auto w = triangle_area(pos[t.x], pos[t.y], pos[t.z]);
+        auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
     return cdf;
@@ -2187,11 +2187,11 @@ inline tuple<int, vec2f> sample_triangles_element(
 
 // Pick a point on a quad mesh uniformly.
 inline vector<float> sample_quads_element_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& pos) {
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
     auto cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
-        auto w = quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+        auto w = quad_area(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
     return cdf;
@@ -2213,12 +2213,12 @@ inline tuple<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos, norm
 // and texcoord of the sampled points.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
     int seed = 7);
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
-    const vector<vec4i>& quads, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
     int seed = 7);
 
 }  // namespace ygl
@@ -2415,7 +2415,7 @@ struct make_fvshape_data {
     // Faces swith different topology for each data
     vector<vec4i> positions_quads;
     vector<vec4i> normals_quads;
-    vector<vec4i> quads_texcoord;
+    vector<vec4i> quads_texturecoords;
 };
 
 // Make examples shapes that are not watertight (besides quads).

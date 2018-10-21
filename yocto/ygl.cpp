@@ -295,11 +295,11 @@ namespace ygl {
 
 // Compute per-vertex tangents for lines.
 vector<vec3f> compute_vertex_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& pos) {
-    auto norm = vector<vec3f>(pos.size(), zero3f);
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+    auto norm = vector<vec3f>(positions.size(), zero3f);
     for (auto& l : lines) {
-        auto n = line_tangent(pos[l.x], pos[l.y]);
-        auto a = line_length(pos[l.x], pos[l.y]);
+        auto n = line_tangent(positions[l.x], positions[l.y]);
+        auto a = line_length(positions[l.x], positions[l.y]);
         norm[l.x] += n * a;
         norm[l.y] += n * a;
     }
@@ -309,11 +309,11 @@ vector<vec3f> compute_vertex_tangents(
 
 // Compute per-vertex normals for triangles.
 vector<vec3f> compute_vertex_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos) {
-    auto norm = vector<vec3f>(pos.size(), zero3f);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+    auto norm = vector<vec3f>(positions.size(), zero3f);
     for (auto& t : triangles) {
-        auto n = triangle_normal(pos[t.x], pos[t.y], pos[t.z]);
-        auto a = triangle_area(pos[t.x], pos[t.y], pos[t.z]);
+        auto n = triangle_normal(positions[t.x], positions[t.y], positions[t.z]);
+        auto a = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         norm[t.x] += n * a;
         norm[t.y] += n * a;
         norm[t.z] += n * a;
@@ -324,11 +324,11 @@ vector<vec3f> compute_vertex_normals(
 
 // Compute per-vertex normals for quads.
 vector<vec3f> compute_vertex_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& pos) {
-    auto norm = vector<vec3f>(pos.size(), zero3f);
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+    auto norm = vector<vec3f>(positions.size(), zero3f);
     for (auto q : quads) {
-        auto n = quad_normal(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
-        auto a = quad_area(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+        auto n = quad_normal(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        auto a = quad_area(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         norm[q.x] += n * a;
         norm[q.y] += n * a;
         norm[q.z] += n * a;
@@ -344,68 +344,68 @@ vector<vec3f> compute_vertex_normals(
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
 vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord) {
-    auto tangu = vector<vec3f>(pos.size(), zero3f);
-    auto tangv = vector<vec3f>(pos.size(), zero3f);
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords) {
+    auto tangu = vector<vec3f>(positions.size(), zero3f);
+    auto tangv = vector<vec3f>(positions.size(), zero3f);
     for (auto t : triangles) {
-        auto tutv = triangle_tangents_fromuv(pos[t.x], pos[t.y], pos[t.z],
-            texcoord[t.x], texcoord[t.y], texcoord[t.z]);
+        auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y], positions[t.z],
+            texturecoords[t.x], texturecoords[t.y], texturecoords[t.z]);
         tutv      = {normalize(get<0>(tutv)), normalize(get<1>(tutv))};
         for (auto vid : {t.x, t.y, t.z}) tangu[vid] += get<0>(tutv);
         for (auto vid : {t.x, t.y, t.z}) tangv[vid] += get<1>(tutv);
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
-    auto tangsp = vector<vec4f>(pos.size(), zero4f);
-    for (auto i = 0; i < pos.size(); i++) {
-        tangu[i] = orthonormalize(tangu[i], norm[i]);
-        auto s   = (dot(cross(norm[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
+    auto tangsp = vector<vec4f>(positions.size(), zero4f);
+    for (auto i = 0; i < positions.size(); i++) {
+        tangu[i] = orthonormalize(tangu[i], normals[i]);
+        auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
         tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
     return tangsp;
 }
 
 // Apply skinning
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec4f>& weights,
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
     const vector<vec4i>& joints, const vector<frame3f>& xforms) {
-    auto skinned_pos  = vector<vec3f>(pos.size());
-    auto skinned_norm = vector<vec3f>(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
-        skinned_pos[i] = transform_point(xforms[joints[i].x], pos[i]) *
+    auto skinned_pos  = vector<vec3f>(positions.size());
+    auto skinned_norm = vector<vec3f>(normals.size());
+    for (auto i = 0; i < positions.size(); i++) {
+        skinned_pos[i] = transform_point(xforms[joints[i].x], positions[i]) *
                              weights[i].x +
-                         transform_point(xforms[joints[i].y], pos[i]) *
+                         transform_point(xforms[joints[i].y], positions[i]) *
                              weights[i].y +
-                         transform_point(xforms[joints[i].z], pos[i]) *
+                         transform_point(xforms[joints[i].z], positions[i]) *
                              weights[i].z +
-                         transform_point(xforms[joints[i].w], pos[i]) *
+                         transform_point(xforms[joints[i].w], positions[i]) *
                              weights[i].w;
     }
-    for (auto i = 0; i < pos.size(); i++) {
+    for (auto i = 0; i < positions.size(); i++) {
         skinned_norm[i] = normalize(
-            transform_direction(xforms[joints[i].x], norm[i]) * weights[i].x +
-            transform_direction(xforms[joints[i].y], norm[i]) * weights[i].y +
-            transform_direction(xforms[joints[i].z], norm[i]) * weights[i].z +
-            transform_direction(xforms[joints[i].w], norm[i]) * weights[i].w);
+            transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
+            transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
+            transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
+            transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
     }
     return {skinned_pos, skinned_norm};
 }
 
 // Apply skinning as specified in Khronos glTF
 tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
-    auto skinned_pos  = vector<vec3f>(pos.size());
-    auto skinned_norm = vector<vec3f>(norm.size());
-    for (auto i = 0; i < pos.size(); i++) {
+    auto skinned_pos  = vector<vec3f>(positions.size());
+    auto skinned_norm = vector<vec3f>(normals.size());
+    for (auto i = 0; i < positions.size(); i++) {
         auto xform = xforms[joints[i].x] * weights[i].x +
                      xforms[joints[i].y] * weights[i].y +
                      xforms[joints[i].z] * weights[i].z +
                      xforms[joints[i].w] * weights[i].w;
-        skinned_pos[i]  = transform_point(xform, pos[i]);
-        skinned_norm[i] = normalize(transform_direction(xform, norm[i]));
+        skinned_pos[i]  = transform_point(xform, positions[i]);
+        skinned_norm[i] = normalize(transform_direction(xform, normals[i]));
     }
     return {skinned_pos, skinned_norm};
 }
@@ -531,20 +531,20 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 // and filled vectors for pos, norm and texcoord.
 void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
     vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
-    const vector<vec4i>& quads_pos, const vector<vec4i>& quads_norm,
-    const vector<vec4i>& quads_texcoord, const vector<vec4i>& quads_color,
-    const vector<vec3f>& pos, const vector<vec3f>& norm,
-    const vector<vec2f>& texcoord, const vector<vec4f>& color) {
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec4i>& quads_colors,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, const vector<vec4f>& colors) {
     // make faces unique
     unordered_map<vec4i, int> vert_map;
-    qquads = vector<vec4i>(quads_pos.size());
-    for (auto fid = 0; fid < quads_pos.size(); fid++) {
+    qquads = vector<vec4i>(quads_positions.size());
+    for (auto fid = 0; fid < quads_positions.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
             auto v = vec4i{
-                (&quads_pos[fid].x)[c],
-                (!quads_norm.empty()) ? (&quads_norm[fid].x)[c] : -1,
-                (!quads_texcoord.empty()) ? (&quads_texcoord[fid].x)[c] : -1,
-                (!quads_color.empty()) ? (&quads_color[fid].x)[c] : -1,
+                (&quads_positions[fid].x)[c],
+                (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
+                (!quads_texturecoords.empty()) ? (&quads_texturecoords[fid].x)[c] : -1,
+                (!quads_colors.empty()) ? (&quads_colors[fid].x)[c] : -1,
             };
             auto it = vert_map.find(v);
             if (it == vert_map.end()) {
@@ -559,20 +559,20 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
 
     // fill vert data
     qpos.clear();
-    if (!pos.empty()) {
+    if (!positions.empty()) {
         qpos.resize(vert_map.size());
-        for (auto kv : vert_map) { qpos[kv.second] = pos[kv.first.x]; }
+        for (auto kv : vert_map) { qpos[kv.second] = positions[kv.first.x]; }
     }
     qnorm.clear();
-    if (!norm.empty()) {
+    if (!normals.empty()) {
         qnorm.resize(vert_map.size());
-        for (auto kv : vert_map) { qnorm[kv.second] = norm[kv.first.y]; }
+        for (auto kv : vert_map) { qnorm[kv.second] = normals[kv.first.y]; }
     }
     qtexcoord.clear();
-    if (!texcoord.empty()) {
+    if (!texturecoords.empty()) {
         qtexcoord.resize(vert_map.size());
         for (auto kv : vert_map) {
-            qtexcoord[kv.second] = texcoord[kv.first.z];
+            qtexcoord[kv.second] = texturecoords[kv.first.z];
         }
     }
 }
@@ -891,26 +891,26 @@ template tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& pos, float threshold) {
-    auto vid  = vector<int>(pos.size());
-    auto wpos = vector<vec3f>();
-    for (auto i = 0; i < pos.size(); i++) {
-        vid[i] = (int)wpos.size();
-        for (auto j = 0; j < wpos.size(); j++) {
-            if (length(pos[i] - wpos[j]) < threshold) {
+    const vector<vec3f>& positions, float threshold) {
+    auto vid  = vector<int>(positions.size());
+    auto welded_positions = vector<vec3f>();
+    for (auto i = 0; i < positions.size(); i++) {
+        vid[i] = (int)welded_positions.size();
+        for (auto j = 0; j < welded_positions.size(); j++) {
+            if (length(positions[i] - welded_positions[j]) < threshold) {
                 vid[i] = j;
                 break;
             }
         }
-        if (vid[i] == (int)wpos.size()) wpos.push_back(pos[i]);
+        if (vid[i] == (int)welded_positions.size()) welded_positions.push_back(positions[i]);
     }
-    return {wpos, vid};
+    return {welded_positions, vid};
 }
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos, float threshold) {
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, float threshold) {
     auto vid        = vector<int>();
     auto wpos       = vector<vec3f>();
-    tie(wpos, vid)  = weld_vertices(pos, threshold);
+    tie(wpos, vid)  = weld_vertices(positions, threshold);
     auto wtriangles = vector<vec3i>();
     for (auto t : triangles) {
         t.x = vid[t.x];
@@ -921,10 +921,10 @@ tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
     return {wtriangles, wpos};
 }
 tuple<vector<vec4i>, vector<vec3f>> weld_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& pos, float threshold) {
+    const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold) {
     auto vid       = vector<int>();
     auto wpos      = vector<vec3f>();
-    tie(wpos, vid) = weld_vertices(pos, threshold);
+    tie(wpos, vid) = weld_vertices(positions, threshold);
     auto wquads    = vector<vec4i>();
     for (auto q : quads) {
         q.x = vid[q.x];
@@ -940,13 +940,13 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
     int seed) {
-    auto sampled_pos      = vector<vec3f>(npoints);
-    auto sampled_norm     = vector<vec3f>(npoints);
-    auto sampled_texcoord = vector<vec2f>(npoints);
-    auto cdf              = sample_triangles_element_cdf(triangles, pos);
+    auto sampled_positions      = vector<vec3f>(npoints);
+    auto sampled_normals     = vector<vec3f>(npoints);
+    auto sampled_texturecoords = vector<vec2f>(npoints);
+    auto cdf              = sample_triangles_element_cdf(triangles, positions);
     auto rng              = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto ei     = 0;
@@ -954,35 +954,35 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
         tie(ei, uv) = sample_triangles_element(
             cdf, get_random_float(rng), {get_random_float(rng), get_random_float(rng)});
         auto t         = triangles[ei];
-        sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], uv);
-        if (!sampled_norm.empty()) {
-            sampled_norm[i] = normalize(
-                interpolate_triangle(norm[t.x], norm[t.y], norm[t.z], uv));
+        sampled_positions[i] = interpolate_triangle(positions[t.x], positions[t.y], positions[t.z], uv);
+        if (!sampled_normals.empty()) {
+            sampled_normals[i] = normalize(
+                interpolate_triangle(normals[t.x], normals[t.y], normals[t.z], uv));
         } else {
-            sampled_norm[i] = triangle_normal(pos[t.x], pos[t.y], pos[t.z]);
+            sampled_normals[i] = triangle_normal(positions[t.x], positions[t.y], positions[t.z]);
         }
-        if (!sampled_texcoord.empty()) {
-            sampled_texcoord[i] = interpolate_triangle(
-                texcoord[t.x], texcoord[t.y], texcoord[t.z], uv);
+        if (!sampled_texturecoords.empty()) {
+            sampled_texturecoords[i] = interpolate_triangle(
+                texturecoords[t.x], texturecoords[t.y], texturecoords[t.z], uv);
         } else {
-            sampled_texcoord[i] = zero2f;
+            sampled_texturecoords[i] = zero2f;
         }
     }
 
-    return {sampled_pos, sampled_norm, sampled_texcoord};
+    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
-    const vector<vec4i>& quads, const vector<vec3f>& pos,
-    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
     int seed) {
-    auto sampled_pos      = vector<vec3f>(npoints);
-    auto sampled_norm     = vector<vec3f>(npoints);
-    auto sampled_texcoord = vector<vec2f>(npoints);
-    auto cdf              = sample_quads_element_cdf(quads, pos);
+    auto sampled_positions      = vector<vec3f>(npoints);
+    auto sampled_normals     = vector<vec3f>(npoints);
+    auto sampled_texturecoords = vector<vec2f>(npoints);
+    auto cdf              = sample_quads_element_cdf(quads, positions);
     auto rng              = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto ei     = 0;
@@ -990,22 +990,22 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
         tie(ei, uv) = sample_quads_element(
             cdf, get_random_float(rng), {get_random_float(rng), get_random_float(rng)});
         auto q         = quads[ei];
-        sampled_pos[i] = interpolate_quad(pos[q.x], pos[q.y], pos[q.z], pos[q.w], uv);
-        if (!sampled_norm.empty()) {
-            sampled_norm[i] = normalize(
-                interpolate_quad(norm[q.x], norm[q.y], norm[q.z], norm[q.w], uv));
+        sampled_positions[i] = interpolate_quad(positions[q.x], positions[q.y], positions[q.z], positions[q.w], uv);
+        if (!sampled_normals.empty()) {
+            sampled_normals[i] = normalize(
+                interpolate_quad(normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
         } else {
-            sampled_norm[i] = quad_normal(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+            sampled_normals[i] = quad_normal(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         }
-        if (!sampled_texcoord.empty()) {
-            sampled_texcoord[i] = interpolate_quad(
-                texcoord[q.x], texcoord[q.y], texcoord[q.z], texcoord[q.w], uv);
+        if (!sampled_texturecoords.empty()) {
+            sampled_texturecoords[i] = interpolate_quad(
+                texturecoords[q.x], texturecoords[q.y], texturecoords[q.z], texturecoords[q.w], uv);
         } else {
-            sampled_texcoord[i] = zero2f;
+            sampled_texturecoords[i] = zero2f;
         }
     }
 
-    return {sampled_pos, sampled_norm, sampled_texcoord};
+    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 }  // namespace ygl
@@ -2309,7 +2309,7 @@ make_fvshape_data make_cube_fvshape(
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     fvshp.normals_quads                         = qshp.quads;
     fvshp.normals                               = qshp.normals;
-    fvshp.quads_texcoord                        = qshp.quads;
+    fvshp.quads_texturecoords                        = qshp.quads;
     fvshp.texturecoords                         = qshp.texturecoords;
     return fvshp;
 }
@@ -3515,24 +3515,24 @@ bbox3f compute_scene_bounds(const yocto_scene* scene) {
 // Updates tesselation.
 void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
     shape->name         = surface->name;
-    auto quads_pos      = surface->positions_quads;
-    auto quads_texcoord = surface->texturecoords_quads;
-    auto quads_color    = surface->colors_quads;
+    auto quads_positions      = surface->positions_quads;
+    auto quads_texturecoords = surface->texturecoords_quads;
+    auto quads_colors    = surface->colors_quads;
     auto pos            = surface->positions;
     auto texcoord       = surface->texturecoords;
     auto color          = surface->colors;
     for (auto l = 0; l < surface->subdivision_level; l++) {
-        tie(quads_pos, pos)           = subdivide_catmullclark(quads_pos, pos);
-        tie(quads_texcoord, texcoord) = subdivide_catmullclark(
-            quads_texcoord, texcoord, true);
-        tie(quads_color, color) = subdivide_catmullclark(quads_color, color);
+        tie(quads_positions, pos)           = subdivide_catmullclark(quads_positions, pos);
+        tie(quads_texturecoords, texcoord) = subdivide_catmullclark(
+            quads_texturecoords, texcoord, true);
+        tie(quads_colors, color) = subdivide_catmullclark(quads_colors, color);
     }
     auto norm = vector<vec3f>();
     if (surface->compute_vertex_normals)
-        norm = compute_vertex_normals(quads_pos, pos);
+        norm = compute_vertex_normals(quads_positions, pos);
     convert_face_varying(shape->quads, shape->positions, shape->normals,
-        shape->texturecoords, shape->colors, quads_pos, quads_pos,
-        quads_texcoord, quads_color, pos, norm, texcoord, color);
+        shape->texturecoords, shape->colors, quads_positions, quads_positions,
+        quads_texturecoords, quads_colors, pos, norm, texcoord, color);
 }
 void tesselate_subdivs(yocto_scene* scene) {
     for (auto instance : scene->instances) {
