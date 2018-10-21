@@ -1820,13 +1820,6 @@ inline vec3f sample_sphere(const vec2f& ruv) {
 }
 inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
 
-// Sample spherical coordinates uniformly.
-inline vec2f sample_spherical(const vec2f& ruv) {
-    // BUG: FIXME this is not uniform at all!!!!
-    return {ruv.x, ruv.y};
-}
-inline float sample_spherical_pdf(const vec2f& w) { return 1 / (4 * pif); }
-
 // Sample an hemispherical direction with cosine distribution.
 inline vec3f sample_hemisphere_cosine(const vec2f& ruv) {
     auto z   = sqrt(ruv.y);
