@@ -952,7 +952,7 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
         auto ei     = 0;
         auto uv     = zero2f;
         tie(ei, uv) = sample_triangles(
-            cdf, rand1f(rng), {rand1f(rng), rand1f(rng)});
+            cdf, get_random_float(rng), {get_random_float(rng), get_random_float(rng)});
         auto t         = triangles[ei];
         sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], uv);
         if (!sampled_norm.empty()) {
@@ -1460,21 +1460,21 @@ void build_bvh(bvh_tree* bvh, bool high_quality) {
     auto prims = vector<bvh_prim>();
     if (!bvh->points.empty()) {
         for (auto& p : bvh->points) {
-            prims.push_back({point_bbox(bvh->positions[p], bvh->radius[p])});
+            prims.push_back({point_bounds(bvh->positions[p], bvh->radius[p])});
         }
     } else if (!bvh->lines.empty()) {
         for (auto& l : bvh->lines) {
-            prims.push_back({line_bbox(bvh->positions[l.x], bvh->positions[l.y],
+            prims.push_back({line_bounds(bvh->positions[l.x], bvh->positions[l.y],
                 bvh->radius[l.x], bvh->radius[l.y])});
         }
     } else if (!bvh->triangles.empty()) {
         for (auto& t : bvh->triangles) {
-            prims.push_back({triangle_bbox(bvh->positions[t.x],
+            prims.push_back({triangle_bounds(bvh->positions[t.x],
                 bvh->positions[t.y], bvh->positions[t.z])});
         }
     } else if (!bvh->quads.empty()) {
         for (auto& q : bvh->quads) {
-            prims.push_back({quad_bbox(bvh->positions[q.x], bvh->positions[q.y],
+            prims.push_back({quad_bounds(bvh->positions[q.x], bvh->positions[q.y],
                 bvh->positions[q.z], bvh->positions[q.w])});
         }
     } else if (!bvh->instances.empty()) {
@@ -1511,25 +1511,25 @@ void refit_bvh(bvh_tree* bvh, int nodeid) {
     } else if (!bvh->triangles.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& t = bvh->triangles[node.primitive_ids[i]];
-            node.bbox += triangle_bbox(
+            node.bbox += triangle_bounds(
                 bvh->positions[t.x], bvh->positions[t.y], bvh->positions[t.z]);
         }
     } else if (!bvh->quads.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& t = bvh->quads[node.primitive_ids[i]];
-            node.bbox += quad_bbox(bvh->positions[t.x], bvh->positions[t.y],
+            node.bbox += quad_bounds(bvh->positions[t.x], bvh->positions[t.y],
                 bvh->positions[t.z], bvh->positions[t.w]);
         }
     } else if (!bvh->lines.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& l = bvh->lines[node.primitive_ids[i]];
-            node.bbox += line_bbox(bvh->positions[l.x], bvh->positions[l.y],
+            node.bbox += line_bounds(bvh->positions[l.x], bvh->positions[l.y],
                 bvh->radius[l.x], bvh->radius[l.y]);
         }
     } else if (!bvh->points.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& p = bvh->points[node.primitive_ids[i]];
-            node.bbox += point_bbox(bvh->positions[p], bvh->radius[p]);
+            node.bbox += point_bounds(bvh->positions[p], bvh->radius[p]);
         }
     } else if (!bvh->instances.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
@@ -2794,7 +2794,7 @@ make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
     auto shape = make_points(num, uvsize, point_radius);
     auto rng   = make_rng(seed);
     for (auto i = 0; i < shape.positions.size(); i++) {
-        shape.positions[i] = (rand3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+        shape.positions[i] = (next_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
     }
     return shape;
 }
@@ -2843,7 +2843,7 @@ make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
 
     auto rng  = make_rng(seed, 3);
     auto blen = vector<float>(bpos.size());
-    for (auto& l : blen) l = lerp(len.x, len.y, rand1f(rng));
+    for (auto& l : blen) l = lerp(len.x, len.y, get_random_float(rng));
 
     auto cidx = vector<int>();
     if (clump.x > 0) {
@@ -4407,7 +4407,7 @@ vec3f evaluate_transmission(const yocto_material* vol, const vec3f& from,
     auto tr = 1.0f, t = 0.0f;
     auto pos = from;
     while (true) {
-        auto step = -log(1 - rand1f(rng)) / at(vd, channel);
+        auto step = -log(1 - get_random_float(rng)) / at(vd, channel);
         t += step;
         if (t >= dist) break;
         pos += dir * step;
@@ -4428,7 +4428,7 @@ float sample_distance(const yocto_material* vol, const vec3f& from,
     // delta tracking
     auto dist = 0.0f;
     while (true) {
-        auto r = rand1f(rng);
+        auto r = get_random_float(rng);
         if (r == 0) return maxf;
         auto step = -log(r) / majorant;
         if (is_volume_homogeneus(vol)) return step;
@@ -4438,7 +4438,7 @@ float sample_distance(const yocto_material* vol, const vec3f& from,
         auto density = vol->volume_density *
                        evaluate_voltexture(vol->volume_density_texture, pos);
 
-        if (at(density, channel) / majorant >= rand1f(rng)) return dist;
+        if (at(density, channel) / majorant >= get_random_float(rng)) return dist;
 
         // Escape from volume.
         if (pos.x > 1 || pos.y > 1 || pos.z > 1) return maxf;
@@ -4664,7 +4664,7 @@ trace_point trace_ray_with_opacity(const yocto_scene* scene,
         auto point = trace_ray(scene, bvh, position, direction);
         if (!point.instance) return point;
         if (point.opacity > 0.999f) return point;
-        if (rand1f(rng) < point.opacity) return point;
+        if (get_random_float(rng) < point.opacity) return point;
         position = point.position;
     }
     return {};
@@ -4681,7 +4681,7 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
         auto op = evaluate_opacity(
             isec.instance, isec.element_id, isec.element_uv);
         if (op > 0.999f) return isec;
-        if (rand1f(rng) < op) return isec;
+        if (get_random_float(rng) < op) return isec;
         ray = make_ray(
             evaluate_position(isec.instance, isec.element_id, isec.element_uv),
             ray.d);
@@ -4692,8 +4692,8 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera* camera, const vec2i& ij,
     const vec2i& imsize, rng_state& rng) {
-    auto puv = rand2f(rng);  // force order of evaluation with assignments
-    auto luv = rand2f(rng);  // force order of evaluation with assignments
+    auto puv = next_random_vec2f(rng);  // force order of evaluation with assignments
+    auto luv = next_random_vec2f(rng);  // force order of evaluation with assignments
     return evaluate_camera_ray(camera, ij, imsize, puv, luv);
 }
 
@@ -4852,8 +4852,8 @@ vec3f sample_smooth_brdf_direction(const microfacet_brdf& f, const vec3f& n,
 // Picks a direction based on the BRDF
 vec3f sample_smooth_brdf_direction(
     const microfacet_brdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
-    auto rnl = rand1f(rng);  // force order of evaluation with assignments
-    auto rni = rand2f(rng);  // force order of evaluation with assignments
+    auto rnl = get_random_float(rng);  // force order of evaluation with assignments
+    auto rni = next_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_smooth_brdf_direction(f, n, o, rnl, rni);
 }
 
@@ -4891,8 +4891,8 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& f, const vec3f& n,
 // Picks a direction based on the BRDF
 vec3f sample_delta_brdf_direction(
     const microfacet_brdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
-    auto rnl = rand1f(rng);  // force order of evaluation with assignments
-    auto rni = rand2f(rng);  // force order of evaluation with assignments
+    auto rnl = get_random_float(rng);  // force order of evaluation with assignments
+    auto rni = next_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_delta_brdf_direction(f, n, o, rnl, rni);
 }
 
@@ -4985,8 +4985,8 @@ float sample_instance_point_pdf(const yocto_instance* instance,
 trace_point sample_light_point(
     const trace_light* light, const vec3f& position, rng_state& rng) {
     if (!light->instance) return {};
-    auto rel   = rand1f(rng);  // force order of evaluation with assignments
-    auto ruv   = rand2f(rng);  // force order of evaluation with assignments
+    auto rel   = get_random_float(rng);  // force order of evaluation with assignments
+    auto ruv   = next_random_vec2f(rng);  // force order of evaluation with assignments
     auto point = sample_instance_point(
         light->instance, light->elements_cdf, rel, ruv);
     auto direction = normalize(position - point.position);
@@ -5008,7 +5008,7 @@ trace_point sample_lights_point(
     const trace_lights* lights, const vec3f& position, rng_state& rng) {
     if (lights->instances.empty()) return {};
     auto light = lights->instances[sample_index(
-        lights->instances.size(), rand1f(rng))];
+        lights->instances.size(), get_random_float(rng))];
     return sample_light_point(light, position, rng);
 }
 
@@ -5064,8 +5064,8 @@ vec3f sample_environment_light_direction(const yocto_environment* environment,
 
 vec3f sample_environment_light_direction(const yocto_environment* environment,
     const vector<float>& elem_cdf, rng_state& rng) {
-    auto rel = rand1f(rng);  // force order of evaluation with assignments
-    auto ruv = rand2f(rng);  // force order of evaluation with assignments
+    auto rel = get_random_float(rng);  // force order of evaluation with assignments
+    auto ruv = next_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_environment_light_direction(environment, elem_cdf, rel, ruv);
 }
 
@@ -5135,9 +5135,9 @@ vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
 
 vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& p, rng_state& rng) {
-    auto rlg = rand1f(rng);  // force order of evaluation with assignments
-    auto rel = rand1f(rng);  // force order of evaluation with assignments
-    auto ruv = rand2f(rng);  // force order of evaluation with assignments
+    auto rlg = get_random_float(rng);  // force order of evaluation with assignments
+    auto rel = get_random_float(rng);  // force order of evaluation with assignments
+    auto ruv = next_random_vec2f(rng);  // force order of evaluation with assignments
     return sample_lights_direction(lights, bvh, p, rlg, rel, ruv);
 }
 
@@ -5177,7 +5177,7 @@ float sample_lights_direction_pdf(const trace_lights* lights,
 vec3f sample_lights_or_brdf_direction(const trace_lights* lights,
     const bvh_tree* bvh, const microfacet_brdf& brdf, const vec3f& position,
     const vec3f& normal, const vec3f& outgoing, rng_state& rng) {
-    auto rmode = rand1f(rng);
+    auto rmode = get_random_float(rng);
     if (rmode < 0.5f) {
         return sample_lights_direction(lights, bvh, position, rng);
     } else {
@@ -5199,7 +5199,7 @@ bool sample_russian_roulette(
     const vec3f& weight, int bounce, rng_state& rng, int min_bounce = 2) {
     if (bounce <= min_bounce) return false;
     auto rrprob = 1.0f - min(max(weight), 0.95f);
-    return rand1f(rng) < rrprob;
+    return get_random_float(rng) < rrprob;
 }
 float sample_russian_roulette_pdf(
     const vec3f& weight, int bounce, int min_bounce = 2) {
@@ -5246,17 +5246,17 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     vec3f weight = vec3f{1, 1, 1};
 
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
-    auto idx     = sample_index(nlights, rand1f(rng));
+    auto idx     = sample_index(nlights, get_random_float(rng));
     pdf          = 1.0 / nlights;
     if (idx < lights->instances.size()) {
         auto light = lights->instances[idx];
         i          = sample_instance_direction(
-            light->instance, light->elements_cdf, p, rand1f(rng), rand2f(rng));
+            light->instance, light->elements_cdf, p, get_random_float(rng), next_random_vec2f(rng));
         pdf *= 1.0 / light->elements_cdf.back();
     } else {
         auto light = lights->environments[idx - lights->instances.size()];
         i          = sample_environment_direction(
-            light->environment, light->elements_cdf, rand1f(rng), rand2f(rng));
+            light->environment, light->elements_cdf, get_random_float(rng), next_random_vec2f(rng));
         pdf *= sample_environment_direction_pdf(
             light->environment, light->elements_cdf, i);
         auto isec = intersect_scene_with_opacity(
@@ -5448,7 +5448,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
 
     // Sample color channel. This won't matter if there are no heterogeneus
     // materials.
-    auto ch             = sample_index(3, rand1f(rng));
+    auto ch             = sample_index(3, get_random_float(rng));
     auto single_channel = false;
 
     int bounce = 0;
@@ -5521,7 +5521,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
                 break;
 
             // direct lighting
-            if (rand1f(rng) < prob_direct(f)) {
+            if (get_random_float(rng) < prob_direct(f)) {
                 // With some probabilty, this is a naive path tracer (works
                 // great with delta-like brdfs)
                 vec3f direct;
@@ -5582,7 +5582,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
             float scattering_prob = at(va, ch);
 
             // absorption and emission
-            if (rand1f(rng) >= scattering_prob) {
+            if (get_random_float(rng) >= scattering_prob) {
                 weight /= 1 - scattering_prob;
                 radiance += weight * ve;
                 break;
@@ -5604,7 +5604,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
             }
 
             // indirect
-            vec3f i = sample_phase_function(vg, rand2f(rng));
+            vec3f i = sample_phase_function(vg, next_random_vec2f(rng));
             weight *= va;
             ray.d = transform_direction(make_frame_fromz(zero3f, ray.d), i);
         }
@@ -5612,7 +5612,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         // russian roulette
         if (bounce > 2) {
             auto rrprob = 1.0f - min(max(weight), 0.95f);
-            if (rand1f(rng) < rrprob) break;
+            if (get_random_float(rng) < rrprob) break;
             weight *= 1 / (1 - rrprob);
         }
     }
@@ -6406,7 +6406,7 @@ float integrate_func_base(
     function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = rand1f(rng);
+        auto r = get_random_float(rng);
         auto x = a + r * (b - a);
         integral += f(x) * (b - a);
     }
@@ -6418,7 +6418,7 @@ float integrate_func_stratified(
     function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = (i + rand1f(rng)) / nsamples;
+        auto r = (i + get_random_float(rng)) / nsamples;
         auto x = a + r * (b - a);
         integral += f(x) * (b - a);
     }
@@ -6431,7 +6431,7 @@ float integrate_func_importance(function<float(float)> f,
     rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = rand1f(rng);
+        auto r = get_random_float(rng);
         auto x = warp(r);
         integral += f(x) / pdf(x);
     }
@@ -6471,7 +6471,7 @@ float integrate_func2_base(
     function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = rand2f(rng);
+        auto r = next_random_vec2f(rng);
         auto x = a + r * (b - a);
         integral += f(x) * (b.x - a.x) * (b.y - a.y);
     }
@@ -6486,7 +6486,7 @@ float integrate_func2_stratified(
     for (auto i = 0; i < nsamples2; i++) {
         for (auto j = 0; j < nsamples2; j++) {
             auto r = vec2f{
-                (i + rand1f(rng)) / nsamples2, (j + rand1f(rng)) / nsamples2};
+                (i + get_random_float(rng)) / nsamples2, (j + get_random_float(rng)) / nsamples2};
             auto x = a + r * (b - a);
             integral += f(x) * (b.x - a.x) * (b.y - a.y);
         }
@@ -6500,7 +6500,7 @@ float integrate_func2_importance(function<float(vec2f)> f,
     rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
-        auto r = rand2f(rng);
+        auto r = next_random_vec2f(rng);
         auto x = warp(r);
         integral += f(x) / pdf(x);
     }

@@ -129,9 +129,9 @@
 //     1. initialize the random number generator with `make_rng()`
 //     2. advance the random number state with `advance_rng()`
 //     3. if necessary, you can reseed the rng with `seed_rng()`
-//     4. generate random integers in an interval with `rand1i()`
+//     4. generate random integers in an interval with `get_random_int()`
 //     5. generate random floats and double in the [0,1) range with
-//        `rand1f()`, `rand2f()`, `rand3f()`, `next_rand1d()`
+//        `get_random_float()`, `next_random_vec2f()`, `next_random_vec3f()`, `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
@@ -1395,14 +1395,14 @@ inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
 
 // Primitive bounds.
 template <typename T>
-inline bbox<T, 3> point_bbox(const vec<T, 3>& p, T r = 0) {
+inline bbox<T, 3> point_bounds(const vec<T, 3>& p, T r = 0) {
     auto bounds = bbox<T, 3>{};
     bounds += p - vec3f{r, r, r};
     bounds += p + vec3f{r, r, r};
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> line_bbox(
+inline bbox<T, 3> line_bounds(
     const vec<T, 3>& p0, const vec<T, 3>& p1, T r0 = 0, T r1 = 0) {
     auto bounds = bbox<T, 3>{};
     bounds += p0 - vec3f{r0, r0, r0};
@@ -1412,7 +1412,7 @@ inline bbox<T, 3> line_bbox(
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> triangle_bbox(
+inline bbox<T, 3> triangle_bounds(
     const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
     auto bounds = bbox<T, 3>{};
     bounds += p0;
@@ -1421,7 +1421,7 @@ inline bbox<T, 3> triangle_bbox(
     return bounds;
 }
 template <typename T>
-inline bbox<T, 3> quad_bbox(const vec<T, 3>& p0, const vec<T, 3>& p1,
+inline bbox<T, 3> quad_bounds(const vec<T, 3>& p0, const vec<T, 3>& p1,
     const vec<T, 3>& p2, const vec<T, 3>& p3) {
     auto bounds = bbox<T, 3>{};
     bounds += p0;
@@ -1722,7 +1722,7 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 }
 
 // Center image and autofit.
-inline void center_image4f(vec2f& center, float& scale, const vec2i& imsize,
+inline void center_image(vec2f& center, float& scale, const vec2i& imsize,
     const vec2i& winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
         scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
@@ -1767,8 +1767,8 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   rand1i(rng_state& rng, int n) { return advance_rng(rng) % n; }
-inline float rand1f(rng_state& rng) {
+inline int   get_random_int(rng_state& rng, int n) { return advance_rng(rng) % n; }
+inline float get_random_float(rng_state& rng) {
     union {
         uint32_t u;
         float    f;
@@ -1779,17 +1779,17 @@ inline float rand1f(rng_state& rng) {
     // const static auto scale = (float)(1.0 / numeric_limits<uint32_t>::max());
     // return advance_rng(rng) * scale;
 }
-inline vec2f rand2f(rng_state& rng) {
+inline vec2f next_random_vec2f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = rand1f(rng);
-    auto y = rand1f(rng);
+    auto x = get_random_float(rng);
+    auto y = get_random_float(rng);
     return {x, y};
 }
-inline vec3f rand3f(rng_state& rng) {
+inline vec3f next_random_vec3f(rng_state& rng) {
     // force order of evaluation by using separate assignments.
-    auto x = rand1f(rng);
-    auto y = rand1f(rng);
-    auto z = rand1f(rng);
+    auto x = get_random_float(rng);
+    auto y = get_random_float(rng);
+    auto z = get_random_float(rng);
     return {x, y, z};
 }
 

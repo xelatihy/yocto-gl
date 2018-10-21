@@ -261,7 +261,7 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
-        center_image4f(img->imcenter, img->imscale,
+        center_image(img->imcenter, img->imscale,
             {img->display.width, img->display.height}, win_size,
             img->zoom_to_fit);
         draw_glimage(img->gl_txt, {img->display.width, img->display.height},
@@ -299,7 +299,7 @@ void run_ui(app_state* app) {
     init_glwidgets(win);
 
     // center image
-    center_image4f(img->imcenter, img->imscale, {img->img.width, img->img.height},
+    center_image(img->imcenter, img->imscale, {img->img.width, img->img.height},
         {width, height}, img->img.width > width || img->img.height > height);
 
     // window values

@@ -138,7 +138,7 @@ void draw(glwindow* win) {
     auto fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    center_image4f(app->imcenter, app->imscale,
+    center_image(app->imcenter, app->imscale,
         {app->state->display_image.width, app->state->display_image.height},
         win_size, app->zoom_to_fit);
     if (!app->gl_txt) {

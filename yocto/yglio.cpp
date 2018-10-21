@@ -2315,7 +2315,7 @@ bool apply_json_procedural(
         for (auto& instance : ists) nmap[instance.get()] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
-            auto instance = ists.at(rand1i(rng, (int)ists.size() - 1)).get();
+            auto instance = ists.at(get_random_int(rng, (int)ists.size() - 1)).get();
             nmap[instance] += 1;
             val->instances.push_back(new yocto_instance());
             val->instances.back()->name = instance->name +
