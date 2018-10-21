@@ -566,12 +566,16 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
     qpos.clear();
     if (!positions.empty()) {
         qpos.resize(vert_map.size());
-        for (auto kv : vert_map) { qpos[kv.second] = positions[kv.first.x]; }
+        for (auto kv : vert_map) {
+            qpos[kv.second] = positions[kv.first.x];
+        }
     }
     qnorm.clear();
     if (!normals.empty()) {
         qnorm.resize(vert_map.size());
-        for (auto kv : vert_map) { qnorm[kv.second] = normals[kv.first.y]; }
+        for (auto kv : vert_map) {
+            qnorm[kv.second] = normals[kv.first.y];
+        }
     }
     qtexcoord.clear();
     if (!texturecoords.empty()) {
@@ -1440,7 +1444,9 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
                                     return (&a.center.x)[split_axis] < middle;
                                 }) -
                             prims.data());
-                if (mid == start || mid == end) { log_error("bad BVH build"); }
+                if (mid == start || mid == end) {
+                    log_error("bad BVH build");
+                }
             } else {
                 // split along largest
                 auto largest_axis = 0;
@@ -2752,7 +2758,9 @@ make_shape_data make_suzanne_shape(float size, bool as_triangles) {
         }
     } else {
         shape.triangles = convert_quads_to_triangles(suzanne_quads);
-        for (auto& t : suzanne_triangles) { shape.triangles.push_back(t); }
+        for (auto& t : suzanne_triangles) {
+            shape.triangles.push_back(t);
+        }
     }
     return shape;
 }
@@ -3151,7 +3159,9 @@ image<vec4f> make_bumpdimple_image4f(int width, int height, int tiles) {
             auto r = sqrt(float(ii * ii + jj * jj)) /
                      sqrt(float(tile * tile) / 4);
             auto h = 0.5f;
-            if (r < 0.5f) { h += (c) ? (0.5f - r) : -(0.5f - r); }
+            if (r < 0.5f) {
+                h += (c) ? (0.5f - r) : -(0.5f - r);
+            }
             at(img, i, j) = {h, h, h, 1};
         }
     }
@@ -5012,8 +5022,12 @@ float sample_delta_brdf_direction_pdf(
 
     auto pdf = 0.0f;
 
-    if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) { return prob.y; }
-    if (f.kt != zero3f && dot(n, o) * dot(n, i) < 0) { return prob.z; }
+    if (f.ks != zero3f && dot(n, o) * dot(n, i) > 0) {
+        return prob.y;
+    }
+    if (f.kt != zero3f && dot(n, o) * dot(n, i) < 0) {
+        return prob.z;
+    }
 
     return pdf;
 }
