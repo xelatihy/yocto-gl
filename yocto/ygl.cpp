@@ -3648,7 +3648,7 @@ vector<float> compute_environment_texels_cdf(
     auto texture  = environment->emission_texture;
     auto size     = eval_texture_size(texture);
     auto elem_cdf = vector<float>(size.x * size.y);
-    if (size == zero2i) {
+    if (size != zero2i) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
