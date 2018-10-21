@@ -68,24 +68,24 @@ int main(int argc, char** argv) {
                 if (ext == "pfm")
                     replace_extension(filename, "hdr");
                 else
-                    printf("unknown texture format %s\n", ext.c_str());
+                    log_error("unknown texture format {}", ext);
             } else {
                 if (ext == "png" || ext == "jpg") continue;
                 if (ext == "tga" || ext == "bmp")
                     replace_extension(filename, "png");
                 else
-                    printf("unknown texture format %s\n", ext.c_str());
+                    log_error("unknown texture format {}", ext);
             }
         }
     }
 
     // make a directory if needed
     if (!mkdir(get_dirname(output)))
-        log_fatal("cannot create directory " + get_dirname(output));
+        log_fatal("cannot create directory {}", get_dirname(output));
 
     // save scene
     if (!save_scene(output, scene.get(), !notextures))
-        log_fatal("cannot save scene %" + output);
+        log_fatal("cannot save scene {}", output);
 
     // done
     return 0;

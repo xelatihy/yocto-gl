@@ -294,6 +294,7 @@
 #include <atomic>
 #include <cctype>
 #include <cfloat>
+#include <chrono>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -396,6 +397,74 @@ const auto epsf = epst<float>();
 template <class T>
 const T    pi  = (T)3.14159265358979323846;
 const auto pif = 3.14159265f;
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// PRINT/PARSE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Formats a string `fmt` with values taken from `args`. Uses `{}` as
+// placeholder.
+template <typename... Args>
+inline string format(const string& fmt, const Args&... args);
+
+// Converts to string.
+template <typename T>
+inline string to_string(const T& val);
+
+// Prints a formatted string to stdout or file.
+template <typename... Args>
+inline bool print(FILE* fs, const string& fmt, const Args&... args);
+template <typename... Args>
+inline bool print(const string& fmt, const Args&... args) {
+    return print(stdout, fmt, args...);
+}
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration);
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num);
+
+// Parse a list of space separated values.
+template <typename... Args>
+inline bool parse(const string& str, Args&... args);
+
+// get time in nanoseconds - useful only to compute difference of times
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// LOGGING UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Log info/error/fatal/trace message
+template <typename... Args>
+inline void log_info(const string& fmt, const Args&... args);
+template <typename... Args>
+inline void log_error(const string& fmt, const Args&... args);
+template <typename... Args>
+inline void log_fatal(const string& fmt, const Args&... args);
+
+// Setup logging
+inline void set_log_console(bool enabled);
+inline void set_log_file(const string& filename, bool append = false);
+
+// Log traces for timing and program debugging
+struct log_scope;
+template <typename... Args>
+inline void log_trace(const string& fmt, const Args&... args);
+template <typename... Args>
+inline log_scope log_trace_begin(const string& fmt, const Args&... args);
+template <typename... Args>
+inline void log_trace_end(log_scope& scope);
+template <typename... Args>
+inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 
 }  // namespace ygl
 
@@ -3139,6 +3208,7 @@ void add_missing_cameras(yocto_scene* scene);
 // Checks for validity of the scene.
 vector<string> validate_scene(
     const yocto_scene* scene, bool skip_textures = false);
+void log_validation_errors(const yocto_scene* scene, bool skip_textures = false);
 
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
@@ -3635,6 +3705,303 @@ inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
     auto pos = frame.o + transl.x * x + transl.y * y + transl.z * z;
 
     frame = {rot.x, rot.y, rot.z, pos};
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Prints basic types
+inline bool print_value(string& str, const string& val) {
+    str += val;
+    return true;
+}
+inline bool print_value(string& str, const char* val) {
+    str += val;
+    return true;
+}
+inline bool print_value(string& str, int val) {
+    str += std::to_string(val);
+    return true;
+}
+inline bool print_value(string& str, float val) {
+    str += std::to_string(val);
+    return true;
+}
+inline bool print_value(string& str, double val) {
+    str += std::to_string(val);
+    return true;
+}
+
+template <typename T, size_t N>
+inline bool print_value(string& str, const array<T, N>& val) {
+    for (auto i = 0; i < N; i++) {
+        if (i) str += " ";
+        str += std::to_string(val[i]);
+    }
+    return true;
+}
+
+// Print compound types.
+template <typename T, int N>
+inline bool print_value(string& str, const vec<T, N>& v) {
+    return print_value(str, (const array<T, N>&)v);
+}
+template <typename T, int N, int M>
+inline bool print_value(string& str, const mat<T, N, M>& v) {
+    return print_value(str, (const array<T, N * M>&)v);
+}
+template <typename T, int N>
+inline bool print_value(string& str, const frame<T, N>& v) {
+    return print_value(str, (const array<T, N*(N + 1)>&)v);
+}
+template <typename T, int N>
+inline bool print_value(string& str, const bbox<T, N>& v) {
+    return print_value(str, (const array<T, N * 2>&)v);
+}
+template <typename T, int N>
+inline bool print_value(string& str, const ray<T, N>& v) {
+    return print_value(str, (const array<T, N * 2 + 2>&)v);
+}
+
+// Prints a string.
+inline bool print_next(string& str, const string& fmt) {
+    return print_value(str, fmt);
+}
+template <typename Arg, typename... Args>
+inline bool print_next(
+    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+    auto pos = fmt.find("{}");
+    if (pos == string::npos) return print_value(str, fmt);
+    if (!print_value(str, fmt.substr(0, pos))) return false;
+    if (!print_value(str, arg)) return false;
+    return print_next(str, fmt.substr(pos + 2), args...);
+}
+
+// Formats a string `fmt` with values taken from `args`. Uses `{}` as
+// placeholder.
+template <typename... Args>
+inline string format(const string& fmt, const Args&... args) {
+    auto str = string();
+    print_next(str, fmt, args...);
+    return str;
+}
+
+// Prints a string.
+template <typename... Args>
+inline bool print(FILE* fs, const string& fmt, const Args&... args) {
+    auto str = format(fmt, args...);
+    return fprintf(fs, "%s", str.c_str()) >= 0;
+}
+
+// Converts to string.
+template <typename T>
+inline string to_string(const T& val) {
+    auto str = string();
+    print_value(str, val);
+    return str;
+}
+
+// Prints basic types to string
+inline bool _parse(const char*& str, string& val) {
+    auto n = 0;
+    char buf[4096];
+    if (sscanf(str, "%4095s%n", buf, &n) != 1) return false;
+    val = buf;
+    str += n;
+    return true;
+}
+inline bool _parse(const char*& str, int& val) {
+    auto n = 0;
+    if (sscanf(str, "%d%n", &val, &n) != 1) return false;
+    str += n;
+    return true;
+}
+inline bool _parse(const char*& str, float& val) {
+    auto n = 0;
+    if (sscanf(str, "%f%n", &val, &n) != 1) return false;
+    str += n;
+    return true;
+}
+inline bool _parse(const char*& str, double& val) {
+    auto n = 0;
+    if (sscanf(str, "%lf%n", &val, &n) != 1) return false;
+    str += n;
+    return true;
+}
+
+// Print compound types
+template <typename T, size_t N>
+inline bool _parse(const char*& str, array<T, N>& val) {
+    for (auto i = 0; i < N; i++) {
+        if (!_parse(str, val[i])) return false;
+    }
+    return true;
+}
+// Data acess
+template <typename T, int N>
+inline bool _parse(const char*& str, vec<T, N>& v) {
+    return _parse(str, (array<T, N>&)v);
+}
+template <typename T, int N, int M>
+inline bool _parse(const char*& str, mat<T, N, M>& v) {
+    return _parse(str, (array<T, N * M>&)v);
+}
+template <typename T, int N>
+inline bool _parse(const char*& str, frame<T, N>& v) {
+    return _parse(str, (array<T, N*(N + 1)>&)v);
+}
+template <typename T, int N>
+inline bool _parse(const char*& str, bbox<T, N>& v) {
+    return _parse(str, (array<T, N * 2>&)v);
+}
+template <typename T, int N>
+inline bool _parse(const char*& str, ray<T, N>& v) {
+    return _parse(str, (array<T, N * 2 + 2>&)v);
+}
+
+// Prints a string.
+inline bool _parse_next(const char*& str) { return true; }
+template <typename Arg, typename... Args>
+inline bool _parse_next(const char*& str, Arg& arg, Args&... args) {
+    if (!_parse(str, arg)) return false;
+    return _parse_next(str, args...);
+}
+
+// Returns trus if this is white space
+inline bool _is_whitespace(const char* str) {
+    while (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') str++;
+    return *str == 0;
+}
+
+// Parse a list of space separated values.
+template <typename... Args>
+inline bool parse(const string& str, Args&... args) {
+    auto str_ = str.c_str();
+    if (!_parse_next(str_, args...)) return false;
+    return _is_whitespace(str_);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF LOGGING UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Logging configutation
+inline bool& _log_console() {
+    static auto _log_console = true;
+    return _log_console;
+}
+inline FILE*& _log_filestream() {
+    static auto _log_filestream = (FILE*)nullptr;
+    return _log_filestream;
+}
+
+// Logs a message
+inline void log_message(const char* lbl, const char* msg) {
+    if (_log_console()) {
+        printf("%s\n", msg);
+        fflush(stdout);
+    }
+    if (_log_filestream()) {
+        fprintf(_log_filestream(), "%s %s\n", lbl, msg);
+        fflush(_log_filestream());
+    }
+}
+
+// Log info/error/fatal/trace message
+template <typename... Args>
+inline void log_info(const string& fmt, const Args&... args) {
+    log_message("INFO ", format(fmt, args...).c_str());
+}
+template <typename... Args>
+inline void log_error(const string& fmt, const Args&... args) {
+    log_message("ERROR", format(fmt, args...).c_str());
+}
+template <typename... Args>
+inline void log_fatal(const string& fmt, const Args&... args) {
+    log_message("FATAL", format(fmt, args...).c_str());
+    exit(1);
+}
+
+// Log traces for timing and program debugging
+struct log_scope {
+    string  message    = "";
+    int64_t start_time = -1;
+    bool    scoped     = false;
+    ~log_scope();
+};
+template <typename... Args>
+inline void log_trace(const string& fmt, const Args&... args) {
+    log_message("TRACE", format(fmt, args...).c_str());
+}
+template <typename... Args>
+inline log_scope log_trace_begin(const string& fmt, const Args&... args) {
+    auto message = format(fmt, args...);
+    log_trace(message + " [started]");
+    return {message, get_time(), false};
+}
+template <typename... Args>
+inline void log_trace_end(log_scope& scope) {
+    if (scope.start_time >= 0) {
+        log_trace(scope.message + " [ended: " +
+                  format_duration(get_time() - scope.start_time) + "]");
+    } else {
+        log_trace(scope.message + " [ended]");
+    }
+}
+template <typename... Args>
+inline log_scope log_trace_scoped(const string& fmt, const Args&... args) {
+    auto message = format(fmt, args...);
+    log_trace(message + " [started]");
+    return {message, get_time(), true};
+}
+inline log_scope::~log_scope() {
+    if (scoped) log_trace_end(*this);
+}
+
+// Configure the logging
+inline void set_log_console(bool enabled) { _log_console() = enabled; }
+inline void set_log_file(const string& filename, bool append) {
+    if (_log_filestream()) {
+        fclose(_log_filestream());
+        _log_filestream() = nullptr;
+    }
+    if (filename.empty()) return;
+    _log_filestream() = fopen(filename.c_str(), append ? "at" : "wt");
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF STRING FORMAT UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Format duration string from nanoseconds
+inline string format_duration(int64_t duration) {
+    auto elapsed = duration / 1000000;  // milliseconds
+    auto hours   = (int)(elapsed / 3600000);
+    elapsed %= 3600000;
+    auto mins = (int)(elapsed / 60000);
+    elapsed %= 60000;
+    auto secs  = (int)(elapsed / 1000);
+    auto msecs = (int)(elapsed % 1000);
+    char buf[256];
+    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buf;
+}
+// Format a large integer number in human readable form
+inline string format_num(uint64_t num) {
+    auto rem = num % 1000;
+    auto div = num / 1000;
+    if (div > 0) return format_num(div) + "," + std::to_string(rem);
+    return std::to_string(rem);
 }
 
 }  // namespace ygl

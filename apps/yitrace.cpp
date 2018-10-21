@@ -298,20 +298,13 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    if (!quiet) printf("loading scene %s\n", app->filename.c_str());
-    auto load_start = get_time();
-    app->scene      = unique_ptr<yocto_scene>(load_scene(app->filename));
+    app->scene = unique_ptr<yocto_scene>(load_scene(app->filename));
     if (!app->scene) log_fatal("cannot load scene " + app->filename);
-    if (!quiet)
-        printf("loading in %s\n",
-            format_duration(get_time() - load_start).c_str());
 
     // tesselate
-    if (!quiet) printf("tesselating scene elements\n");
     tesselate_subdivs(app->scene.get());
 
     // add components
-    if (!quiet) printf("adding scene elements\n");
     if (add_skyenv && app->scene->environments.empty()) {
         app->scene->environments.push_back(make_sky_environment("sky"));
         app->scene->textures.push_back(
@@ -323,27 +316,20 @@ int main(int argc, char* argv[]) {
         app->scene->cameras.push_back(
             make_bbox_camera("<view>", compute_scene_bounds(app->scene.get())));
     add_missing_names(app->scene.get());
-    for (auto& err : validate_scene(app->scene.get()))
-        printf("warning: %s\n", err.c_str());
+    log_validation_errors(app->scene.get());
 
     // build bvh
-    if (!quiet) printf("building bvh\n");
-    auto bvh_start = get_time();
-    app->bvh       = unique_ptr<bvh_tree>(
+    app->bvh = unique_ptr<bvh_tree>(
         make_scene_bvh(app->scene.get(), true, embree));
-    if (!quiet)
-        printf("building bvh in %s\n",
-            format_duration(get_time() - bvh_start).c_str());
 
     // init renderer
-    if (!quiet) printf("initializing lights\n");
     app->lights = unique_ptr<trace_lights>(
         make_trace_lights(app->scene.get(), app->params));
 
     // fix renderer type if no lights
     if (!app->lights && app->params.sample_tracer != trace_type::eyelight) {
         if (!quiet)
-            printf("no lights presents, switching to eyelight shader\n");
+            log_info("no lights presents, switching to eyelight shader\n");
         app->params.sample_tracer = trace_type::eyelight;
     }
 
@@ -352,7 +338,6 @@ int main(int argc, char* argv[]) {
         make_trace_state(app->scene.get(), app->params));
 
     // initialize rendering objects
-    if (!quiet) printf("starting async renderer\n");
     app->trace_start = get_time();
     trace_async_start(app->state.get(), app->scene.get(), app->bvh.get(),
         app->lights.get(), app->params);
