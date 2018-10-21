@@ -136,10 +136,10 @@
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
 // 3. Monte Carlo support: warp functions from [0,1)^k domains to domains
-//    commonly used in path tracing. In particular, use `sample_hemisphere()`,
-//    `sample_sphere()`, `sample_hemisphere_cosine()`,
-//    `sample_hemisphere_cospower()`. `sample_disk()`. `sample_cylinder()`.
-//    `sample_triangle()`, `sample_discrete()`. For each warp, you can compute
+//    commonly used in path tracing. In particular, use `sample_hemisphere_direction()`,
+//    `sample_sphere_direction()`, `sample_hemisphere_direction_cosine()`,
+//    `sample_hemisphere_direction_cospower()`. `sample_disk_point()`. `sample_cylinder_point()`.
+//    `sample_triangle()`, `sample_discrete_distribution()`. For each warp, you can compute
 //     the PDF with `sample_xxx_pdf()`.
 //
 //
@@ -1801,105 +1801,107 @@ inline vec3f get_random_vec3f(rng_state& rng) {
 namespace ygl {
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere(const vec2f& ruv) {
+inline vec3f sample_hemisphere_direction(const vec2f& ruv) {
     auto z   = ruv.y;
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_pdf(const vec3f& w) {
-    return (w.z <= 0) ? 0 : 1 / (2 * pif);
+inline float sample_hemisphere_direction_pdf(const vec3f& direction) {
+    return (direction.z <= 0) ? 0 : 1 / (2 * pif);
 }
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere(const vec2f& ruv) {
+inline vec3f sample_sphere_direction(const vec2f& ruv) {
     auto z   = 2 * ruv.y - 1;
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_sphere_pdf(const vec3f& w) { return 1 / (4 * pif); }
+inline float sample_sphere_direction_pdf(const vec3f& w) { return 1 / (4 * pif); }
 
 // Sample an hemispherical direction with cosine distribution.
-inline vec3f sample_hemisphere_cosine(const vec2f& ruv) {
+inline vec3f sample_hemisphere_direction_cosine(const vec2f& ruv) {
     auto z   = sqrt(ruv.y);
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cosine_pdf(const vec3f& w) {
-    return (w.z <= 0) ? 0 : w.z / pif;
+inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction) {
+    return (direction.z <= 0) ? 0 : direction.z / pif;
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_cospower(float n, const vec2f& ruv) {
-    auto z   = pow(ruv.y, 1 / (n + 1));
+inline vec3f sample_hemisphere_direction_cospower(float exponent, const vec2f& ruv) {
+    auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_cospower_pdf(float n, const vec3f& w) {
-    return (w.z <= 0) ? 0 : pow(w.z, n) * (n + 1) / (2 * pif);
+inline float sample_hemisphere_direction_cospower_pdf(float exponent, const vec3f& direction) {
+    return (direction.z <= 0) ? 0 : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.
-inline vec3f sample_disk(const vec2f& ruv) {
+inline vec3f sample_disk_point(const vec2f& ruv) {
     auto r   = sqrt(ruv.y);
     auto phi = 2 * pif * ruv.x;
     return {cos(phi) * r, sin(phi) * r, 0};
 }
-inline float sample_disk_pdf() { return 1 / pif; }
+inline float sample_disk_point_pdf() { return 1 / pif; }
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder(const vec2f& ruv) {
+inline vec3f sample_cylinder_point(const vec2f& ruv) {
     auto phi = 2 * pif * ruv.x;
     return {sin(phi), cos(phi), ruv.y * 2 - 1};
 }
-inline float sample_cylinder_pdf() { return 1 / pif; }
+inline float sample_cylinder_point_pdf() { return 1 / pif; }
 
-// Sample a point uniformly on a triangle.
-inline vec2f sample_triangle(const vec2f& ruv) {
+// Sample a point uniformly on a triangle returning the baricentric coordinates.
+inline vec2f sample_triangle_coordinates(const vec2f& ruv) {
     return {1 - sqrt(ruv.x), ruv.y * sqrt(ruv.x)};
 }
-inline vec3f sample_triangle(
+
+// Sample a point uniformly on a triangle.
+inline vec3f sample_triangle_point(
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
-    auto uv = sample_triangle(ruv);
+    auto uv = sample_triangle_coordinates(ruv);
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_pdf(
+inline float sample_triangle_point_pdf(
     const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
 // Sample an index with uniform distribution.
-inline int sample_index(int size, float r) {
+inline int sample_uniform_index(int size, float r) {
     return clamp((int)(r * size), 0, size - 1);
 }
-inline float sample_index_pdf(int size) { return 1.0f / size; }
+inline float sample_uniform_index_pdf(int size) { return 1.0f / size; }
 
 // Sample an index with uniform distribution.
 template <typename T>
-inline T sample_element(const vector<T>& elements, float r) {
+inline T sample_uniform_element(const vector<T>& elements, float r) {
     if (elements.empty()) return {};
     auto size = (int)elements.size();
     return elements[clamp((int)(r * size), 0, size - 1)];
 }
 template <typename T>
-inline float sample_element_pdf(const vector<T>& elements) {
+inline float sample_uniform_element_pdf(const vector<T>& elements) {
     if (elements.empty()) return 0;
     return 1.0f / (int)elements.size();
 }
 
 // Sample a discrete distribution represented by its cdf.
-inline int sample_discrete(const vector<float>& cdf, float r) {
+inline int sample_discrete_distribution(const vector<float>& cdf, float r) {
     r        = clamp(r * cdf.back(), 0.0f, cdf.back() - 0.00001f);
     auto idx = (int)(std::upper_bound(cdf.data(), cdf.data() + cdf.size(), r) -
                      cdf.data());
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_pdf(const vector<float>& cdf, int idx) {
+inline float sample_discrete_distribution_pdf(const vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -2140,7 +2142,7 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(
 
 // Pick a point in a point set uniformly.
 inline int sample_points(int npoints, float re) {
-    return sample_index(npoints, re);
+    return sample_uniform_index(npoints, re);
 }
 inline vector<float> sample_points_cdf(int npoints) {
     auto cdf = vector<float>(npoints);
@@ -2148,7 +2150,7 @@ inline vector<float> sample_points_cdf(int npoints) {
     return cdf;
 }
 inline int sample_points(const vector<float>& cdf, float re) {
-    return sample_discrete(cdf, re);
+    return sample_discrete_distribution(cdf, re);
 }
 
 // Pick a point on lines uniformly.
@@ -2164,7 +2166,7 @@ inline vector<float> sample_lines_cdf(
 }
 inline tuple<int, float> sample_lines(
     const vector<float>& cdf, float re, float ru) {
-    return {sample_discrete(cdf, re), ru};
+    return {sample_discrete_distribution(cdf, re), ru};
 }
 
 // Pick a point on a triangle mesh uniformly.
@@ -2180,7 +2182,7 @@ inline vector<float> sample_triangles_cdf(
 }
 inline tuple<int, vec2f> sample_triangles(
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete(cdf, re), sample_triangle(ruv)};
+    return {sample_discrete_distribution(cdf, re), sample_triangle_coordinates(ruv)};
 }
 
 // Pick a point on a quad mesh uniformly.
@@ -2196,13 +2198,13 @@ inline vector<float> sample_quads_cdf(
 }
 inline tuple<int, vec2f> sample_quads(
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete(cdf, re), ruv};
+    return {sample_discrete_distribution(cdf, re), ruv};
 }
 inline tuple<int, vec2f> sample_quads(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    auto ei = sample_discrete(cdf, re);
+    auto ei = sample_discrete_distribution(cdf, re);
     if (quads[ei].z == quads[ei].w) {
-        return {ei, sample_triangle(ruv)};
+        return {ei, sample_triangle_coordinates(ruv)};
     } else {
         return {ei, ruv};
     }

@@ -3668,13 +3668,13 @@ vec3f sample_environment_direction(const yocto_environment* environment,
     const vector<float>& texels_cdf, float re, const vec2f& ruv) {
     auto texture = environment->emission_texture;
     if (!texels_cdf.empty() && texture) {
-        auto idx  = sample_discrete(texels_cdf, re);
+        auto idx  = sample_discrete_distribution(texels_cdf, re);
         auto size = evaluate_texture_size(texture);
         auto u    = (idx % size.x + 0.5f) / size.x;
         auto v    = (idx / size.x + 0.5f) / size.y;
         return evaluate_direction(environment, {u, v});
     } else {
-        return sample_sphere(ruv);
+        return sample_sphere_direction(ruv);
     }
 }
 
@@ -3688,12 +3688,12 @@ float sample_environment_direction_pdf(const yocto_environment* environment,
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
-        auto prob  = sample_discrete_pdf(texels_cdf, idx) / texels_cdf.back();
+        auto prob  = sample_discrete_distribution_pdf(texels_cdf, idx) / texels_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
     } else {
-        return sample_sphere_pdf(direction);
+        return sample_sphere_direction_pdf(direction);
     }
 }
 
@@ -5007,7 +5007,7 @@ float sample_light_point_pdf(
 trace_point sample_lights_point(
     const trace_lights* lights, const vec3f& position, rng_state& rng) {
     if (lights->instances.empty()) return {};
-    auto light = lights->instances[sample_index(
+    auto light = lights->instances[sample_uniform_index(
         lights->instances.size(), get_random_float(rng))];
     return sample_light_point(light, position, rng);
 }
@@ -5025,7 +5025,7 @@ float sample_lights_point_pdf(const trace_lights* lights, const vec3f& position,
     }
     if (!light) return 0;
     return sample_light_point_pdf(light, position, light_point) *
-           sample_index_pdf(lights->instances.size());
+           sample_uniform_index_pdf(lights->instances.size());
 }
 
 // Sample pdf for an environment.
@@ -5038,7 +5038,7 @@ float sample_environment_light_direction_pdf(const yocto_environment* environmen
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
-        auto prob     = sample_discrete_pdf(elem_cdf, idx) / elem_cdf.back();
+        auto prob     = sample_discrete_distribution_pdf(elem_cdf, idx) / elem_cdf.back();
         auto angle    = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
@@ -5052,13 +5052,13 @@ vec3f sample_environment_light_direction(const yocto_environment* environment,
     const vector<float>& elem_cdf, float rel, const vec2f& ruv) {
     auto texture = environment->emission_texture;
     if (!elem_cdf.empty() && texture) {
-        auto idx  = sample_discrete(elem_cdf, rel);
+        auto idx  = sample_discrete_distribution(elem_cdf, rel);
         auto size = evaluate_texture_size(texture);
         auto u    = (idx % size.x + 0.5f) / size.x;
         auto v    = (idx / size.x + 0.5f) / size.y;
         return evaluate_direction(environment, {u, v});
     } else {
-        return sample_sphere(ruv);
+        return sample_sphere_direction(ruv);
     }
 }
 
@@ -5123,7 +5123,7 @@ vec3f sample_light_direction(const trace_light* light, const bvh_tree* bvh,
 vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& position, float rlg, float rel, const vec2f& ruv) {
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
-    auto idx     = sample_index(nlights, rlg);
+    auto idx     = sample_uniform_index(nlights, rlg);
     if (idx < lights->instances.size()) {
         auto light = lights->instances[idx];
         return sample_light_direction(light, bvh, position, rel, ruv);
@@ -5163,12 +5163,12 @@ float sample_lights_direction_pdf(const trace_lights* lights,
     // instances
     for (auto light : lights->instances) {
         pdf += sample_light_direction_pdf(light, bvh, position, direction) *
-               sample_index_pdf(nlights);
+               sample_uniform_index_pdf(nlights);
     }
     // environments
     for (auto light : lights->environments) {
         pdf += sample_light_direction_pdf(light, bvh, position, direction) *
-               sample_index_pdf(nlights);
+               sample_uniform_index_pdf(nlights);
     }
     return pdf;
 }
@@ -5246,7 +5246,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     vec3f weight = vec3f{1, 1, 1};
 
     auto nlights = (int)(lights->instances.size() + lights->environments.size());
-    auto idx     = sample_index(nlights, get_random_float(rng));
+    auto idx     = sample_uniform_index(nlights, get_random_float(rng));
     pdf          = 1.0 / nlights;
     if (idx < lights->instances.size()) {
         auto light = lights->instances[idx];
@@ -5448,7 +5448,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
 
     // Sample color channel. This won't matter if there are no heterogeneus
     // materials.
-    auto ch             = sample_index(3, get_random_float(rng));
+    auto ch             = sample_uniform_index(3, get_random_float(rng));
     auto single_channel = false;
 
     int bounce = 0;
