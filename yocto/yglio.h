@@ -401,9 +401,9 @@ namespace ygl {
 
 // OBJ vertex
 struct obj_vertex {
-    int position      = 0;
+    int position     = 0;
     int texturecoord = 0;
-    int normal     = 0;
+    int normal       = 0;
 };
 
 // Obj texture information.

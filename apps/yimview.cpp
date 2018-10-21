@@ -112,8 +112,8 @@ void update_display_async(app_image* img) {
                     if (img->display_stop) break;
                     for (auto i = 0; i < img->img.width; i++) {
                         at(img->display, i, j) = tonemap_filmic(
-                            at(img->img, i, j), img->exposure,
-                            img->filmic, img->srgb);
+                            at(img->img, i, j), img->exposure, img->filmic,
+                            img->srgb);
                     }
                 }
             }));
@@ -124,8 +124,7 @@ void update_display_async(app_image* img) {
             if (img->display_stop) break;
             for (auto i = 0; i < img->img.width; i++) {
                 at(img->display, i, j) = tonemap_filmic(
-                    at(img->img, i, j), img->exposure, img->filmic,
-                    img->srgb);
+                    at(img->img, i, j), img->exposure, img->filmic, img->srgb);
             }
         }
     }

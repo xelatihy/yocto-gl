@@ -110,8 +110,8 @@ void draw_glwidgets(glwindow* win) {
             draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app->state->rendered_image.width &&
                 ij.y >= 0 && ij.y < app->state->rendered_image.height) {
-                draw_coloredit_glwidget(win, "pixel",
-                    at(app->state->rendered_image, ij.x, ij.y));
+                draw_coloredit_glwidget(
+                    win, "pixel", at(app->state->rendered_image, ij.x, ij.y));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_glwidget(win, "pixel", zero4f_);
@@ -329,7 +329,8 @@ int main(int argc, char* argv[]) {
     // build bvh
     if (!quiet) printf("building bvh\n");
     auto bvh_start = get_time();
-    app->bvh = unique_ptr<bvh_tree>(make_scene_bvh(app->scene.get(), true, embree));
+    app->bvh       = unique_ptr<bvh_tree>(
+        make_scene_bvh(app->scene.get(), true, embree));
     if (!quiet)
         printf("building bvh in %s\n",
             format_duration(get_time() - bvh_start).c_str());

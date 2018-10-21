@@ -327,8 +327,10 @@ vector<vec3f> compute_vertex_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
     auto norm = vector<vec3f>(positions.size(), zero3f);
     for (auto q : quads) {
-        auto n = quad_normal(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-        auto a = quad_area(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        auto n = quad_normal(
+            positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        auto a = quad_area(
+            positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         norm[q.x] += n * a;
         norm[q.y] += n * a;
         norm[q.z] += n * a;
@@ -349,8 +351,9 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     auto tangu = vector<vec3f>(positions.size(), zero3f);
     auto tangv = vector<vec3f>(positions.size(), zero3f);
     for (auto t : triangles) {
-        auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y], positions[t.z],
-            texturecoords[t.x], texturecoords[t.y], texturecoords[t.z]);
+        auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
+            positions[t.z], texturecoords[t.x], texturecoords[t.y],
+            texturecoords[t.z]);
         tutv      = {normalize(get<0>(tutv)), normalize(get<1>(tutv))};
         for (auto vid : {t.x, t.y, t.z}) tangu[vid] += get<0>(tutv);
         for (auto vid : {t.x, t.y, t.z}) tangv[vid] += get<1>(tutv);
@@ -360,16 +363,17 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     auto tangsp = vector<vec4f>(positions.size(), zero4f);
     for (auto i = 0; i < positions.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], normals[i]);
-        auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
+        auto s = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
         tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
     return tangsp;
 }
 
 // Apply skinning
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms) {
     auto skinned_pos  = vector<vec3f>(positions.size());
     auto skinned_norm = vector<vec3f>(normals.size());
     for (auto i = 0; i < positions.size(); i++) {
@@ -543,7 +547,8 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
             auto v = vec4i{
                 (&quads_positions[fid].x)[c],
                 (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
-                (!quads_texturecoords.empty()) ? (&quads_texturecoords[fid].x)[c] : -1,
+                (!quads_texturecoords.empty()) ? (&quads_texturecoords[fid].x)[c] :
+                                                 -1,
                 (!quads_colors.empty()) ? (&quads_colors[fid].x)[c] : -1,
             };
             auto it = vert_map.find(v);
@@ -892,7 +897,7 @@ template tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold) {
-    auto vid  = vector<int>(positions.size());
+    auto vid              = vector<int>(positions.size());
     auto welded_positions = vector<vec3f>();
     for (auto i = 0; i < positions.size(); i++) {
         vid[i] = (int)welded_positions.size();
@@ -902,12 +907,13 @@ tuple<vector<vec3f>, vector<int>> weld_vertices(
                 break;
             }
         }
-        if (vid[i] == (int)welded_positions.size()) welded_positions.push_back(positions[i]);
+        if (vid[i] == (int)welded_positions.size())
+            welded_positions.push_back(positions[i]);
     }
     return {welded_positions, vid};
 }
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, float threshold) {
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold) {
     auto vid        = vector<int>();
     auto wpos       = vector<vec3f>();
     tie(wpos, vid)  = weld_vertices(positions, threshold);
@@ -920,8 +926,8 @@ tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
     }
     return {wtriangles, wpos};
 }
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold) {
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold) {
     auto vid       = vector<int>();
     auto wpos      = vector<vec3f>();
     tie(wpos, vid) = weld_vertices(positions, threshold);
@@ -941,25 +947,27 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(
 // [0,1]^3. unorm and texcoord are optional.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
-    int seed) {
-    auto sampled_positions      = vector<vec3f>(npoints);
-    auto sampled_normals     = vector<vec3f>(npoints);
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed) {
+    auto sampled_positions     = vector<vec3f>(npoints);
+    auto sampled_normals       = vector<vec3f>(npoints);
     auto sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf              = sample_triangles_element_cdf(triangles, positions);
-    auto rng              = make_rng(seed);
+    auto cdf = sample_triangles_element_cdf(triangles, positions);
+    auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto ei     = 0;
         auto uv     = zero2f;
-        tie(ei, uv) = sample_triangles_element(
-            cdf, get_random_float(rng), {get_random_float(rng), get_random_float(rng)});
-        auto t         = triangles[ei];
-        sampled_positions[i] = interpolate_triangle(positions[t.x], positions[t.y], positions[t.z], uv);
+        tie(ei, uv) = sample_triangles_element(cdf, get_random_float(rng),
+            {get_random_float(rng), get_random_float(rng)});
+        auto t      = triangles[ei];
+        sampled_positions[i] = interpolate_triangle(
+            positions[t.x], positions[t.y], positions[t.z], uv);
         if (!sampled_normals.empty()) {
-            sampled_normals[i] = normalize(
-                interpolate_triangle(normals[t.x], normals[t.y], normals[t.z], uv));
+            sampled_normals[i] = normalize(interpolate_triangle(
+                normals[t.x], normals[t.y], normals[t.z], uv));
         } else {
-            sampled_normals[i] = triangle_normal(positions[t.x], positions[t.y], positions[t.z]);
+            sampled_normals[i] = triangle_normal(
+                positions[t.x], positions[t.y], positions[t.z]);
         }
         if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_triangle(
@@ -977,29 +985,31 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
 // [0,1]^3. unorm and texcoord are optional.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
-    int seed) {
-    auto sampled_positions      = vector<vec3f>(npoints);
-    auto sampled_normals     = vector<vec3f>(npoints);
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed) {
+    auto sampled_positions     = vector<vec3f>(npoints);
+    auto sampled_normals       = vector<vec3f>(npoints);
     auto sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf              = sample_quads_element_cdf(quads, positions);
-    auto rng              = make_rng(seed);
+    auto cdf                   = sample_quads_element_cdf(quads, positions);
+    auto rng                   = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto ei     = 0;
-        auto uv     = zero2f;
-        tie(ei, uv) = sample_quads_element(
-            cdf, get_random_float(rng), {get_random_float(rng), get_random_float(rng)});
-        auto q         = quads[ei];
-        sampled_positions[i] = interpolate_quad(positions[q.x], positions[q.y], positions[q.z], positions[q.w], uv);
+        auto ei              = 0;
+        auto uv              = zero2f;
+        tie(ei, uv)          = sample_quads_element(cdf, get_random_float(rng),
+            {get_random_float(rng), get_random_float(rng)});
+        auto q               = quads[ei];
+        sampled_positions[i] = interpolate_quad(
+            positions[q.x], positions[q.y], positions[q.z], positions[q.w], uv);
         if (!sampled_normals.empty()) {
-            sampled_normals[i] = normalize(
-                interpolate_quad(normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
+            sampled_normals[i] = normalize(interpolate_quad(
+                normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
         } else {
-            sampled_normals[i] = quad_normal(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+            sampled_normals[i] = quad_normal(
+                positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         }
         if (!sampled_texturecoords.empty()) {
-            sampled_texturecoords[i] = interpolate_quad(
-                texturecoords[q.x], texturecoords[q.y], texturecoords[q.z], texturecoords[q.w], uv);
+            sampled_texturecoords[i] = interpolate_quad(texturecoords[q.x],
+                texturecoords[q.y], texturecoords[q.z], texturecoords[q.w], uv);
         } else {
             sampled_texturecoords[i] = zero2f;
         }
@@ -1500,8 +1510,8 @@ void build_bvh(bvh_tree* bvh, bool high_quality) {
         }
     } else if (!bvh->lines.empty()) {
         for (auto& l : bvh->lines) {
-            prims.push_back({line_bounds(bvh->positions[l.x], bvh->positions[l.y],
-                bvh->radius[l.x], bvh->radius[l.y])});
+            prims.push_back({line_bounds(bvh->positions[l.x],
+                bvh->positions[l.y], bvh->radius[l.x], bvh->radius[l.y])});
         }
     } else if (!bvh->triangles.empty()) {
         for (auto& t : bvh->triangles) {
@@ -1510,8 +1520,8 @@ void build_bvh(bvh_tree* bvh, bool high_quality) {
         }
     } else if (!bvh->quads.empty()) {
         for (auto& q : bvh->quads) {
-            prims.push_back({quad_bounds(bvh->positions[q.x], bvh->positions[q.y],
-                bvh->positions[q.z], bvh->positions[q.w])});
+            prims.push_back({quad_bounds(bvh->positions[q.x],
+                bvh->positions[q.y], bvh->positions[q.z], bvh->positions[q.w])});
         }
     } else if (!bvh->instances.empty()) {
         for (auto& instance : bvh->instances) {
@@ -2251,8 +2261,8 @@ make_shape_data make_cylinder_shape(const vec3i& steps, const vec2f& size,
 }
 
 // Make a rounded cylinder.
-make_shape_data make_cylinder_rounded_shape(const vec3i& steps, const vec2f& size,
-    const vec3f& uvsize, float radius, bool as_triangles) {
+make_shape_data make_cylinder_rounded_shape(const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius, bool as_triangles) {
     auto shape = make_cylinder_shape(steps, size, uvsize, as_triangles);
     auto c     = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < shape.positions.size(); i++) {
@@ -2309,7 +2319,7 @@ make_fvshape_data make_cube_fvshape(
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     fvshp.normals_quads                         = qshp.quads;
     fvshp.normals                               = qshp.normals;
-    fvshp.quads_texturecoords                        = qshp.quads;
+    fvshp.quads_texturecoords                   = qshp.quads;
     fvshp.texturecoords                         = qshp.texturecoords;
     return fvshp;
 }
@@ -2825,12 +2835,13 @@ make_shape_data make_points_shape(int num, float uvsize, float point_radius) {
 }
 
 // Generate a point set.
-make_shape_data make_random_points_shape(int num, const vec3f& size, float uvsize,
-    float point_radius, uint64_t seed) {
+make_shape_data make_random_points_shape(int num, const vec3f& size,
+    float uvsize, float point_radius, uint64_t seed) {
     auto shape = make_points_shape(num, uvsize, point_radius);
     auto rng   = make_rng(seed);
     for (auto i = 0; i < shape.positions.size(); i++) {
-        shape.positions[i] = (get_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
+        shape.positions[i] = (get_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) *
+                             size;
     }
     return shape;
 }
@@ -2862,11 +2873,11 @@ make_shape_data make_bezier_circle_shape(float size) {
 }
 
 // Make a hair ball around a shape
-make_shape_data make_hair_shape(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
-    const vec2f& rotation, int seed) {
+make_shape_data make_hair_shape(const vec2i& steps,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
+    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
     vector<vec3f> bpos;
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
@@ -3124,7 +3135,7 @@ image<vec4f> make_checker_image4f(
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto c              = (i / tile + j / tile) % 2 == 0;
+            auto c        = (i / tile + j / tile) % 2 == 0;
             at(img, i, j) = (c) ? c0 : c1;
         }
     }
@@ -3155,7 +3166,7 @@ image<vec4f> make_ramp_image4f(
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto u              = (float)i / (float)img.width;
+            auto u        = (float)i / (float)img.width;
             at(img, i, j) = c0 * (1 - u) + c1 * u;
         }
     }
@@ -3224,8 +3235,7 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
             auto i1 = (i + 1) % img.width, j1 = (j + 1) % img.height;
-            auto p00 = at(img, i, j), p10 = at(img, i1, j),
-                 p01 = at(img, i, j1);
+            auto p00 = at(img, i, j), p10 = at(img, i1, j), p01 = at(img, i, j1);
             auto g00 = (p00.x + p00.y + p00.z) / 3;
             auto g01 = (p01.x + p01.y + p01.z) / 3;
             auto g10 = (p10.x + p10.y + p10.z) / 3;
@@ -3332,8 +3342,8 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
             auto phi = 2 * pif * (float(i + 0.5f) / img.width);
             auto w   = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma          = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
-            auto col            = sky(theta, gamma) + sun(theta, gamma);
+            auto gamma    = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
+            auto col      = sky(theta, gamma) + sun(theta, gamma);
             at(img, i, j) = {col.x, col.y, col.z, 1};
         }
     }
@@ -3388,8 +3398,8 @@ image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
         for (auto i = 0; i < img.width; i++) {
             auto p = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} *
                      scale;
-            auto g              = perlin_noise(p, wrap3i);
-            g                   = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            auto g        = perlin_noise(p, wrap3i);
+            g             = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -3424,7 +3434,7 @@ image<vec4f> make_ridge_image4f(int width, int height, float scale,
                      scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
-            g                   = clamp(g, 0.0f, 1.0f);
+            g             = clamp(g, 0.0f, 1.0f);
             at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -3442,7 +3452,7 @@ image<vec4f> make_turbulence_image4f(int width, int height, float scale,
                      scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
-            g                   = clamp(g, 0.0f, 1.0f);
+            g             = clamp(g, 0.0f, 1.0f);
             at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -3514,15 +3524,15 @@ bbox3f compute_scene_bounds(const yocto_scene* scene) {
 
 // Updates tesselation.
 void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
-    shape->name         = surface->name;
-    auto quads_positions      = surface->positions_quads;
+    shape->name              = surface->name;
+    auto quads_positions     = surface->positions_quads;
     auto quads_texturecoords = surface->texturecoords_quads;
-    auto quads_colors    = surface->colors_quads;
-    auto pos            = surface->positions;
-    auto texcoord       = surface->texturecoords;
-    auto color          = surface->colors;
+    auto quads_colors        = surface->colors_quads;
+    auto pos                 = surface->positions;
+    auto texcoord            = surface->texturecoords;
+    auto color               = surface->colors;
     for (auto l = 0; l < surface->subdivision_level; l++) {
-        tie(quads_positions, pos)           = subdivide_catmullclark(quads_positions, pos);
+        tie(quads_positions, pos) = subdivide_catmullclark(quads_positions, pos);
         tie(quads_texturecoords, texcoord) = subdivide_catmullclark(
             quads_texturecoords, texcoord, true);
         tie(quads_colors, color) = subdivide_catmullclark(quads_colors, color);
@@ -3724,7 +3734,8 @@ float sample_environment_direction_pdf(const yocto_environment* environment,
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
-        auto prob  = sample_discrete_distribution_pdf(texels_cdf, idx) / texels_cdf.back();
+        auto prob     = sample_discrete_distribution_pdf(texels_cdf, idx) /
+                    texels_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
@@ -3734,7 +3745,8 @@ float sample_environment_direction_pdf(const yocto_environment* environment,
 }
 
 // Build a shape BVH
-bvh_tree* make_shape_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
+bvh_tree* make_shape_bvh(
+    const yocto_shape* shape, bool high_quality, bool embree) {
     // create bvh
     auto bvh = new bvh_tree();
 
@@ -3754,7 +3766,8 @@ bvh_tree* make_shape_bvh(const yocto_shape* shape, bool high_quality, bool embre
 }
 
 // Build a scene BVH
-bvh_tree* make_scene_bvh(const yocto_scene* scene, bool high_quality, bool embree) {
+bvh_tree* make_scene_bvh(
+    const yocto_scene* scene, bool high_quality, bool embree) {
     // create bvh
     auto bvh = new bvh_tree();
 
@@ -4449,8 +4462,7 @@ vec3f evaluate_transmission(const yocto_material* vol, const vec3f& from,
         pos += dir * step;
         auto density = vol->volume_density *
                        evaluate_voltexture(vol->volume_density_texture, pos);
-        tr *= 1.0f -
-              max(0.0f, at(density, channel) / at(vd, channel));
+        tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
     }
     return {tr, tr, tr};
 }
@@ -4474,7 +4486,8 @@ float sample_distance(const yocto_material* vol, const vec3f& from,
         auto density = vol->volume_density *
                        evaluate_voltexture(vol->volume_density_texture, pos);
 
-        if (at(density, channel) / majorant >= get_random_float(rng)) return dist;
+        if (at(density, channel) / majorant >= get_random_float(rng))
+            return dist;
 
         // Escape from volume.
         if (pos.x > 1 || pos.y > 1 || pos.z > 1) return maxf;
@@ -4728,8 +4741,10 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera* camera, const vec2i& ij,
     const vec2i& imsize, rng_state& rng) {
-    auto puv = get_random_vec2f(rng);  // force order of evaluation with assignments
-    auto luv = get_random_vec2f(rng);  // force order of evaluation with assignments
+    auto puv = get_random_vec2f(rng);  // force order of evaluation with
+                                       // assignments
+    auto luv = get_random_vec2f(rng);  // force order of evaluation with
+                                       // assignments
     return evaluate_camera_ray(camera, ij, imsize, puv, luv);
 }
 
@@ -4888,8 +4903,10 @@ vec3f sample_smooth_brdf_direction(const microfacet_brdf& f, const vec3f& n,
 // Picks a direction based on the BRDF
 vec3f sample_smooth_brdf_direction(
     const microfacet_brdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
-    auto rnl = get_random_float(rng);  // force order of evaluation with assignments
-    auto rni = get_random_vec2f(rng);  // force order of evaluation with assignments
+    auto rnl = get_random_float(rng);  // force order of evaluation with
+                                       // assignments
+    auto rni = get_random_vec2f(rng);  // force order of evaluation with
+                                       // assignments
     return sample_smooth_brdf_direction(f, n, o, rnl, rni);
 }
 
@@ -4927,8 +4944,10 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& f, const vec3f& n,
 // Picks a direction based on the BRDF
 vec3f sample_delta_brdf_direction(
     const microfacet_brdf& f, const vec3f& n, const vec3f& o, rng_state& rng) {
-    auto rnl = get_random_float(rng);  // force order of evaluation with assignments
-    auto rni = get_random_vec2f(rng);  // force order of evaluation with assignments
+    auto rnl = get_random_float(rng);  // force order of evaluation with
+                                       // assignments
+    auto rni = get_random_vec2f(rng);  // force order of evaluation with
+                                       // assignments
     return sample_delta_brdf_direction(f, n, o, rnl, rni);
 }
 
@@ -5021,8 +5040,10 @@ float sample_instance_point_pdf(const yocto_instance* instance,
 trace_point sample_light_point(
     const trace_light* light, const vec3f& position, rng_state& rng) {
     if (!light->instance) return {};
-    auto rel   = get_random_float(rng);  // force order of evaluation with assignments
-    auto ruv   = get_random_vec2f(rng);  // force order of evaluation with assignments
+    auto rel = get_random_float(rng);  // force order of evaluation with
+                                       // assignments
+    auto ruv = get_random_vec2f(rng);  // force order of evaluation with
+                                       // assignments
     auto point = sample_instance_point(
         light->instance, light->elements_cdf, rel, ruv);
     auto direction = normalize(position - point.position);
@@ -5074,8 +5095,9 @@ float sample_environment_light_direction_pdf(const yocto_environment* environmen
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
-        auto prob     = sample_discrete_distribution_pdf(elem_cdf, idx) / elem_cdf.back();
-        auto angle    = (2 * pif / size.x) * (pif / size.y) *
+        auto prob     = sample_discrete_distribution_pdf(elem_cdf, idx) /
+                    elem_cdf.back();
+        auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
     } else {
@@ -5100,8 +5122,10 @@ vec3f sample_environment_light_direction(const yocto_environment* environment,
 
 vec3f sample_environment_light_direction(const yocto_environment* environment,
     const vector<float>& elem_cdf, rng_state& rng) {
-    auto rel = get_random_float(rng);  // force order of evaluation with assignments
-    auto ruv = get_random_vec2f(rng);  // force order of evaluation with assignments
+    auto rel = get_random_float(rng);  // force order of evaluation with
+                                       // assignments
+    auto ruv = get_random_vec2f(rng);  // force order of evaluation with
+                                       // assignments
     return sample_environment_light_direction(environment, elem_cdf, rel, ruv);
 }
 
@@ -5171,9 +5195,12 @@ vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
 
 vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& p, rng_state& rng) {
-    auto rlg = get_random_float(rng);  // force order of evaluation with assignments
-    auto rel = get_random_float(rng);  // force order of evaluation with assignments
-    auto ruv = get_random_vec2f(rng);  // force order of evaluation with assignments
+    auto rlg = get_random_float(rng);  // force order of evaluation with
+                                       // assignments
+    auto rel = get_random_float(rng);  // force order of evaluation with
+                                       // assignments
+    auto ruv = get_random_vec2f(rng);  // force order of evaluation with
+                                       // assignments
     return sample_lights_direction(lights, bvh, p, rlg, rel, ruv);
 }
 
@@ -5286,13 +5313,13 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     pdf          = 1.0 / nlights;
     if (idx < lights->instances.size()) {
         auto light = lights->instances[idx];
-        i          = sample_instance_direction(
-            light->instance, light->elements_cdf, p, get_random_float(rng), get_random_vec2f(rng));
+        i = sample_instance_direction(light->instance, light->elements_cdf, p,
+            get_random_float(rng), get_random_vec2f(rng));
         pdf *= 1.0 / light->elements_cdf.back();
     } else {
         auto light = lights->environments[idx - lights->instances.size()];
-        i          = sample_environment_direction(
-            light->environment, light->elements_cdf, get_random_float(rng), get_random_vec2f(rng));
+        i          = sample_environment_direction(light->environment,
+            light->elements_cdf, get_random_float(rng), get_random_vec2f(rng));
         pdf *= sample_environment_direction_pdf(
             light->environment, light->elements_cdf, i);
         auto isec = intersect_scene_with_opacity(
@@ -5502,7 +5529,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
             at(weight, ch) *= 3;
             at(weight, (ch + 1) % 3) = 0;
             at(weight, (ch + 2) % 3) = 0;
-            single_channel                   = true;
+            single_channel           = true;
         }
 
         // TODO: FIXME REMOVING BBOX
@@ -6189,8 +6216,7 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
                         for (auto s = 0; s < params.num_samples; s++)
                             at(state->rendered_image, i, j) += trace_sample(
                                 state, scene, bvh, lights, i, j, params);
-                        at(
-                            state->rendered_image, i, j) /= params.num_samples;
+                        at(state->rendered_image, i, j) /= params.num_samples;
                     }
                 }
             }));
@@ -6219,9 +6245,8 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
                     j) = at(state->accumulation_buffer, i, j) /
                          at(state->samples_per_pixel, i, j);
                 at(state->display_image, i, j) = tonemap_filmic(
-                    at(state->rendered_image, i, j),
-                    params.display_exposure, params.display_filmic,
-                    params.display_srgb);
+                    at(state->rendered_image, i, j), params.display_exposure,
+                    params.display_filmic, params.display_srgb);
             }
         }
     } else {
@@ -6233,9 +6258,8 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
                      j += nthreads) {
                     for (auto i = 0; i < state->rendered_image.width; i++) {
                         for (auto s = 0; s < nbatch; s++) {
-                            at(state->accumulation_buffer, i,
-                                j) += trace_sample(state, scene, bvh, lights, i,
-                                j, params);
+                            at(state->accumulation_buffer, i, j) += trace_sample(
+                                state, scene, bvh, lights, i, j, params);
                             at(state->samples_per_pixel, i, j) += 1;
                         }
                         at(state->rendered_image, i,
@@ -6273,7 +6297,7 @@ void trace_async_start(trace_state* state, const yocto_scene* scene,
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
                 at(state->rendered_image, i, j) = at(pimg, pi, pj);
-                at(state->display_image, i, j) = at(pdisplay, pi, pj);
+                at(state->display_image, i, j)  = at(pdisplay, pi, pj);
             }
         }
     }
@@ -6521,8 +6545,8 @@ float integrate_func2_stratified(
     auto nsamples2 = (int)sqrt(nsamples);
     for (auto i = 0; i < nsamples2; i++) {
         for (auto j = 0; j < nsamples2; j++) {
-            auto r = vec2f{
-                (i + get_random_float(rng)) / nsamples2, (j + get_random_float(rng)) / nsamples2};
+            auto r = vec2f{(i + get_random_float(rng)) / nsamples2,
+                (j + get_random_float(rng)) / nsamples2};
             auto x = a + r * (b - a);
             integral += f(x) * (b.x - a.x) * (b.y - a.y);
         }

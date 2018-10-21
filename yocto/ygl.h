@@ -100,16 +100,20 @@
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_cube_shape()`, `make_sphere_shape()`, `make_quad_shape()`,
-//    `make_cube_fvshape()`, `make_hair_shape()`, `make_suzanne_shape()`, `make_lines_shape()`,
-//    `make_points_shape()`, `make_sphere_cube_shape()`, `make_cube_rounded_shape()`,
-//    `make_sphere_flipcap_shape()`, `make_cylinder_shape()`, `make_cylinder_rounded_shape()`,
+// 6. create shapes with `make_cube_shape()`, `make_sphere_shape()`,
+// `make_quad_shape()`,
+//    `make_cube_fvshape()`, `make_hair_shape()`, `make_suzanne_shape()`,
+//    `make_lines_shape()`, `make_points_shape()`, `make_sphere_cube_shape()`,
+//    `make_cube_rounded_shape()`, `make_sphere_flipcap_shape()`,
+//    `make_cylinder_shape()`, `make_cylinder_rounded_shape()`,
 //    `make_disk_shape()`, `make_cylinder_side_shape()`, `make_disk_quad_shape()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points_element()`, `sample_lines_element()`,
 //    `sample_triangles_element()`; initialize the sampling CDFs with
-//    `sample_points_element_cdf()`, `sample_lines_element_cdf()`, `sample_triangles_element_cdf()`
-// 9.  sample a could of point over a surface with `sample_triangles_element_points()`
+//    `sample_points_element_cdf()`, `sample_lines_element_cdf()`,
+//    `sample_triangles_element_cdf()`
+// 9.  sample a could of point over a surface with
+// `sample_triangles_element_points()`
 // 10. get edges and boundaries with `get_edges()`
 // 11. convert quads to triangles with `convert_quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
@@ -131,15 +135,18 @@
 //     3. if necessary, you can reseed the rng with `seed_rng()`
 //     4. generate random integers in an interval with `get_random_int()`
 //     5. generate random floats and double in the [0,1) range with
-//        `get_random_float()`, `get_random_vec2f()`, `get_random_vec3f()`, `next_rand1d()`
+//        `get_random_float()`, `get_random_vec2f()`, `get_random_vec3f()`,
+//        `next_rand1d()`
 // 2. Perlin noise: `perlin_noise()` to generate Perlin noise with optional
 //    wrapping, with fractal variations `perlin_ridge_noise()`,
 //    `perlin_fbm_noise()`, `perlin_turbulence_noise()`
 // 3. Monte Carlo support: warp functions from [0,1)^k domains to domains
-//    commonly used in path tracing. In particular, use `sample_hemisphere_direction()`,
-//    `sample_sphere_direction()`, `sample_hemisphere_direction_cosine()`,
-//    `sample_hemisphere_direction_cospower()`. `sample_disk_point()`. `sample_cylinder_point()`.
-//    `sample_triangle()`, `sample_discrete_distribution()`. For each warp, you can compute
+//    commonly used in path tracing. In particular, use
+//    `sample_hemisphere_direction()`, `sample_sphere_direction()`,
+//    `sample_hemisphere_direction_cosine()`,
+//    `sample_hemisphere_direction_cospower()`. `sample_disk_point()`.
+//    `sample_cylinder_point()`. `sample_triangle()`,
+//    `sample_discrete_distribution()`. For each warp, you can compute
 //     the PDF with `sample_xxx_pdf()`.
 //
 //
@@ -202,7 +209,7 @@
 // 3. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 4. can merge scene together with `merge_scene()`
 // 6. for ray-intersection and closest point queries, a BVH can be created with
-//    `make_shape_bvh()/make_scene_bvh()` and refit with 
+//    `make_shape_bvh()/make_scene_bvh()` and refit with
 //    `refit_shape_bvh()/refit_scene_bvh()`
 // 7. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
@@ -469,19 +476,33 @@ inline vec<T, 3>& xyz(vec<T, 4>& v) {
 
 // Iteration and data
 template <typename T, int N>
-int size(const vec<T, N>& v) { return N; }
-template <typename T, int N> 
-T* begin(vec<T, N>& v) { return &v.x; }
+int size(const vec<T, N>& v) {
+    return N;
+}
 template <typename T, int N>
-const T* begin(const vec<T, N>& v) { return &v.x; }
+T* begin(vec<T, N>& v) {
+    return &v.x;
+}
 template <typename T, int N>
-T* end(vec<T, N>& v) { return &v.x + N; }
+const T* begin(const vec<T, N>& v) {
+    return &v.x;
+}
 template <typename T, int N>
-const T* end(const vec<T, N>& v) { return &v.x + N; }
-template <typename T, int N> 
-T* data(vec<T, N>& v) { return &v.x; }
+T* end(vec<T, N>& v) {
+    return &v.x + N;
+}
 template <typename T, int N>
-const T* data(const vec<T, N>& v) { return &v.x; }
+const T* end(const vec<T, N>& v) {
+    return &v.x + N;
+}
+template <typename T, int N>
+T* data(vec<T, N>& v) {
+    return &v.x;
+}
+template <typename T, int N>
+const T* data(const vec<T, N>& v) {
+    return &v.x;
+}
 
 // Vector comparison operations.
 template <typename T>
@@ -815,9 +836,12 @@ inline vec<T, 3> reflect(const vec<T, 3>& direction, const vec<T, 3>& normal) {
     return -direction + 2 * dot(normal, direction) * normal;
 }
 template <typename T, typename T1>
-inline vec<T, 3> refract(const vec<T, 3>& direction, const vec<T, 3>& normal, T1 eta) {
+inline vec<T, 3> refract(
+    const vec<T, 3>& direction, const vec<T, 3>& normal, T1 eta) {
     // auto k = 1.0 - eta * eta * (1.0 - dot(n, w) * dot(n, w));
-    auto k = 1 - eta * eta * max(0.0f, 1 - dot(normal, direction) * dot(normal, direction));
+    auto k = 1 -
+             eta * eta *
+                 max(0.0f, 1 - dot(normal, direction) * dot(normal, direction));
     if (k < 0) return {0, 0, 0};  // tir
     return -direction * eta + (eta * dot(normal, direction) - sqrt(k)) * normal;
 }
@@ -829,12 +853,13 @@ inline vec<T, 2> clamp(const vec<T, 2>& value, T1 min, T2 max) {
 }
 template <typename T, typename T1, typename T2>
 inline vec<T, 3> clamp(const vec<T, 3>& value, T1 min, T2 max) {
-    return {clamp(value.x, min, max), clamp(value.y, min, max), clamp(value.z, min, max)};
+    return {clamp(value.x, min, max), clamp(value.y, min, max),
+        clamp(value.z, min, max)};
 }
 template <typename T, typename T1, typename T2>
 inline vec<T, 4> clamp(const vec<T, 4>& value, T1 min, T2 max) {
-    return {clamp(value.x, min, max), clamp(value.y, min, max), clamp(value.z, min, max),
-        clamp(value.w, min, max)};
+    return {clamp(value.x, min, max), clamp(value.y, min, max),
+        clamp(value.z, min, max), clamp(value.w, min, max)};
 }
 template <typename T>
 inline T max(const vec<T, 2>& a) {
@@ -1767,7 +1792,9 @@ inline rng_state make_rng(uint64_t seed, uint64_t seq = 1) {
 }
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int   get_random_int(rng_state& rng, int n) { return advance_rng(rng) % n; }
+inline int get_random_int(rng_state& rng, int n) {
+    return advance_rng(rng) % n;
+}
 inline float get_random_float(rng_state& rng) {
     union {
         uint32_t u;
@@ -1818,7 +1845,9 @@ inline vec3f sample_sphere_direction(const vec2f& ruv) {
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_sphere_direction_pdf(const vec3f& w) { return 1 / (4 * pif); }
+inline float sample_sphere_direction_pdf(const vec3f& w) {
+    return 1 / (4 * pif);
+}
 
 // Sample an hemispherical direction with cosine distribution.
 inline vec3f sample_hemisphere_direction_cosine(const vec2f& ruv) {
@@ -1832,14 +1861,18 @@ inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction) {
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_direction_cospower(float exponent, const vec2f& ruv) {
+inline vec3f sample_hemisphere_direction_cospower(
+    float exponent, const vec2f& ruv) {
     auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_direction_cospower_pdf(float exponent, const vec3f& direction) {
-    return (direction.z <= 0) ? 0 : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+inline float sample_hemisphere_direction_cospower_pdf(
+    float exponent, const vec3f& direction) {
+    return (direction.z <= 0) ?
+               0 :
+               pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.
@@ -2056,9 +2089,10 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
 tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
@@ -2135,10 +2169,10 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quad
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold);
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, float threshold);
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold);
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold);
 
 // Pick a point in a point set uniformly.
 inline int sample_points_element(int npoints, float re) {
@@ -2182,7 +2216,8 @@ inline vector<float> sample_triangles_element_cdf(
 }
 inline tuple<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete_distribution(cdf, re), sample_triangle_coordinates(ruv)};
+    return {sample_discrete_distribution(cdf, re),
+        sample_triangle_coordinates(ruv)};
 }
 
 // Pick a point on a quad mesh uniformly.
@@ -2191,7 +2226,8 @@ inline vector<float> sample_quads_element_cdf(
     auto cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
-        auto w = quad_area(positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
+        auto w = quad_area(
+            positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
     return cdf;
@@ -2210,16 +2246,16 @@ inline tuple<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
     }
 }
 
-// Samples a set of points over a triangle/quad mesh uniformly. Returns pos, norm
-// and texcoord of the sampled points.
+// Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
+// norm and texcoord of the sampled points.
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
-    int seed = 7);
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed = 7);
 tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, int npoints,
-    int seed = 7);
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed = 7);
 
 }  // namespace ygl
 
@@ -2446,8 +2482,8 @@ make_shape_data make_cylinder_side_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles);
 make_shape_data make_cylinder_shape(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cylinder_rounded_shape(const vec3i& steps, const vec2f& size,
-    const vec3f& uvsize, float radius, bool as_triangles);
+make_shape_data make_cylinder_rounded_shape(const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius, bool as_triangles);
 make_shape_data make_geodesic_sphere_shape(
     int tesselation, float size, bool as_triangles);
 
@@ -2466,12 +2502,14 @@ make_shape_data make_lines_shape(const vec2i& steps, const vec2f& size,
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
 make_shape_data make_point_shape(float point_radius = 0.001f);
-make_shape_data make_points_shape(int num, float uvsize, float point_radius = 0.001f);
-make_shape_data make_random_points_shape(int num, const vec3f& size, float uvsize,
-    float point_radius = 0.001f, uint64_t seed = 0);
+make_shape_data make_points_shape(
+    int num, float uvsize, float point_radius = 0.001f);
+make_shape_data make_random_points_shape(int num, const vec3f& size,
+    float uvsize, float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle_shape(vector<vec4i>& beziers, vector<vec3f>& pos);
+make_shape_data make_bezier_circle_shape(
+    vector<vec4i>& beziers, vector<vec3f>& pos);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -2479,12 +2517,12 @@ make_shape_data make_bezier_circle_shape(vector<vec4i>& beziers, vector<vec3f>& 
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_data make_hair_shape(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
-    const vec2f& rotation = zero2f, int seed = 7);
+make_shape_data make_hair_shape(const vec2i& steps,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
+    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
 
 // Helper to concatenated shape data for non-facevarying shapes.
 make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
