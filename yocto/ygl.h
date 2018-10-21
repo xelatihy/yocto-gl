@@ -3031,16 +3031,19 @@ bbox3f compute_bbox(const yocto_shape* shape);
 bbox3f compute_bbox(const yocto_scene* scene);
 
 // Sample a shape element based on area/length.
-vector<float> compute_shape_element_cdf(const yocto_shape* shape);
+vector<float>     compute_shape_element_cdf(const yocto_shape* shape);
 tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
+float             sample_shape_element_pdf(const yocto_shape* shape,
+                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Sample an environment based on either texel values of uniform
-vec3f sample_environment_direction(const yocto_environment* environment,
-    float re, const vec2f& ruv);
-vector<float> compute_environment_direction_cdf(const yocto_environment* environment);
+vector<float> compute_environment_direction_cdf(
+    const yocto_environment* environment);
 vec3f sample_environment_direction(const yocto_environment* environment,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
+float sample_environment_direction_pdf(const yocto_environment* environment,
+    const vector<float>& elem_cdf, const vec3f& direction);
 
 // Updates/refits bvh.
 bvh_tree* build_bvh(

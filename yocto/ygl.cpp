@@ -3636,9 +3636,10 @@ tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
 }
 
 // Update environment CDF for sampling.
-vector<float> compute_environment_direction_cdf(const yocto_environment* environment) {
+vector<float> compute_environment_direction_cdf(
+    const yocto_environment* environment) {
     if (!environment->emission_texture) return {};
-    auto texture = environment->emission_texture;
+    auto texture  = environment->emission_texture;
     auto size     = eval_texture_size(texture);
     auto elem_cdf = vector<float>(size.x * size.y);
     if (size == zero2i) {
@@ -3653,6 +3654,40 @@ vector<float> compute_environment_direction_cdf(const yocto_environment* environ
         throw runtime_error("empty texture");
     }
     return elem_cdf;
+}
+
+// Sample an environment based on texels
+vec3f sample_environment_direction(const yocto_environment* environment,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv) {
+    auto texture = environment->emission_texture;
+    if (!elem_cdf.empty() && texture) {
+        auto idx  = sample_discrete(elem_cdf, re);
+        auto size = eval_texture_size(texture);
+        auto u    = (idx % size.x + 0.5f) / size.x;
+        auto v    = (idx / size.x + 0.5f) / size.y;
+        return eval_direction(environment, {u, v});
+    } else {
+        return sample_sphere(ruv);
+    }
+}
+
+// Sample an environment based on texels
+float sample_environment_direction_pdf(const yocto_environment* environment,
+    const vector<float>& elem_cdf, const vec3f& direction) {
+    auto texture = environment->emission_texture;
+    if (!elem_cdf.empty() && texture) {
+        auto size     = eval_texture_size(texture);
+        auto texcoord = eval_texturecoord(environment, direction);
+        auto i        = (int)(texcoord.x * size.x);
+        auto j        = (int)(texcoord.y * size.y);
+        auto idx      = j * size.x + i;
+        auto prob     = sample_discrete_pdf(elem_cdf, idx) / elem_cdf.back();
+        auto angle    = (2 * pif / size.x) * (pif / size.y) *
+                     sin(pif * (j + 0.5f) / size.y);
+        return prob / angle;
+    } else {
+        return sample_sphere_pdf(direction);
+    }
 }
 
 // Build a shape BVH
