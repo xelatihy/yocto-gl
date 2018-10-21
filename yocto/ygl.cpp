@@ -343,7 +343,7 @@ vector<vec3f> compute_vertex_normals(
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_space(const vector<vec3i>& triangles,
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const vector<vec3f>& norm,
     const vector<vec2f>& texcoord) {
     auto tangu = vector<vec3f>(pos.size(), zero3f);
@@ -946,12 +946,12 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     auto sampled_pos      = vector<vec3f>(npoints);
     auto sampled_norm     = vector<vec3f>(npoints);
     auto sampled_texcoord = vector<vec2f>(npoints);
-    auto cdf              = sample_triangles_cdf(triangles, pos);
+    auto cdf              = sample_triangles_element_cdf(triangles, pos);
     auto rng              = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto ei     = 0;
         auto uv     = zero2f;
-        tie(ei, uv) = sample_triangles(
+        tie(ei, uv) = sample_triangles_element(
             cdf, get_random_float(rng), {get_random_float(rng), get_random_float(rng)});
         auto t         = triangles[ei];
         sampled_pos[i] = interpolate_triangle(pos[t.x], pos[t.y], pos[t.z], uv);
@@ -964,6 +964,42 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
         if (!sampled_texcoord.empty()) {
             sampled_texcoord[i] = interpolate_triangle(
                 texcoord[t.x], texcoord[t.y], texcoord[t.z], uv);
+        } else {
+            sampled_texcoord[i] = zero2f;
+        }
+    }
+
+    return {sampled_pos, sampled_norm, sampled_texcoord};
+}
+
+// Samples a set of points over a triangle mesh uniformly. The rng function
+// takes the point index and returns vec3f numbers uniform directibuted in
+// [0,1]^3. unorm and texcoord are optional.
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+    const vector<vec4i>& quads, const vector<vec3f>& pos,
+    const vector<vec3f>& norm, const vector<vec2f>& texcoord, int npoints,
+    int seed) {
+    auto sampled_pos      = vector<vec3f>(npoints);
+    auto sampled_norm     = vector<vec3f>(npoints);
+    auto sampled_texcoord = vector<vec2f>(npoints);
+    auto cdf              = sample_quads_element_cdf(quads, pos);
+    auto rng              = make_rng(seed);
+    for (auto i = 0; i < npoints; i++) {
+        auto ei     = 0;
+        auto uv     = zero2f;
+        tie(ei, uv) = sample_quads_element(
+            cdf, get_random_float(rng), {get_random_float(rng), get_random_float(rng)});
+        auto q         = quads[ei];
+        sampled_pos[i] = interpolate_quad(pos[q.x], pos[q.y], pos[q.z], pos[q.w], uv);
+        if (!sampled_norm.empty()) {
+            sampled_norm[i] = normalize(
+                interpolate_quad(norm[q.x], norm[q.y], norm[q.z], norm[q.w], uv));
+        } else {
+            sampled_norm[i] = quad_normal(pos[q.x], pos[q.y], pos[q.z], pos[q.w]);
+        }
+        if (!sampled_texcoord.empty()) {
+            sampled_texcoord[i] = interpolate_quad(
+                texcoord[q.x], texcoord[q.y], texcoord[q.z], texcoord[q.w], uv);
         } else {
             sampled_texcoord[i] = zero2f;
         }
@@ -1927,7 +1963,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
 namespace ygl {
 
 // Make a quad.
-make_shape_data make_quad(const vec2i& steps, const vec2f& size,
+make_shape_data make_quad_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles) {
     auto shape = make_shape_data();
     shape.positions.resize((steps.x + 1) * (steps.y + 1));
@@ -1969,20 +2005,20 @@ make_shape_data make_quad(const vec2i& steps, const vec2f& size,
     return shape;
 }
 
-make_shape_data make_floor(const vec2i& steps, const vec2f& size,
+make_shape_data make_floor_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles) {
-    auto shape = make_quad(steps, size, uvsize, as_triangles);
+    auto shape = make_quad_shape(steps, size, uvsize, as_triangles);
     for (auto& p : shape.positions) p = {p.x, p.z, p.y};
     for (auto& n : shape.normals) n = {n.x, n.z, n.y};
     return shape;
 }
 
 // Make a stack of quads
-make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
+make_shape_data make_quad_stack_shape(const vec3i& steps, const vec3f& size,
     const vec2f& uvsize, bool as_triangles) {
     auto qshps = vector<make_shape_data>(steps.z + 1);
     for (auto i = 0; i <= steps.z; i++) {
-        qshps[i] = make_quad(
+        qshps[i] = make_quad_shape(
             {steps.x, steps.y}, {size.x, size.y}, uvsize, as_triangles);
         for (auto& p : qshps[i].positions)
             p.z = (-0.5f + (float)i / steps.z) * size.z;
@@ -1991,11 +2027,11 @@ make_shape_data make_quad_stack(const vec3i& steps, const vec3f& size,
 }
 
 // Make a cube.
-make_shape_data make_cube(const vec3i& steps, const vec3f& size,
+make_shape_data make_cube_shape(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, bool as_triangles) {
     auto qshps = vector<make_shape_data>(6);
     // + z
-    qshps[0] = make_quad({steps.x, steps.y}, {size.x, size.y},
+    qshps[0] = make_quad_shape({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[0].positions.size(); i++) {
         qshps[0].positions[i] = {
@@ -2003,7 +2039,7 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
         qshps[0].normals[i] = {0, 0, 1};
     }
     // - z
-    qshps[1] = make_quad({steps.x, steps.y}, {size.x, size.y},
+    qshps[1] = make_quad_shape({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[1].positions.size(); i++) {
         qshps[1].positions[i] = {
@@ -2011,7 +2047,7 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
         qshps[1].normals[i] = {0, 0, -1};
     }
     // + x
-    qshps[2] = make_quad({steps.y, steps.z}, {size.y, size.z},
+    qshps[2] = make_quad_shape({steps.y, steps.z}, {size.y, size.z},
         {uvsize.y, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[2].positions.size(); i++) {
         qshps[2].positions[i] = {
@@ -2019,7 +2055,7 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
         qshps[2].normals[i] = {1, 0, 0};
     }
     // - x
-    qshps[3] = make_quad({steps.y, steps.z}, {size.y, size.z},
+    qshps[3] = make_quad_shape({steps.y, steps.z}, {size.y, size.z},
         {uvsize.y, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[3].positions.size(); i++) {
         qshps[3].positions[i] = {
@@ -2027,7 +2063,7 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
         qshps[3].normals[i] = {-1, 0, 0};
     }
     // + y
-    qshps[4] = make_quad({steps.x, steps.y}, {size.x, size.y},
+    qshps[4] = make_quad_shape({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[4].positions.size(); i++) {
         qshps[4].positions[i] = {
@@ -2035,7 +2071,7 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
         qshps[4].normals[i] = {0, 1, 0};
     }
     // - y
-    qshps[5] = make_quad({steps.x, steps.y}, {size.x, size.y},
+    qshps[5] = make_quad_shape({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     for (auto i = 0; i < qshps[5].positions.size(); i++) {
         qshps[5].positions[i] = {
@@ -2046,9 +2082,9 @@ make_shape_data make_cube(const vec3i& steps, const vec3f& size,
 }
 
 // Make a rounded cube.
-make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
+make_shape_data make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool as_triangles) {
-    auto shape = make_cube(steps, size, uvsize, as_triangles);
+    auto shape = make_cube_shape(steps, size, uvsize, as_triangles);
     auto c     = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto pc = vec3f{fabs(shape.positions[i].x), fabs(shape.positions[i].y),
@@ -2082,9 +2118,9 @@ make_shape_data make_cube_rounded(const vec3i& steps, const vec3f& size,
 }
 
 // Make a sphere.
-make_shape_data make_sphere(
+make_shape_data make_sphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
-    auto shape = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
+    auto shape = make_quad_shape(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto uv = shape.texturecoords[i];
         auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -2097,9 +2133,9 @@ make_shape_data make_sphere(
 }
 
 // Make a spherecube.
-make_shape_data make_sphere_cube(
+make_shape_data make_sphere_cube_shape(
     int steps, float size, float uvsize, bool as_triangles) {
-    auto shape = make_cube({steps, steps, steps}, {1, 1, 1},
+    auto shape = make_cube_shape({steps, steps, steps}, {1, 1, 1},
         {uvsize, uvsize, uvsize}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto p             = shape.positions[i];
@@ -2110,9 +2146,9 @@ make_shape_data make_sphere_cube(
 }
 
 // Make a flipped sphere. This is not watertight.
-make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
+make_shape_data make_sphere_flipcap_shape(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool as_triangles) {
-    auto shape = make_sphere(steps, size, uvsize, as_triangles);
+    auto shape = make_sphere_shape(steps, size, uvsize, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         if (shape.positions[i].z > zflip.y) {
             shape.positions[i].z = 2 * zflip.y - shape.positions[i].z;
@@ -2128,9 +2164,9 @@ make_shape_data make_sphere_flipcap(const vec2i& steps, float size,
 }
 
 // Make a disk.
-make_shape_data make_disk(
+make_shape_data make_disk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles) {
-    auto shape = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
+    auto shape = make_quad_shape(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto uv            = shape.texturecoords[i];
         auto phi           = 2 * pif * uv.x;
@@ -2143,9 +2179,9 @@ make_shape_data make_disk(
 }
 
 // Make a disk from a quad.
-make_shape_data make_disk_quad(
+make_shape_data make_disk_quad_shape(
     int steps, float size, float uvsize, bool as_triangles) {
-    auto shape = make_quad(
+    auto shape = make_quad_shape(
         {steps, steps}, {2, 2}, {uvsize, uvsize}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
@@ -2159,9 +2195,9 @@ make_shape_data make_disk_quad(
 }
 
 // Make a bulged disk from a quad.
-make_shape_data make_disk_bulged(
+make_shape_data make_disk_bulged_shape(
     int steps, float size, float uvsize, float height, bool as_triangles) {
-    auto shape = make_disk_quad(steps, size, uvsize, as_triangles);
+    auto shape = make_disk_quad_shape(steps, size, uvsize, as_triangles);
     if (height == 0) return shape;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
@@ -2174,9 +2210,9 @@ make_shape_data make_disk_bulged(
 }
 
 // Make a cylinder (side-only).
-make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
+make_shape_data make_cylinder_side_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, bool as_triangles) {
-    auto shape = make_quad(steps, {1, 1}, {1, 1}, as_triangles);
+    auto shape = make_quad_shape(steps, {1, 1}, {1, 1}, as_triangles);
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto uv                = shape.texturecoords[i];
         auto phi               = 2 * pif * uv.x;
@@ -2189,20 +2225,20 @@ make_shape_data make_cylinder_side(const vec2i& steps, const vec2f& size,
 }
 
 // Make a cylinder.
-make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
+make_shape_data make_cylinder_shape(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, bool as_triangles) {
     auto qshps = vector<make_shape_data>(3);
     // side
-    qshps[0] = make_cylinder_side({steps.x, steps.y}, {size.x, size.y},
+    qshps[0] = make_cylinder_side_shape({steps.x, steps.y}, {size.x, size.y},
         {uvsize.x, uvsize.y}, as_triangles);
     // top
-    qshps[1] = make_disk(
+    qshps[1] = make_disk_shape(
         {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[1].positions.size(); i++) {
         qshps[1].positions[i].z = size.y / 2;
     }
     // bottom
-    qshps[2] = make_disk(
+    qshps[2] = make_disk_shape(
         {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z}, as_triangles);
     for (auto i = 0; i < qshps[2].positions.size(); i++) {
         qshps[2].positions[i].z = -size.y / 2;
@@ -2215,9 +2251,9 @@ make_shape_data make_cylinder(const vec3i& steps, const vec2f& size,
 }
 
 // Make a rounded cylinder.
-make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
+make_shape_data make_cylinder_rounded_shape(const vec3i& steps, const vec2f& size,
     const vec3f& uvsize, float radius, bool as_triangles) {
-    auto shape = make_cylinder(steps, size, uvsize, as_triangles);
+    auto shape = make_cylinder_shape(steps, size, uvsize, as_triangles);
     auto c     = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto phi = atan2(shape.positions[i].y, shape.positions[i].x);
@@ -2238,7 +2274,7 @@ make_shape_data make_cylinder_rounded(const vec3i& steps, const vec2f& size,
 }
 
 // Make a geodesic sphere.
-make_shape_data make_geodesic_sphere(
+make_shape_data make_geodesic_sphere_shape(
     int tesselation, float size, bool as_triangles) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X   = 0.525731112119133606f;
@@ -2264,9 +2300,9 @@ make_shape_data make_geodesic_sphere(
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-make_fvshape_data make_fvcube(
+make_fvshape_data make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshp  = make_cube(steps, size, uvsize, false);
+    auto qshp  = make_cube_shape(steps, size, uvsize, false);
     auto fvshp = make_fvshape_data{};
     tie(fvshp.positions_quads, fvshp.positions) = weld_quads(qshp.quads,
         qshp.positions,
@@ -2280,7 +2316,7 @@ make_fvshape_data make_fvcube(
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.
-make_shape_data make_suzanne(float size, bool as_triangles) {
+make_shape_data make_suzanne_shape(float size, bool as_triangles) {
     static auto suzanne_pos       = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
         {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
         {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
@@ -2714,7 +2750,7 @@ make_shape_data make_suzanne(float size, bool as_triangles) {
 }
 
 // Watertight cube
-make_shape_data make_cube(const vec3f& size, bool as_triangles) {
+make_shape_data make_cube_shape(const vec3f& size, bool as_triangles) {
     static auto cube_pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
         {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
     static auto cube_quads   = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
@@ -2732,7 +2768,7 @@ make_shape_data make_cube(const vec3f& size, bool as_triangles) {
 }
 
 // Generate lines set along a quad.
-make_shape_data make_lines(const vec2i& steps, const vec2f& size,
+make_shape_data make_lines_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, const vec2f& line_radius) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
@@ -2775,7 +2811,7 @@ make_shape_data make_lines(const vec2i& steps, const vec2f& size,
 
 // Generate a point set with points placed at the origin with texcoords
 // varying along u.
-make_shape_data make_points(int num, float uvsize, float point_radius) {
+make_shape_data make_points_shape(int num, float uvsize, float point_radius) {
     auto shape = make_shape_data();
     shape.points.resize(num);
     for (auto i = 0; i < num; i++) shape.points[i] = i;
@@ -2789,9 +2825,9 @@ make_shape_data make_points(int num, float uvsize, float point_radius) {
 }
 
 // Generate a point set.
-make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
+make_shape_data make_random_points_shape(int num, const vec3f& size, float uvsize,
     float point_radius, uint64_t seed) {
-    auto shape = make_points(num, uvsize, point_radius);
+    auto shape = make_points_shape(num, uvsize, point_radius);
     auto rng   = make_rng(seed);
     for (auto i = 0; i < shape.positions.size(); i++) {
         shape.positions[i] = (get_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
@@ -2800,7 +2836,7 @@ make_shape_data make_random_points(int num, const vec3f& size, float uvsize,
 }
 
 // Make a point.
-make_shape_data make_point(float point_radius) {
+make_shape_data make_point_shape(float point_radius) {
     auto shape          = make_shape_data();
     shape.points        = {0};
     shape.positions     = {{0, 0, 0}};
@@ -2811,7 +2847,7 @@ make_shape_data make_point(float point_radius) {
 }
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle(float size) {
+make_shape_data make_bezier_circle_shape(float size) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
     const auto  c              = 0.551915024494f;
     static auto circle_pos     = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
@@ -2826,7 +2862,7 @@ make_shape_data make_bezier_circle(float size) {
 }
 
 // Make a hair ball around a shape
-make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
+make_shape_data make_hair_shape(const vec2i& steps, const vector<vec3i>& striangles,
     const vector<vec4i>& squads, const vector<vec3f>& spos,
     const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
     const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
@@ -2860,7 +2896,7 @@ make_shape_data make_hair(const vec2i& steps, const vector<vec3i>& striangles,
         }
     }
 
-    auto shape = make_lines(steps, {1, 1}, {1, 1});
+    auto shape = make_lines_shape(steps, {1, 1}, {1, 1});
     for (auto i = 0; i < shape.positions.size(); i++) {
         auto u             = shape.texturecoords[i].x;
         auto bidx          = i / (steps.x + 1);
@@ -3460,16 +3496,16 @@ yocto_scene::~yocto_scene() {
 }
 
 // Computes a shape bounding box.
-bbox3f compute_bounding_box(const yocto_shape* shape) {
+bbox3f compute_shape_bounds(const yocto_shape* shape) {
     auto bbox = invalid_bbox3f;
     for (auto p : shape->positions) bbox += p;
     return bbox;
 }
 
 // Updates the scene and scene's instances bounding boxes
-bbox3f compute_bounding_box(const yocto_scene* scene) {
+bbox3f compute_scene_bounds(const yocto_scene* scene) {
     auto sbbox = unordered_map<yocto_shape*, bbox3f>();
-    for (auto shape : scene->shapes) sbbox[shape] = compute_bounding_box(shape);
+    for (auto shape : scene->shapes) sbbox[shape] = compute_shape_bounds(shape);
     auto bbox = invalid_bbox3f;
     for (auto instance : scene->instances)
         bbox += transform_bbox(instance->frame, sbbox[instance->shape]);
@@ -3606,13 +3642,13 @@ vec2f compute_animation_range(const yocto_scene* scene, const string& anim_group
 // Generate a distribution for sampling a shape uniformly based on area/length.
 vector<float> compute_shape_elements_cdf(const yocto_shape* shape) {
     if (!shape->triangles.empty()) {
-        return sample_triangles_cdf(shape->triangles, shape->positions);
+        return sample_triangles_element_cdf(shape->triangles, shape->positions);
     } else if (!shape->quads.empty()) {
-        return sample_quads_cdf(shape->quads, shape->positions);
+        return sample_quads_element_cdf(shape->quads, shape->positions);
     } else if (!shape->lines.empty()) {
-        return sample_lines_cdf(shape->lines, shape->positions);
+        return sample_lines_element_cdf(shape->lines, shape->positions);
     } else if (!shape->points.empty()) {
-        return sample_points_cdf(shape->points.size());
+        return sample_points_element_cdf(shape->points.size());
     } else {
         throw runtime_error("empty shape not supported");
     }
@@ -3624,13 +3660,13 @@ tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
     // TODO: implement sampling without cdf
     if (elements_cdf.empty()) return {};
     if (!shape->triangles.empty()) {
-        return sample_triangles(elements_cdf, re, ruv);
+        return sample_triangles_element(elements_cdf, re, ruv);
     } else if (!shape->quads.empty()) {
-        return sample_quads(elements_cdf, re, ruv);
+        return sample_quads_element(elements_cdf, re, ruv);
     } else if (!shape->lines.empty()) {
-        return {get<0>(sample_lines(elements_cdf, re, ruv.x)), ruv};
+        return {get<0>(sample_lines_element(elements_cdf, re, ruv.x)), ruv};
     } else if (!shape->positions.empty()) {
-        return {sample_points(elements_cdf, re), ruv};
+        return {sample_points_element(elements_cdf, re), ruv};
     } else {
         return {0, zero2f};
     }
@@ -3698,7 +3734,7 @@ float sample_environment_direction_pdf(const yocto_environment* environment,
 }
 
 // Build a shape BVH
-bvh_tree* build_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
+bvh_tree* make_shape_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
     // create bvh
     auto bvh = new bvh_tree();
 
@@ -3718,13 +3754,13 @@ bvh_tree* build_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
 }
 
 // Build a scene BVH
-bvh_tree* build_bvh(const yocto_scene* scene, bool high_quality, bool embree) {
+bvh_tree* make_scene_bvh(const yocto_scene* scene, bool high_quality, bool embree) {
     // create bvh
     auto bvh = new bvh_tree();
 
     // shapes
     for (auto shape : scene->shapes) {
-        bvh->shape_bvhs.push_back(build_bvh(shape, high_quality, embree));
+        bvh->shape_bvhs.push_back(make_shape_bvh(shape, high_quality, embree));
         bvh->shape_ids[shape] = (int)bvh->shape_bvhs.size() - 1;
     }
 
@@ -3743,14 +3779,14 @@ bvh_tree* build_bvh(const yocto_scene* scene, bool high_quality, bool embree) {
 }
 
 // Refits a shape BVH
-void refit_bvh(const yocto_shape* shape, bvh_tree* bvh) {
+void refit_shape_bvh(const yocto_shape* shape, bvh_tree* bvh) {
     bvh->positions = shape->positions;
     bvh->radius    = shape->radius;
     refit_bvh(bvh);
 }
 
 // Refits a scene BVH
-void refit_bvh(const yocto_scene* scene, bvh_tree* bvh) {
+void refit_scene_bvh(const yocto_scene* scene, bvh_tree* bvh) {
     auto shape_ids = unordered_map<yocto_shape*, int>();
     for (auto sid = 0; sid < scene->shapes.size(); sid++)
         shape_ids[scene->shapes[sid]] = sid;
@@ -3798,7 +3834,7 @@ void add_missing_tangent_space(yocto_scene* scene) {
             if (instance->shape->normals.empty())
                 instance->shape->normals = compute_vertex_normals(
                     instance->shape->triangles, instance->shape->positions);
-            instance->shape->tangentspaces = compute_tangent_space(
+            instance->shape->tangentspaces = compute_tangent_spaces(
                 instance->shape->triangles, instance->shape->positions,
                 instance->shape->normals, instance->shape->texturecoords);
         } else {
@@ -3824,7 +3860,7 @@ void add_missing_materials(yocto_scene* scene) {
 void add_missing_cameras(yocto_scene* scene) {
     if (scene->cameras.empty()) {
         scene->cameras.push_back(
-            make_bbox_camera("<view>", compute_bounding_box(scene)));
+            make_bbox_camera("<view>", compute_scene_bounds(scene)));
     }
 }
 
@@ -4490,18 +4526,18 @@ float evaluate_phase_function(float cos_theta, float g) {
 namespace ygl {
 
 // Merge scene into one another
-void merge_into(yocto_scene* merge_into, yocto_scene* merge_from) {
+void merge_scene(yocto_scene* merge_scene, yocto_scene* merge_from) {
     auto merge = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());
         v2.clear();
     };
-    merge(merge_into->cameras, merge_from->cameras);
-    merge(merge_into->textures, merge_from->textures);
-    merge(merge_into->materials, merge_from->materials);
-    merge(merge_into->shapes, merge_from->shapes);
-    merge(merge_into->environments, merge_from->environments);
-    merge(merge_into->nodes, merge_from->nodes);
-    merge(merge_into->animations, merge_from->animations);
+    merge(merge_scene->cameras, merge_from->cameras);
+    merge(merge_scene->textures, merge_from->textures);
+    merge(merge_scene->materials, merge_from->materials);
+    merge(merge_scene->shapes, merge_from->shapes);
+    merge(merge_scene->environments, merge_from->environments);
+    merge(merge_scene->nodes, merge_from->nodes);
+    merge(merge_scene->animations, merge_from->animations);
 }
 
 void print_stats(const yocto_scene* scene) {
@@ -4534,7 +4570,7 @@ void print_stats(const yocto_scene* scene) {
     auto memory_elems = (long long)0;
     auto memory_verts = (long long)0;
 
-    auto bbox = compute_bounding_box(scene);
+    auto bbox = compute_scene_bounds(scene);
 
     num_cameras      = scene->cameras.size();
     num_shapes       = scene->shapes.size();

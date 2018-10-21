@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     printf("building bvh\n");
-    auto bvh = build_bvh(scene, true, embree);
+    auto bvh = make_scene_bvh(scene, true, embree);
 
     // init renderer
     printf("initializing lights\n");
