@@ -3617,13 +3617,31 @@ vector<float> compute_shape_element_cdf(const yocto_shape* shape) {
     }
 }
 
+// Sample a shape based on a distribution.
+tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv) {
+    // TODO: implement sampling without cdf
+    if (elem_cdf.empty()) return {};
+    if (!shape->triangles.empty()) {
+        return sample_triangles(elem_cdf, re, ruv);
+    } else if (!shape->quads.empty()) {
+        return sample_quads(elem_cdf, re, ruv);
+    } else if (!shape->lines.empty()) {
+        return {get<0>(sample_lines(elem_cdf, re, ruv.x)), ruv};
+    } else if (!shape->positions.empty()) {
+        return {sample_points(elem_cdf, re), ruv};
+    } else {
+        return {0, zero2f};
+    }
+}
+
 // Update environment CDF for sampling.
-vector<float> compute_environment_texel_cdf(const yocto_environment* environment) {
+vector<float> compute_environment_direction_cdf(const yocto_environment* environment) {
+    if (!environment->emission_texture) return {};
     auto texture = environment->emission_texture;
-    if (!texture) return {};
     auto size     = eval_texture_size(texture);
     auto elem_cdf = vector<float>(size.x * size.y);
-    if (!texture->hdr_image.pixels.empty()) {
+    if (size == zero2i) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
@@ -4312,24 +4330,6 @@ bool is_brdf_delta(const microfacet_brdf& f) {
 }
 bool is_brdf_zero(const microfacet_brdf& f) {
     return f.kd == zero3f && f.ks == zero3f && f.kt == zero3f;
-}
-
-// Sample a shape based on a distribution.
-tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
-    const vector<float>& elem_cdf, float re, const vec2f& ruv) {
-    // TODO: implement sampling without cdf
-    if (elem_cdf.empty()) return {};
-    if (!shape->triangles.empty()) {
-        return sample_triangles(elem_cdf, re, ruv);
-    } else if (!shape->quads.empty()) {
-        return sample_quads(elem_cdf, re, ruv);
-    } else if (!shape->lines.empty()) {
-        return {get<0>(sample_lines(elem_cdf, re, ruv.x)), ruv};
-    } else if (!shape->positions.empty()) {
-        return {sample_points(elem_cdf, re), ruv};
-    } else {
-        return {0, zero2f};
-    }
 }
 
 }  // namespace ygl
@@ -6022,7 +6022,7 @@ trace_lights* make_trace_lights(
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
         lights->environments.push_back(environment);
-        lights->environment_cdfs[environment] = compute_environment_texel_cdf(
+        lights->environment_cdfs[environment] = compute_environment_direction_cdf(
             environment);
     }
 
