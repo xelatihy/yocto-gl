@@ -66,10 +66,7 @@ int main(int argc, char* argv[]) {
 
     // prepare file to output
     auto fs = fopen(output.c_str(), "wt");
-    if (!fs) {
-        printf("cannot open file %s\n", output.c_str());
-        exit(1);
-    }
+    if (!fs) log_fatal("cannot open {}", output);
 
     // obj callbacks
     auto cb = obj_callbacks();

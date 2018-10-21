@@ -3208,6 +3208,7 @@ void add_missing_cameras(yocto_scene* scene);
 // Checks for validity of the scene.
 vector<string> validate_scene(
     const yocto_scene* scene, bool skip_textures = false);
+void log_validation_errors(const yocto_scene* scene, bool skip_textures = false);
 
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
@@ -3931,7 +3932,7 @@ inline void log_fatal(const string& fmt, const Args&... args) {
 // Log traces for timing and program debugging
 struct log_scope {
     string   message    = "";
-    uint64_t start_time = 0;
+    int64_t start_time  = -1;
     bool     scoped     = false;
     ~log_scope();
 };
@@ -3947,7 +3948,11 @@ inline log_scope log_trace_begin(const string& fmt, const Args&... args) {
 }
 template <typename... Args>
 inline void log_trace_end(log_scope& scope) {
-    log_trace(scope.message + "[ended: " + format_duration(get_time() - scope.start_time) + "]");
+    if(scope.start_time >= 0) {
+        log_trace(scope.message + " [ended: " + format_duration(get_time() - scope.start_time) + "]");
+    } else {
+        log_trace(scope.message + " [ended]");
+    }
 }
 template <typename... Args>
 inline log_scope log_trace_scoped(const string& fmt, const Args&... args) {

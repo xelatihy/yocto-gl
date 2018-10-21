@@ -2377,6 +2377,7 @@ bool parse_json_object(const json& js, yocto_scene* val) {
 // Load a scene in the builtin JSON format.
 yocto_scene* load_json_scene(
     const string& filename, bool load_textures, bool skip_missing) {
+    auto scope = log_trace_scoped("loading scene {}", filename);
     // initialize
     auto scene = make_unique<yocto_scene>();
 
@@ -2875,6 +2876,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
 // Loads an OBJ
 yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     bool skip_missing, bool split_shapes) {
+    auto scope = log_trace_scoped("loading scene {}", filename);
     auto scene = make_unique<yocto_scene>();
 
     // splitting policy
@@ -4386,6 +4388,7 @@ bool pbrt_to_json(const string& filename, json& js) {
 // load pbrt scenes
 yocto_scene* load_pbrt_scene(
     const string& filename, bool load_textures, bool skip_missing) {
+    auto scope = log_trace_scoped("loading scene {}", filename);
     // convert to json
     auto js = json();
     try {
@@ -5403,6 +5406,7 @@ bool serialize_scene(yocto_scene* scene, file_stream& fs, bool save) {
 // Load/save a binary dump useful for very fast scene IO.
 yocto_scene* load_ybin_scene(
     const string& filename, bool load_textures, bool skip_missing) {
+    auto scope = log_trace_scoped("loading scene {}", filename);
     auto fs = open(filename, "rb");
     if (!fs) return nullptr;
     auto scene = make_unique<yocto_scene>();

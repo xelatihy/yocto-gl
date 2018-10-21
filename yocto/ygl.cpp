@@ -3547,6 +3547,8 @@ void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
         quads_texturecoords, quads_colors, pos, norm, texcoord, color);
 }
 void tesselate_subdivs(yocto_scene* scene) {
+    if(scene->surfaces.empty()) return;
+    auto scope = log_trace_scoped("tesselating surfaces");
     for (auto instance : scene->instances) {
         if (!instance->surface) continue;
         tesselate_subdiv(instance->surface, instance->shape);
@@ -3771,6 +3773,7 @@ bvh_tree* make_shape_bvh(
 // Build a scene BVH
 bvh_tree* make_scene_bvh(
     const yocto_scene* scene, bool high_quality, bool embree) {
+    auto scope = log_trace_scoped("building scene bvh");
     // create bvh
     auto bvh = new bvh_tree();
 
@@ -3887,16 +3890,19 @@ vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
         auto used = unordered_map<string, int>();
         for (auto val : vals) used[val->name] += 1;
         for (auto& kv : used) {
-            if (kv.first == "")
+            if (kv.first == "") {
                 errs.push_back("empty " + base + " name");
-            else if (kv.second > 1)
+            }
+            else if (kv.second > 1) {
                 errs.push_back("duplicated " + base + " name " + kv.first);
+            }
         }
     };
     auto check_empty_textures = [&errs](const vector<yocto_texture*>& vals) {
         for (auto val : vals) {
-            if (val->hdr_image.pixels.empty() && val->ldr_image.pixels.empty())
+            if (val->hdr_image.pixels.empty() && val->ldr_image.pixels.empty()) {
                 errs.push_back("empty texture " + val->name);
+            }
         }
     };
 
@@ -3910,6 +3916,11 @@ vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
     if (!skip_textures) check_empty_textures(scene->textures);
 
     return errs;
+}
+
+// Logs validations errors
+void log_validation_errors(const yocto_scene* scene, bool skip_textures) {
+    for(auto err : validate_scene(scene, skip_textures)) log_error(err + " [validation]");
 }
 
 // add missing camera
@@ -6135,6 +6146,7 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
 // Init trace state
 trace_state* make_trace_state(
     const yocto_scene* scene, const trace_params& params) {
+    auto scope = log_trace_scoped("making trace state");
     auto state  = new trace_state();
     auto camera = scene->cameras[params.camera_id];
     auto size   = evaluate_image_size(camera, params.vertical_resolution);
@@ -6150,6 +6162,7 @@ trace_state* make_trace_state(
 // Init trace lights
 trace_lights* make_trace_lights(
     const yocto_scene* scene, const trace_params& params) {
+    auto scope = log_trace_scoped("making trace lights");
     auto lights = make_unique<trace_lights>();
 
     for (auto instance : scene->instances) {
@@ -6181,6 +6194,7 @@ trace_lights::~trace_lights() {
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const trace_params& params) {
+    auto scope = log_trace_scoped("tracing image");
     auto state = make_trace_state(scene, params);
 
     if (params.no_parallel) {
@@ -6218,6 +6232,7 @@ image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 bool trace_samples(trace_state* state, const yocto_scene* scene,
     const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
+    auto scope = log_trace_scoped("tracing samples {}/{}", state->current_sample, params.num_samples);
     auto nbatch = min(
         params.samples_per_batch, params.num_samples - state->current_sample);
     if (params.no_parallel) {
@@ -6269,6 +6284,7 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
 // Starts an anyncrhounous renderer.
 void trace_async_start(trace_state* state, const yocto_scene* scene,
     const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
+    log_trace("start tracing async");
     // render preview image
     if (params.preview_ratio) {
         auto pparams                = params;
