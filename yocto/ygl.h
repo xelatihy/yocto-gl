@@ -3012,60 +3012,6 @@ void print_stats(const yocto_scene* scene);
 // merge_from to merged_into, so merge_from will be empty after this function.
 void merge_into(const yocto_scene* merge_into, yocto_scene* merge_from);
 
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// UPDATES TO COMPUTED PROPERTIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Update node transforms.
-void update_transforms(
-    yocto_scene* scene, float time = 0, const string& anim_group = "");
-// Compute animation range.
-vec2f compute_animation_range(
-    const yocto_scene* scene, const string& anim_group = "");
-
-// Computes shape/scene approximate bounds.
-bbox3f compute_bbox(const yocto_shape* shape);
-bbox3f compute_bbox(const yocto_scene* scene);
-
-// Sample a shape element based on area/length.
-vector<float>     compute_shape_elements_cdf(const yocto_shape* shape);
-tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
-    const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float             sample_shape_element_pdf(const yocto_shape* shape,
-                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
-
-// Sample an environment based on either texel values of uniform
-vector<float> compute_environment_texels_cdf(
-    const yocto_environment* environment);
-vec3f sample_environment_direction(const yocto_environment* environment,
-    const vector<float>& texels_cdf, float re, const vec2f& ruv);
-float sample_environment_direction_pdf(const yocto_environment* environment,
-    const vector<float>& texels_cdf, const vec3f& direction);
-
-// Updates/refits bvh.
-bvh_tree* build_bvh(
-    const yocto_shape* shape, bool high_quality, bool embree = false);
-bvh_tree* build_bvh(
-    const yocto_scene* scene, bool high_quality, bool embree = false);
-void refit_bvh(const yocto_shape* shape, bvh_tree* bvh);
-void refit_bvh(const yocto_scene* scene, bvh_tree* bvh);
-
-// Updates tesselation.
-void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape);
-void tesselate_subdivs(yocto_scene* scene);
-
-// Add missing names, normals, tangents and hierarchy.
-void add_missing_names(yocto_scene* scene);
-void add_missing_normals(yocto_scene* scene);
-void add_missing_tangent_space(yocto_scene* scene);
-void add_missing_materials(yocto_scene* scene);
-void add_missing_cameras(yocto_scene* scene);
-// Checks for validity of the scene.
-vector<string> validate(const yocto_scene* scene, bool skip_textures = false);
-
 // make camera
 yocto_camera* make_bbox_camera(const string& name, const bbox3f& bbox,
     const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
@@ -3094,9 +3040,48 @@ inline yocto_environment* make_sky_environment(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// UPDATES TO COMPUTED PROPERTIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Update node transforms.
+void update_transforms(
+    yocto_scene* scene, float time = 0, const string& anim_group = "");
+// Compute animation range.
+vec2f compute_animation_range(
+    const yocto_scene* scene, const string& anim_group = "");
+
+} // namespace ygl
+
+// -----------------------------------------------------------------------------
 // EVALUATION OF SCENE PROPERTIES
 // -----------------------------------------------------------------------------
 namespace ygl {
+
+// Computes shape/scene approximate bounds.
+bbox3f compute_bbox(const yocto_shape* shape);
+bbox3f compute_bbox(const yocto_scene* scene);
+
+// Updates/refits bvh.
+bvh_tree* build_bvh(
+    const yocto_shape* shape, bool high_quality, bool embree = false);
+bvh_tree* build_bvh(
+    const yocto_scene* scene, bool high_quality, bool embree = false);
+void refit_bvh(const yocto_shape* shape, bvh_tree* bvh);
+void refit_bvh(const yocto_scene* scene, bvh_tree* bvh);
+
+// Updates tesselation.
+void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape);
+void tesselate_subdivs(yocto_scene* scene);
+
+// Add missing names, normals, tangents and hierarchy.
+void add_missing_names(yocto_scene* scene);
+void add_missing_normals(yocto_scene* scene);
+void add_missing_tangent_space(yocto_scene* scene);
+void add_missing_materials(yocto_scene* scene);
+void add_missing_cameras(yocto_scene* scene);
+// Checks for validity of the scene.
+vector<string> validate(const yocto_scene* scene, bool skip_textures = false);
 
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
@@ -3204,6 +3189,21 @@ bool is_bsdf_delta(const microfacet_brdf& f);
 // Check volume properties.
 bool is_volume_homogeneus(const yocto_material* vol);
 bool is_volume_colored(const yocto_material* vol);
+
+// Sample a shape element based on area/length.
+vector<float>     compute_shape_elements_cdf(const yocto_shape* shape);
+tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
+float             sample_shape_element_pdf(const yocto_shape* shape,
+                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
+
+// Sample an environment based on either texel values of uniform
+vector<float> compute_environment_texels_cdf(
+    const yocto_environment* environment);
+vec3f sample_environment_direction(const yocto_environment* environment,
+    const vector<float>& texels_cdf, float re, const vec2f& ruv);
+float sample_environment_direction_pdf(const yocto_environment* environment,
+    const vector<float>& texels_cdf, const vec3f& direction);
 
 }  // namespace ygl
 
