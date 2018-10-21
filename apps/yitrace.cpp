@@ -239,11 +239,11 @@ void run_ui(app_state* app) {
             if (ij.x < 0 || ij.x >= app->state->rendered_image.width ||
                 ij.y < 0 || ij.y >= app->state->rendered_image.height) {
                 auto camera = app->scene->cameras.at(app->params.camera_id);
-                auto ray    = eval_camera_ray(camera, ij,
+                auto ray    = evaluate_camera_ray(camera, ij,
                     {app->state->rendered_image.width,
                         app->state->rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
-                auto isec = intersect_ray(app->scene.get(), app->bvh.get(), ray);
+                auto isec = intersect_sene(app->scene.get(), app->bvh.get(), ray);
                 if (isec.instance) app->selection = isec.instance;
             }
         }
@@ -321,9 +321,9 @@ int main(int argc, char* argv[]) {
         for (auto mat : app->scene->materials) mat->double_sided = true;
     if (app->scene->cameras.empty())
         app->scene->cameras.push_back(
-            make_bbox_camera("<view>", compute_bbox(app->scene.get())));
+            make_bbox_camera("<view>", compute_bounding_box(app->scene.get())));
     add_missing_names(app->scene.get());
-    for (auto& err : validate(app->scene.get()))
+    for (auto& err : validate_scene(app->scene.get()))
         printf("warning: %s\n", err.c_str());
 
     // build bvh
