@@ -3324,8 +3324,9 @@ struct trace_light {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<trace_light*> instances;
-    vector<trace_light*> environments;
+    vector<trace_light*> lights           = {};
+    int                  num_instances    = 0;
+    int                  num_environments = 0;
     ~trace_lights();
 };
 

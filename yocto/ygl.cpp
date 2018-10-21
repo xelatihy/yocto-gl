@@ -5063,18 +5063,18 @@ float sample_light_point_pdf(
 // Sample a point from all shape lights.
 trace_point sample_lights_point(
     const trace_lights* lights, const vec3f& position, rng_state& rng) {
-    if (lights->instances.empty()) return {};
-    auto light = lights->instances[sample_uniform_index(
-        lights->instances.size(), get_random_float(rng))];
+    if (lights->num_instances == 0) return {};
+    auto light = lights->lights[sample_uniform_index(
+        lights->num_instances, get_random_float(rng))];
     return sample_light_point(light, position, rng);
 }
 
 // Sample pdf for a light point.
 float sample_lights_point_pdf(const trace_lights* lights, const vec3f& position,
     const trace_point& light_point) {
-    if (lights->instances.empty()) return 0;
+    if (lights->num_instances == 0) return 0;
     auto light = (trace_light*)nullptr;
-    for (auto l : lights->instances) {
+    for (auto l : lights->lights) {
         if (l->instance == light_point.instance) {
             light = l;
             break;
@@ -5082,7 +5082,7 @@ float sample_lights_point_pdf(const trace_lights* lights, const vec3f& position,
     }
     if (!light) return 0;
     return sample_light_point_pdf(light, position, light_point) *
-           sample_uniform_index_pdf(lights->instances.size());
+           sample_uniform_index_pdf(lights->num_instances);
 }
 
 // Sample pdf for an environment.
@@ -5182,15 +5182,9 @@ vec3f sample_light_direction(const trace_light* light, const bvh_tree* bvh,
 // Sample lights wrt solid angle
 vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& position, float rlg, float rel, const vec2f& ruv) {
-    auto nlights = (int)(lights->instances.size() + lights->environments.size());
-    auto idx     = sample_uniform_index(nlights, rlg);
-    if (idx < lights->instances.size()) {
-        auto light = lights->instances[idx];
-        return sample_light_direction(light, bvh, position, rel, ruv);
-    } else {
-        auto light = lights->environments[idx - (int)lights->instances.size()];
-        return sample_light_direction(light, bvh, position, rel, ruv);
-    }
+    auto idx   = sample_uniform_index(lights->lights.size(), rlg);
+    auto light = lights->lights[idx];
+    return sample_light_direction(light, bvh, position, rel, ruv);
 }
 
 vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
@@ -5221,17 +5215,10 @@ float sample_light_direction_pdf(const trace_light* light, const bvh_tree* bvh,
 // Sample lights pdf
 float sample_lights_direction_pdf(const trace_lights* lights,
     const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
-    auto nlights = (int)(lights->instances.size() + lights->environments.size());
-    auto pdf     = 0.0f;
-    // instances
-    for (auto light : lights->instances) {
+    auto pdf = 0.0f;
+    for (auto light : lights->lights) {
         pdf += sample_light_direction_pdf(light, bvh, position, direction) *
-               sample_uniform_index_pdf(nlights);
-    }
-    // environments
-    for (auto light : lights->environments) {
-        pdf += sample_light_direction_pdf(light, bvh, position, direction) *
-               sample_uniform_index_pdf(nlights);
+               sample_uniform_index_pdf(lights->lights.size());
     }
     return pdf;
 }
@@ -5308,16 +5295,15 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     auto  i      = zero3f;
     vec3f weight = vec3f{1, 1, 1};
 
-    auto nlights = (int)(lights->instances.size() + lights->environments.size());
-    auto idx     = sample_uniform_index(nlights, get_random_float(rng));
-    pdf          = 1.0 / nlights;
-    if (idx < lights->instances.size()) {
-        auto light = lights->instances[idx];
+    auto idx = sample_uniform_index(lights->lights.size(), get_random_float(rng));
+    pdf      = 1.0 / lights->lights.size();
+    if (idx < lights->num_instances) {
+        auto light = lights->lights[idx];
         i = sample_instance_direction(light->instance, light->elements_cdf, p,
             get_random_float(rng), get_random_vec2f(rng));
         pdf *= 1.0 / light->elements_cdf.back();
     } else {
-        auto light = lights->environments[idx - lights->instances.size()];
+        auto light = lights->lights[idx];
         i          = sample_environment_direction(light->environment,
             light->elements_cdf, get_random_float(rng), get_random_vec2f(rng));
         pdf *= sample_environment_direction_pdf(
@@ -5485,8 +5471,7 @@ static yocto_instance* air = new yocto_instance{
 tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights* lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
-    if (lights->instances.empty() && lights->environments.empty())
-        return {zero3f, false};
+    if (lights->lights.empty()) return {zero3f, false};
 
     // initialize
     auto radiance = zero3f;
@@ -5857,7 +5842,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
     auto outgoing = -direction;
 
     // direct
-    if (!is_brdf_delta(point.brdf) && lights && !lights->instances.empty()) {
+    if (!is_brdf_delta(point.brdf) && lights && lights->num_instances > 0) {
         auto light_point = sample_lights_point(lights, point.position, rng);
         auto light_pdf   = sample_lights_point_pdf(
             lights, point.position, light_point);
@@ -5876,7 +5861,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
     }
 
     // environments
-    if (!is_brdf_delta(point.brdf) && lights && !lights->environments.empty()) {
+    if (!is_brdf_delta(point.brdf) && lights && lights->num_environments > 0) {
         auto next_direction = sample_brdf_direction(
             point.brdf, point.normal, outgoing, rng);
         auto brdf_cosine = evaluate_brdf_cosine(
@@ -6170,25 +6155,25 @@ trace_lights* make_trace_lights(
             continue;
         if (instance->shape->triangles.empty() && instance->shape->quads.empty())
             continue;
-        lights->instances.push_back(new trace_light{
+        lights->lights.push_back(new trace_light{
             instance, nullptr, compute_shape_elements_cdf(instance->shape)});
+        lights->num_instances += 1;
     }
 
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
-        lights->environments.push_back(new trace_light{
+        lights->lights.push_back(new trace_light{
             nullptr, environment, compute_environment_texels_cdf(environment)});
+        lights->num_environments += 1;
     }
 
-    if (lights->instances.empty() && lights->environments.empty())
-        return nullptr;
+    if (lights->lights.empty()) return nullptr;
     return lights.release();
 }
 
 // cleanup
 trace_lights::~trace_lights() {
-    for (auto v : instances) delete v;
-    for (auto v : environments) delete v;
+    for (auto light : lights) delete light;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
