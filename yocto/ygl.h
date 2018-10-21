@@ -3931,9 +3931,9 @@ inline void log_fatal(const string& fmt, const Args&... args) {
 
 // Log traces for timing and program debugging
 struct log_scope {
-    string   message    = "";
-    int64_t start_time  = -1;
-    bool     scoped     = false;
+    string  message    = "";
+    int64_t start_time = -1;
+    bool    scoped     = false;
     ~log_scope();
 };
 template <typename... Args>
@@ -3944,12 +3944,13 @@ template <typename... Args>
 inline log_scope log_trace_begin(const string& fmt, const Args&... args) {
     auto message = format(fmt, args...);
     log_trace(message + " [started]");
-    return { message, get_time(), false };
+    return {message, get_time(), false};
 }
 template <typename... Args>
 inline void log_trace_end(log_scope& scope) {
-    if(scope.start_time >= 0) {
-        log_trace(scope.message + " [ended: " + format_duration(get_time() - scope.start_time) + "]");
+    if (scope.start_time >= 0) {
+        log_trace(scope.message + " [ended: " +
+                  format_duration(get_time() - scope.start_time) + "]");
     } else {
         log_trace(scope.message + " [ended]");
     }
@@ -3958,10 +3959,10 @@ template <typename... Args>
 inline log_scope log_trace_scoped(const string& fmt, const Args&... args) {
     auto message = format(fmt, args...);
     log_trace(message + " [started]");
-    return { message, get_time(), true };
+    return {message, get_time(), true};
 }
 inline log_scope::~log_scope() {
-    if(scoped) log_trace_end(*this);
+    if (scoped) log_trace_end(*this);
 }
 
 // Configure the logging

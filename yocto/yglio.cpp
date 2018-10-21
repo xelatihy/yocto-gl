@@ -902,7 +902,10 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 
 // Resize image.
 image<vec4f> resize_image(const image<vec4f>& img, int width, int height) {
-    if (!width && !height) { log_error("bad image size in resize_image"); return img; }
+    if (!width && !height) {
+        log_error("bad image size in resize_image");
+        return img;
+    }
     if (!width) width = (int)round(img.width * (height / (float)img.height));
     if (!height) height = (int)round(img.height * (width / (float)img.width));
     auto res_img = image<vec4f>{width, height};
@@ -2971,9 +2974,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         if (instance->surface) instance->surface->name = instance->name;
         if (matname != "") {
             auto it = mmap.find(matname);
-            if (it == mmap.end()) {
-                log_error("missing material {}", matname);
-            }
+            if (it == mmap.end()) { log_error("missing material {}", matname); }
             instance->material = it->second;
         }
         vert_map.clear();
@@ -4303,7 +4304,10 @@ bool pbrt_to_json(const string& filename, json& js) {
                std::isdigit(tok[0]);
     };
     auto parse_string = [](const vector<string>& tokens, int& i) -> string {
-        if (tokens[i][0] != '"') { log_error("string expected"); return ""; }
+        if (tokens[i][0] != '"') {
+            log_error("string expected");
+            return "";
+        }
         auto tok = tokens[i++];
         tok      = tok.substr(1, tok.size() - 2);
         if (tok.find('|') != tok.npos) tok = tok.substr(tok.find('|') + 1);
@@ -4328,7 +4332,10 @@ bool pbrt_to_json(const string& filename, json& js) {
                 i++;
                 if (!list) break;
             } else {
-                if (!first && !list) { log_error("bad params"); break; }
+                if (!first && !list) {
+                    log_error("bad params");
+                    break;
+                }
                 js.push_back(atof(tokens[i].c_str()));
                 i++;
                 if (!list) break;
@@ -4376,7 +4383,10 @@ bool pbrt_to_json(const string& filename, json& js) {
     auto tokens = split(pbrt);
     auto i      = 0;
     while (i < tokens.size()) {
-        if (!is_cmd(tokens, i)) { runtime_error("command expected"); break; }
+        if (!is_cmd(tokens, i)) {
+            runtime_error("command expected");
+            break;
+        }
         auto& tok   = tokens[i++];
         auto  jcmd  = json::object();
         jcmd["cmd"] = tok;
@@ -5439,7 +5449,7 @@ bool serialize_scene(yocto_scene* scene, file_stream& fs, bool save) {
 yocto_scene* load_ybin_scene(
     const string& filename, bool load_textures, bool skip_missing) {
     auto scope = log_trace_scoped("loading scene {}", filename);
-    auto fs = open(filename, "rb");
+    auto fs    = open(filename, "rb");
     if (!fs) return nullptr;
     auto scene = make_unique<yocto_scene>();
     if (!serialize_scene(scene.get(), fs, false)) return nullptr;
@@ -5577,8 +5587,7 @@ ply_data* load_ply(const string& filename) {
                 auto elem_type  = parse_string(ss);
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
-                if (elem_type != "int")
-                    log_error("unsupported ply list type");
+                if (elem_type != "int") log_error("unsupported ply list type");
                 prop.type = ply_type::ply_int_list;
             } else if (type == "float") {
                 prop.type = ply_type::ply_float;

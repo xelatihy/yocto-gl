@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    auto scene      = unique_ptr<yocto_scene>{load_scene(filename)};
+    auto scene = unique_ptr<yocto_scene>{load_scene(filename)};
     if (!scene) log_fatal("cannot load scene {}", filename);
 
     // tesselate
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
     auto state = unique_ptr<trace_state>{make_trace_state(scene.get(), params)};
 
     // render
-    auto done = false;
+    auto done  = false;
     auto scope = log_trace_begin("rendering image");
     while (!done) {
         done = trace_samples(

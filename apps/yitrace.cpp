@@ -298,7 +298,7 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    app->scene      = unique_ptr<yocto_scene>(load_scene(app->filename));
+    app->scene = unique_ptr<yocto_scene>(load_scene(app->filename));
     if (!app->scene) log_fatal("cannot load scene " + app->filename);
 
     // tesselate
@@ -319,7 +319,7 @@ int main(int argc, char* argv[]) {
     log_validation_errors(app->scene.get());
 
     // build bvh
-    app->bvh       = unique_ptr<bvh_tree>(
+    app->bvh = unique_ptr<bvh_tree>(
         make_scene_bvh(app->scene.get(), true, embree));
 
     // init renderer
