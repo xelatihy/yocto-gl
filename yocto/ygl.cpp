@@ -5077,13 +5077,6 @@ vec3f sample_instance_direction(const yocto_instance* instance,
         evaluate_position(instance, get<0>(sample), get<1>(sample)) - p);
 }
 
-vec3f sample_instance_direction(const yocto_instance* instance,
-    const vector<float>& elem_cdf, const vec3f& p, rng_state& rng) {
-    auto rel = rand1f(rng);  // force order of evaluation with assignments
-    auto ruv = rand2f(rng);  // force order of evaluation with assignments
-    return sample_instance_direction(instance, elem_cdf, p, rel, ruv);
-}
-
 // Sample pdf for a light point.
 float sample_instance_direction_pdf(const yocto_instance* instance,
     const vector<float>& elem_cdf, const bvh_tree* bvh, const vec3f& position,
