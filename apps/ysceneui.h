@@ -255,7 +255,7 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_checkbox_glwidget(win, "catmull-clark", val->catmull_clark);
     continue_glwidgets_line(win);
     edited += draw_checkbox_glwidget(
-        win, "compute normals", val->compute_normals);
+        win, "compute normals", val->compute_vertex_normals);
     draw_label_glwidgets(win, "quads pos", "%ld", val->positions_quads.size());
     draw_label_glwidgets(
         win, "quads texcoord", "%ld", val->texturecoords_quads.size());

@@ -227,7 +227,7 @@ static const char* fragment =
         uniform vec3 lpos[16];         // light positions
         uniform vec3 lke[16];          // light intensities
 
-        void eval_light(int lid, vec3 pos, out vec3 cl, out vec3 wi) {
+        void evaluate_light(int lid, vec3 pos, out vec3 cl, out vec3 wi) {
             cl = vec3(0,0,0);
             wi = vec3(0,0,0);
             if(ltype[lid] == 0) {
@@ -313,7 +313,7 @@ static const char* fragment =
 
         uniform mat4 shape_xform;           // shape transform
 
-        bool eval_material(vec2 texcoord, vec4 color, out vec3 ke, 
+        bool evaluate_material(vec2 texcoord, vec4 color, out vec3 ke, 
                            out vec3 kd, out vec3 ks, out float rs, out float op) {
             if(mat_type == 0) {
                 ke = mat_ke;
@@ -417,7 +417,7 @@ static const char* fragment =
 
             // get material color from textures
             vec3 brdf_ke, brdf_kd, brdf_ks; float brdf_rs, brdf_op;
-            bool has_brdf = eval_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
+            bool has_brdf = evaluate_material(texcoord, color, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op);
 
             // exit if needed
             if(brdf_op < 0.005) discard;
@@ -443,7 +443,7 @@ static const char* fragment =
                     // foreach light
                     for(int lid = 0; lid < lnum; lid ++) {
                         vec3 cl = vec3(0,0,0); vec3 wi = vec3(0,0,0);
-                        eval_light(lid, pos, cl, wi);
+                        evaluate_light(lid, pos, cl, wi);
                         c += cl * brdfcos((has_brdf) ? elem_type : 0, brdf_ke, brdf_kd, brdf_ks, brdf_rs, brdf_op, n,wi,wo);
                     }
                 }
@@ -552,9 +552,9 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
 
     auto camera_view = frame_to_mat(inverse(camera->frame));
     // auto camera_proj =
-    //         perspective_mat(eval_camera_fovy(camera),
+    //         perspective_mat(evaluate_camera_fovy(camera),
     //             (float)viewport_size.x / (float)viewport_size.y, near_plane);
-    auto camera_proj = perspective_mat(eval_camera_fovy(camera),
+    auto camera_proj = perspective_mat(evaluate_camera_fovy(camera),
         (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
     bind_glprogram(state->prog);
@@ -573,7 +573,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
             if (lgt->material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto shape = lgt->shape;
-            auto bbox  = compute_bbox(shape);
+            auto bbox  = compute_bounding_box(shape);
             auto pos   = (bbox.max + bbox.min) / 2;
             auto area  = 0.0f;
             if (!shape->triangles.empty()) {
@@ -670,9 +670,10 @@ draw_glstate* init_draw_state(glwindow* win) {
 void run_ui(app_state* app) {
     // window
     auto camera = app->scene->cameras.at(app->camid);
-    auto width  = clamp(eval_image_size(camera, app->resolution).x, 256, 1440),
-         height = clamp(eval_image_size(camera, app->resolution).y, 256, 1440);
-    auto win    = make_glwindow(width, height, "yview", app, draw);
+    auto width = clamp(evaluate_image_size(camera, app->resolution).x, 256, 1440),
+         height = clamp(
+             evaluate_image_size(camera, app->resolution).y, 256, 1440);
+    auto win = make_glwindow(width, height, "yview", app, draw);
 
     // init widget
     init_glwidgets(win);
@@ -799,7 +800,7 @@ int main(int argc, char* argv[]) {
     if (double_sided) {
         for (auto mat : app->scene->materials) mat->double_sided = true;
     }
-    for (auto& err : validate(app->scene.get())) log_error(err);
+    for (auto& err : validate_scene(app->scene.get())) log_error(err);
 
     // animation
     auto time_range = compute_animation_range(app->scene.get());

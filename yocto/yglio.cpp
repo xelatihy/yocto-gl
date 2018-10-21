@@ -1915,8 +1915,8 @@ bool dump_json_object(
         return false;
     if (val->catmull_clark != def.catmull_clark)
         js["catmull_clark"] = val->catmull_clark;
-    if (val->compute_normals != def.compute_normals)
-        js["compute_normals"] = val->compute_normals;
+    if (val->compute_vertex_normals != def.compute_vertex_normals)
+        js["compute_vertex_normals"] = val->compute_vertex_normals;
     if (val->filename == "") {
         if (!dump_json_value(js, val->positions_quads, "positions_quads",
                 def.positions_quads))
@@ -1983,8 +1983,8 @@ bool parse_json_object(
     if (!parse_json_value(
             js, val->catmull_clark, "catmull_clark", def.catmull_clark))
         return false;
-    if (!parse_json_value(
-            js, val->compute_normals, "compute_normals", def.compute_normals))
+    if (!parse_json_value(js, val->compute_vertex_normals,
+            "compute_vertex_normals", def.compute_vertex_normals))
         return false;
     if (!parse_json_value(
             js, val->positions_quads, "positions_quads", def.positions_quads))
@@ -3938,7 +3938,7 @@ yocto_scene* load_gltf_scene(
     update_transforms(scene.get());
 
     // fix cameras
-    auto bbox = compute_bbox(scene.get());
+    auto bbox = compute_bounding_box(scene.get());
     for (auto camera : scene->cameras) {
         auto center = (bbox.min + bbox.max) / 2;
         auto dist   = dot(-camera->frame.z, center - camera->frame.o);
@@ -4933,7 +4933,7 @@ WorldEnd
     auto up     = camera->frame.y;
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
-        eval_camera_fovy(camera) * 180 / pif);
+        evaluate_camera_fovy(camera) * 180 / pif);
 
     // save renderer
     print(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
@@ -4942,8 +4942,8 @@ WorldEnd
     print(fs,
         "Film \"image\" \"string filename\" [\"{}\"] "
         "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), eval_image_size(camera, 512).x,
-        eval_image_size(camera, 512).y);
+        replace_extension(filename, "exr"), evaluate_image_size(camera, 512).x,
+        evaluate_image_size(camera, 512).y);
 
     // start world
     print(fs, "WorldBegin\n");
@@ -5265,7 +5265,8 @@ bool serialize_bin_object(yocto_surface* surface, file_stream& fs, bool save) {
     if (!serialize_bin_value(surface->subdivision_level, fs, save))
         return false;
     if (!serialize_bin_value(surface->catmull_clark, fs, save)) return false;
-    if (!serialize_bin_value(surface->compute_normals, fs, save)) return false;
+    if (!serialize_bin_value(surface->compute_vertex_normals, fs, save))
+        return false;
     if (!serialize_bin_value(surface->positions_quads, fs, save)) return false;
     if (!serialize_bin_value(surface->texturecoords_quads, fs, save))
         return false;

@@ -3,5 +3,6 @@ mkdir -p build/release
 cd build/release
 cmake ../.. -GNinja
 cmake --build .
-
-ctest -j 4
+rm tests/run-tests/output/*.png
+rm tests/run-tests/difference/*.png
+ctest -j 4 $1
