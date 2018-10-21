@@ -1,0 +1,1 @@
+./scripts/format-code.sh && ./scripts/build.sh && ./scripts/test.sh && git commit -a -m $1

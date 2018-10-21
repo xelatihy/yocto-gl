@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
     }
     if (double_sided)
         for (auto mat : scene->materials) mat->double_sided = true;
-    for (auto& err : validate(scene.get())) log_error("warning: {}", err);
+    for (auto& err : validate_scene(scene.get())) log_error("warning: {}", err);
 
     // build bvh
     log_info("building bvh");
