@@ -36,6 +36,7 @@ struct glshape {
                   gl_tangsp   = {};
     glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {},
                     gl_quads = {};
+    int num_facevarying_quads = 0;
 };
 
 struct draw_glstate {
@@ -522,6 +523,10 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
         set_gluniform(state->prog, "elem_type", 3);
         draw_gltriangles(vbos.gl_quads, shape->quads.size() * 2);
     }
+    if (!shape->quads_positions.empty()) {
+        set_gluniform(state->prog, "elem_type", 3);
+        draw_gltriangles(vbos.gl_quads, vbos.num_facevarying_quads * 2);
+    }
 
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
@@ -641,6 +646,7 @@ draw_glstate* init_draw_state(glwindow* win) {
         }
     }
     for (auto& shape : app->scene->shapes) {
+        if (!shape->quads_positions.empty()) continue;
         auto vbos = glshape();
         if (!shape->positions.empty())
             vbos.gl_pos = make_glarraybuffer(shape->positions, false);
@@ -661,6 +667,33 @@ draw_glstate* init_draw_state(glwindow* win) {
         if (!shape->quads.empty())
             vbos.gl_quads = make_glelementbuffer(
                 convert_quads_to_triangles(shape->quads), false);
+        state->shps[shape] = vbos;
+    }
+    for (auto& shape : app->scene->shapes) {
+        if (shape->quads_positions.empty()) continue;
+        auto vbos = glshape();
+        auto quads = vector<vec4i>();
+        auto positions = vector<vec3f>();
+        auto normals = vector<vec3f>();
+        auto colors = vector<vec4f>();
+        auto texturecoords = vector<vec2f>();
+        convert_face_varying(quads, positions, normals, texturecoords, colors,
+            shape->quads_positions, shape->quads_normals,
+            shape->quads_texturecoords, shape->quads_colors,
+            shape->positions, shape->normals,
+            shape->texturecoords, shape->colors);
+        if (!positions.empty())
+            vbos.gl_pos = make_glarraybuffer(positions, false);
+        if (!normals.empty())
+            vbos.gl_norm = make_glarraybuffer(normals, false);
+        if (!texturecoords.empty())
+            vbos.gl_texcoord = make_glarraybuffer(texturecoords, false);
+        if (!colors.empty())
+            vbos.gl_color = make_glarraybuffer(colors, false);
+        if (!quads.empty())
+            vbos.gl_quads = make_glelementbuffer(
+                convert_quads_to_triangles(quads), false);
+        vbos.num_facevarying_quads = (int)quads.size();
         state->shps[shape] = vbos;
     }
     return state;
