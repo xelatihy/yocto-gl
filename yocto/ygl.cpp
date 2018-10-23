@@ -3772,7 +3772,7 @@ bvh_tree* make_shape_bvh(
     bvh->lines     = shape->lines;
     bvh->triangles = shape->triangles;
     bvh->quads     = shape->quads;
-    if(!shape->quads_positions.empty()) bvh->quads = shape->quads_positions;
+    if (!shape->quads_positions.empty()) bvh->quads = shape->quads_positions;
 
     // build bvh
     build_bvh_embree(bvh, high_quality, embree);
@@ -4069,7 +4069,7 @@ template <typename T>
 T evaluate_elem(const yocto_shape* shape, const vector<T>& vals,
     const vector<vec4i>& quads, int ei, const vec2f& uv) {
     if (vals.empty()) return {};
-    auto q = shape->quads_positions[ei];
+    auto q = quads[ei];
     if (q.w == q.z)
         return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
     return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);

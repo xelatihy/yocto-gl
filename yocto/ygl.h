@@ -3183,7 +3183,7 @@ struct yocto_shape {
     vector<vec4i> quads_positions     = {};
     vector<vec4i> quads_normals       = {};
     vector<vec4i> quads_texturecoords = {};
-    vector<vec4i> quads_colors = {};
+    vector<vec4i> quads_colors        = {};
 
     // vertex data
     vector<vec3f> positions     = {};

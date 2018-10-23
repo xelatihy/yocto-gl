@@ -35,7 +35,7 @@ struct glshape {
     glarraybuffer gl_pos = {}, gl_norm = {}, gl_texcoord = {}, gl_color = {},
                   gl_tangsp   = {};
     glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {},
-                    gl_quads = {};
+                    gl_quads  = {};
     int num_facevarying_quads = 0;
 };
 
@@ -671,30 +671,27 @@ draw_glstate* init_draw_state(glwindow* win) {
     }
     for (auto& shape : app->scene->shapes) {
         if (shape->quads_positions.empty()) continue;
-        auto vbos = glshape();
-        auto quads = vector<vec4i>();
-        auto positions = vector<vec3f>();
-        auto normals = vector<vec3f>();
-        auto colors = vector<vec4f>();
+        auto vbos          = glshape();
+        auto quads         = vector<vec4i>();
+        auto positions     = vector<vec3f>();
+        auto normals       = vector<vec3f>();
+        auto colors        = vector<vec4f>();
         auto texturecoords = vector<vec2f>();
         convert_face_varying(quads, positions, normals, texturecoords, colors,
             shape->quads_positions, shape->quads_normals,
-            shape->quads_texturecoords, shape->quads_colors,
-            shape->positions, shape->normals,
-            shape->texturecoords, shape->colors);
+            shape->quads_texturecoords, shape->quads_colors, shape->positions,
+            shape->normals, shape->texturecoords, shape->colors);
         if (!positions.empty())
             vbos.gl_pos = make_glarraybuffer(positions, false);
-        if (!normals.empty())
-            vbos.gl_norm = make_glarraybuffer(normals, false);
+        if (!normals.empty()) vbos.gl_norm = make_glarraybuffer(normals, false);
         if (!texturecoords.empty())
             vbos.gl_texcoord = make_glarraybuffer(texturecoords, false);
-        if (!colors.empty())
-            vbos.gl_color = make_glarraybuffer(colors, false);
+        if (!colors.empty()) vbos.gl_color = make_glarraybuffer(colors, false);
         if (!quads.empty())
             vbos.gl_quads = make_glelementbuffer(
                 convert_quads_to_triangles(quads), false);
         vbos.num_facevarying_quads = (int)quads.size();
-        state->shps[shape] = vbos;
+        state->shps[shape]         = vbos;
     }
     return state;
 }

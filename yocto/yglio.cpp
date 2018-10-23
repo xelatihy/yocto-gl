@@ -1912,8 +1912,7 @@ bool apply_json_procedural(
         shape = make_suzanne_shape(js.value("size", 2.0f), as_triangles);
     } else if (type == "fvcube") {
         shape = make_fvcube_shape(js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
         return false;
