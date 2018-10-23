@@ -1796,6 +1796,15 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scene
         if (!dump_json_value(js, val->triangles, "triangles", def.triangles))
             return false;
         if (!dump_json_value(js, val->quads, "quads", def.quads)) return false;
+        if (!dump_json_value(js, val->quads_positions, "quads_positions",
+                def.quads_positions))
+            return false;
+        if (!dump_json_value(
+                js, val->quads_normals, "quads_normals", def.quads_normals))
+            return false;
+        if (!dump_json_value(js, val->quads_texturecoords,
+                "quads_texturecoords", def.quads_texturecoords))
+            return false;
         if (!dump_json_value(js, val->positions, "positions", def.positions))
             return false;
         if (!dump_json_value(js, val->normals, "normals", def.normals))
@@ -1901,6 +1910,10 @@ bool apply_json_procedural(
             32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
     } else if (type == "suzanne") {
         shape = make_suzanne_shape(js.value("size", 2.0f), as_triangles);
+    } else if (type == "fvcube") {
+        shape = make_fvcube_shape(js.value("steps", vec3i{1, 1, 1}),
+            js.value("size", vec3f{2, 2, 2}),
+            js.value("uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
         return false;
@@ -1909,14 +1922,17 @@ bool apply_json_procedural(
         for (auto& p : shape.positions) p = {p.x, p.z, p.y};
         for (auto& n : shape.normals) n = {n.x, n.z, n.y};
     }
-    val->points        = shape.points;
-    val->lines         = shape.lines;
-    val->triangles     = shape.triangles;
-    val->quads         = shape.quads;
-    val->positions     = shape.positions;
-    val->normals       = shape.normals;
-    val->texturecoords = shape.texturecoords;
-    val->radius        = shape.radius;
+    val->points              = shape.points;
+    val->lines               = shape.lines;
+    val->triangles           = shape.triangles;
+    val->quads               = shape.quads;
+    val->quads_positions     = shape.quads_positions;
+    val->quads_normals       = shape.quads_normals;
+    val->quads_texturecoords = shape.quads_texturecoords;
+    val->positions           = shape.positions;
+    val->normals             = shape.normals;
+    val->texturecoords       = shape.texturecoords;
+    val->radius              = shape.radius;
     return true;
 }
 
@@ -1991,25 +2007,25 @@ bool apply_json_procedural(
     if (!parse_json_objbegin(js)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
-    auto shape = make_fvshape_data();
+    auto shape = make_shape_data();
     if (type == "cube") {
-        shape = make_cube_fvshape(js.value("steps", vec3i{1, 1, 1}),
+        shape = make_fvcube_shape(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_open") {
-        shape = make_cube_fvshape(js.value("steps", vec3i{1, 1, 1}),
+        shape = make_fvcube_shape(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
-        shape.positions_quads.pop_back();
-        shape.normals_quads.pop_back();
+        shape.quads_positions.pop_back();
+        shape.quads_normals.pop_back();
         shape.quads_texturecoords.pop_back();
     } else if (type == "suzanne") {
         auto qshp = make_suzanne_shape(js.value("size", 2.0f), false);
-        shape.positions_quads = qshp.quads;
+        shape.quads_positions = qshp.quads;
         shape.positions       = qshp.positions;
     } else {
         log_error("unknown shape type {}", type);
         return false;
     }
-    val->positions_quads     = shape.positions_quads;
+    val->positions_quads     = shape.quads_positions;
     val->positions           = shape.positions;
     val->texturecoords_quads = shape.quads_texturecoords;
     val->texturecoords       = shape.texturecoords;

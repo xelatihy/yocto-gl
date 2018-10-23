@@ -2673,18 +2673,10 @@ struct make_shape_data {
     vector<vec3i> triangles;
     vector<vec4i> quads;
     vector<vec4i> beziers;
-};
 
-// Shape data returned by make_fv<shape> functions.
-struct make_fvshape_data {
-    // Vertex data
-    vector<vec3f> positions;
-    vector<vec3f> normals;
-    vector<vec2f> texturecoords;
-
-    // Faces swith different topology for each data
-    vector<vec4i> positions_quads;
-    vector<vec4i> normals_quads;
+    // face-varying elements data
+    vector<vec4i> quads_positions;
+    vector<vec4i> quads_normals;
     vector<vec4i> quads_texturecoords;
 };
 
@@ -2727,7 +2719,7 @@ make_shape_data make_suzanne_shape(float size, bool as_triangles);
 make_shape_data make_cube_shape(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_fvshape_data make_cube_fvshape(
+make_shape_data make_fvcube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.

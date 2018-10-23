@@ -2314,14 +2314,14 @@ make_shape_data make_geodesic_sphere_shape(
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-make_fvshape_data make_cube_fvshape(
+make_shape_data make_fvcube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
-    auto fvshp = make_fvshape_data{};
-    tie(fvshp.positions_quads, fvshp.positions) = weld_quads(qshp.quads,
+    auto fvshp = make_shape_data{};
+    tie(fvshp.quads_positions, fvshp.positions) = weld_quads(qshp.quads,
         qshp.positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    fvshp.normals_quads                         = qshp.quads;
+    fvshp.quads_normals                         = qshp.quads;
     fvshp.normals                               = qshp.normals;
     fvshp.quads_texturecoords                   = qshp.quads;
     fvshp.texturecoords                         = qshp.texturecoords;
@@ -3772,6 +3772,7 @@ bvh_tree* make_shape_bvh(
     bvh->lines     = shape->lines;
     bvh->triangles = shape->triangles;
     bvh->quads     = shape->quads;
+    if(!shape->quads_positions.empty()) bvh->quads = shape->quads_positions;
 
     // build bvh
     build_bvh_embree(bvh, high_quality, embree);
