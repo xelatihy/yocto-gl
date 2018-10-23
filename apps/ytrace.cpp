@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
     if (!scene) log_fatal("cannot load scene {}", filename);
 
     // tesselate
-    tesselate_subdivs(scene.get());
+    tesselate_shapes(scene.get());
 
     // add components
     if (add_skyenv && scene->environments.empty()) {

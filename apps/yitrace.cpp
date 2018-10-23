@@ -302,7 +302,7 @@ int main(int argc, char* argv[]) {
     if (!app->scene) log_fatal("cannot load scene " + app->filename);
 
     // tesselate
-    tesselate_subdivs(app->scene.get());
+    tesselate_shapes(app->scene.get());
 
     // add components
     if (add_skyenv && app->scene->environments.empty()) {

@@ -830,7 +830,7 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     if (!quiet) log_info("tesselating scene elements\n");
-    tesselate_subdivs(app->scene.get());
+    tesselate_shapes(app->scene.get());
 
     // add components
     if (!quiet) log_info("adding scene elements\n");

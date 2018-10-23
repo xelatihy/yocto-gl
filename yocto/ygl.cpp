@@ -3561,6 +3561,33 @@ void tesselate_subdivs(yocto_scene* scene) {
     }
 }
 
+// Updates tesselation.
+yocto_shape* tesselate_shape(const yocto_shape* shape) {
+    auto tesselated_shape = new yocto_shape(*shape);
+    return tesselated_shape;
+}
+void tesselate_shapes(yocto_scene* scene) {
+    auto scope = log_trace_scoped("tesselating surfaces");
+    auto tesselated_surfaces = unordered_map<yocto_shape*,yocto_shape*>();
+    for(auto shape : scene->shapes) {
+        if(!shape->subdivision_level) continue;
+        tesselated_surfaces[shape] = tesselate_shape(shape);
+    }
+    for(auto instance : scene->instances) {
+        if(tesselated_surfaces.find(instance->shape) == 
+           tesselated_surfaces.end()) continue;
+        instance->shape = tesselated_surfaces.at(instance->shape);
+    }
+    for(auto& shape : scene->shapes) {
+        if(tesselated_surfaces.find(shape) == 
+           tesselated_surfaces.end()) continue;
+        shape = tesselated_surfaces.at(shape);
+    }
+    for(auto kv : tesselated_surfaces) {
+        delete kv.first;
+    }
+}
+
 // Update animation transforms
 void update_transforms(
     yocto_animation* animation, float time, const string& anim_group) {

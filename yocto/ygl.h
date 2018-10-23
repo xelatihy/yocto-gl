@@ -3173,6 +3173,11 @@ struct yocto_shape {
     string name     = "";
     string filename = "";
 
+    // subdision properties
+    int    subdivision_level      = 0;
+    bool   catmull_clark          = true;
+    bool   compute_vertex_normals = true;
+
     // primitives
     vector<int>   points    = {};
     vector<vec2i> lines     = {};
@@ -3359,8 +3364,8 @@ void refit_shape_bvh(const yocto_shape* shape, bvh_tree* bvh);
 void refit_scene_bvh(const yocto_scene* scene, bvh_tree* bvh);
 
 // Updates tesselation.
-void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape);
-void tesselate_subdivs(yocto_scene* scene);
+yocto_shape* tesselate_shape(const yocto_shape* shape);
+void tesselate_shapes(yocto_scene* scene);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_missing_names(yocto_scene* scene);
