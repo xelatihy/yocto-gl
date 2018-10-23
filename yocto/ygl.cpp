@@ -5179,7 +5179,7 @@ float sample_instance_direction_pdf(const yocto_instance* instance,
             isec.instance, isec.element_id, isec.element_uv, direction);
         // prob triangle * area triangle = area triangle mesh
         auto area = elem_cdf.back();
-        pdf += distance_square(light_position, position) /
+        pdf += distance_squared(light_position, position) /
                (abs(dot(light_normal, direction)) * area);
         // continue
         ray  = make_ray(light_position, direction);
@@ -5769,7 +5769,7 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
                     point.brdf, point.normal, outgoing, light_direction);
                 auto geometric_term = abs(dot(light_point.normal,
                                           light_direction)) /
-                                      distance_square(
+                                      distance_squared(
                                           light_point.position, point.position);
                 radiance += weight * light_point.emission * brdf_cosine *
                             geometric_term / light_pdf;
@@ -5877,7 +5877,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
             auto brdf_cosine = evaluate_smooth_brdf_cosine(
                 point.brdf, point.normal, outgoing, light_direction);
             auto geometric_term = abs(dot(light_point.normal, light_direction)) /
-                                  distance_square(
+                                  distance_squared(
                                       light_point.position, point.position);
             radiance += light_point.emission * brdf_cosine * geometric_term /
                         light_pdf;
