@@ -479,6 +479,10 @@ struct vec;
 
 // Small size vectors.
 template <typename T>
+struct vec<T, 1> {
+    T x = 0;
+};
+template <typename T>
 struct vec<T, 2> {
     T x = 0;
     T y = 0;
@@ -498,18 +502,22 @@ struct vec<T, 4> {
 };
 
 // Type aliases.
+using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;
 using vec3f = vec<float, 3>;
 using vec4f = vec<float, 4>;
+using vec1i = vec<int, 2>;
 using vec2i = vec<int, 2>;
 using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
 using vec4b = vec<byte, 4>;
 
 // Zero vector constants.
+const auto zero1f = vec1f{0};
 const auto zero2f = vec2f{0, 0};
 const auto zero3f = vec3f{0, 0, 0};
 const auto zero4f = vec4f{0, 0, 0, 0};
+const auto zero1i = vec1i{0};
 const auto zero2i = vec2i{0, 0};
 const auto zero3i = vec3i{0, 0, 0};
 const auto zero4i = vec4i{0, 0, 0, 0};
@@ -575,6 +583,22 @@ const T* data(const vec<T, N>& v) {
 
 // Vector comparison operations.
 template <typename T>
+inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return a.x == b.x;
+}
+template <typename T>
+inline bool operator!=(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return a.x != b.x;
+}
+template <typename T, typename T1>
+inline bool operator==(const vec<T, 1>& a, T1 b) {
+    return a.x == b;
+}
+template <typename T, typename T1>
+inline bool operator!=(const vec<T, 1>& a, T1 b) {
+    return a.x != b;
+}
+template <typename T>
 inline bool operator==(const vec<T, 2>& a, const vec<T, 2>& b) {
     return a.x == b.x && a.y == b.y;
 }
@@ -621,6 +645,60 @@ inline bool operator==(const vec<T, 4>& a, T1 b) {
 template <typename T, typename T1>
 inline bool operator!=(const vec<T, 4>& a, T1 b) {
     return a.x != b || a.y != b || a.z != b || a.w != b;
+}
+
+// Vector operations.
+template <typename T>
+inline vec<T, 1> operator-(const vec<T, 1>& a) {
+    return {-a.x};
+}
+template <typename T>
+inline vec<T, 1> operator+(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return {a.x + b.x};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator+(const vec<T, 1>& a, T1 b) {
+    return {a.x + b};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator+(T1 a, const vec<T, 1>& b) {
+    return {a + b.x};
+}
+template <typename T>
+inline vec<T, 1> operator-(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return {a.x - b.x};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator-(const vec<T, 1>& a, T1 b) {
+    return {a.x - b};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator-(T1 a, const vec<T, 1>& b) {
+    return {a - b.x};
+}
+template <typename T>
+inline vec<T, 1> operator*(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return {a.x * b.x};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator*(const vec<T, 1>& a, T1 b) {
+    return {a.x * b};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator*(T1 a, const vec<T, 1>& b) {
+    return {a * b.x};
+}
+template <typename T>
+inline vec<T, 1> operator/(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return {a.x / b.x};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator/(const vec<T, 1>& a, T1 b) {
+    return {a.x / b};
+}
+template <typename T, typename T1>
+inline vec<T, 1> operator/(T1 a, const vec<T, 1>& b) {
+    return {a / b.x};
 }
 
 // Vector operations.
@@ -824,6 +902,10 @@ inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
 }
 
 // Vector products and lengths.
+template <typename T>
+inline T dot(const vec<T, 1>& a, const vec<T, 1>& b) {
+    return a.x * b.x;
+}
 template <typename T>
 inline T dot(const vec<T, 2>& a, const vec<T, 2>& b) {
     return a.x * b.x + a.y * b.y;
