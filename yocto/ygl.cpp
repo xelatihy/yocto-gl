@@ -3669,6 +3669,8 @@ vector<float> compute_shape_elements_cdf(const yocto_shape* shape) {
         return sample_lines_element_cdf(shape->lines, shape->positions);
     } else if (!shape->points.empty()) {
         return sample_points_element_cdf(shape->points.size());
+    } else if (!shape->quads_positions.empty()) {
+        return sample_quads_element_cdf(shape->quads_positions, shape->positions);
     } else {
         log_error("empty shape not supported");
         return {};
@@ -3686,8 +3688,10 @@ tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
         return sample_quads_element(elements_cdf, re, ruv);
     } else if (!shape->lines.empty()) {
         return {get<0>(sample_lines_element(elements_cdf, re, ruv.x)), ruv};
-    } else if (!shape->positions.empty()) {
+    } else if (!shape->points.empty()) {
         return {sample_points_element(elements_cdf, re), ruv};
+    } else if (!shape->quads_positions.empty()) {
+        return sample_quads_element(elements_cdf, re, ruv);
     } else {
         return {0, zero2f};
     }
@@ -3996,6 +4000,10 @@ vec3f evaluate_element_normal(const yocto_shape* shape, int ei) {
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
         norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
+    } else if (!shape->quads_positions.empty()) {
+        auto q = shape->quads_positions[ei];
+        norm   = quad_normal(shape->positions[q.x], shape->positions[q.y],
+            shape->positions[q.z], shape->positions[q.w]);
     } else {
         norm = {0, 0, 1};
     }
@@ -4046,9 +4054,24 @@ T evaluate_elem(
         return interpolate_line(vals[l.x], vals[l.y], uv.x);
     } else if (!shape->points.empty()) {
         return vals[shape->points[ei]];
+    } else if (!shape->quads_positions.empty()) {
+        auto q = shape->quads_positions[ei];
+        if (q.w == q.z)
+            return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
     } else {
         return {};
     }
+}
+// override for face-varying
+template <typename T>
+T evaluate_elem(const yocto_shape* shape, const vector<T>& vals,
+    const vector<vec4i>& quads, int ei, const vec2f& uv) {
+    if (vals.empty()) return {};
+    auto q = shape->quads_positions[ei];
+    if (q.w == q.z)
+        return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
 }
 
 // Shape values interpolated using barycentric coordinates
@@ -4057,10 +4080,16 @@ vec3f evaluate_position(const yocto_shape* shape, int ei, const vec2f& uv) {
 }
 vec3f evaluate_normal(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->normals.empty()) return evaluate_element_normal(shape, ei);
+    if (!shape->quads_positions.empty())
+        return normalize(
+            evaluate_elem(shape, shape->normals, shape->quads_normals, ei, uv));
     return normalize(evaluate_elem(shape, shape->normals, ei, uv));
 }
 vec2f evaluate_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->texturecoords.empty()) return uv;
+    if (!shape->quads_positions.empty())
+        return evaluate_elem(
+            shape, shape->texturecoords, shape->quads_texturecoords, ei, uv);
     return evaluate_elem(shape, shape->texturecoords, ei, uv);
 }
 vec4f evaluate_color(const yocto_shape* shape, int ei, const vec2f& uv) {
@@ -4140,6 +4169,8 @@ vec3f evaluate_shading_normal(
         return evaluate_normal(instance, ei, uv);
     } else if (!instance->shape->lines.empty()) {
         return orthonormalize(o, evaluate_normal(instance, ei, uv));
+    } else if (!instance->shape->quads_positions.empty()) {
+        return evaluate_normal(instance, ei, uv);
     } else {
         return o;
     }
