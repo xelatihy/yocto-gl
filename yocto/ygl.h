@@ -1126,25 +1126,25 @@ struct mat;
 // Small Fixed-size square matrices stored in column major format.
 template <typename T, int N>
 struct mat<T, N, 1> {
-    vec<T, N> x = {0, 0};
+    vec<T, N> x = {};
 };
 template <typename T, int N>
 struct mat<T, N, 2> {
-    vec<T, N> x = {0, 0};
-    vec<T, N> y = {0, 0};
+    vec<T, N> x = {};
+    vec<T, N> y = {};
 };
 template <typename T, int N>
 struct mat<T, N, 3> {
-    vec<T, 3> x = {0, 0, 0};
-    vec<T, 3> y = {0, 0, 0};
-    vec<T, 3> z = {0, 0, 0};
+    vec<T, 3> x = {};
+    vec<T, 3> y = {};
+    vec<T, 3> z = {};
 };
 template <typename T, int N>
 struct mat<T, N, 4> {
-    vec<T, 4> x = {0, 0, 0, 0};
-    vec<T, 4> y = {0, 0, 0, 0};
-    vec<T, 4> z = {0, 0, 0, 0};
-    vec<T, 4> w = {0, 0, 0, 0};
+    vec<T, 4> x = {};
+    vec<T, 4> y = {};
+    vec<T, 4> z = {};
+    vec<T, 4> w = {};
 };
 
 // Type aliases.
