@@ -133,6 +133,8 @@
             "name": "obj2",
             "filename": "meshes/obj2.ply",
             "subdivision_level": 2,
+            "catmull_clark": true,
+            "compute_vertex_normals": true,
             "!!proc": {
                 "type": "suzanne"
             }
