@@ -5690,46 +5690,50 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 
     PLYData ply;
 
-    auto get_channel = [](const auto& data, int channel_index) -> vector<float> {
-        auto channel = vector<float>(data.size());
-        for (auto i = 0; i < channel.size(); i++)
-            channel[i] = (&data[i].x)[channel_index];
+    auto get_channel = [](const auto& data, int channel_index, int length) -> vector<float> {
+        auto channel = vector<float>(length, 0.0f);
+        for (auto i = 0; i < min((int)channel.size(), length); i++)
+            channel[i] = ((float*)&data[i])[channel_index];
         return channel;
     };
 
+    // for the number of vertices, we pad data to support face varying
+    auto nverts = max(positions.size(), max(normals.size(), 
+        max(texturecoords.size(), max(colors.size(), radius.size())))); 
+
     if (!positions.empty()) {
         if (!ply.hasElement("vertex"))
-            ply.addElement("vertex", positions.size());
-        ply.getElement("vertex").addProperty("x", get_channel(positions, 0));
-        ply.getElement("vertex").addProperty("y", get_channel(positions, 1));
-        ply.getElement("vertex").addProperty("z", get_channel(positions, 2));
+            ply.addElement("vertex", nverts);
+        ply.getElement("vertex").addProperty("x", get_channel(positions, 0, nverts));
+        ply.getElement("vertex").addProperty("y", get_channel(positions, 1, nverts));
+        ply.getElement("vertex").addProperty("z", get_channel(positions, 2, nverts));
     }
 
     if (!normals.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", normals.size());
-        ply.getElement("vertex").addProperty("nx", get_channel(normals, 0));
-        ply.getElement("vertex").addProperty("ny", get_channel(normals, 1));
-        ply.getElement("vertex").addProperty("nz", get_channel(normals, 2));
+        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
+        ply.getElement("vertex").addProperty("nx", get_channel(normals, 0, nverts));
+        ply.getElement("vertex").addProperty("ny", get_channel(normals, 1, nverts));
+        ply.getElement("vertex").addProperty("nz", get_channel(normals, 2, nverts));
     }
 
     if (!texturecoords.empty()) {
         if (!ply.hasElement("vertex"))
-            ply.addElement("vertex", texturecoords.size());
-        ply.getElement("vertex").addProperty("u", get_channel(texturecoords, 0));
-        ply.getElement("vertex").addProperty("v", get_channel(texturecoords, 1));
+            ply.addElement("vertex", nverts);
+        ply.getElement("vertex").addProperty("u", get_channel(texturecoords, 0, nverts));
+        ply.getElement("vertex").addProperty("v", get_channel(texturecoords, 1, nverts));
     }
 
     if (!colors.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", colors.size());
-        ply.getElement("vertex").addProperty("red", get_channel(colors, 0));
-        ply.getElement("vertex").addProperty("green", get_channel(colors, 1));
-        ply.getElement("vertex").addProperty("blue", get_channel(colors, 2));
-        ply.getElement("vertex").addProperty("alpha", get_channel(colors, 3));
+        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
+        ply.getElement("vertex").addProperty("red", get_channel(colors, 0, nverts));
+        ply.getElement("vertex").addProperty("green", get_channel(colors, 1, nverts));
+        ply.getElement("vertex").addProperty("blue", get_channel(colors, 2, nverts));
+        ply.getElement("vertex").addProperty("alpha", get_channel(colors, 3, nverts));
     }
 
     if (!radius.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", radius.size());
-        ply.getElement("vertex").addProperty("radius", radius);
+        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
+        ply.getElement("vertex").addProperty("radius", get_channel(radius, 0, nverts));
     }
 
     if (!triangles.empty() || !quads.empty()) {
@@ -5752,6 +5756,48 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         auto line_property = vector<vector<int>>();
         for (auto l : lines) line_property.push_back({l.x, l.y});
         ply.getElement("line").addListProperty("vertex_indices", line_property);
+    }
+
+    if (!quads_positions.empty()) {
+        if (!ply.hasElement("face"))
+            ply.addElement("face", quads_positions.size());
+        auto face_property = vector<vector<int>>();
+        for (auto q : quads_positions) {
+            if (q.z == q.w) {
+                face_property.push_back({q.x, q.y, q.z});
+            } else {
+                face_property.push_back({q.x, q.y, q.z, q.w});
+            }
+        }
+        ply.getElement("face").addListProperty("vertex_position_indices", face_property);
+    }
+
+    if (!quads_normals.empty()) {
+        if (!ply.hasElement("face"))
+            ply.addElement("face", quads_positions.size());
+        auto face_property = vector<vector<int>>();
+        for (auto q : quads_normals) {
+            if (q.z == q.w) {
+                face_property.push_back({q.x, q.y, q.z});
+            } else {
+                face_property.push_back({q.x, q.y, q.z, q.w});
+            }
+        }
+        ply.getElement("face").addListProperty("vertex_normal_indices", face_property);
+    }
+
+    if (!quads_texturecoords.empty()) {
+        if (!ply.hasElement("face"))
+            ply.addElement("face", quads_positions.size());
+        auto face_property = vector<vector<int>>();
+        for (auto q : quads_texturecoords) {
+            if (q.z == q.w) {
+                face_property.push_back({q.x, q.y, q.z});
+            } else {
+                face_property.push_back({q.x, q.y, q.z, q.w});
+            }
+        }
+        ply.getElement("face").addListProperty("vertex_texturecoord_indices", face_property);
     }
 
     // save
