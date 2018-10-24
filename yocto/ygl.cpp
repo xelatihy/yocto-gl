@@ -590,6 +590,8 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
 template <typename T>
 tuple<vector<vec2i>, vector<T>> subdivide_lines(
     const vector<vec2i>& lines, const vector<T>& vert) {
+    // early exit
+    if (lines.empty() || vert.empty()) return {lines, vert};
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
     // create vertices
@@ -623,6 +625,8 @@ template tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
 template <typename T>
 tuple<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vert) {
+    // early exit
+    if (triangles.empty() || vert.empty()) return {triangles, vert};
     // get edges
     auto emap  = make_edge_map(triangles);
     auto edges = get_edges(emap);
@@ -668,6 +672,8 @@ template tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
 template <typename T>
 tuple<vector<vec4i>, vector<T>> subdivide_quads(
     const vector<vec4i>& quads, const vector<T>& vert) {
+    // early exit
+    if (quads.empty() || vert.empty()) return {quads, vert};
     // get edges
     auto emap  = make_edge_map(quads);
     auto edges = get_edges(emap);
@@ -772,6 +778,8 @@ template tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
 template <typename T>
 tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
+    // early exit
+    if (quads.empty() || vert.empty()) return {quads, vert};
     // get edges
     auto emap     = make_edge_map(quads);
     auto edges    = get_edges(emap);
@@ -2314,14 +2322,14 @@ make_shape_data make_geodesic_sphere_shape(
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-make_fvshape_data make_cube_fvshape(
+make_shape_data make_fvcube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
-    auto fvshp = make_fvshape_data{};
-    tie(fvshp.positions_quads, fvshp.positions) = weld_quads(qshp.quads,
+    auto fvshp = make_shape_data{};
+    tie(fvshp.quads_positions, fvshp.positions) = weld_quads(qshp.quads,
         qshp.positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    fvshp.normals_quads                         = qshp.quads;
+    fvshp.quads_normals                         = qshp.quads;
     fvshp.normals                               = qshp.normals;
     fvshp.quads_texturecoords                   = qshp.quads;
     fvshp.texturecoords                         = qshp.texturecoords;
@@ -3503,7 +3511,6 @@ namespace ygl {
 yocto_scene::~yocto_scene() {
     for (auto v : cameras) delete v;
     for (auto v : shapes) delete v;
-    for (auto v : surfaces) delete v;
     for (auto v : instances) delete v;
     for (auto v : materials) delete v;
     for (auto v : textures) delete v;
@@ -3531,33 +3538,145 @@ bbox3f compute_scene_bounds(const yocto_scene* scene) {
 }
 
 // Updates tesselation.
-void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
-    shape->name              = surface->name;
-    auto quads_positions     = surface->positions_quads;
-    auto quads_texturecoords = surface->texturecoords_quads;
-    auto quads_colors        = surface->colors_quads;
-    auto pos                 = surface->positions;
-    auto texcoord            = surface->texturecoords;
-    auto color               = surface->colors;
-    for (auto l = 0; l < surface->subdivision_level; l++) {
-        tie(quads_positions, pos) = subdivide_catmullclark(quads_positions, pos);
-        tie(quads_texturecoords, texcoord) = subdivide_catmullclark(
-            quads_texturecoords, texcoord, true);
-        tie(quads_colors, color) = subdivide_catmullclark(quads_colors, color);
+yocto_shape* tesselate_shape(const yocto_shape* shape) {
+    auto tesselated_shape = new yocto_shape(*shape);
+    if (!shape->subdivision_level) return tesselated_shape;
+    if (!shape->points.empty()) {
+        log_error("point subdivision not supported");
+    } else if (!shape->lines.empty()) {
+        for (auto l = 0; l < tesselated_shape->subdivision_level; l++) {
+            auto tesselated_lines            = tesselated_shape->lines;
+            tie(tesselated_shape->lines,
+                tesselated_shape->positions) = subdivide_lines(tesselated_lines,
+                tesselated_shape->positions);
+            tie(ignore, tesselated_shape->normals) = subdivide_lines(
+                tesselated_lines, tesselated_shape->normals);
+            tie(ignore, tesselated_shape->texturecoords) = subdivide_lines(
+                tesselated_lines, tesselated_shape->texturecoords);
+            tie(ignore, tesselated_shape->colors) = subdivide_lines(
+                tesselated_lines, tesselated_shape->colors);
+        }
+        if (shape->compute_vertex_normals) {
+            tesselated_shape->normals = compute_vertex_tangents(
+                tesselated_shape->lines, tesselated_shape->positions);
+        }
+    } else if (!shape->triangles.empty()) {
+        for (auto l = 0; l < tesselated_shape->subdivision_level; l++) {
+            auto tesselated_triangles = tesselated_shape->triangles;
+            tie(tesselated_shape->triangles,
+                tesselated_shape->positions) = subdivide_triangles(tesselated_triangles,
+                tesselated_shape->positions);
+            tie(ignore, tesselated_shape->normals) = subdivide_triangles(
+                tesselated_triangles, tesselated_shape->normals);
+            tie(ignore, tesselated_shape->texturecoords) = subdivide_triangles(
+                tesselated_triangles, tesselated_shape->texturecoords);
+            tie(ignore, tesselated_shape->colors) = subdivide_triangles(
+                tesselated_triangles, tesselated_shape->colors);
+        }
+        if (shape->compute_vertex_normals) {
+            tesselated_shape->normals = compute_vertex_normals(
+                tesselated_shape->triangles, tesselated_shape->positions);
+        }
+    } else if (!shape->quads.empty() && !shape->catmull_clark) {
+        for (auto l = 0; l < tesselated_shape->subdivision_level; l++) {
+            auto tesselated_quads            = tesselated_shape->quads;
+            tie(tesselated_shape->quads,
+                tesselated_shape->positions) = subdivide_quads(tesselated_quads,
+                tesselated_shape->positions);
+            tie(ignore, tesselated_shape->normals) = subdivide_quads(
+                tesselated_quads, tesselated_shape->normals);
+            tie(ignore, tesselated_shape->texturecoords) = subdivide_quads(
+                tesselated_quads, tesselated_shape->texturecoords);
+            tie(ignore, tesselated_shape->colors) = subdivide_quads(
+                tesselated_quads, tesselated_shape->colors);
+        }
+        if (shape->compute_vertex_normals) {
+            tesselated_shape->normals = compute_vertex_normals(
+                tesselated_shape->quads, tesselated_shape->positions);
+        }
+    } else if (!shape->quads.empty() && shape->catmull_clark) {
+        for (auto l = 0; l < tesselated_shape->subdivision_level; l++) {
+            auto tesselated_quads            = tesselated_shape->quads;
+            tie(tesselated_shape->quads,
+                tesselated_shape->positions) = subdivide_catmullclark(tesselated_quads,
+                tesselated_shape->positions);
+            tie(ignore, tesselated_shape->normals) = subdivide_catmullclark(
+                tesselated_quads, tesselated_shape->normals);
+            tie(ignore, tesselated_shape->texturecoords) = subdivide_catmullclark(
+                tesselated_quads, tesselated_shape->texturecoords);
+            tie(ignore, tesselated_shape->colors) = subdivide_catmullclark(
+                tesselated_quads, tesselated_shape->colors);
+        }
+        if (shape->compute_vertex_normals) {
+            tesselated_shape->normals = compute_vertex_normals(
+                tesselated_shape->quads, tesselated_shape->positions);
+        }
+    } else if (!shape->quads_positions.empty() && !shape->catmull_clark) {
+        for (auto l = 0; l < tesselated_shape->subdivision_level; l++) {
+            tie(tesselated_shape->quads_positions,
+                tesselated_shape->positions) = subdivide_quads(tesselated_shape
+                                                                   ->quads_positions,
+                tesselated_shape->positions);
+            tie(tesselated_shape->quads_normals, tesselated_shape->normals) = subdivide_quads(
+                tesselated_shape->quads_normals, tesselated_shape->normals);
+            tie(tesselated_shape->quads_texturecoords,
+                tesselated_shape
+                    ->texturecoords) = subdivide_quads(tesselated_shape
+                                                           ->quads_texturecoords,
+                tesselated_shape->texturecoords);
+            tie(tesselated_shape->quads_colors, tesselated_shape->colors) = subdivide_quads(
+                tesselated_shape->quads_colors, tesselated_shape->colors);
+        }
+        if (shape->compute_vertex_normals) {
+            tesselated_shape->quads_normals = tesselated_shape->quads_positions;
+            tesselated_shape->normals       = compute_vertex_normals(
+                tesselated_shape->quads_positions, tesselated_shape->positions);
+        }
+    } else if (!shape->quads_positions.empty() && shape->catmull_clark) {
+        for (auto l = 0; l < tesselated_shape->subdivision_level; l++) {
+            tie(tesselated_shape->quads_positions,
+                tesselated_shape
+                    ->positions)     = subdivide_catmullclark(tesselated_shape
+                                                              ->quads_positions,
+                tesselated_shape->positions);
+            tie(tesselated_shape->quads_texturecoords,
+                tesselated_shape
+                    ->texturecoords) = subdivide_catmullclark(tesselated_shape
+                                                                  ->quads_texturecoords,
+                tesselated_shape->texturecoords, true);
+            tie(tesselated_shape->quads_colors, tesselated_shape->colors) = subdivide_catmullclark(
+                tesselated_shape->quads_colors, tesselated_shape->colors);
+        }
+        if (shape->compute_vertex_normals) {
+            tesselated_shape->quads_normals = tesselated_shape->quads_positions;
+            tesselated_shape->normals       = compute_vertex_normals(
+                tesselated_shape->quads_positions, tesselated_shape->positions);
+        }
+    } else {
+        log_error("subdivision not supported");
     }
-    auto norm = vector<vec3f>();
-    if (surface->compute_vertex_normals)
-        norm = compute_vertex_normals(quads_positions, pos);
-    convert_face_varying(shape->quads, shape->positions, shape->normals,
-        shape->texturecoords, shape->colors, quads_positions, quads_positions,
-        quads_texturecoords, quads_colors, pos, norm, texcoord, color);
+    return tesselated_shape;
 }
-void tesselate_subdivs(yocto_scene* scene) {
-    if (scene->surfaces.empty()) return;
-    auto scope = log_trace_scoped("tesselating surfaces");
+void tesselate_shapes(yocto_scene* scene) {
+    auto scope               = log_trace_scoped("tesselating surfaces");
+    auto tesselated_surfaces = unordered_map<yocto_shape*, yocto_shape*>();
+    for (auto shape : scene->shapes) {
+        if (!shape->subdivision_level) continue;
+        tesselated_surfaces[shape] = tesselate_shape(shape);
+    }
+    if (tesselated_surfaces.empty()) return;
     for (auto instance : scene->instances) {
-        if (!instance->surface) continue;
-        tesselate_subdiv(instance->surface, instance->shape);
+        if (tesselated_surfaces.find(instance->shape) == tesselated_surfaces.end())
+            continue;
+        instance->shape = tesselated_surfaces.at(instance->shape);
+    }
+    for (auto& shape : scene->shapes) {
+        if (tesselated_surfaces.find(shape) == tesselated_surfaces.end())
+            continue;
+        shape = tesselated_surfaces.at(shape);
+    }
+    for (auto kv : tesselated_surfaces) {
+        delete kv.first;
     }
 }
 
@@ -3669,6 +3788,8 @@ vector<float> compute_shape_elements_cdf(const yocto_shape* shape) {
         return sample_lines_element_cdf(shape->lines, shape->positions);
     } else if (!shape->points.empty()) {
         return sample_points_element_cdf(shape->points.size());
+    } else if (!shape->quads_positions.empty()) {
+        return sample_quads_element_cdf(shape->quads_positions, shape->positions);
     } else {
         log_error("empty shape not supported");
         return {};
@@ -3686,8 +3807,10 @@ tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
         return sample_quads_element(elements_cdf, re, ruv);
     } else if (!shape->lines.empty()) {
         return {get<0>(sample_lines_element(elements_cdf, re, ruv.x)), ruv};
-    } else if (!shape->positions.empty()) {
+    } else if (!shape->points.empty()) {
         return {sample_points_element(elements_cdf, re), ruv};
+    } else if (!shape->quads_positions.empty()) {
+        return sample_quads_element(elements_cdf, re, ruv);
     } else {
         return {0, zero2f};
     }
@@ -3768,6 +3891,7 @@ bvh_tree* make_shape_bvh(
     bvh->lines     = shape->lines;
     bvh->triangles = shape->triangles;
     bvh->quads     = shape->quads;
+    if (!shape->quads_positions.empty()) bvh->quads = shape->quads_positions;
 
     // build bvh
     build_bvh_embree(bvh, high_quality, embree);
@@ -3996,6 +4120,10 @@ vec3f evaluate_element_normal(const yocto_shape* shape, int ei) {
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[ei];
         norm   = line_tangent(shape->positions[l.x], shape->positions[l.y]);
+    } else if (!shape->quads_positions.empty()) {
+        auto q = shape->quads_positions[ei];
+        norm   = quad_normal(shape->positions[q.x], shape->positions[q.y],
+            shape->positions[q.z], shape->positions[q.w]);
     } else {
         norm = {0, 0, 1};
     }
@@ -4046,9 +4174,24 @@ T evaluate_elem(
         return interpolate_line(vals[l.x], vals[l.y], uv.x);
     } else if (!shape->points.empty()) {
         return vals[shape->points[ei]];
+    } else if (!shape->quads_positions.empty()) {
+        auto q = shape->quads_positions[ei];
+        if (q.w == q.z)
+            return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
     } else {
         return {};
     }
+}
+// override for face-varying
+template <typename T>
+T evaluate_elem(const yocto_shape* shape, const vector<T>& vals,
+    const vector<vec4i>& quads, int ei, const vec2f& uv) {
+    if (vals.empty()) return {};
+    auto q = quads[ei];
+    if (q.w == q.z)
+        return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
 }
 
 // Shape values interpolated using barycentric coordinates
@@ -4057,10 +4200,16 @@ vec3f evaluate_position(const yocto_shape* shape, int ei, const vec2f& uv) {
 }
 vec3f evaluate_normal(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->normals.empty()) return evaluate_element_normal(shape, ei);
+    if (!shape->quads_positions.empty())
+        return normalize(
+            evaluate_elem(shape, shape->normals, shape->quads_normals, ei, uv));
     return normalize(evaluate_elem(shape, shape->normals, ei, uv));
 }
 vec2f evaluate_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->texturecoords.empty()) return uv;
+    if (!shape->quads_positions.empty())
+        return evaluate_elem(
+            shape, shape->texturecoords, shape->quads_texturecoords, ei, uv);
     return evaluate_elem(shape, shape->texturecoords, ei, uv);
 }
 vec4f evaluate_color(const yocto_shape* shape, int ei, const vec2f& uv) {
@@ -4140,6 +4289,8 @@ vec3f evaluate_shading_normal(
         return evaluate_normal(instance, ei, uv);
     } else if (!instance->shape->lines.empty()) {
         return orthonormalize(o, evaluate_normal(instance, ei, uv));
+    } else if (!instance->shape->quads_positions.empty()) {
+        return evaluate_normal(instance, ei, uv);
     } else {
         return o;
     }
@@ -4607,7 +4758,6 @@ void print_stats(const yocto_scene* scene) {
 
     num_cameras      = scene->cameras.size();
     num_shapes       = scene->shapes.size();
-    num_shapes       = scene->surfaces.size();
     num_materials    = scene->materials.size();
     num_textures     = scene->textures.size();
     num_environments = scene->environments.size();
@@ -5489,7 +5639,7 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 
 // @Hack: air volume properties should be set in the scene struct.
 static yocto_instance* air = new yocto_instance{
-    "air", {}, nullptr, new yocto_material{}, nullptr};
+    "air", {}, nullptr, new yocto_material{}};
 
 // Iterative volume path tracing.
 tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,

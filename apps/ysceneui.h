@@ -63,7 +63,6 @@ template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_instance>(
     glwindow* win, const string& lbl_, yocto_instance* val, void*& sel) {
     draw_glwidgets_scene_tree(win, "shape", val->shape, sel);
-    draw_glwidgets_scene_tree(win, "surface", val->surface, sel);
     draw_glwidgets_scene_tree(win, "mat", val->material, sel);
 }
 
@@ -112,11 +111,6 @@ inline void draw_glwidgets_scene_tree(
     }
     if (!scene->shapes.empty() && begin_treenode_glwidget(win, "shapes")) {
         for (auto v : scene->shapes) draw_glwidgets_scene_tree(win, "", v, sel);
-        end_treenode_glwidget(win);
-    }
-    if (!scene->surfaces.empty() && begin_treenode_glwidget(win, "subdivs")) {
-        for (auto v : scene->surfaces)
-            draw_glwidgets_scene_tree(win, "", v, sel);
         end_treenode_glwidget(win);
     }
     if (!scene->instances.empty() && begin_treenode_glwidget(win, "instances")) {
@@ -248,25 +242,6 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_surface* val, yocto_scene* scene) {
-    auto edited = 0;
-    edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_slider_glwidget(win, "level", val->subdivision_level, 0, 10);
-    edited += draw_checkbox_glwidget(win, "catmull-clark", val->catmull_clark);
-    continue_glwidgets_line(win);
-    edited += draw_checkbox_glwidget(
-        win, "compute normals", val->compute_vertex_normals);
-    draw_label_glwidgets(win, "quads pos", "%ld", val->positions_quads.size());
-    draw_label_glwidgets(
-        win, "quads texcoord", "%ld", val->texturecoords_quads.size());
-    draw_label_glwidgets(win, "quads color", "%ld", val->colors_quads.size());
-    draw_label_glwidgets(win, "pos", "%ld", val->positions.size());
-    draw_label_glwidgets(win, "texcoord", "%ld", val->texturecoords.size());
-    draw_label_glwidgets(win, "color", "%ld", val->colors.size());
-    return edited;
-}
-
-inline bool draw_glwidgets_scene_inspector(
     glwindow* win, yocto_instance* val, yocto_scene* scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val->name);
@@ -276,8 +251,6 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
     edited += draw_combobox_glwidget(
         win, "shape", val->shape, scene->shapes, true);
-    edited += draw_combobox_glwidget(
-        win, "surface", val->surface, scene->surfaces, true);
     edited += draw_combobox_glwidget(
         win, "mat", val->material, scene->materials, true);
     return edited;
@@ -384,11 +357,6 @@ inline bool draw_glwidgets_scene_inspector(glwindow* win, const string& lbl,
         if (shape != sel) continue;
         if (draw_glwidgets_scene_inspector(win, shape, scene))
             update_list.push_back({"shape", shape});
-    }
-    for (auto surface : scene->surfaces) {
-        if (surface != sel) continue;
-        if (draw_glwidgets_scene_inspector(win, surface, scene))
-            update_list.push_back({"subdiv", surface});
     }
     for (auto texture : scene->textures) {
         if (texture != sel) continue;

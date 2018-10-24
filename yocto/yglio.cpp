@@ -1789,6 +1789,13 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scene
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->filename, "filename", def.filename))
         return false;
+    if (!dump_json_value(js, val->subdivision_level, "subdivision_level",
+            def.subdivision_level))
+        return false;
+    if (val->catmull_clark != def.catmull_clark)
+        js["catmull_clark"] = val->catmull_clark;
+    if (val->compute_vertex_normals != def.compute_vertex_normals)
+        js["compute_vertex_normals"] = val->compute_vertex_normals;
     if (val->filename == "") {
         if (!dump_json_value(js, val->points, "points", def.points))
             return false;
@@ -1796,6 +1803,15 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scene
         if (!dump_json_value(js, val->triangles, "triangles", def.triangles))
             return false;
         if (!dump_json_value(js, val->quads, "quads", def.quads)) return false;
+        if (!dump_json_value(js, val->quads_positions, "quads_positions",
+                def.quads_positions))
+            return false;
+        if (!dump_json_value(
+                js, val->quads_normals, "quads_normals", def.quads_normals))
+            return false;
+        if (!dump_json_value(js, val->quads_texturecoords,
+                "quads_texturecoords", def.quads_texturecoords))
+            return false;
         if (!dump_json_value(js, val->positions, "positions", def.positions))
             return false;
         if (!dump_json_value(js, val->normals, "normals", def.normals))
@@ -1901,6 +1917,9 @@ bool apply_json_procedural(
             32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
     } else if (type == "suzanne") {
         shape = make_suzanne_shape(js.value("size", 2.0f), as_triangles);
+    } else if (type == "fvcube") {
+        shape = make_fvcube_shape(js.value("steps", vec3i{1, 1, 1}),
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
         return false;
@@ -1909,14 +1928,17 @@ bool apply_json_procedural(
         for (auto& p : shape.positions) p = {p.x, p.z, p.y};
         for (auto& n : shape.normals) n = {n.x, n.z, n.y};
     }
-    val->points        = shape.points;
-    val->lines         = shape.lines;
-    val->triangles     = shape.triangles;
-    val->quads         = shape.quads;
-    val->positions     = shape.positions;
-    val->normals       = shape.normals;
-    val->texturecoords = shape.texturecoords;
-    val->radius        = shape.radius;
+    val->points              = shape.points;
+    val->lines               = shape.lines;
+    val->triangles           = shape.triangles;
+    val->quads               = shape.quads;
+    val->quads_positions     = shape.quads_positions;
+    val->quads_normals       = shape.quads_normals;
+    val->quads_texturecoords = shape.quads_texturecoords;
+    val->positions           = shape.positions;
+    val->normals             = shape.normals;
+    val->texturecoords       = shape.texturecoords;
+    val->radius              = shape.radius;
     return true;
 }
 
@@ -1927,6 +1949,15 @@ bool parse_json_object(
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->filename, "filename", def.filename))
+        return false;
+    if (!parse_json_value(js, val->subdivision_level, "subdivision_level",
+            def.subdivision_level))
+        return false;
+    if (!parse_json_value(
+            js, val->catmull_clark, "catmull_clark", def.catmull_clark))
+        return false;
+    if (!parse_json_value(js, val->compute_vertex_normals,
+            "compute_vertex_normals", def.compute_vertex_normals))
         return false;
     if (!parse_json_value(js, val->points, "points", def.points)) return false;
     if (!parse_json_value(js, val->lines, "lines", def.lines)) return false;
@@ -1951,109 +1982,6 @@ bool parse_json_object(
 
 // Serialize struct
 bool dump_json_object(
-    json& js, const yocto_surface* val, const yocto_scene* scene) {
-    static const auto def = yocto_surface();
-    if (!dump_json_objbegin(js)) return false;
-    if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->filename, "filename", def.filename))
-        return false;
-    if (!dump_json_value(
-            js, val->subdivision_level, "level", def.subdivision_level))
-        return false;
-    if (val->catmull_clark != def.catmull_clark)
-        js["catmull_clark"] = val->catmull_clark;
-    if (val->compute_vertex_normals != def.compute_vertex_normals)
-        js["compute_vertex_normals"] = val->compute_vertex_normals;
-    if (val->filename == "") {
-        if (!dump_json_value(js, val->positions_quads, "positions_quads",
-                def.positions_quads))
-            return false;
-        if (!dump_json_value(js, val->texturecoords_quads,
-                "texturecoords_quads", def.texturecoords_quads))
-            return false;
-        if (!dump_json_value(
-                js, val->colors_quads, "colors_quads", def.colors_quads))
-            return false;
-        if (!dump_json_value(js, val->positions, "positions", def.positions))
-            return false;
-        if (!dump_json_value(
-                js, val->texturecoords, "texturecoords", def.texturecoords))
-            return false;
-        if (!dump_json_value(js, val->colors, "colors", def.colors))
-            return false;
-    }
-    return true;
-}
-
-// Procedural commands for subdivs
-bool apply_json_procedural(
-    const json& js, yocto_surface* val, const yocto_scene* scene) {
-    if (!parse_json_objbegin(js)) return false;
-    auto type = js.value("type", ""s);
-    if (type == "") return true;
-    auto shape = make_fvshape_data();
-    if (type == "cube") {
-        shape = make_cube_fvshape(js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
-    } else if (type == "cube_open") {
-        shape = make_cube_fvshape(js.value("steps", vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
-        shape.positions_quads.pop_back();
-        shape.normals_quads.pop_back();
-        shape.quads_texturecoords.pop_back();
-    } else if (type == "suzanne") {
-        auto qshp = make_suzanne_shape(js.value("size", 2.0f), false);
-        shape.positions_quads = qshp.quads;
-        shape.positions       = qshp.positions;
-    } else {
-        log_error("unknown shape type {}", type);
-        return false;
-    }
-    val->positions_quads     = shape.positions_quads;
-    val->positions           = shape.positions;
-    val->texturecoords_quads = shape.quads_texturecoords;
-    val->texturecoords       = shape.texturecoords;
-    if (val->filename == "") val->filename = "meshes/" + val->name + ".obj";
-    return true;
-}
-
-// Serialize struct
-bool parse_json_object(
-    const json& js, yocto_surface* val, const yocto_scene* scene) {
-    static const auto def = yocto_surface();
-    if (!parse_json_objbegin(js)) return false;
-    if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->filename, "filename", def.filename))
-        return false;
-    if (!parse_json_value(js, val->subdivision_level, "subdivision_level",
-            def.subdivision_level))
-        return false;
-    if (!parse_json_value(
-            js, val->catmull_clark, "catmull_clark", def.catmull_clark))
-        return false;
-    if (!parse_json_value(js, val->compute_vertex_normals,
-            "compute_vertex_normals", def.compute_vertex_normals))
-        return false;
-    if (!parse_json_value(
-            js, val->positions_quads, "positions_quads", def.positions_quads))
-        return false;
-    if (!parse_json_value(js, val->texturecoords_quads, "texturecoords_quads",
-            def.texturecoords_quads))
-        return false;
-    if (!parse_json_value(js, val->colors_quads, "colors_quads", def.colors_quads))
-        return false;
-    if (!parse_json_value(js, val->positions, "positions", def.positions))
-        return false;
-    if (!parse_json_value(
-            js, val->texturecoords, "texturecoords", def.texturecoords))
-        return false;
-    if (!parse_json_value(js, val->colors, "colors", def.colors)) return false;
-    if (!parse_json_procedural(js, val, "!!proc", scene)) return false;
-    return true;
-}
-
-// Serialize struct
-bool dump_json_object(
     json& js, const yocto_instance* val, const yocto_scene* scene) {
     static const auto def = yocto_instance();
     if (!dump_json_objbegin(js)) return false;
@@ -2061,8 +1989,6 @@ bool dump_json_object(
     if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!dump_json_objref(js, val->shape, "shape", scene->shapes)) return false;
     if (!dump_json_objref(js, val->material, "material", scene->materials))
-        return false;
-    if (!dump_json_objref(js, val->surface, "surface", scene->surfaces))
         return false;
     return true;
 }
@@ -2095,8 +2021,6 @@ bool parse_json_object(
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
     if (!parse_json_objref(js, val->shape, "shape", scene->shapes))
-        return false;
-    if (!parse_json_objref(js, val->surface, "surface", scene->surfaces))
         return false;
     if (!parse_json_objref(js, val->material, "material", scene->materials))
         return false;
@@ -2327,7 +2251,6 @@ bool dump_json_object(json& js, const yocto_scene* val, const yocto_scene* scene
     if (!dump_json_objarray(js, val->materials, "materials", scene))
         return false;
     if (!dump_json_objarray(js, val->shapes, "shapes", scene)) return false;
-    if (!dump_json_objarray(js, val->surfaces, "surfaces", scene)) return false;
     if (!dump_json_objarray(js, val->instances, "instances", scene))
         return false;
     if (!dump_json_objarray(js, val->environments, "environments", scene))
@@ -2375,7 +2298,6 @@ bool apply_json_procedural(
                                            instance->frame;
             val->instances.back()->shape    = instance->shape;
             val->instances.back()->material = instance->material;
-            val->instances.back()->surface  = instance->surface;
         }
     }
     return true;
@@ -2395,8 +2317,6 @@ bool parse_json_object(
     if (!parse_json_objarray(js, val->materials, "materials", scene))
         return false;
     if (!parse_json_objarray(js, val->shapes, "shapes", scene)) return false;
-    if (!parse_json_objarray(js, val->surfaces, "surfaces", scene))
-        return false;
     if (!parse_json_objarray(js, val->instances, "instances", scene))
         return false;
     if (!parse_json_objarray(js, val->environments, "environments", scene))
@@ -2449,19 +2369,6 @@ yocto_scene* load_json_scene(
         }
     }
 
-    // load suddivs
-    for (auto surface : scene->surfaces) {
-        if (surface->filename == "" || !surface->positions.empty()) continue;
-        auto filename      = normalize_path(dirname + "/" + surface->filename);
-        auto quads_normals = vector<vec4i>();
-        auto norm          = vector<vec3f>();
-        if (!load_fvmesh(filename, surface->positions_quads, surface->positions,
-                quads_normals, norm, surface->texturecoords_quads,
-                surface->texturecoords, surface->colors_quads, surface->colors)) {
-            if (!skip_missing) return nullptr;
-        }
-    }
-
     // skip textures
     if (load_textures) {
         if (!load_scene_textures(scene.get(), dirname, skip_missing, false))
@@ -2503,17 +2410,6 @@ bool save_json_scene(const string& filename, const yocto_scene* scene,
         if (!save_mesh(filename, shape->points, shape->lines, shape->triangles,
                 shape->quads, shape->positions, shape->normals,
                 shape->texturecoords, shape->colors, shape->radius)) {
-            if (!skip_missing) return false;
-        }
-    }
-
-    // save subdivs
-    for (auto& surface : scene->surfaces) {
-        if (surface->filename == "") continue;
-        auto filename = normalize_path(dirname + "/" + surface->filename);
-        if (!save_fvmesh(filename, surface->positions_quads, surface->positions,
-                {}, {}, surface->texturecoords_quads, surface->texturecoords,
-                surface->colors_quads, surface->colors)) {
             if (!skip_missing) return false;
         }
     }
@@ -2951,9 +2847,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
 
     // add object if needed
     auto is_instance_empty = [](yocto_instance* instance) {
-        if (instance->surface) {
-            return instance->surface->positions.empty();
-        } else if (instance->shape) {
+        if (instance->shape) {
             return instance->shape->positions.empty();
         } else {
             return true;
@@ -2977,7 +2871,6 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         auto instance  = scene->instances.back();
         instance->name = name;
         if (instance->shape) instance->shape->name = instance->name;
-        if (instance->surface) instance->surface->name = instance->name;
         if (matname != "") {
             auto it = mmap.find(matname);
             if (it == mmap.end()) {
@@ -3164,10 +3057,6 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
             scene->shapes.erase(std::find(
                 scene->shapes.begin(), scene->shapes.end(), instance->shape));
         }
-        if (instance->surface) {
-            scene->surfaces.erase(std::find(scene->surfaces.begin(),
-                scene->surfaces.end(), instance->surface));
-        }
         scene->instances.erase(scene->instances.begin() + idx);
         idx--;
     }
@@ -3299,50 +3188,108 @@ bool save_obj(const string& filename, const yocto_scene* scene,
     // shapes
     auto offset = obj_vertex{0, 0, 0};
     for (auto instance : scene->instances) {
-        if (!instance->surface) {
-            print(fs, "o {}\n", instance->name);
-            if (instance->material)
-                print(fs, "usemtl {}\n", instance->material->name);
-            if (instance->frame == identity_frame3f) {
-                for (auto& p : instance->shape->positions)
-                    print(fs, "v {}\n", p);
-                for (auto& n : instance->shape->normals)
-                    print(fs, "vn {}\n", n);
-                for (auto& t : instance->shape->texturecoords)
-                    print(fs, "vt {}\n",
-                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        print(fs, "o {}\n", instance->name);
+        if (instance->material)
+            print(fs, "usemtl {}\n", instance->material->name);
+        if (instance->frame == identity_frame3f) {
+            for (auto& p : instance->shape->positions) print(fs, "v {}\n", p);
+            for (auto& n : instance->shape->normals) print(fs, "vn {}\n", n);
+            for (auto& t : instance->shape->texturecoords)
+                print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        } else {
+            for (auto& pp : instance->shape->positions) {
+                print(fs, "v {}\n", transform_point(instance->frame, pp));
+            }
+            for (auto& nn : instance->shape->normals) {
+                print(fs, "vn {}\n", transform_direction(instance->frame, nn));
+            }
+            for (auto& t : instance->shape->texturecoords)
+                print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+        }
+        auto mask = obj_vertex{1, instance->shape->texturecoords.empty() ? 0 : 1,
+            instance->shape->normals.empty() ? 0 : 1};
+        auto vert = [mask, offset](int i) {
+            return obj_vertex{(i + offset.position + 1) * mask.position,
+                (i + offset.texturecoord + 1) * mask.texturecoord,
+                (i + offset.normal + 1) * mask.normal};
+        };
+        for (auto& p : instance->shape->points) {
+            print(fs, "p {}\n", to_string(vert(p)));
+        }
+        for (auto& l : instance->shape->lines) {
+            print(fs, "l {} {}\n", to_string(vert(l.x)), to_string(vert(l.y)));
+        }
+        for (auto& t : instance->shape->triangles) {
+            print(fs, "f {} {} {}\n", to_string(vert(t.x)),
+                to_string(vert(t.y)), to_string(vert(t.z)));
+        }
+        for (auto& q : instance->shape->quads) {
+            if (q.z == q.w) {
+                print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                    to_string(vert(q.y)), to_string(vert(q.z)));
             } else {
-                for (auto& pp : instance->shape->positions) {
-                    print(fs, "v {}\n", transform_point(instance->frame, pp));
+                print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                    to_string(vert(q.y)), to_string(vert(q.z)),
+                    to_string(vert(q.w)));
+            }
+        }
+        for (auto i = 0; i < instance->shape->quads_positions.size(); i++) {
+            if (!instance->shape->texturecoords.empty() &&
+                instance->shape->normals.empty()) {
+                auto vert = [offset](int ip, int it) {
+                    return obj_vertex{ip + offset.position + 1,
+                        it + offset.texturecoord + 1, 0};
+                };
+                auto qp = instance->shape->quads_positions[i];
+                auto qt = instance->shape->quads_texturecoords[i];
+                if (qp.z == qp.w) {
+                    print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
+                        to_string(vert(qp.y, qt.y)), to_string(vert(qp.z, qt.z)));
+                } else {
+                    print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qt.x)),
+                        to_string(vert(qp.y, qt.y)), to_string(vert(qp.z, qt.z)),
+                        to_string(vert(qp.w, qt.w)));
                 }
-                for (auto& nn : instance->shape->normals) {
-                    print(fs, "vn {}\n",
-                        transform_direction(instance->frame, nn));
+            } else if (!instance->shape->texturecoords.empty() &&
+                       !instance->shape->normals.empty()) {
+                auto vert = [offset](int ip, int it, int in) {
+                    return obj_vertex{ip + offset.position + 1,
+                        it + offset.texturecoord + 1, in + offset.normal + 1};
+                };
+                auto qp = instance->shape->quads_positions[i];
+                auto qt = instance->shape->quads_texturecoords[i];
+                auto qn = instance->shape->quads_normals[i];
+                if (qp.z == qp.w) {
+                    print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x, qn.x)),
+                        to_string(vert(qp.y, qt.y, qn.y)),
+                        to_string(vert(qp.z, qt.z, qn.z)));
+                } else {
+                    print(fs, "f {} {} {} {}\n",
+                        to_string(vert(qp.x, qt.x, qn.x)),
+                        to_string(vert(qp.y, qt.y, qn.y)),
+                        to_string(vert(qp.z, qt.z, qn.z)),
+                        to_string(vert(qp.w, qt.w, qn.w)));
                 }
-                for (auto& t : instance->shape->texturecoords)
-                    print(fs, "vt {}\n",
-                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
-            }
-            auto mask = obj_vertex{1,
-                instance->shape->texturecoords.empty() ? 0 : 1,
-                instance->shape->normals.empty() ? 0 : 1};
-            auto vert = [mask, offset](int i) {
-                return obj_vertex{(i + offset.position + 1) * mask.position,
-                    (i + offset.texturecoord + 1) * mask.texturecoord,
-                    (i + offset.normal + 1) * mask.normal};
-            };
-            for (auto& p : instance->shape->points) {
-                print(fs, "p {}\n", to_string(vert(p)));
-            }
-            for (auto& l : instance->shape->lines) {
-                print(fs, "l {} {}\n", to_string(vert(l.x)),
-                    to_string(vert(l.y)));
-            }
-            for (auto& t : instance->shape->triangles) {
-                print(fs, "f {} {} {}\n", to_string(vert(t.x)),
-                    to_string(vert(t.y)), to_string(vert(t.z)));
-            }
-            for (auto& q : instance->shape->quads) {
+            } else if (!instance->shape->normals.empty()) {
+                auto vert = [offset](int ip, int in) {
+                    return obj_vertex{
+                        ip + offset.position + 1, 0, in + offset.normal + 1};
+                };
+                auto qp = instance->shape->quads_positions[i];
+                auto qn = instance->shape->quads_normals[i];
+                if (qp.z == qp.w) {
+                    print(fs, "f {} {} {}\n", to_string(vert(qp.x, qn.x)),
+                        to_string(vert(qp.y, qn.y)), to_string(vert(qp.z, qn.z)));
+                } else {
+                    print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qn.x)),
+                        to_string(vert(qp.y, qn.y)), to_string(vert(qp.z, qn.z)),
+                        to_string(vert(qp.w, qn.w)));
+                }
+            } else {
+                auto vert = [offset](int ip) {
+                    return obj_vertex{ip + offset.position + 1, 0, 0};
+                };
+                auto q = instance->shape->quads_positions[i];
                 if (q.z == q.w) {
                     print(fs, "f {} {} {}\n", to_string(vert(q.x)),
                         to_string(vert(q.y)), to_string(vert(q.z)));
@@ -3352,66 +3299,10 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                         to_string(vert(q.w)));
                 }
             }
-            offset.position += instance->shape->positions.size();
-            offset.texturecoord += instance->shape->texturecoords.size();
-            offset.normal += instance->shape->normals.size();
-        } else {
-            print(fs, "o {}\n", instance->name);
-            if (instance->material)
-                print(fs, "usemtl {}\n", instance->material->name);
-            if (instance->frame == identity_frame3f) {
-                for (auto& p : instance->surface->positions)
-                    print(fs, "v {}\n", p);
-                for (auto& t : instance->surface->texturecoords)
-                    print(fs, "vt {}\n",
-                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
-            } else {
-                for (auto& pp : instance->surface->positions) {
-                    auto p = transform_point(instance->frame, pp);
-                    print(fs, "v {}\n", p);
-                }
-                for (auto& t : instance->surface->texturecoords)
-                    print(fs, "vt {}\n",
-                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
-            }
-            if (!instance->surface->texturecoords.empty()) {
-                auto vert = [offset](int ip, int it) {
-                    return obj_vertex{ip + offset.position + 1,
-                        it + offset.texturecoord + 1, 0};
-                };
-                for (auto i = 0; i < instance->surface->positions_quads.size();
-                     i++) {
-                    auto qp = instance->surface->positions_quads[i];
-                    auto qt = instance->surface->texturecoords_quads[i];
-                    if (qp.z == qp.w) {
-                        print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
-                            to_string(vert(qp.y, qt.y)),
-                            to_string(vert(qp.z, qt.z)));
-                    } else {
-                        print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qt.x)),
-                            to_string(vert(qp.y, qt.y)),
-                            to_string(vert(qp.z, qt.z)),
-                            to_string(vert(qp.w, qt.w)));
-                    }
-                }
-            } else {
-                auto vert = [offset](int ip) {
-                    return obj_vertex{ip + offset.position + 1, 0, 0};
-                };
-                for (auto& q : instance->surface->positions_quads) {
-                    if (q.z == q.w) {
-                        print(fs, "f {} {} {}\n", to_string(vert(q.x)),
-                            to_string(vert(q.y)), to_string(vert(q.z)));
-                    } else {
-                        print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
-                            to_string(vert(q.y)), to_string(vert(q.z)),
-                            to_string(vert(q.w)));
-                    }
-                }
-            }
-            offset.position += instance->surface->positions.size();
-            offset.texturecoord += instance->surface->texturecoords.size();
         }
+        offset.position += instance->shape->positions.size();
+        offset.texturecoord += instance->shape->texturecoords.size();
+        offset.normal += instance->shape->normals.size();
     }
 
     return true;
@@ -5344,28 +5235,6 @@ bool serialize_bin_object(
     return true;
 }
 
-bool serialize_bin_object(yocto_surface* surface, file_stream& fs, bool save) {
-    if (!serialize_bin_value(surface->name, fs, save)) return false;
-    if (!serialize_bin_value(surface->filename, fs, save)) return false;
-    if (!serialize_bin_value(surface->subdivision_level, fs, save))
-        return false;
-    if (!serialize_bin_value(surface->catmull_clark, fs, save)) return false;
-    if (!serialize_bin_value(surface->compute_vertex_normals, fs, save))
-        return false;
-    if (!serialize_bin_value(surface->positions_quads, fs, save)) return false;
-    if (!serialize_bin_value(surface->texturecoords_quads, fs, save))
-        return false;
-    if (!serialize_bin_value(surface->colors_quads, fs, save)) return false;
-    if (!serialize_bin_value(surface->positions_creases, fs, save))
-        return false;
-    if (!serialize_bin_value(surface->texturecoords_quads, fs, save))
-        return false;
-    if (!serialize_bin_value(surface->positions, fs, save)) return false;
-    if (!serialize_bin_value(surface->texturecoords, fs, save)) return false;
-    if (!serialize_bin_value(surface->colors, fs, save)) return false;
-    return true;
-}
-
 bool serialize_bin_object(yocto_texture* tex, file_stream& fs, bool save) {
     if (!serialize_bin_value(tex->name, fs, save)) return false;
     if (!serialize_bin_value(tex->filename, fs, save)) return false;
@@ -5452,8 +5321,6 @@ bool serialize_bin_object(yocto_instance* instance, const yocto_scene* scene,
         return false;
     if (!serialize_bin_handle(instance->material, scene->materials, fs, save))
         return false;
-    if (!serialize_bin_handle(instance->surface, scene->surfaces, fs, save))
-        return false;
     return true;
 };
 
@@ -5461,7 +5328,6 @@ bool serialize_scene(yocto_scene* scene, file_stream& fs, bool save) {
     if (!serialize_bin_value(scene->name, fs, save)) return false;
     if (!serialize_bin_object(scene->cameras, fs, save)) return false;
     if (!serialize_bin_object(scene->shapes, scene, fs, save)) return false;
-    if (!serialize_bin_object(scene->surfaces, fs, save)) return false;
     if (!serialize_bin_object(scene->textures, fs, save)) return false;
     if (!serialize_bin_object(scene->voltextures, fs, save)) return false;
     if (!serialize_bin_object(scene->materials, scene, fs, save)) return false;
