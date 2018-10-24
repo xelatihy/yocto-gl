@@ -6165,6 +6165,9 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
         tie(quads, positions, normals, texturecoords) = convert_face_varying(
             quads_positions, quads_normals, quads_texturecoords, positions,
             normals, texturecoords);
+        quads_positions = {};
+        quads_normals = {};
+        quads_texturecoords = {};
     }
 
     // merging quads and triangles
