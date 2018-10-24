@@ -347,6 +347,7 @@ using std::runtime_error;
 using std::string;
 using std::thread;
 using std::tie;
+using std::ignore;
 using std::tuple;
 using std::unique_ptr;
 using std::unordered_map;
@@ -3175,8 +3176,8 @@ struct yocto_shape {
 
     // subdision properties
     int    subdivision_level      = 0;
-    bool   catmull_clark          = true;
-    bool   compute_vertex_normals = true;
+    bool   catmull_clark          = false;
+    bool   compute_vertex_normals = false;
 
     // primitives
     vector<int>   points    = {};
