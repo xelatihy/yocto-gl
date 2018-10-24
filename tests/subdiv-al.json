@@ -125,14 +125,20 @@
             "name": "obj1",
             "filename": "meshes/obj1.ply",
             "material": "obj1",
+            "subdivision_level": 4,
+            "catmull_clark": true,
+            "compute_vertex_normals": true,
             "!!proc": {
-                "type": "cube"
+                "type": "fvcube"
             }
         },
         {
             "name": "obj2",
             "filename": "meshes/obj2.ply",
             "material": "obj2",
+            "subdivision_level": 2,
+            "catmull_clark": true,
+            "compute_vertex_normals": true,
             "!!proc": {
                 "type": "suzanne"
             }
@@ -141,8 +147,11 @@
             "name": "obj3",
             "filename": "meshes/obj3.ply",
             "material": "obj3",
+            "subdivision_level": 4,
+            "catmull_clark": true,
+            "compute_vertex_normals": true,
             "!!proc": {
-                "type": "cube"
+                "type": "fvcube"
             }
         },
         {
@@ -168,32 +177,6 @@
             }
         }
     ],
-    "surfaces": [
-        {
-            "name": "obj1",
-            "filename": "meshes/obj1.obj",
-            "subdivision_level": 4,
-            "!!proc": {
-                "type": "cube"
-            }
-        },
-        {
-            "name": "obj2",
-            "filename": "meshes/obj2.obj",
-            "subdivision_level": 2,
-            "!!proc": {
-                "type": "suzanne"
-            }
-        },
-        {
-            "name": "obj3",
-            "filename": "meshes/obj3.obj",
-            "subdivision_level": 4,
-            "!!proc": {
-                "type": "cube"
-            }
-        }
-    ],
     "instances": [
         {
             "name": "floor",
@@ -202,7 +185,6 @@
         {
             "name": "obj1",
             "shape": "obj1",
-            "surface": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -214,7 +196,6 @@
         {
             "name": "obj2",
             "shape": "obj2",
-            "surface": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -226,7 +207,6 @@
         {
             "name": "obj3",
             "shape": "obj3",
-            "surface": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,

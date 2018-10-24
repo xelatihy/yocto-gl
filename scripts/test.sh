@@ -5,4 +5,4 @@ cmake ../.. -GNinja
 cmake --build .
 rm tests/run-tests/output/*.png
 rm tests/run-tests/difference/*.png
-ctest -j 4 $1
+ctest -j 4 --output-on-failure $1
