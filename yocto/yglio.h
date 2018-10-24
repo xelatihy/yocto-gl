@@ -223,7 +223,8 @@ bool         save_json_scene(const string& filename, const yocto_scene* scene,
 
 // Load/save a scene from/to OBJ.
 yocto_scene* load_obj_scene(const string& filename, bool load_textures = true,
-    bool skip_missing = true, bool split_shapes = true, bool preserve_face_varying = true);
+    bool skip_missing = true, bool split_shapes = true,
+    bool preserve_face_varying = true);
 bool         save_obj_scene(const string& filename, const yocto_scene* scene,
             bool save_textures = true, bool skip_missing = true);
 

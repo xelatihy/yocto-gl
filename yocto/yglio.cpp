@@ -1090,36 +1090,36 @@ bool save_scene_textures(
     return true;
 }
 
-    // merge quads and triangles
-    void merge_triangles_and_quads(
-                                   vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
-        if (quads.empty()) return;
-        if (force_triangles) {
-            auto qtriangles = convert_quads_to_triangles(quads);
-            triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
-            quads = {};
-        } else {
-            auto tquads = convert_triangles_to_quads(triangles);
-            quads.insert(quads.end(), tquads.begin(), tquads.end());
-            triangles = {};
-        }
+// merge quads and triangles
+void merge_triangles_and_quads(
+    vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
+    if (quads.empty()) return;
+    if (force_triangles) {
+        auto qtriangles = convert_quads_to_triangles(quads);
+        triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
+        quads = {};
+    } else {
+        auto tquads = convert_triangles_to_quads(triangles);
+        quads.insert(quads.end(), tquads.begin(), tquads.end());
+        triangles = {};
     }
-    
-    // check if it is really face varying
-    bool is_face_varying(const vector<vec4i>& quads_positions,
-                         const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords) {
-        if (quads_positions.empty()) return false;
-        if (!quads_normals.empty()) {
-            for (auto i = 0; i < quads_positions.size(); i++)
-                if (quads_positions[i] != quads_normals[i]) return true;
-        }
-        if (!quads_texcoords.empty()) {
-            for (auto i = 0; i < quads_positions.size(); i++)
-                if (quads_positions[i] != quads_texcoords[i]) return true;
-        }
-        return false;
+}
+
+// check if it is really face varying
+bool is_face_varying(const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords) {
+    if (quads_positions.empty()) return false;
+    if (!quads_normals.empty()) {
+        for (auto i = 0; i < quads_positions.size(); i++)
+            if (quads_positions[i] != quads_normals[i]) return true;
     }
-    
+    if (!quads_texcoords.empty()) {
+        for (auto i = 0; i < quads_positions.size(); i++)
+            if (quads_positions[i] != quads_texcoords[i]) return true;
+    }
+    return false;
+}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -3002,14 +3002,15 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     cb.norm     = [&](vec3f v) { onorm.push_back(v); };
     cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
-        if(preserve_face_varying) {
+        if (preserve_face_varying) {
             add_fvverts(verts);
             if (verts.size() == 4) {
                 if (verts[0].position) {
-                    shape->quads_positions.push_back({pos_map.at(verts[0].position),
-                        pos_map.at(verts[1].position),
-                        pos_map.at(verts[2].position),
-                        pos_map.at(verts[3].position)});
+                    shape->quads_positions.push_back(
+                        {pos_map.at(verts[0].position),
+                            pos_map.at(verts[1].position),
+                            pos_map.at(verts[2].position),
+                            pos_map.at(verts[3].position)});
                 }
                 if (verts[0].texturecoord) {
                     shape->quads_texturecoords.push_back(
@@ -3026,26 +3027,29 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
             } else {
                 if (verts[0].position) {
                     for (auto i = 2; i < verts.size(); i++)
-                        shape->quads_positions.push_back({pos_map.at(verts[0].position),
-                            pos_map.at(verts[1].position),
-                            pos_map.at(verts[i].position),
-                            pos_map.at(verts[i].position)});
+                        shape->quads_positions.push_back(
+                            {pos_map.at(verts[0].position),
+                                pos_map.at(verts[1].position),
+                                pos_map.at(verts[i].position),
+                                pos_map.at(verts[i].position)});
                 }
                 if (verts[0].texturecoord) {
                     for (auto i = 2; i < verts.size(); i++)
                         shape->quads_texturecoords.push_back(
-                                                      {texcoord_map.at(verts[0].texturecoord),
-                                                          texcoord_map.at(verts[1].texturecoord),
-                                                          texcoord_map.at(verts[i].texturecoord),
-                                                          texcoord_map.at(verts[i].texturecoord)});
+                            {texcoord_map.at(verts[0].texturecoord),
+                                texcoord_map.at(verts[1].texturecoord),
+                                texcoord_map.at(verts[i].texturecoord),
+                                texcoord_map.at(verts[i].texturecoord)});
                 }
                 if (verts[0].normal) {
                     for (auto i = 2; i < verts.size(); i++)
-                        shape->quads_normals.push_back({norm_map.at(verts[0].normal),
-                            norm_map.at(verts[1].normal),
-                            norm_map.at(verts[i].normal),
-                            norm_map.at(verts[i].normal)});
-                }            }
+                        shape->quads_normals.push_back(
+                            {norm_map.at(verts[0].normal),
+                                norm_map.at(verts[1].normal),
+                                norm_map.at(verts[i].normal),
+                                norm_map.at(verts[i].normal)});
+                }
+            }
         } else {
             add_verts(verts);
             if (verts.size() == 4) {
@@ -3153,15 +3157,18 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         scene->shapes.erase(scene->shapes.begin() + idx);
         idx--;
     }
-    
+
     // cleanup facevarying
-    for(auto shape : scene->shapes) {
-        if(!shape->quads_positions.empty() && !is_face_varying(shape->quads_positions, shape->quads_normals, shape->quads_texturecoords)) {
-            tie(shape->quads, shape->positions, shape->normals, shape->texturecoords) = convert_face_varying(
-                shape->quads_positions, shape->quads_normals, shape->quads_texturecoords,
+    for (auto shape : scene->shapes) {
+        if (!shape->quads_positions.empty() &&
+            !is_face_varying(shape->quads_positions, shape->quads_normals,
+                shape->quads_texturecoords)) {
+            tie(shape->quads, shape->positions, shape->normals,
+                shape->texturecoords) = convert_face_varying(shape->quads_positions,
+                shape->quads_normals, shape->quads_texturecoords,
                 shape->positions, shape->normals, shape->texturecoords);
-            shape->quads_positions = {};
-            shape->quads_normals = {};
+            shape->quads_positions     = {};
+            shape->quads_normals       = {};
             shape->quads_texturecoords = {};
         }
     }
@@ -6250,8 +6257,8 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
         tie(quads, positions, normals, texturecoords) = convert_face_varying(
             quads_positions, quads_normals, quads_texturecoords, positions,
             normals, texturecoords);
-        quads_positions = {};
-        quads_normals = {};
+        quads_positions     = {};
+        quads_normals       = {};
         quads_texturecoords = {};
     }
 
