@@ -3200,36 +3200,12 @@ struct yocto_shape {
     vector<vec4f> tangentspaces = {};
 };
 
-// Subdivision surface.
-struct yocto_surface {
-    string name                   = "";
-    string filename               = "";
-    int    subdivision_level      = 0;
-    bool   catmull_clark          = true;
-    bool   compute_vertex_normals = true;
-
-    // primitives for each vertex propoerty
-    vector<vec4i> positions_quads     = {};
-    vector<vec4i> texturecoords_quads = {};
-    vector<vec4i> colors_quads        = {};
-
-    // creases
-    vector<vec3i> positions_creases     = {};
-    vector<vec3i> texturecoords_creases = {};
-
-    // vertex data
-    vector<vec3f> positions     = {};
-    vector<vec2f> texturecoords = {};
-    vector<vec4f> colors        = {};
-};
-
 // Shape instance.
 struct yocto_instance {
     string          name     = "";
     frame3f         frame    = identity_frame3f;
     yocto_shape*    shape    = nullptr;
     yocto_material* material = nullptr;
-    yocto_surface*  surface  = nullptr;
 };
 
 // Environment map.
@@ -3285,7 +3261,6 @@ struct yocto_scene {
     string                     name         = "";
     vector<yocto_camera*>      cameras      = {};
     vector<yocto_shape*>       shapes       = {};
-    vector<yocto_surface*>     surfaces     = {};
     vector<yocto_instance*>    instances    = {};
     vector<yocto_material*>    materials    = {};
     vector<yocto_texture*>     textures     = {};

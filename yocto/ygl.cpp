@@ -3511,7 +3511,6 @@ namespace ygl {
 yocto_scene::~yocto_scene() {
     for (auto v : cameras) delete v;
     for (auto v : shapes) delete v;
-    for (auto v : surfaces) delete v;
     for (auto v : instances) delete v;
     for (auto v : materials) delete v;
     for (auto v : textures) delete v;
@@ -3536,37 +3535,6 @@ bbox3f compute_scene_bounds(const yocto_scene* scene) {
     for (auto instance : scene->instances)
         bbox += transform_bbox(instance->frame, sbbox[instance->shape]);
     return bbox;
-}
-
-// Updates tesselation.
-void tesselate_subdiv(const yocto_surface* surface, yocto_shape* shape) {
-    shape->name              = surface->name;
-    auto quads_positions     = surface->positions_quads;
-    auto quads_texturecoords = surface->texturecoords_quads;
-    auto quads_colors        = surface->colors_quads;
-    auto pos                 = surface->positions;
-    auto texcoord            = surface->texturecoords;
-    auto color               = surface->colors;
-    for (auto l = 0; l < surface->subdivision_level; l++) {
-        tie(quads_positions, pos) = subdivide_catmullclark(quads_positions, pos);
-        tie(quads_texturecoords, texcoord) = subdivide_catmullclark(
-            quads_texturecoords, texcoord, true);
-        tie(quads_colors, color) = subdivide_catmullclark(quads_colors, color);
-    }
-    auto norm = vector<vec3f>();
-    if (surface->compute_vertex_normals)
-        norm = compute_vertex_normals(quads_positions, pos);
-    convert_face_varying(shape->quads, shape->positions, shape->normals,
-        shape->texturecoords, shape->colors, quads_positions, quads_positions,
-        quads_texturecoords, quads_colors, pos, norm, texcoord, color);
-}
-void tesselate_subdivs(yocto_scene* scene) {
-    if (scene->surfaces.empty()) return;
-    auto scope = log_trace_scoped("tesselating surfaces");
-    for (auto instance : scene->instances) {
-        if (!instance->surface) continue;
-        tesselate_subdiv(instance->surface, instance->shape);
-    }
 }
 
 // Updates tesselation.
@@ -4790,7 +4758,6 @@ void print_stats(const yocto_scene* scene) {
 
     num_cameras      = scene->cameras.size();
     num_shapes       = scene->shapes.size();
-    num_shapes       = scene->surfaces.size();
     num_materials    = scene->materials.size();
     num_textures     = scene->textures.size();
     num_environments = scene->environments.size();
@@ -5672,7 +5639,7 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 
 // @Hack: air volume properties should be set in the scene struct.
 static yocto_instance* air = new yocto_instance{
-    "air", {}, nullptr, new yocto_material{}, nullptr};
+    "air", {}, nullptr, new yocto_material{}};
 
 // Iterative volume path tracing.
 tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
