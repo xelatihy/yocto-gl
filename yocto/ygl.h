@@ -3337,7 +3337,7 @@ bvh_tree* make_scene_bvh(
 void refit_shape_bvh(const yocto_shape* shape, bvh_tree* bvh);
 void refit_scene_bvh(const yocto_scene* scene, bvh_tree* bvh);
 
-// Updates tesselation.
+// Apply subdivision and displacement rules.
 yocto_shape* tesselate_shape(const yocto_shape* shape);
 void         tesselate_shapes(yocto_scene* scene);
 
