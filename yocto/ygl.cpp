@@ -3647,7 +3647,8 @@ void displace_shape(yocto_shape* shape) {
         auto empty_normals = !shape->normals.empty();
         if (empty_normals) update_shape_normals(shape);
         for (auto vid = 0; vid < shape->positions.size(); vid++) {
-            shape->positions[vid] += shape->normals[vid] * shape->material->displacement_texture->height_scale * 
+            shape->positions[vid] += shape->normals[vid] *
+                                     shape->material->displacement_texture->height_scale *
                                      mean(xyz(evaluate_texture(
                                          shape->material->displacement_texture,
                                          shape->texturecoords[vid])));
@@ -3655,18 +3656,21 @@ void displace_shape(yocto_shape* shape) {
         if (empty_normals) shape->normals.clear();
     } else {
         auto offset = vector<float>(shape->positions.size(), 0);
-        auto count = vector<int>(shape->positions.size(), 0);
+        auto count  = vector<int>(shape->positions.size(), 0);
         for (auto fid = 0; fid < shape->quads_positions.size(); fid++) {
             auto qpos = shape->quads_positions[fid];
             auto qtxt = shape->quads_texturecoords[fid];
-            for(auto i = 0; i < 4; i ++) {
-                offset[(&qpos.x)[i]] += shape->material->displacement_texture->height_scale * mean(xyz(evaluate_texture(
-                                         shape->material->displacement_texture,
-                                         shape->texturecoords[(&qtxt.x)[i]])));
+            for (auto i = 0; i < 4; i++) {
+                offset[(&qpos.x)[i]] += shape->material->displacement_texture
+                                            ->height_scale *
+                                        mean(xyz(evaluate_texture(
+                                            shape->material->displacement_texture,
+                                            shape->texturecoords[(&qtxt.x)[i]])));
                 count[(&qpos.x)[i]] += 1;
             }
         }
-        auto normals = compute_vertex_normals(shape->quads_positions, shape->positions);
+        auto normals = compute_vertex_normals(
+            shape->quads_positions, shape->positions);
         for (auto vid = 0; vid < shape->positions.size(); vid++) {
             shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
         }
@@ -3686,7 +3690,8 @@ void tesselate_shapes(yocto_scene* scene) {
     auto scope               = log_trace_scoped("tesselating surfaces");
     auto tesselated_surfaces = unordered_map<yocto_shape*, yocto_shape*>();
     for (auto shape : scene->shapes) {
-        if (!shape->subdivision_level && !shape->material->displacement_texture) continue;
+        if (!shape->subdivision_level && !shape->material->displacement_texture)
+            continue;
         tesselated_surfaces[shape] = tesselate_shape(shape);
     }
     if (tesselated_surfaces.empty()) return;
