@@ -3171,8 +3171,10 @@ struct yocto_material {
 // Shape data represented as an indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
 struct yocto_shape {
+    // shape data
     string name     = "";
     string filename = "";
+    yocto_material* material = nullptr;
 
     // subdision properties
     int  subdivision_level      = 0;
@@ -3205,7 +3207,6 @@ struct yocto_instance {
     string          name     = "";
     frame3f         frame    = identity_frame3f;
     yocto_shape*    shape    = nullptr;
-    yocto_material* material = nullptr;
 };
 
 // Environment map.

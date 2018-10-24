@@ -469,8 +469,10 @@ static const char* fragment =
 
 // Draw a shape
 void draw_glshape(draw_glstate* state, const yocto_shape* shape,
-    const yocto_material* mat, const mat4f& xform, bool highlighted,
-    bool eyelight, bool edges) {
+    const frame3f& frame, bool highlighted, bool eyelight, bool edges) {
+    auto mat = shape->material;
+    auto xform = frame_to_mat(frame);
+
     set_gluniform(state->prog, "shape_xform", xform);
     set_gluniform(state->prog, "shape_normal_offset", 0.0f);
 
@@ -575,7 +577,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
         for (auto lgt : scene->instances) {
-            if (lgt->material->emission == zero3f) continue;
+            if (lgt->shape->material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto shape = lgt->shape;
             auto bbox  = compute_shape_bounds(shape);
@@ -597,7 +599,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
             } else {
                 area += shape->positions.size();
             }
-            auto ke = lgt->material->emission * area;
+            auto ke = lgt->shape->material->emission * area;
             lights_pos.push_back(transform_point(lgt->frame, pos));
             lights_ke.push_back(ke);
             lights_type.push_back(0);
@@ -617,10 +619,9 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
 
     if (wireframe) set_glwireframe(true);
     for (auto instance : scene->instances) {
-        draw_glshape(state, instance->shape, instance->material,
-            frame_to_mat(instance->frame),
+        draw_glshape(state, instance->shape, instance->frame,
             instance == highlighted || instance->shape == highlighted ||
-                instance->material == highlighted,
+                instance->shape->material == highlighted,
             eyelight, edges);
     }
 

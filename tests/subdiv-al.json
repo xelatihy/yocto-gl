@@ -116,6 +116,7 @@
         {
             "name": "floor",
             "filename": "meshes/floor.ply",
+            "material": "floor",
             "!!proc": {
                 "type": "floor"
             }
@@ -123,6 +124,7 @@
         {
             "name": "obj1",
             "filename": "meshes/obj1.ply",
+            "material": "obj1",
             "!!proc": {
                 "type": "cube"
             }
@@ -130,6 +132,7 @@
         {
             "name": "obj2",
             "filename": "meshes/obj2.ply",
+            "material": "obj2",
             "!!proc": {
                 "type": "suzanne"
             }
@@ -137,12 +140,14 @@
         {
             "name": "obj3",
             "filename": "meshes/obj3.ply",
+            "material": "obj3",
             "!!proc": {
                 "type": "cube"
             }
         },
         {
             "name": "light1",
+            "material": "light1",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -153,6 +158,7 @@
         },
         {
             "name": "light2",
+            "material": "light2",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -191,14 +197,12 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "shape": "floor"
         },
         {
             "name": "obj1",
             "shape": "obj1",
             "surface": "obj1",
-            "material": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -211,7 +215,6 @@
             "name": "obj2",
             "shape": "obj2",
             "surface": "obj2",
-            "material": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -224,7 +227,6 @@
             "name": "obj3",
             "shape": "obj3",
             "surface": "obj3",
-            "material": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -236,7 +238,6 @@
         {
             "name": "light1",
             "shape": "light1",
-            "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -253,7 +254,6 @@
         {
             "name": "light2",
             "shape": "light2",
-            "material": "light2",
             "!!proc": {
                 "from": [
                     4,
