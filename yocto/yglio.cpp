@@ -2361,7 +2361,8 @@ yocto_scene* load_json_scene(
         if (shape->filename == "" || !shape->positions.empty()) continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
         if (!load_mesh(filename, shape->points, shape->lines, shape->triangles,
-                shape->quads, shape->positions, shape->normals,
+                shape->quads, shape->quads_positions, shape->quads_normals, 
+                shape->quads_texturecoords, shape->positions, shape->normals,
                 shape->texturecoords, shape->colors, shape->radius, false)) {
             if (!skip_missing) return nullptr;
         }
@@ -2407,7 +2408,9 @@ bool save_json_scene(const string& filename, const yocto_scene* scene,
         if (shape->filename == "") continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
         if (!save_mesh(filename, shape->points, shape->lines, shape->triangles,
-                shape->quads, shape->positions, shape->normals,
+                shape->quads, shape->quads_positions, shape->quads_normals, 
+                shape->quads_texturecoords, 
+                shape->positions, shape->normals,
                 shape->texturecoords, shape->colors, shape->radius)) {
             if (!skip_missing) return false;
         }
@@ -4665,6 +4668,8 @@ yocto_scene* load_pbrt_scene(
                 shape->filename = filename;
                 if (!load_ply_mesh(dirname_ + "/" + filename, shape->points,
                         shape->lines, shape->triangles, shape->quads,
+                        shape->quads_positions, shape->quads_normals, 
+                shape->quads_texturecoords, 
                         shape->positions, shape->normals, shape->texturecoords,
                         shape->colors, shape->radius, false))
                     return nullptr;
@@ -4971,7 +4976,8 @@ bool save_pbrt_scene(const string& filename, const yocto_scene* scene,
         if (shape->filename == "") continue;
         auto filename = normalize_path(dirname + "/" + shape->filename);
         if (!save_mesh(filename, shape->points, shape->lines, shape->triangles,
-                shape->quads, shape->positions, shape->normals,
+                shape->quads, shape->quads_positions, shape->quads_normals, 
+                shape->quads_texturecoords, shape->positions, shape->normals,
                 shape->texturecoords, shape->colors, shape->radius)) {
             if (!skip_missing) return false;
         }
@@ -5361,17 +5367,23 @@ namespace ygl {
 
 // Reset mesh data
 void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& pos,
-    vector<vec3f>& norm, vector<vec2f>& texcoord, vector<vec4f>& color,
+    vector<vec3i>& triangles, vector<vec4i>& quads, 
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals, 
+    vector<vec4i>& quads_textuercoords, 
+    vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius) {
     points    = {};
     lines     = {};
     triangles = {};
     quads     = {};
-    pos       = {};
-    norm      = {};
-    texcoord  = {};
-    color     = {};
+    quads_positions     = {};
+    quads_normals     = {};
+    quads_textuercoords     = {};
+    positions       = {};
+    normals      = {};
+    texturecoords  = {};
+    colors    = {};
     radius    = {};
 }
 
@@ -5393,18 +5405,24 @@ void merge_triangles_and_quads(
 // Load ply mesh
 bool load_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
-    vector<vec4f>& color, vector<float>& radius, bool force_triangles) {
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    vector<vec4f>& colors, vector<float>& radius, bool force_triangles) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        return load_ply_mesh(filename, points, lines, triangles, quads, pos,
-            norm, texcoord, color, radius, force_triangles);
+        return load_ply_mesh(filename, points, lines, triangles, quads, 
+            quads_positions, quads_normals, quads_texturecoords,
+            positions,
+            normals, texturecoords, colors, radius, force_triangles);
     } else if (ext == "obj" || ext == "OBJ") {
-        return load_obj_mesh(filename, points, lines, triangles, quads, pos,
-            norm, texcoord, force_triangles);
+        return load_obj_mesh(filename, points, lines, triangles, quads, 
+            quads_positions, quads_normals, quads_texturecoords,
+        positions,
+            normals, texturecoords, force_triangles);
     } else {
-        reset_mesh_data(points, lines, triangles, quads, pos, norm, texcoord,
-            color, radius);
+        reset_mesh_data(points, lines, triangles, quads, quads_positions, quads_normals, 
+                quads_texturecoords, positions, normals, texturecoords,
+            colors, radius);
         return false;
     }
 }
@@ -5412,15 +5430,19 @@ bool load_mesh(const string& filename, vector<int>& points,
 // Save ply mesh
 bool save_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec4i>& quads, 
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texturecoords,
+    const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
         return save_ply_mesh(filename, points, lines, triangles, quads,
+            quads_positions, quads_normals, quads_texturecoords,
             positions, normals, texturecoords, colors, radius, ascii);
     } else if (ext == "obj" || ext == "OBJ") {
         return save_obj_mesh(filename, points, lines, triangles, quads,
+            quads_positions, quads_normals, quads_texturecoords,
             positions, normals, texturecoords);
     } else {
         return false;
@@ -5563,11 +5585,12 @@ ply_data* load_ply(const string& filename) {
 // Load ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texturecoords,
     vector<vec4f>& color, vector<float>& radius, bool force_triangles) {
     // reset data
     reset_mesh_data(
-        points, lines, triangles, quads, pos, norm, texcoord, color, radius);
+        points, lines, triangles, quads, quads_positions, quads_normals, quads_texturecoords, positions, normals, texturecoords, color, radius);
 
     // open ply
     auto ply = unique_ptr<happly::PLYData>();
@@ -5586,22 +5609,22 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
             auto x = vertex_element.getProperty<float>("x");
             auto y = vertex_element.getProperty<float>("y");
             auto z = vertex_element.getProperty<float>("z");
-            pos.resize(x.size());
-            for (auto i = 0; i < x.size(); i++) pos[i] = {x[i], y[i], z[i]};
+            positions.resize(x.size());
+            for (auto i = 0; i < x.size(); i++) positions[i] = {x[i], y[i], z[i]};
         }
         if (vertex_element.hasProperty("nx") && vertex_element.hasProperty("ny") &&
             vertex_element.hasProperty("nz")) {
             auto x = vertex_element.getProperty<float>("nx");
             auto y = vertex_element.getProperty<float>("ny");
             auto z = vertex_element.getProperty<float>("nz");
-            norm.resize(x.size());
-            for (auto i = 0; i < x.size(); i++) norm[i] = {x[i], y[i], z[i]};
+            normals.resize(x.size());
+            for (auto i = 0; i < x.size(); i++) normals[i] = {x[i], y[i], z[i]};
         }
         if (vertex_element.hasProperty("u") && vertex_element.hasProperty("v")) {
             auto x = vertex_element.getProperty<float>("u");
             auto y = vertex_element.getProperty<float>("v");
-            texcoord.resize(x.size());
-            for (auto i = 0; i < x.size(); i++) texcoord[i] = {x[i], y[i]};
+            texturecoords.resize(x.size());
+            for (auto i = 0; i < x.size(); i++) texturecoords[i] = {x[i], y[i]};
         }
         if (vertex_element.hasProperty("red") &&
             vertex_element.hasProperty("green") &&
@@ -5658,7 +5681,10 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
 // Save ply mesh
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec4i>& quads, 
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals, 
+    const vector<vec4i>& quads_texturecoords,
+    const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
     using namespace happly;
@@ -5917,13 +5943,14 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 // Load ply mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals, vector<vec2f>& texturecoords,
     bool flip_texcoord, bool force_triangles) {
     // clear
-    auto color  = vector<vec4f>{};
+    auto colors  = vector<vec4f>{};
     auto radius = vector<float>{};
     reset_mesh_data(
-        points, lines, triangles, quads, pos, norm, texcoord, color, radius);
+        points, lines, triangles, quads, quads_positions, quads_normals, quads_texturecoords, positions, normals, texturecoords, colors, radius);
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -5938,12 +5965,12 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
         for (auto& vert : verts) {
             auto it = vert_map.find(vert);
             if (it != vert_map.end()) continue;
-            auto nverts = (int)pos.size();
+            auto nverts = (int)positions.size();
             vert_map.insert(it, {vert, nverts});
-            if (vert.position) pos.push_back(opos.at(vert.position - 1));
+            if (vert.position) positions.push_back(opos.at(vert.position - 1));
             if (vert.texturecoord)
-                texcoord.push_back(otexcoord.at(vert.texturecoord - 1));
-            if (vert.normal) norm.push_back(onorm.at(vert.normal - 1));
+                texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
         }
     };
 
@@ -5983,7 +6010,10 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
 // Load ply mesh
 bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec4i>& quads, 
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals, 
+    const vector<vec4i>& quads_texturecoords,
+    const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     bool flip_texcoord) {
     auto fs = open(filename, "wt");
@@ -6031,53 +6061,7 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Reset mesh data
-void reset_fvmesh_data(vector<vec4i>& quads_positions, vector<vec3f>& pos,
-    vector<vec4i>& quads_normals, vector<vec3f>& norm,
-    vector<vec4i>& quads_texturecoords, vector<vec2f>& texcoord,
-    vector<vec4i>& quads_colors, vector<vec4f>& color) {
-    quads_positions     = {};
-    pos                 = {};
-    quads_normals       = {};
-    norm                = {};
-    quads_texturecoords = {};
-    texcoord            = {};
-    quads_colors        = {};
-    color               = {};
-}
-
-// Load mesh
-bool load_fvmesh(const string& filename, vector<vec4i>& quads_positions,
-    vector<vec3f>& pos, vector<vec4i>& quads_normals, vector<vec3f>& norm,
-    vector<vec4i>& quads_texturecoords, vector<vec2f>& texcoord,
-    vector<vec4i>& quads_colors, vector<vec4f>& color) {
-    auto ext = get_extension(filename);
-    if (ext == "obj" || ext == "OBJ") {
-        return load_obj_fvmesh(filename, quads_positions, pos, quads_normals,
-            norm, quads_texturecoords, texcoord);
-    } else {
-        reset_fvmesh_data(quads_positions, pos, quads_normals, norm,
-            quads_texturecoords, texcoord, quads_colors, color);
-        log_io_error("unsupported mesh format {}", ext);
-        return false;
-    }
-}
-
-// Save mesh
-bool save_fvmesh(const string& filename, const vector<vec4i>& quads_positions,
-    const vector<vec3f>& positions, const vector<vec4i>& quads_normals,
-    const vector<vec3f>& normals, const vector<vec4i>& quads_texturecoords,
-    const vector<vec2f>& texturecoords, const vector<vec4i>& quads_colors,
-    const vector<vec4f>& colors, bool ascii) {
-    auto ext = get_extension(filename);
-    if (ext == "obj" || ext == "OBJ") {
-        return save_obj_fvmesh(filename, quads_positions, positions,
-            quads_normals, normals, quads_texturecoords, texturecoords);
-    } else {
-        log_io_error("unsupported mesh format {}", ext);
-        return false;
-    }
-}
+#if 0
 
 // Load obj mesh
 bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_positions,
@@ -6219,5 +6203,7 @@ bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_position
 
     return true;
 }
+
+#endif
 
 }  // namespace ygl
