@@ -3371,8 +3371,8 @@ struct scene_intersection {
 scene_intersection intersect_scene(const yocto_instance* instance,
     const bvh_tree* sbvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with the scene.
-scene_intersection intersect_scene(const yocto_scene* scene, const bvh_tree* bvh,
-    const ray3f& ray, bool find_any = false);
+scene_intersection intersect_scene(const yocto_scene* scene,
+    const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f evaluate_position(const yocto_shape* shape, int ei, const vec2f& uv);

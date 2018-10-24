@@ -4093,8 +4093,8 @@ scene_intersection intersect_scene(const yocto_instance* instance,
 }
 
 // Scene intersection.
-scene_intersection intersect_scene(const yocto_scene* scene, const bvh_tree* bvh,
-    const ray3f& ray, bool find_any) {
+scene_intersection intersect_scene(const yocto_scene* scene,
+    const bvh_tree* bvh, const ray3f& ray, bool find_any) {
     auto iid  = 0;
     auto isec = scene_intersection();
     if (!intersect_bvh(bvh, ray, find_any, isec.distance, iid, isec.element_id,
@@ -5559,7 +5559,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
         }
 
         isec = intersect_scene(scene, bvh, make_ray(lp, i));  //@Hack: 10? Don't
-                                                             // know...
+                                                              // know...
     }
 
     return i;
