@@ -4080,7 +4080,7 @@ yocto_camera* make_bbox_camera(
 namespace ygl {
 
 // Instance intersection.
-scene_intersection intersect_sene(const yocto_instance* instance,
+scene_intersection intersect_scene(const yocto_instance* instance,
     const bvh_tree* sbvh, const ray3f& ray, bool find_any) {
     auto iid  = 0;
     auto isec = scene_intersection();
@@ -4093,7 +4093,7 @@ scene_intersection intersect_sene(const yocto_instance* instance,
 }
 
 // Scene intersection.
-scene_intersection intersect_sene(const yocto_scene* scene, const bvh_tree* bvh,
+scene_intersection intersect_scene(const yocto_scene* scene, const bvh_tree* bvh,
     const ray3f& ray, bool find_any) {
     auto iid  = 0;
     auto isec = scene_intersection();
@@ -4869,7 +4869,7 @@ trace_point make_trace_point(const yocto_instance* instance, int element_id,
 // Intersects a ray and returns a point
 trace_point trace_ray(const yocto_scene* scene, const bvh_tree* bvh,
     const vec3f& position, const vec3f& direction) {
-    auto isec = intersect_sene(scene, bvh, make_ray(position, direction));
+    auto isec = intersect_scene(scene, bvh, make_ray(position, direction));
     _trace_nrays += 1;
     if (isec.instance) {
         return make_trace_point(
@@ -4903,7 +4903,7 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
     auto ray = ray_;
     for (auto b = 0; b < max_bounces; b++) {
         _trace_nrays += 1;
-        auto isec = intersect_sene(scene, bvh, ray);
+        auto isec = intersect_scene(scene, bvh, ray);
         if (!isec.instance) return isec;
         auto op = evaluate_opacity(
             isec.instance, isec.element_id, isec.element_uv);
@@ -5328,7 +5328,7 @@ float sample_instance_direction_pdf(const yocto_instance* instance,
     auto pdf       = 0.0f;
     auto ray       = make_ray(position, direction);
     auto shape_bvh = bvh->shape_bvhs[bvh->shape_ids.at(instance->shape)];
-    auto isec      = intersect_sene(instance, shape_bvh, ray);
+    auto isec      = intersect_scene(instance, shape_bvh, ray);
     while (isec.instance) {
         // accumulate pdf
         auto light_position = evaluate_position(
@@ -5341,7 +5341,7 @@ float sample_instance_direction_pdf(const yocto_instance* instance,
                (abs(dot(light_normal, direction)) * area);
         // continue
         ray  = make_ray(light_position, direction);
-        isec = intersect_sene(instance, shape_bvh, ray);
+        isec = intersect_scene(instance, shape_bvh, ray);
     }
     return pdf;
 }
@@ -5447,7 +5447,7 @@ vec3f evaluate_transmission(const yocto_scene* scene, const bvh_tree* bvh,
     auto p      = from;
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         auto ray  = make_segment(p, to);
-        auto isec = intersect_sene(scene, bvh, ray);
+        auto isec = intersect_scene(scene, bvh, ray);
         if (!isec.instance) break;
         auto f = evaluate_brdf(isec.instance, isec.element_id, isec.element_uv);
         auto op = evaluate_opacity(
@@ -5498,7 +5498,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
         }
     }
 
-    auto isec = intersect_sene(scene, bvh, make_ray(p, i));
+    auto isec = intersect_scene(scene, bvh, make_ray(p, i));
 
     while (isec.instance) {
         auto lp = evaluate_position(
@@ -5558,7 +5558,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
             return zero3f;
         }
 
-        isec = intersect_sene(scene, bvh, make_ray(lp, i));  //@Hack: 10? Don't
+        isec = intersect_scene(scene, bvh, make_ray(lp, i));  //@Hack: 10? Don't
                                                              // know...
     }
 

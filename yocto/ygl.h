@@ -3355,6 +3355,9 @@ vector<string> validate_scene(
     const yocto_scene* scene, bool skip_textures = false);
 void log_validation_errors(const yocto_scene* scene, bool skip_textures = false);
 
+// Queries on objects
+bool is_shape_face_varying(const yocto_shape* shape);
+
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
 struct scene_intersection {
@@ -3365,10 +3368,10 @@ struct scene_intersection {
 };
 
 // Intersects a ray with an instance. The bvh refers is the shape bvh.
-scene_intersection intersect_sene(const yocto_instance* instance,
+scene_intersection intersect_scene(const yocto_instance* instance,
     const bvh_tree* sbvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with the scene.
-scene_intersection intersect_sene(const yocto_scene* scene, const bvh_tree* bvh,
+scene_intersection intersect_scene(const yocto_scene* scene, const bvh_tree* bvh,
     const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
