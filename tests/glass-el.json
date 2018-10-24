@@ -112,6 +112,7 @@
         {
             "name": "floor",
             "filename": "meshes/floor.ply",
+            "material": "floor",
             "!!proc": {
                 "type": "floor"
             }
@@ -119,6 +120,7 @@
         {
             "name": "obj1",
             "filename": "meshes/obj1.ply",
+            "material": "obj1",
             "!!proc": {
                 "type": "matball"
             }
@@ -126,6 +128,7 @@
         {
             "name": "obj2",
             "filename": "meshes/obj2.ply",
+            "material": "obj2",
             "!!proc": {
                 "type": "matball"
             }
@@ -133,6 +136,7 @@
         {
             "name": "obj3",
             "filename": "meshes/obj3.ply",
+            "material": "obj3",
             "!!proc": {
                 "type": "matball"
             }
@@ -141,13 +145,11 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "shape": "floor"
         },
         {
             "name": "obj1",
             "shape": "obj1",
-            "material": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -159,7 +161,6 @@
         {
             "name": "obj2",
             "shape": "obj2",
-            "material": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -171,7 +172,6 @@
         {
             "name": "obj3",
             "shape": "obj3",
-            "material": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,

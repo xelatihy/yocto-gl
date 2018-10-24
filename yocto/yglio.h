@@ -223,7 +223,8 @@ bool         save_json_scene(const string& filename, const yocto_scene* scene,
 
 // Load/save a scene from/to OBJ.
 yocto_scene* load_obj_scene(const string& filename, bool load_textures = true,
-    bool skip_missing = true, bool split_shapes = true);
+    bool skip_missing = true, bool split_shapes = true,
+    bool preserve_face_varying = true);
 bool         save_obj_scene(const string& filename, const yocto_scene* scene,
             bool save_textures = true, bool skip_missing = true);
 
@@ -258,62 +259,45 @@ namespace ygl {
 // Load/Save a mesh
 bool load_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
-    vector<vec4f>& color, vector<float>& radius, bool force_triangles);
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius, bool force_triangles);
 bool save_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii = false);
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texturecoords,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool ascii = false);
 
 // Load/Save a ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
-    vector<vec4f>& color, vector<float>& radius, bool force_triangles);
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& color,
+    vector<float>& radius, bool force_triangles);
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii = false);
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texturecoords,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, const vector<vec4f>& colors,
+    const vector<float>& radius, bool ascii = false);
 
 // Load/Save an OBJ mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
-    bool force_triangles, bool flip_texcoord = true);
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, bool force_triangles,
+    bool preserve_faceavarying = true, bool flip_texcoord = true);
 bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    bool flip_texcoord = true);
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// FACE-VARYING IO FUNCTIONS
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Load/Save a mesh
-bool load_fvmesh(const string& filename, vector<vec4i>& quads_positions,
-    vector<vec3f>& pos, vector<vec4i>& quads_normals, vector<vec3f>& norm,
-    vector<vec4i>& quads_texturecoords, vector<vec2f>& texcoord,
-    vector<vec4i>& quads_colors, vector<vec4f>& color);
-bool save_fvmesh(const string& filename, const vector<vec4i>& quads_positions,
-    const vector<vec3f>& positions, const vector<vec4i>& quads_normals,
-    const vector<vec3f>& normals, const vector<vec4i>& quads_texturecoords,
-    const vector<vec2f>& texturecoords, const vector<vec4i>& quads_colors,
-    const vector<vec4f>& colors, bool ascii = false);
-
-// Load/Save an OBJ mesh
-bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_positions,
-    vector<vec3f>& pos, vector<vec4i>& quads_normals, vector<vec3f>& norm,
-    vector<vec4i>& quads_texturecoords, vector<vec2f>& texcoord,
-    bool flip_texcoord = true);
-bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_positions,
-    const vector<vec3f>& positions, const vector<vec4i>& quads_normals,
-    const vector<vec3f>& normals, const vector<vec4i>& quads_texturecoords,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texturecoords,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texturecoords, bool flip_texcoord = true);
 
 }  // namespace ygl

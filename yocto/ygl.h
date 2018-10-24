@@ -2371,12 +2371,10 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
-void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
-    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec4i>& quads_colors,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, const vector<vec4f>& colors);
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
@@ -3171,8 +3169,10 @@ struct yocto_material {
 // Shape data represented as an indexed meshes of elements.
 // May contain either points, lines, triangles and quads.
 struct yocto_shape {
-    string name     = "";
-    string filename = "";
+    // shape data
+    string          name     = "";
+    string          filename = "";
+    yocto_material* material = nullptr;
 
     // subdision properties
     int  subdivision_level      = 0;
@@ -3189,7 +3189,6 @@ struct yocto_shape {
     vector<vec4i> quads_positions     = {};
     vector<vec4i> quads_normals       = {};
     vector<vec4i> quads_texturecoords = {};
-    vector<vec4i> quads_colors        = {};
 
     // vertex data
     vector<vec3f> positions     = {};
@@ -3202,10 +3201,9 @@ struct yocto_shape {
 
 // Shape instance.
 struct yocto_instance {
-    string          name     = "";
-    frame3f         frame    = identity_frame3f;
-    yocto_shape*    shape    = nullptr;
-    yocto_material* material = nullptr;
+    string       name  = "";
+    frame3f      frame = identity_frame3f;
+    yocto_shape* shape = nullptr;
 };
 
 // Environment map.
@@ -3354,6 +3352,9 @@ vector<string> validate_scene(
     const yocto_scene* scene, bool skip_textures = false);
 void log_validation_errors(const yocto_scene* scene, bool skip_textures = false);
 
+// Queries on objects
+bool is_shape_face_varying(const yocto_shape* shape);
+
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
 struct scene_intersection {
@@ -3364,11 +3365,11 @@ struct scene_intersection {
 };
 
 // Intersects a ray with an instance. The bvh refers is the shape bvh.
-scene_intersection intersect_sene(const yocto_instance* instance,
+scene_intersection intersect_scene(const yocto_instance* instance,
     const bvh_tree* sbvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with the scene.
-scene_intersection intersect_sene(const yocto_scene* scene, const bvh_tree* bvh,
-    const ray3f& ray, bool find_any = false);
+scene_intersection intersect_scene(const yocto_scene* scene,
+    const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f evaluate_position(const yocto_shape* shape, int ei, const vec2f& uv);

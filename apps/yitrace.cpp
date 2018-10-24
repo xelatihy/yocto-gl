@@ -243,7 +243,8 @@ void run_ui(app_state* app) {
                     {app->state->rendered_image.width,
                         app->state->rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
-                auto isec = intersect_sene(app->scene.get(), app->bvh.get(), ray);
+                auto isec   = intersect_scene(
+                    app->scene.get(), app->bvh.get(), ray);
                 if (isec.instance) app->selection = isec.instance;
             }
         }

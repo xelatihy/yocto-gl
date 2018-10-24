@@ -136,7 +136,8 @@
                     3,
                     0
                 ]
-            ]
+            ],
+            "material": "floor"
         },
         {
             "name": "ceiling",
@@ -173,7 +174,8 @@
                     3,
                     0
                 ]
-            ]
+            ],
+            "material": "ceiling"
         },
         {
             "name": "backwall",
@@ -210,7 +212,8 @@
                     3,
                     0
                 ]
-            ]
+            ],
+            "material": "backwall"
         },
         {
             "name": "rightwall",
@@ -247,7 +250,8 @@
                     3,
                     0
                 ]
-            ]
+            ],
+            "material": "rightwall"
         },
         {
             "name": "leftwall",
@@ -284,7 +288,8 @@
                     3,
                     0
                 ]
-            ]
+            ],
+            "material": "leftwall"
         },
         {
             "name": "shortbox",
@@ -471,7 +476,8 @@
                     23,
                     20
                 ]
-            ]
+            ],
+            "material": "shortbox"
         },
         {
             "name": "tallbox",
@@ -658,7 +664,8 @@
                     23,
                     20
                 ]
-            ]
+            ],
+            "material": "tallbox"
         },
         {
             "name": "light",
@@ -695,49 +702,42 @@
                     3,
                     0
                 ]
-            ]
+            ],
+            "material": "light"
         }
     ],
     "instances": [
         {
             "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "shape": "floor"
         },
         {
             "name": "ceiling",
-            "shape": "ceiling",
-            "material": "ceiling"
+            "shape": "ceiling"
         },
         {
             "name": "backwall",
-            "shape": "backwall",
-            "material": "backwall"
+            "shape": "backwall"
         },
         {
             "name": "rightwall",
-            "shape": "rightwall",
-            "material": "rightwall"
+            "shape": "rightwall"
         },
         {
             "name": "leftwall",
-            "shape": "leftwall",
-            "material": "leftwall"
+            "shape": "leftwall"
         },
         {
             "name": "shortbox",
-            "shape": "shortbox",
-            "material": "shortbox"
+            "shape": "shortbox"
         },
         {
             "name": "tallbox",
-            "shape": "tallbox",
-            "material": "tallbox"
+            "shape": "tallbox"
         },
         {
             "name": "light",
-            "shape": "light",
-            "material": "light"
+            "shape": "light"
         }
     ],
     "environments": []
