@@ -4495,83 +4495,73 @@ ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
 }
 
 // Evaluates material parameters.
-vec3f evaluate_emission(const yocto_material* material, const vec2f& texturecoord, const vec4f& shape_color) {
+vec3f evaluate_emission(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
     return material->emission * xyz(shape_color) *
            xyz(evaluate_texture(material->emission_texture, texturecoord));
 }
-vec3f evaluate_diffuse(const yocto_material* material, const vec2f& texturecoord, const vec4f& shape_color) {
+vec3f evaluate_diffuse(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
     if (!material->base_metallic) {
-        return material->diffuse *
-               xyz(shape_color) *
+        return material->diffuse * xyz(shape_color) *
                xyz(evaluate_texture(material->diffuse_texture, texturecoord));
     } else {
-        auto kb = material->diffuse *
-                  xyz(shape_color) *
+        auto kb = material->diffuse * xyz(shape_color) *
                   xyz(evaluate_texture(material->diffuse_texture, texturecoord));
         auto km = material->specular.x *
                   evaluate_texture(material->specular_texture, texturecoord).z;
         return kb * (1 - km);
     }
 }
-vec3f evaluate_specular(const yocto_material* material, const vec2f& texturecoord, const vec4f& shape_color) {
+vec3f evaluate_specular(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
     if (!material->base_metallic) {
-        return material->specular *
-               xyz(shape_color) *
+        return material->specular * xyz(shape_color) *
                xyz(evaluate_texture(material->specular_texture, texturecoord));
     } else {
-        auto kb = material->diffuse *
-                  xyz(shape_color) *
+        auto kb = material->diffuse * xyz(shape_color) *
                   xyz(evaluate_texture(material->diffuse_texture, texturecoord));
         auto km = material->specular.x *
                   evaluate_texture(material->specular_texture, texturecoord).z;
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
-float evaluate_roughness(const yocto_material* material, const vec2f& texturecoord, const vec4f& shape_color) {
+float evaluate_roughness(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return 1;
     if (!material->base_metallic) {
         if (!material->gltf_textures) {
             auto rs = material->roughness *
-                      evaluate_texture(
-                          material->roughness_texture,
-                          texturecoord)
+                      evaluate_texture(material->roughness_texture, texturecoord)
                           .x;
             return rs * rs;
         } else {
             auto gs = (1 - material->roughness) *
-                      evaluate_texture(
-                          material->roughness_texture,
-                          texturecoord)
+                      evaluate_texture(material->roughness_texture, texturecoord)
                           .w;
             auto rs = 1 - gs;
             return rs * rs;
         }
     } else {
         auto rs = material->roughness *
-                  evaluate_texture(material->roughness_texture,
-                      texturecoord)
-                      .y;
+                  evaluate_texture(material->roughness_texture, texturecoord).y;
         return rs * rs;
     }
 }
-vec3f evaluate_transmission(
-    const yocto_material* material, const vec2f& texturecoord, const vec4f& shape_color) {
+vec3f evaluate_transmission(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
-    return material->transmission *
-           xyz(shape_color) *
-           xyz(evaluate_texture(material->transmission_texture,
-               texturecoord));
+    return material->transmission * xyz(shape_color) *
+           xyz(evaluate_texture(material->transmission_texture, texturecoord));
 }
-float evaluate_opacity(const yocto_material* material, const vec2f& texturecoord, const vec4f& shape_color) {
+float evaluate_opacity(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return 1;
-    return material->opacity *
-           shape_color.w *
-           evaluate_texture(material->opacity_texture,
-               texturecoord)
-               .w;
+    return material->opacity * shape_color.w *
+           evaluate_texture(material->opacity_texture, texturecoord).w;
 }
 
 // Evaluates material parameters.
@@ -4665,8 +4655,8 @@ float evaluate_opacity(const yocto_instance* instance, int ei, const vec2f& uv) 
 }
 
 // Evaluates the microfacet_brdf at a location.
-microfacet_brdf evaluate_brdf(
-    const yocto_material* material, const vec2f& texturecoord, const vec4f& shape_color) {
+microfacet_brdf evaluate_brdf(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color) {
     auto f    = microfacet_brdf();
     f.kd      = evaluate_diffuse(material, texturecoord, shape_color);
     f.ks      = evaluate_specular(material, texturecoord, shape_color);
@@ -4938,8 +4928,9 @@ trace_point make_trace_point(const yocto_instance* instance, int element_id,
         instance, element_id, element_uv, -shading_direction);
     point.texturecoord = evaluate_texturecoord(instance, element_id, element_uv);
     point.emission     = evaluate_emission(instance, element_id, element_uv);
-    point.brdf         = evaluate_brdf(instance->shape->material, point.texturecoord, evaluate_color(instance, element_id, element_uv));
-    point.opacity      = evaluate_opacity(instance, element_id, element_uv);
+    point.brdf    = evaluate_brdf(instance->shape->material, point.texturecoord,
+        evaluate_color(instance, element_id, element_uv));
+    point.opacity = evaluate_opacity(instance, element_id, element_uv);
     return point;
 }
 
@@ -5604,8 +5595,11 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
             break;
         }
 
-        auto microfacet_brdf = evaluate_brdf(
-            isec.instance->shape->material, evaluate_texturecoord(isec.instance->shape, isec.element_id, isec.element_uv), evaluate_color(isec.instance->shape, isec.element_id, isec.element_uv));
+        auto microfacet_brdf = evaluate_brdf(isec.instance->shape->material,
+            evaluate_texturecoord(
+                isec.instance->shape, isec.element_id, isec.element_uv),
+            evaluate_color(
+                isec.instance->shape, isec.element_id, isec.element_uv));
         if (microfacet_brdf.kt == zero3f) {
             le = zero3f;
             break;
@@ -5814,9 +5808,11 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
                 isec.instance, isec.element_id, isec.element_uv);
             auto n = evaluate_shading_normal(
                 isec.instance, isec.element_id, isec.element_uv, o);
-            auto f = evaluate_brdf(
-                isec.instance->shape->material, evaluate_texturecoord(isec.instance->shape, isec.element_id, isec.element_uv),
-                evaluate_color(isec.instance->shape, isec.element_id, isec.element_uv));
+            auto f = evaluate_brdf(isec.instance->shape->material,
+                evaluate_texturecoord(
+                    isec.instance->shape, isec.element_id, isec.element_uv),
+                evaluate_color(
+                    isec.instance->shape, isec.element_id, isec.element_uv));
 
             // distance sampling pdf is unknown due to delta tracking, but we do
             // know the value of transmission / pdf_dist.
