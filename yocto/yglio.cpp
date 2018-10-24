@@ -2387,6 +2387,7 @@ yocto_scene* load_json_scene(
 // Save a scene in the builtin JSON format.
 bool save_json_scene(const string& filename, const yocto_scene* scene,
     bool save_textures, bool skip_missing) {
+    auto scope = log_trace_scoped("saving scene {}", filename);
     // save json
     auto js = json();
     try {
@@ -3302,6 +3303,7 @@ bool save_obj(const string& filename, const yocto_scene* scene,
 
 bool save_obj_scene(const string& filename, const yocto_scene* scene,
     bool save_textures, bool skip_missing) {
+    auto scope = log_trace_scoped("saving scene {}", filename);
     if (!save_obj(filename, scene, true)) return false;
     if (!scene->materials.empty()) {
         if (!save_mtl(replace_extension(filename, ".mtl"), scene, true))
@@ -4115,6 +4117,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
 
 // save gltf mesh
 bool save_gltf_mesh(const string& filename, const yocto_shape* shape) {
+    auto scope = log_trace_scoped("saving scene {}", filename);
     auto fs = open(filename, "wb");
     if (!fs) return false;
 
@@ -4854,6 +4857,7 @@ yocto_scene* load_pbrt_scene(
 
 // Convert a scene to pbrt format
 bool save_pbrt(const string& filename, const yocto_scene* scene) {
+    auto scope = log_trace_scoped("saving scene {}", filename);
     auto fs = open(filename, "wt");
     if (!fs) return false;
 
