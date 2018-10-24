@@ -6068,31 +6068,58 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
     for (auto& n : normals) print(fs, "vn {}\n", n);
     for (auto& t : texturecoords)
         print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+
     auto mask = obj_vertex{
         1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
     auto vert = [mask](int i) {
         return obj_vertex{(i + 1) * mask.position, (i + 1) * mask.texturecoord,
             (i + 1) * mask.normal};
     };
+
     for (auto& p : points) {
-        print(fs, "p {}\n", to_string(vert(p)).c_str());
+        print(fs, "p {}\n", to_string(vert(p)));
     }
     for (auto& l : lines) {
-        print(fs, "l {} {}\n", to_string(vert(l.x)).c_str(),
-            to_string(vert(l.y)).c_str());
+        print(fs, "l {} {}\n", to_string(vert(l.x)),
+            to_string(vert(l.y)));
     }
     for (auto& t : triangles) {
-        print(fs, "f {} {} {}\n", to_string(vert(t.x)).c_str(),
-            to_string(vert(t.y)).c_str(), to_string(vert(t.z)).c_str());
+        print(fs, "f {} {} {}\n", to_string(vert(t.x)),
+            to_string(vert(t.y)), to_string(vert(t.z)));
     }
     for (auto& q : quads) {
         if (q.z == q.w) {
-            print(fs, "f {} {} {}\n", to_string(vert(q.x)).c_str(),
-                to_string(vert(q.y)).c_str(), to_string(vert(q.z)).c_str());
+            print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                to_string(vert(q.y)), to_string(vert(q.z)));
         } else {
-            print(fs, "f {} {} {} {}\n", to_string(vert(q.x)).c_str(),
-                to_string(vert(q.y)).c_str(), to_string(vert(q.z)).c_str(),
-                to_string(vert(q.w)).c_str());
+            print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                to_string(vert(q.y)), to_string(vert(q.z)),
+                to_string(vert(q.w)));
+        }
+    }
+
+    auto fvmask = obj_vertex{
+        1, texturecoords.empty() ? 0 : 1, normals.empty() ? 0 : 1};
+    auto fvvert = [fvmask](int pi, int ti, int ni) {
+        return obj_vertex{(pi + 1) * fvmask.position,
+            (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
+    };
+    for (auto i = 0; i < quads_positions.size(); i++) {
+        auto qp = quads_positions.at(i);
+        auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i) :
+                                                 vec4i{-1, -1, -1, -1};
+        auto qn = !quads_normals.empty() ? quads_normals.at(i) :
+                                           vec4i{-1, -1, -1, -1};
+        if (qp.z != qp.w) {
+            print(fs, "f {} {} {} {}\n",
+                to_string(fvvert(qp.x, qt.x, qn.x)),
+                to_string(fvvert(qp.y, qt.y, qn.y)),
+                to_string(fvvert(qp.z, qt.z, qn.z)),
+                to_string(fvvert(qp.w, qt.w, qn.w)));
+        } else {
+            print(fs, "f {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
+                to_string(fvvert(qp.y, qt.y, qn.y)),
+                to_string(fvvert(qp.z, qt.z, qn.z)));
         }
     }
 
