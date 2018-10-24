@@ -2830,9 +2830,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     auto shape     = (yocto_shape*)nullptr;
 
     // vertices
-    auto obj_positions     = std::deque<vec3f>();
-    auto obj_normals       = std::deque<vec3f>();
-    auto obj_texturecoords = std::deque<vec2f>();
+    auto opos      = std::deque<vec3f>();
+    auto onorm     = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
 
     // object maps
     auto tmap = unordered_map<string, yocto_texture*>();
@@ -2927,12 +2927,12 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
             auto nverts = (int)shape->positions.size();
             vertex_map.insert(it, {vert, nverts});
             if (vert.position)
-                shape->positions.push_back(obj_positions.at(vert.position - 1));
+                shape->positions.push_back(opos.at(vert.position - 1));
             if (vert.texturecoord)
                 shape->texturecoords.push_back(
-                    obj_texturecoords.at(vert.texturecoord - 1));
+                    otexcoord.at(vert.texturecoord - 1));
             if (vert.normal)
-                shape->normals.push_back(obj_normals.at(vert.normal - 1));
+                shape->normals.push_back(onorm.at(vert.normal - 1));
         }
     };
 
@@ -2941,9 +2941,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
 
     // callbacks
     auto cb     = obj_callbacks();
-    cb.vert     = [&](vec3f v) { obj_positions.push_back(v); };
-    cb.norm     = [&](vec3f v) { obj_normals.push_back(v); };
-    cb.texcoord = [&](vec2f v) { obj_texturecoords.push_back(v); };
+    cb.vert     = [&](vec3f v) { opos.push_back(v); };
+    cb.norm     = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
         if (verts.size() == 4) {
@@ -5228,7 +5228,6 @@ bool serialize_bin_object(
     if (!serialize_bin_value(shape->quads_normals, fs, save)) return false;
     if (!serialize_bin_value(shape->quads_texturecoords, fs, save))
         return false;
-    if (!serialize_bin_value(shape->quads_colors, fs, save)) return false;
     if (!serialize_bin_value(shape->positions, fs, save)) return false;
     if (!serialize_bin_value(shape->normals, fs, save)) return false;
     if (!serialize_bin_value(shape->texturecoords, fs, save)) return false;
@@ -5399,6 +5398,21 @@ void merge_triangles_and_quads(
         quads.insert(quads.end(), tquads.begin(), tquads.end());
         triangles = {};
     }
+}
+
+// check if it is really face varying
+bool is_face_varying(const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals, const vector<vec4i>& quads_texcoords) {
+    if (quads_positions.empty()) return false;
+    if (!quads_normals.empty()) {
+        for (auto i = 0; i < quads_positions.size(); i++)
+            if (quads_positions[i] != quads_normals[i]) return true;
+    }
+    if (!quads_texcoords.empty()) {
+        for (auto i = 0; i < quads_positions.size(); i++)
+            if (quads_positions[i] != quads_texcoords[i]) return true;
+    }
+    return false;
 }
 
 // Load ply mesh
@@ -6007,8 +6021,8 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, bool flip_texcoord,
-    bool force_triangles) {
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, bool force_triangles,
+    bool preserve_face_varying, bool flip_texcoord) {
     // clear
     auto colors = vector<vec4f>{};
     auto radius = vector<float>{};
@@ -6017,9 +6031,9 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
         colors, radius);
 
     // obj vertices
-    auto obj_positions     = std::deque<vec3f>();
-    auto obj_normals       = std::deque<vec3f>();
-    auto obj_texturecoords = std::deque<vec2f>();
+    auto opos      = std::deque<vec3f>();
+    auto onorm     = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
 
     // vertex maps
     auto vertex_map = unordered_map<obj_vertex, int, obj_vertex_hash>();
@@ -6031,28 +6045,106 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
             if (it != vertex_map.end()) continue;
             auto nverts = (int)positions.size();
             vertex_map.insert(it, {vert, nverts});
-            if (vert.position)
-                positions.push_back(obj_positions.at(vert.position - 1));
+            if (vert.position) positions.push_back(opos.at(vert.position - 1));
             if (vert.texturecoord)
-                texturecoords.push_back(
-                    obj_texturecoords.at(vert.texturecoord - 1));
-            if (vert.normal) normals.push_back(obj_normals.at(vert.normal - 1));
+                texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+            if (vert.normal) normals.push_back(onorm.at(vert.normal - 1));
+        }
+    };
+
+    // vertex maps
+    auto pos_map      = unordered_map<int, int>();
+    auto texcoord_map = unordered_map<int, int>();
+    auto norm_map     = unordered_map<int, int>();
+
+    // add vertex
+    auto add_fvverts = [&](const vector<obj_vertex>& verts) {
+        for (auto& vert : verts) {
+            if (!vert.position) continue;
+            auto pos_it = pos_map.find(vert.position);
+            if (pos_it != pos_map.end()) continue;
+            auto nverts = (int)positions.size();
+            pos_map.insert(pos_it, {vert.position, nverts});
+            positions.push_back(opos.at(vert.position - 1));
+        }
+        for (auto& vert : verts) {
+            if (!vert.texturecoord) continue;
+            auto texcoord_it = texcoord_map.find(vert.texturecoord);
+            if (texcoord_it != texcoord_map.end()) continue;
+            auto nverts = (int)texturecoords.size();
+            texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
+            texturecoords.push_back(otexcoord.at(vert.texturecoord - 1));
+        }
+        for (auto& vert : verts) {
+            if (!vert.normal) continue;
+            auto norm_it = norm_map.find(vert.normal);
+            if (norm_it != norm_map.end()) continue;
+            auto nverts = (int)normals.size();
+            norm_map.insert(norm_it, {vert.normal, nverts});
+            normals.push_back(onorm.at(vert.normal - 1));
         }
     };
 
     auto cb     = obj_callbacks();
-    cb.vert     = [&](vec3f v) { obj_positions.push_back(v); };
-    cb.norm     = [&](vec3f v) { obj_normals.push_back(v); };
-    cb.texcoord = [&](vec2f v) { obj_texturecoords.push_back(v); };
+    cb.vert     = [&](vec3f v) { opos.push_back(v); };
+    cb.norm     = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
-        add_verts(verts);
-        if (verts.size() == 4) {
-            quads.push_back({vertex_map.at(verts[0]), vertex_map.at(verts[1]),
-                vertex_map.at(verts[2]), vertex_map.at(verts[3])});
+        if (preserve_face_varying) {
+            add_fvverts(verts);
+            if (verts.size() == 4) {
+                if (verts[0].position) {
+                    quads_positions.push_back({pos_map.at(verts[0].position),
+                        pos_map.at(verts[1].position),
+                        pos_map.at(verts[2].position),
+                        pos_map.at(verts[3].position)});
+                }
+                if (verts[0].texturecoord) {
+                    quads_texturecoords.push_back(
+                        {texcoord_map.at(verts[0].texturecoord),
+                            texcoord_map.at(verts[1].texturecoord),
+                            texcoord_map.at(verts[2].texturecoord),
+                            texcoord_map.at(verts[3].texturecoord)});
+                }
+                if (verts[0].normal) {
+                    quads_normals.push_back({norm_map.at(verts[0].normal),
+                        norm_map.at(verts[1].normal), norm_map.at(verts[2].normal),
+                        norm_map.at(verts[3].normal)});
+                }
+            } else {
+                if (verts[0].position) {
+                    for (auto i = 2; i < verts.size(); i++)
+                        quads_positions.push_back({pos_map.at(verts[0].position),
+                            pos_map.at(verts[1].position),
+                            pos_map.at(verts[i].position),
+                            pos_map.at(verts[i].position)});
+                }
+                if (verts[0].texturecoord) {
+                    for (auto i = 2; i < verts.size(); i++)
+                        quads_texturecoords.push_back(
+                            {texcoord_map.at(verts[0].texturecoord),
+                                texcoord_map.at(verts[1].texturecoord),
+                                texcoord_map.at(verts[i].texturecoord),
+                                texcoord_map.at(verts[i].texturecoord)});
+                }
+                if (verts[0].normal) {
+                    for (auto i = 2; i < verts.size(); i++)
+                        quads_normals.push_back({norm_map.at(verts[0].normal),
+                            norm_map.at(verts[1].normal),
+                            norm_map.at(verts[i].normal),
+                            norm_map.at(verts[i].normal)});
+                }
+            }
         } else {
-            for (auto i = 2; i < verts.size(); i++)
-                triangles.push_back({vertex_map.at(verts[0]),
-                    vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+            add_verts(verts);
+            if (verts.size() == 4) {
+                quads.push_back({vertex_map.at(verts[0]), vertex_map.at(verts[1]),
+                    vertex_map.at(verts[2]), vertex_map.at(verts[3])});
+            } else {
+                for (auto i = 2; i < verts.size(); i++)
+                    triangles.push_back({vertex_map.at(verts[0]),
+                        vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+            }
         }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
@@ -6066,6 +6158,14 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
         for (auto i = 0; i < verts.size(); i++)
             points.push_back(vertex_map.at(verts[i]));
     };
+
+    // undo facaevarying if not needed
+    if (!quads_positions.empty() &&
+        !is_face_varying(quads_positions, quads_normals, quads_texturecoords)) {
+        tie(quads, positions, normals, texturecoords) = convert_face_varying(
+            quads_positions, quads_normals, quads_texturecoords, positions,
+            normals, texturecoords);
+    }
 
     // merging quads and triangles
     merge_triangles_and_quads(triangles, quads, force_triangles);
@@ -6164,9 +6264,9 @@ bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_positions,
         quads_texturecoords, texcoord, quads_colors, color);
 
     // obj vertex
-    auto obj_positions      = std::deque<vec3f>();
-    auto obj_normals     = std::deque<vec3f>();
-    auto obj_texturecoords = std::deque<vec2f>();
+    auto opos      = std::deque<vec3f>();
+    auto onorm     = std::deque<vec3f>();
+    auto otexcoord = std::deque<vec2f>();
 
     // vertex maps
     auto pos_map      = unordered_map<int, int>();
@@ -6181,7 +6281,7 @@ bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_positions,
             if (pos_it != pos_map.end()) continue;
             auto nverts = (int)pos.size();
             pos_map.insert(pos_it, {vert.position, nverts});
-            pos.push_back(obj_positions.at(vert.position - 1));
+            pos.push_back(opos.at(vert.position - 1));
         }
         for (auto& vert : verts) {
             if (!vert.texturecoord) continue;
@@ -6189,7 +6289,7 @@ bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_positions,
             if (texcoord_it != texcoord_map.end()) continue;
             auto nverts = (int)texcoord.size();
             texcoord_map.insert(texcoord_it, {vert.texturecoord, nverts});
-            texcoord.push_back(obj_texturecoords.at(vert.texturecoord - 1));
+            texcoord.push_back(otexcoord.at(vert.texturecoord - 1));
         }
         for (auto& vert : verts) {
             if (!vert.normal) continue;
@@ -6197,14 +6297,14 @@ bool load_obj_fvmesh(const string& filename, vector<vec4i>& quads_positions,
             if (norm_it != norm_map.end()) continue;
             auto nverts = (int)norm.size();
             norm_map.insert(norm_it, {vert.normal, nverts});
-            norm.push_back(obj_normals.at(vert.normal - 1));
+            norm.push_back(onorm.at(vert.normal - 1));
         }
     };
 
     auto cb     = obj_callbacks();
-    cb.vert     = [&](vec3f v) { obj_positions.push_back(v); };
-    cb.norm     = [&](vec3f v) { obj_normals.push_back(v); };
-    cb.texcoord = [&](vec2f v) { obj_texturecoords.push_back(v); };
+    cb.vert     = [&](vec3f v) { opos.push_back(v); };
+    cb.norm     = [&](vec3f v) { onorm.push_back(v); };
+    cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
         add_verts(verts);
         if (verts.size() == 4) {

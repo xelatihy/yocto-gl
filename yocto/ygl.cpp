@@ -533,23 +533,24 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
-    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec4i>& quads_colors,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, const vector<vec4f>& colors) {
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords) {
+    vector<vec4i> qquads;
+    vector<vec3f> qpos;
+    vector<vec3f> qnorm;
+    vector<vec2f> qtexcoord;
     // make faces unique
-    unordered_map<vec4i, int> vert_map;
+    unordered_map<vec3i, int> vert_map;
     qquads = vector<vec4i>(quads_positions.size());
     for (auto fid = 0; fid < quads_positions.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
-            auto v = vec4i{
+            auto v = vec3i{
                 (&quads_positions[fid].x)[c],
                 (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
                 (!quads_texturecoords.empty()) ? (&quads_texturecoords[fid].x)[c] :
                                                  -1,
-                (!quads_colors.empty()) ? (&quads_colors[fid].x)[c] : -1,
             };
             auto it = vert_map.find(v);
             if (it == vert_map.end()) {
@@ -584,6 +585,8 @@ void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
             qtexcoord[kv.second] = texturecoords[kv.first.z];
         }
     }
+
+    return {qquads, qpos, qnorm, qtexcoord};
 }
 
 // Subdivide lines.
@@ -3624,8 +3627,6 @@ yocto_shape* tesselate_shape(const yocto_shape* shape) {
                     ->texturecoords) = subdivide_quads(tesselated_shape
                                                            ->quads_texturecoords,
                 tesselated_shape->texturecoords);
-            tie(tesselated_shape->quads_colors, tesselated_shape->colors) = subdivide_quads(
-                tesselated_shape->quads_colors, tesselated_shape->colors);
         }
         if (shape->compute_vertex_normals) {
             tesselated_shape->quads_normals = tesselated_shape->quads_positions;
@@ -3644,8 +3645,6 @@ yocto_shape* tesselate_shape(const yocto_shape* shape) {
                     ->texturecoords) = subdivide_catmullclark(tesselated_shape
                                                                   ->quads_texturecoords,
                 tesselated_shape->texturecoords, true);
-            tie(tesselated_shape->quads_colors, tesselated_shape->colors) = subdivide_catmullclark(
-                tesselated_shape->quads_colors, tesselated_shape->colors);
         }
         if (shape->compute_vertex_normals) {
             tesselated_shape->quads_normals = tesselated_shape->quads_positions;

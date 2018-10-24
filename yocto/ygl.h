@@ -2371,12 +2371,10 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord.
-void convert_face_varying(vector<vec4i>& qquads, vector<vec3f>& qpos,
-    vector<vec3f>& qnorm, vector<vec2f>& qtexcoord, vector<vec4f>& qcolor,
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec4i>& quads_colors,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, const vector<vec4f>& colors);
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
@@ -3191,7 +3189,6 @@ struct yocto_shape {
     vector<vec4i> quads_positions     = {};
     vector<vec4i> quads_normals       = {};
     vector<vec4i> quads_texturecoords = {};
-    vector<vec4i> quads_colors        = {};
 
     // vertex data
     vector<vec3f> positions     = {};

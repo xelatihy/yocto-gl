@@ -291,7 +291,7 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, bool force_triangles,
-    bool flip_texcoord = true);
+    bool preserve_faceavarying = true, bool flip_texcoord = true);
 bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
