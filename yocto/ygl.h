@@ -341,13 +341,13 @@ using std::tan;
 using std::array;
 using std::atomic;
 using std::function;
+using std::ignore;
 using std::make_unique;
 using std::map;
 using std::runtime_error;
 using std::string;
 using std::thread;
 using std::tie;
-using std::ignore;
 using std::tuple;
 using std::unique_ptr;
 using std::unordered_map;
@@ -3175,9 +3175,9 @@ struct yocto_shape {
     string filename = "";
 
     // subdision properties
-    int    subdivision_level      = 0;
-    bool   catmull_clark          = false;
-    bool   compute_vertex_normals = false;
+    int  subdivision_level      = 0;
+    bool catmull_clark          = false;
+    bool compute_vertex_normals = false;
 
     // primitives
     vector<int>   points    = {};
@@ -3366,7 +3366,7 @@ void refit_scene_bvh(const yocto_scene* scene, bvh_tree* bvh);
 
 // Updates tesselation.
 yocto_shape* tesselate_shape(const yocto_shape* shape);
-void tesselate_shapes(yocto_scene* scene);
+void         tesselate_shapes(yocto_scene* scene);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_missing_names(yocto_scene* scene);

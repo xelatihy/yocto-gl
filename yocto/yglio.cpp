@@ -1789,8 +1789,8 @@ bool dump_json_object(json& js, const yocto_shape* val, const yocto_scene* scene
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
     if (!dump_json_value(js, val->filename, "filename", def.filename))
         return false;
-    if (!dump_json_value(
-            js, val->subdivision_level, "subdivision_level", def.subdivision_level))
+    if (!dump_json_value(js, val->subdivision_level, "subdivision_level",
+            def.subdivision_level))
         return false;
     if (val->catmull_clark != def.catmull_clark)
         js["catmull_clark"] = val->catmull_clark;
@@ -1950,11 +1950,14 @@ bool parse_json_object(
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
     if (!parse_json_value(js, val->filename, "filename", def.filename))
         return false;
-    if (!parse_json_value(js, val->subdivision_level, "subdivision_level", def.subdivision_level))
+    if (!parse_json_value(js, val->subdivision_level, "subdivision_level",
+            def.subdivision_level))
         return false;
-    if (!parse_json_value(js, val->catmull_clark, "catmull_clark", def.catmull_clark))
+    if (!parse_json_value(
+            js, val->catmull_clark, "catmull_clark", def.catmull_clark))
         return false;
-    if (!parse_json_value(js, val->compute_vertex_normals, "compute_vertex_normals", def.compute_vertex_normals))
+    if (!parse_json_value(js, val->compute_vertex_normals,
+            "compute_vertex_normals", def.compute_vertex_normals))
         return false;
     if (!parse_json_value(js, val->points, "points", def.points)) return false;
     if (!parse_json_value(js, val->lines, "lines", def.lines)) return false;
