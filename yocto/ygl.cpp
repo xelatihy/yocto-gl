@@ -3564,26 +3564,42 @@ void tesselate_subdivs(yocto_scene* scene) {
 // Updates tesselation.
 yocto_shape* tesselate_shape(const yocto_shape* shape) {
     auto tesselated_shape = new yocto_shape(*shape);
+    if(!shape->subdivision_level) return tesselated_shape;
+    if(shape->quads_positions.empty()) return tesselated_shape;
+    for (auto l = 0; l < tesselated_shape->subdivision_level; l++) {
+        tie(tesselated_shape->quads_positions, tesselated_shape->positions) = 
+            subdivide_catmullclark(tesselated_shape->quads_positions, tesselated_shape->positions);
+        tie(tesselated_shape->quads_texturecoords, tesselated_shape->texturecoords) = 
+            subdivide_catmullclark(tesselated_shape->quads_texturecoords, tesselated_shape->texturecoords, true);
+        tie(tesselated_shape->quads_colors, tesselated_shape->colors) = 
+            subdivide_catmullclark(tesselated_shape->quads_colors, tesselated_shape->colors);
+    }
+    if (shape->compute_vertex_normals) {
+        tesselated_shape->quads_normals = tesselated_shape->quads_positions;
+        tesselated_shape->normals = compute_vertex_normals(
+            tesselated_shape->quads_positions, tesselated_shape->positions);
+    }
     return tesselated_shape;
 }
 void tesselate_shapes(yocto_scene* scene) {
-    auto scope = log_trace_scoped("tesselating surfaces");
-    auto tesselated_surfaces = unordered_map<yocto_shape*,yocto_shape*>();
-    for(auto shape : scene->shapes) {
-        if(!shape->subdivision_level) continue;
+    auto scope               = log_trace_scoped("tesselating surfaces");
+    auto tesselated_surfaces = unordered_map<yocto_shape*, yocto_shape*>();
+    for (auto shape : scene->shapes) {
+        if (!shape->subdivision_level) continue;
         tesselated_surfaces[shape] = tesselate_shape(shape);
     }
-    for(auto instance : scene->instances) {
-        if(tesselated_surfaces.find(instance->shape) == 
-           tesselated_surfaces.end()) continue;
+    if(tesselated_surfaces.empty()) return;
+    for (auto instance : scene->instances) {
+        if (tesselated_surfaces.find(instance->shape) == tesselated_surfaces.end())
+            continue;
         instance->shape = tesselated_surfaces.at(instance->shape);
     }
-    for(auto& shape : scene->shapes) {
-        if(tesselated_surfaces.find(shape) == 
-           tesselated_surfaces.end()) continue;
+    for (auto& shape : scene->shapes) {
+        if (tesselated_surfaces.find(shape) == tesselated_surfaces.end())
+            continue;
         shape = tesselated_surfaces.at(shape);
     }
-    for(auto kv : tesselated_surfaces) {
+    for (auto kv : tesselated_surfaces) {
         delete kv.first;
     }
 }

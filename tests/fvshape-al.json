@@ -116,6 +116,7 @@
         {
             "name": "floor",
             "filename": "meshes/floor.ply",
+            "subdivision_level": 0,
             "!!proc": {
                 "type": "floor"
             }
@@ -123,6 +124,7 @@
         {
             "name": "obj1",
             "filename": "meshes/obj1.ply",
+            "subdivision_level": 2,
             "!!proc": {
                 "type": "cube"
             }
@@ -130,6 +132,7 @@
         {
             "name": "obj2",
             "filename": "meshes/obj2.ply",
+            "subdivision_level": 2,
             "!!proc": {
                 "type": "suzanne"
             }
@@ -137,6 +140,7 @@
         {
             "name": "obj3",
             "filename": "meshes/obj3.obj",
+            "subdivision_level": 4,
             "!!proc": {
                 "type": "fvcube"
             }
