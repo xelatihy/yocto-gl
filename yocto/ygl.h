@@ -3172,8 +3172,8 @@ struct yocto_material {
 // May contain either points, lines, triangles and quads.
 struct yocto_shape {
     // shape data
-    string name     = "";
-    string filename = "";
+    string          name     = "";
+    string          filename = "";
     yocto_material* material = nullptr;
 
     // subdision properties
@@ -3204,9 +3204,9 @@ struct yocto_shape {
 
 // Shape instance.
 struct yocto_instance {
-    string          name     = "";
-    frame3f         frame    = identity_frame3f;
-    yocto_shape*    shape    = nullptr;
+    string       name  = "";
+    frame3f      frame = identity_frame3f;
+    yocto_shape* shape = nullptr;
 };
 
 // Environment map.

@@ -3973,19 +3973,17 @@ void add_missing_names(yocto_scene* scene) {
 // Add missing tangent space if needed.
 void add_missing_tangent_space(yocto_scene* scene) {
     for (auto shape : scene->shapes) {
-        if (!shape->tangentspaces.empty() ||
-            shape->texturecoords.empty())
+        if (!shape->tangentspaces.empty() || shape->texturecoords.empty())
             continue;
-        if (!shape->material || (!shape->material->normal_texture &&
-                                       !shape->material->bump_texture))
+        if (!shape->material ||
+            (!shape->material->normal_texture && !shape->material->bump_texture))
             continue;
         if (!shape->triangles.empty()) {
             if (shape->normals.empty())
                 shape->normals = compute_vertex_normals(
                     shape->triangles, shape->positions);
-            shape->tangentspaces = compute_tangent_spaces(
-                shape->triangles, shape->positions,
-                shape->normals, shape->texturecoords);
+            shape->tangentspaces = compute_tangent_spaces(shape->triangles,
+                shape->positions, shape->normals, shape->texturecoords);
         } else {
             log_error("type not supported");
         }
@@ -4251,8 +4249,7 @@ vec3f evaluate_shading_normal(
             auto tv = normalize(cross(n, tu) * (left_handed ? -1.0f : 1.0f));
             n = normalize(texture.x * tu + texture.y * tv + texture.z * n);
         }
-        if (shape->material && shape->material->double_sided &&
-            dot(n, o) < 0)
+        if (shape->material && shape->material->double_sided && dot(n, o) < 0)
             n = -n;
         return n;
     } else if (!shape->quads.empty()) {
@@ -4298,7 +4295,9 @@ vec3f evaluate_element_normal(const yocto_instance* instance, int ei) {
 // Shading normals including material perturbations.
 vec3f evaluate_shading_normal(
     const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o) {
-    return transform_direction(instance->frame, evaluate_shading_normal(instance->shape, ei, uv, transform_direction_inverse(instance->frame, o)));
+    return transform_direction(
+        instance->frame, evaluate_shading_normal(instance->shape, ei, uv,
+                             transform_direction_inverse(instance->frame, o)));
 }
 
 // Environment texture coordinates from the direction.
@@ -4499,7 +4498,8 @@ ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
 // Evaluates material parameters.
 vec3f evaluate_emission(const yocto_instance* instance, int ei, const vec2f& uv) {
     if (!instance || !instance->shape->material) return zero3f;
-    return instance->shape->material->emission * xyz(evaluate_color(instance, ei, uv)) *
+    return instance->shape->material->emission *
+           xyz(evaluate_color(instance, ei, uv)) *
            xyz(evaluate_texture(instance->shape->material->emission_texture,
                evaluate_texturecoord(instance, ei, uv)));
 }
@@ -4546,13 +4546,15 @@ float evaluate_roughness(const yocto_instance* instance, int ei, const vec2f& uv
     if (!instance->shape->material->base_metallic) {
         if (!instance->shape->material->gltf_textures) {
             auto rs = instance->shape->material->roughness *
-                      evaluate_texture(instance->shape->material->roughness_texture,
+                      evaluate_texture(
+                          instance->shape->material->roughness_texture,
                           evaluate_texturecoord(instance, ei, uv))
                           .x;
             return rs * rs;
         } else {
             auto gs = (1 - instance->shape->material->roughness) *
-                      evaluate_texture(instance->shape->material->roughness_texture,
+                      evaluate_texture(
+                          instance->shape->material->roughness_texture,
                           evaluate_texturecoord(instance, ei, uv))
                           .w;
             auto rs = 1 - gs;
@@ -4591,8 +4593,9 @@ microfacet_brdf evaluate_brdf(
     f.ks      = evaluate_specular(instance, ei, uv);
     f.kt      = evaluate_transmission(instance, ei, uv);
     f.rs      = evaluate_roughness(instance, ei, uv);
-    f.refract = (instance && instance->shape->material) ? instance->shape->material->refract :
-                                                   false;
+    f.refract = (instance && instance->shape->material) ?
+                    instance->shape->material->refract :
+                    false;
     if (f.kd != zero3f) {
         f.rs = clamp(f.rs, 0.03f * 0.03f, 1.0f);
     } else if (f.rs <= 0.03f * 0.03f)
@@ -6331,7 +6334,8 @@ trace_lights* make_trace_lights(
     auto lights = make_unique<trace_lights>();
 
     for (auto instance : scene->instances) {
-        if (!instance->shape->material || instance->shape->material->emission == zero3f)
+        if (!instance->shape->material ||
+            instance->shape->material->emission == zero3f)
             continue;
         if (instance->shape->triangles.empty() && instance->shape->quads.empty())
             continue;

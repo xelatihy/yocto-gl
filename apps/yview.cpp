@@ -470,7 +470,7 @@ static const char* fragment =
 // Draw a shape
 void draw_glshape(draw_glstate* state, const yocto_shape* shape,
     const frame3f& frame, bool highlighted, bool eyelight, bool edges) {
-    auto mat = shape->material;
+    auto mat   = shape->material;
     auto xform = frame_to_mat(frame);
 
     set_gluniform(state->prog, "shape_xform", xform);
