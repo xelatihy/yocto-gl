@@ -3440,13 +3440,18 @@ ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f evaluate_emission(const yocto_instance* instance, int ei, const vec2f& uv);
-vec3f evaluate_diffuse(const yocto_instance* instance, int ei, const vec2f& uv);
-vec3f evaluate_specular(const yocto_instance* instance, int ei, const vec2f& uv);
-vec3f evaluate_transmission(
-    const yocto_instance* instance, int ei, const vec2f& uv);
-float evaluate_roughness(const yocto_instance* instance, int ei, const vec2f& uv);
-float evaluate_opacity(const yocto_instance* instance, int ei, const vec2f& uv);
+vec3f evaluate_emission(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_diffuse(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_specular(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_transmission(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+float evaluate_roughness(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+float evaluate_opacity(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
@@ -3456,9 +3461,9 @@ struct microfacet_brdf {
     float rs      = 1;       // roughness
     bool  refract = false;   // whether to use refraction in transmission
 };
-microfacet_brdf evaluate_brdf(
-    const yocto_instance* instance, int ei, const vec2f& uv);
-bool is_bsdf_delta(const microfacet_brdf& f);
+microfacet_brdf evaluate_brdf(const yocto_material* material,
+    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+bool            is_bsdf_delta(const microfacet_brdf& f);
 
 // Check volume properties.
 bool is_volume_homogeneus(const yocto_material* vol);
