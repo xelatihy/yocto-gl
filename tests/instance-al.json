@@ -54,12 +54,14 @@
         {
             "name": "floor",
             "filename": "meshes/floor.ply",
+            "material": "floor",
             "!!proc": {
                 "type": "floor"
             }
         },
         {
             "name": "light1",
+            "material": "light1",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -70,6 +72,7 @@
         },
         {
             "name": "light2",
+            "material": "light2",
             "!!proc": {
                 "type": "quad",
                 "size": [
@@ -82,13 +85,11 @@
     "instances": [
         {
             "name": "floor",
-            "shape": "floor",
-            "material": "floor"
+            "shape": "floor"
         },
         {
             "name": "light1",
             "shape": "light1",
-            "material": "light1",
             "!!proc": {
                 "from": [
                     -4,
@@ -105,7 +106,6 @@
         {
             "name": "light2",
             "shape": "light2",
-            "material": "light2",
             "!!proc": {
                 "from": [
                     4,
