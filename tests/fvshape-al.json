@@ -140,6 +140,8 @@
         {
             "name": "obj3",
             "filename": "meshes/obj3.obj",
+            "catmull_clark": true,
+            "compute_vertex_normals": true,
             "subdivision_level": 4,
             "!!proc": {
                 "type": "fvcube"
