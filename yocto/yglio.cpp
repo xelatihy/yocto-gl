@@ -3192,27 +3192,21 @@ bool save_obj(const string& filename, const yocto_scene* scene,
         if (instance->material)
             print(fs, "usemtl {}\n", instance->material->name);
         if (instance->frame == identity_frame3f) {
-            for (auto& p : instance->shape->positions)
-                print(fs, "v {}\n", p);
-            for (auto& n : instance->shape->normals)
-                print(fs, "vn {}\n", n);
+            for (auto& p : instance->shape->positions) print(fs, "v {}\n", p);
+            for (auto& n : instance->shape->normals) print(fs, "vn {}\n", n);
             for (auto& t : instance->shape->texturecoords)
-                print(fs, "vt {}\n",
-                    vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+                print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         } else {
             for (auto& pp : instance->shape->positions) {
                 print(fs, "v {}\n", transform_point(instance->frame, pp));
             }
             for (auto& nn : instance->shape->normals) {
-                print(fs, "vn {}\n",
-                    transform_direction(instance->frame, nn));
+                print(fs, "vn {}\n", transform_direction(instance->frame, nn));
             }
             for (auto& t : instance->shape->texturecoords)
-                print(fs, "vt {}\n",
-                    vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+                print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         }
-        auto mask = obj_vertex{1,
-            instance->shape->texturecoords.empty() ? 0 : 1,
+        auto mask = obj_vertex{1, instance->shape->texturecoords.empty() ? 0 : 1,
             instance->shape->normals.empty() ? 0 : 1};
         auto vert = [mask, offset](int i) {
             return obj_vertex{(i + offset.position + 1) * mask.position,
@@ -3223,8 +3217,7 @@ bool save_obj(const string& filename, const yocto_scene* scene,
             print(fs, "p {}\n", to_string(vert(p)));
         }
         for (auto& l : instance->shape->lines) {
-            print(fs, "l {} {}\n", to_string(vert(l.x)),
-                to_string(vert(l.y)));
+            print(fs, "l {} {}\n", to_string(vert(l.x)), to_string(vert(l.y)));
         }
         for (auto& t : instance->shape->triangles) {
             print(fs, "f {} {} {}\n", to_string(vert(t.x)),
@@ -3240,8 +3233,9 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                     to_string(vert(q.w)));
             }
         }
-        for(auto i = 0; i < instance->shape->quads_positions.size(); i ++) {
-            if (!instance->shape->texturecoords.empty() && instance->shape->normals.empty()) {
+        for (auto i = 0; i < instance->shape->quads_positions.size(); i++) {
+            if (!instance->shape->texturecoords.empty() &&
+                instance->shape->normals.empty()) {
                 auto vert = [offset](int ip, int it) {
                     return obj_vertex{ip + offset.position + 1,
                         it + offset.texturecoord + 1, 0};
@@ -3250,15 +3244,14 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                 auto qt = instance->shape->quads_texturecoords[i];
                 if (qp.z == qp.w) {
                     print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
-                        to_string(vert(qp.y, qt.y)),
-                        to_string(vert(qp.z, qt.z)));
+                        to_string(vert(qp.y, qt.y)), to_string(vert(qp.z, qt.z)));
                 } else {
                     print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qt.x)),
-                        to_string(vert(qp.y, qt.y)),
-                        to_string(vert(qp.z, qt.z)),
+                        to_string(vert(qp.y, qt.y)), to_string(vert(qp.z, qt.z)),
                         to_string(vert(qp.w, qt.w)));
                 }
-            } else if (!instance->shape->texturecoords.empty() && !instance->shape->normals.empty()) {
+            } else if (!instance->shape->texturecoords.empty() &&
+                       !instance->shape->normals.empty()) {
                 auto vert = [offset](int ip, int it, int in) {
                     return obj_vertex{ip + offset.position + 1,
                         it + offset.texturecoord + 1, in + offset.normal + 1};
@@ -3271,26 +3264,25 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                         to_string(vert(qp.y, qt.y, qn.y)),
                         to_string(vert(qp.z, qt.z, qn.z)));
                 } else {
-                    print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qt.x, qn.x)),
+                    print(fs, "f {} {} {} {}\n",
+                        to_string(vert(qp.x, qt.x, qn.x)),
                         to_string(vert(qp.y, qt.y, qn.y)),
                         to_string(vert(qp.z, qt.z, qn.z)),
                         to_string(vert(qp.w, qt.w, qn.w)));
                 }
             } else if (!instance->shape->normals.empty()) {
                 auto vert = [offset](int ip, int in) {
-                    return obj_vertex{ip + offset.position + 1,
-                        0, in + offset.normal + 1};
+                    return obj_vertex{
+                        ip + offset.position + 1, 0, in + offset.normal + 1};
                 };
                 auto qp = instance->shape->quads_positions[i];
                 auto qn = instance->shape->quads_normals[i];
                 if (qp.z == qp.w) {
                     print(fs, "f {} {} {}\n", to_string(vert(qp.x, qn.x)),
-                        to_string(vert(qp.y, qn.y)),
-                        to_string(vert(qp.z, qn.z)));
+                        to_string(vert(qp.y, qn.y)), to_string(vert(qp.z, qn.z)));
                 } else {
                     print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qn.x)),
-                        to_string(vert(qp.y, qn.y)),
-                        to_string(vert(qp.z, qn.z)),
+                        to_string(vert(qp.y, qn.y)), to_string(vert(qp.z, qn.z)),
                         to_string(vert(qp.w, qn.w)));
                 }
             } else {
