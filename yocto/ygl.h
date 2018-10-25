@@ -2010,7 +2010,7 @@ inline void center_image(vec2f& center, float& scale, const vec2i& imsize,
 namespace ygl {
 
 // check if a container contains a key
-template<typename K, typename V>
+template <typename K, typename V>
 inline bool contains(const unordered_map<K, V>& container, const K& value) {
     return container.find(value) != container.end();
 }
@@ -3559,9 +3559,9 @@ struct trace_params {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<yocto_instance*> instances = {};
-    vector<yocto_environment*> environments = {};
-    unordered_map<yocto_shape*, vector<float>> shape_elements_cdf = {};
+    vector<yocto_instance*>                      instances               = {};
+    vector<yocto_environment*>                   environments            = {};
+    unordered_map<yocto_shape*, vector<float>>   shape_elements_cdf      = {};
     unordered_map<yocto_texture*, vector<float>> environment_texture_cdf = {};
 };
 

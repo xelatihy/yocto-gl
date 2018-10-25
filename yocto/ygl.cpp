@@ -5321,14 +5321,15 @@ float sample_instance_point_pdf(const yocto_instance* instance,
 trace_point sample_lights_point(
     const trace_lights* lights, const vec3f& position, rng_state& rng) {
     if (lights->instances.empty()) return {};
-    auto light_id = sample_uniform_index(lights->instances.size(), get_random_float(rng));
-    auto instance = lights->instances[light_id];
-    auto& cdf = lights->shape_elements_cdf.at(instance->shape); 
-    auto rel = get_random_float(rng);  // force order of evaluation
-    auto ruv = get_random_vec2f(rng);  // force order of evaluation
-    auto point = sample_instance_point(instance, cdf, rel, ruv);
-    auto direction = normalize(position - point.position);
-    point.normal   = evaluate_shading_normal(
+    auto light_id = sample_uniform_index(
+        lights->instances.size(), get_random_float(rng));
+    auto  instance  = lights->instances[light_id];
+    auto& cdf       = lights->shape_elements_cdf.at(instance->shape);
+    auto  rel       = get_random_float(rng);  // force order of evaluation
+    auto  ruv       = get_random_vec2f(rng);  // force order of evaluation
+    auto  point     = sample_instance_point(instance, cdf, rel, ruv);
+    auto  direction = normalize(position - point.position);
+    point.normal    = evaluate_shading_normal(
         instance, point.element_id, point.element_uv, direction);
     return point;
 }
@@ -5337,10 +5338,11 @@ trace_point sample_lights_point(
 float sample_lights_point_pdf(const trace_lights* lights, const vec3f& position,
     const trace_point& light_point) {
     if (lights->instances.empty()) return 0;
-    if(light_point.instance->shape->material->emission == zero3f) return 0;
-    auto instance = light_point.instance;
-    auto& cdf = lights->shape_elements_cdf.at(instance->shape);
-    return sample_instance_point_pdf(instance, cdf, light_point.element_id, light_point.element_uv) * 
+    if (light_point.instance->shape->material->emission == zero3f) return 0;
+    auto  instance = light_point.instance;
+    auto& cdf      = lights->shape_elements_cdf.at(instance->shape);
+    return sample_instance_point_pdf(
+               instance, cdf, light_point.element_id, light_point.element_uv) *
            sample_uniform_index_pdf(lights->instances.size());
 }
 
@@ -5426,21 +5428,23 @@ float sample_instance_direction_pdf(const yocto_instance* instance,
 // Sample lights wrt solid angle
 vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& position, rng_state& rng) {
-    auto light_id   = sample_uniform_index(lights->instances.size() + lights->environments.size(), get_random_float(rng));
-    if(light_id < lights->instances.size()) {
-        auto instance = lights->instances[light_id];
-        auto& cdf = lights->shape_elements_cdf.at(instance->shape);
-        auto rel = get_random_float(rng);  // force order of evaluation
-        auto ruv = get_random_vec2f(rng);  // force order of evaluation
-        return sample_instance_direction(
-            instance, cdf, position, rel, ruv);
+    auto light_id = sample_uniform_index(
+        lights->instances.size() + lights->environments.size(),
+        get_random_float(rng));
+    if (light_id < lights->instances.size()) {
+        auto  instance = lights->instances[light_id];
+        auto& cdf      = lights->shape_elements_cdf.at(instance->shape);
+        auto  rel      = get_random_float(rng);  // force order of evaluation
+        auto  ruv      = get_random_vec2f(rng);  // force order of evaluation
+        return sample_instance_direction(instance, cdf, position, rel, ruv);
     } else {
-        auto environment = lights->environments[light_id - (int)lights->instances.size()];
-        auto& cdf = lights->environment_texture_cdf.at(environment->emission_texture);
+        auto  environment = lights->environments[light_id -
+                                                (int)lights->instances.size()];
+        auto& cdf         = lights->environment_texture_cdf.at(
+            environment->emission_texture);
         auto rel = get_random_float(rng);  // force order of evaluation
         auto ruv = get_random_vec2f(rng);  // force order of evaluation
-        return sample_environment_direction(
-            environment, cdf, rel, ruv);
+        return sample_environment_direction(environment, cdf, rel, ruv);
     }
 }
 
@@ -5454,11 +5458,12 @@ float sample_lights_direction_pdf(const trace_lights* lights,
             instance, cdf, bvh, position, direction);
     }
     for (auto environment : lights->environments) {
-        auto& cdf = lights->environment_texture_cdf.at(environment->emission_texture);
-        pdf += sample_environment_direction_pdf(
-            environment, cdf, direction);
+        auto& cdf = lights->environment_texture_cdf.at(
+            environment->emission_texture);
+        pdf += sample_environment_direction_pdf(environment, cdf, direction);
     }
-    pdf *= sample_uniform_index_pdf(lights->instances.size() + lights->environments.size());
+    pdf *= sample_uniform_index_pdf(
+        lights->instances.size() + lights->environments.size());
     return pdf;
 }
 
@@ -5537,19 +5542,23 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     auto  i      = zero3f;
     vec3f weight = vec3f{1, 1, 1};
 
-    auto idx = sample_uniform_index(lights->instances.size() + lights->environments.size(), get_random_float(rng));
-    pdf      = 1.0f / (lights->instances.size() + lights->environments.size());
+    auto idx = sample_uniform_index(
+        lights->instances.size() + lights->environments.size(),
+        get_random_float(rng));
+    pdf = 1.0f / (lights->instances.size() + lights->environments.size());
     if (idx < lights->instances.size()) {
-        auto instance = lights->instances[idx];
-        auto& cdf = lights->shape_elements_cdf.at(instance->shape);
-        i = sample_instance_direction(instance, cdf, p, get_random_float(rng), get_random_vec2f(rng));
+        auto  instance = lights->instances[idx];
+        auto& cdf      = lights->shape_elements_cdf.at(instance->shape);
+        i              = sample_instance_direction(
+            instance, cdf, p, get_random_float(rng), get_random_vec2f(rng));
         pdf *= 1.0 / cdf.back();
     } else {
-        auto environment = lights->environments[idx- lights->instances.size()];
-        auto& cdf = lights->environment_texture_cdf.at(environment->emission_texture);
-        i          = sample_environment_direction(environment, cdf, get_random_float(rng), get_random_vec2f(rng));
-        pdf *= sample_environment_direction_pdf(
-            environment, cdf, i);
+        auto environment = lights->environments[idx - lights->instances.size()];
+        auto& cdf        = lights->environment_texture_cdf.at(
+            environment->emission_texture);
+        i = sample_environment_direction(
+            environment, cdf, get_random_float(rng), get_random_vec2f(rng));
+        pdf *= sample_environment_direction_pdf(environment, cdf, i);
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, i), rng, 10);
         if (isec.instance == nullptr) {
@@ -6406,22 +6415,25 @@ trace_lights* make_trace_lights(
         if (instance->shape->triangles.empty() && instance->shape->quads.empty())
             continue;
         lights->instances.push_back(instance);
-        if(!contains(lights->shape_elements_cdf, instance->shape)) {
-            lights->shape_elements_cdf[instance->shape] = 
-                compute_shape_elements_cdf(instance->shape);
+        if (!contains(lights->shape_elements_cdf, instance->shape)) {
+            lights->shape_elements_cdf[instance->shape] = compute_shape_elements_cdf(
+                instance->shape);
         }
     }
 
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
         lights->environments.push_back(environment);
-        if(!contains(lights->environment_texture_cdf, environment->emission_texture)) {
-            lights->environment_texture_cdf[environment->emission_texture] = 
-                compute_environment_texels_cdf(environment);
+        if (!contains(lights->environment_texture_cdf,
+                environment->emission_texture)) {
+            lights->environment_texture_cdf
+                [environment->emission_texture] = compute_environment_texels_cdf(
+                environment);
         }
     }
 
-    if (lights->instances.empty() && lights->environments.empty()) return nullptr;
+    if (lights->instances.empty() && lights->environments.empty())
+        return nullptr;
     return lights.release();
 }
 
