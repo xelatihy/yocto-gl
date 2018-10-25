@@ -4857,11 +4857,15 @@ trace_point make_trace_point(const yocto_instance* instance, int element_id,
     point.position   = evaluate_position(instance, element_id, element_uv);
     point.normal     = evaluate_shading_normal(
         instance, element_id, element_uv, -shading_direction);
-    point.texturecoord = evaluate_texturecoord(instance->shape, element_id, element_uv);
+    point.texturecoord = evaluate_texturecoord(
+        instance->shape, element_id, element_uv);
     auto shape_color = evaluate_color(instance->shape, element_id, element_uv);
-    point.emission     = evaluate_emission(instance->shape->material, point.texturecoord, shape_color);
-    point.brdf    = evaluate_brdf(instance->shape->material, point.texturecoord, shape_color);
-    point.opacity = evaluate_opacity(instance->shape->material, point.texturecoord, shape_color);
+    point.emission   = evaluate_emission(
+        instance->shape->material, point.texturecoord, shape_color);
+    point.brdf = evaluate_brdf(
+        instance->shape->material, point.texturecoord, shape_color);
+    point.opacity = evaluate_opacity(
+        instance->shape->material, point.texturecoord, shape_color);
     return point;
 }
 
@@ -4904,9 +4908,11 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
         _trace_nrays += 1;
         auto isec = intersect_scene(scene, bvh, ray);
         if (!isec.instance) return isec;
-        auto op = evaluate_opacity(isec.instance->shape->material, 
-            evaluate_texturecoord(isec.instance->shape, isec.element_id, isec.element_uv),
-            evaluate_color(isec.instance->shape, isec.element_id, isec.element_uv));
+        auto op = evaluate_opacity(isec.instance->shape->material,
+            evaluate_texturecoord(
+                isec.instance->shape, isec.element_id, isec.element_uv),
+            evaluate_color(
+                isec.instance->shape, isec.element_id, isec.element_uv));
         if (op > 0.999f) return isec;
         if (get_random_float(rng) < op) return isec;
         ray = make_ray(
@@ -5476,8 +5482,10 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
         auto ln = evaluate_shading_normal(
             isec.instance, isec.element_id, isec.element_uv, -i);
         auto emission = evaluate_emission(isec.instance->shape->material,
-            evaluate_texturecoord(isec.instance->shape, isec.element_id, isec.element_uv),
-            evaluate_color(isec.instance->shape, isec.element_id, isec.element_uv));
+            evaluate_texturecoord(
+                isec.instance->shape, isec.element_id, isec.element_uv),
+            evaluate_color(
+                isec.instance->shape, isec.element_id, isec.element_uv));
 
         yocto_instance* medium = mediums.back();
         if (medium->shape->material->volume_density != zero3f)
@@ -5720,9 +5728,12 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
 
             // emission
             if (emission)
-                radiance += weight * evaluate_emission(isec.instance->shape->material,
-                    evaluate_texturecoord(isec.instance->shape, isec.element_id, isec.element_uv),
-                    evaluate_color(isec.instance->shape, isec.element_id, isec.element_uv));
+                radiance += weight *
+                            evaluate_emission(isec.instance->shape->material,
+                                evaluate_texturecoord(isec.instance->shape,
+                                    isec.element_id, isec.element_uv),
+                                evaluate_color(isec.instance->shape,
+                                    isec.element_id, isec.element_uv));
 
             // early exit
             if (f.kd + f.ks + f.kt == zero3f || bounce >= max_bounces - 1)
