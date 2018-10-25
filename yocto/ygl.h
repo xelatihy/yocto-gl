@@ -66,6 +66,9 @@
 // `translation_mat()` or `translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
+// All basic types support printing and parsing using `print()` and `parse()`
+// methods and iostream `<<` and `>>` operators.
+//
 //
 // ## Geometry functions
 //
@@ -241,6 +244,12 @@
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
 //
+// ## Utilities foe containers
+//
+// Internally we use a few container utilities to make the use of STL simpler.
+// These are just thin wrapper to STL idioms.
+//
+// 1. check for containment with `contains()`
 //
 
 //
@@ -1996,6 +2005,19 @@ inline void center_image(vec2f& center, float& scale, const vec2i& imsize,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// CONTAINER UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// check if a container contains a key
+template <typename K, typename V>
+inline bool contains(const unordered_map<K, V>& container, const K& value) {
+    return container.find(value) != container.end();
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -3535,19 +3557,12 @@ struct trace_params {
     int        random_seed         = trace_default_seed;
 };
 
-// Trace lights
-struct trace_light {
-    yocto_instance*    instance     = nullptr;
-    yocto_environment* environment  = nullptr;
-    vector<float>      elements_cdf = {};
-};
-
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<trace_light*> lights           = {};
-    int                  num_instances    = 0;
-    int                  num_environments = 0;
-    ~trace_lights();
+    vector<yocto_instance*>                      instances               = {};
+    vector<yocto_environment*>                   environments            = {};
+    unordered_map<yocto_shape*, vector<float>>   shape_elements_cdf      = {};
+    unordered_map<yocto_texture*, vector<float>> environment_texture_cdf = {};
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
