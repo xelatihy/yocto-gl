@@ -3410,10 +3410,6 @@ vec4f evaluate_element_tangentspace(const yocto_shape* shape, int ei);
 // Handles defaults if data is missing.
 vec3f evaluate_position(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_normal(const yocto_instance* instance, int ei, const vec2f& uv);
-vec2f evaluate_texturecoord(
-    const yocto_instance* instance, int ei, const vec2f& uv);
-vec4f evaluate_color(const yocto_instance* instance, int ei, const vec2f& uv);
-float evaluate_radius(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_tangentspace(
     const yocto_instance* instance, int ei, const vec2f& uv, bool& left_handed);
 // Instance element values.
