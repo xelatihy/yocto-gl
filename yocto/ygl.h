@@ -3410,10 +3410,6 @@ vec4f evaluate_element_tangentspace(const yocto_shape* shape, int ei);
 // Handles defaults if data is missing.
 vec3f evaluate_position(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_normal(const yocto_instance* instance, int ei, const vec2f& uv);
-vec2f evaluate_texturecoord(
-    const yocto_instance* instance, int ei, const vec2f& uv);
-vec4f evaluate_color(const yocto_instance* instance, int ei, const vec2f& uv);
-float evaluate_radius(const yocto_instance* instance, int ei, const vec2f& uv);
 vec3f evaluate_tangentspace(
     const yocto_instance* instance, int ei, const vec2f& uv, bool& left_handed);
 // Instance element values.
@@ -3477,11 +3473,11 @@ float evaluate_opacity(const yocto_material* material,
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
-    vec3f kd      = zero3f;  // diffuse
-    vec3f ks      = zero3f;  // specular
-    vec3f kt      = zero3f;  // transmission
-    float rs      = 1;       // roughness
-    bool  refract = false;   // whether to use refraction in transmission
+    vec3f diffuse      = zero3f;
+    vec3f specular     = zero3f;
+    vec3f transmission = zero3f;
+    float roughness    = 1;
+    bool  refract      = false;
 };
 microfacet_brdf evaluate_brdf(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
