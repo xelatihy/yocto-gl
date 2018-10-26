@@ -3871,6 +3871,7 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                     child->instance->name  = child->name;
                     child->instance->shape = shape;
                     scene->instances.push_back(child->instance);
+                    scene->nodes.push_back(child);
                 }
             }
         }
