@@ -1710,7 +1710,7 @@ void build_embree_bvh(bvh_tree* bvh) { return build_bvh(bvh, true); }
 void refit_embree_bvh(bvh_tree* bvh) { return refit_bvh(bvh); }
 // Intersect BVH using Embree
 bool intersect_embree_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& uv) {
+    float& dist, int& iid, int& eid, vec2f& element_uv) {
     log_error("this should not have been called");
     return false;
 }
@@ -1726,10 +1726,10 @@ void build_bvh_embree(bvh_tree* bvh, bool high_quality, bool embree) {
 
 // Intersect ray with a bvh.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& uv) {
+    float& dist, int& iid, int& eid, vec2f& element_uv) {
     // call Embree if needed
     if (bvh->embree_bvh)
-        return intersect_embree_bvh(bvh, ray_, find_any, dist, iid, eid, uv);
+        return intersect_embree_bvh(bvh, ray_, find_any, dist, iid, eid, element_uv);
 
     // node stack
     int  node_stack[128];
@@ -1771,7 +1771,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh->triangles[node.primitive_ids[i]];
                 if (intersect_triangle(ray, bvh->positions[t.x],
-                        bvh->positions[t.y], bvh->positions[t.z], dist, uv)) {
+                        bvh->positions[t.y], bvh->positions[t.z], dist, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1781,7 +1781,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh->quads[node.primitive_ids[i]];
                 if (intersect_quad(ray, bvh->positions[t.x], bvh->positions[t.y],
-                        bvh->positions[t.z], bvh->positions[t.w], dist, uv)) {
+                        bvh->positions[t.z], bvh->positions[t.w], dist, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1791,7 +1791,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh->lines[node.primitive_ids[i]];
                 if (intersect_line(ray, bvh->positions[l.x], bvh->positions[l.y],
-                        bvh->radius[l.x], bvh->radius[l.y], dist, uv)) {
+                        bvh->radius[l.x], bvh->radius[l.y], dist, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1801,7 +1801,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh->points[node.primitive_ids[i]];
                 if (intersect_point(
-                        ray, bvh->positions[p], bvh->radius[p], dist, uv)) {
+                        ray, bvh->positions[p], bvh->radius[p], dist, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1812,7 +1812,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
                 auto& instance = bvh->instances[node.primitive_ids[i]];
                 if (intersect_bvh(bvh->shape_bvhs[instance.shape_id],
                         transform_ray(instance.frame_inverse, ray), find_any,
-                        dist, iid, eid, uv)) {
+                        dist, iid, eid, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     iid      = node.primitive_ids[i];
@@ -1831,7 +1831,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray_, bool find_any,
 
 // Finds the closest element with a bvh.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& uv) {
+    bool find_any, float& dist, int& iid, int& eid, vec2f& element_uv) {
     // node stack
     int  node_stack[64];
     auto node_cur          = 0;
@@ -1859,7 +1859,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 auto& t = bvh->triangles[node.primitive_ids[i]];
                 if (overlap_triangle(pos, max_dist, bvh->positions[t.x],
                         bvh->positions[t.y], bvh->positions[t.z], bvh->radius[t.x],
-                        bvh->radius[t.y], bvh->radius[t.z], dist, uv)) {
+                        bvh->radius[t.y], bvh->radius[t.z], dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1871,7 +1871,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 if (overlap_quad(pos, max_dist, bvh->positions[q.x],
                         bvh->positions[q.y], bvh->positions[q.z],
                         bvh->positions[q.w], bvh->radius[q.x], bvh->radius[q.y],
-                        bvh->radius[q.z], bvh->radius[q.w], dist, uv)) {
+                        bvh->radius[q.z], bvh->radius[q.w], dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1882,7 +1882,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 auto& l = bvh->lines[node.primitive_ids[i]];
                 if (overlap_line(pos, max_dist, bvh->positions[l.x],
                         bvh->positions[l.y], bvh->radius[l.x], bvh->radius[l.y],
-                        dist, uv)) {
+                        dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1892,7 +1892,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh->points[node.primitive_ids[i]];
                 if (overlap_point(pos, max_dist, bvh->positions[p],
-                        bvh->radius[p], dist, uv)) {
+                        bvh->radius[p], dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
                     eid      = node.primitive_ids[i];
@@ -1903,7 +1903,7 @@ bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
                 auto& instance = bvh->instances[node.primitive_ids[i]];
                 if (overlap_bvh(bvh->shape_bvhs[instance.shape_id],
                         transform_point(instance.frame_inverse, pos), max_dist,
-                        find_any, dist, iid, eid, uv)) {
+                        find_any, dist, iid, eid, element_uv)) {
                     hit      = true;
                     max_dist = dist;
                     iid      = node.primitive_ids[i];
@@ -4189,26 +4189,26 @@ vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int element_
 // Shape value interpolated using barycentric coordinates
 template <typename T>
 T evaluate_elem(
-    const yocto_shape* shape, const vector<T>& vals, int element_id, const vec2f& uv) {
+    const yocto_shape* shape, const vector<T>& vals, int element_id, const vec2f& element_uv) {
     if (vals.empty()) return {};
     if (!shape->triangles.empty()) {
         auto t = shape->triangles[element_id];
-        return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], uv);
+        return interpolate_triangle(vals[t.x], vals[t.y], vals[t.z], element_uv);
     } else if (!shape->quads.empty()) {
         auto q = shape->quads[element_id];
         if (q.w == q.z)
-            return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
-        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+            return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], element_uv);
+        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], element_uv);
     } else if (!shape->lines.empty()) {
         auto l = shape->lines[element_id];
-        return interpolate_line(vals[l.x], vals[l.y], uv.x);
+        return interpolate_line(vals[l.x], vals[l.y], element_uv.x);
     } else if (!shape->points.empty()) {
         return vals[shape->points[element_id]];
     } else if (!shape->quads_positions.empty()) {
         auto q = shape->quads_positions[element_id];
         if (q.w == q.z)
-            return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
-        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+            return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], element_uv);
+        return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], element_uv);
     } else {
         return {};
     }
@@ -4216,62 +4216,62 @@ T evaluate_elem(
 // override for face-varying
 template <typename T>
 T evaluate_elem(const yocto_shape* shape, const vector<T>& vals,
-    const vector<vec4i>& quads, int element_id, const vec2f& uv) {
+    const vector<vec4i>& quads, int element_id, const vec2f& element_uv) {
     if (vals.empty()) return {};
     auto q = quads[element_id];
     if (q.w == q.z)
-        return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], uv);
-    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], uv);
+        return interpolate_triangle(vals[q.x], vals[q.y], vals[q.z], element_uv);
+    return interpolate_quad(vals[q.x], vals[q.y], vals[q.z], vals[q.w], element_uv);
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f evaluate_shape_position(const yocto_shape* shape, int element_id, const vec2f& uv) {
-    return evaluate_elem(shape, shape->positions, element_id, uv);
+vec3f evaluate_shape_position(const yocto_shape* shape, int element_id, const vec2f& element_uv) {
+    return evaluate_elem(shape, shape->positions, element_id, element_uv);
 }
-vec3f evaluate_shape_normal(const yocto_shape* shape, int element_id, const vec2f& uv) {
+vec3f evaluate_shape_normal(const yocto_shape* shape, int element_id, const vec2f& element_uv) {
     if (shape->normals.empty()) return evaluate_shape_element_normal(shape, element_id);
     if (!shape->quads_positions.empty())
         return normalize(
-            evaluate_elem(shape, shape->normals, shape->quads_normals, element_id, uv));
-    return normalize(evaluate_elem(shape, shape->normals, element_id, uv));
+            evaluate_elem(shape, shape->normals, shape->quads_normals, element_id, element_uv));
+    return normalize(evaluate_elem(shape, shape->normals, element_id, element_uv));
 }
 vec2f evaluate_shape_texturecoord(
-    const yocto_shape* shape, int element_id, const vec2f& uv) {
-    if (shape->texturecoords.empty()) return uv;
+    const yocto_shape* shape, int element_id, const vec2f& element_uv) {
+    if (shape->texturecoords.empty()) return element_uv;
     if (!shape->quads_positions.empty())
         return evaluate_elem(
-            shape, shape->texturecoords, shape->quads_texturecoords, element_id, uv);
-    return evaluate_elem(shape, shape->texturecoords, element_id, uv);
+            shape, shape->texturecoords, shape->quads_texturecoords, element_id, element_uv);
+    return evaluate_elem(shape, shape->texturecoords, element_id, element_uv);
 }
-vec4f evaluate_shape_color(const yocto_shape* shape, int element_id, const vec2f& uv) {
+vec4f evaluate_shape_color(const yocto_shape* shape, int element_id, const vec2f& element_uv) {
     if (shape->colors.empty()) return {1, 1, 1, 1};
-    return evaluate_elem(shape, shape->colors, element_id, uv);
+    return evaluate_elem(shape, shape->colors, element_id, element_uv);
 }
-float evaluate_shape_radius(const yocto_shape* shape, int element_id, const vec2f& uv) {
+float evaluate_shape_radius(const yocto_shape* shape, int element_id, const vec2f& element_uv) {
     if (shape->radius.empty()) return 0.001f;
-    return evaluate_elem(shape, shape->radius, element_id, uv);
+    return evaluate_elem(shape, shape->radius, element_id, element_uv);
 }
 vec4f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int element_id, const vec2f& uv) {
+    const yocto_shape* shape, int element_id, const vec2f& element_uv) {
     if (shape->tangentspaces.empty())
         return evaluate_shape_element_tangentspace(shape, element_id);
-    return evaluate_elem(shape, shape->tangentspaces, element_id, uv);
+    return evaluate_elem(shape, shape->tangentspaces, element_id, element_uv);
 }
 vec3f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int element_id, const vec2f& uv, bool& left_handed) {
+    const yocto_shape* shape, int element_id, const vec2f& element_uv, bool& left_handed) {
     auto tangsp = (shape->tangentspaces.empty()) ?
                       evaluate_shape_element_tangentspace(shape, element_id) :
-                      evaluate_elem(shape, shape->tangentspaces, element_id, uv);
+                      evaluate_elem(shape, shape->tangentspaces, element_id, element_uv);
     left_handed = tangsp.w < 0;
     return {tangsp.x, tangsp.y, tangsp.z};
 }
 // Shading normals including material perturbations.
 vec3f evaluate_shading_normal(
-    const yocto_shape* shape, int element_id, const vec2f& uv, const vec3f& outgoing) {
+    const yocto_shape* shape, int element_id, const vec2f& element_uv, const vec3f& outgoing) {
     if (!shape->triangles.empty()) {
-        auto normal = evaluate_shape_normal(shape, element_id, uv);
+        auto normal = evaluate_shape_normal(shape, element_id, element_uv);
         if (shape->material && shape->material->normal_texture) {
-            auto texcoord    = evaluate_shape_texturecoord(shape, element_id, uv);
+            auto texcoord    = evaluate_shape_texturecoord(shape, element_id, element_uv);
             auto left_handed = false;
             auto texture     = xyz(
                 evaluate_texture(shape->material->normal_texture, texcoord));
@@ -4279,7 +4279,7 @@ vec3f evaluate_shading_normal(
             texture.y = -texture.y;  // flip vertical axis to align green with
                                      // image up
             auto tu = orthonormalize(
-                evaluate_shape_tangentspace(shape, element_id, uv, left_handed), normal);
+                evaluate_shape_tangentspace(shape, element_id, element_uv, left_handed), normal);
             auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
             normal = normalize(
                 texture.x * tu + texture.y * tv + texture.z * normal);
@@ -4289,11 +4289,11 @@ vec3f evaluate_shading_normal(
             normal = -normal;
         return normal;
     } else if (!shape->quads.empty()) {
-        return evaluate_shape_normal(shape, element_id, uv);
+        return evaluate_shape_normal(shape, element_id, element_uv);
     } else if (!shape->lines.empty()) {
-        return orthonormalize(outgoing, evaluate_shape_normal(shape, element_id, uv));
+        return orthonormalize(outgoing, evaluate_shape_normal(shape, element_id, element_uv));
     } else if (!shape->quads_positions.empty()) {
-        return evaluate_shape_normal(shape, element_id, uv);
+        return evaluate_shape_normal(shape, element_id, element_uv);
     } else {
         return outgoing;
     }
@@ -4301,19 +4301,19 @@ vec3f evaluate_shading_normal(
 
 // Instance values interpolated using barycentric coordinates.
 vec3f evaluate_instance_position(
-    const yocto_instance* instance, int element_id, const vec2f& uv) {
+    const yocto_instance* instance, int element_id, const vec2f& element_uv) {
     return transform_point(
-        instance->frame, evaluate_shape_position(instance->shape, element_id, uv));
+        instance->frame, evaluate_shape_position(instance->shape, element_id, element_uv));
 }
 vec3f evaluate_shape_normal(
-    const yocto_instance* instance, int element_id, const vec2f& uv) {
+    const yocto_instance* instance, int element_id, const vec2f& element_uv) {
     return transform_direction(
-        instance->frame, evaluate_shape_normal(instance->shape, element_id, uv));
+        instance->frame, evaluate_shape_normal(instance->shape, element_id, element_uv));
 }
 vec3f evaluate_instance_tangentspace(const yocto_instance* instance, int element_id,
-    const vec2f& uv, bool& left_handed) {
+    const vec2f& element_uv, bool& left_handed) {
     return transform_direction(instance->frame,
-        evaluate_shape_tangentspace(instance->shape, element_id, uv, left_handed));
+        evaluate_shape_tangentspace(instance->shape, element_id, element_uv, left_handed));
 }
 // Instance element values.
 vec3f evaluate_instance_element_normal(const yocto_instance* instance, int element_id) {
@@ -4322,43 +4322,43 @@ vec3f evaluate_instance_element_normal(const yocto_instance* instance, int eleme
 }
 // Shading normals including material perturbations.
 vec3f evaluate_instance_shading_normal(const yocto_instance* instance, int element_id,
-    const vec2f& uv, const vec3f& outgoing) {
+    const vec2f& element_uv, const vec3f& outgoing) {
     return transform_direction(instance->frame,
-        evaluate_shading_normal(instance->shape, element_id, uv,
+        evaluate_shading_normal(instance->shape, element_id, element_uv,
             transform_direction_inverse(instance->frame, outgoing)));
 }
 
 // Environment texture coordinates from the direction.
 vec2f evaluate_environment_texturecoord(
-    const yocto_environment* environment, const vec3f& w) {
-    auto wl = transform_direction_inverse(environment->frame, w);
-    auto uv = vec2f{
+    const yocto_environment* environment, const vec3f& direction) {
+    auto wl = transform_direction_inverse(environment->frame, direction);
+    auto environment_uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
-    if (uv.x < 0) uv.x += 1;
-    return uv;
+    if (environment_uv.x < 0) environment_uv.x += 1;
+    return environment_uv;
 }
 // Evaluate the environment direction.
 vec3f evaluate_environment_direction(
-    const yocto_environment* environment, const vec2f& uv) {
+    const yocto_environment* environment, const vec2f& environment_uv) {
     return transform_direction(environment->frame,
-        {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
-            sin(uv.x * 2 * pif) * sin(uv.y * pif)});
+        {cos(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif), cos(environment_uv.y * pif),
+            sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
 }
 // Evaluate the environment color.
 vec3f evaluate_environment_emission(
-    const yocto_environment* environment, const vec3f& w) {
+    const yocto_environment* environment, const vec3f& direction) {
     auto ke = environment->emission;
     if (environment->emission_texture) {
         ke *= xyz(evaluate_texture(environment->emission_texture,
-            evaluate_environment_texturecoord(environment, w)));
+            evaluate_environment_texturecoord(environment, direction)));
     }
     return ke;
 }
 // Evaluate all environment color.
-vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& w) {
+vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& direction) {
     auto ke = zero3f;
     for (auto environment : scene->environments)
-        ke += evaluate_environment_emission(environment, w);
+        ke += evaluate_environment_emission(environment, direction);
     return ke;
 }
 

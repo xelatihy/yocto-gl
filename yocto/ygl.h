@@ -2661,17 +2661,17 @@ void build_bvh_embree(bvh_tree* bvh, bool high_quality = false);
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `dist`, the instance
 // id `iid`, the shape id `sid`, the shape element index `eid` and the
-// shape barycentric coordinates `uv`.
+// shape barycentric coordinates `element_uv`.
 bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& uv);
+    float& dist, int& iid, int& eid, vec2f& element_uv);
 
 // Find a shape element that overlaps a point within a given distance
 // `max_dist`, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance `dist`, the instance id `iid`, the
 // shape id `sid`, the shape element index `eid` and the shape barycentric
-// coordinates `uv`.
+// coordinates `element_uv`.
 bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& uv);
+    bool find_any, float& dist, int& iid, int& eid, vec2f& element_uv);
 
 }  // namespace ygl
 
@@ -3394,16 +3394,16 @@ scene_intersection intersect_scene(const yocto_scene* scene,
     const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f evaluate_shape_position(const yocto_shape* shape, int element_id, const vec2f& uv);
-vec3f evaluate_shape_normal(const yocto_shape* shape, int element_id, const vec2f& uv);
+vec3f evaluate_shape_position(const yocto_shape* shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_shape_normal(const yocto_shape* shape, int element_id, const vec2f& element_uv);
 vec2f evaluate_shape_texturecoord(
-    const yocto_shape* shape, int element_id, const vec2f& uv);
-vec4f evaluate_shape_color(const yocto_shape* shape, int element_id, const vec2f& uv);
-float evaluate_shape_radius(const yocto_shape* shape, int element_id, const vec2f& uv);
+    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+vec4f evaluate_shape_color(const yocto_shape* shape, int element_id, const vec2f& element_uv);
+float evaluate_shape_radius(const yocto_shape* shape, int element_id, const vec2f& element_uv);
 vec4f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int element_id, const vec2f& uv);
+    const yocto_shape* shape, int element_id, const vec2f& element_uv);
 vec3f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int element_id, const vec2f& uv, bool& left_handed);
+    const yocto_shape* shape, int element_id, const vec2f& element_uv, bool& left_handed);
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape* shape, int element_id);
 vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int element_id);
@@ -3411,26 +3411,26 @@ vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int element_
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
 vec3f evaluate_instance_position(
-    const yocto_instance* instance, int element_id, const vec2f& uv);
+    const yocto_instance* instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_normal(
-    const yocto_instance* instance, int element_id, const vec2f& uv);
+    const yocto_instance* instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_tangentspace(
-    const yocto_instance* instance, int element_id, const vec2f& uv, bool& left_handed);
+    const yocto_instance* instance, int element_id, const vec2f& element_uv, bool& left_handed);
 // Instance element values.
 vec3f evaluate_instance_element_normal(const yocto_instance* instance, int element_id);
 // Shading normals including material perturbations.
 vec3f evaluate_instance_shading_normal(
-    const yocto_instance* instance, int element_id, const vec2f& uv, const vec3f& o);
+    const yocto_instance* instance, int element_id, const vec2f& element_uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
-    const yocto_environment* environment, const vec3f& i);
-// Evaluate the incoming direction from the uv.
+    const yocto_environment* environment, const vec3f& direction);
+// Evaluate the incoming direction from the element_uv.
 vec3f evaluate_environment_direction(
-    const yocto_environment* environment, const vec2f& uv);
+    const yocto_environment* environment, const vec2f& environment_uv);
 // Evaluate the environment emission.
 vec3f evaluate_environment_emission(
-    const yocto_environment* environment, const vec3f& i);
+    const yocto_environment* environment, const vec3f& direction);
 // Evaluate all environment emission.
 vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& i);
 
