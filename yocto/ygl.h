@@ -2493,11 +2493,11 @@ inline tuple<int, vec2f> sample_quads_element(
 }
 inline tuple<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
-    auto ei = sample_discrete_distribution(cdf, re);
-    if (quads[ei].z == quads[ei].w) {
-        return {ei, sample_triangle_coordinates(ruv)};
+    auto element_id = sample_discrete_distribution(cdf, re);
+    if (quads[element_id].z == quads[element_id].w) {
+        return {element_id, sample_triangle_coordinates(ruv)};
     } else {
-        return {ei, ruv};
+        return {element_id, ruv};
     }
 }
 
@@ -3394,33 +3394,33 @@ scene_intersection intersect_scene(const yocto_scene* scene,
     const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f evaluate_shape_position(const yocto_shape* shape, int ei, const vec2f& uv);
-vec3f evaluate_shape_normal(const yocto_shape* shape, int ei, const vec2f& uv);
+vec3f evaluate_shape_position(const yocto_shape* shape, int element_id, const vec2f& uv);
+vec3f evaluate_shape_normal(const yocto_shape* shape, int element_id, const vec2f& uv);
 vec2f evaluate_shape_texturecoord(
-    const yocto_shape* shape, int ei, const vec2f& uv);
-vec4f evaluate_shape_color(const yocto_shape* shape, int ei, const vec2f& uv);
-float evaluate_shape_radius(const yocto_shape* shape, int ei, const vec2f& uv);
+    const yocto_shape* shape, int element_id, const vec2f& uv);
+vec4f evaluate_shape_color(const yocto_shape* shape, int element_id, const vec2f& uv);
+float evaluate_shape_radius(const yocto_shape* shape, int element_id, const vec2f& uv);
 vec4f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int ei, const vec2f& uv);
+    const yocto_shape* shape, int element_id, const vec2f& uv);
 vec3f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int ei, const vec2f& uv, bool& left_handed);
+    const yocto_shape* shape, int element_id, const vec2f& uv, bool& left_handed);
 // Shape element values.
-vec3f evaluate_shape_element_normal(const yocto_shape* shape, int ei);
-vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int ei);
+vec3f evaluate_shape_element_normal(const yocto_shape* shape, int element_id);
+vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int element_id);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
 vec3f evaluate_instance_position(
-    const yocto_instance* instance, int ei, const vec2f& uv);
+    const yocto_instance* instance, int element_id, const vec2f& uv);
 vec3f evaluate_instance_normal(
-    const yocto_instance* instance, int ei, const vec2f& uv);
+    const yocto_instance* instance, int element_id, const vec2f& uv);
 vec3f evaluate_instance_tangentspace(
-    const yocto_instance* instance, int ei, const vec2f& uv, bool& left_handed);
+    const yocto_instance* instance, int element_id, const vec2f& uv, bool& left_handed);
 // Instance element values.
-vec3f evaluate_instance_element_normal(const yocto_instance* instance, int ei);
+vec3f evaluate_instance_element_normal(const yocto_instance* instance, int element_id);
 // Shading normals including material perturbations.
 vec3f evaluate_instance_shading_normal(
-    const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o);
+    const yocto_instance* instance, int element_id, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
