@@ -4235,7 +4235,8 @@ vec3f evaluate_shape_normal(const yocto_shape* shape, int ei, const vec2f& uv) {
             evaluate_elem(shape, shape->normals, shape->quads_normals, ei, uv));
     return normalize(evaluate_elem(shape, shape->normals, ei, uv));
 }
-vec2f evaluate_shape_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv) {
+vec2f evaluate_shape_texturecoord(
+    const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->texturecoords.empty()) return uv;
     if (!shape->quads_positions.empty())
         return evaluate_elem(
@@ -4250,7 +4251,8 @@ float evaluate_shape_radius(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->radius.empty()) return 0.001f;
     return evaluate_elem(shape, shape->radius, ei, uv);
 }
-vec4f evaluate_shape_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv) {
+vec4f evaluate_shape_tangentspace(
+    const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->tangentspaces.empty())
         return evaluate_shape_element_tangentspace(shape, ei);
     return evaluate_elem(shape, shape->tangentspaces, ei, uv);
@@ -4298,11 +4300,13 @@ vec3f evaluate_shading_normal(
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f evaluate_instance_position(const yocto_instance* instance, int ei, const vec2f& uv) {
+vec3f evaluate_instance_position(
+    const yocto_instance* instance, int ei, const vec2f& uv) {
     return transform_point(
         instance->frame, evaluate_shape_position(instance->shape, ei, uv));
 }
-vec3f evaluate_shape_normal(const yocto_instance* instance, int ei, const vec2f& uv) {
+vec3f evaluate_shape_normal(
+    const yocto_instance* instance, int ei, const vec2f& uv) {
     return transform_direction(
         instance->frame, evaluate_shape_normal(instance->shape, ei, uv));
 }
@@ -4325,7 +4329,8 @@ vec3f evaluate_instance_shading_normal(const yocto_instance* instance, int ei,
 }
 
 // Environment texture coordinates from the direction.
-vec2f evaluate_environment_texturecoord(const yocto_environment* environment, const vec3f& w) {
+vec2f evaluate_environment_texturecoord(
+    const yocto_environment* environment, const vec3f& w) {
     auto wl = transform_direction_inverse(environment->frame, w);
     auto uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
@@ -4333,13 +4338,15 @@ vec2f evaluate_environment_texturecoord(const yocto_environment* environment, co
     return uv;
 }
 // Evaluate the environment direction.
-vec3f evaluate_environment_direction(const yocto_environment* environment, const vec2f& uv) {
+vec3f evaluate_environment_direction(
+    const yocto_environment* environment, const vec2f& uv) {
     return transform_direction(environment->frame,
         {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
             sin(uv.x * 2 * pif) * sin(uv.y * pif)});
 }
 // Evaluate the environment color.
-vec3f evaluate_environment_emission(const yocto_environment* environment, const vec3f& w) {
+vec3f evaluate_environment_emission(
+    const yocto_environment* environment, const vec3f& w) {
     auto ke = environment->emission;
     if (environment->emission_texture) {
         ke *= xyz(evaluate_texture(environment->emission_texture,
@@ -4592,13 +4599,15 @@ float evaluate_material_opacity(const yocto_material* material,
 // Evaluates the microfacet_brdf at a location.
 microfacet_brdf evaluate_material_brdf(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
-    auto brdf         = microfacet_brdf();
-    brdf.diffuse      = evaluate_material_diffuse(material, texturecoord, shape_color);
-    brdf.specular     = evaluate_material_specular(material, texturecoord, shape_color);
+    auto brdf    = microfacet_brdf();
+    brdf.diffuse = evaluate_material_diffuse(material, texturecoord, shape_color);
+    brdf.specular = evaluate_material_specular(
+        material, texturecoord, shape_color);
     brdf.transmission = evaluate_material_transmission(
         material, texturecoord, shape_color);
-    brdf.roughness = evaluate_material_roughness(material, texturecoord, shape_color);
-    brdf.refract   = material->refract;
+    brdf.roughness = evaluate_material_roughness(
+        material, texturecoord, shape_color);
+    brdf.refract = material->refract;
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
     } else if (brdf.roughness <= 0.03f * 0.03f)
@@ -4861,13 +4870,14 @@ trace_point make_trace_point(const yocto_instance* instance, int element_id,
     point.instance   = instance;
     point.element_id = element_id;
     point.element_uv = element_uv;
-    point.position   = evaluate_instance_position(instance, element_id, element_uv);
-    point.normal     = evaluate_instance_shading_normal(
+    point.position = evaluate_instance_position(instance, element_id, element_uv);
+    point.normal   = evaluate_instance_shading_normal(
         instance, element_id, element_uv, -shading_direction);
     point.texturecoord = evaluate_shape_texturecoord(
         instance->shape, element_id, element_uv);
-    auto shape_color = evaluate_shape_color(instance->shape, element_id, element_uv);
-    point.emission   = evaluate_material_emission(
+    auto shape_color = evaluate_shape_color(
+        instance->shape, element_id, element_uv);
+    point.emission = evaluate_material_emission(
         instance->shape->material, point.texturecoord, shape_color);
     point.brdf = evaluate_material_brdf(
         instance->shape->material, point.texturecoord, shape_color);
@@ -4922,8 +4932,8 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
                 isec.instance->shape, isec.element_id, isec.element_uv));
         if (op > 0.999f) return isec;
         if (get_random_float(rng) < op) return isec;
-        ray = make_ray(
-            evaluate_instance_position(isec.instance, isec.element_id, isec.element_uv),
+        ray = make_ray(evaluate_instance_position(
+                           isec.instance, isec.element_id, isec.element_uv),
             ray.d);
     }
     return {};
@@ -5571,7 +5581,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
         }
 
         isec = intersect_scene(scene, bvh, make_ray(lp, incoming));  //@Hack:
-                                                                     //10? Don't
+                                                                     // 10? Don't
                                                                      // know...
     }
 
@@ -5735,7 +5745,8 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         if (isec.instance == nullptr && dist > scene_size) {
             if (emission) {
                 for (auto environment : scene->environments)
-                    radiance += weight * evaluate_environment_emission(environment, ray.d);
+                    radiance += weight * evaluate_environment_emission(
+                                             environment, ray.d);
             }
             return {radiance, false};
         }
@@ -5760,7 +5771,8 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
             // emission
             if (emission)
                 radiance += weight *
-                            evaluate_material_emission(isec.instance->shape->material,
+                            evaluate_material_emission(
+                                isec.instance->shape->material,
                                 evaluate_shape_texturecoord(isec.instance->shape,
                                     isec.element_id, isec.element_uv),
                                 evaluate_shape_color(isec.instance->shape,
@@ -6127,7 +6139,8 @@ tuple<vec3f, bool> trace_environment(const yocto_scene* scene,
 
     // accumulate environment illumination
     if (next_pdf)
-        radiance += brdf_cosine * evaluate_environment_emission(scene, next_direction) /
+        radiance += brdf_cosine *
+                    evaluate_environment_emission(scene, next_direction) /
                     next_pdf;
 
     // done
