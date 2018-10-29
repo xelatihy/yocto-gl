@@ -3394,38 +3394,38 @@ scene_intersection intersect_scene(const yocto_scene* scene,
     const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f evaluate_position(const yocto_shape* shape, int ei, const vec2f& uv);
-vec3f evaluate_normal(const yocto_shape* shape, int ei, const vec2f& uv);
-vec2f evaluate_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv);
-vec4f evaluate_color(const yocto_shape* shape, int ei, const vec2f& uv);
-float evaluate_radius(const yocto_shape* shape, int ei, const vec2f& uv);
-vec4f evaluate_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv);
-vec3f evaluate_tangentspace(
+vec3f evaluate_shape_position(const yocto_shape* shape, int ei, const vec2f& uv);
+vec3f evaluate_shape_normal(const yocto_shape* shape, int ei, const vec2f& uv);
+vec2f evaluate_shape_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv);
+vec4f evaluate_shape_color(const yocto_shape* shape, int ei, const vec2f& uv);
+float evaluate_shape_radius(const yocto_shape* shape, int ei, const vec2f& uv);
+vec4f evaluate_shape_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv);
+vec3f evaluate_shape_tangentspace(
     const yocto_shape* shape, int ei, const vec2f& uv, bool& left_handed);
 // Shape element values.
-vec3f evaluate_element_normal(const yocto_shape* shape, int ei);
-vec4f evaluate_element_tangentspace(const yocto_shape* shape, int ei);
+vec3f evaluate_shape_element_normal(const yocto_shape* shape, int ei);
+vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int ei);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f evaluate_position(const yocto_instance* instance, int ei, const vec2f& uv);
-vec3f evaluate_normal(const yocto_instance* instance, int ei, const vec2f& uv);
-vec3f evaluate_tangentspace(
+vec3f evaluate_instance_position(const yocto_instance* instance, int ei, const vec2f& uv);
+vec3f evaluate_instance_normal(const yocto_instance* instance, int ei, const vec2f& uv);
+vec3f evaluate_instance_tangentspace(
     const yocto_instance* instance, int ei, const vec2f& uv, bool& left_handed);
 // Instance element values.
-vec3f evaluate_element_normal(const yocto_instance* instance, int ei);
+vec3f evaluate_instance_element_normal(const yocto_instance* instance, int ei);
 // Shading normals including material perturbations.
-vec3f evaluate_shading_normal(
+vec3f evaluate_instance_shading_normal(
     const yocto_instance* instance, int ei, const vec2f& uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
-vec2f evaluate_texturecoord(const yocto_environment* environment, const vec3f& i);
+vec2f evaluate_environment_texturecoord(const yocto_environment* environment, const vec3f& i);
 // Evaluate the incoming direction from the uv.
-vec3f evaluate_direction(const yocto_environment* environment, const vec2f& uv);
+vec3f evaluate_environment_direction(const yocto_environment* environment, const vec2f& uv);
 // Evaluate the environment emission.
-vec3f evaluate_emission(const yocto_environment* environment, const vec3f& i);
+vec3f evaluate_environment_emission(const yocto_environment* environment, const vec3f& i);
 // Evaluate all environment emission.
-vec3f evaluate_emission(const yocto_scene* scene, const vec3f& i);
+vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& i);
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture* texture);
@@ -3458,17 +3458,17 @@ ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f evaluate_emission(const yocto_material* material,
+vec3f evaluate_material_emission(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_diffuse(const yocto_material* material,
+vec3f evaluate_material_diffuse(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_specular(const yocto_material* material,
+vec3f evaluate_material_specular(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_transmission(const yocto_material* material,
+vec3f evaluate_material_transmission(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_roughness(const yocto_material* material,
+float evaluate_material_roughness(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_opacity(const yocto_material* material,
+float evaluate_material_opacity(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
 
 // Material values packed into a convenience structure.
@@ -3479,7 +3479,7 @@ struct microfacet_brdf {
     float roughness    = 1;
     bool  refract      = false;
 };
-microfacet_brdf evaluate_brdf(const yocto_material* material,
+microfacet_brdf evaluate_material_brdf(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
 bool            is_bsdf_delta(const microfacet_brdf& f);
 

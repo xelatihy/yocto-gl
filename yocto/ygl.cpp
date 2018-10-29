@@ -3884,7 +3884,7 @@ vec3f sample_environment_direction(const yocto_environment* environment,
         auto size = evaluate_texture_size(texture);
         auto u    = (idx % size.x + 0.5f) / size.x;
         auto v    = (idx / size.x + 0.5f) / size.y;
-        return evaluate_direction(environment, {u, v});
+        return evaluate_environment_direction(environment, {u, v});
     } else {
         return sample_sphere_direction(ruv);
     }
@@ -3896,7 +3896,7 @@ float sample_environment_direction_pdf(const yocto_environment* environment,
     auto texture = environment->emission_texture;
     if (!texels_cdf.empty() && texture) {
         auto size     = evaluate_texture_size(texture);
-        auto texcoord = evaluate_texturecoord(environment, direction);
+        auto texcoord = evaluate_environment_texturecoord(environment, direction);
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
@@ -4137,7 +4137,7 @@ scene_intersection intersect_scene(const yocto_scene* scene,
 }
 
 // Shape element normal.
-vec3f evaluate_element_normal(const yocto_shape* shape, int ei) {
+vec3f evaluate_shape_element_normal(const yocto_shape* shape, int ei) {
     auto norm = zero3f;
     if (!shape->triangles.empty()) {
         auto t = shape->triangles[ei];
@@ -4161,7 +4161,7 @@ vec3f evaluate_element_normal(const yocto_shape* shape, int ei) {
 }
 
 // Shape element normal.
-vec4f evaluate_element_tangentspace(const yocto_shape* shape, int ei) {
+vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int ei) {
     auto tangsp = zero4f;
     if (!shape->triangles.empty()) {
         auto t    = shape->triangles[ei];
@@ -4225,40 +4225,40 @@ T evaluate_elem(const yocto_shape* shape, const vector<T>& vals,
 }
 
 // Shape values interpolated using barycentric coordinates
-vec3f evaluate_position(const yocto_shape* shape, int ei, const vec2f& uv) {
+vec3f evaluate_shape_position(const yocto_shape* shape, int ei, const vec2f& uv) {
     return evaluate_elem(shape, shape->positions, ei, uv);
 }
-vec3f evaluate_normal(const yocto_shape* shape, int ei, const vec2f& uv) {
-    if (shape->normals.empty()) return evaluate_element_normal(shape, ei);
+vec3f evaluate_shape_normal(const yocto_shape* shape, int ei, const vec2f& uv) {
+    if (shape->normals.empty()) return evaluate_shape_element_normal(shape, ei);
     if (!shape->quads_positions.empty())
         return normalize(
             evaluate_elem(shape, shape->normals, shape->quads_normals, ei, uv));
     return normalize(evaluate_elem(shape, shape->normals, ei, uv));
 }
-vec2f evaluate_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv) {
+vec2f evaluate_shape_texturecoord(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->texturecoords.empty()) return uv;
     if (!shape->quads_positions.empty())
         return evaluate_elem(
             shape, shape->texturecoords, shape->quads_texturecoords, ei, uv);
     return evaluate_elem(shape, shape->texturecoords, ei, uv);
 }
-vec4f evaluate_color(const yocto_shape* shape, int ei, const vec2f& uv) {
+vec4f evaluate_shape_color(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->colors.empty()) return {1, 1, 1, 1};
     return evaluate_elem(shape, shape->colors, ei, uv);
 }
-float evaluate_radius(const yocto_shape* shape, int ei, const vec2f& uv) {
+float evaluate_shape_radius(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->radius.empty()) return 0.001f;
     return evaluate_elem(shape, shape->radius, ei, uv);
 }
-vec4f evaluate_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv) {
+vec4f evaluate_shape_tangentspace(const yocto_shape* shape, int ei, const vec2f& uv) {
     if (shape->tangentspaces.empty())
-        return evaluate_element_tangentspace(shape, ei);
+        return evaluate_shape_element_tangentspace(shape, ei);
     return evaluate_elem(shape, shape->tangentspaces, ei, uv);
 }
-vec3f evaluate_tangentspace(
+vec3f evaluate_shape_tangentspace(
     const yocto_shape* shape, int ei, const vec2f& uv, bool& left_handed) {
     auto tangsp = (shape->tangentspaces.empty()) ?
-                      evaluate_element_tangentspace(shape, ei) :
+                      evaluate_shape_element_tangentspace(shape, ei) :
                       evaluate_elem(shape, shape->tangentspaces, ei, uv);
     left_handed = tangsp.w < 0;
     return {tangsp.x, tangsp.y, tangsp.z};
@@ -4267,9 +4267,9 @@ vec3f evaluate_tangentspace(
 vec3f evaluate_shading_normal(
     const yocto_shape* shape, int ei, const vec2f& uv, const vec3f& outgoing) {
     if (!shape->triangles.empty()) {
-        auto normal = evaluate_normal(shape, ei, uv);
+        auto normal = evaluate_shape_normal(shape, ei, uv);
         if (shape->material && shape->material->normal_texture) {
-            auto texcoord    = evaluate_texturecoord(shape, ei, uv);
+            auto texcoord    = evaluate_shape_texturecoord(shape, ei, uv);
             auto left_handed = false;
             auto texture     = xyz(
                 evaluate_texture(shape->material->normal_texture, texcoord));
@@ -4277,7 +4277,7 @@ vec3f evaluate_shading_normal(
             texture.y = -texture.y;  // flip vertical axis to align green with
                                      // image up
             auto tu = orthonormalize(
-                evaluate_tangentspace(shape, ei, uv, left_handed), normal);
+                evaluate_shape_tangentspace(shape, ei, uv, left_handed), normal);
             auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
             normal = normalize(
                 texture.x * tu + texture.y * tv + texture.z * normal);
@@ -4287,37 +4287,37 @@ vec3f evaluate_shading_normal(
             normal = -normal;
         return normal;
     } else if (!shape->quads.empty()) {
-        return evaluate_normal(shape, ei, uv);
+        return evaluate_shape_normal(shape, ei, uv);
     } else if (!shape->lines.empty()) {
-        return orthonormalize(outgoing, evaluate_normal(shape, ei, uv));
+        return orthonormalize(outgoing, evaluate_shape_normal(shape, ei, uv));
     } else if (!shape->quads_positions.empty()) {
-        return evaluate_normal(shape, ei, uv);
+        return evaluate_shape_normal(shape, ei, uv);
     } else {
         return outgoing;
     }
 }
 
 // Instance values interpolated using barycentric coordinates.
-vec3f evaluate_position(const yocto_instance* instance, int ei, const vec2f& uv) {
+vec3f evaluate_instance_position(const yocto_instance* instance, int ei, const vec2f& uv) {
     return transform_point(
-        instance->frame, evaluate_position(instance->shape, ei, uv));
+        instance->frame, evaluate_shape_position(instance->shape, ei, uv));
 }
-vec3f evaluate_normal(const yocto_instance* instance, int ei, const vec2f& uv) {
+vec3f evaluate_shape_normal(const yocto_instance* instance, int ei, const vec2f& uv) {
     return transform_direction(
-        instance->frame, evaluate_normal(instance->shape, ei, uv));
+        instance->frame, evaluate_shape_normal(instance->shape, ei, uv));
 }
-vec3f evaluate_tangentspace(const yocto_instance* instance, int ei,
+vec3f evaluate_instance_tangentspace(const yocto_instance* instance, int ei,
     const vec2f& uv, bool& left_handed) {
     return transform_direction(instance->frame,
-        evaluate_tangentspace(instance->shape, ei, uv, left_handed));
+        evaluate_shape_tangentspace(instance->shape, ei, uv, left_handed));
 }
 // Instance element values.
-vec3f evaluate_element_normal(const yocto_instance* instance, int ei) {
+vec3f evaluate_instance_element_normal(const yocto_instance* instance, int ei) {
     return transform_direction(
-        instance->frame, evaluate_element_normal(instance->shape, ei));
+        instance->frame, evaluate_shape_element_normal(instance->shape, ei));
 }
 // Shading normals including material perturbations.
-vec3f evaluate_shading_normal(const yocto_instance* instance, int ei,
+vec3f evaluate_instance_shading_normal(const yocto_instance* instance, int ei,
     const vec2f& uv, const vec3f& outgoing) {
     return transform_direction(instance->frame,
         evaluate_shading_normal(instance->shape, ei, uv,
@@ -4325,7 +4325,7 @@ vec3f evaluate_shading_normal(const yocto_instance* instance, int ei,
 }
 
 // Environment texture coordinates from the direction.
-vec2f evaluate_texturecoord(const yocto_environment* environment, const vec3f& w) {
+vec2f evaluate_environment_texturecoord(const yocto_environment* environment, const vec3f& w) {
     auto wl = transform_direction_inverse(environment->frame, w);
     auto uv = vec2f{
         atan2(wl.z, wl.x) / (2 * pif), acos(clamp(wl.y, -1.0f, 1.0f)) / pif};
@@ -4333,25 +4333,25 @@ vec2f evaluate_texturecoord(const yocto_environment* environment, const vec3f& w
     return uv;
 }
 // Evaluate the environment direction.
-vec3f evaluate_direction(const yocto_environment* environment, const vec2f& uv) {
+vec3f evaluate_environment_direction(const yocto_environment* environment, const vec2f& uv) {
     return transform_direction(environment->frame,
         {cos(uv.x * 2 * pif) * sin(uv.y * pif), cos(uv.y * pif),
             sin(uv.x * 2 * pif) * sin(uv.y * pif)});
 }
 // Evaluate the environment color.
-vec3f evaluate_emission(const yocto_environment* environment, const vec3f& w) {
+vec3f evaluate_environment_emission(const yocto_environment* environment, const vec3f& w) {
     auto ke = environment->emission;
     if (environment->emission_texture) {
         ke *= xyz(evaluate_texture(environment->emission_texture,
-            evaluate_texturecoord(environment, w)));
+            evaluate_environment_texturecoord(environment, w)));
     }
     return ke;
 }
 // Evaluate all environment color.
-vec3f evaluate_emission(const yocto_scene* scene, const vec3f& w) {
+vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& w) {
     auto ke = zero3f;
     for (auto environment : scene->environments)
-        ke += evaluate_emission(environment, w);
+        ke += evaluate_environment_emission(environment, w);
     return ke;
 }
 
@@ -4520,13 +4520,13 @@ ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
 }
 
 // Evaluates material parameters.
-vec3f evaluate_emission(const yocto_material* material,
+vec3f evaluate_material_emission(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
     return material->emission * xyz(shape_color) *
            xyz(evaluate_texture(material->emission_texture, texturecoord));
 }
-vec3f evaluate_diffuse(const yocto_material* material,
+vec3f evaluate_material_diffuse(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
     if (!material->base_metallic) {
@@ -4540,7 +4540,7 @@ vec3f evaluate_diffuse(const yocto_material* material,
         return kb * (1 - km);
     }
 }
-vec3f evaluate_specular(const yocto_material* material,
+vec3f evaluate_material_specular(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
     if (!material->base_metallic) {
@@ -4554,7 +4554,7 @@ vec3f evaluate_specular(const yocto_material* material,
         return kb * km + vec3f{0.04f, 0.04f, 0.04f} * (1 - km);
     }
 }
-float evaluate_roughness(const yocto_material* material,
+float evaluate_material_roughness(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return 1;
     if (!material->base_metallic) {
@@ -4576,13 +4576,13 @@ float evaluate_roughness(const yocto_material* material,
         return rs * rs;
     }
 }
-vec3f evaluate_transmission(const yocto_material* material,
+vec3f evaluate_material_transmission(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return zero3f;
     return material->transmission * xyz(shape_color) *
            xyz(evaluate_texture(material->transmission_texture, texturecoord));
 }
-float evaluate_opacity(const yocto_material* material,
+float evaluate_material_opacity(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
     if (!material) return 1;
     return material->opacity * shape_color.w *
@@ -4590,14 +4590,14 @@ float evaluate_opacity(const yocto_material* material,
 }
 
 // Evaluates the microfacet_brdf at a location.
-microfacet_brdf evaluate_brdf(const yocto_material* material,
+microfacet_brdf evaluate_material_brdf(const yocto_material* material,
     const vec2f& texturecoord, const vec4f& shape_color) {
     auto brdf         = microfacet_brdf();
-    brdf.diffuse      = evaluate_diffuse(material, texturecoord, shape_color);
-    brdf.specular     = evaluate_specular(material, texturecoord, shape_color);
-    brdf.transmission = evaluate_transmission(
+    brdf.diffuse      = evaluate_material_diffuse(material, texturecoord, shape_color);
+    brdf.specular     = evaluate_material_specular(material, texturecoord, shape_color);
+    brdf.transmission = evaluate_material_transmission(
         material, texturecoord, shape_color);
-    brdf.roughness = evaluate_roughness(material, texturecoord, shape_color);
+    brdf.roughness = evaluate_material_roughness(material, texturecoord, shape_color);
     brdf.refract   = material->refract;
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
@@ -4861,17 +4861,17 @@ trace_point make_trace_point(const yocto_instance* instance, int element_id,
     point.instance   = instance;
     point.element_id = element_id;
     point.element_uv = element_uv;
-    point.position   = evaluate_position(instance, element_id, element_uv);
-    point.normal     = evaluate_shading_normal(
+    point.position   = evaluate_instance_position(instance, element_id, element_uv);
+    point.normal     = evaluate_instance_shading_normal(
         instance, element_id, element_uv, -shading_direction);
-    point.texturecoord = evaluate_texturecoord(
+    point.texturecoord = evaluate_shape_texturecoord(
         instance->shape, element_id, element_uv);
-    auto shape_color = evaluate_color(instance->shape, element_id, element_uv);
-    point.emission   = evaluate_emission(
+    auto shape_color = evaluate_shape_color(instance->shape, element_id, element_uv);
+    point.emission   = evaluate_material_emission(
         instance->shape->material, point.texturecoord, shape_color);
-    point.brdf = evaluate_brdf(
+    point.brdf = evaluate_material_brdf(
         instance->shape->material, point.texturecoord, shape_color);
-    point.opacity = evaluate_opacity(
+    point.opacity = evaluate_material_opacity(
         instance->shape->material, point.texturecoord, shape_color);
     return point;
 }
@@ -4886,7 +4886,7 @@ trace_point trace_ray(const yocto_scene* scene, const bvh_tree* bvh,
             isec.instance, isec.element_id, isec.element_uv, direction);
     } else {
         auto point     = trace_point();
-        point.emission = evaluate_emission(scene, direction);
+        point.emission = evaluate_environment_emission(scene, direction);
         return point;
     }
 }
@@ -4915,15 +4915,15 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
         _trace_nrays += 1;
         auto isec = intersect_scene(scene, bvh, ray);
         if (!isec.instance) return isec;
-        auto op = evaluate_opacity(isec.instance->shape->material,
-            evaluate_texturecoord(
+        auto op = evaluate_material_opacity(isec.instance->shape->material,
+            evaluate_shape_texturecoord(
                 isec.instance->shape, isec.element_id, isec.element_uv),
-            evaluate_color(
+            evaluate_shape_color(
                 isec.instance->shape, isec.element_id, isec.element_uv));
         if (op > 0.999f) return isec;
         if (get_random_float(rng) < op) return isec;
         ray = make_ray(
-            evaluate_position(isec.instance, isec.element_id, isec.element_uv),
+            evaluate_instance_position(isec.instance, isec.element_id, isec.element_uv),
             ray.d);
     }
     return {};
@@ -5266,7 +5266,7 @@ trace_point sample_lights_point(
     auto  ruv       = get_random_vec2f(rng);  // force order of evaluation
     auto  point     = sample_instance_point(instance, cdf, rel, ruv);
     auto  direction = normalize(position - point.position);
-    point.normal    = evaluate_shading_normal(
+    point.normal    = evaluate_instance_shading_normal(
         instance, point.element_id, point.element_uv, direction);
     return point;
 }
@@ -5289,7 +5289,7 @@ float sample_environment_light_direction_pdf(const yocto_environment* environmen
     auto texture = environment->emission_texture;
     if (!elem_cdf.empty() && texture) {
         auto size     = evaluate_texture_size(texture);
-        auto texcoord = evaluate_texturecoord(environment, incoming);
+        auto texcoord = evaluate_environment_texturecoord(environment, incoming);
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
@@ -5312,7 +5312,7 @@ vec3f sample_environment_light_direction(const yocto_environment* environment,
         auto size = evaluate_texture_size(texture);
         auto u    = (idx % size.x + 0.5f) / size.x;
         auto v    = (idx / size.x + 0.5f) / size.y;
-        return evaluate_direction(environment, {u, v});
+        return evaluate_environment_direction(environment, {u, v});
     } else {
         return sample_sphere_direction(ruv);
     }
@@ -5332,7 +5332,7 @@ vec3f sample_instance_direction(const yocto_instance* instance,
     const vector<float>& elem_cdf, const vec3f& p, float rel, const vec2f& ruv) {
     auto sample = sample_shape_element(instance->shape, elem_cdf, rel, ruv);
     return normalize(
-        evaluate_position(instance, get<0>(sample), get<1>(sample)) - p);
+        evaluate_instance_position(instance, get<0>(sample), get<1>(sample)) - p);
 }
 
 // Sample pdf for a light point.
@@ -5347,9 +5347,9 @@ float sample_instance_direction_pdf(const yocto_instance* instance,
     auto isec      = intersect_scene(instance, shape_bvh, ray);
     while (isec.instance) {
         // accumulate pdf
-        auto light_position = evaluate_position(
+        auto light_position = evaluate_instance_position(
             isec.instance, isec.element_id, isec.element_uv);
-        auto light_normal = evaluate_shading_normal(
+        auto light_normal = evaluate_instance_shading_normal(
             isec.instance, isec.element_id, isec.element_uv, direction);
         // prob triangle * area triangle = area triangle mesh
         auto area = elem_cdf.back();
@@ -5499,7 +5499,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, incoming), rng, 10);
         if (isec.instance == nullptr) {
-            le = evaluate_emission(environment, incoming);
+            le = evaluate_environment_emission(environment, incoming);
             return incoming;
         }
     }
@@ -5507,14 +5507,14 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     auto isec = intersect_scene(scene, bvh, make_ray(p, incoming));
 
     while (isec.instance) {
-        auto lp = evaluate_position(
+        auto lp = evaluate_instance_position(
             isec.instance, isec.element_id, isec.element_uv);
-        auto ln = evaluate_shading_normal(
+        auto ln = evaluate_instance_shading_normal(
             isec.instance, isec.element_id, isec.element_uv, -incoming);
-        auto emission = evaluate_emission(isec.instance->shape->material,
-            evaluate_texturecoord(
+        auto emission = evaluate_material_emission(isec.instance->shape->material,
+            evaluate_shape_texturecoord(
                 isec.instance->shape, isec.element_id, isec.element_uv),
-            evaluate_color(
+            evaluate_shape_color(
                 isec.instance->shape, isec.element_id, isec.element_uv));
 
         yocto_instance* medium = mediums.back();
@@ -5533,10 +5533,10 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
             break;
         }
 
-        auto brdf = evaluate_brdf(isec.instance->shape->material,
-            evaluate_texturecoord(
+        auto brdf = evaluate_material_brdf(isec.instance->shape->material,
+            evaluate_shape_texturecoord(
                 isec.instance->shape, isec.element_id, isec.element_uv),
-            evaluate_color(
+            evaluate_shape_color(
                 isec.instance->shape, isec.element_id, isec.element_uv));
         if (brdf.transmission == zero3f) {
             le = zero3f;
@@ -5735,7 +5735,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         if (isec.instance == nullptr && dist > scene_size) {
             if (emission) {
                 for (auto environment : scene->environments)
-                    radiance += weight * evaluate_emission(environment, ray.d);
+                    radiance += weight * evaluate_environment_emission(environment, ray.d);
             }
             return {radiance, false};
         }
@@ -5743,14 +5743,14 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         // surface intersection
         if (isec.instance) {
             auto outgoing = -ray.d;
-            auto p        = evaluate_position(
+            auto p        = evaluate_instance_position(
                 isec.instance, isec.element_id, isec.element_uv);
-            auto normal = evaluate_shading_normal(
+            auto normal = evaluate_instance_shading_normal(
                 isec.instance, isec.element_id, isec.element_uv, outgoing);
-            auto brdf = evaluate_brdf(isec.instance->shape->material,
-                evaluate_texturecoord(
+            auto brdf = evaluate_material_brdf(isec.instance->shape->material,
+                evaluate_shape_texturecoord(
                     isec.instance->shape, isec.element_id, isec.element_uv),
-                evaluate_color(
+                evaluate_shape_color(
                     isec.instance->shape, isec.element_id, isec.element_uv));
 
             // distance sampling pdf is unknown due to delta tracking, but we do
@@ -5760,10 +5760,10 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
             // emission
             if (emission)
                 radiance += weight *
-                            evaluate_emission(isec.instance->shape->material,
-                                evaluate_texturecoord(isec.instance->shape,
+                            evaluate_material_emission(isec.instance->shape->material,
+                                evaluate_shape_texturecoord(isec.instance->shape,
                                     isec.element_id, isec.element_uv),
-                                evaluate_color(isec.instance->shape,
+                                evaluate_shape_color(isec.instance->shape,
                                     isec.element_id, isec.element_uv));
 
             // early exit
@@ -6079,7 +6079,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
             point.brdf, point.normal, outgoing, next_direction);
         auto next_pdf = sample_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
-        auto emission = evaluate_emission(scene, next_direction);
+        auto emission = evaluate_environment_emission(scene, next_direction);
         if (next_pdf &&
             !intersect_scene_with_opacity(scene, bvh,
                 make_ray(point.position, next_direction), rng, max_bounces)
@@ -6127,7 +6127,7 @@ tuple<vec3f, bool> trace_environment(const yocto_scene* scene,
 
     // accumulate environment illumination
     if (next_pdf)
-        radiance += brdf_cosine * evaluate_emission(scene, next_direction) /
+        radiance += brdf_cosine * evaluate_environment_emission(scene, next_direction) /
                     next_pdf;
 
     // done
