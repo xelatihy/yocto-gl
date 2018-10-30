@@ -5385,10 +5385,11 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 }
 
 // Picks a point on a light.
-trace_point sample_instance_point(const yocto_scene* scene,
-    const yocto_instance* instance, const vector<float>& elements_cdf,
+trace_point sample_instance_point(const yocto_scene* scene, const trace_lights& lights,
+    const yocto_instance* instance, 
     float rel, const vec2f& ruv) {
     auto shape                  = scene->shapes[instance->shape];
+    auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
     auto element_id             = 0;
     auto element_uv             = zero2f;
     tie(element_id, element_uv) = sample_shape_element(
@@ -5397,11 +5398,12 @@ trace_point sample_instance_point(const yocto_scene* scene,
 }
 
 // Sample pdf for a light point.
-float sample_instance_point_pdf(const yocto_scene* scene,
-    const yocto_instance* instance, const vector<float>& elements_cdf,
+float sample_instance_point_pdf(const yocto_scene* scene, const trace_lights& lights,
+    const yocto_instance* instance,
     int element_id, const vec2f& element_uv) {
     auto shape    = scene->shapes[instance->shape];
     auto material = scene->materials[shape->material];
+    auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
     if (material->emission == zero3f) return 0;
     return sample_shape_element_pdf(shape, elements_cdf, element_id, element_uv);
 }
@@ -5413,10 +5415,9 @@ trace_point sample_lights_point(const yocto_scene* scene,
     auto light_id = sample_uniform_index(
         lights.instances.size(), get_random_float(rng));
     auto  instance  = lights.instances[light_id];
-    auto& cdf       = lights.shape_elements_cdf.at(instance->shape);
     auto  rel       = get_random_float(rng);  // force order of evaluation
     auto  ruv       = get_random_vec2f(rng);  // force order of evaluation
-    auto  point     = sample_instance_point(scene, instance, cdf, rel, ruv);
+    auto  point     = sample_instance_point(scene, lights, instance, rel, ruv);
     auto  direction = normalize(position - point.position);
     point.normal    = evaluate_instance_shading_normal(
         scene, instance, point.element_id, point.element_uv, direction);
@@ -5432,25 +5433,25 @@ float sample_lights_point_pdf(const yocto_scene* scene,
     if (lights.instances.empty()) return 0;
     if (material->emission == zero3f) return 0;
     auto  instance = light_point.instance;
-    auto& cdf      = lights.shape_elements_cdf.at(instance->shape);
-    return sample_instance_point_pdf(scene, instance, cdf,
+    return sample_instance_point_pdf(scene, lights, instance, 
                light_point.element_id, light_point.element_uv) *
            sample_uniform_index_pdf(lights.instances.size());
 }
 
 // Sample pdf for an environment.
-float sample_environment_light_direction_pdf(const yocto_scene* scene,
-    const yocto_environment* environment, const vector<float>& elem_cdf,
+float sample_environment_direction_pdf(const yocto_scene* scene, const trace_lights& lights,
+    const yocto_environment* environment,
     const vec3f& incoming) {
-    if (!elem_cdf.empty() && environment->emission_texture >= 0) {
+    if (environment->emission_texture >= 0) {
+        auto& elements_cdf = lights.environment_texture_cdf[environment->emission_texture];
         auto emission_texture = scene->textures[environment->emission_texture];
         auto size             = evaluate_texture_size(emission_texture);
         auto texcoord = evaluate_environment_texturecoord(environment, incoming);
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
         auto idx      = j * size.x + i;
-        auto prob     = sample_discrete_distribution_pdf(elem_cdf, idx) /
-                    elem_cdf.back();
+        auto prob     = sample_discrete_distribution_pdf(elements_cdf, idx) /
+                    elements_cdf.back();
         auto angle = (2 * pif / size.x) * (pif / size.y) *
                      sin(pif * (j + 0.5f) / size.y);
         return prob / angle;
@@ -5460,12 +5461,13 @@ float sample_environment_light_direction_pdf(const yocto_scene* scene,
 }
 
 // Picks a point on an environment.
-vec3f sample_environment_light_direction(const yocto_scene* scene,
-    const yocto_environment* environment, const vector<float>& elem_cdf,
+vec3f sample_environment_direction(const yocto_scene* scene, const trace_lights& lights,
+    const yocto_environment* environment, 
     float rel, const vec2f& ruv) {
-    if (!elem_cdf.empty() && environment->emission_texture >= 0) {
+    if (environment->emission_texture >= 0) {
+        auto& elements_cdf = lights.environment_texture_cdf[environment->emission_texture];
         auto emission_texture = scene->textures[environment->emission_texture];
-        auto idx              = sample_discrete_distribution(elem_cdf, rel);
+        auto idx              = sample_discrete_distribution(elements_cdf, rel);
         auto size             = evaluate_texture_size(emission_texture);
         auto u                = (idx % size.x + 0.5f) / size.x;
         auto v                = (idx / size.x + 0.5f) / size.y;
@@ -5475,34 +5477,36 @@ vec3f sample_environment_light_direction(const yocto_scene* scene,
     }
 }
 
-vec3f sample_environment_light_direction(const yocto_scene* scene,
-    const yocto_environment* environment, const vector<float>& elem_cdf,
+vec3f sample_environment_direction(const yocto_scene* scene, const trace_lights& lights,
+    const yocto_environment* environment,
     rng_state& rng) {
     auto rel = get_random_float(rng);  // force order of evaluation with
                                        // assignments
     auto ruv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
-    return sample_environment_light_direction(
-        scene, environment, elem_cdf, rel, ruv);
+    return sample_environment_direction(
+        scene, lights, environment, rel, ruv);
 }
 
 // Picks a point on a light.
-vec3f sample_instance_direction(const yocto_scene* scene,
-    const yocto_instance* instance, const vector<float>& elem_cdf,
+vec3f sample_instance_direction(const yocto_scene* scene,const trace_lights& lights, 
+    const yocto_instance* instance,
     const vec3f& p, float rel, const vec2f& ruv) {
     auto shape  = scene->shapes[instance->shape];
-    auto sample = sample_shape_element(shape, elem_cdf, rel, ruv);
+    auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
+    auto sample = sample_shape_element(shape, elements_cdf, rel, ruv);
     return normalize(evaluate_instance_position(
                          scene, instance, get<0>(sample), get<1>(sample)) -
                      p);
 }
 
 // Sample pdf for a light point.
-float sample_instance_direction_pdf(const yocto_scene* scene,
-    const yocto_instance* instance, const vector<float>& elem_cdf,
+float sample_instance_direction_pdf(const yocto_scene* scene,const trace_lights& lights, 
+    const yocto_instance* instance,
     const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
     auto shape    = scene->shapes[instance->shape];
     auto material = scene->materials[shape->material];
+    auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
     if (material->emission == zero3f) return 0;
     // check all intersection
     auto pdf       = 0.0f;
@@ -5516,7 +5520,7 @@ float sample_instance_direction_pdf(const yocto_scene* scene,
         auto light_normal = evaluate_instance_shading_normal(
             scene, isec.instance, isec.element_id, isec.element_uv, direction);
         // prob triangle * area triangle = area triangle mesh
-        auto area = elem_cdf.back();
+        auto area = elements_cdf.back();
         pdf += distance_squared(light_position, position) /
                (abs(dot(light_normal, direction)) * area);
         // continue
@@ -5535,24 +5539,17 @@ vec3f sample_lights_direction(const yocto_scene* scene,
         get_random_float(rng));
     if (light_id < lights.instances.size()) {
         auto  instance = lights.instances[light_id];
-        auto& cdf      = lights.shape_elements_cdf.at(instance->shape);
         auto  rel      = get_random_float(rng);  // force order of evaluation
         auto  ruv      = get_random_vec2f(rng);  // force order of evaluation
         return sample_instance_direction(
-            scene, instance, cdf, position, rel, ruv);
+            scene, lights, instance, position, rel, ruv);
     } else {
         auto environment = lights.environments[light_id -
                                                (int)lights.instances.size()];
         auto rel         = get_random_float(rng);  // force order of evaluation
         auto ruv         = get_random_vec2f(rng);  // force order of evaluation
-        if (environment->emission_texture >= 0) {
-            auto& cdf = lights.environment_texture_cdf.at(
-                environment->emission_texture);
             return sample_environment_direction(
-                scene, environment, cdf, rel, ruv);
-        } else {
-            return sample_environment_direction(scene, environment, {}, rel, ruv);
-        }
+                scene, lights, environment, rel, ruv);
     }
 }
 
@@ -5562,20 +5559,12 @@ float sample_lights_direction_pdf(const yocto_scene* scene,
     const vec3f& direction) {
     auto pdf = 0.0f;
     for (auto instance : lights.instances) {
-        auto& cdf = lights.shape_elements_cdf.at(instance->shape);
         pdf += sample_instance_direction_pdf(
-            scene, instance, cdf, bvh, position, direction);
+            scene, lights,instance, bvh, position, direction);
     }
     for (auto environment : lights.environments) {
-        if (environment->emission_texture >= 0) {
-            auto& cdf = lights.environment_texture_cdf.at(
-                environment->emission_texture);
             pdf += sample_environment_direction_pdf(
-                scene, environment, cdf, direction);
-        } else {
-            pdf += sample_environment_direction_pdf(
-                scene, environment, {}, direction);
-        }
+                scene, lights, environment, direction);
     }
     pdf *= sample_uniform_index_pdf(
         lights.instances.size() + lights.environments.size());
@@ -5666,25 +5655,15 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     pdf = 1.0f / (lights.instances.size() + lights.environments.size());
     if (idx < lights.instances.size()) {
         auto  instance = lights.instances[idx];
-        auto& cdf      = lights.shape_elements_cdf.at(instance->shape);
-        incoming       = sample_instance_direction(scene, instance, cdf, p,
+        incoming       = sample_instance_direction(scene, lights, instance, p,
             get_random_float(rng), get_random_vec2f(rng));
-        pdf *= 1.0 / cdf.back();
+        pdf *= 1.0 / lights.shape_elements_cdf[instance->shape].back();
     } else {
         auto environment = lights.environments[idx - lights.instances.size()];
-        if (environment->emission_texture >= 0) {
-            auto& cdf = lights.environment_texture_cdf.at(
-                environment->emission_texture);
-            incoming = sample_environment_direction(scene, environment, cdf,
+            incoming = sample_environment_direction(scene, lights, environment,
                 get_random_float(rng), get_random_vec2f(rng));
             pdf *= sample_environment_direction_pdf(
-                scene, environment, cdf, incoming);
-        } else {
-            incoming = sample_environment_direction(scene, environment, {},
-                get_random_float(rng), get_random_vec2f(rng));
-            pdf *= sample_environment_direction_pdf(
-                scene, environment, {}, incoming);
-        }
+                scene, lights, environment, incoming);
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, incoming), rng, 10);
         if (isec.instance == nullptr) {
