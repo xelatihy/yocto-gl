@@ -183,7 +183,7 @@ void draw_glwidgets(glwindow* win) {
     if (begin_glwidgets_window(win, "yimview")) {
         auto img = app->imgs.at(app->img_id);
         if (begin_header_glwidget(win, "image")) {
-            draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
+            draw_combobox_glwidget(win, "image", app->img_id, app->imgs, false);
             draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
             draw_textinput_glwidget(win, "outname", img->outname);
             if (draw_button_glwidget(win, "save display")) {

@@ -813,9 +813,15 @@ bool draw_combobox_glwidget(
 }
 
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
-    const vector<void*>& vals, const char* (*label)(void*)) {
+    const vector<void*>& vals, const char* (*label)(void*), bool include_null) {
     if (!ImGui::BeginCombo(lbl, label(vals.at(idx)))) return false;
     auto old_idx = idx;
+    if (include_null) {
+        ImGui::PushID(100000);
+        if (ImGui::Selectable("<none>", idx < 0)) idx = -1;
+        if (idx < 0) ImGui::SetItemDefaultFocus();
+        ImGui::PopID();
+    }
     for (auto i = 0; i < vals.size(); i++) {
         ImGui::PushID(i);
         if (ImGui::Selectable(label(vals.at(i)), idx == i)) idx = i;

@@ -1359,6 +1359,84 @@ bool parse_json_objref(
     return parse_json_objref(js.at(name), val, refs);
 }
 
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, int val, const vector<T*>& refs) {
+    return dump_json_value(js, val >= 0 ? refs[val]->name : ""s);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, int val, const char* name, const vector<T*>& refs) {
+    if (!val) return true;
+    return dump_json_objref(js[name], val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, const vector<int>& val, const vector<T*>& refs) {
+    js = json::array();
+    for (auto v : val) {
+        js.push_back({});
+        if (!dump_json_objref(js.back(), v, refs)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(
+    json& js, const vector<int>& val, const char* name, const vector<T*>& refs) {
+    if (val.empty()) return true;
+    return dump_json_objref(js[name], val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, int& val, const vector<T*>& refs) {
+    if (!js.is_string()) return false;
+    auto name = ""s;
+    if (!parse_json_value(js, name)) return false;
+    val = -1;
+    for (auto index = 0; index < refs.size(); index++) {
+        if (refs[index]->name == name) {
+            val = index;
+            break;
+        }
+    }
+    if (val < 0) return false;
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(
+    const json& js, int& val, const char* name, const vector<T*>& refs) {
+    if (!js.count(name)) return true;
+    val = -1;
+    return parse_json_objref(js.at(name), val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, vector<int>& val, const vector<T*>& refs) {
+    if (!js.is_array()) return false;
+    for (auto& j : js) {
+        val.push_back(-1);
+        if (!parse_json_objref(j, val.back(), refs)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(
+    const json& js, vector<int>& val, const char* name, const vector<T*>& refs) {
+    if (!js.count(name)) return true;
+    val = {};
+    return parse_json_objref(js.at(name), val, refs);
+}
+
 // Starts a json object
 bool dump_json_objbegin(json& js) {
     js = json::object();
@@ -2866,6 +2944,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
 
     // object maps
     auto tmap = unordered_map<string, yocto_texture*>();
+    auto tmap_ = unordered_map<string, int>();
     auto vmap = unordered_map<string, yocto_voltexture*>();
     auto mmap = unordered_map<string, yocto_material*>();
 
@@ -2931,6 +3010,27 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         tmap[info.path] = texture;
 
         return texture;
+    };
+    // Parse texture options and name
+    auto add_texture_ = [&scene, &tmap_](
+                           const obj_texture_info& info, bool force_linear) {
+        if (info.path == "") return -1;
+        if (tmap_.find(info.path) != tmap_.end()) {
+            return tmap_.at(info.path);
+        }
+
+        // create texture
+        auto texture           = new yocto_texture();
+        texture->name          = info.path;
+        texture->filename      = info.path;
+        texture->clamp_to_edge = info.clamp;
+        texture->height_scale  = info.scale;
+        texture->ldr_as_linear = force_linear || is_hdr_filename(info.path);
+        scene->textures.push_back(texture);
+        auto index = (int)scene->textures.size() - 1;
+        tmap_[info.path] = index;
+
+        return index;
     };
     // Parse texture options and name
     auto add_voltexture = [&scene, &vmap](
@@ -3143,7 +3243,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         auto environment              = new yocto_environment();
         environment->name             = oenv.name;
         environment->emission         = oenv.ke;
-        environment->emission_texture = add_texture(oenv.ke_txt, true);
+        environment->emission_texture = add_texture_(oenv.ke_txt, true);
         scene->environments.push_back(environment);
     };
 
@@ -3268,11 +3368,10 @@ bool save_objx(const string& filename, const yocto_scene* scene) {
 
     // environments
     for (auto environment : scene->environments) {
+        auto emission_filename = environment->emission_texture >= 0 ? scene->environments[environment->emission_texture]->name : ""s; 
         print(fs, "e {} {} {} {}\n", environment->name.c_str(),
-            environment->emission,
-            ((environment->emission_texture) ?
-                    environment->emission_texture->filename.c_str() :
-                    "\"\""),
+            environment->emission, emission_filename == "" ? emission_filename : 
+                    "\"\""s,
             environment->frame);
     }
 
@@ -4892,7 +4991,7 @@ yocto_scene* load_pbrt_scene(
                     texture->filename = jcmd.at("mapname").get<string>();
                     texture->name     = environment->name;
                     scene->textures.push_back(texture);
-                    environment->emission_texture = texture;
+                    environment->emission_texture = (int)scene->textures.size()-1;
                 }
                 scene->environments.push_back(environment);
             } else if (type == "distant") {
@@ -5386,8 +5485,8 @@ bool serialize_bin_object(yocto_environment* environment,
     if (!serialize_bin_value(environment->name, fs, save)) return false;
     if (!serialize_bin_value(environment->frame, fs, save)) return false;
     if (!serialize_bin_value(environment->emission, fs, save)) return false;
-    if (!serialize_bin_handle(
-            environment->emission_texture, scene->textures, fs, save))
+    if (!serialize_bin_value(
+            environment->emission_texture, fs, save))
         return false;
     return true;
 }

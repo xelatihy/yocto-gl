@@ -3861,10 +3861,10 @@ float sample_shape_element_pdf(const yocto_shape* shape,
 }
 
 // Update environment CDF for sampling.
-vector<float> compute_environment_texels_cdf(
+vector<float> compute_environment_texels_cdf(const yocto_scene* scene,
     const yocto_environment* environment) {
-    if (!environment->emission_texture) return {};
-    auto texture  = environment->emission_texture;
+    if (environment->emission_texture < 0) return {};
+    auto texture  = scene->textures[environment->emission_texture];
     auto size     = evaluate_texture_size(texture);
     auto elem_cdf = vector<float>(size.x * size.y);
     if (size != zero2i) {
@@ -3882,10 +3882,11 @@ vector<float> compute_environment_texels_cdf(
 }
 
 // Sample an environment based on texels
-vec3f sample_environment_direction(const yocto_environment* environment,
+vec3f sample_environment_direction(const yocto_scene* scene,
+    const yocto_environment* environment,
     const vector<float>& texels_cdf, float re, const vec2f& ruv) {
-    auto texture = environment->emission_texture;
-    if (!texels_cdf.empty() && texture) {
+    if (!texels_cdf.empty() && environment->emission_texture >= 0) {
+        auto texture = scene->textures[environment->emission_texture];
         auto idx  = sample_discrete_distribution(texels_cdf, re);
         auto size = evaluate_texture_size(texture);
         auto u    = (idx % size.x + 0.5f) / size.x;
@@ -3897,10 +3898,11 @@ vec3f sample_environment_direction(const yocto_environment* environment,
 }
 
 // Sample an environment based on texels
-float sample_environment_direction_pdf(const yocto_environment* environment,
+float sample_environment_direction_pdf(const yocto_scene* scene,
+    const yocto_environment* environment,
     const vector<float>& texels_cdf, const vec3f& direction) {
-    auto texture = environment->emission_texture;
-    if (!texels_cdf.empty() && texture) {
+    if (!texels_cdf.empty() && environment->emission_texture >= 0) {
+        auto texture = scene->textures[environment->emission_texture];
         auto size     = evaluate_texture_size(texture);
         auto texcoord = evaluate_environment_texturecoord(environment, direction);
         auto i        = (int)(texcoord.x * size.x);
@@ -4063,7 +4065,7 @@ void add_sky_environment(yocto_scene* scene, float sun_angle) {
     auto environment              = new yocto_environment();
     environment->name             = "<sky>";
     environment->emission         = {1, 1, 1};
-    environment->emission_texture = texture;
+    environment->emission_texture = (int)scene->textures.size()-1;
     scene->environments.push_back(environment);
 }
 
@@ -4366,11 +4368,12 @@ vec3f evaluate_environment_direction(
             sin(environment_uv.x * 2 * pif) * sin(environment_uv.y * pif)});
 }
 // Evaluate the environment color.
-vec3f evaluate_environment_emission(
+vec3f evaluate_environment_emission(const yocto_scene* scene, 
     const yocto_environment* environment, const vec3f& direction) {
     auto ke = environment->emission;
-    if (environment->emission_texture) {
-        ke *= xyz(evaluate_texture(environment->emission_texture,
+    if (environment->emission_texture >= 0) {
+        auto emission_texture = scene->textures[environment->emission_texture];
+        ke *= xyz(evaluate_texture(emission_texture,
             evaluate_environment_texturecoord(environment, direction)));
     }
     return ke;
@@ -4379,7 +4382,7 @@ vec3f evaluate_environment_emission(
 vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& direction) {
     auto ke = zero3f;
     for (auto environment : scene->environments)
-        ke += evaluate_environment_emission(environment, direction);
+        ke += evaluate_environment_emission(scene, environment, direction);
     return ke;
 }
 
@@ -5315,11 +5318,11 @@ float sample_lights_point_pdf(const trace_lights* lights, const vec3f& position,
 }
 
 // Sample pdf for an environment.
-float sample_environment_light_direction_pdf(const yocto_environment* environment,
+float sample_environment_light_direction_pdf(const yocto_scene* scene, const yocto_environment* environment,
     const vector<float>& elem_cdf, const vec3f& incoming) {
-    auto texture = environment->emission_texture;
-    if (!elem_cdf.empty() && texture) {
-        auto size     = evaluate_texture_size(texture);
+    if (!elem_cdf.empty() && environment->emission_texture >= 0) {
+        auto emission_texture = scene->textures[environment->emission_texture];
+        auto size     = evaluate_texture_size(emission_texture);
         auto texcoord = evaluate_environment_texturecoord(environment, incoming);
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
@@ -5335,12 +5338,12 @@ float sample_environment_light_direction_pdf(const yocto_environment* environmen
 }
 
 // Picks a point on an environment.
-vec3f sample_environment_light_direction(const yocto_environment* environment,
+vec3f sample_environment_light_direction(const yocto_scene* scene, const yocto_environment* environment,
     const vector<float>& elem_cdf, float rel, const vec2f& ruv) {
-    auto texture = environment->emission_texture;
-    if (!elem_cdf.empty() && texture) {
+    if (!elem_cdf.empty() && environment->emission_texture >= 0) {
+        auto emission_texture = scene->textures[environment->emission_texture];
         auto idx  = sample_discrete_distribution(elem_cdf, rel);
-        auto size = evaluate_texture_size(texture);
+        auto size = evaluate_texture_size(emission_texture);
         auto u    = (idx % size.x + 0.5f) / size.x;
         auto v    = (idx / size.x + 0.5f) / size.y;
         return evaluate_environment_direction(environment, {u, v});
@@ -5349,13 +5352,13 @@ vec3f sample_environment_light_direction(const yocto_environment* environment,
     }
 }
 
-vec3f sample_environment_light_direction(const yocto_environment* environment,
+vec3f sample_environment_light_direction(const yocto_scene* scene, const yocto_environment* environment,
     const vector<float>& elem_cdf, rng_state& rng) {
     auto rel = get_random_float(rng);  // force order of evaluation with
                                        // assignments
     auto ruv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
-    return sample_environment_light_direction(environment, elem_cdf, rel, ruv);
+    return sample_environment_light_direction(scene, environment, elem_cdf, rel, ruv);
 }
 
 // Picks a point on a light.
@@ -5394,7 +5397,7 @@ float sample_instance_direction_pdf(const yocto_instance* instance,
 }
 
 // Sample lights wrt solid angle
-vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
+vec3f sample_lights_direction(const yocto_scene* scene, const trace_lights* lights, const bvh_tree* bvh,
     const vec3f& position, rng_state& rng) {
     auto light_id = sample_uniform_index(
         lights->instances.size() + lights->environments.size(),
@@ -5408,16 +5411,16 @@ vec3f sample_lights_direction(const trace_lights* lights, const bvh_tree* bvh,
     } else {
         auto  environment = lights->environments[light_id -
                                                 (int)lights->instances.size()];
-        auto& cdf         = lights->environment_texture_cdf.at(
-            environment->emission_texture);
+        auto emission_texture = environment->emission_texture >= 0 ? scene->textures[environment->emission_texture] : nullptr;
+        auto& cdf         = lights->environment_texture_cdf.at(emission_texture);
         auto rel = get_random_float(rng);  // force order of evaluation
         auto ruv = get_random_vec2f(rng);  // force order of evaluation
-        return sample_environment_direction(environment, cdf, rel, ruv);
+        return sample_environment_direction(scene, environment, cdf, rel, ruv);
     }
 }
 
 // Sample lights pdf
-float sample_lights_direction_pdf(const trace_lights* lights,
+float sample_lights_direction_pdf(const yocto_scene* scene,const trace_lights* lights,
     const bvh_tree* bvh, const vec3f& position, const vec3f& direction) {
     auto pdf = 0.0f;
     for (auto instance : lights->instances) {
@@ -5426,9 +5429,9 @@ float sample_lights_direction_pdf(const trace_lights* lights,
             instance, cdf, bvh, position, direction);
     }
     for (auto environment : lights->environments) {
-        auto& cdf = lights->environment_texture_cdf.at(
-            environment->emission_texture);
-        pdf += sample_environment_direction_pdf(environment, cdf, direction);
+        auto emission_texture = environment->emission_texture >= 0 ? scene->textures[environment->emission_texture] : nullptr;
+        auto& cdf = lights->environment_texture_cdf.at(emission_texture);
+        pdf += sample_environment_direction_pdf(scene, environment, cdf, direction);
     }
     pdf *= sample_uniform_index_pdf(
         lights->instances.size() + lights->environments.size());
@@ -5436,22 +5439,22 @@ float sample_lights_direction_pdf(const trace_lights* lights,
 }
 
 // Sample a direction accoding to either ligts or brdf
-vec3f sample_lights_or_brdf_direction(const trace_lights* lights,
+vec3f sample_lights_or_brdf_direction(const yocto_scene* scene, const trace_lights* lights,
     const bvh_tree* bvh, const microfacet_brdf& brdf, const vec3f& position,
     const vec3f& normal, const vec3f& outgoing, rng_state& rng) {
     auto rmode = get_random_float(rng);
     if (rmode < 0.5f) {
-        return sample_lights_direction(lights, bvh, position, rng);
+        return sample_lights_direction(scene, lights, bvh, position, rng);
     } else {
         return sample_smooth_brdf_direction(brdf, normal, outgoing, rng);
     }
 }
 
 // Pdf for direction sampling
-float sample_lights_or_brdf_direction_pdf(const trace_lights* lights,
+float sample_lights_or_brdf_direction_pdf(const yocto_scene* scene,const trace_lights* lights,
     const bvh_tree* bvh, const microfacet_brdf& brdf, const vec3f& position,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
-    return 0.5f * sample_lights_direction_pdf(lights, bvh, position, incoming) +
+    return 0.5f * sample_lights_direction_pdf(scene, lights, bvh, position, incoming) +
            0.5f * sample_smooth_brdf_direction_pdf(
                       brdf, normal, outgoing, incoming);
 }
@@ -5522,15 +5525,15 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
         pdf *= 1.0 / cdf.back();
     } else {
         auto environment = lights->environments[idx - lights->instances.size()];
-        auto& cdf        = lights->environment_texture_cdf.at(
-            environment->emission_texture);
-        incoming = sample_environment_direction(
+        auto emission_texture = environment->emission_texture >= 0 ? scene->textures[environment->emission_texture] : nullptr;
+        auto& cdf        = lights->environment_texture_cdf.at(emission_texture);
+        incoming = sample_environment_direction(scene, 
             environment, cdf, get_random_float(rng), get_random_vec2f(rng));
-        pdf *= sample_environment_direction_pdf(environment, cdf, incoming);
+        pdf *= sample_environment_direction_pdf(scene, environment, cdf, incoming);
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, incoming), rng, 10);
         if (isec.instance == nullptr) {
-            le = evaluate_environment_emission(environment, incoming);
+            le = evaluate_environment_emission(scene, environment, incoming);
             return incoming;
         }
     }
@@ -5627,9 +5630,9 @@ tuple<vec3f, bool> trace_path(const yocto_scene* scene, const bvh_tree* bvh,
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
         if (!is_brdf_delta(point.brdf) && lights) {
-            auto light_direction = sample_lights_or_brdf_direction(lights, bvh,
+            auto light_direction = sample_lights_or_brdf_direction(scene, lights, bvh,
                 point.brdf, point.position, point.normal, outgoing, rng);
-            auto light_pdf   = sample_lights_or_brdf_direction_pdf(lights, bvh,
+            auto light_pdf   = sample_lights_or_brdf_direction_pdf(scene, lights, bvh,
                 point.brdf, point.position, point.normal, outgoing,
                 light_direction);
             auto light_point = trace_ray_with_opacity(
@@ -5766,7 +5769,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         if (isec.instance == nullptr && dist > scene_size) {
             if (emission) {
                 for (auto environment : scene->environments)
-                    radiance += weight * evaluate_environment_emission(
+                    radiance += weight * evaluate_environment_emission(scene, 
                                              environment, ray.d);
             }
             return {radiance, false};
@@ -6043,9 +6046,9 @@ tuple<vec3f, bool> trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
 
     // direct
     if (!is_brdf_delta(point.brdf) && lights) {
-        auto light_direction = sample_lights_or_brdf_direction(lights, bvh,
+        auto light_direction = sample_lights_or_brdf_direction(scene, lights, bvh,
             point.brdf, point.position, point.normal, outgoing, rng);
-        auto light_pdf       = sample_lights_or_brdf_direction_pdf(lights, bvh,
+        auto light_pdf       = sample_lights_or_brdf_direction_pdf(scene, lights, bvh,
             point.brdf, point.position, point.normal, outgoing, light_direction);
         auto light_point     = trace_ray_with_opacity(
             scene, bvh, point.position, light_direction, rng, max_bounces);
@@ -6414,10 +6417,11 @@ trace_lights* make_trace_lights(
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
         lights->environments.push_back(environment);
+        auto emission_texture = environment->emission_texture >= 0 ? scene->textures[environment->emission_texture] : nullptr;
         if (!contains(lights->environment_texture_cdf,
-                environment->emission_texture)) {
+                emission_texture)) {
             lights->environment_texture_cdf
-                [environment->emission_texture] = compute_environment_texels_cdf(
+                [emission_texture] = compute_environment_texels_cdf(scene,
                 environment);
         }
     }

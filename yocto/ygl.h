@@ -3233,7 +3233,7 @@ struct yocto_environment {
     string         name             = "";
     frame3f        frame            = identity_frame3f;
     vec3f          emission         = {0, 0, 0};
-    yocto_texture* emission_texture = nullptr;
+    int emission_texture = -1;
 };
 
 // Node in a transform hierarchy.
@@ -3411,7 +3411,7 @@ vec2f evaluate_environment_texturecoord(
 vec3f evaluate_environment_direction(
     const yocto_environment* environment, const vec2f& environment_uv);
 // Evaluate the environment emission.
-vec3f evaluate_environment_emission(
+vec3f evaluate_environment_emission(const yocto_scene* scene,
     const yocto_environment* environment, const vec3f& direction);
 // Evaluate all environment emission.
 vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& i);
@@ -3485,11 +3485,11 @@ float             sample_shape_element_pdf(const yocto_shape* shape,
                 const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Sample an environment based on either texel values of uniform
-vector<float> compute_environment_texels_cdf(
+vector<float> compute_environment_texels_cdf(const yocto_scene* scene,
     const yocto_environment* environment);
-vec3f sample_environment_direction(const yocto_environment* environment,
+vec3f sample_environment_direction(const yocto_scene* scene,const yocto_environment* environment,
     const vector<float>& texels_cdf, float re, const vec2f& ruv);
-float sample_environment_direction_pdf(const yocto_environment* environment,
+float sample_environment_direction_pdf(const yocto_scene* scene,const yocto_environment* environment,
     const vector<float>& texels_cdf, const vec3f& direction);
 
 }  // namespace ygl
