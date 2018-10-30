@@ -74,7 +74,7 @@ inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
 template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_shape>(glwindow* win,
     const string& lbl_, yocto_scene* scene, yocto_shape* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "material", scene, val->material, sel);
+    draw_glwidgets_scene_tree(win, "material", scene, val->material, scene->materials, sel);
 }
 
 template <>

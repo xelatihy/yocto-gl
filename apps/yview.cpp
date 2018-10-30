@@ -468,9 +468,8 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(draw_glstate* state, const yocto_shape* shape,
+void draw_glshape(draw_glstate* state, const yocto_shape* shape, const yocto_material* mat,
     const frame3f& frame, bool highlighted, bool eyelight, bool edges) {
-    auto mat   = shape->material;
     auto xform = frame_to_mat(frame);
 
     set_gluniform(state->prog, "shape_xform", xform);
@@ -589,7 +588,8 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
         for (auto lgt : scene->instances) {
-            if (lgt->shape->material->emission == zero3f) continue;
+            auto material = scene->materials[lgt->shape->material];
+            if (material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto shape = lgt->shape;
             auto bbox  = compute_shape_bounds(shape);
@@ -611,7 +611,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
             } else {
                 area += shape->positions.size();
             }
-            auto ke = lgt->shape->material->emission * area;
+            auto ke = material->emission * area;
             lights_pos.push_back(transform_point(lgt->frame, pos));
             lights_ke.push_back(ke);
             lights_type.push_back(0);
@@ -631,9 +631,9 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
 
     if (wireframe) set_glwireframe(true);
     for (auto instance : scene->instances) {
-        draw_glshape(state, instance->shape, instance->frame,
-            instance == highlighted || instance->shape == highlighted ||
-                instance->shape->material == highlighted,
+        auto material = scene->materials[instance->shape->material];
+        draw_glshape(state, instance->shape, material, instance->frame,
+            instance == highlighted || instance->shape == highlighted,
             eyelight, edges);
     }
 

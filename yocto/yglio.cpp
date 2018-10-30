@@ -2948,7 +2948,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     // object maps
     auto tmap = unordered_map<string, int>();
     auto vmap = unordered_map<string, int>();
-    auto mmap = unordered_map<string, yocto_material*>();
+    auto mmap = unordered_map<string, int>();
 
     // vertex maps
     auto name_map     = unordered_map<string, int>();
@@ -3209,7 +3209,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         mat->volume_phaseg          = omat.vg;
         mat->volume_density_texture = add_voltexture(omat.vd_txt, false);
         scene->materials.push_back(mat);
-        mmap[mat->name] = mat;
+        mmap[mat->name] = (int)scene->materials.size()-1;
     };
     cb.camera = [&](const obj_camera& ocam) {
         auto camera            = new yocto_camera();
@@ -3404,8 +3404,8 @@ bool save_obj(const string& filename, const yocto_scene* scene,
     auto offset = obj_vertex{0, 0, 0};
     for (auto instance : scene->instances) {
         print(fs, "o {}\n", instance->name);
-        if (instance->shape->material)
-            print(fs, "usemtl {}\n", instance->shape->material->name);
+        if (instance->shape->material>=0)
+            print(fs, "usemtl {}\n", scene->materials[instance->shape->material]->name);
         if (instance->frame == identity_frame3f) {
             for (auto& p : instance->shape->positions) print(fs, "v {}\n", p);
             for (auto& n : instance->shape->normals) print(fs, "vn {}\n", n);
@@ -3890,10 +3890,8 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                         log_error("unknown primitive type");
                     }
                 }
-                shape->material = (gprim.count("material")) ?
-                                      scene->materials.at(
-                                          gprim.value("material", -1)) :
-                                      nullptr;
+                shape->material = gprim.count("material") ?
+                                          gprim.value("material", -1) : -1;
                 meshes.back().push_back(shape);
                 scene->shapes.push_back(shape);
             }
@@ -4181,7 +4179,6 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     }
 
     // material
-    auto mmap = unordered_map<yocto_material*, int>();
     for (auto mat : scene->materials) {
         auto mjs           = json();
         mjs["name"]        = mat->name;
@@ -4217,7 +4214,6 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         if (mat->occlusion_texture >= 0)
             mjs["occlusionTexture"]["index"] = mat->occlusion_texture;
         js["materials"].push_back(mjs);
-        mmap[mat] = (int)js["materials"].size() - 1;
     }
 
     // shapes
@@ -4230,8 +4226,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         bjs["name"]       = shape->name;
         bjs["byteLength"] = 0;
         bjs["uri"]        = replace_extension(shape->filename, ".bin");
-        auto mat_it       = mmap.find(shape->material);
-        if (mat_it != mmap.end()) pjs["material"] = mat_it->second;
+        pjs["material"] = shape->material;
         auto add_accessor = [&js, &bjs, bid](
                                 int count, string type, bool indices = false) {
             auto bytes = count * 4;
@@ -4567,7 +4562,7 @@ yocto_scene* load_pbrt_scene(
 
     struct stack_item {
         frame3f         frame     = identity_frame3f;
-        yocto_material* mat       = nullptr;
+        int mat       = -1;
         yocto_material* light_mat = nullptr;
         float           focus = 1, aspect = 1;
         bool            reverse = false;
@@ -4579,7 +4574,7 @@ yocto_scene* load_pbrt_scene(
     stack.push_back(stack_item());
 
     auto txt_map = map<string, int>();
-    auto mat_map = map<string, yocto_material*>();
+    auto mat_map = map<string, int>();
     auto mid     = 0;
 
     auto get_vec3f = [](const json& js) -> vec3f {
@@ -4773,10 +4768,10 @@ yocto_scene* load_pbrt_scene(
                 scene->materials.push_back(mat);
                 if (cmd == "Material") {
                     mat->name        = "unnamed_mat" + std::to_string(mid++);
-                    stack.back().mat = mat;
+                    stack.back().mat = (int)scene->materials.size()-1;
                 } else {
                     mat->name          = jcmd.at("name").get<string>();
-                    mat_map[mat->name] = mat;
+                    mat_map[mat->name] = (int)scene->materials.size()-1;
                 }
                 auto type = "uber"s;
                 if (jcmd.count("type")) type = jcmd.at("type").get<string>();
@@ -4837,7 +4832,7 @@ yocto_scene* load_pbrt_scene(
                     if (jcmd.count("namedmaterial1")) {
                         auto mat1 = jcmd.at("namedmaterial1").get<string>();
                         auto saved_name = mat->name;
-                        *mat            = *mat_map.at(mat1);
+                        *mat            = *scene->materials[mat_map.at(mat1)];
                         mat->name       = saved_name;
                     } else {
                         printf("mix material missing front material\n");
@@ -4870,12 +4865,12 @@ yocto_scene* load_pbrt_scene(
         } else if (cmd == "NamedMaterial") {
             stack.back().mat = mat_map.at(jcmd.at("name").get<string>());
             if (stack.back().light_mat) {
-                auto mat = new yocto_material(*stack.back().mat);
+                auto mat = new yocto_material(*scene->materials[stack.back().mat]);
                 mat->name += "_" + std::to_string(lid++);
                 mat->emission         = stack.back().light_mat->emission;
                 mat->emission_texture = stack.back().light_mat->emission_texture;
                 scene->materials.push_back(mat);
-                stack.back().mat = mat;
+                stack.back().mat = (int)scene->materials.size()-1;
             }
         } else if (cmd == "Shape") {
             auto shape = new yocto_shape();
@@ -4962,9 +4957,9 @@ yocto_scene* load_pbrt_scene(
         } else if (cmd == "AreaLightSource") {
             auto type = jcmd.at("type").get<string>();
             if (type == "diffuse") {
-                auto lmat              = new yocto_material();
-                lmat->emission         = get_vec3f(jcmd.at("L"));
-                stack.back().light_mat = lmat;
+                auto ligth_mat = new yocto_material();
+                ligth_mat->emission = get_vec3f(jcmd.at("L"));
+                stack.back().light_mat = ligth_mat;
             } else {
                 printf("%s area light not supported\n", type.c_str());
             }
@@ -5007,14 +5002,14 @@ yocto_scene* load_pbrt_scene(
                 shape->triangles     = sshp.triangles;
                 scene->shapes.push_back(shape);
                 auto mat        = new yocto_material();
-                shape->material = mat;
+                scene->materials.push_back(mat);
+                shape->material = scene->materials.size()-1;
                 mat->name       = shape->name;
                 mat->emission   = {1, 1, 1};
                 if (jcmd.count("L")) mat->emission *= get_vec3f(jcmd.at("L"));
                 if (jcmd.count("scale"))
                     mat->emission *= get_vec3f(jcmd.at("scale"));
                 mat->emission *= (distant_dist * distant_dist) / (size * size);
-                scene->materials.push_back(mat);
                 auto instance   = new yocto_instance();
                 instance->name  = shape->name;
                 instance->shape = shape;
@@ -5165,13 +5160,14 @@ WorldEnd
 
     // convert instances
     for (auto instance : scene->instances) {
+        auto material = scene->materials[instance->shape->material];
         print(fs, "AttributeBegin\n");
         print(fs, "TransformBegin\n");
         print(fs, "ConcatTransform [{}]\n", frame_to_mat(instance->frame));
-        if (instance->shape->material->emission != zero3f)
+        if (material->emission != zero3f)
             print(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ {} ]\n",
-                instance->shape->material->emission);
-        print(fs, "NamedMaterial \"{}\"\n", instance->shape->material->name);
+                material->emission);
+        print(fs, "NamedMaterial \"{}\"\n", material->name);
         print(fs, "Shape \"plymesh\" \"string filename\" [\"{}\"]\n",
             instance->shape->filename.c_str());
         print(fs, "TransformEnd\n");
@@ -5439,7 +5435,7 @@ bool serialize_bin_object(
     yocto_shape* shape, const yocto_scene* scene, file_stream& fs, bool save) {
     if (!serialize_bin_value(shape->name, fs, save)) return false;
     if (!serialize_bin_value(shape->filename, fs, save)) return false;
-    if (!serialize_bin_handle(shape->material, scene->materials, fs, save))
+    if (!serialize_bin_value(shape->material, fs, save))
         return false;
     if (!serialize_bin_value(shape->points, fs, save)) return false;
     if (!serialize_bin_value(shape->lines, fs, save)) return false;

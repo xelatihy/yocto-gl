@@ -3194,7 +3194,7 @@ struct yocto_shape {
     // shape data
     string          name     = "";
     string          filename = "";
-    yocto_material* material = nullptr;
+    int material = -1;
 
     // subdision properties
     int  subdivision_level      = 0;
