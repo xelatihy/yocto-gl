@@ -3542,120 +3542,122 @@ bbox3f compute_scene_bounds(const yocto_scene* scene) {
     return bbox;
 }
 
-// update shape normals
-void update_shape_normals(yocto_shape* shape) {
+// Compute vertex normals
+vector<vec3f> compute_shape_normals(const yocto_shape* shape) {
     if (!shape->points.empty()) {
-        shape->normals = vector<vec3f>(shape->positions.size(), {0, 0, 1});
+        return vector<vec3f>(shape->positions.size(), {0, 0, 1});
     } else if (!shape->lines.empty()) {
-        shape->normals = compute_vertex_tangents(shape->lines, shape->positions);
+        return compute_vertex_tangents(shape->lines, shape->positions);
     } else if (!shape->triangles.empty()) {
-        shape->normals = compute_vertex_normals(
+        return compute_vertex_normals(
             shape->triangles, shape->positions);
     } else if (!shape->quads.empty() && !shape->catmull_clark) {
-        shape->normals = compute_vertex_normals(shape->quads, shape->positions);
+        return compute_vertex_normals(shape->quads, shape->positions);
     } else if (!shape->quads.empty() && shape->catmull_clark) {
-        shape->normals = compute_vertex_normals(shape->quads, shape->positions);
-    } else if (!shape->quads_positions.empty() && !shape->catmull_clark) {
-        shape->quads_normals = shape->quads_positions;
-        shape->normals       = compute_vertex_normals(
+        return compute_vertex_normals(shape->quads, shape->positions);
+    } else if (!shape->quads_positions.empty()) {
+        return compute_vertex_normals(
             shape->quads_positions, shape->positions);
-    } else if (!shape->quads_positions.empty() && shape->catmull_clark) {
-        shape->quads_normals = shape->quads_positions;
-        shape->normals       = compute_vertex_normals(
-            shape->quads_positions, shape->positions);
+    } else {
+        return {};
     }
 }
 
 // Apply subdivision and displacement rules.
-void subdivide_shape(yocto_shape* shape) {
-    if (!shape->subdivision_level) return;
-    if (!shape->points.empty()) {
+yocto_shape* subdivide_shape(const yocto_shape* shape, int subdivision_level, bool catmull_clark, bool compute_normals) {
+    if (!subdivision_level) return nullptr;
+    auto subdivided_shape = new yocto_shape(*shape);
+    if (!subdivided_shape->points.empty()) {
         log_error("point subdivision not supported");
-    } else if (!shape->lines.empty()) {
-        for (auto l = 0; l < shape->subdivision_level; l++) {
-            auto tesselated_lines               = shape->lines;
-            tie(shape->lines, shape->positions) = subdivide_lines(
-                tesselated_lines, shape->positions);
-            tie(ignore, shape->normals) = subdivide_lines(
-                tesselated_lines, shape->normals);
-            tie(ignore, shape->texturecoords) = subdivide_lines(
-                tesselated_lines, shape->texturecoords);
-            tie(ignore, shape->colors) = subdivide_lines(
-                tesselated_lines, shape->colors);
+    } else if (!subdivided_shape->lines.empty()) {
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto tesselated_lines               = subdivided_shape->lines;
+            tie(subdivided_shape->lines, subdivided_shape->positions) = subdivide_lines(
+                tesselated_lines, subdivided_shape->positions);
+            tie(ignore, subdivided_shape->normals) = subdivide_lines(
+                tesselated_lines, subdivided_shape->normals);
+            tie(ignore, subdivided_shape->texturecoords) = subdivide_lines(
+                tesselated_lines, subdivided_shape->texturecoords);
+            tie(ignore, subdivided_shape->colors) = subdivide_lines(
+                tesselated_lines, subdivided_shape->colors);
         }
-    } else if (!shape->triangles.empty()) {
-        for (auto l = 0; l < shape->subdivision_level; l++) {
-            auto tesselated_triangles               = shape->triangles;
-            tie(shape->triangles, shape->positions) = subdivide_triangles(
-                tesselated_triangles, shape->positions);
-            tie(ignore, shape->normals) = subdivide_triangles(
-                tesselated_triangles, shape->normals);
-            tie(ignore, shape->texturecoords) = subdivide_triangles(
-                tesselated_triangles, shape->texturecoords);
-            tie(ignore, shape->colors) = subdivide_triangles(
-                tesselated_triangles, shape->colors);
+    } else if (!subdivided_shape->triangles.empty()) {
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto tesselated_triangles               = subdivided_shape->triangles;
+            tie(subdivided_shape->triangles, subdivided_shape->positions) = subdivide_triangles(
+                tesselated_triangles, subdivided_shape->positions);
+            tie(ignore, subdivided_shape->normals) = subdivide_triangles(
+                tesselated_triangles, subdivided_shape->normals);
+            tie(ignore, subdivided_shape->texturecoords) = subdivide_triangles(
+                tesselated_triangles, subdivided_shape->texturecoords);
+            tie(ignore, subdivided_shape->colors) = subdivide_triangles(
+                tesselated_triangles, subdivided_shape->colors);
         }
-    } else if (!shape->quads.empty() && !shape->catmull_clark) {
-        for (auto l = 0; l < shape->subdivision_level; l++) {
-            auto tesselated_quads               = shape->quads;
-            tie(shape->quads, shape->positions) = subdivide_quads(
-                tesselated_quads, shape->positions);
-            tie(ignore, shape->normals) = subdivide_quads(
-                tesselated_quads, shape->normals);
-            tie(ignore, shape->texturecoords) = subdivide_quads(
-                tesselated_quads, shape->texturecoords);
-            tie(ignore, shape->colors) = subdivide_quads(
-                tesselated_quads, shape->colors);
+    } else if (!subdivided_shape->quads.empty() && !catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto tesselated_quads               = subdivided_shape->quads;
+            tie(subdivided_shape->quads, subdivided_shape->positions) = subdivide_quads(
+                tesselated_quads, subdivided_shape->positions);
+            tie(ignore, subdivided_shape->normals) = subdivide_quads(
+                tesselated_quads, subdivided_shape->normals);
+            tie(ignore, subdivided_shape->texturecoords) = subdivide_quads(
+                tesselated_quads, subdivided_shape->texturecoords);
+            tie(ignore, subdivided_shape->colors) = subdivide_quads(
+                tesselated_quads, subdivided_shape->colors);
         }
-    } else if (!shape->quads.empty() && shape->catmull_clark) {
-        for (auto l = 0; l < shape->subdivision_level; l++) {
-            auto tesselated_quads               = shape->quads;
-            tie(shape->quads, shape->positions) = subdivide_catmullclark(
-                tesselated_quads, shape->positions);
-            tie(ignore, shape->normals) = subdivide_catmullclark(
-                tesselated_quads, shape->normals);
-            tie(ignore, shape->texturecoords) = subdivide_catmullclark(
-                tesselated_quads, shape->texturecoords);
-            tie(ignore, shape->colors) = subdivide_catmullclark(
-                tesselated_quads, shape->colors);
+    } else if (!subdivided_shape->quads.empty() && catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto tesselated_quads               = subdivided_shape->quads;
+            tie(subdivided_shape->quads, subdivided_shape->positions) = subdivide_catmullclark(
+                tesselated_quads, subdivided_shape->positions);
+            tie(ignore, subdivided_shape->normals) = subdivide_catmullclark(
+                tesselated_quads, subdivided_shape->normals);
+            tie(ignore, subdivided_shape->texturecoords) = subdivide_catmullclark(
+                tesselated_quads, subdivided_shape->texturecoords);
+            tie(ignore, subdivided_shape->colors) = subdivide_catmullclark(
+                tesselated_quads, subdivided_shape->colors);
         }
-    } else if (!shape->quads_positions.empty() && !shape->catmull_clark) {
-        for (auto l = 0; l < shape->subdivision_level; l++) {
-            tie(shape->quads_positions, shape->positions) = subdivide_quads(
-                shape->quads_positions, shape->positions);
-            tie(shape->quads_normals, shape->normals) = subdivide_quads(
-                shape->quads_normals, shape->normals);
-            tie(shape->quads_texturecoords, shape->texturecoords) = subdivide_quads(
-                shape->quads_texturecoords, shape->texturecoords);
+    } else if (!subdivided_shape->quads_positions.empty() && !catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
+            tie(subdivided_shape->quads_positions, subdivided_shape->positions) = subdivide_quads(
+                subdivided_shape->quads_positions, subdivided_shape->positions);
+            tie(subdivided_shape->quads_normals, subdivided_shape->normals) = subdivide_quads(
+                subdivided_shape->quads_normals, subdivided_shape->normals);
+            tie(subdivided_shape->quads_texturecoords, subdivided_shape->texturecoords) = subdivide_quads(
+                subdivided_shape->quads_texturecoords, subdivided_shape->texturecoords);
         }
-    } else if (!shape->quads_positions.empty() && shape->catmull_clark) {
-        for (auto l = 0; l < shape->subdivision_level; l++) {
-            tie(shape->quads_positions, shape->positions) = subdivide_catmullclark(
-                shape->quads_positions, shape->positions);
-            tie(shape->quads_texturecoords, shape->texturecoords) = subdivide_catmullclark(
-                shape->quads_texturecoords, shape->texturecoords, true);
+    } else if (!subdivided_shape->quads_positions.empty() && catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
+            tie(subdivided_shape->quads_positions, subdivided_shape->positions) = subdivide_catmullclark(
+                subdivided_shape->quads_positions, subdivided_shape->positions);
+            tie(subdivided_shape->quads_texturecoords, subdivided_shape->texturecoords) = subdivide_catmullclark(
+                subdivided_shape->quads_texturecoords, subdivided_shape->texturecoords, true);
         }
     }
 
-    if (shape->compute_vertex_normals) update_shape_normals(shape);
+    if (compute_normals) {
+        if(!subdivided_shape->quads_positions.empty()) subdivided_shape->quads_normals = subdivided_shape->quads_positions;
+        subdivided_shape->normals = compute_shape_normals(subdivided_shape);
+    }
+
+    return subdivided_shape;
 }
-void displace_shape(yocto_shape* shape) {
-    if (!shape->material->displacement_texture) return;
+yocto_shape* displace_shape(const yocto_shape* shape, const yocto_texture* displacement, bool compute_normals) {
+    if (!displacement) return nullptr;
     if (shape->texturecoords.empty()) {
         log_error("missing texture coordinates");
-        return;
+        return nullptr;
     }
+    auto displaced_shape = new yocto_shape(*shape);
     if (shape->quads_positions.empty()) {
-        auto empty_normals = !shape->normals.empty();
-        if (empty_normals) update_shape_normals(shape);
+        auto normals = (shape->normals.empty()) ? compute_shape_normals(shape) : shape->normals;
         for (auto vid = 0; vid < shape->positions.size(); vid++) {
-            shape->positions[vid] += shape->normals[vid] *
-                                     shape->material->displacement_texture->height_scale *
+            displaced_shape->positions[vid] += normals[vid] *
+                                     displacement->height_scale *
                                      mean(xyz(evaluate_texture(
-                                         shape->material->displacement_texture,
+                                         displacement,
                                          shape->texturecoords[vid])));
         }
-        if (empty_normals) shape->normals.clear();
     } else {
         auto offset = vector<float>(shape->positions.size(), 0);
         auto count  = vector<int>(shape->positions.size(), 0);
@@ -3663,10 +3665,9 @@ void displace_shape(yocto_shape* shape) {
             auto qpos = shape->quads_positions[fid];
             auto qtxt = shape->quads_texturecoords[fid];
             for (auto i = 0; i < 4; i++) {
-                offset[(&qpos.x)[i]] += shape->material->displacement_texture
-                                            ->height_scale *
+                offset[(&qpos.x)[i]] += displacement->height_scale *
                                         mean(xyz(evaluate_texture(
-                                            shape->material->displacement_texture,
+                                            displacement,
                                             shape->texturecoords[(&qtxt.x)[i]])));
                 count[(&qpos.x)[i]] += 1;
             }
@@ -3674,19 +3675,24 @@ void displace_shape(yocto_shape* shape) {
         auto normals = compute_vertex_normals(
             shape->quads_positions, shape->positions);
         for (auto vid = 0; vid < shape->positions.size(); vid++) {
-            shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
+            displaced_shape->positions[vid] += normals[vid] * offset[vid] / count[vid];
         }
     }
 
-    if (shape->compute_vertex_normals) update_shape_normals(shape);
+    if (compute_normals) {
+        if(!displaced_shape->quads_positions.empty()) displaced_shape->quads_normals = displaced_shape->quads_positions;
+        displaced_shape->normals = compute_shape_normals(displaced_shape);
+    }
+
+    return displaced_shape;
 }
 
 // Updates tesselation.
 yocto_shape* tesselate_shape(const yocto_shape* shape) {
-    auto tesselated_shape = new yocto_shape(*shape);
-    if (shape->subdivision_level) subdivide_shape(tesselated_shape);
-    if (shape->material->displacement_texture) displace_shape(tesselated_shape);
-    return tesselated_shape;
+    auto tesselated_shape = make_unique<yocto_shape>(*shape);
+    if (shape->subdivision_level) tesselated_shape = unique_ptr<yocto_shape>{subdivide_shape(tesselated_shape.get(), tesselated_shape->subdivision_level, tesselated_shape->catmull_clark, tesselated_shape->compute_vertex_normals)};
+    if (shape->material->displacement_texture) tesselated_shape = unique_ptr<yocto_shape>{displace_shape(tesselated_shape.get(), shape->material->displacement_texture, shape->compute_vertex_normals)};
+    return tesselated_shape.release();
 }
 void tesselate_shapes(yocto_scene* scene) {
     auto scope               = log_trace_scoped("tesselating surfaces");

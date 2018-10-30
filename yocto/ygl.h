@@ -3351,6 +3351,9 @@ vec2f compute_animation_range(
 bbox3f compute_shape_bounds(const yocto_shape* shape);
 bbox3f compute_scene_bounds(const yocto_scene* scene);
 
+// Compute shape vertex normals
+vector<vec3f> compute_shape_normals(const yocto_shape* shape);
+
 // Updates/refits bvh.
 bvh_tree* make_shape_bvh(
     const yocto_shape* shape, bool high_quality, bool embree = false);
