@@ -4987,7 +4987,6 @@ atomic<uint64_t> _trace_nrays{0};
 
 // Trace point
 struct trace_point {
-    const yocto_instance* instance     = nullptr;
     int instance_id = -1;
     int                   element_id   = -1;
     vec2f                 element_uv   = zero2f;
@@ -5007,7 +5006,6 @@ trace_point make_trace_point(const yocto_scene* scene,
     auto shape       = scene->shapes[instance->shape];
     auto material    = scene->materials[shape->material];
     auto point       = trace_point();
-    point.instance   = instance;
     point.instance_id = instance_id;
     point.element_id = element_id;
     point.element_uv = element_uv;
@@ -5050,7 +5048,7 @@ trace_point trace_ray_with_opacity(const yocto_scene* scene,
     auto position = position_;
     for (auto b = 0; b < max_bounces; b++) {
         auto point = trace_ray(scene, bvh, position, direction);
-        if (!point.instance) return point;
+        if (point.instance_id < 0) return point;
         if (point.opacity > 0.999f) return point;
         if (get_random_float(rng) < point.opacity) return point;
         position = point.position;
@@ -5433,7 +5431,8 @@ trace_point sample_lights_point(const yocto_scene* scene,
 float sample_lights_point_pdf(const yocto_scene* scene,
     const trace_lights& lights, const vec3f& position,
     const trace_point& light_point) {
-    auto shape    = scene->shapes[light_point.instance->shape];
+    auto instance = scene->instances[light_point.instance_id];
+    auto shape    = scene->shapes[instance->shape];
     auto material = scene->materials[shape->material];
     if (lights.instances.empty()) return 0;
     if (material->emission == zero3f) return 0;
@@ -5764,7 +5763,7 @@ tuple<vec3f, bool> trace_path(const yocto_scene* scene, const bvh_tree* bvh,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {point.emission, false};
+    if (point.instance_id < 0) return {point.emission, false};
 
     // initialize
     auto radiance = point.emission;
@@ -5810,7 +5809,7 @@ tuple<vec3f, bool> trace_path(const yocto_scene* scene, const bvh_tree* bvh,
         auto next_point = trace_ray_with_opacity(
             scene, bvh, point.position, next_direction, rng, max_bounces);
         if (is_brdf_delta(point.brdf)) radiance += weight * next_point.emission;
-        if (!next_point.instance || is_brdf_zero(next_point.brdf)) break;
+        if (next_point.instance_id < 0 || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point    = next_point;
@@ -6069,7 +6068,7 @@ tuple<vec3f, bool> trace_path_naive(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {point.emission, false};
+    if (point.instance_id < 0) return {point.emission, false};
 
     // initialize
     auto radiance = point.emission;
@@ -6099,7 +6098,7 @@ tuple<vec3f, bool> trace_path_naive(const yocto_scene* scene,
         auto next_point = trace_ray_with_opacity(
             scene, bvh, point.position, next_direction, rng, max_bounces);
         radiance += weight * next_point.emission;
-        if (!next_point.instance || is_brdf_zero(next_point.brdf)) break;
+        if (next_point.instance_id < 0 || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point    = next_point;
@@ -6116,7 +6115,7 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {point.emission, false};
+    if (point.instance_id < 0) return {point.emission, false};
 
     // initialize
     auto radiance = point.emission;
@@ -6135,7 +6134,7 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
                 light_point.position - point.position);
             auto intersection_point = trace_ray_with_opacity(
                 scene, bvh, point.position, light_direction, rng, max_bounces);
-            if (light_pdf && light_point.instance == intersection_point.instance) {
+            if (light_pdf && light_point.instance_id == intersection_point.instance_id) {
                 auto brdf_cosine = evaluate_smooth_brdf_cosine(
                     point.brdf, point.normal, outgoing, light_direction);
                 auto geometric_term = abs(dot(light_point.normal,
@@ -6167,9 +6166,9 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
         // intersect next point
         auto next_point = trace_ray_with_opacity(
             scene, bvh, point.position, next_direction, rng, max_bounces);
-        if (!next_point.instance || is_brdf_delta(point.brdf))
+        if (next_point.instance_id < 0 || is_brdf_delta(point.brdf))
             radiance += weight * next_point.emission;
-        if (!next_point.instance || is_brdf_zero(next_point.brdf)) break;
+        if (next_point.instance_id < 0 || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point    = next_point;
@@ -6186,7 +6185,7 @@ tuple<vec3f, bool> trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {point.emission, false};
+    if (point.instance_id < 0) return {point.emission, false};
 
     // initialize
     auto radiance = point.emission;
@@ -6230,7 +6229,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {point.emission, false};
+    if (point.instance_id < 0) return {point.emission, false};
 
     // initialize
     auto radiance = point.emission;
@@ -6245,7 +6244,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
         auto light_direction = normalize(light_point.position - point.position);
         auto intersection_point = trace_ray_with_opacity(
             scene, bvh, point.position, light_direction, rng, max_bounces);
-        if (light_pdf && light_point.instance == intersection_point.instance) {
+        if (light_pdf && light_point.instance_id == intersection_point.instance_id) {
             auto brdf_cosine = evaluate_smooth_brdf_cosine(
                 point.brdf, point.normal, outgoing, light_direction);
             auto geometric_term = abs(dot(light_point.normal, light_direction)) /
@@ -6296,7 +6295,7 @@ tuple<vec3f, bool> trace_environment(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {point.emission, false};
+    if (point.instance_id < 0) return {point.emission, false};
 
     // initialize
     auto radiance = point.emission;
@@ -6327,7 +6326,7 @@ tuple<vec3f, bool> trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {point.emission, false};
+    if (point.instance_id < 0) return {point.emission, false};
 
     // initialize
     auto radiance = point.emission;
@@ -6349,7 +6348,7 @@ tuple<vec3f, bool> trace_debug_normal(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {zero3f, false};
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     return {point.normal * 0.5f + 0.5f, true};
@@ -6362,7 +6361,7 @@ tuple<vec3f, bool> trace_debug_frontfacing(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {zero3f, false};
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     auto outgoing = -direction;
@@ -6377,7 +6376,7 @@ tuple<vec3f, bool> trace_debug_albedo(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {zero3f, false};
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     return {point.brdf.diffuse + point.brdf.specular + point.brdf.transmission,
@@ -6391,7 +6390,7 @@ tuple<vec3f, bool> trace_debug_diffuse(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {zero3f, false};
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     return {point.brdf.diffuse, true};
@@ -6404,7 +6403,7 @@ tuple<vec3f, bool> trace_debug_specular(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {zero3f, false};
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     return {point.brdf.specular, true};
@@ -6417,7 +6416,7 @@ tuple<vec3f, bool> trace_debug_roughness(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {zero3f, false};
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     return {{point.brdf.roughness, point.brdf.roughness, point.brdf.roughness},
@@ -6431,7 +6430,7 @@ tuple<vec3f, bool> trace_debug_texcoord(const yocto_scene* scene,
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (!point.instance) return {zero3f, false};
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     return {{point.texturecoord.x, point.texturecoord.y, 0}, true};
