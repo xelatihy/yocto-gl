@@ -1031,25 +1031,27 @@ bool load_scene_textures(yocto_scene* scene, const string& dirname,
 
     // assign opacity texture if needed
     if (assign_opacity) {
-        auto has_opacity = unordered_map<yocto_texture*, bool>();
-        for (auto& texture : scene->textures) {
-            has_opacity[texture] = false;
+        auto has_opacity = vector<bool>();
+        for (auto texture_id = 0; texture_id < scene->textures.size();
+             texture_id++) {
+            auto& texture           = scene->textures[texture_id];
+            has_opacity[texture_id] = false;
             for (auto& p : texture->hdr_image.pixels) {
                 if (p.w < 0.999f) {
-                    has_opacity[texture] = true;
+                    has_opacity[texture_id] = true;
                     break;
                 }
             }
             for (auto& p : texture->ldr_image.pixels) {
                 if (p.w < 255) {
-                    has_opacity[texture] = true;
+                    has_opacity[texture_id] = true;
                     break;
                 }
             }
         }
         for (auto& mat : scene->materials) {
-            if (mat->diffuse_texture && !mat->opacity_texture &&
-                has_opacity.at(mat->diffuse_texture))
+            if (mat->diffuse_texture >= 0 && mat->opacity_texture < 0 &&
+                has_opacity[mat->diffuse_texture])
                 mat->opacity_texture = mat->diffuse_texture;
         }
     }
@@ -2944,10 +2946,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     auto otexcoord = std::deque<vec2f>();
 
     // object maps
-    auto tmap  = unordered_map<string, yocto_texture*>();
-    auto tmap_ = unordered_map<string, int>();
-    auto vmap  = unordered_map<string, yocto_voltexture*>();
-    auto mmap  = unordered_map<string, yocto_material*>();
+    auto tmap = unordered_map<string, int>();
+    auto vmap = unordered_map<string, int>();
+    auto mmap = unordered_map<string, yocto_material*>();
 
     // vertex maps
     auto name_map     = unordered_map<string, int>();
@@ -2995,7 +2996,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     // Parse texture options and name
     auto add_texture = [&scene, &tmap](
                            const obj_texture_info& info, bool force_linear) {
-        if (info.path == "") return (yocto_texture*)nullptr;
+        if (info.path == "") return -1;
         if (tmap.find(info.path) != tmap.end()) {
             return tmap.at(info.path);
         }
@@ -3008,35 +3009,15 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         texture->height_scale  = info.scale;
         texture->ldr_as_linear = force_linear || is_hdr_filename(info.path);
         scene->textures.push_back(texture);
-        tmap[info.path] = texture;
-
-        return texture;
-    };
-    // Parse texture options and name
-    auto add_texture_ = [&scene, &tmap_](
-                            const obj_texture_info& info, bool force_linear) {
-        if (info.path == "") return -1;
-        if (tmap_.find(info.path) != tmap_.end()) {
-            return tmap_.at(info.path);
-        }
-
-        // create texture
-        auto texture           = new yocto_texture();
-        texture->name          = info.path;
-        texture->filename      = info.path;
-        texture->clamp_to_edge = info.clamp;
-        texture->height_scale  = info.scale;
-        texture->ldr_as_linear = force_linear || is_hdr_filename(info.path);
-        scene->textures.push_back(texture);
-        auto index       = (int)scene->textures.size() - 1;
-        tmap_[info.path] = index;
+        auto index      = (int)scene->textures.size() - 1;
+        tmap[info.path] = index;
 
         return index;
     };
     // Parse texture options and name
     auto add_voltexture = [&scene, &vmap](
                               const obj_texture_info& info, bool srgb) {
-        if (info.path == "") return (yocto_voltexture*)nullptr;
+        if (info.path == "") return -1;
         if (vmap.find(info.path) != vmap.end()) {
             return vmap.at(info.path);
         }
@@ -3046,9 +3027,10 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         texture->name     = info.path;
         texture->filename = info.path;
         scene->voltextures.push_back(texture);
-        vmap[info.path] = texture;
+        auto index      = (int)scene->voltextures.size() - 1;
+        vmap[info.path] = index;
 
-        return texture;
+        return index;
     };
     // Add  vertices to the current shape
     auto add_verts = [&](const vector<obj_vertex>& verts) {
@@ -3244,7 +3226,7 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         auto environment              = new yocto_environment();
         environment->name             = oenv.name;
         environment->emission         = oenv.ke;
-        environment->emission_texture = add_texture_(oenv.ke_txt, true);
+        environment->emission_texture = add_texture(oenv.ke_txt, true);
         scene->environments.push_back(environment);
     };
 
@@ -3319,26 +3301,37 @@ bool save_mtl(
                     2 / pow(mat->roughness + 1e-10f, 4.0f) - 2, 0.0f, 1.0e12f));
         if (mat->opacity != 1.0f) print(fs, "  d {}\n", mat->opacity);
         if (mat->roughness != -1.0f) print(fs, "  Pr {}\n", mat->roughness);
-        if (mat->emission_texture)
-            print(fs, "  map_Ke {}\n", mat->emission_texture->filename);
-        if (mat->diffuse_texture)
-            print(fs, "  map_Kd {}\n", mat->diffuse_texture->filename);
-        if (mat->specular_texture)
-            print(fs, "  map_Ks {}\n", mat->specular_texture->filename);
-        if (mat->transmission_texture)
-            print(fs, "  map_Kt {}\n", mat->transmission_texture->filename);
-        if (mat->opacity_texture && mat->opacity_texture != mat->diffuse_texture)
-            print(fs, "  map_d  {}\n", mat->opacity_texture->filename);
-        if (mat->roughness_texture)
-            print(fs, "  map_Pr {}\n", mat->roughness_texture->filename);
-        if (mat->occlusion_texture)
-            print(fs, "  map_occ {}\n", mat->occlusion_texture->filename);
-        if (mat->bump_texture)
-            print(fs, "  map_bump {}\n", mat->bump_texture->filename);
-        if (mat->displacement_texture)
-            print(fs, "  map_disp {}\n", mat->displacement_texture->filename);
-        if (mat->normal_texture)
-            print(fs, "  map_norm {}\n", mat->normal_texture->filename);
+        if (mat->emission_texture >= 0)
+            print(fs, "  map_Ke {}\n",
+                scene->textures[mat->emission_texture]->filename);
+        if (mat->diffuse_texture >= 0)
+            print(fs, "  map_Kd {}\n",
+                scene->textures[mat->diffuse_texture]->filename);
+        if (mat->specular_texture >= 0)
+            print(fs, "  map_Ks {}\n",
+                scene->textures[mat->specular_texture]->filename);
+        if (mat->transmission_texture >= 0)
+            print(fs, "  map_Kt {}\n",
+                scene->textures[mat->transmission_texture]->filename);
+        if (mat->opacity_texture >= 0 &&
+            mat->opacity_texture != mat->diffuse_texture)
+            print(fs, "  map_d  {}\n",
+                scene->textures[mat->opacity_texture]->filename);
+        if (mat->roughness_texture >= 0)
+            print(fs, "  map_Pr {}\n",
+                scene->textures[mat->roughness_texture]->filename);
+        if (mat->occlusion_texture >= 0)
+            print(fs, "  map_occ {}\n",
+                scene->textures[mat->occlusion_texture]->filename);
+        if (mat->bump_texture >= 0)
+            print(fs, "  map_bump {}\n",
+                scene->textures[mat->bump_texture]->filename);
+        if (mat->displacement_texture >= 0)
+            print(fs, "  map_disp {}\n",
+                scene->textures[mat->displacement_texture]->filename);
+        if (mat->normal_texture >= 0)
+            print(fs, "  map_norm {}\n",
+                scene->textures[mat->normal_texture]->filename);
         if (mat->volume_emission != zero3f)
             print(fs, "  Ve {}\n", mat->volume_emission);
         if (mat->volume_density != zero3f)
@@ -3346,8 +3339,9 @@ bool save_mtl(
         if (mat->volume_albedo != zero3f)
             print(fs, "  Va {}\n", mat->volume_albedo);
         if (mat->volume_phaseg != 0) print(fs, "  Vg {}\n", mat->volume_phaseg);
-        if (mat->volume_density_texture)
-            print(fs, "  map_Vd {}\n", mat->volume_density_texture->filename);
+        if (mat->volume_density_texture >= 0)
+            print(fs, "  map_Vd {}\n",
+                scene->voltextures[mat->volume_density_texture]->filename);
         print(fs, "\n");
     }
 
@@ -3369,15 +3363,14 @@ bool save_objx(const string& filename, const yocto_scene* scene) {
 
     // environments
     for (auto environment : scene->environments) {
-        auto emission_filename = environment->emission_texture >= 0 ?
-                                     scene
-                                         ->environments[environment->emission_texture]
-                                         ->name :
-                                     ""s;
-        print(fs, "e {} {} {} {}\n", environment->name.c_str(),
-            environment->emission,
-            emission_filename == "" ? emission_filename : "\"\""s,
-            environment->frame);
+        if (environment->emission_texture >= 0) {
+            print(fs, "e {} {} {} {}\n", environment->name, environment->emission,
+                scene->textures[environment->emission_texture]->filename,
+                environment->frame);
+        } else {
+            print(fs, "e {} {} \"\" {}\n", environment->name,
+                environment->emission, environment->frame);
+        }
     }
 
     // done
@@ -3614,24 +3607,26 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
 
     // add a texture
     auto add_texture = [scene, &gltf](const json& ginfo, bool force_linear) {
-        if (!gltf.count("images") || !gltf.count("textures"))
-            return (yocto_texture*)nullptr;
-        if (ginfo.is_null() || ginfo.empty()) return (yocto_texture*)nullptr;
-        if (ginfo.value("index", -1) < 0) return (yocto_texture*)nullptr;
+        if (!gltf.count("images") || !gltf.count("textures")) return -1;
+        if (ginfo.is_null() || ginfo.empty()) return -1;
+        if (ginfo.value("index", -1) < 0) return -1;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
-        if (gtxt.empty() || gtxt.value("source", -1) < 0)
-            return (yocto_texture*)nullptr;
-        auto texture = scene->textures.at(gtxt.value("source", -1));
+        if (gtxt.empty() || gtxt.value("source", -1) < 0) return -1;
+        auto texture_id = gtxt.value("source", -1);
         if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
-            return texture;
+            return texture_id;
         auto& gsmp = gltf.at("samplers").at(gtxt.value("sampler", -1));
-        texture->clamp_to_edge = gsmp.value("wrapS", ""s) == "ClampToEdge" ||
-                                 gsmp.value("wrapT", ""s) == "ClampToEdge";
-        texture->height_scale = gsmp.value("scale", 1.0f) *
-                                gsmp.value("strength", 1.0f);
-        texture->ldr_as_linear = force_linear ||
-                                 is_hdr_filename(texture->filename);
-        return texture;
+        scene->textures[texture_id]->clamp_to_edge = gsmp.value("wrapS", ""s) ==
+                                                         "ClampToEdge" ||
+                                                     gsmp.value("wrapT", ""s) ==
+                                                         "ClampToEdge";
+        scene->textures[texture_id]->height_scale = gsmp.value("scale", 1.0f) *
+                                                    gsmp.value("strength", 1.0f);
+        scene->textures[texture_id]
+            ->ldr_as_linear = force_linear ||
+                              is_hdr_filename(
+                                  scene->textures[texture_id]->filename);
+        return texture_id;
     };
 
     // convert materials
@@ -4177,14 +4172,12 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     }
 
     // textures
-    auto tmap = unordered_map<yocto_texture*, int>();
     for (auto& texture : scene->textures) {
         auto tjs = json(), ijs = json();
         tjs["source"] = (int)js["images"].size();
         ijs["uri"]    = texture->filename;
         js["images"].push_back(ijs);
         js["textures"].push_back(tjs);
-        tmap[texture] = (int)js["textures"].size() - 1;
     }
 
     // material
@@ -4194,8 +4187,8 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         mjs["name"]        = mat->name;
         mjs["doubleSided"] = mat->double_sided;
         if (mat->emission != zero3f) mjs["emissiveFactor"] = mat->emission;
-        if (mat->emission_texture)
-            mjs["emissiveTexture"]["index"] = tmap.at(mat->emission_texture);
+        if (mat->emission_texture >= 0)
+            mjs["emissiveTexture"]["index"] = mat->emission_texture;
         auto kd = vec4f{
             mat->diffuse.x, mat->diffuse.y, mat->diffuse.z, mat->opacity};
         if (mat->base_metallic) {
@@ -4203,28 +4196,26 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
             mmjs["baseColorFactor"] = kd;
             mmjs["metallicFactor"]  = mat->specular.x;
             mmjs["roughnessFactor"] = mat->roughness;
-            if (mat->diffuse_texture)
-                mmjs["baseColorTexture"]["index"] = tmap.at(mat->diffuse_texture);
-            if (mat->specular_texture)
-                mmjs["metallicRoughnessTexture"]["index"] = tmap.at(
-                    mat->specular_texture);
+            if (mat->diffuse_texture >= 0)
+                mmjs["baseColorTexture"]["index"] = mat->diffuse_texture;
+            if (mat->specular_texture >= 0)
+                mmjs["metallicRoughnessTexture"]["index"] = mat->specular_texture;
             mjs["pbrMetallicRoughness"] = mmjs;
         } else {
             auto mmjs                = json();
             mmjs["diffuseFactor"]    = kd;
             mmjs["specularFactor"]   = mat->specular;
             mmjs["glossinessFactor"] = 1 - mat->roughness;
-            if (mat->diffuse_texture)
-                mmjs["diffuseTexture"]["index"] = tmap.at(mat->diffuse_texture);
-            if (mat->specular_texture)
-                mmjs["specularGlossinessTexture"]["index"] = tmap.at(
-                    mat->specular_texture);
+            if (mat->diffuse_texture >= 0)
+                mmjs["diffuseTexture"]["index"] = mat->diffuse_texture;
+            if (mat->specular_texture >= 0)
+                mmjs["specularGlossinessTexture"]["index"] = mat->specular_texture;
             mjs["extensions"]["KHR_materials_pbrSpecularGlossiness"] = mmjs;
         }
-        if (mat->normal_texture)
-            mjs["normalTexture"]["index"] = tmap.at(mat->normal_texture);
-        if (mat->occlusion_texture)
-            mjs["occlusionTexture"]["index"] = tmap.at(mat->occlusion_texture);
+        if (mat->normal_texture >= 0)
+            mjs["normalTexture"]["index"] = mat->normal_texture;
+        if (mat->occlusion_texture >= 0)
+            mjs["occlusionTexture"]["index"] = mat->occlusion_texture;
         js["materials"].push_back(mjs);
         mmap[mat] = (int)js["materials"].size() - 1;
     }
@@ -4587,7 +4578,7 @@ yocto_scene* load_pbrt_scene(
     auto stack = vector<stack_item>();
     stack.push_back(stack_item());
 
-    auto txt_map = map<string, yocto_texture*>();
+    auto txt_map = map<string, int>();
     auto mat_map = map<string, yocto_material*>();
     auto mid     = 0;
 
@@ -4677,10 +4668,10 @@ yocto_scene* load_pbrt_scene(
         return vals;
     };
 
-    auto get_scaled_texture =
-        [&txt_map, &get_vec3f](const json& js) -> tuple<vec3f, yocto_texture*> {
+    auto get_scaled_texture = [&txt_map, &get_vec3f](
+                                  const json& js) -> tuple<vec3f, int> {
         if (js.is_string()) return {{1, 1, 1}, txt_map.at(js.get<string>())};
-        return {get_vec3f(js), nullptr};
+        return {get_vec3f(js), -1};
     };
 
     auto use_hierarchy = false;
@@ -4754,7 +4745,7 @@ yocto_scene* load_pbrt_scene(
                 auto texture = new yocto_texture();
                 scene->textures.push_back(texture);
                 texture->name          = jcmd.at("name").get<string>();
-                txt_map[texture->name] = texture;
+                txt_map[texture->name] = (int)scene->textures.size() - 1;
                 auto type              = jcmd.at("type").get<string>();
                 if (type == "imagemap") {
                     texture->filename = jcmd.at("filename").get<string>();
@@ -4801,7 +4792,7 @@ yocto_scene* load_pbrt_scene(
                             jcmd.at("Kt"));
                     if (jcmd.count("opacity")) {
                         auto op         = vec3f{0, 0, 0};
-                        auto op_txt     = (yocto_texture*)nullptr;
+                        auto op_txt     = -1;
                         tie(op, op_txt) = get_scaled_texture(jcmd.at("opacity"));
                         mat->opacity    = (op.x + op.y + op.z) / 3;
                         mat->opacity_texture = op_txt;
@@ -5158,12 +5149,14 @@ WorldEnd
     for (auto mat : scene->materials) {
         print(fs, "MakeNamedMaterial \"{}\" ", mat->name);
         print(fs, "\"string type\" \"{}\" ", "uber");
-        if (mat->diffuse_texture)
-            print(fs, "\"texture Kd\" [\"{}\"] ", mat->diffuse_texture->name);
+        if (mat->diffuse_texture >= 0)
+            print(fs, "\"texture Kd\" [\"{}\"] ",
+                scene->textures[mat->diffuse_texture]->name);
         else
             print(fs, "\"rgb Kd\" [{}] ", mat->diffuse);
-        if (mat->specular_texture)
-            print(fs, "\"texture Ks\" [\"{}\"] ", mat->specular_texture->name);
+        if (mat->specular_texture >= 0)
+            print(fs, "\"texture Ks\" [\"{}\"] ",
+                scene->textures[mat->specular_texture]->name);
         else
             print(fs, "\"rgb Ks\" [{}] ", mat->specular);
         print(fs, "\"float roughness\" [{}] ", mat->roughness);
@@ -5510,34 +5503,21 @@ bool serialize_bin_object(
     if (!serialize_bin_value(mat->opacity, fs, save)) return false;
     if (!serialize_bin_value(mat->fresnel, fs, save)) return false;
     if (!serialize_bin_value(mat->refract, fs, save)) return false;
-    if (!serialize_bin_handle(mat->emission_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(mat->diffuse_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(mat->specular_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(
-            mat->transmission_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(mat->roughness_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(mat->opacity_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(mat->occlusion_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(mat->bump_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(
-            mat->displacement_texture, scene->textures, fs, save))
-        return false;
-    if (!serialize_bin_handle(mat->normal_texture, scene->textures, fs, save))
-        return false;
+    if (!serialize_bin_value(mat->emission_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->diffuse_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->specular_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->transmission_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->roughness_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->opacity_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->occlusion_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->bump_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->displacement_texture, fs, save)) return false;
+    if (!serialize_bin_value(mat->normal_texture, fs, save)) return false;
     if (!serialize_bin_value(mat->volume_emission, fs, save)) return false;
     if (!serialize_bin_value(mat->volume_albedo, fs, save)) return false;
     if (!serialize_bin_value(mat->volume_density, fs, save)) return false;
     if (!serialize_bin_value(mat->volume_phaseg, fs, save)) return false;
-    if (!serialize_bin_handle(
-            mat->volume_density_texture, scene->voltextures, fs, save))
+    if (!serialize_bin_value(mat->volume_density_texture, fs, save))
         return false;
     return true;
 };

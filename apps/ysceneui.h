@@ -86,13 +86,18 @@ inline void draw_scene_tree_glwidgets_rec<yocto_instance>(glwindow* win,
 template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_material>(glwindow* win,
     const string& lbl_, yocto_scene* scene, yocto_material* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "emission", scene, val->emission_texture, sel);
-    draw_glwidgets_scene_tree(win, "diffuse", scene, val->diffuse_texture, sel);
-    draw_glwidgets_scene_tree(win, "specular", scene, val->specular_texture, sel);
-    draw_glwidgets_scene_tree(win, "bump", scene, val->bump_texture, sel);
     draw_glwidgets_scene_tree(
-        win, "displament", scene, val->displacement_texture, sel);
-    draw_glwidgets_scene_tree(win, "normal", scene, val->normal_texture, sel);
+        win, "emission", scene, val->emission_texture, scene->textures, sel);
+    draw_glwidgets_scene_tree(
+        win, "diffuse", scene, val->diffuse_texture, scene->textures, sel);
+    draw_glwidgets_scene_tree(
+        win, "specular", scene, val->specular_texture, scene->textures, sel);
+    draw_glwidgets_scene_tree(
+        win, "bump", scene, val->bump_texture, scene->textures, sel);
+    draw_glwidgets_scene_tree(win, "displament", scene,
+        val->displacement_texture, scene->textures, sel);
+    draw_glwidgets_scene_tree(
+        win, "normal", scene, val->normal_texture, scene->textures, sel);
 }
 template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_environment>(glwindow* win,

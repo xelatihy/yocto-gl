@@ -40,9 +40,9 @@ struct glshape {
 };
 
 struct draw_glstate {
-    glprogram                                      prog = {};
-    unordered_map<const yocto_shape*, glshape>     shps;
-    unordered_map<const yocto_texture*, gltexture> txts;
+    glprogram                                  prog = {};
+    unordered_map<const yocto_shape*, glshape> shps;
+    vector<gltexture>                          txts;
 };
 
 // Application state
@@ -487,17 +487,29 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
     set_gluniform(state->prog, "mat_op", mat->opacity);
     set_gluniform(state->prog, "mat_double_sided", (int)mat->double_sided);
     set_gluniform_texture(state->prog, "mat_ke_txt", "mat_ke_txt_on",
-        state->txts.at(mat->emission_texture), 0);
+        mat->emission_texture >= 0 ? state->txts.at(mat->emission_texture) :
+                                     gltexture{},
+        0);
     set_gluniform_texture(state->prog, "mat_kd_txt", "mat_kd_txt_on",
-        state->txts.at(mat->diffuse_texture), 1);
+        mat->diffuse_texture >= 0 ? state->txts.at(mat->diffuse_texture) :
+                                    gltexture{},
+        1);
     set_gluniform_texture(state->prog, "mat_ks_txt", "mat_ks_txt_on",
-        state->txts.at(mat->specular_texture), 2);
+        mat->specular_texture >= 0 ? state->txts.at(mat->specular_texture) :
+                                     gltexture{},
+        2);
     set_gluniform_texture(state->prog, "mat_rs_txt", "mat_rs_txt_on",
-        state->txts.at(mat->roughness_texture), 3);
+        mat->roughness_texture >= 0 ? state->txts.at(mat->roughness_texture) :
+                                      gltexture{},
+        3);
     set_gluniform_texture(state->prog, "mat_op_txt", "mat_op_txt_on",
-        state->txts.at(mat->opacity_texture), 4);
+        mat->opacity_texture >= 0 ? state->txts.at(mat->opacity_texture) :
+                                    gltexture{},
+        4);
     set_gluniform_texture(state->prog, "mat_norm_txt", "mat_norm_txt_on",
-        state->txts.at(mat->normal_texture), 5);
+        mat->normal_texture >= 0 ? state->txts.at(mat->normal_texture) :
+                                   gltexture{},
+        5);
 
     auto& vbos = state->shps.at(shape);
     set_gluniform(state->prog, "elem_faceted", (int)shape->normals.empty());
@@ -633,14 +645,16 @@ draw_glstate* init_draw_state(glwindow* win) {
     auto app   = (app_state*)get_user_pointer(win);
     auto state = new draw_glstate();
     // load textures and vbos
-    state->prog          = make_glprogram(vertex, fragment);
-    state->txts[nullptr] = {};
-    for (auto texture : app->scene->textures) {
+    state->prog = make_glprogram(vertex, fragment);
+    state->txts.resize(app->scene->textures.size());
+    for (auto texture_id = 0; texture_id < app->scene->textures.size();
+         texture_id++) {
+        auto texture = app->scene->textures[texture_id];
         if (!texture->hdr_image.pixels.empty()) {
-            state->txts[texture] = make_gltexture(
+            state->txts[texture_id] = make_gltexture(
                 texture->hdr_image, true, true, true);
         } else if (!texture->ldr_image.pixels.empty()) {
-            state->txts[texture] = make_gltexture(
+            state->txts[texture_id] = make_gltexture(
                 texture->ldr_image, !texture->ldr_as_linear, true, true);
         } else {
             printf("bad texture");

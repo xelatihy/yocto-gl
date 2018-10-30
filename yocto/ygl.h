@@ -3165,16 +3165,16 @@ struct yocto_material {
     bool  refract      = false;
 
     // textures
-    yocto_texture* emission_texture     = nullptr;
-    yocto_texture* diffuse_texture      = nullptr;
-    yocto_texture* specular_texture     = nullptr;
-    yocto_texture* transmission_texture = nullptr;
-    yocto_texture* roughness_texture    = nullptr;
-    yocto_texture* opacity_texture      = nullptr;
-    yocto_texture* occlusion_texture    = nullptr;
-    yocto_texture* bump_texture         = nullptr;
-    yocto_texture* displacement_texture = nullptr;
-    yocto_texture* normal_texture       = nullptr;
+    int emission_texture     = -1;
+    int diffuse_texture      = -1;
+    int specular_texture     = -1;
+    int transmission_texture = -1;
+    int roughness_texture    = -1;
+    int opacity_texture      = -1;
+    int occlusion_texture    = -1;
+    int bump_texture         = -1;
+    int displacement_texture = -1;
+    int normal_texture       = -1;
 
     // volume properties
     // albedo = scattering / (absorption + scattering)
@@ -3185,7 +3185,7 @@ struct yocto_material {
     float volume_phaseg   = 0;
 
     // volume textures
-    yocto_voltexture* volume_density_texture = nullptr;
+    int volume_density_texture = -1;
 };
 
 // Shape data represented as an indexed meshes of elements.
@@ -3407,8 +3407,9 @@ vec3f evaluate_instance_tangentspace(const yocto_instance* instance,
 vec3f evaluate_instance_element_normal(
     const yocto_instance* instance, int element_id);
 // Shading normals including material perturbations.
-vec3f evaluate_instance_shading_normal(const yocto_instance* instance,
-    int element_id, const vec2f& element_uv, const vec3f& o);
+vec3f evaluate_instance_shading_normal(const yocto_scene* scene,
+    const yocto_instance* instance, int element_id, const vec2f& element_uv,
+    const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
@@ -3455,18 +3456,24 @@ ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f evaluate_material_emission(const yocto_material* material,
-    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_diffuse(const yocto_material* material,
-    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_specular(const yocto_material* material,
-    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_transmission(const yocto_material* material,
-    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_material_roughness(const yocto_material* material,
-    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_material_opacity(const yocto_material* material,
-    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_material_emission(const yocto_scene* scene,
+    const yocto_material* material, const vec2f& texturecoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_material_diffuse(const yocto_scene* scene,
+    const yocto_material* material, const vec2f& texturecoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_material_specular(const yocto_scene* scene,
+    const yocto_material* material, const vec2f& texturecoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_material_transmission(const yocto_scene* scene,
+    const yocto_material* material, const vec2f& texturecoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+float evaluate_material_roughness(const yocto_scene* scene,
+    const yocto_material* material, const vec2f& texturecoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
+float evaluate_material_opacity(const yocto_scene* scene,
+    const yocto_material* material, const vec2f& texturecoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
@@ -3476,13 +3483,14 @@ struct microfacet_brdf {
     float roughness    = 1;
     bool  refract      = false;
 };
-microfacet_brdf evaluate_material_brdf(const yocto_material* material,
-    const vec2f& texturecoord, const vec4f& shape_color = {1, 1, 1, 1});
+microfacet_brdf evaluate_material_brdf(const yocto_scene* scene,
+    const yocto_material* material, const vec2f& texturecoord,
+    const vec4f& shape_color = {1, 1, 1, 1});
 bool            is_bsdf_delta(const microfacet_brdf& f);
 
 // Check volume properties.
-bool is_volume_homogeneus(const yocto_material* vol);
-bool is_volume_colored(const yocto_material* vol);
+bool is_material_volume_homogeneus(const yocto_material* vol);
+bool is_material_volume_colored(const yocto_material* vol);
 
 // Sample a shape element based on area/length.
 vector<float>     compute_shape_elements_cdf(const yocto_shape* shape);
