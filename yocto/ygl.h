@@ -3584,29 +3584,32 @@ struct trace_state {
 };
 
 // Initialize lights.
-trace_lights* make_trace_lights(
+trace_lights make_trace_lights(
     const yocto_scene* scene, const trace_params& params);
+inline bool empty(const trace_lights& lights) {
+    return lights.instances.empty() && lights.environments.empty();
+}
 
 // Initialize state of the renderer.
-trace_state* make_trace_state(
+trace_state make_trace_state(
     const yocto_scene* scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const trace_params& params);
+    const trace_lights& lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state* state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params);
+bool trace_samples(trace_state& state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights& lights, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(trace_state* state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params);
+void trace_async_start(trace_state& state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights& lights, const trace_params& params);
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_state* state);
+void trace_async_stop(trace_state& state);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.

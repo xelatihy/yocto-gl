@@ -5408,12 +5408,12 @@ float sample_instance_point_pdf(const yocto_scene* scene,
 
 // Sample a point from all shape lights.
 trace_point sample_lights_point(const yocto_scene* scene,
-    const trace_lights* lights, const vec3f& position, rng_state& rng) {
-    if (lights->instances.empty()) return {};
+    const trace_lights& lights, const vec3f& position, rng_state& rng) {
+    if (lights.instances.empty()) return {};
     auto light_id = sample_uniform_index(
-        lights->instances.size(), get_random_float(rng));
-    auto  instance  = lights->instances[light_id];
-    auto& cdf       = lights->shape_elements_cdf.at(instance->shape);
+        lights.instances.size(), get_random_float(rng));
+    auto  instance  = lights.instances[light_id];
+    auto& cdf       = lights.shape_elements_cdf.at(instance->shape);
     auto  rel       = get_random_float(rng);  // force order of evaluation
     auto  ruv       = get_random_vec2f(rng);  // force order of evaluation
     auto  point     = sample_instance_point(scene, instance, cdf, rel, ruv);
@@ -5425,17 +5425,17 @@ trace_point sample_lights_point(const yocto_scene* scene,
 
 // Sample pdf for a light point.
 float sample_lights_point_pdf(const yocto_scene* scene,
-    const trace_lights* lights, const vec3f& position,
+    const trace_lights& lights, const vec3f& position,
     const trace_point& light_point) {
     auto shape    = scene->shapes[light_point.instance->shape];
     auto material = scene->materials[shape->material];
-    if (lights->instances.empty()) return 0;
+    if (lights.instances.empty()) return 0;
     if (material->emission == zero3f) return 0;
     auto  instance = light_point.instance;
-    auto& cdf      = lights->shape_elements_cdf.at(instance->shape);
+    auto& cdf      = lights.shape_elements_cdf.at(instance->shape);
     return sample_instance_point_pdf(scene, instance, cdf,
                light_point.element_id, light_point.element_uv) *
-           sample_uniform_index_pdf(lights->instances.size());
+           sample_uniform_index_pdf(lights.instances.size());
 }
 
 // Sample pdf for an environment.
@@ -5528,25 +5528,25 @@ float sample_instance_direction_pdf(const yocto_scene* scene,
 
 // Sample lights wrt solid angle
 vec3f sample_lights_direction(const yocto_scene* scene,
-    const trace_lights* lights, const bvh_tree* bvh, const vec3f& position,
+    const trace_lights& lights, const bvh_tree* bvh, const vec3f& position,
     rng_state& rng) {
     auto light_id = sample_uniform_index(
-        lights->instances.size() + lights->environments.size(),
+        lights.instances.size() + lights.environments.size(),
         get_random_float(rng));
-    if (light_id < lights->instances.size()) {
-        auto  instance = lights->instances[light_id];
-        auto& cdf      = lights->shape_elements_cdf.at(instance->shape);
+    if (light_id < lights.instances.size()) {
+        auto  instance = lights.instances[light_id];
+        auto& cdf      = lights.shape_elements_cdf.at(instance->shape);
         auto  rel      = get_random_float(rng);  // force order of evaluation
         auto  ruv      = get_random_vec2f(rng);  // force order of evaluation
         return sample_instance_direction(
             scene, instance, cdf, position, rel, ruv);
     } else {
-        auto environment = lights->environments[light_id -
-                                                (int)lights->instances.size()];
+        auto environment = lights.environments[light_id -
+                                               (int)lights.instances.size()];
         auto rel         = get_random_float(rng);  // force order of evaluation
         auto ruv         = get_random_vec2f(rng);  // force order of evaluation
         if (environment->emission_texture >= 0) {
-            auto& cdf = lights->environment_texture_cdf.at(
+            auto& cdf = lights.environment_texture_cdf.at(
                 environment->emission_texture);
             return sample_environment_direction(
                 scene, environment, cdf, rel, ruv);
@@ -5558,17 +5558,17 @@ vec3f sample_lights_direction(const yocto_scene* scene,
 
 // Sample lights pdf
 float sample_lights_direction_pdf(const yocto_scene* scene,
-    const trace_lights* lights, const bvh_tree* bvh, const vec3f& position,
+    const trace_lights& lights, const bvh_tree* bvh, const vec3f& position,
     const vec3f& direction) {
     auto pdf = 0.0f;
-    for (auto instance : lights->instances) {
-        auto& cdf = lights->shape_elements_cdf.at(instance->shape);
+    for (auto instance : lights.instances) {
+        auto& cdf = lights.shape_elements_cdf.at(instance->shape);
         pdf += sample_instance_direction_pdf(
             scene, instance, cdf, bvh, position, direction);
     }
-    for (auto environment : lights->environments) {
+    for (auto environment : lights.environments) {
         if (environment->emission_texture >= 0) {
-            auto& cdf = lights->environment_texture_cdf.at(
+            auto& cdf = lights.environment_texture_cdf.at(
                 environment->emission_texture);
             pdf += sample_environment_direction_pdf(
                 scene, environment, cdf, direction);
@@ -5578,13 +5578,13 @@ float sample_lights_direction_pdf(const yocto_scene* scene,
         }
     }
     pdf *= sample_uniform_index_pdf(
-        lights->instances.size() + lights->environments.size());
+        lights.instances.size() + lights.environments.size());
     return pdf;
 }
 
 // Sample a direction accoding to either ligts or brdf
 vec3f sample_lights_or_brdf_direction(const yocto_scene* scene,
-    const trace_lights* lights, const bvh_tree* bvh,
+    const trace_lights& lights, const bvh_tree* bvh,
     const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, rng_state& rng) {
     auto rmode = get_random_float(rng);
@@ -5597,7 +5597,7 @@ vec3f sample_lights_or_brdf_direction(const yocto_scene* scene,
 
 // Pdf for direction sampling
 float sample_lights_or_brdf_direction_pdf(const yocto_scene* scene,
-    const trace_lights* lights, const bvh_tree* bvh,
+    const trace_lights& lights, const bvh_tree* bvh,
     const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     return 0.5f * sample_lights_direction_pdf(
@@ -5655,25 +5655,25 @@ float prob_direct(const microfacet_brdf& brdf) {
 // mediums.back(). pdf and incoming radiance le are returned in reference. It
 // works for both surface rendering and volume rendering.
 vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const vec3f& p, int channel,
+    const trace_lights& lights, const vec3f& p, int channel,
     vector<yocto_instance*> mediums, rng_state& rng, float& pdf, vec3f& le) {
     auto  incoming = zero3f;
     vec3f weight   = vec3f{1, 1, 1};
 
     auto idx = sample_uniform_index(
-        lights->instances.size() + lights->environments.size(),
+        lights.instances.size() + lights.environments.size(),
         get_random_float(rng));
-    pdf = 1.0f / (lights->instances.size() + lights->environments.size());
-    if (idx < lights->instances.size()) {
-        auto  instance = lights->instances[idx];
-        auto& cdf      = lights->shape_elements_cdf.at(instance->shape);
+    pdf = 1.0f / (lights.instances.size() + lights.environments.size());
+    if (idx < lights.instances.size()) {
+        auto  instance = lights.instances[idx];
+        auto& cdf      = lights.shape_elements_cdf.at(instance->shape);
         incoming       = sample_instance_direction(scene, instance, cdf, p,
             get_random_float(rng), get_random_vec2f(rng));
         pdf *= 1.0 / cdf.back();
     } else {
-        auto environment = lights->environments[idx - lights->instances.size()];
+        auto environment = lights.environments[idx - lights.instances.size()];
         if (environment->emission_texture >= 0) {
-            auto& cdf = lights->environment_texture_cdf.at(
+            auto& cdf = lights.environment_texture_cdf.at(
                 environment->emission_texture);
             incoming = sample_environment_direction(scene, environment, cdf,
                 get_random_float(rng), get_random_vec2f(rng));
@@ -5771,7 +5771,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
 
 // Recursive path tracing.
 tuple<vec3f, bool> trace_path(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -5786,7 +5786,7 @@ tuple<vec3f, bool> trace_path(const yocto_scene* scene, const bvh_tree* bvh,
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
-        if (!is_brdf_delta(point.brdf) && lights) {
+        if (!is_brdf_delta(point.brdf) && !empty(lights)) {
             auto light_direction = sample_lights_or_brdf_direction(scene, lights,
                 bvh, point.brdf, point.position, point.normal, outgoing, rng);
             auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights,
@@ -5854,9 +5854,9 @@ static yocto_instance* air = new yocto_instance{"air", {}, -1};
 
 // Iterative volume path tracing.
 tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
-    if (!lights) return {zero3f, false};
+    if (empty(lights)) return {zero3f, false};
 
     // initialize
     auto radiance = zero3f;
@@ -6076,7 +6076,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
 
 // Recursive path tracing.
 tuple<vec3f, bool> trace_path_naive(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6123,7 +6123,7 @@ tuple<vec3f, bool> trace_path_naive(const yocto_scene* scene,
 
 // Recursive path tracing.
 tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6138,7 +6138,7 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
-        if (!is_brdf_delta(point.brdf) && lights) {
+        if (!is_brdf_delta(point.brdf) && !empty(lights)) {
             auto light_point = sample_lights_point(
                 scene, lights, point.position, rng);
             auto light_pdf = sample_lights_point_pdf(
@@ -6193,7 +6193,7 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
 
 // Direct illumination.
 tuple<vec3f, bool> trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6205,7 +6205,7 @@ tuple<vec3f, bool> trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
     auto outgoing = -direction;
 
     // direct
-    if (!is_brdf_delta(point.brdf) && lights) {
+    if (!is_brdf_delta(point.brdf) && !empty(lights)) {
         auto light_direction = sample_lights_or_brdf_direction(scene, lights,
             bvh, point.brdf, point.position, point.normal, outgoing, rng);
         auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights, bvh,
@@ -6237,7 +6237,7 @@ tuple<vec3f, bool> trace_direct(const yocto_scene* scene, const bvh_tree* bvh,
 
 // Direct illumination.
 tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6249,7 +6249,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
     auto outgoing = -direction;
 
     // direct
-    if (!is_brdf_delta(point.brdf) && lights && !lights->instances.empty()) {
+    if (!is_brdf_delta(point.brdf) && !lights.instances.empty()) {
         auto light_point = sample_lights_point(
             scene, lights, point.position, rng);
         auto light_pdf = sample_lights_point_pdf(
@@ -6269,7 +6269,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
     }
 
     // environments
-    if (!is_brdf_delta(point.brdf) && lights && !lights->environments.empty()) {
+    if (!is_brdf_delta(point.brdf) && !lights.environments.empty()) {
         auto next_direction = sample_brdf_direction(
             point.brdf, point.normal, outgoing, rng);
         auto brdf_cosine = evaluate_brdf_cosine(
@@ -6303,7 +6303,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
 
 // Environment illumination only with no shadows.
 tuple<vec3f, bool> trace_environment(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6334,7 +6334,7 @@ tuple<vec3f, bool> trace_environment(const yocto_scene* scene,
 
 // Eyelight for quick previewing.
 tuple<vec3f, bool> trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const vec3f& position, const vec3f& direction,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6356,7 +6356,7 @@ tuple<vec3f, bool> trace_eyelight(const yocto_scene* scene, const bvh_tree* bvh,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_normal(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6369,7 +6369,7 @@ tuple<vec3f, bool> trace_debug_normal(const yocto_scene* scene,
 
 // Debug frontfacing.
 tuple<vec3f, bool> trace_debug_frontfacing(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6384,7 +6384,7 @@ tuple<vec3f, bool> trace_debug_frontfacing(const yocto_scene* scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_albedo(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6398,7 +6398,7 @@ tuple<vec3f, bool> trace_debug_albedo(const yocto_scene* scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_diffuse(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6411,7 +6411,7 @@ tuple<vec3f, bool> trace_debug_diffuse(const yocto_scene* scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_specular(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6424,7 +6424,7 @@ tuple<vec3f, bool> trace_debug_specular(const yocto_scene* scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_roughness(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6438,7 +6438,7 @@ tuple<vec3f, bool> trace_debug_roughness(const yocto_scene* scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_texcoord(const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const vec3f& position,
+    const bvh_tree* bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6451,7 +6451,7 @@ tuple<vec3f, bool> trace_debug_texcoord(const yocto_scene* scene,
 
 // Trace a single ray from the camera using the given algorithm.
 tuple<vec3f, bool> trace_func(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, trace_type tracer, const vec3f& position,
+    const trace_lights& lights, trace_type tracer, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     switch (tracer) {
         case trace_type::path:
@@ -6504,14 +6504,14 @@ tuple<vec3f, bool> trace_func(const yocto_scene* scene, const bvh_tree* bvh,
 }
 
 // Trace a single sample
-vec4f trace_sample(trace_state* state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, int i, int j,
+vec4f trace_sample(trace_state& state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights& lights, int i, int j,
     const trace_params& params) {
     _trace_npaths += 1;
     auto  camera       = scene->cameras.at(params.camera_id);
-    auto& rng          = at(state->random_number_generators, i, j);
+    auto& rng          = at(state.random_number_generators, i, j);
     auto  ray          = sample_camera_ray(camera, {i, j},
-        {state->rendered_image.width, state->rendered_image.height}, rng);
+        {state.rendered_image.width, state.rendered_image.height}, rng);
     auto  radiance     = zero3f;
     auto  hit          = false;
     tie(radiance, hit) = trace_func(scene, bvh, lights, params.sample_tracer,
@@ -6541,112 +6541,108 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
 }
 
 // Init trace state
-trace_state* make_trace_state(
+trace_state make_trace_state(
     const yocto_scene* scene, const trace_params& params) {
     auto scope  = log_trace_scoped("making trace state");
-    auto state  = new trace_state();
+    auto state  = trace_state();
     auto camera = scene->cameras[params.camera_id];
     auto size   = evaluate_image_size(camera, params.vertical_resolution);
-    state->rendered_image           = image<vec4f>{size.x, size.y, zero4f};
-    state->display_image            = image<vec4f>{size.x, size.y, zero4f};
-    state->accumulation_buffer      = image<vec4f>{size.x, size.y, zero4f};
-    state->samples_per_pixel        = image<int>{size.x, size.y, 0};
-    state->random_number_generators = make_trace_rngs(
+    state.rendered_image           = image<vec4f>{size.x, size.y, zero4f};
+    state.display_image            = image<vec4f>{size.x, size.y, zero4f};
+    state.accumulation_buffer      = image<vec4f>{size.x, size.y, zero4f};
+    state.samples_per_pixel        = image<int>{size.x, size.y, 0};
+    state.random_number_generators = make_trace_rngs(
         size.x, size.y, params.random_seed);
     return state;
 }
 
 // Init trace lights
-trace_lights* make_trace_lights(
+trace_lights make_trace_lights(
     const yocto_scene* scene, const trace_params& params) {
     auto scope  = log_trace_scoped("making trace lights");
-    auto lights = make_unique<trace_lights>();
+    auto lights = trace_lights{};
 
-    lights->shape_elements_cdf.resize(scene->shapes.size());
+    lights.shape_elements_cdf.resize(scene->shapes.size());
     for (auto instance : scene->instances) {
         auto shape    = scene->shapes[instance->shape];
         auto material = scene->materials[shape->material];
         if (material->emission == zero3f) continue;
         if (shape->triangles.empty() && shape->quads.empty()) continue;
-        lights->instances.push_back(instance);
-        lights->shape_elements_cdf[instance->shape] = compute_shape_elements_cdf(
+        lights.instances.push_back(instance);
+        lights.shape_elements_cdf[instance->shape] = compute_shape_elements_cdf(
             shape);
     }
 
-    lights->environment_texture_cdf.resize(scene->textures.size());
+    lights.environment_texture_cdf.resize(scene->textures.size());
     for (auto environment : scene->environments) {
         if (environment->emission == zero3f) continue;
-        lights->environments.push_back(environment);
+        lights.environments.push_back(environment);
         if (environment->emission_texture >= 0) {
-            lights->environment_texture_cdf
-                [environment->emission_texture] = compute_environment_texels_cdf(
+            lights.environment_texture_cdf[environment->emission_texture] = compute_environment_texels_cdf(
                 scene, environment);
         }
     }
 
-    if (lights->instances.empty() && lights->environments.empty())
-        return nullptr;
-    return lights.release();
+    if (lights.instances.empty() && lights.environments.empty()) return {};
+    return lights;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
-    const trace_lights* lights, const trace_params& params) {
+    const trace_lights& lights, const trace_params& params) {
     auto scope = log_trace_scoped("tracing image");
     auto state = make_trace_state(scene, params);
 
     if (params.no_parallel) {
-        for (auto j = 0; j < state->rendered_image.height; j++) {
-            for (auto i = 0; i < state->rendered_image.width; i++) {
+        for (auto j = 0; j < state.rendered_image.height; j++) {
+            for (auto i = 0; i < state.rendered_image.width; i++) {
                 for (auto s = 0; s < params.num_samples; s++)
-                    at(state->rendered_image, i, j) += trace_sample(
+                    at(state.rendered_image, i, j) += trace_sample(
                         state, scene, bvh, lights, i, j, params);
-                at(state->rendered_image, i, j) /= params.num_samples;
+                at(state.rendered_image, i, j) /= params.num_samples;
             }
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([=]() {
-                for (auto j = tid; j < state->rendered_image.height;
+            threads.push_back(thread([&, tid]() {
+                for (auto j = tid; j < state.rendered_image.height;
                      j += nthreads) {
-                    for (auto i = 0; i < state->rendered_image.width; i++) {
+                    for (auto i = 0; i < state.rendered_image.width; i++) {
                         for (auto s = 0; s < params.num_samples; s++)
-                            at(state->rendered_image, i, j) += trace_sample(
+                            at(state.rendered_image, i, j) += trace_sample(
                                 state, scene, bvh, lights, i, j, params);
-                        at(state->rendered_image, i, j) /= params.num_samples;
+                        at(state.rendered_image, i, j) /= params.num_samples;
                     }
                 }
             }));
         }
         for (auto& t : threads) t.join();
     }
-    auto img = state->rendered_image;
-    delete state;
-    return img;
+    return state.rendered_image;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-bool trace_samples(trace_state* state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
+bool trace_samples(trace_state& state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights& lights, const trace_params& params) {
     auto scope = log_trace_scoped(
-        "tracing samples {}/{}", state->current_sample, params.num_samples);
+        "tracing samples {}/{}", state.current_sample, params.num_samples);
     auto nbatch = min(
-        params.samples_per_batch, params.num_samples - state->current_sample);
+        params.samples_per_batch, params.num_samples - state.current_sample);
     if (params.no_parallel) {
-        for (auto j = 0; j < state->rendered_image.height; j++) {
-            for (auto i = 0; i < state->rendered_image.width; i++) {
+        for (auto j = 0; j < state.rendered_image.height; j++) {
+            for (auto i = 0; i < state.rendered_image.width; i++) {
                 for (auto s = 0; s < nbatch; s++) {
-                    at(state->accumulation_buffer, i, j) += trace_sample(
+                    at(state.accumulation_buffer, i, j) += trace_sample(
                         state, scene, bvh, lights, i, j, params);
-                    at(state->samples_per_pixel, i, j) += 1;
+                    at(state.samples_per_pixel, i, j) += 1;
                 }
-                at(state->rendered_image, i,
-                    j) = at(state->accumulation_buffer, i, j) /
-                         at(state->samples_per_pixel, i, j);
-                at(state->display_image, i, j) = tonemap_filmic(
-                    at(state->rendered_image, i, j), params.display_exposure,
+                at(state.rendered_image, i,
+                    j) = at(state.accumulation_buffer, i, j) /
+                         at(state.samples_per_pixel, i, j);
+                at(state.display_image, i, j) = tonemap_filmic(
+                    at(state.rendered_image, i, j), params.display_exposure,
                     params.display_filmic, params.display_srgb);
             }
         }
@@ -6654,20 +6650,20 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([=]() {
-                for (auto j = tid; j < state->rendered_image.height;
+            threads.push_back(thread([&, tid]() {
+                for (auto j = tid; j < state.rendered_image.height;
                      j += nthreads) {
-                    for (auto i = 0; i < state->rendered_image.width; i++) {
+                    for (auto i = 0; i < state.rendered_image.width; i++) {
                         for (auto s = 0; s < nbatch; s++) {
-                            at(state->accumulation_buffer, i, j) += trace_sample(
+                            at(state.accumulation_buffer, i, j) += trace_sample(
                                 state, scene, bvh, lights, i, j, params);
-                            at(state->samples_per_pixel, i, j) += 1;
+                            at(state.samples_per_pixel, i, j) += 1;
                         }
-                        at(state->rendered_image, i,
-                            j) = at(state->accumulation_buffer, i, j) /
-                                 at(state->samples_per_pixel, i, j);
-                        at(state->display_image, i, j) = tonemap_filmic(
-                            at(state->rendered_image, i, j),
+                        at(state.rendered_image, i,
+                            j) = at(state.accumulation_buffer, i, j) /
+                                 at(state.samples_per_pixel, i, j);
+                        at(state.display_image, i, j) = tonemap_filmic(
+                            at(state.rendered_image, i, j),
                             params.display_exposure, params.display_filmic,
                             params.display_srgb);
                     }
@@ -6676,68 +6672,68 @@ bool trace_samples(trace_state* state, const yocto_scene* scene,
         }
         for (auto& t : threads) t.join();
     }
-    state->current_sample += nbatch;
-    return state->current_sample >= params.num_samples;
+    state.current_sample += nbatch;
+    return state.current_sample >= params.num_samples;
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_state* state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights* lights, const trace_params& params) {
+void trace_async_start(trace_state& state, const yocto_scene* scene,
+    const bvh_tree* bvh, const trace_lights& lights, const trace_params& params) {
     log_trace("start tracing async");
     // render preview image
     if (params.preview_ratio) {
         auto pparams                = params;
-        pparams.vertical_resolution = state->rendered_image.height /
+        pparams.vertical_resolution = state.rendered_image.height /
                                       params.preview_ratio;
         pparams.num_samples = 1;
         auto pimg           = trace_image4f(scene, bvh, lights, pparams);
         auto pdisplay       = tonemap_filmic(pimg, params.display_exposure,
             params.display_filmic, params.display_srgb);
         auto pwidth = pimg.width, pheight = pimg.height;
-        for (auto j = 0; j < state->rendered_image.height; j++) {
-            for (auto i = 0; i < state->rendered_image.width; i++) {
+        for (auto j = 0; j < state.rendered_image.height; j++) {
+            for (auto i = 0; i < state.rendered_image.width; i++) {
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
-                at(state->rendered_image, i, j) = at(pimg, pi, pj);
-                at(state->display_image, i, j)  = at(pdisplay, pi, pj);
+                at(state.rendered_image, i, j) = at(pimg, pi, pj);
+                at(state.display_image, i, j)  = at(pdisplay, pi, pj);
             }
         }
     }
 
     auto nthreads = thread::hardware_concurrency();
-    state->async_threads.clear();
-    state->async_stop_flag = false;
+    state.async_threads.clear();
+    state.async_stop_flag = false;
     for (auto tid = 0; tid < nthreads; tid++) {
-        state->async_threads.push_back(thread([=, &params]() {
+        state.async_threads.push_back(thread([&, tid]() {
             for (auto s = 0; s < params.num_samples; s++) {
-                if (!tid) state->current_sample = s;
-                for (auto j = tid; j < state->rendered_image.height;
+                if (!tid) state.current_sample = s;
+                for (auto j = tid; j < state.rendered_image.height;
                      j += nthreads) {
-                    for (auto i = 0; i < state->rendered_image.width; i++) {
-                        if (state->async_stop_flag) return;
-                        at(state->accumulation_buffer, i, j) += trace_sample(
+                    for (auto i = 0; i < state.rendered_image.width; i++) {
+                        if (state.async_stop_flag) return;
+                        at(state.accumulation_buffer, i, j) += trace_sample(
                             state, scene, bvh, lights, i, j, params);
-                        at(state->samples_per_pixel, i, j) += 1;
-                        at(state->rendered_image, i,
-                            j) = at(state->accumulation_buffer, i, j) /
-                                 at(state->samples_per_pixel, i, j);
-                        at(state->display_image, i, j) = tonemap_filmic(
-                            at(state->rendered_image, i, j),
+                        at(state.samples_per_pixel, i, j) += 1;
+                        at(state.rendered_image, i,
+                            j) = at(state.accumulation_buffer, i, j) /
+                                 at(state.samples_per_pixel, i, j);
+                        at(state.display_image, i, j) = tonemap_filmic(
+                            at(state.rendered_image, i, j),
                             params.display_exposure, params.display_filmic,
                             params.display_srgb);
                     }
                 }
             }
-            if (!tid) state->current_sample = params.num_samples;
+            if (!tid) state.current_sample = params.num_samples;
         }));
     }
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_state* state) {
-    state->async_stop_flag = true;
-    for (auto& t : state->async_threads) t.join();
-    state->async_threads.clear();
+void trace_async_stop(trace_state& state) {
+    state.async_stop_flag = true;
+    for (auto& t : state.async_threads) t.join();
+    state.async_threads.clear();
 }
 
 // Trace statistics for last run used for fine tuning implementation.

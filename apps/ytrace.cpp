@@ -88,30 +88,27 @@ int main(int argc, char* argv[]) {
     auto bvh = unique_ptr<bvh_tree>{make_scene_bvh(scene.get(), true, embree)};
 
     // init renderer
-    auto lights = unique_ptr<trace_lights>{
-        make_trace_lights(scene.get(), params)};
+    auto lights = make_trace_lights(scene.get(), params);
 
     // fix renderer type if no lights
-    if (!lights && params.sample_tracer != trace_type::eyelight) {
+    if (empty(lights) && params.sample_tracer != trace_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader");
         params.sample_tracer = trace_type::eyelight;
     }
 
     // initialize rendering objects
-    auto state = unique_ptr<trace_state>{make_trace_state(scene.get(), params)};
+    auto state = make_trace_state(scene.get(), params);
 
     // render
     auto done  = false;
     auto scope = log_trace_begin("rendering image");
     while (!done) {
-        done = trace_samples(
-            state.get(), scene.get(), bvh.get(), lights.get(), params);
+        done = trace_samples(state, scene.get(), bvh.get(), lights, params);
         if (save_batch) {
-            auto filename = replace_extension(
-                imfilename, to_string(state->current_sample) + "." +
-                                get_extension(imfilename));
+            auto filename = replace_extension(imfilename,
+                to_string(state.current_sample) + "." + get_extension(imfilename));
             if (!save_tonemapped_image(
-                    filename, state->rendered_image, exposure, filmic, srgb))
+                    filename, state.rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);
         }
     }
@@ -119,7 +116,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     if (!save_tonemapped_image(
-            imfilename, state->rendered_image, exposure, filmic, srgb))
+            imfilename, state.rendered_image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);
 
     // done

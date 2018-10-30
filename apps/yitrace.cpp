@@ -43,8 +43,8 @@ struct app_state {
     trace_params params     = {};
 
     // rendering state
-    unique_ptr<trace_state>  state  = nullptr;
-    unique_ptr<trace_lights> lights = nullptr;
+    trace_state  state  = {};
+    trace_lights lights = {};
 
     // view image
     vec2f                        imcenter     = zero2f;
@@ -69,8 +69,8 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "trace")) {
             draw_label_glwidgets(win, "image", "%d x %d @ %d",
-                app->state->rendered_image.width,
-                app->state->rendered_image.height, app->state->current_sample);
+                app->state.rendered_image.width,
+                app->state.rendered_image.height, app->state.current_sample);
             auto cam_names = vector<string>();
             for (auto camera : app->scene->cameras)
                 cam_names.push_back(camera->name);
@@ -91,9 +91,9 @@ void draw_glwidgets(glwindow* win) {
                 win, "pratio", app->params.preview_ratio, 1, 64);
             if (edited) app->update_list.push_back({"app", app});
             draw_label_glwidgets(win, "time/sample", "%0.3lf",
-                (app->state->current_sample) ?
+                (app->state.current_sample) ?
                     (get_time() - app->trace_start) /
-                        (1000000000.0 * app->state->current_sample) :
+                        (1000000000.0 * app->state.current_sample) :
                     0.0);
             draw_slider_glwidget(
                 win, "exposure", app->params.display_exposure, -5, 5);
@@ -105,13 +105,13 @@ void draw_glwidgets(glwindow* win) {
             draw_checkbox_glwidget(win, "fps", app->navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
             auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
-                {app->state->rendered_image.width,
-                    app->state->rendered_image.height});
+                {app->state.rendered_image.width,
+                    app->state.rendered_image.height});
             draw_dragger_glwidget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app->state->rendered_image.width &&
-                ij.y >= 0 && ij.y < app->state->rendered_image.height) {
+            if (ij.x >= 0 && ij.x < app->state.rendered_image.width &&
+                ij.y >= 0 && ij.y < app->state.rendered_image.height) {
                 draw_coloredit_glwidget(
-                    win, "pixel", at(app->state->rendered_image, ij.x, ij.y));
+                    win, "pixel", at(app->state.rendered_image, ij.x, ij.y));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_glwidget(win, "pixel", zero4f_);
@@ -139,17 +139,17 @@ void draw(glwindow* win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     center_image(app->imcenter, app->imscale,
-        {app->state->display_image.width, app->state->display_image.height},
+        {app->state.display_image.width, app->state.display_image.height},
         win_size, app->zoom_to_fit);
     if (!app->gl_txt) {
         app->gl_txt = make_gltexture(
-            app->state->display_image, false, false, false);
+            app->state.display_image, false, false, false);
     } else {
         update_gltexture(
-            app->gl_txt, app->state->display_image, false, false, false);
+            app->gl_txt, app->state.display_image, false, false, false);
     }
     draw_glimage(app->gl_txt,
-        {app->state->display_image.width, app->state->display_image.height},
+        {app->state.display_image.width, app->state.display_image.height},
         win_size, app->imcenter, app->imscale);
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -160,7 +160,7 @@ bool update(app_state* app) {
     if (app->update_list.empty()) return false;
 
     // stop renderer
-    trace_async_stop(app->state.get());
+    trace_async_stop(app->state);
 
     // update BVH
     for (auto& sel : app->update_list) {
@@ -186,10 +186,9 @@ bool update(app_state* app) {
 
     app->state       = {};
     app->trace_start = get_time();
-    app->state       = unique_ptr<trace_state>(
-        make_trace_state(app->scene.get(), app->params));
-    trace_async_start(app->state.get(), app->scene.get(), app->bvh.get(),
-        app->lights.get(), app->params);
+    app->state       = make_trace_state(app->scene.get(), app->params);
+    trace_async_start(
+        app->state, app->scene.get(), app->bvh.get(), app->lights, app->params);
 
     // updated
     return true;
@@ -198,8 +197,8 @@ bool update(app_state* app) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto width  = clamp(app->state->rendered_image.width, 256, 1440);
-    auto height = clamp(app->state->rendered_image.height, 256, 1440);
+    auto width  = clamp(app->state.rendered_image.width, 256, 1440);
+    auto height = clamp(app->state.rendered_image.height, 256, 1440);
     auto win    = make_glwindow(width, height, "yitrace", app, draw);
 
     // init widgets
@@ -234,14 +233,14 @@ void run_ui(app_state* app) {
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app->imcenter, app->imscale,
-                {app->state->rendered_image.width,
-                    app->state->rendered_image.height});
-            if (ij.x < 0 || ij.x >= app->state->rendered_image.width ||
-                ij.y < 0 || ij.y >= app->state->rendered_image.height) {
+                {app->state.rendered_image.width,
+                    app->state.rendered_image.height});
+            if (ij.x < 0 || ij.x >= app->state.rendered_image.width ||
+                ij.y < 0 || ij.y >= app->state.rendered_image.height) {
                 auto camera = app->scene->cameras.at(app->params.camera_id);
                 auto ray    = evaluate_camera_ray(camera, ij,
-                    {app->state->rendered_image.width,
-                        app->state->rendered_image.height},
+                    {app->state.rendered_image.width,
+                        app->state.rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
                 auto isec   = intersect_scene(
                     app->scene.get(), app->bvh.get(), ray);
@@ -319,30 +318,28 @@ int main(int argc, char* argv[]) {
         make_scene_bvh(app->scene.get(), true, embree));
 
     // init renderer
-    app->lights = unique_ptr<trace_lights>(
-        make_trace_lights(app->scene.get(), app->params));
+    app->lights = make_trace_lights(app->scene.get(), app->params);
 
     // fix renderer type if no lights
-    if (!app->lights && app->params.sample_tracer != trace_type::eyelight) {
+    if (empty(app->lights) && app->params.sample_tracer != trace_type::eyelight) {
         if (!quiet)
             log_info("no lights presents, switching to eyelight shader\n");
         app->params.sample_tracer = trace_type::eyelight;
     }
 
     // prepare renderer
-    app->state = unique_ptr<trace_state>(
-        make_trace_state(app->scene.get(), app->params));
+    app->state = make_trace_state(app->scene.get(), app->params);
 
     // initialize rendering objects
     app->trace_start = get_time();
-    trace_async_start(app->state.get(), app->scene.get(), app->bvh.get(),
-        app->lights.get(), app->params);
+    trace_async_start(
+        app->state, app->scene.get(), app->bvh.get(), app->lights, app->params);
 
     // run interactive
     run_ui(app);
 
     // cleanup
-    trace_async_stop(app->state.get());
+    trace_async_stop(app->state);
 
     // done
     return 0;
