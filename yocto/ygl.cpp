@@ -4034,7 +4034,9 @@ void add_missing_materials(yocto_scene* scene) {
     for (auto shape : scene->shapes) {
         if (shape->material) continue;
         if (!mat) {
-            mat = make_default_material("<default>");
+            mat = new yocto_material();
+            mat->name = "<default>";
+            mat->diffuse = {0.2f, 0.2f, 0.2f};
             scene->materials.push_back(mat);
         }
         shape->material = mat;
@@ -4044,8 +4046,10 @@ void add_missing_materials(yocto_scene* scene) {
 // Add missing cameras.
 void add_missing_cameras(yocto_scene* scene) {
     if (scene->cameras.empty()) {
-        scene->cameras.push_back(
-            make_bbox_camera("<view>", compute_scene_bounds(scene)));
+        auto camera = new yocto_camera();
+        camera->name = "<view>";
+        set_camera_view(camera, compute_scene_bounds(scene));
+        scene->cameras.push_back(camera);
     }
 }
 
@@ -4090,24 +4094,21 @@ void log_validation_errors(const yocto_scene* scene, bool skip_textures) {
 }
 
 // add missing camera
-yocto_camera* make_bbox_camera(
-    const string& name, const bbox3f& bbox, const vec2f& film, float focal) {
+void set_camera_view(yocto_camera* camera,
+    const bbox3f& bbox, const vec2f& film, float focal) {
     auto bbox_center       = (bbox.max + bbox.min) / 2.0f;
     auto bbox_size         = bbox.max - bbox.min;
     auto bbox_msize        = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto camera            = new yocto_camera();
-    camera->name           = name;
     auto camera_dir        = vec3f{1, 0.4f, 1};
     auto from              = camera_dir * bbox_msize + bbox_center;
     auto to                = bbox_center;
     auto up                = vec3f{0, 1, 0};
     camera->frame          = lookat_frame(from, to, up);
     camera->orthographic   = false;
-    camera->film_size      = film;
-    camera->focal_length   = focal;
+    if(film != zero2f) camera->film_size      = film;
+    if(focal != 0) camera->focal_length   = focal;
     camera->focus_distance = length(from - to);
     camera->lens_aperture  = 0;
-    return camera;
 }
 
 }  // namespace ygl

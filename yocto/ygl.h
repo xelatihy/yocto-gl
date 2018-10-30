@@ -3307,17 +3307,6 @@ void print_stats(const yocto_scene* scene);
 // merge_from to merged_into, so merge_from will be empty after this function.
 void merge_scene(yocto_scene* merge_into, yocto_scene* merge_from);
 
-// make camera
-yocto_camera* make_bbox_camera(const string& name, const bbox3f& bbox,
-    const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
-// make default material
-inline yocto_material* make_default_material(const string& name) {
-    auto mat     = new yocto_material();
-    mat->name    = name;
-    mat->diffuse = {0.2f, 0.2f, 0.2f};
-    return mat;
-}
-
 // Add a sky environment
 inline yocto_environment* make_sky_environment(
     const string& name, float sun_angle = pif / 4) {
@@ -3450,6 +3439,8 @@ float evaluate_camera_aspect(const yocto_camera* camera);
 void  set_camera_fovy(
      yocto_camera* camera, float fovy, float aspect, float width = 0.036f);
 vec2i evaluate_image_size(const yocto_camera* camera, int yresolution);
+void set_camera_view(yocto_camera* camera, const bbox3f& bbox,
+    const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.

@@ -313,9 +313,7 @@ int main(int argc, char* argv[]) {
     }
     if (double_sided)
         for (auto mat : app->scene->materials) mat->double_sided = true;
-    if (app->scene->cameras.empty())
-        app->scene->cameras.push_back(
-            make_bbox_camera("<view>", compute_scene_bounds(app->scene.get())));
+        add_missing_cameras(app->scene.get());
     add_missing_names(app->scene.get());
     log_validation_errors(app->scene.get());
 
