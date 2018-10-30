@@ -3929,7 +3929,7 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
             auto  node = new yocto_scene_node();
             node->name = gnde.value("name", ""s);
             if (gnde.count("camera"))
-                node->camera = scene->cameras[gnde.value("camera", 0)];
+                node->camera = gnde.value("camera", 0);
             node->translation = gnde.value("translation", zero3f);
             node->rotation    = gnde.value("rotation", vec4f{0, 0, 0, 1});
             node->scale       = gnde.value("scale", vec3f{1, 1, 1});
@@ -3941,9 +3941,8 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
             if (!gnde.count("children")) continue;
-            auto node = scene->nodes[nid];
             for (auto& cid : gnde.at("children"))
-                scene->nodes[cid.get<int>()]->parent = node;
+                scene->nodes[cid.get<int>()]->parent = nid;
         }
 
         // set up instances
@@ -3954,20 +3953,22 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
             auto& shps = meshes.at(gnde.value("mesh", 0));
             if (shps.empty()) continue;
             if (shps.size() == 1) {
-                node->instance        = new yocto_instance();
-                node->instance->name  = node->name;
-                node->instance->shape = shps[0];
-                scene->instances.push_back(node->instance);
+                auto instance        = new yocto_instance();
+                instance->name  = node->name;
+                instance->shape = shps[0];
+                scene->instances.push_back(instance);
+                node->instance = (int)scene->instances.size()-1;
             } else {
                 for (auto shp : shps) {
                     auto shape = scene->shapes[shp];
+                    auto instance        = new yocto_instance();
+                    instance->name  = node->name + "_" + shape->name;
+                    instance->shape = shp;
+                    scene->instances.push_back(instance);
                     auto child             = new yocto_scene_node();
                     child->name            = node->name + "_" + shape->name;
-                    child->parent          = node;
-                    child->instance        = new yocto_instance();
-                    child->instance->name  = child->name;
-                    child->instance->shape = shp;
-                    scene->instances.push_back(child->instance);
+                    child->parent          = nid;
+                    child->instance = (int)scene->instances.size()-1;
                     scene->nodes.push_back(child);
                 }
             }
@@ -4075,7 +4076,7 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                     ->animations[sampler_map.at(
                         {gchannel.at("sampler").get<int>(), path})]
                     ->node_targets.push_back(
-                        scene->nodes[(int)gchannel.at("target").at("node").get<int>()]);
+                        (int)gchannel.at("target").at("node").get<int>());
             }
         }
     }
@@ -4150,7 +4151,6 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     if (!scene->nodes.empty()) js["nodes"] = json::array();
 
     // convert cameras
-    auto cmap = unordered_map<yocto_camera*, int>();
     for (auto camera : scene->cameras) {
         auto cjs    = json();
         cjs["name"] = camera->name;
@@ -4165,7 +4165,6 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
             cjs["orthographic"]["ymag"]  = camera->film_size.y / 2;
             cjs["orthographic"]["znear"] = 0.01f;
         }
-        cmap[camera] = (int)js["cameras"].size();
         js["cameras"].push_back(cjs);
     }
 
@@ -4285,7 +4284,6 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     }
 
     // nodes
-    auto nmap = unordered_map<yocto_scene_node*, int>();
     for (auto& node : scene->nodes) {
         auto njs           = json();
         njs["name"]        = node->name;
@@ -4293,15 +4291,14 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         njs["translation"] = node->translation;
         njs["rotation"]    = node->rotation;
         njs["scale"]       = node->scale;
-        if (node->camera) njs["camera"] = cmap.at(node->camera);
-        if (node->instance) njs["mesh"] = node->instance->shape;
+        if (node->camera >= 0) njs["camera"] = node->camera;
+        if (node->instance >= 0) njs["mesh"] = scene->instances[node->instance]->shape;
         if (!node->children.empty()) {
             njs["children"] = json::array();
             for (auto& c : node->children)
-                njs["children"].push_back(nmap.at(c));
+                njs["children"].push_back(c);
         }
         js["nodes"].push_back(njs);
-        nmap[node] = (int)js["nodes"].size() - 1;
     }
 
     // animations not supported yet
@@ -4309,10 +4306,11 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
 
     // nodes from instances
     if (scene->nodes.empty()) {
+        auto camera_id = 0;
         for (auto camera : scene->cameras) {
             auto njs      = json();
             njs["name"]   = camera->name;
-            njs["camera"] = cmap.at(camera);
+            njs["camera"] = camera_id++;
             njs["matrix"] = frame_to_mat(camera->frame);
             js["nodes"].push_back(njs);
         }
@@ -5039,18 +5037,20 @@ yocto_scene* load_pbrt_scene(
         }
     }
     if (use_hierarchy) {
+        auto camera_id = 0;
         for (auto camera : scene->cameras) {
             auto node    = new yocto_scene_node();
             node->name   = camera->name;
             node->local  = camera->frame;
-            node->camera = camera;
+            node->camera = camera_id++;
             scene->nodes.insert(scene->nodes.begin(), node);
         }
+        auto environment_id = 0;
         for (auto environment : scene->environments) {
             auto node         = new yocto_scene_node();
             node->name        = environment->name;
             node->local       = environment->frame;
-            node->environment = environment;
+            node->environment = environment_id++;
             scene->nodes.push_back(node);
         }
     }

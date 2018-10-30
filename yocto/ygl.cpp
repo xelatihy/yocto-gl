@@ -3740,7 +3740,7 @@ void tesselate_shapes(yocto_scene* scene) {
 }
 
 // Update animation transforms
-void update_transforms(
+void update_transforms(yocto_scene* scene,
     yocto_animation* animation, float time, const string& anim_group) {
     if (anim_group != "" && anim_group != animation->animation_group) return;
 
@@ -3761,7 +3761,7 @@ void update_transforms(
                 break;
             default: log_error("should not have been here");
         }
-        for (auto target : animation->node_targets) target->translation = val;
+        for (auto target : animation->node_targets) scene->nodes[target]->translation = val;
     }
     if (!animation->rotation_keyframes.empty()) {
         auto val = vec4f{0, 0, 0, 1};
@@ -3779,7 +3779,7 @@ void update_transforms(
                     animation->rotation_keyframes, time);
                 break;
         }
-        for (auto target : animation->node_targets) target->rotation = val;
+        for (auto target : animation->node_targets) scene->nodes[target]->rotation = val;
     }
     if (!animation->scale_keyframes.empty()) {
         auto val = vec3f{1, 1, 1};
@@ -3797,30 +3797,32 @@ void update_transforms(
                     animation->scale_keyframes, time);
                 break;
         }
-        for (auto target : animation->node_targets) target->scale = val;
+        for (auto target : animation->node_targets) scene->nodes[target]->scale = val;
     }
 }
 
 // Update node transforms
-void update_transforms(
+void update_transforms(yocto_scene* scene,
     yocto_scene_node* node, const frame3f& parent = identity_frame3f) {
     auto frame = parent * node->local * translation_frame(node->translation) *
                  rotation_frame(node->rotation) * scaling_frame(node->scale);
-    if (node->instance) node->instance->frame = frame;
-    if (node->camera) node->camera->frame = frame;
-    if (node->environment) node->environment->frame = frame;
-    for (auto child : node->children) update_transforms(child, frame);
+    if (node->instance >= 0) scene->instances[node->instance]->frame = frame;
+    if (node->camera >= 0) scene->cameras[node->camera]->frame = frame;
+    if (node->environment >= 0) scene->environments[node->environment]->frame = frame;
+    for (auto child : node->children) update_transforms(scene, scene->nodes[child], frame);
 }
 
 // Update node transforms
 void update_transforms(yocto_scene* scene, float time, const string& anim_group) {
     for (auto& agr : scene->animations)
-        update_transforms(agr, time, anim_group);
+        update_transforms(scene, agr, time, anim_group);
     for (auto& node : scene->nodes) node->children.clear();
+    for (auto node_id = 0; node_id < scene->nodes.size(); node_id++) {
+        auto& node = scene->nodes[node_id];
+        if (node->parent >= 0) scene->nodes[node->parent]->children.push_back(node_id);
+    }
     for (auto& node : scene->nodes)
-        if (node->parent) node->parent->children.push_back(node);
-    for (auto& node : scene->nodes)
-        if (!node->parent) update_transforms(node);
+        if (node->parent >= 0) update_transforms(scene, node);
 }
 
 // Compute animation range

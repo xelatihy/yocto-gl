@@ -3239,18 +3239,18 @@ struct yocto_environment {
 // Node in a transform hierarchy.
 struct yocto_scene_node {
     string             name        = "";
-    yocto_scene_node*  parent      = nullptr;
+    int  parent      = -1;
     frame3f            local       = identity_frame3f;
     vec3f              translation = {0, 0, 0};
     vec4f              rotation    = {0, 0, 0, 1};
     vec3f              scale       = {1, 1, 1};
     vector<float>      weights     = {};
-    yocto_camera*      camera      = nullptr;
-    yocto_instance*    instance    = nullptr;
-    yocto_environment* environment = nullptr;
+    int      camera      = -1;
+    int    instance    = -1;
+    int environment = -1;
 
     // compute properties
-    vector<yocto_scene_node*> children = {};
+    vector<int> children = {};
 };
 
 // Keyframe type.
@@ -3267,7 +3267,7 @@ struct yocto_animation {
     vector<vec4f>            rotation_keyframes      = {};
     vector<vec3f>            scale_keyframes         = {};
     vector<vector<float>>    morph_weights_keyframes = {};
-    vector<yocto_scene_node*> node_targets           = {};
+    vector<int> node_targets           = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
