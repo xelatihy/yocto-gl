@@ -4053,6 +4053,20 @@ void add_missing_cameras(yocto_scene* scene) {
     }
 }
 
+// Add a sky environment
+void add_sky_environment(yocto_scene* scene, float sun_angle) {
+    auto texture                  = new yocto_texture();
+    texture->name                 = "<sky>";
+    texture->filename             = "textures/sky.hdr";
+    texture->hdr_image            = make_sunsky_image4f(1024, 512, sun_angle);
+    scene->textures.push_back(texture);
+    auto environment              = new yocto_environment();
+    environment->name             = "<sky>";
+    environment->emission         = {1, 1, 1};
+    environment->emission_texture = texture;
+    scene->environments.push_back(environment);
+}
+
 // Checks for validity of the scene.
 vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
     auto errs        = vector<string>();

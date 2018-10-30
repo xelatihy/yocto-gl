@@ -78,10 +78,7 @@ int main(int argc, char* argv[]) {
     tesselate_shapes(scene.get());
 
     // add components
-    if (add_skyenv && scene->environments.empty()) {
-        scene->environments.push_back(make_sky_environment("sky"));
-        scene->textures.push_back(scene->environments.back()->emission_texture);
-    }
+    if (add_skyenv && scene->environments.empty()) add_sky_environment(scene.get());
     if (double_sided)
         for (auto mat : scene->materials) mat->double_sided = true;
     log_validation_errors(scene.get());

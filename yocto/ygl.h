@@ -3307,20 +3307,6 @@ void print_stats(const yocto_scene* scene);
 // merge_from to merged_into, so merge_from will be empty after this function.
 void merge_scene(yocto_scene* merge_into, yocto_scene* merge_from);
 
-// Add a sky environment
-inline yocto_environment* make_sky_environment(
-    const string& name, float sun_angle = pif / 4) {
-    auto texture                  = new yocto_texture();
-    texture->name                 = name;
-    texture->filename             = "textures/" + name + ".hdr";
-    texture->hdr_image            = make_sunsky_image4f(1024, 512, sun_angle);
-    auto environment              = new yocto_environment();
-    environment->name             = name;
-    environment->emission         = {1, 1, 1};
-    environment->emission_texture = texture;
-    return environment;
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -3361,6 +3347,10 @@ void add_missing_normals(yocto_scene* scene);
 void add_missing_tangent_space(yocto_scene* scene);
 void add_missing_materials(yocto_scene* scene);
 void add_missing_cameras(yocto_scene* scene);
+
+// Add a sky environment
+void add_sky_environment(yocto_scene* scene, float sun_angle = pif / 4);
+
 // Checks for validity of the scene.
 vector<string> validate_scene(
     const yocto_scene* scene, bool skip_textures = false);
@@ -3430,7 +3420,6 @@ vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& i);
 vec2i evaluate_texture_size(const yocto_texture* texture);
 vec4f lookup_texture(const yocto_texture* texture, int i, int j);
 vec4f evaluate_texture(const yocto_texture* texture, const vec2f& texcoord);
-float lookup_voltexture(const yocto_voltexture* texture, int i, int j, int k);
 float evaluate_voltexture(const yocto_voltexture* texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
