@@ -306,10 +306,11 @@ int main(int argc, char* argv[]) {
     tesselate_shapes(app->scene.get());
 
     // add components
-    if (add_skyenv && app->scene->environments.empty()) add_sky_environment(app->scene.get());
+    if (add_skyenv && app->scene->environments.empty())
+        add_sky_environment(app->scene.get());
     if (double_sided)
         for (auto mat : app->scene->materials) mat->double_sided = true;
-        add_missing_cameras(app->scene.get());
+    add_missing_cameras(app->scene.get());
     add_missing_names(app->scene.get());
     log_validation_errors(app->scene.get());
 

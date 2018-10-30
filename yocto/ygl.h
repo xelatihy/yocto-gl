@@ -3230,10 +3230,10 @@ struct yocto_instance {
 
 // Environment map.
 struct yocto_environment {
-    string         name             = "";
-    frame3f        frame            = identity_frame3f;
-    vec3f          emission         = {0, 0, 0};
-    int emission_texture = -1;
+    string  name             = "";
+    frame3f frame            = identity_frame3f;
+    vec3f   emission         = {0, 0, 0};
+    int     emission_texture = -1;
 };
 
 // Node in a transform hierarchy.
@@ -3376,19 +3376,24 @@ scene_intersection intersect_scene(const yocto_scene* scene,
     const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f evaluate_shape_position(const yocto_shape* shape, int element_id, const vec2f& element_uv);
-vec3f evaluate_shape_normal(const yocto_shape* shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_shape_position(
+    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_shape_normal(
+    const yocto_shape* shape, int element_id, const vec2f& element_uv);
 vec2f evaluate_shape_texturecoord(
     const yocto_shape* shape, int element_id, const vec2f& element_uv);
-vec4f evaluate_shape_color(const yocto_shape* shape, int element_id, const vec2f& element_uv);
-float evaluate_shape_radius(const yocto_shape* shape, int element_id, const vec2f& element_uv);
+vec4f evaluate_shape_color(
+    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+float evaluate_shape_radius(
+    const yocto_shape* shape, int element_id, const vec2f& element_uv);
 vec4f evaluate_shape_tangentspace(
     const yocto_shape* shape, int element_id, const vec2f& element_uv);
-vec3f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int element_id, const vec2f& element_uv, bool& left_handed);
+vec3f evaluate_shape_tangentspace(const yocto_shape* shape, int element_id,
+    const vec2f& element_uv, bool& left_handed);
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape* shape, int element_id);
-vec4f evaluate_shape_element_tangentspace(const yocto_shape* shape, int element_id);
+vec4f evaluate_shape_element_tangentspace(
+    const yocto_shape* shape, int element_id);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
@@ -3396,13 +3401,14 @@ vec3f evaluate_instance_position(
     const yocto_instance* instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_normal(
     const yocto_instance* instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_tangentspace(
-    const yocto_instance* instance, int element_id, const vec2f& element_uv, bool& left_handed);
+vec3f evaluate_instance_tangentspace(const yocto_instance* instance,
+    int element_id, const vec2f& element_uv, bool& left_handed);
 // Instance element values.
-vec3f evaluate_instance_element_normal(const yocto_instance* instance, int element_id);
+vec3f evaluate_instance_element_normal(
+    const yocto_instance* instance, int element_id);
 // Shading normals including material perturbations.
-vec3f evaluate_instance_shading_normal(
-    const yocto_instance* instance, int element_id, const vec2f& element_uv, const vec3f& o);
+vec3f evaluate_instance_shading_normal(const yocto_instance* instance,
+    int element_id, const vec2f& element_uv, const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
@@ -3414,7 +3420,8 @@ vec3f evaluate_environment_direction(
 vec3f evaluate_environment_emission(const yocto_scene* scene,
     const yocto_environment* environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& direction);
+vec3f evaluate_environment_emission(
+    const yocto_scene* scene, const vec3f& direction);
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture* texture);
@@ -3428,8 +3435,8 @@ float evaluate_camera_aspect(const yocto_camera* camera);
 void  set_camera_fovy(
      yocto_camera* camera, float fovy, float aspect, float width = 0.036f);
 vec2i evaluate_image_size(const yocto_camera* camera, int yresolution);
-void set_camera_view(yocto_camera* camera, const bbox3f& bbox,
-    const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
+void  set_camera_view(yocto_camera* camera, const bbox3f& bbox,
+     const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
@@ -3485,12 +3492,14 @@ float             sample_shape_element_pdf(const yocto_shape* shape,
                 const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Sample an environment based on either texel values of uniform
-vector<float> compute_environment_texels_cdf(const yocto_scene* scene,
-    const yocto_environment* environment);
-vec3f sample_environment_direction(const yocto_scene* scene,const yocto_environment* environment,
-    const vector<float>& texels_cdf, float re, const vec2f& ruv);
-float sample_environment_direction_pdf(const yocto_scene* scene,const yocto_environment* environment,
-    const vector<float>& texels_cdf, const vec3f& direction);
+vector<float> compute_environment_texels_cdf(
+    const yocto_scene* scene, const yocto_environment* environment);
+vec3f sample_environment_direction(const yocto_scene* scene,
+    const yocto_environment* environment, const vector<float>& texels_cdf,
+    float re, const vec2f& ruv);
+float sample_environment_direction_pdf(const yocto_scene* scene,
+    const yocto_environment* environment, const vector<float>& texels_cdf,
+    const vec3f& direction);
 
 }  // namespace ygl
 

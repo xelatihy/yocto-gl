@@ -241,13 +241,15 @@ bool draw_combobox_glwidget(
 bool draw_combobox_glwidget(
     glwindow* win, const char* lbl, string& val, const vector<string>& labels);
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
-    const vector<void*>& vals, const char* (*label)(void*), bool include_null = false);
+    const vector<void*>& vals, const char* (*label)(void*),
+    bool                 include_null = false);
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
-    const vector<void*>& vals, const char* (*label)(void*), bool include_null = false);
+    const vector<void*>& vals, const char* (*label)(void*),
+    bool                 include_null = false);
 
 template <typename T>
-inline bool draw_combobox_glwidget(
-    glwindow* win, const char* lbl, int& idx, const vector<T*>& vals, bool include_null = false) {
+inline bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
+    const vector<T*>& vals, bool include_null = false) {
     return draw_combobox_glwidget(win, lbl, idx, (const vector<void*>&)vals,
         [](void* val) { return ((T*)val)->name.c_str(); }, include_null);
 }
