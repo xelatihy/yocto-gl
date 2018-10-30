@@ -74,13 +74,15 @@ inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
 template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_shape>(glwindow* win,
     const string& lbl_, yocto_scene* scene, yocto_shape* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "material", scene, val->material, scene->materials, sel);
+    draw_glwidgets_scene_tree(
+        win, "material", scene, val->material, scene->materials, sel);
 }
 
 template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_instance>(glwindow* win,
     const string& lbl_, yocto_scene* scene, yocto_instance* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "shape", scene, val->shape, scene->shapes, sel);
+    draw_glwidgets_scene_tree(
+        win, "shape", scene, val->shape, scene->shapes, sel);
 }
 
 template <>
@@ -108,10 +110,14 @@ inline void draw_scene_tree_glwidgets_rec<yocto_environment>(glwindow* win,
 template <>
 inline void draw_scene_tree_glwidgets_rec<yocto_scene_node>(glwindow* win,
     const string& lbl_, yocto_scene* scene, yocto_scene_node* val, void*& sel) {
-    draw_glwidgets_scene_tree(win, "instance", scene, val->instance, scene->instances, sel);
-    draw_glwidgets_scene_tree(win, "camera", scene, val->camera, scene->cameras, sel);
-    draw_glwidgets_scene_tree(win, "environment", scene, val->environment, scene->environments, sel);
-    draw_glwidgets_scene_tree(win, "parent", scene, val->parent, scene->nodes, sel);
+    draw_glwidgets_scene_tree(
+        win, "instance", scene, val->instance, scene->instances, sel);
+    draw_glwidgets_scene_tree(
+        win, "camera", scene, val->camera, scene->cameras, sel);
+    draw_glwidgets_scene_tree(
+        win, "environment", scene, val->environment, scene->environments, sel);
+    draw_glwidgets_scene_tree(
+        win, "parent", scene, val->parent, scene->nodes, sel);
     auto cid = 0;
     for (auto ch : val->children) {
         draw_glwidgets_scene_tree(

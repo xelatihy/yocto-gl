@@ -468,8 +468,9 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(draw_glstate* state, const yocto_shape* shape, const yocto_material* mat,
-    const frame3f& frame, bool highlighted, bool eyelight, bool edges) {
+void draw_glshape(draw_glstate* state, const yocto_shape* shape,
+    const yocto_material* mat, const frame3f& frame, bool highlighted,
+    bool eyelight, bool edges) {
     auto xform = frame_to_mat(frame);
 
     set_gluniform(state->prog, "shape_xform", xform);
@@ -588,13 +589,13 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
         for (auto instance : scene->instances) {
-            auto shape = scene->shapes[instance->shape];
+            auto shape    = scene->shapes[instance->shape];
             auto material = scene->materials[shape->material];
             if (material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto bbox  = compute_shape_bounds(shape);
-            auto pos   = (bbox.max + bbox.min) / 2;
-            auto area  = 0.0f;
+            auto bbox = compute_shape_bounds(shape);
+            auto pos  = (bbox.max + bbox.min) / 2;
+            auto area = 0.0f;
             if (!shape->triangles.empty()) {
                 for (auto t : shape->triangles)
                     area += triangle_area(shape->positions[t.x],
@@ -631,11 +632,10 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
 
     if (wireframe) set_glwireframe(true);
     for (auto instance : scene->instances) {
-        auto shape = scene->shapes[instance->shape];
+        auto shape    = scene->shapes[instance->shape];
         auto material = scene->materials[shape->material];
         draw_glshape(state, shape, material, instance->frame,
-            instance == highlighted || shape == highlighted,
-            eyelight, edges);
+            instance == highlighted || shape == highlighted, eyelight, edges);
     }
 
     unbind_glprogram();

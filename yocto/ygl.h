@@ -3192,9 +3192,9 @@ struct yocto_material {
 // May contain either points, lines, triangles and quads.
 struct yocto_shape {
     // shape data
-    string          name     = "";
-    string          filename = "";
-    int material = -1;
+    string name     = "";
+    string filename = "";
+    int    material = -1;
 
     // subdision properties
     int  subdivision_level      = 0;
@@ -3223,9 +3223,9 @@ struct yocto_shape {
 
 // Shape instance.
 struct yocto_instance {
-    string       name  = "";
-    frame3f      frame = identity_frame3f;
-    int shape = -1;
+    string  name  = "";
+    frame3f frame = identity_frame3f;
+    int     shape = -1;
 };
 
 // Environment map.
@@ -3238,16 +3238,16 @@ struct yocto_environment {
 
 // Node in a transform hierarchy.
 struct yocto_scene_node {
-    string             name        = "";
-    int  parent      = -1;
-    frame3f            local       = identity_frame3f;
-    vec3f              translation = {0, 0, 0};
-    vec4f              rotation    = {0, 0, 0, 1};
-    vec3f              scale       = {1, 1, 1};
-    vector<float>      weights     = {};
-    int      camera      = -1;
-    int    instance    = -1;
-    int environment = -1;
+    string        name        = "";
+    int           parent      = -1;
+    frame3f       local       = identity_frame3f;
+    vec3f         translation = {0, 0, 0};
+    vec4f         rotation    = {0, 0, 0, 1};
+    vec3f         scale       = {1, 1, 1};
+    vector<float> weights     = {};
+    int           camera      = -1;
+    int           instance    = -1;
+    int           environment = -1;
 
     // compute properties
     vector<int> children = {};
@@ -3267,7 +3267,7 @@ struct yocto_animation {
     vector<vec4f>            rotation_keyframes      = {};
     vector<vec3f>            scale_keyframes         = {};
     vector<vector<float>>    morph_weights_keyframes = {};
-    vector<int> node_targets           = {};
+    vector<int>              node_targets            = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -3401,11 +3401,12 @@ vec3f evaluate_instance_position(const yocto_scene* scene,
     const yocto_instance* instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_normal(const yocto_scene* scene,
     const yocto_instance* instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_tangentspace(const yocto_scene* scene,const yocto_instance* instance,
-    int element_id, const vec2f& element_uv, bool& left_handed);
+vec3f evaluate_instance_tangentspace(const yocto_scene* scene,
+    const yocto_instance* instance, int element_id, const vec2f& element_uv,
+    bool& left_handed);
 // Instance element values.
-vec3f evaluate_instance_element_normal(const yocto_scene* scene,
-    const yocto_instance* instance, int element_id);
+vec3f evaluate_instance_element_normal(
+    const yocto_scene* scene, const yocto_instance* instance, int element_id);
 // Shading normals including material perturbations.
 vec3f evaluate_instance_shading_normal(const yocto_scene* scene,
     const yocto_instance* instance, int element_id, const vec2f& element_uv,
@@ -3562,10 +3563,10 @@ struct trace_params {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<yocto_instance*>                      instances               = {};
-    vector<yocto_environment*>                   environments            = {};
-    vector<vector<float>>   shape_elements_cdf      = {};
-    vector<vector<float>> environment_texture_cdf = {};
+    vector<yocto_instance*>    instances               = {};
+    vector<yocto_environment*> environments            = {};
+    vector<vector<float>>      shape_elements_cdf      = {};
+    vector<vector<float>>      environment_texture_cdf = {};
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
