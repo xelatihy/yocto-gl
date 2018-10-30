@@ -2380,33 +2380,31 @@ bool apply_json_procedural(
         auto& jjs  = js.at("random_instances");
         auto  num  = jjs.value("num", 100);
         auto  seed = jjs.value("seed", 13);
-        auto  base = make_unique<yocto_instance>();
+        auto shape_offset = (int)scene->shapes.size();
+        auto num_shapes = 0;
+        auto  base = make_unique<yocto_shape>();
         parse_json_object(jjs.at("base"), base.get(), scene);
-        auto shapes = vector<unique_ptr<yocto_shape>>();
         for (auto& j : jjs.at("shapes")) {
-            shapes.push_back(make_unique<yocto_shape>());
-            parse_json_object(j, shapes.back().get(), scene);
+            val->shapes.push_back(new yocto_shape());
+            parse_json_object(j, scene->shapes.back(), scene);
+            num_shapes ++;
         }
 
         auto pos                 = vector<vec3f>();
         auto norm                = vector<vec3f>();
         auto texcoord            = vector<vec2f>();
         tie(pos, norm, texcoord) = sample_triangles_points(
-            base->shape->triangles, base->shape->positions,
-            base->shape->normals, base->shape->texturecoords, num, seed);
+            base->triangles, base->positions,
+            base->normals, base->texturecoords, num, seed);
 
-        auto nmap = unordered_map<yocto_shape*, int>();
-        for (auto& shape : shapes) nmap[shape.get()] = 0;
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
-            auto shape = shapes.at(get_random_int(rng, (int)shapes.size() - 1)).get();
-            nmap[shape] += 1;
+            auto shape = get_random_int(rng, num_shapes - 1);
             val->instances.push_back(new yocto_instance());
-            val->instances.back()->name = shape->name +
-                                          std::to_string(nmap[shape]);
-            val->instances.back()->frame = base->frame *
-                                           translation_frame(pos[i]);
-            val->instances.back()->shape = shape;
+            val->instances.back()->name = "random_" +
+                                          std::to_string(i);
+            val->instances.back()->frame = translation_frame(pos[i]);
+            val->instances.back()->shape = shape + shape_offset;
         }
     }
     return true;
@@ -3257,9 +3255,9 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
     }
 
     // create instances
-    for (auto shape : scene->shapes) {
+    for (auto shape_id = 0; shape_id < scene->shapes.size(); shape_id++) {
         scene->instances.push_back(
-            new yocto_instance{shape->name, identity_frame3f, shape});
+            new yocto_instance{shape->name, identity_frame3f, shape_id});
     }
 
     // load textures
@@ -3403,42 +3401,43 @@ bool save_obj(const string& filename, const yocto_scene* scene,
     // shapes
     auto offset = obj_vertex{0, 0, 0};
     for (auto instance : scene->instances) {
+        auto shape = scene->shapes[instance->shape];
         print(fs, "o {}\n", instance->name);
-        if (instance->shape->material>=0)
-            print(fs, "usemtl {}\n", scene->materials[instance->shape->material]->name);
+        if (shape->material>=0)
+            print(fs, "usemtl {}\n", scene->materials[shape->material]->name);
         if (instance->frame == identity_frame3f) {
-            for (auto& p : instance->shape->positions) print(fs, "v {}\n", p);
-            for (auto& n : instance->shape->normals) print(fs, "vn {}\n", n);
-            for (auto& t : instance->shape->texturecoords)
+            for (auto& p : shape->positions) print(fs, "v {}\n", p);
+            for (auto& n : shape->normals) print(fs, "vn {}\n", n);
+            for (auto& t : shape->texturecoords)
                 print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         } else {
-            for (auto& pp : instance->shape->positions) {
+            for (auto& pp : shape->positions) {
                 print(fs, "v {}\n", transform_point(instance->frame, pp));
             }
-            for (auto& nn : instance->shape->normals) {
+            for (auto& nn : shape->normals) {
                 print(fs, "vn {}\n", transform_direction(instance->frame, nn));
             }
-            for (auto& t : instance->shape->texturecoords)
+            for (auto& t : shape->texturecoords)
                 print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
         }
-        auto mask = obj_vertex{1, instance->shape->texturecoords.empty() ? 0 : 1,
-            instance->shape->normals.empty() ? 0 : 1};
+        auto mask = obj_vertex{1, shape->texturecoords.empty() ? 0 : 1,
+            shape->normals.empty() ? 0 : 1};
         auto vert = [mask, offset](int i) {
             return obj_vertex{(i + offset.position + 1) * mask.position,
                 (i + offset.texturecoord + 1) * mask.texturecoord,
                 (i + offset.normal + 1) * mask.normal};
         };
-        for (auto& p : instance->shape->points) {
+        for (auto& p : shape->points) {
             print(fs, "p {}\n", to_string(vert(p)));
         }
-        for (auto& l : instance->shape->lines) {
+        for (auto& l : shape->lines) {
             print(fs, "l {} {}\n", to_string(vert(l.x)), to_string(vert(l.y)));
         }
-        for (auto& t : instance->shape->triangles) {
+        for (auto& t : shape->triangles) {
             print(fs, "f {} {} {}\n", to_string(vert(t.x)),
                 to_string(vert(t.y)), to_string(vert(t.z)));
         }
-        for (auto& q : instance->shape->quads) {
+        for (auto& q : shape->quads) {
             if (q.z == q.w) {
                 print(fs, "f {} {} {}\n", to_string(vert(q.x)),
                     to_string(vert(q.y)), to_string(vert(q.z)));
@@ -3448,15 +3447,15 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                     to_string(vert(q.w)));
             }
         }
-        for (auto i = 0; i < instance->shape->quads_positions.size(); i++) {
-            if (!instance->shape->texturecoords.empty() &&
-                instance->shape->normals.empty()) {
+        for (auto i = 0; i < shape->quads_positions.size(); i++) {
+            if (!shape->texturecoords.empty() &&
+                shape->normals.empty()) {
                 auto vert = [offset](int ip, int it) {
                     return obj_vertex{ip + offset.position + 1,
                         it + offset.texturecoord + 1, 0};
                 };
-                auto qp = instance->shape->quads_positions[i];
-                auto qt = instance->shape->quads_texturecoords[i];
+                auto qp = shape->quads_positions[i];
+                auto qt = shape->quads_texturecoords[i];
                 if (qp.z == qp.w) {
                     print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
                         to_string(vert(qp.y, qt.y)), to_string(vert(qp.z, qt.z)));
@@ -3465,15 +3464,15 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                         to_string(vert(qp.y, qt.y)), to_string(vert(qp.z, qt.z)),
                         to_string(vert(qp.w, qt.w)));
                 }
-            } else if (!instance->shape->texturecoords.empty() &&
-                       !instance->shape->normals.empty()) {
+            } else if (!shape->texturecoords.empty() &&
+                       !shape->normals.empty()) {
                 auto vert = [offset](int ip, int it, int in) {
                     return obj_vertex{ip + offset.position + 1,
                         it + offset.texturecoord + 1, in + offset.normal + 1};
                 };
-                auto qp = instance->shape->quads_positions[i];
-                auto qt = instance->shape->quads_texturecoords[i];
-                auto qn = instance->shape->quads_normals[i];
+                auto qp = shape->quads_positions[i];
+                auto qt = shape->quads_texturecoords[i];
+                auto qn = shape->quads_normals[i];
                 if (qp.z == qp.w) {
                     print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x, qn.x)),
                         to_string(vert(qp.y, qt.y, qn.y)),
@@ -3485,13 +3484,13 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                         to_string(vert(qp.z, qt.z, qn.z)),
                         to_string(vert(qp.w, qt.w, qn.w)));
                 }
-            } else if (!instance->shape->normals.empty()) {
+            } else if (!shape->normals.empty()) {
                 auto vert = [offset](int ip, int in) {
                     return obj_vertex{
                         ip + offset.position + 1, 0, in + offset.normal + 1};
                 };
-                auto qp = instance->shape->quads_positions[i];
-                auto qn = instance->shape->quads_normals[i];
+                auto qp = shape->quads_positions[i];
+                auto qn = shape->quads_normals[i];
                 if (qp.z == qp.w) {
                     print(fs, "f {} {} {}\n", to_string(vert(qp.x, qn.x)),
                         to_string(vert(qp.y, qn.y)), to_string(vert(qp.z, qn.z)));
@@ -3504,7 +3503,7 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                 auto vert = [offset](int ip) {
                     return obj_vertex{ip + offset.position + 1, 0, 0};
                 };
-                auto q = instance->shape->quads_positions[i];
+                auto q = shape->quads_positions[i];
                 if (q.z == q.w) {
                     print(fs, "f {} {} {}\n", to_string(vert(q.x)),
                         to_string(vert(q.y)), to_string(vert(q.z)));
@@ -3515,9 +3514,9 @@ bool save_obj(const string& filename, const yocto_scene* scene,
                 }
             }
         }
-        offset.position += instance->shape->positions.size();
-        offset.texturecoord += instance->shape->texturecoords.size();
-        offset.normal += instance->shape->normals.size();
+        offset.position += shape->positions.size();
+        offset.texturecoord += shape->texturecoords.size();
+        offset.normal += shape->normals.size();
     }
 
     return true;
@@ -3741,7 +3740,7 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
     };
 
     // convert meshes
-    auto meshes = vector<vector<yocto_shape*>>();
+    auto meshes = vector<vector<int>>();
     if (gltf.count("meshes")) {
         for (auto mid = 0; mid < gltf.at("meshes").size(); mid++) {
             auto& gmesh = gltf.at("meshes").at(mid);
@@ -3892,8 +3891,8 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                 }
                 shape->material = gprim.count("material") ?
                                           gprim.value("material", -1) : -1;
-                meshes.back().push_back(shape);
                 scene->shapes.push_back(shape);
+                meshes.back().push_back((int)scene->shapes.size()-1);
             }
         }
     }
@@ -3960,13 +3959,14 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                 node->instance->shape = shps[0];
                 scene->instances.push_back(node->instance);
             } else {
-                for (auto shape : shps) {
+                for (auto shp : shps) {
+                    auto shape = scene->shapes[shp];
                     auto child             = new yocto_scene_node();
                     child->name            = node->name + "_" + shape->name;
                     child->parent          = node;
                     child->instance        = new yocto_instance();
                     child->instance->name  = child->name;
-                    child->instance->shape = shape;
+                    child->instance->shape = shp;
                     scene->instances.push_back(child->instance);
                     scene->nodes.push_back(child);
                 }
@@ -4217,7 +4217,6 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     }
 
     // shapes
-    auto smap = unordered_map<yocto_shape*, int>();
     for (auto shape : scene->shapes) {
         auto mjs = json(), bjs = json(), pjs = json();
         auto bid          = js["buffers"].size();
@@ -4283,7 +4282,6 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         mjs["primitives"].push_back(pjs);
         js["meshes"].push_back(mjs);
         js["buffers"].push_back(bjs);
-        smap[shape] = (int)js["meshes"].size() - 1;
     }
 
     // nodes
@@ -4296,7 +4294,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         njs["rotation"]    = node->rotation;
         njs["scale"]       = node->scale;
         if (node->camera) njs["camera"] = cmap.at(node->camera);
-        if (node->instance) njs["mesh"] = smap.at(node->instance->shape);
+        if (node->instance) njs["mesh"] = node->instance->shape;
         if (!node->children.empty()) {
             njs["children"] = json::array();
             for (auto& c : node->children)
@@ -4321,7 +4319,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         for (auto instance : scene->instances) {
             auto njs      = json();
             njs["name"]   = instance->name;
-            njs["mesh"]   = smap.at(instance->shape);
+            njs["mesh"]   = instance->shape;
             njs["matrix"] = frame_to_mat(instance->frame);
             js["nodes"].push_back(njs);
         }
@@ -4935,7 +4933,7 @@ yocto_scene* load_pbrt_scene(
             auto instance   = new yocto_instance();
             instance->name  = shape->name;
             instance->frame = frame;
-            instance->shape = shape;
+            instance->shape = (int)scene->shapes.size()-1;
             if (cur_object != "") {
                 objects[cur_object].push_back(instance);
             } else {
@@ -5012,7 +5010,7 @@ yocto_scene* load_pbrt_scene(
                 mat->emission *= (distant_dist * distant_dist) / (size * size);
                 auto instance   = new yocto_instance();
                 instance->name  = shape->name;
-                instance->shape = shape;
+                instance->shape = (int)scene->shapes.size()-1;
                 instance->frame = stack.back().frame *
                                   lookat_frame(dir * distant_dist, zero3f,
                                       {0, 1, 0}, true);
@@ -5160,7 +5158,8 @@ WorldEnd
 
     // convert instances
     for (auto instance : scene->instances) {
-        auto material = scene->materials[instance->shape->material];
+        auto shape = scene->shapes[instance->shape];
+        auto material = scene->materials[shape->material];
         print(fs, "AttributeBegin\n");
         print(fs, "TransformBegin\n");
         print(fs, "ConcatTransform [{}]\n", frame_to_mat(instance->frame));
@@ -5169,7 +5168,7 @@ WorldEnd
                 material->emission);
         print(fs, "NamedMaterial \"{}\"\n", material->name);
         print(fs, "Shape \"plymesh\" \"string filename\" [\"{}\"]\n",
-            instance->shape->filename.c_str());
+            shape->filename);
         print(fs, "TransformEnd\n");
         print(fs, "AttributeEnd\n");
     }
@@ -5522,7 +5521,7 @@ bool serialize_bin_object(yocto_instance* instance, const yocto_scene* scene,
     file_stream& fs, bool save) {
     if (!serialize_bin_value(instance->name, fs, save)) return false;
     if (!serialize_bin_value(instance->frame, fs, save)) return false;
-    if (!serialize_bin_handle(instance->shape, scene->shapes, fs, save))
+    if (!serialize_bin_value(instance->shape, fs, save))
         return false;
     return true;
 };

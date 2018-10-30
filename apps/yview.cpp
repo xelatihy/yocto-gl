@@ -587,11 +587,11 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
         auto lights_pos  = vector<vec3f>();
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
-        for (auto lgt : scene->instances) {
-            auto material = scene->materials[lgt->shape->material];
+        for (auto instance : scene->instances) {
+            auto shape = scene->shapes[instance->shape];
+            auto material = scene->materials[shape->material];
             if (material->emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto shape = lgt->shape;
             auto bbox  = compute_shape_bounds(shape);
             auto pos   = (bbox.max + bbox.min) / 2;
             auto area  = 0.0f;
@@ -612,7 +612,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
                 area += shape->positions.size();
             }
             auto ke = material->emission * area;
-            lights_pos.push_back(transform_point(lgt->frame, pos));
+            lights_pos.push_back(transform_point(instance->frame, pos));
             lights_ke.push_back(ke);
             lights_type.push_back(0);
         }
@@ -631,9 +631,10 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
 
     if (wireframe) set_glwireframe(true);
     for (auto instance : scene->instances) {
-        auto material = scene->materials[instance->shape->material];
-        draw_glshape(state, instance->shape, material, instance->frame,
-            instance == highlighted || instance->shape == highlighted,
+        auto shape = scene->shapes[instance->shape];
+        auto material = scene->materials[shape->material];
+        draw_glshape(state, shape, material, instance->frame,
+            instance == highlighted || shape == highlighted,
             eyelight, edges);
     }
 

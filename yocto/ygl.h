@@ -3225,7 +3225,7 @@ struct yocto_shape {
 struct yocto_instance {
     string       name  = "";
     frame3f      frame = identity_frame3f;
-    yocto_shape* shape = nullptr;
+    int shape = -1;
 };
 
 // Environment map.
@@ -3397,14 +3397,14 @@ vec4f evaluate_shape_element_tangentspace(
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f evaluate_instance_position(
+vec3f evaluate_instance_position(const yocto_scene* scene,
     const yocto_instance* instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_normal(
+vec3f evaluate_instance_normal(const yocto_scene* scene,
     const yocto_instance* instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_tangentspace(const yocto_instance* instance,
+vec3f evaluate_instance_tangentspace(const yocto_scene* scene,const yocto_instance* instance,
     int element_id, const vec2f& element_uv, bool& left_handed);
 // Instance element values.
-vec3f evaluate_instance_element_normal(
+vec3f evaluate_instance_element_normal(const yocto_scene* scene,
     const yocto_instance* instance, int element_id);
 // Shading normals including material perturbations.
 vec3f evaluate_instance_shading_normal(const yocto_scene* scene,
@@ -3564,8 +3564,8 @@ struct trace_params {
 struct trace_lights {
     vector<yocto_instance*>                      instances               = {};
     vector<yocto_environment*>                   environments            = {};
-    unordered_map<yocto_shape*, vector<float>>   shape_elements_cdf      = {};
-    unordered_map<yocto_texture*, vector<float>> environment_texture_cdf = {};
+    vector<vector<float>>   shape_elements_cdf      = {};
+    vector<vector<float>> environment_texture_cdf = {};
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
