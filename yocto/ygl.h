@@ -3363,16 +3363,17 @@ bool is_shape_face_varying(const yocto_shape* shape);
 // the shape element_id and element_uv and the inetrsection distance.
 struct scene_intersection {
     yocto_instance* instance   = nullptr;
-    int             element_id = 0;
+    int             instance_id = -1;
+    int             element_id = -1;
     vec2f           element_uv = zero2f;
     float           distance   = maxf;
 };
 
-// Intersects a ray with an instance. The bvh refers is the shape bvh.
-scene_intersection intersect_scene(const yocto_instance* instance,
-    const bvh_tree* sbvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with the scene.
 scene_intersection intersect_scene(const yocto_scene* scene,
+    const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
+// Intersects a ray with a scene instance.
+scene_intersection intersect_scene(const yocto_scene* scene, int instance_id,
     const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
@@ -3563,8 +3564,8 @@ struct trace_params {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<yocto_instance*>    instances               = {};
-    vector<yocto_environment*> environments            = {};
+    vector<int>    instances               = {};
+    vector<int> environments            = {};
     vector<vector<float>>      shape_elements_cdf      = {};
     vector<vector<float>>      environment_texture_cdf = {};
 };
