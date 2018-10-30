@@ -3414,7 +3414,7 @@ vec3f evaluate_environment_direction(
 vec3f evaluate_environment_emission(const yocto_scene* scene,
     const yocto_environment* environment, const vec3f& direction);
 // Evaluate all environment emission.
-vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& i);
+vec3f evaluate_environment_emission(const yocto_scene* scene, const vec3f& direction);
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture* texture);
