@@ -1389,7 +1389,7 @@ bool dump_json_objref(json& js, int val, const vector<T>& refs) {
 // Dumps a json value
 template <typename T>
 bool dump_json_objref(json& js, int val, const char* name, const vector<T>& refs) {
-    if (!val) return true;
+    if (val < 0) return true;
     return dump_json_objref(js[name], val, refs);
 }
 
