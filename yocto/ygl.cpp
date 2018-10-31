@@ -6472,8 +6472,8 @@ vec4f trace_sample(trace_state& state, const yocto_scene& scene,
 
 // Init a sequence of random number generators.
 image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
-    auto rngs  = image<rng_state>{width, height};
-    auto rng = make_rng(1301081);
+    auto rngs = image<rng_state>{width, height};
+    auto rng  = make_rng(1301081);
     for (auto j = 0; j < rngs.height; j++) {
         for (auto i = 0; i < rngs.width; i++) {
             at(rngs, i, j) = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
@@ -6552,17 +6552,18 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_tree& bvh,
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
-                for (auto j = tid; j < state.rendered_image.height;
-                     j += nthreads) {
-                    for (auto i = 0; i < state.rendered_image.width; i++) {
-                        for (auto s = 0; s < params.num_samples; s++)
-                            at(state.rendered_image, i, j) += trace_sample(
-                                state, scene, bvh, lights, i, j, params);
-                        at(state.rendered_image, i, j) /= params.num_samples;
+            threads.push_back(
+                thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
+                    for (auto j = tid; j < state.rendered_image.height;
+                         j += nthreads) {
+                        for (auto i = 0; i < state.rendered_image.width; i++) {
+                            for (auto s = 0; s < params.num_samples; s++)
+                                at(state.rendered_image, i, j) += trace_sample(
+                                    state, scene, bvh, lights, i, j, params);
+                            at(state.rendered_image, i, j) /= params.num_samples;
+                        }
                     }
-                }
-            }));
+                }));
         }
         for (auto& t : threads) t.join();
     }
@@ -6596,7 +6597,8 @@ bool trace_samples(trace_state& state, const yocto_scene& scene,
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([tid, nthreads, nbatch, &scene, &state, &bvh, &lights, &params]() {
+            threads.push_back(thread([tid, nthreads, nbatch, &scene, &state,
+                                         &bvh, &lights, &params]() {
                 for (auto j = tid; j < state.rendered_image.height;
                      j += nthreads) {
                     for (auto i = 0; i < state.rendered_image.width; i++) {
@@ -6650,28 +6652,29 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
     state.async_threads.clear();
     state.async_stop_flag = false;
     for (auto tid = 0; tid < nthreads; tid++) {
-        state.async_threads.push_back(thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
-            for (auto s = 0; s < params.num_samples; s++) {
-                if (!tid) state.current_sample = s;
-                for (auto j = tid; j < state.rendered_image.height;
-                     j += nthreads) {
-                    for (auto i = 0; i < state.rendered_image.width; i++) {
-                        if (state.async_stop_flag) return;
-                        at(state.accumulation_buffer, i, j) += trace_sample(
-                            state, scene, bvh, lights, i, j, params);
-                        at(state.samples_per_pixel, i, j) += 1;
-                        at(state.rendered_image, i,
-                            j) = at(state.accumulation_buffer, i, j) /
-                                 at(state.samples_per_pixel, i, j);
-                        at(state.display_image, i, j) = tonemap_filmic(
-                            at(state.rendered_image, i, j),
-                            params.display_exposure, params.display_filmic,
-                            params.display_srgb);
+        state.async_threads.push_back(
+            thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
+                for (auto s = 0; s < params.num_samples; s++) {
+                    if (!tid) state.current_sample = s;
+                    for (auto j = tid; j < state.rendered_image.height;
+                         j += nthreads) {
+                        for (auto i = 0; i < state.rendered_image.width; i++) {
+                            if (state.async_stop_flag) return;
+                            at(state.accumulation_buffer, i, j) += trace_sample(
+                                state, scene, bvh, lights, i, j, params);
+                            at(state.samples_per_pixel, i, j) += 1;
+                            at(state.rendered_image, i,
+                                j) = at(state.accumulation_buffer, i, j) /
+                                     at(state.samples_per_pixel, i, j);
+                            at(state.display_image, i, j) = tonemap_filmic(
+                                at(state.rendered_image, i, j),
+                                params.display_exposure, params.display_filmic,
+                                params.display_srgb);
+                        }
                     }
                 }
-            }
-            if (!tid) state.current_sample = params.num_samples;
-        }));
+                if (!tid) state.current_sample = params.num_samples;
+            }));
     }
 }
 
