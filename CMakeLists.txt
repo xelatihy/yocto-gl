@@ -124,7 +124,17 @@ foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomi
         get_filename_component(name ${filename} NAME_WE)
         add_test(NAME ytrace-${tracer}-${filename}
                 COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 360"
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}) 
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endforeach()
 endforeach(tracer)
+if(YOCTO_EMBREE)
+foreach(tracer "eyelight" "path")
+    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "hairball-al.json")
+        get_filename_component(name ${filename} NAME_WE)
+        add_test(NAME ytrace-embree-${tracer}-${filename}
+                COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-embree-${tracer}-${name}.png ${resdir}/ytrace-embree-${tracer}-${name}.png ${diffdir}/ytrace-embree-${tracer}-${name}.png "-t ${tracer} --embree -s 4 -r 360"
+                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    endforeach()
+endforeach(tracer)
+endif(YOCTO_EMBREE)
 endif(YOCTO_TESTING)
