@@ -300,7 +300,7 @@
 // INCLUDES
 // -----------------------------------------------------------------------------
 
-#include <algorithm>  // for std::upper_bound
+#include <algorithm>
 #include <array>
 #include <atomic>
 #include <cctype>
@@ -312,9 +312,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <deque>
-#include <functional>  // for std::hash
+#include <functional>
 #include <limits>
-#include <map>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -353,7 +352,6 @@ using std::deque;
 using std::function;
 using std::ignore;
 using std::make_unique;
-using std::map;
 using std::runtime_error;
 using std::string;
 using std::thread;

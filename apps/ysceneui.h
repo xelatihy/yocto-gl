@@ -34,11 +34,11 @@
 #include "yglutils.h"
 using namespace ygl;
 
-inline const map<yocto_interpolation_type, string>& animation_type_names() {
-    static auto names = map<yocto_interpolation_type, string>{
-        {yocto_interpolation_type::linear, "linear"},
-        {yocto_interpolation_type::step, "step"},
-        {yocto_interpolation_type::bezier, "bezier"},
+inline const unordered_map<int, string>& animation_type_names() {
+    static auto names = unordered_map<int, string>{
+        {(int)yocto_interpolation_type::linear, "linear"},
+        {(int)yocto_interpolation_type::step, "step"},
+        {(int)yocto_interpolation_type::bezier, "bezier"},
     };
     return names;
 }

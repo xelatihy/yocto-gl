@@ -4252,8 +4252,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
     auto stack = vector<stack_item>();
     stack.push_back(stack_item());
 
-    auto txt_map = map<string, int>();
-    auto mat_map = map<string, int>();
+    auto txt_map = unordered_map<string, int>();
+    auto mat_map = unordered_map<string, int>();
     auto mid     = 0;
 
     auto get_vec3f = [](const json& js) -> vec3f {
@@ -4350,7 +4350,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto use_hierarchy = false;
 
-    map<string, vector<yocto_instance>> objects;
+    unordered_map<string, vector<yocto_instance>> objects;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<string>();
         if (cmd == "ObjectInstance") {
@@ -4621,7 +4621,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 scene.instances.push_back(instance);
             }
         } else if (cmd == "ObjectInstance") {
-            static auto instances = map<string, int>();
+            static auto instances = unordered_map<string, int>();
             auto        name      = jcmd.at("name").get<string>();
             auto&       object    = objects.at(name);
             for (auto shape : object) {
