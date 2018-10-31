@@ -78,11 +78,6 @@
 
 #include "ygl.h"
 
-// use Happly library for PLY format rather than our library
-#ifndef YGL_HAPPLY
-#define YGL_HAPPLY 0
-#endif
-
 // -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
