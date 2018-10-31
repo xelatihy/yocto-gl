@@ -1358,7 +1358,7 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 namespace ygl {
 
 // Cleanup
-bvh_tree::~bvh_tree() {
+void clear_bvh_embree(bvh_tree* bvh) {
 #if YGL_EMBREE
     if (embree_bvh) {
         for (auto i = 0; i < max(1, (int)instances.size()); i++) {

@@ -2640,9 +2640,6 @@ struct bvh_tree {
 
     // Embree opaque data
     void* embree_bvh = nullptr;
-
-    // cleanup
-    ~bvh_tree();
 };
 
 // Build a BVH from the given set of primitives.
@@ -2653,6 +2650,7 @@ void refit_bvh(bvh_tree* bvh);
 // Build a BVH from the given set of primitives.
 // Uses Embree if available and requested, otherwise the standard build.
 void build_bvh_embree(bvh_tree* bvh, bool high_quality = false);
+void clear_bvh_embree(bvh_tree* bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `dist`, the instance
