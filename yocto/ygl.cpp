@@ -1527,24 +1527,23 @@ void build_bvh(bvh_tree& bvh, bool high_quality) {
         }
     } else if (!bvh.lines.empty()) {
         for (auto& l : bvh.lines) {
-            prims.push_back({line_bounds(bvh.positions[l.x],
-                bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y])});
+            prims.push_back({line_bounds(bvh.positions[l.x], bvh.positions[l.y],
+                bvh.radius[l.x], bvh.radius[l.y])});
         }
     } else if (!bvh.triangles.empty()) {
         for (auto& t : bvh.triangles) {
-            prims.push_back({triangle_bounds(bvh.positions[t.x],
-                bvh.positions[t.y], bvh.positions[t.z])});
+            prims.push_back({triangle_bounds(
+                bvh.positions[t.x], bvh.positions[t.y], bvh.positions[t.z])});
         }
     } else if (!bvh.quads.empty()) {
         for (auto& q : bvh.quads) {
-            prims.push_back({quad_bounds(bvh.positions[q.x],
-                bvh.positions[q.y], bvh.positions[q.z], bvh.positions[q.w])});
+            prims.push_back({quad_bounds(bvh.positions[q.x], bvh.positions[q.y],
+                bvh.positions[q.z], bvh.positions[q.w])});
         }
     } else if (!bvh.instances.empty()) {
         for (auto& instance : bvh.instances) {
             auto sbvh = bvh.shape_bvhs[instance.shape_id];
-            prims.push_back(
-                {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+            prims.push_back({transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
         }
     }
 
@@ -1771,9 +1770,8 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.triangles.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (intersect_triangle(ray, bvh.positions[t.x],
-                        bvh.positions[t.y], bvh.positions[t.z], dist,
-                        element_uv)) {
+                if (intersect_triangle(ray, bvh.positions[t.x], bvh.positions[t.y],
+                        bvh.positions[t.z], dist, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1782,9 +1780,9 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.quads.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.quads[node.primitive_ids[i]];
-                if (intersect_quad(ray, bvh.positions[t.x],
-                        bvh.positions[t.y], bvh.positions[t.z],
-                        bvh.positions[t.w], dist, element_uv)) {
+                if (intersect_quad(ray, bvh.positions[t.x], bvh.positions[t.y],
+                        bvh.positions[t.z], bvh.positions[t.w], dist,
+                        element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -1803,8 +1801,8 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.points.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh.points[node.primitive_ids[i]];
-                if (intersect_point(ray, bvh.positions[p], bvh.radius[p],
-                        dist, element_uv)) {
+                if (intersect_point(ray, bvh.positions[p], bvh.radius[p], dist,
+                        element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
                     eid      = node.primitive_ids[i];
@@ -3517,7 +3515,6 @@ namespace ygl {
 
 // cleanup
 yocto_scene::~yocto_scene() {
-    for (auto v : cameras) delete v;
     for (auto v : shapes) delete v;
     for (auto v : instances) delete v;
     for (auto v : materials) delete v;
@@ -3811,7 +3808,7 @@ void update_transforms(yocto_scene* scene, yocto_scene_node* node,
     auto frame = parent * node->local * translation_frame(node->translation) *
                  rotation_frame(node->rotation) * scaling_frame(node->scale);
     if (node->instance >= 0) scene->instances[node->instance]->frame = frame;
-    if (node->camera >= 0) scene->cameras[node->camera]->frame = frame;
+    if (node->camera >= 0) scene->cameras_[node->camera].frame = frame;
     if (node->environment >= 0)
         scene->environments[node->environment]->frame = frame;
     for (auto child : node->children)
@@ -3949,8 +3946,7 @@ float sample_environment_direction_pdf(const yocto_scene* scene,
 }
 
 // Build a shape BVH
-bvh_tree make_shape_bvh(
-    const yocto_shape* shape, bool high_quality, bool embree) {
+bvh_tree make_shape_bvh(const yocto_shape* shape, bool high_quality, bool embree) {
     // create bvh
     auto bvh = bvh_tree{};
 
@@ -3971,8 +3967,7 @@ bvh_tree make_shape_bvh(
 }
 
 // Build a scene BVH
-bvh_tree make_scene_bvh(
-    const yocto_scene* scene, bool high_quality, bool embree) {
+bvh_tree make_scene_bvh(const yocto_scene* scene, bool high_quality, bool embree) {
     auto scope = log_trace_scoped("building scene bvh");
     // create bvh
     auto bvh = bvh_tree{};
@@ -4008,7 +4003,7 @@ void refit_scene_bvh(const yocto_scene* scene, bvh_tree& bvh) {
     for (auto sid = 0; sid < scene->shapes.size(); sid++)
         shape_ids[scene->shapes[sid]] = sid;
     for (auto iid = 0; iid < scene->instances.size(); iid++) {
-        auto instance       = scene->instances[iid];
+        auto instance      = scene->instances[iid];
         bvh.instances[iid] = {
             instance->frame, inverse(instance->frame), instance->shape};
     }
@@ -4029,7 +4024,19 @@ void add_missing_names(yocto_scene* scene) {
             }
         }
     };
-    fix_names(scene->cameras, "camera");
+    auto fix_names_ = [](auto& vals, const string& base) {
+        auto nmap = unordered_map<string, int>();
+        for (auto& val : vals) {
+            if (val.name == "") val.name = base;
+            if (nmap.find(val.name) == nmap.end()) {
+                nmap[val.name] = 0;
+            } else {
+                nmap[val.name] += 1;
+                val.name = val.name + "_" + std::to_string(nmap[val.name]);
+            }
+        }
+    };
+    fix_names_(scene->cameras_, "camera");
     fix_names(scene->shapes, "shape");
     fix_names(scene->textures, "texture");
     fix_names(scene->materials, "mat");
@@ -4076,11 +4083,11 @@ void add_missing_materials(yocto_scene* scene) {
 
 // Add missing cameras.
 void add_missing_cameras(yocto_scene* scene) {
-    if (scene->cameras.empty()) {
-        auto camera  = new yocto_camera();
-        camera->name = "<view>";
+    if (scene->cameras_.empty()) {
+        auto camera = yocto_camera{};
+        camera.name = "<view>";
         set_camera_view(camera, compute_scene_bounds(scene));
-        scene->cameras.push_back(camera);
+        scene->cameras_.push_back(camera);
     }
 }
 
@@ -4112,6 +4119,17 @@ vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
             }
         }
     };
+    auto check_names_ = [&errs](const auto& vals, const string& base) {
+        auto used = unordered_map<string, int>();
+        for (auto& val : vals) used[val.name] += 1;
+        for (auto& kv : used) {
+            if (kv.first == "") {
+                errs.push_back("empty " + base + " name");
+            } else if (kv.second > 1) {
+                errs.push_back("duplicated " + base + " name " + kv.first);
+            }
+        }
+    };
     auto check_empty_textures = [&errs](const vector<yocto_texture*>& vals) {
         for (auto val : vals) {
             if (val->hdr_image.pixels.empty() && val->ldr_image.pixels.empty()) {
@@ -4120,7 +4138,7 @@ vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
         }
     };
 
-    check_names(scene->cameras, "camera");
+    check_names_(scene->cameras_, "camera");
     check_names(scene->shapes, "shape");
     check_names(scene->textures, "texture");
     check_names(scene->materials, "material");
@@ -4140,20 +4158,20 @@ void log_validation_errors(const yocto_scene* scene, bool skip_textures) {
 
 // add missing camera
 void set_camera_view(
-    yocto_camera* camera, const bbox3f& bbox, const vec2f& film, float focal) {
-    auto bbox_center     = (bbox.max + bbox.min) / 2.0f;
-    auto bbox_size       = bbox.max - bbox.min;
-    auto bbox_msize      = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto camera_dir      = vec3f{1, 0.4f, 1};
-    auto from            = camera_dir * bbox_msize + bbox_center;
-    auto to              = bbox_center;
-    auto up              = vec3f{0, 1, 0};
-    camera->frame        = lookat_frame(from, to, up);
-    camera->orthographic = false;
-    if (film != zero2f) camera->film_size = film;
-    if (focal != 0) camera->focal_length = focal;
-    camera->focus_distance = length(from - to);
-    camera->lens_aperture  = 0;
+    yocto_camera& camera, const bbox3f& bbox, const vec2f& film, float focal) {
+    auto bbox_center    = (bbox.max + bbox.min) / 2.0f;
+    auto bbox_size      = bbox.max - bbox.min;
+    auto bbox_msize     = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
+    auto camera_dir     = vec3f{1, 0.4f, 1};
+    auto from           = camera_dir * bbox_msize + bbox_center;
+    auto to             = bbox_center;
+    auto up             = vec3f{0, 1, 0};
+    camera.frame        = lookat_frame(from, to, up);
+    camera.orthographic = false;
+    if (film != zero2f) camera.film_size = film;
+    if (focal != 0) camera.focal_length = focal;
+    camera.focus_distance = length(from - to);
+    camera.lens_aperture  = 0;
 }
 
 }  // namespace ygl
@@ -4167,8 +4185,8 @@ namespace ygl {
 scene_intersection intersect_scene(const yocto_scene* scene,
     const bvh_tree& bvh, const ray3f& ray, bool find_any) {
     auto isec = scene_intersection();
-    if (!intersect_bvh(bvh, ray, find_any, isec.distance, isec.instance_id, isec.element_id,
-            isec.element_uv))
+    if (!intersect_bvh(bvh, ray, find_any, isec.distance, isec.instance_id,
+            isec.element_id, isec.element_uv))
         return {};
     return isec;
 }
@@ -4177,10 +4195,10 @@ scene_intersection intersect_scene(const yocto_scene* scene,
 scene_intersection intersect_scene(const yocto_scene* scene, int instance_id,
     const bvh_tree& bvh, const ray3f& ray, bool find_any) {
     auto instance = scene->instances[instance_id];
-    auto isec = scene_intersection();
-    auto tray = transform_ray_inverse(instance->frame, ray);
-    if (!intersect_bvh(bvh.shape_bvhs[instance->shape], tray, find_any, isec.distance, isec.instance_id,
-            isec.element_id, isec.element_uv))
+    auto isec     = scene_intersection();
+    auto tray     = transform_ray_inverse(instance->frame, ray);
+    if (!intersect_bvh(bvh.shape_bvhs[instance->shape], tray, find_any,
+            isec.distance, isec.instance_id, isec.element_id, isec.element_uv))
         return {};
     isec.instance_id = instance_id;
     return isec;
@@ -4554,49 +4572,48 @@ float evaluate_voltexture(const yocto_voltexture* texture, const vec3f& texcoord
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float evaluate_camera_fovy(const yocto_camera* camera) {
-    return 2 * std::atan(camera->film_size.y / (2 * camera->focal_length));
+float evaluate_camera_fovy(const yocto_camera& camera) {
+    return 2 * std::atan(camera.film_size.y / (2 * camera.focal_length));
 }
-void set_camera_fovy(yocto_camera* camera, float fovy, float aspect, float width) {
-    camera->film_size    = {width, width / aspect};
-    camera->focal_length = camera->film_size.y / (2 * std::tan(fovy / 2));
+void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
+    camera.film_size    = {width, width / aspect};
+    camera.focal_length = camera.film_size.y / (2 * std::tan(fovy / 2));
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 ray3f evaluate_camera_ray(
-    const yocto_camera* camera, const vec2f& uv, const vec2f& luv) {
-    auto dist = camera->focal_length;
-    if (camera->focus_distance < maxf) {
-        dist = camera->focal_length * camera->focus_distance /
-               (camera->focus_distance - camera->focal_length);
+    const yocto_camera& camera, const vec2f& uv, const vec2f& luv) {
+    auto dist = camera.focal_length;
+    if (camera.focus_distance < maxf) {
+        dist = camera.focal_length * camera.focus_distance /
+               (camera.focus_distance - camera.focal_length);
     }
-    auto e = vec3f{
-        luv.x * camera->lens_aperture, luv.y * camera->lens_aperture, 0};
-    // auto q = vec3f{camera->width * (uv.x - 0.5f),
-    //     camera->height * (uv.y - 0.5f), dist};
+    auto e = vec3f{luv.x * camera.lens_aperture, luv.y * camera.lens_aperture, 0};
+    // auto q = vec3f{camera.width * (uv.x - 0.5f),
+    //     camera.height * (uv.y - 0.5f), dist};
     // X flipped for mirror
-    auto q   = vec3f{camera->film_size.x * (0.5f - uv.x),
-        camera->film_size.y * (uv.y - 0.5f), dist};
-    auto ray = make_ray(transform_point(camera->frame, e),
-        transform_direction(camera->frame, normalize(e - q)));
+    auto q   = vec3f{camera.film_size.x * (0.5f - uv.x),
+        camera.film_size.y * (uv.y - 0.5f), dist};
+    auto ray = make_ray(transform_point(camera.frame, e),
+        transform_direction(camera.frame, normalize(e - q)));
     return ray;
 }
 
-vec2i evaluate_image_size(const yocto_camera* camera, int yresolution) {
-    return {(int)round(yresolution * camera->film_size.x / camera->film_size.y),
+vec2i evaluate_image_size(const yocto_camera& camera, int yresolution) {
+    return {(int)round(yresolution * camera.film_size.x / camera.film_size.y),
         yresolution};
 }
 
 // Generates a ray from a camera.
-ray3f evaluate_camera_ray(const yocto_camera* camera, const vec2i& ij,
+ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
     const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
     return evaluate_camera_ray(camera, uv, luv);
 }
 
 // Generates a ray from a camera.
-ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
+ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
     const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
     auto ij = vec2i{idx % imsize.x, idx / imsize.x};
     auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
@@ -4865,11 +4882,14 @@ namespace ygl {
 
 // Merge scene into one another
 void merge_scene(yocto_scene* merge_scene, yocto_scene* merge_from) {
+    log_error("this is  broken since we did not fix references");
     auto merge = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());
-        v2.clear();
     };
-    merge(merge_scene->cameras, merge_from->cameras);
+    auto merge_ = [](auto& v1, auto& v2) {
+        v1.insert(v1.end(), v2.begin(), v2.end());
+    };
+    merge_(merge_scene->cameras_, merge_from->cameras_);
     merge(merge_scene->textures, merge_from->textures);
     merge(merge_scene->materials, merge_from->materials);
     merge(merge_scene->shapes, merge_from->shapes);
@@ -4910,7 +4930,7 @@ void print_stats(const yocto_scene* scene) {
 
     auto bbox = compute_scene_bounds(scene);
 
-    num_cameras      = scene->cameras.size();
+    num_cameras      = scene->cameras_.size();
     num_shapes       = scene->shapes.size();
     num_materials    = scene->materials.size();
     num_textures     = scene->textures.size();
@@ -4984,29 +5004,29 @@ atomic<uint64_t> _trace_nrays{0};
 
 // Trace point
 struct trace_point {
-    int instance_id = -1;
-    int                   element_id   = -1;
-    vec2f                 element_uv   = zero2f;
-    vec3f                 position     = zero3f;
-    vec3f                 normal       = zero3f;
-    vec2f                 texturecoord = zero2f;
-    vec3f                 emission     = zero3f;
-    microfacet_brdf       brdf         = {};
-    float                 opacity      = 1;
+    int             instance_id  = -1;
+    int             element_id   = -1;
+    vec2f           element_uv   = zero2f;
+    vec3f           position     = zero3f;
+    vec3f           normal       = zero3f;
+    vec2f           texturecoord = zero2f;
+    vec3f           emission     = zero3f;
+    microfacet_brdf brdf         = {};
+    float           opacity      = 1;
 };
 
 // Make a trace point
-trace_point make_trace_point(const yocto_scene* scene,
-    int instance_id, int element_id, const vec2f& element_uv,
+trace_point make_trace_point(const yocto_scene* scene, int instance_id,
+    int element_id, const vec2f& element_uv,
     const vec3f& shading_direction = zero3f) {
-    auto instance = scene->instances[instance_id];
-    auto shape       = scene->shapes[instance->shape];
-    auto material    = scene->materials[shape->material];
-    auto point       = trace_point();
+    auto instance     = scene->instances[instance_id];
+    auto shape        = scene->shapes[instance->shape];
+    auto material     = scene->materials[shape->material];
+    auto point        = trace_point();
     point.instance_id = instance_id;
-    point.element_id = element_id;
-    point.element_uv = element_uv;
-    point.position   = evaluate_instance_position(
+    point.element_id  = element_id;
+    point.element_uv  = element_uv;
+    point.position    = evaluate_instance_position(
         scene, instance, element_id, element_uv);
     point.normal = evaluate_instance_shading_normal(
         scene, instance, element_id, element_uv, -shading_direction);
@@ -5028,8 +5048,8 @@ trace_point trace_ray(const yocto_scene* scene, const bvh_tree& bvh,
     auto isec = intersect_scene(scene, bvh, make_ray(position, direction));
     _trace_nrays += 1;
     if (isec.instance_id >= 0) {
-        return make_trace_point(
-            scene, isec.instance_id, isec.element_id, isec.element_uv, direction);
+        return make_trace_point(scene, isec.instance_id, isec.element_id,
+            isec.element_uv, direction);
     } else {
         auto point     = trace_point();
         point.emission = evaluate_environment_emission(scene, direction);
@@ -5069,15 +5089,15 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
             evaluate_shape_color(shape, isec.element_id, isec.element_uv));
         if (op > 0.999f) return isec;
         if (get_random_float(rng) < op) return isec;
-        ray = make_ray(evaluate_instance_position(scene, instance,
-                           isec.element_id, isec.element_uv),
+        ray = make_ray(evaluate_instance_position(
+                           scene, instance, isec.element_id, isec.element_uv),
             ray.d);
     }
     return {};
 }
 
 // Sample camera
-ray3f sample_camera_ray(const yocto_camera* camera, const vec2i& ij,
+ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
     const vec2i& imsize, rng_state& rng) {
     auto puv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
@@ -5384,26 +5404,25 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 }
 
 // Picks a point on a light.
-trace_point sample_instance_point(const yocto_scene* scene, const trace_lights& lights,
-    int instance_id,
-    float rel, const vec2f& ruv) {
-    auto instance = scene->instances[instance_id];
-    auto shape                  = scene->shapes[instance->shape];
-    auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
-    auto element_id             = 0;
-    auto element_uv             = zero2f;
+trace_point sample_instance_point(const yocto_scene* scene,
+    const trace_lights& lights, int instance_id, float rel, const vec2f& ruv) {
+    auto  instance              = scene->instances[instance_id];
+    auto  shape                 = scene->shapes[instance->shape];
+    auto& elements_cdf          = lights.shape_elements_cdf[instance->shape];
+    auto  element_id            = 0;
+    auto  element_uv            = zero2f;
     tie(element_id, element_uv) = sample_shape_element(
         shape, elements_cdf, rel, ruv);
     return make_trace_point(scene, instance_id, element_id, element_uv);
 }
 
 // Sample pdf for a light point.
-float sample_instance_point_pdf(const yocto_scene* scene, const trace_lights& lights,
-    int instance_id,
-    int element_id, const vec2f& element_uv) {
-    auto instance = scene->instances[instance_id];
-    auto shape    = scene->shapes[instance->shape];
-    auto material = scene->materials[shape->material];
+float sample_instance_point_pdf(const yocto_scene* scene,
+    const trace_lights& lights, int instance_id, int element_id,
+    const vec2f& element_uv) {
+    auto  instance     = scene->instances[instance_id];
+    auto  shape        = scene->shapes[instance->shape];
+    auto  material     = scene->materials[shape->material];
     auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
     if (material->emission == zero3f) return 0;
     return sample_shape_element_pdf(shape, elements_cdf, element_id, element_uv);
@@ -5415,13 +5434,14 @@ trace_point sample_lights_point(const yocto_scene* scene,
     if (lights.instances.empty()) return {};
     auto light_id = sample_uniform_index(
         lights.instances.size(), get_random_float(rng));
-    auto  instance_id  = lights.instances[light_id];
-    auto  rel       = get_random_float(rng);  // force order of evaluation
-    auto  ruv       = get_random_vec2f(rng);  // force order of evaluation
-    auto  point     = sample_instance_point(scene, lights, instance_id, rel, ruv);
-    auto  direction = normalize(position - point.position);
-    point.normal    = evaluate_instance_shading_normal(
-        scene, scene->instances[instance_id], point.element_id, point.element_uv, direction);
+    auto instance_id = lights.instances[light_id];
+    auto rel         = get_random_float(rng);  // force order of evaluation
+    auto ruv         = get_random_vec2f(rng);  // force order of evaluation
+    auto point = sample_instance_point(scene, lights, instance_id, rel, ruv);
+    auto direction = normalize(position - point.position);
+    point.normal   = evaluate_instance_shading_normal(scene,
+        scene->instances[instance_id], point.element_id, point.element_uv,
+        direction);
     return point;
 }
 
@@ -5434,15 +5454,14 @@ float sample_lights_point_pdf(const yocto_scene* scene,
     auto material = scene->materials[shape->material];
     if (lights.instances.empty()) return 0;
     if (material->emission == zero3f) return 0;
-    return sample_instance_point_pdf(scene, lights, light_point.instance_id, 
+    return sample_instance_point_pdf(scene, lights, light_point.instance_id,
                light_point.element_id, light_point.element_uv) *
            sample_uniform_index_pdf(lights.instances.size());
 }
 
 // Sample pdf for an environment.
-float sample_environment_direction_pdf(const yocto_scene* scene, const trace_lights& lights,
-    int environment_id,
-    const vec3f& incoming) {
+float sample_environment_direction_pdf(const yocto_scene* scene,
+    const trace_lights& lights, int environment_id, const vec3f& incoming) {
     auto environment = scene->environments[environment_id];
     if (environment->emission_texture >= 0) {
         auto& elements_cdf = lights.environment_texture_cdf[environment->emission_texture];
@@ -5463,9 +5482,8 @@ float sample_environment_direction_pdf(const yocto_scene* scene, const trace_lig
 }
 
 // Picks a point on an environment.
-vec3f sample_environment_direction(const yocto_scene* scene, const trace_lights& lights,
-    int environment_id, 
-    float rel, const vec2f& ruv) {
+vec3f sample_environment_direction(const yocto_scene* scene,
+    const trace_lights& lights, int environment_id, float rel, const vec2f& ruv) {
     auto environment = scene->environments[environment_id];
     if (environment->emission_texture >= 0) {
         auto& elements_cdf = lights.environment_texture_cdf[environment->emission_texture];
@@ -5480,46 +5498,44 @@ vec3f sample_environment_direction(const yocto_scene* scene, const trace_lights&
     }
 }
 
-vec3f sample_environment_direction(const yocto_scene* scene, const trace_lights& lights,
-    int environment_id,
-    rng_state& rng) {
+vec3f sample_environment_direction(const yocto_scene* scene,
+    const trace_lights& lights, int environment_id, rng_state& rng) {
     auto rel = get_random_float(rng);  // force order of evaluation with
                                        // assignments
     auto ruv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
-    return sample_environment_direction(
-        scene, lights, environment_id, rel, ruv);
+    return sample_environment_direction(scene, lights, environment_id, rel, ruv);
 }
 
 // Picks a point on a light.
-vec3f sample_instance_direction(const yocto_scene* scene,const trace_lights& lights, 
-    int instance_id,
-    const vec3f& p, float rel, const vec2f& ruv) {
-    auto instance = scene->instances[instance_id];
-    auto shape  = scene->shapes[instance->shape];
+vec3f sample_instance_direction(const yocto_scene* scene,
+    const trace_lights& lights, int instance_id, const vec3f& p, float rel,
+    const vec2f& ruv) {
+    auto  instance     = scene->instances[instance_id];
+    auto  shape        = scene->shapes[instance->shape];
     auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
-    auto sample = sample_shape_element(shape, elements_cdf, rel, ruv);
+    auto  sample       = sample_shape_element(shape, elements_cdf, rel, ruv);
     return normalize(evaluate_instance_position(
                          scene, instance, get<0>(sample), get<1>(sample)) -
                      p);
 }
 
 // Sample pdf for a light point.
-float sample_instance_direction_pdf(const yocto_scene* scene,const trace_lights& lights, 
-    int instance_id,
-    const bvh_tree& bvh, const vec3f& position, const vec3f& direction) {
-    auto instance = scene->instances[instance_id];
-    auto shape    = scene->shapes[instance->shape];
-    auto material = scene->materials[shape->material];
+float sample_instance_direction_pdf(const yocto_scene* scene,
+    const trace_lights& lights, int instance_id, const bvh_tree& bvh,
+    const vec3f& position, const vec3f& direction) {
+    auto  instance     = scene->instances[instance_id];
+    auto  shape        = scene->shapes[instance->shape];
+    auto  material     = scene->materials[shape->material];
     auto& elements_cdf = lights.shape_elements_cdf[instance->shape];
     if (material->emission == zero3f) return 0;
     // check all intersection
-    auto pdf       = 0.0f;
-    auto ray       = make_ray(position, direction);
-    auto isec      = intersect_scene(scene, instance_id, bvh, ray);
+    auto pdf  = 0.0f;
+    auto ray  = make_ray(position, direction);
+    auto isec = intersect_scene(scene, instance_id, bvh, ray);
     while (isec.instance_id >= 0) {
         // accumulate pdf
-        auto instance = scene->instances[isec.instance_id];
+        auto instance       = scene->instances[isec.instance_id];
         auto light_position = evaluate_instance_position(
             scene, instance, isec.element_id, isec.element_uv);
         auto light_normal = evaluate_instance_shading_normal(
@@ -5543,9 +5559,9 @@ vec3f sample_lights_direction(const yocto_scene* scene,
         lights.instances.size() + lights.environments.size(),
         get_random_float(rng));
     if (light_id < lights.instances.size()) {
-        auto  instance = lights.instances[light_id];
-        auto  rel      = get_random_float(rng);  // force order of evaluation
-        auto  ruv      = get_random_vec2f(rng);  // force order of evaluation
+        auto instance = lights.instances[light_id];
+        auto rel      = get_random_float(rng);  // force order of evaluation
+        auto ruv      = get_random_vec2f(rng);  // force order of evaluation
         return sample_instance_direction(
             scene, lights, instance, position, rel, ruv);
     } else {
@@ -5553,8 +5569,7 @@ vec3f sample_lights_direction(const yocto_scene* scene,
                                                (int)lights.instances.size()];
         auto rel         = get_random_float(rng);  // force order of evaluation
         auto ruv         = get_random_vec2f(rng);  // force order of evaluation
-            return sample_environment_direction(
-                scene, lights, environment, rel, ruv);
+        return sample_environment_direction(scene, lights, environment, rel, ruv);
     }
 }
 
@@ -5565,11 +5580,11 @@ float sample_lights_direction_pdf(const yocto_scene* scene,
     auto pdf = 0.0f;
     for (auto instance : lights.instances) {
         pdf += sample_instance_direction_pdf(
-            scene, lights,instance, bvh, position, direction);
+            scene, lights, instance, bvh, position, direction);
     }
     for (auto environment : lights.environments) {
-            pdf += sample_environment_direction_pdf(
-                scene, lights, environment, direction);
+        pdf += sample_environment_direction_pdf(
+            scene, lights, environment, direction);
     }
     pdf *= sample_uniform_index_pdf(
         lights.instances.size() + lights.environments.size());
@@ -5653,24 +5668,24 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree& bvh,
     const vector<int>& mediums_, rng_state& rng, float& pdf, vec3f& le) {
     auto  incoming = zero3f;
     vec3f weight   = vec3f{1, 1, 1};
-    auto mediums = mediums_;
+    auto  mediums  = mediums_;
 
     auto idx = sample_uniform_index(
         lights.instances.size() + lights.environments.size(),
         get_random_float(rng));
     pdf = 1.0f / (lights.instances.size() + lights.environments.size());
     if (idx < lights.instances.size()) {
-        auto  instance_id = lights.instances[idx];
-        incoming       = sample_instance_direction(scene, lights, instance_id, p,
+        auto instance_id = lights.instances[idx];
+        incoming      = sample_instance_direction(scene, lights, instance_id, p,
             get_random_float(rng), get_random_vec2f(rng));
         auto instance = scene->instances[instance_id];
         pdf *= 1.0 / lights.shape_elements_cdf[instance->shape].back();
     } else {
         auto environment_id = lights.environments[idx - lights.instances.size()];
-            incoming = sample_environment_direction(scene, lights, environment_id,
-                get_random_float(rng), get_random_vec2f(rng));
-            pdf *= sample_environment_direction_pdf(
-                scene, lights, environment_id, incoming);
+        incoming = sample_environment_direction(scene, lights, environment_id,
+            get_random_float(rng), get_random_vec2f(rng));
+        pdf *= sample_environment_direction_pdf(
+            scene, lights, environment_id, incoming);
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, incoming), rng, 10);
         if (isec.instance_id < 0) {
@@ -5684,8 +5699,8 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree& bvh,
 
     while (isec.instance_id >= 0) {
         auto isec_instance = scene->instances[isec.instance_id];
-        auto isec_shape = scene->shapes[isec_instance->shape];
-        auto lp         = evaluate_instance_position(
+        auto isec_shape    = scene->shapes[isec_instance->shape];
+        auto lp            = evaluate_instance_position(
             scene, isec_instance, isec.element_id, isec.element_uv);
         auto ln = evaluate_instance_shading_normal(
             scene, isec_instance, isec.element_id, isec.element_uv, -incoming);
@@ -5695,9 +5710,9 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree& bvh,
                 isec_shape, isec.element_id, isec.element_uv),
             evaluate_shape_color(isec_shape, isec.element_id, isec.element_uv));
 
-        auto medium_instance       = scene->instances[mediums.back()];
-        auto            medium_shape = scene->shapes[medium_instance->shape];
-        auto medium_material         = scene->materials[medium_shape->material];
+        auto medium_instance = scene->instances[mediums.back()];
+        auto medium_shape    = scene->shapes[medium_instance->shape];
+        auto medium_material = scene->materials[medium_shape->material];
         if (medium_material->volume_density != zero3f)
             weight *= evaluate_transmission(scene, medium_material, lp,
                 incoming, isec.distance, channel, rng);
@@ -5728,7 +5743,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree& bvh,
         if (ndi > threshold) {
             // Exiting from medium.
             if (isec.instance_id != mediums.back()) {  // exiting a different
-                                                    // medium??
+                                                       // medium??
                 pdf = 0;
                 return zero3f;
             }
@@ -5739,7 +5754,8 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree& bvh,
             mediums.pop_back();
         } else if (ndi < -threshold) {
             // Entering new medium.
-            if (isec.instance_id == mediums.back()) {  // entering the same medium??
+            if (isec.instance_id == mediums.back()) {  // entering the same
+                                                       // medium??
                 pdf = 0;
                 return zero3f;
             }
@@ -5871,10 +5887,10 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree& bvh,
 
     int bounce = 0;
     while (bounce < max_bounces) {
-        auto        medium   = mediums.back();
-        auto        instance = scene->instances[medium];
-        auto        shape    = scene->shapes[instance->shape];
-        auto        material = scene->materials[shape->material];
+        auto medium   = mediums.back();
+        auto instance = scene->instances[medium];
+        auto shape    = scene->shapes[instance->shape];
+        auto material = scene->materials[shape->material];
         auto ve       = material->volume_emission;
         auto va       = material->volume_albedo;
         auto vd       = material->volume_density;
@@ -6134,7 +6150,8 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene* scene,
                 light_point.position - point.position);
             auto intersection_point = trace_ray_with_opacity(
                 scene, bvh, point.position, light_direction, rng, max_bounces);
-            if (light_pdf && light_point.instance_id == intersection_point.instance_id) {
+            if (light_pdf &&
+                light_point.instance_id == intersection_point.instance_id) {
                 auto brdf_cosine = evaluate_smooth_brdf_cosine(
                     point.brdf, point.normal, outgoing, light_direction);
                 auto geometric_term = abs(dot(light_point.normal,
@@ -6244,7 +6261,8 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
         auto light_direction = normalize(light_point.position - point.position);
         auto intersection_point = trace_ray_with_opacity(
             scene, bvh, point.position, light_direction, rng, max_bounces);
-        if (light_pdf && light_point.instance_id == intersection_point.instance_id) {
+        if (light_pdf &&
+            light_point.instance_id == intersection_point.instance_id) {
             auto brdf_cosine = evaluate_smooth_brdf_cosine(
                 point.brdf, point.normal, outgoing, light_direction);
             auto geometric_term = abs(dot(light_point.normal, light_direction)) /
@@ -6267,7 +6285,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
         if (next_pdf &&
             intersect_scene_with_opacity(scene, bvh,
                 make_ray(point.position, next_direction), rng, max_bounces)
-                 .instance_id < 0)
+                    .instance_id < 0)
             radiance += emission * brdf_cosine / next_pdf;
     }
 
@@ -6495,7 +6513,7 @@ vec4f trace_sample(trace_state& state, const yocto_scene* scene,
     const bvh_tree& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params) {
     _trace_npaths += 1;
-    auto  camera       = scene->cameras.at(params.camera_id);
+    auto& camera       = scene->cameras_.at(params.camera_id);
     auto& rng          = at(state.random_number_generators, i, j);
     auto  ray          = sample_camera_ray(camera, {i, j},
         {state.rendered_image.width, state.rendered_image.height}, rng);
@@ -6504,7 +6522,7 @@ vec4f trace_sample(trace_state& state, const yocto_scene* scene,
     tie(radiance, hit) = trace_func(scene, bvh, lights, params.sample_tracer,
         ray.o, ray.d, rng, params.max_bounces);
     if (!isfinite(radiance.x) || !isfinite(radiance.y) || !isfinite(radiance.z)) {
-        printf("NaN detected\n");
+        log_error("NaN detected");
         radiance = zero3f;
     }
     if (max(radiance) > params.pixel_clamp)
@@ -6530,10 +6548,10 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
 // Init trace state
 trace_state make_trace_state(
     const yocto_scene* scene, const trace_params& params) {
-    auto scope  = log_trace_scoped("making trace state");
-    auto state  = trace_state();
-    auto camera = scene->cameras[params.camera_id];
-    auto size   = evaluate_image_size(camera, params.vertical_resolution);
+    auto  scope  = log_trace_scoped("making trace state");
+    auto  state  = trace_state();
+    auto& camera = scene->cameras_[params.camera_id];
+    auto  size   = evaluate_image_size(camera, params.vertical_resolution);
     state.rendered_image           = image<vec4f>{size.x, size.y, zero4f};
     state.display_image            = image<vec4f>{size.x, size.y, zero4f};
     state.accumulation_buffer      = image<vec4f>{size.x, size.y, zero4f};
@@ -6550,7 +6568,8 @@ trace_lights make_trace_lights(
     auto lights = trace_lights{};
 
     lights.shape_elements_cdf.resize(scene->shapes.size());
-    for (auto instance_id = 0; instance_id < scene->instances.size(); instance_id++) {
+    for (auto instance_id = 0; instance_id < scene->instances.size();
+         instance_id++) {
         auto instance = scene->instances[instance_id];
         auto shape    = scene->shapes[instance->shape];
         auto material = scene->materials[shape->material];
@@ -6562,7 +6581,8 @@ trace_lights make_trace_lights(
     }
 
     lights.environment_texture_cdf.resize(scene->textures.size());
-    for (auto environment_id = 0; environment_id < scene->environments.size(); environment_id++) {
+    for (auto environment_id = 0; environment_id < scene->environments.size();
+         environment_id++) {
         auto environment = scene->environments[environment_id];
         if (environment->emission == zero3f) continue;
         lights.environments.push_back(environment_id);
@@ -6693,7 +6713,7 @@ void trace_async_start(trace_state& state, const yocto_scene* scene,
     state.async_threads.clear();
     state.async_stop_flag = false;
     for (auto tid = 0; tid < nthreads; tid++) {
-        state.async_threads.push_back(thread([&, tid]() {
+        state.async_threads.push_back(thread([&, scene, tid]() {
             for (auto s = 0; s < params.num_samples; s++) {
                 if (!tid) state.current_sample = s;
                 for (auto j = tid; j < state.rendered_image.height;

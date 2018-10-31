@@ -35,7 +35,7 @@
 struct app_state {
     // scene
     unique_ptr<yocto_scene> scene = nullptr;
-    bvh_tree    bvh   = {};
+    bvh_tree                bvh   = {};
 
     // rendering params
     string       filename   = "scene.json";
@@ -47,16 +47,16 @@ struct app_state {
     trace_lights lights = {};
 
     // view image
-    vec2f                        imcenter     = zero2f;
-    float                        imscale      = 1;
-    bool                         zoom_to_fit  = true;
-    bool                         widgets_open = false;
-    tuple<string, int>                        selection    = {"", -1};
+    vec2f                      imcenter     = zero2f;
+    float                      imscale      = 1;
+    bool                       zoom_to_fit  = true;
+    bool                       widgets_open = false;
+    tuple<string, int>         selection    = {"", -1};
     vector<tuple<string, int>> update_list;
-    bool                         navigation_fps = false;
-    bool                         quiet          = false;
-    int64_t                      trace_start    = 0;
-    gltexture                    gl_txt         = {};
+    bool                       navigation_fps = false;
+    bool                       quiet          = false;
+    int64_t                    trace_start    = 0;
+    gltexture                  gl_txt         = {};
 };
 
 void draw_glwidgets(glwindow* win) {
@@ -72,8 +72,8 @@ void draw_glwidgets(glwindow* win) {
                 app->state.rendered_image.width,
                 app->state.rendered_image.height, app->state.current_sample);
             auto cam_names = vector<string>();
-            for (auto camera : app->scene->cameras)
-                cam_names.push_back(camera->name);
+            for (auto& camera : app->scene->cameras_)
+                cam_names.push_back(camera.name);
             auto edited = 0;
             edited += draw_combobox_glwidget(
                 win, "camera", app->params.camera_id, cam_names);
@@ -165,8 +165,8 @@ bool update(app_state* app) {
     // update BVH
     for (auto& sel : app->update_list) {
         if (get<0>(sel) == "shape") {
-            refit_shape_bvh(
-                app->scene->shapes[get<1>(sel)], app->bvh.shape_bvhs[get<1>(sel)]);
+            refit_shape_bvh(app->scene->shapes[get<1>(sel)],
+                app->bvh.shape_bvhs[get<1>(sel)]);
             refit_scene_bvh(app->scene.get(), app->bvh);
         }
         if (get<0>(sel) == "instance") {
@@ -219,9 +219,9 @@ void run_ui(app_state* app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto camera = app->scene->cameras.at(app->params.camera_id);
+            auto& camera = app->scene->cameras_.at(app->params.camera_id);
             camera_turntable(
-                camera->frame, camera->focus_distance, rotate, dolly, pan);
+                camera.frame, camera.focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", app->params.camera_id});
         }
 
@@ -232,14 +232,14 @@ void run_ui(app_state* app) {
                     app->state.rendered_image.height});
             if (ij.x < 0 || ij.x >= app->state.rendered_image.width ||
                 ij.y < 0 || ij.y >= app->state.rendered_image.height) {
-                auto camera = app->scene->cameras.at(app->params.camera_id);
-                auto ray    = evaluate_camera_ray(camera, ij,
+                auto& camera = app->scene->cameras_.at(app->params.camera_id);
+                auto  ray    = evaluate_camera_ray(camera, ij,
                     {app->state.rendered_image.width,
                         app->state.rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
-                auto isec   = intersect_scene(
-                    app->scene.get(), app->bvh, ray);
-                if (isec.instance_id >= 0) app->selection = {"instance", isec.instance_id};
+                auto  isec   = intersect_scene(app->scene.get(), app->bvh, ray);
+                if (isec.instance_id >= 0)
+                    app->selection = {"instance", isec.instance_id};
             }
         }
 
@@ -309,8 +309,7 @@ int main(int argc, char* argv[]) {
     log_validation_errors(app->scene.get());
 
     // build bvh
-    app->bvh = 
-        make_scene_bvh(app->scene.get(), true, embree);
+    app->bvh = make_scene_bvh(app->scene.get(), true, embree);
 
     // init renderer
     app->lights = make_trace_lights(app->scene.get(), app->params);

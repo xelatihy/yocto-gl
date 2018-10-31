@@ -68,20 +68,20 @@ struct app_state {
 
     unique_ptr<draw_glstate> state = nullptr;
 
-    bool                         widgets_open   = false;
-    bool                         navigation_fps = false;
-    tuple<string, int>                        selection      = {"", -1};
+    bool                       widgets_open   = false;
+    bool                       navigation_fps = false;
+    tuple<string, int>         selection      = {"", -1};
     vector<tuple<string, int>> update_list;
-    float                        time       = 0;
-    string                       anim_group = "";
-    vec2f                        time_range = zero2f;
-    bool                         animate    = false;
+    float                      time       = 0;
+    string                     anim_group = "";
+    vec2f                      time_range = zero2f;
+    bool                       animate    = false;
 };
 
 void draw_glscene(draw_glstate* state, const yocto_scene* scene,
-    const yocto_camera* camera, const vec2i& viewport_size,
-    const tuple<string, int>& highlighted, bool eyelight, bool wireframe, bool edges,
-    float exposure, float gamma, float near_plane, float far_plane);
+    const yocto_camera& camera, const vec2i& viewport_size,
+    const tuple<string, int>& highlighted, bool eyelight, bool wireframe,
+    bool edges, float exposure, float gamma, float near_plane, float far_plane);
 
 // draw with shading
 void draw(glwindow* win) {
@@ -111,7 +111,7 @@ void draw(glwindow* win) {
     }
     app->update_list.clear();
 
-    auto camera = app->scene->cameras.at(app->camid);
+    auto& camera = app->scene->cameras_.at(app->camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     draw_glscene(app->state.get(), app->scene.get(), camera, framebuffer_size,
         app->selection, app->eyelight, app->wireframe, app->edges,
@@ -125,7 +125,7 @@ void draw(glwindow* win) {
         }
         if (begin_header_glwidget(win, "view")) {
             draw_combobox_glwidget(
-                win, "camera", camera, app->scene->cameras, false);
+                win, "camera", app->camid, app->scene->cameras_, false);
             draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
             draw_checkbox_glwidget(win, "eyelight", app->eyelight);
             continue_glwidgets_line(win);
@@ -564,12 +564,12 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
 
 // Display a scene
 void draw_glscene(draw_glstate* state, const yocto_scene* scene,
-    const yocto_camera* camera, const vec2i& viewport_size,
-    const tuple<string, int>& highlighted, bool eyelight, bool wireframe, bool edges,
-    float exposure, float gamma, float near_plane, float far_plane) {
+    const yocto_camera& camera, const vec2i& viewport_size,
+    const tuple<string, int>& highlighted, bool eyelight, bool wireframe,
+    bool edges, float exposure, float gamma, float near_plane, float far_plane) {
     set_glviewport(viewport_size);
 
-    auto camera_view = frame_to_mat(inverse(camera->frame));
+    auto camera_view = frame_to_mat(inverse(camera.frame));
     // auto camera_proj =
     //         perspective_mat(evaluate_camera_fovy(camera),
     //             (float)viewport_size.x / (float)viewport_size.y, near_plane);
@@ -577,7 +577,7 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
         (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
     bind_glprogram(state->prog);
-    set_gluniform(state->prog, "cam_pos", camera->frame.o);
+    set_gluniform(state->prog, "cam_pos", camera.frame.o);
     set_gluniform(state->prog, "cam_xform_inv", camera_view);
     set_gluniform(state->prog, "cam_proj", camera_proj);
     set_gluniform(state->prog, "eyelight", (int)eyelight);
@@ -631,13 +631,15 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
     }
 
     if (wireframe) set_glwireframe(true);
-    for (auto instance_id = 0; instance_id < scene->instances.size(); instance_id++) {
-        auto instance = scene->instances[instance_id];
-        auto shape    = scene->shapes[instance->shape];
-        auto material = scene->materials[shape->material];
-        auto highlight = highlighted == tuple<string, int>{"instance", instance_id};
-        draw_glshape(state, shape, material, instance->frame,
-            highlight, eyelight, edges);
+    for (auto instance_id = 0; instance_id < scene->instances.size();
+         instance_id++) {
+        auto instance  = scene->instances[instance_id];
+        auto shape     = scene->shapes[instance->shape];
+        auto material  = scene->materials[shape->material];
+        auto highlight = highlighted ==
+                         tuple<string, int>{"instance", instance_id};
+        draw_glshape(state, shape, material, instance->frame, highlight,
+            eyelight, edges);
     }
 
     unbind_glprogram();
@@ -715,7 +717,7 @@ draw_glstate* init_draw_state(glwindow* win) {
 // run ui loop
 void run_ui(app_state* app) {
     // window
-    auto camera = app->scene->cameras.at(app->camid);
+    auto& camera = app->scene->cameras_.at(app->camid);
     auto width = clamp(evaluate_image_size(camera, app->resolution).x, 256, 1440),
          height = clamp(
              evaluate_image_size(camera, app->resolution).y, 256, 1440);
@@ -750,9 +752,9 @@ void run_ui(app_state* app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto camera = app->scene->cameras.at(app->camid);
+            auto& camera = app->scene->cameras_.at(app->camid);
             camera_turntable(
-                camera->frame, camera->focus_distance, rotate, dolly, pan);
+                camera.frame, camera.focus_distance, rotate, dolly, pan);
             app->update_list.push_back({"camera", app->camid});
         }
 

@@ -2633,7 +2633,7 @@ struct bvh_tree {
 
     // data for instance BVH
     vector<bvh_instance> instances;
-    vector<bvh_tree>    shape_bvhs;
+    vector<bvh_tree>     shape_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -3273,7 +3273,7 @@ struct yocto_animation {
 // updates node transformations only if defined.
 struct yocto_scene {
     string                     name         = "";
-    vector<yocto_camera*>      cameras      = {};
+    vector<yocto_camera>       cameras_     = {};
     vector<yocto_shape*>       shapes       = {};
     vector<yocto_instance*>    instances    = {};
     vector<yocto_material*>    materials    = {};
@@ -3356,10 +3356,10 @@ bool is_shape_face_varying(const yocto_shape* shape);
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
 struct scene_intersection {
-    int             instance_id = -1;
-    int             element_id = -1;
-    vec2f           element_uv = zero2f;
-    float           distance   = maxf;
+    int   instance_id = -1;
+    int   element_id  = -1;
+    vec2f element_uv  = zero2f;
+    float distance    = maxf;
 };
 
 // Intersects a ray with the scene.
@@ -3426,27 +3426,27 @@ vec4f evaluate_texture(const yocto_texture* texture, const vec2f& texcoord);
 float evaluate_voltexture(const yocto_voltexture* texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float evaluate_camera_fovy(const yocto_camera* camera);
-float evaluate_camera_aspect(const yocto_camera* camera);
+float evaluate_camera_fovy(const yocto_camera& camera);
+float evaluate_camera_aspect(const yocto_camera& camera);
 void  set_camera_fovy(
-     yocto_camera* camera, float fovy, float aspect, float width = 0.036f);
-vec2i evaluate_image_size(const yocto_camera* camera, int yresolution);
-void  set_camera_view(yocto_camera* camera, const bbox3f& bbox,
+     yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
+vec2i evaluate_image_size(const yocto_camera& camera, int yresolution);
+void  set_camera_view(yocto_camera& camera, const bbox3f& bbox,
      const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
 
 // Generates a ray from a camera image coordinate `uv` and lens coordinates
 // `luv`.
 ray3f evaluate_camera_ray(
-    const yocto_camera* camera, const vec2f& uv, const vec2f& luv);
+    const yocto_camera& camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f evaluate_camera_ray(const yocto_camera* camera, const vec2i& ij,
+ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
     const vec2i& imsize, const vec2f& puv, const vec2f& luv);
 // Generates a ray from a camera for pixel index `idx`, the image size
 // `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
-ray3f evaluate_camera_ray(const yocto_camera* camera, int idx,
+ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
     const vec2i& imsize, const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
@@ -3557,10 +3557,10 @@ struct trace_params {
 
 // Trace lights used during rendering.
 struct trace_lights {
-    vector<int>    instances               = {};
-    vector<int> environments            = {};
-    vector<vector<float>>      shape_elements_cdf      = {};
-    vector<vector<float>>      environment_texture_cdf = {};
+    vector<int>           instances               = {};
+    vector<int>           environments            = {};
+    vector<vector<float>> shape_elements_cdf      = {};
+    vector<vector<float>> environment_texture_cdf = {};
 };
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
@@ -3913,6 +3913,13 @@ inline bool print_value(string& str, float val) {
 }
 inline bool print_value(string& str, double val) {
     str += std::to_string(val);
+    return true;
+}
+template<typename T>
+inline bool print_value(string& str, const T* val) {
+    char buf[512];
+    sprintf(buf, "%p", val);
+    str += buf;
     return true;
 }
 

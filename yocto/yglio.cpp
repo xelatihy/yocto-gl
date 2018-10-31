@@ -1285,84 +1285,6 @@ bool parse_json_value(const json& js, T& val, const char* name, const T& def) {
 
 // Dumps a json value
 template <typename T>
-bool dump_json_objref(json& js, T* val, const vector<T*>& refs) {
-    return dump_json_value(js, val ? val->name : ""s);
-}
-
-// Dumps a json value
-template <typename T>
-bool dump_json_objref(json& js, T* val, const char* name, const vector<T*>& refs) {
-    if (!val) return true;
-    return dump_json_objref(js[name], val, refs);
-}
-
-// Dumps a json value
-template <typename T>
-bool dump_json_objref(json& js, const vector<T*>& val, const vector<T*>& refs) {
-    js = json::array();
-    for (auto v : val) {
-        js.push_back({});
-        if (!dump_json_objref(js.back(), v, refs)) return false;
-    }
-    return true;
-}
-
-// Dumps a json value
-template <typename T>
-bool dump_json_objref(
-    json& js, const vector<T*>& val, const char* name, const vector<T*>& refs) {
-    if (val.empty()) return true;
-    return dump_json_objref(js[name], val, refs);
-}
-
-// Dumps a json value
-template <typename T>
-bool parse_json_objref(const json& js, T*& val, const vector<T*>& refs) {
-    if (!js.is_string()) return false;
-    auto name = ""s;
-    if (!parse_json_value(js, name)) return false;
-    val = nullptr;
-    for (auto ref : refs) {
-        if (ref->name == name) {
-            val = ref;
-            break;
-        }
-    }
-    if (!val) return false;
-    return true;
-}
-
-// Dumps a json value
-template <typename T>
-bool parse_json_objref(
-    const json& js, T*& val, const char* name, const vector<T*>& refs) {
-    if (!js.count(name)) return true;
-    val = nullptr;
-    return parse_json_objref(js.at(name), val, refs);
-}
-
-// Dumps a json value
-template <typename T>
-bool parse_json_objref(const json& js, vector<T*>& val, const vector<T*>& refs) {
-    if (!js.is_array()) return false;
-    for (auto& j : js) {
-        val.push_back(nullptr);
-        if (!parse_json_objref(j, val.back(), refs)) return false;
-    }
-    return true;
-}
-
-// Dumps a json value
-template <typename T>
-bool parse_json_objref(
-    const json& js, vector<T*>& val, const char* name, const vector<T*>& refs) {
-    if (!js.count(name)) return true;
-    val = {};
-    return parse_json_objref(js.at(name), val, refs);
-}
-
-// Dumps a json value
-template <typename T>
 bool dump_json_objref(json& js, int val, const vector<T*>& refs) {
     return dump_json_value(js, val >= 0 ? refs[val]->name : ""s);
 }
@@ -1440,6 +1362,84 @@ bool parse_json_objref(const json& js, vector<int>& val, const char* name,
     return parse_json_objref(js.at(name), val, refs);
 }
 
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, int val, const vector<T>& refs) {
+    return dump_json_value(js, val >= 0 ? refs[val].name : ""s);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, int val, const char* name, const vector<T>& refs) {
+    if (!val) return true;
+    return dump_json_objref(js[name], val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(json& js, const vector<int>& val, const vector<T>& refs) {
+    js = json::array();
+    for (auto v : val) {
+        js.push_back({});
+        if (!dump_json_objref(js.back(), v, refs)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objref(
+    json& js, const vector<int>& val, const char* name, const vector<T>& refs) {
+    if (val.empty()) return true;
+    return dump_json_objref(js[name], val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, int& val, const vector<T>& refs) {
+    if (!js.is_string()) return false;
+    auto name = ""s;
+    if (!parse_json_value(js, name)) return false;
+    val = -1;
+    for (auto index = 0; index < refs.size(); index++) {
+        if (refs[index].name == name) {
+            val = index;
+            break;
+        }
+    }
+    if (val < 0) return false;
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(
+    const json& js, int& val, const char* name, const vector<T>& refs) {
+    if (!js.count(name)) return true;
+    val = -1;
+    return parse_json_objref(js.at(name), val, refs);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(const json& js, vector<int>& val, const vector<T>& refs) {
+    if (!js.is_array()) return false;
+    for (auto& j : js) {
+        val.push_back(-1);
+        if (!parse_json_objref(j, val.back(), refs)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objref(
+    const json& js, vector<int>& val, const char* name, const vector<T>& refs) {
+    if (!js.count(name)) return true;
+    val = {};
+    return parse_json_objref(js.at(name), val, refs);
+}
+
 // Starts a json object
 bool dump_json_objbegin(json& js) {
     js = json::object();
@@ -1490,6 +1490,46 @@ bool parse_json_objarray(const json& js, vector<T*>& val, const char* name,
     return parse_json_objarray(js.at(name), val, scene);
 }
 
+// Dumps a json value
+template <typename T>
+bool dump_json_objarray(json& js, const vector<T>& val, const yocto_scene* scene) {
+    js = json::array();
+    for (auto& v : val) {
+        js.push_back({});
+        if (!dump_json_object(js.back(), v, scene)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool dump_json_objarray(json& js, const vector<T>& val, const char* name,
+    const yocto_scene* scene) {
+    if (val.empty()) return true;
+    return dump_json_objarray(js[name], val, scene);
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objarray(
+    const json& js, vector<T>& val, const yocto_scene* scene) {
+    if (!js.is_array()) return false;
+    for (auto& j : js) {
+        val.push_back(T{});
+        if (!parse_json_object(j, val.back(), scene)) return false;
+    }
+    return true;
+}
+
+// Dumps a json value
+template <typename T>
+bool parse_json_objarray(const json& js, vector<T>& val, const char* name,
+    const yocto_scene* scene) {
+    if (!js.count(name)) return true;
+    val = {};
+    return parse_json_objarray(js.at(name), val, scene);
+}
+
 // Parses and applied a JSON procedural
 template <typename T>
 bool parse_json_procedural(
@@ -1498,58 +1538,66 @@ bool parse_json_procedural(
     return apply_json_procedural(js.at(name), val, scene);
 }
 
+// Parses and applied a JSON procedural
+template <typename T>
+bool parse_json_procedural(
+    const json& js, T& val, const char* name, const yocto_scene* scene) {
+    if (!js.count(name)) return true;
+    return apply_json_procedural(js.at(name), val, scene);
+}
+
 // Procedural commands for cameras
 bool apply_json_procedural(
-    const json& js, yocto_camera* val, const yocto_scene* scene) {
+    const json& js, yocto_camera& val, const yocto_scene* scene) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from") || js.count("to")) {
-        auto from           = js.value("from", zero3f);
-        auto to             = js.value("to", zero3f);
-        auto up             = js.value("up", vec3f{0, 1, 0});
-        val->frame          = lookat_frame(from, to, up);
-        val->focus_distance = length(from - to);
+        auto from          = js.value("from", zero3f);
+        auto to            = js.value("to", zero3f);
+        auto up            = js.value("up", vec3f{0, 1, 0});
+        val.frame          = lookat_frame(from, to, up);
+        val.focus_distance = length(from - to);
     }
     return true;
 }
 
 // Serialize struct
 bool dump_json_object(
-    json& js, const yocto_camera* val, const yocto_scene* scene) {
+    json& js, const yocto_camera& val, const yocto_scene* scene) {
     static const auto def = yocto_camera();
     if (!dump_json_objbegin(js)) return false;
-    if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!dump_json_value(js, val->orthographic, "orthographic", def.orthographic))
+    if (!dump_json_value(js, val.name, "name", def.name)) return false;
+    if (!dump_json_value(js, val.frame, "frame", def.frame)) return false;
+    if (!dump_json_value(js, val.orthographic, "orthographic", def.orthographic))
         return false;
-    if (!dump_json_value(js, val->film_size, "film_size", def.film_size))
+    if (!dump_json_value(js, val.film_size, "film_size", def.film_size))
         return false;
-    if (!dump_json_value(js, val->focal_length, "focal_length", def.focal_length))
-        return false;
-    if (!dump_json_value(
-            js, val->focus_distance, "focus_distance", def.focus_distance))
+    if (!dump_json_value(js, val.focal_length, "focal_length", def.focal_length))
         return false;
     if (!dump_json_value(
-            js, val->lens_aperture, "lens_aperture", def.lens_aperture))
+            js, val.focus_distance, "focus_distance", def.focus_distance))
+        return false;
+    if (!dump_json_value(
+            js, val.lens_aperture, "lens_aperture", def.lens_aperture))
         return false;
     return true;
 }
 
 // Serialize struct
 bool parse_json_object(
-    const json& js, yocto_camera* val, const yocto_scene* scene) {
+    const json& js, yocto_camera& val, const yocto_scene* scene) {
     static const auto def = yocto_camera();
     if (!parse_json_objbegin(js)) return false;
-    if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->frame, "frame", def.frame)) return false;
-    if (!parse_json_value(js, val->film_size, "film_size", def.film_size))
+    if (!parse_json_value(js, val.name, "name", def.name)) return false;
+    if (!parse_json_value(js, val.frame, "frame", def.frame)) return false;
+    if (!parse_json_value(js, val.film_size, "film_size", def.film_size))
         return false;
-    if (!parse_json_value(js, val->focal_length, "focal_length", def.focal_length))
-        return false;
-    if (!parse_json_value(
-            js, val->focus_distance, "focus_distance", def.focus_distance))
+    if (!parse_json_value(js, val.focal_length, "focal_length", def.focal_length))
         return false;
     if (!parse_json_value(
-            js, val->lens_aperture, "lens_aperture", def.lens_aperture))
+            js, val.focus_distance, "focus_distance", def.focus_distance))
+        return false;
+    if (!parse_json_value(
+            js, val.lens_aperture, "lens_aperture", def.lens_aperture))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scene)) return false;
     return true;
@@ -2197,7 +2245,7 @@ bool dump_json_object(
         return false;
     if (!dump_json_objref(js, val->parent, "parent", scene->nodes))
         return false;
-    if (!dump_json_objref(js, val->camera, "camera", scene->cameras))
+    if (!dump_json_objref(js, val->camera, "camera", scene->cameras_))
         return false;
     if (!dump_json_objref(js, val->instance, "instance", scene->instances))
         return false;
@@ -2238,7 +2286,7 @@ bool parse_json_object(
         return false;
     if (!parse_json_objref(js, val->instance, "instance", scene->instances))
         return false;
-    if (!parse_json_objref(js, val->camera, "camera", scene->cameras))
+    if (!parse_json_objref(js, val->camera, "camera", scene->cameras_))
         return false;
     if (!parse_json_objref(
             js, val->environment, "environment", scene->environments))
@@ -2357,7 +2405,7 @@ bool dump_json_object(json& js, const yocto_scene* val, const yocto_scene* scene
     static const auto def = yocto_scene();
     if (!dump_json_objbegin(js)) return false;
     if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_objarray(js, val->cameras, "cameras", scene)) return false;
+    if (!dump_json_objarray(js, val->cameras_, "cameras", scene)) return false;
     if (!dump_json_objarray(js, val->textures, "textures", scene)) return false;
     if (!dump_json_objarray(js, val->materials, "materials", scene))
         return false;
@@ -2414,7 +2462,7 @@ bool parse_json_object(
     static const auto def = yocto_scene();
     if (!parse_json_objbegin(js)) return false;
     if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_objarray(js, val->cameras, "cameras", scene)) return false;
+    if (!parse_json_objarray(js, val->cameras_, "cameras", scene)) return false;
     if (!parse_json_objarray(js, val->textures, "textures", scene))
         return false;
     if (!parse_json_objarray(js, val->voltextures, "voltextures", scene))
@@ -3208,15 +3256,15 @@ yocto_scene* load_obj_scene(const string& filename, bool load_textures,
         mmap[mat->name] = (int)scene->materials.size() - 1;
     };
     cb.camera = [&](const obj_camera& ocam) {
-        auto camera            = new yocto_camera();
-        camera->name           = ocam.name;
-        camera->orthographic   = ocam.ortho;
-        camera->film_size      = ocam.film;
-        camera->focal_length   = ocam.focal;
-        camera->focus_distance = ocam.focus;
-        camera->lens_aperture  = ocam.aperture;
-        camera->frame          = ocam.frame;
-        scene->cameras.push_back(camera);
+        auto camera           = yocto_camera();
+        camera.name           = ocam.name;
+        camera.orthographic   = ocam.ortho;
+        camera.film_size      = ocam.film;
+        camera.focal_length   = ocam.focal;
+        camera.focus_distance = ocam.focus;
+        camera.lens_aperture  = ocam.aperture;
+        camera.frame          = ocam.frame;
+        scene->cameras_.push_back(camera);
     };
     cb.environmnet = [&](const obj_environment& oenv) {
         auto environment              = new yocto_environment();
@@ -3351,10 +3399,10 @@ bool save_objx(const string& filename, const yocto_scene* scene) {
     if (!fs) return false;
 
     // cameras
-    for (auto camera : scene->cameras) {
-        print(fs, "c {} {} {} {} {} {} {}\n", camera->name,
-            (int)camera->orthographic, camera->film_size, camera->focal_length,
-            camera->focus_distance, camera->lens_aperture, camera->frame);
+    for (auto& camera : scene->cameras_) {
+        print(fs, "c {} {} {} {} {} {} {}\n", camera.name,
+            (int)camera.orthographic, camera.film_size, camera.focal_length,
+            camera.focus_distance, camera.lens_aperture, camera.frame);
     }
 
     // environments
@@ -3526,7 +3574,7 @@ bool save_obj_scene(const string& filename, const yocto_scene* scene,
         if (!save_mtl(replace_extension(filename, ".mtl"), scene, true))
             return false;
     }
-    if (!scene->cameras.empty() || !scene->environments.empty()) {
+    if (!scene->cameras_.empty() || !scene->environments.empty()) {
         if (!save_objx(replace_extension(filename, ".objx"), scene))
             return false;
     }
@@ -3897,25 +3945,25 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
     // convert cameras
     if (gltf.count("cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
-            auto& gcam           = gltf.at("cameras").at(cid);
-            auto  camera         = new yocto_camera();
-            camera->name         = gcam.value("name", ""s);
-            camera->orthographic = gcam.value("type", ""s) == "orthographic";
-            if (camera->orthographic) {
+            auto& gcam          = gltf.at("cameras").at(cid);
+            auto  camera        = yocto_camera{};
+            camera.name         = gcam.value("name", ""s);
+            camera.orthographic = gcam.value("type", ""s) == "orthographic";
+            if (camera.orthographic) {
                 printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
                 set_camera_fovy(camera, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
-                camera->focus_distance = maxf;
-                camera->lens_aperture  = 0;
+                camera.focus_distance = maxf;
+                camera.lens_aperture  = 0;
             } else {
                 auto persp = gcam.value("perspective", json::object());
                 set_camera_fovy(camera, persp.value("yfov", 1.0f),
                     persp.value("aspectRatio", 1.0f));
-                camera->focus_distance = maxf;
-                camera->lens_aperture  = 0;
+                camera.focus_distance = maxf;
+                camera.lens_aperture  = 0;
             }
-            scene->cameras.push_back(camera);
+            scene->cameras_.push_back(camera);
         }
     }
 
@@ -4112,10 +4160,10 @@ yocto_scene* load_gltf_scene(
 
     // fix cameras
     auto bbox = compute_scene_bounds(scene.get());
-    for (auto camera : scene->cameras) {
+    for (auto& camera : scene->cameras_) {
         auto center = (bbox.min + bbox.max) / 2;
-        auto dist   = dot(-camera->frame.z, center - camera->frame.o);
-        if (dist > 0) camera->focus_distance = dist;
+        auto dist   = dot(-camera.frame.z, center - camera.frame.o);
+        if (dist > 0) camera.focus_distance = dist;
     }
 
     // done
@@ -4131,7 +4179,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     js["asset"]["version"] = "2.0";
 
     // prepare top level nodes
-    if (!scene->cameras.empty()) js["cameras"] = json::array();
+    if (!scene->cameras_.empty()) js["cameras"] = json::array();
     if (!scene->textures.empty()) {
         js["textures"] = json::array();
         js["images"]   = json::array();
@@ -4147,18 +4195,18 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     if (!scene->nodes.empty()) js["nodes"] = json::array();
 
     // convert cameras
-    for (auto camera : scene->cameras) {
+    for (auto& camera : scene->cameras_) {
         auto cjs    = json();
-        cjs["name"] = camera->name;
-        if (!camera->orthographic) {
+        cjs["name"] = camera.name;
+        if (!camera.orthographic) {
             cjs["type"]                       = "perspective";
-            cjs["perspective"]["aspectRatio"] = camera->film_size.x /
-                                                camera->film_size.y;
+            cjs["perspective"]["aspectRatio"] = camera.film_size.x /
+                                                camera.film_size.y;
             cjs["perspective"]["znear"] = 0.01f;
         } else {
             cjs["type"]                  = "orthographic";
-            cjs["orthographic"]["xmag"]  = camera->film_size.x / 2;
-            cjs["orthographic"]["ymag"]  = camera->film_size.y / 2;
+            cjs["orthographic"]["xmag"]  = camera.film_size.x / 2;
+            cjs["orthographic"]["ymag"]  = camera.film_size.y / 2;
             cjs["orthographic"]["znear"] = 0.01f;
         }
         js["cameras"].push_back(cjs);
@@ -4303,11 +4351,11 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     // nodes from instances
     if (scene->nodes.empty()) {
         auto camera_id = 0;
-        for (auto camera : scene->cameras) {
+        for (auto& camera : scene->cameras_) {
             auto njs      = json();
-            njs["name"]   = camera->name;
+            njs["name"]   = camera.name;
             njs["camera"] = camera_id++;
-            njs["matrix"] = frame_to_mat(camera->frame);
+            njs["matrix"] = frame_to_mat(camera.frame);
             js["nodes"].push_back(njs);
         }
         for (auto instance : scene->instances) {
@@ -4704,21 +4752,21 @@ yocto_scene* load_pbrt_scene(
             stack.back().aspect = jcmd.at("xresolution").get<float>() /
                                   jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            auto camera            = new yocto_camera();
-            camera->name           = "camera" + std::to_string(cid++);
-            camera->frame          = inverse(stack.back().frame);
-            camera->frame.z        = -camera->frame.z;
-            camera->focus_distance = stack.back().focus;
-            auto aspect            = stack.back().aspect;
-            auto fovy              = 1.0f;
-            auto type              = jcmd.at("type").get<string>();
+            auto camera           = yocto_camera{};
+            camera.name           = "camera" + std::to_string(cid++);
+            camera.frame          = inverse(stack.back().frame);
+            camera.frame.z        = -camera.frame.z;
+            camera.focus_distance = stack.back().focus;
+            auto aspect           = stack.back().aspect;
+            auto fovy             = 1.0f;
+            auto type             = jcmd.at("type").get<string>();
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pif / 180;
             } else {
                 printf("%s camera not supported\n", type.c_str());
             }
             set_camera_fovy(camera, fovy, aspect);
-            scene->cameras.push_back(camera);
+            scene->cameras_.push_back(camera);
         } else if (cmd == "Texture") {
             auto found = false;
             auto name  = jcmd.at("name").get<string>();
@@ -5035,10 +5083,10 @@ yocto_scene* load_pbrt_scene(
     }
     if (use_hierarchy) {
         auto camera_id = 0;
-        for (auto camera : scene->cameras) {
+        for (auto& camera : scene->cameras_) {
             auto node    = new yocto_scene_node();
-            node->name   = camera->name;
-            node->local  = camera->frame;
+            node->name   = camera.name;
+            node->local  = camera.frame;
             node->camera = camera_id++;
             scene->nodes.insert(scene->nodes.begin(), node);
         }
@@ -5106,10 +5154,10 @@ WorldEnd
 #endif
 
     // convert camera and settings
-    auto camera = scene->cameras.front();
-    auto from   = camera->frame.o;
-    auto to     = camera->frame.o - camera->frame.z;
-    auto up     = camera->frame.y;
+    auto& camera = scene->cameras_.front();
+    auto  from   = camera.frame.o;
+    auto  to     = camera.frame.o - camera.frame.z;
+    auto  up     = camera.frame.y;
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         evaluate_camera_fovy(camera) * 180 / pif);
@@ -5380,58 +5428,38 @@ bool serialize_bin_object(
     }
 }
 
-// Serialize a pointer. It is saved as an integer index (handle) of the array of
-// pointers vec. On loading, the handle is converted back into a pointer.
+// Serialize vector of objects
 template <typename T>
-bool serialize_bin_handle(
-    T*& val, const vector<T*>& vec, file_stream& fs, bool save) {
+bool serialize_bin_object(
+    vector<T>& vec, const yocto_scene* scene, file_stream& fs, bool save) {
     if (save) {
-        auto handle = -1;
-        for (auto i = 0; i < vec.size(); ++i)
-            if (vec[i] == val) {
-                handle = i;
-                break;
-            }
-        if (!serialize_bin_value(handle, fs, true)) return false;
-        return true;
-    } else {
-        auto handle = -1;
-        if (!serialize_bin_value(handle, fs, false)) return false;
-        val = (handle == -1) ? nullptr : vec[handle];
-        return true;
-    }
-}
-
-// Serialize a pointer. It is saved as an integer index (handle) of the array of
-// pointers vec. On loading, the handle is converted back into a pointer.
-template <typename T>
-bool serialize_bin_handle(
-    vector<T*>& vals, const vector<T*>& vec_, file_stream& fs, bool save) {
-    if (save) {
-        auto count = (size_t)vals.size();
+        auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
-        for (auto i = 0; i < vals.size(); ++i) {
-            if (!serialize_bin_handle(vals[i], vec_, fs, true)) return false;
+        for (auto i = 0; i < vec.size(); ++i) {
+            if (!serialize_bin_object(vec[i], scene, fs, true)) return false;
         }
+        return true;
     } else {
         auto count = (size_t)0;
         if (!serialize_bin_value(count, fs, false)) return false;
-        vals = vector<T*>(count);
-        for (auto i = 0; i < vals.size(); ++i) {
-            if (!serialize_bin_handle(vals[i], vec_, fs, false)) return false;
+        vec = vector<T*>(count);
+        for (auto i = 0; i < vec.size(); ++i) {
+            vec[i] = T{};
+            if (!serialize_bin_object(vec[i], scene, fs, false)) return false;
         }
+        return true;
     }
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-bool serialize_bin_object(yocto_camera* camera, file_stream& fs, bool save) {
-    if (!serialize_bin_value(camera->name, fs, save)) return false;
-    if (!serialize_bin_value(camera->frame, fs, save)) return false;
-    if (!serialize_bin_value(camera->orthographic, fs, save)) return false;
-    if (!serialize_bin_value(camera->film_size, fs, save)) return false;
-    if (!serialize_bin_value(camera->focal_length, fs, save)) return false;
-    if (!serialize_bin_value(camera->focus_distance, fs, save)) return false;
-    if (!serialize_bin_value(camera->lens_aperture, fs, save)) return false;
+bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
+    if (!serialize_bin_value(camera.name, fs, save)) return false;
+    if (!serialize_bin_value(camera.frame, fs, save)) return false;
+    if (!serialize_bin_value(camera.orthographic, fs, save)) return false;
+    if (!serialize_bin_value(camera.film_size, fs, save)) return false;
+    if (!serialize_bin_value(camera.focal_length, fs, save)) return false;
+    if (!serialize_bin_value(camera.focus_distance, fs, save)) return false;
+    if (!serialize_bin_value(camera.lens_aperture, fs, save)) return false;
     return true;
 }
 
@@ -5545,7 +5573,7 @@ bool serialize_bin_object(yocto_instance* instance, const yocto_scene* scene,
 
 bool serialize_scene(yocto_scene* scene, file_stream& fs, bool save) {
     if (!serialize_bin_value(scene->name, fs, save)) return false;
-    if (!serialize_bin_object(scene->cameras, fs, save)) return false;
+    if (!serialize_bin_object(scene->cameras_, fs, save)) return false;
     if (!serialize_bin_object(scene->shapes, scene, fs, save)) return false;
     if (!serialize_bin_object(scene->textures, fs, save)) return false;
     if (!serialize_bin_object(scene->voltextures, fs, save)) return false;

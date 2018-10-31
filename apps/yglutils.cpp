@@ -812,9 +812,10 @@ bool draw_combobox_glwidget(
     return val != old_val;
 }
 
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
-    const vector<void*>& vals, const char* (*label)(void*), bool include_null) {
-    if (!ImGui::BeginCombo(lbl, idx >= 0 ? label(vals.at(idx)) : "<none>")) return false;
+bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx, int num,
+    const function<const char*(int)>& labels, bool include_null) {
+    if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>"))
+        return false;
     auto old_idx = idx;
     if (include_null) {
         ImGui::PushID(100000);
@@ -822,34 +823,14 @@ bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
         if (idx < 0) ImGui::SetItemDefaultFocus();
         ImGui::PopID();
     }
-    for (auto i = 0; i < vals.size(); i++) {
+    for (auto i = 0; i < num; i++) {
         ImGui::PushID(i);
-        if (ImGui::Selectable(label(vals.at(i)), idx == i)) idx = i;
+        if (ImGui::Selectable(labels(i), idx == i)) idx = i;
         if (idx == i) ImGui::SetItemDefaultFocus();
         ImGui::PopID();
     }
     ImGui::EndCombo();
     return idx != old_idx;
-}
-
-bool draw_combobox_glwidget(glwindow* win, const char* lbl, void*& val,
-    const vector<void*>& vals, const char* (*label)(void*), bool include_null) {
-    if (!ImGui::BeginCombo(lbl, (val) ? label(val) : "<none>")) return false;
-    auto old_val = val;
-    if (include_null) {
-        ImGui::PushID(100000);
-        if (ImGui::Selectable("<none>", val == nullptr)) val = nullptr;
-        if (val == nullptr) ImGui::SetItemDefaultFocus();
-        ImGui::PopID();
-    }
-    for (auto i = 0; i < vals.size(); i++) {
-        ImGui::PushID(i);
-        if (ImGui::Selectable(label(vals[i]), val == vals[i])) val = vals[i];
-        if (val == vals[i]) ImGui::SetItemDefaultFocus();
-        ImGui::PopID();
-    }
-    ImGui::EndCombo();
-    return val != old_val;
 }
 
 void begin_child_glwidget(glwindow* win, const char* lbl, const vec2i& size) {
