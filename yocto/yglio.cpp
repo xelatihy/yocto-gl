@@ -3800,8 +3800,8 @@ bool load_gltf_scene(const string& filename, yocto_scene& scene,
     auto bbox = compute_scene_bounds(scene);
     for (auto& camera : scene.cameras) {
         auto center = (bbox.min + bbox.max) / 2;
-        auto dist   = dot(-camera.frame.z, center - camera.frame.o);
-        if (dist > 0) camera.focus_distance = dist;
+        auto distance   = dot(-camera.frame.z, center - camera.frame.o);
+        if (distance > 0) camera.focus_distance = distance;
     }
 
     // done

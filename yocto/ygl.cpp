@@ -1043,7 +1043,7 @@ namespace ygl {
 
 // Intersect a ray with a point (approximate)
 bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& dist, vec2f& uv) {
+    const ray3f& ray, const vec3f& p, float r, float& distance, vec2f& uv) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
     auto t = dot(w, ray.d) / dot(ray.d, ray.d);
@@ -1057,7 +1057,7 @@ bool intersect_point(
     if (dot(prp, prp) > r * r) return false;
 
     // intersection occurred: set params and exit
-    dist = t;
+    distance = t;
     uv   = {0, 0};
 
     return true;
@@ -1065,7 +1065,7 @@ bool intersect_point(
 
 // Intersect a ray with a line
 bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, float& dist, vec2f& uv) {
+    float r0, float r1, float& distance, vec2f& uv) {
     // setup intersection params
     auto u = ray.d;
     auto v = p1 - p0;
@@ -1104,7 +1104,7 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     if (d2 > r * r) return false;
 
     // intersection occurred: set params and exit
-    dist = t;
+    distance = t;
     uv   = {s, sqrt(d2) / r};
 
     return true;
@@ -1112,7 +1112,7 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 
 // Intersect a ray with a triangle
 bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, float& dist, vec2f& uv) {
+    const vec3f& p2, float& distance, vec2f& uv) {
     // compute triangle edges
     auto edge1 = p1 - p0;
     auto edge2 = p2 - p0;
@@ -1141,7 +1141,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // intersection occurred: set params and exit
-    dist = t;
+    distance = t;
     uv   = {u, v};
 
     return true;
@@ -1149,16 +1149,16 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 
 // Intersect a ray with a quad.
 bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv) {
+    const vec3f& p2, const vec3f& p3, float& distance, vec2f& uv) {
     auto hit  = false;
     auto tray = ray;
-    if (intersect_triangle(tray, p0, p1, p3, dist, uv)) {
-        tray.tmax = dist;
+    if (intersect_triangle(tray, p0, p1, p3, distance, uv)) {
+        tray.tmax = distance;
         hit       = true;
     }
-    if (intersect_triangle(tray, p2, p3, p1, dist, uv)) {
+    if (intersect_triangle(tray, p2, p3, p1, distance, uv)) {
         uv        = {1 - uv.x, 1 - uv.y};
-        tray.tmax = dist;
+        tray.tmax = distance;
         hit       = true;
     }
     return hit;
@@ -1216,10 +1216,10 @@ namespace ygl {
 
 // TODO: documentation
 bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
-    float& dist, vec2f& uv) {
+    float& distance, vec2f& uv) {
     auto d2 = dot(pos - p, pos - p);
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
-    dist = sqrt(d2);
+    distance = sqrt(d2);
     uv   = {0, 0};
     return true;
 }
@@ -1237,7 +1237,7 @@ float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
 
 // TODO: documentation
 bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, float& dist, vec2f& uv) {
+    const vec3f& p1, float r0, float r1, float& distance, vec2f& uv) {
     auto u = closestuv_line(pos, p0, p1);
     // Compute projected position from the clamped t d = a + t * ab;
     auto p  = p0 + (p1 - p0) * u;
@@ -1246,7 +1246,7 @@ bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
     // check distance
     if (d2 > (dist_max + r) * (dist_max + r)) return false;
     // done
-    dist = sqrt(d2);
+    distance = sqrt(d2);
     uv   = {u, 0};
     return true;
 }
@@ -1297,28 +1297,28 @@ vec2f closestuv_triangle(
 
 // TODO: documentation
 bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& distance,
     vec2f& uv) {
     uv      = closestuv_triangle(pos, p0, p1, p2);
     auto p  = interpolate_triangle(p0, p1, p2, uv);
     auto r  = interpolate_triangle(r0, r1, r2, uv);
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
-    dist = sqrt(dd);
+    distance = sqrt(dd);
     return true;
 }
 
 // TODO: documentation
 bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, float& dist, vec2f& uv) {
+    float r2, float r3, float& distance, vec2f& uv) {
     auto hit = false;
-    if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r3, dist, uv)) {
-        dist_max = dist;
+    if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r3, distance, uv)) {
+        dist_max = distance;
         hit      = true;
     }
-    if (overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, dist, uv)) {
-        // dist_max = dist;
+    if (overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, distance, uv)) {
+        // dist_max = distance;
         uv  = {1 - uv.x, 1 - uv.y};
         hit = true;
     }
@@ -1679,7 +1679,7 @@ void build_embree_bvh(bvh_scene& bvh) {
 // Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
 void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
 bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
-    float& dist, int& instance_id, int& element_id, vec2f& uv) {
+    float& distance, int& instance_id, int& element_id, vec2f& uv) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -1696,7 +1696,7 @@ bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     rtcInitIntersectContext(&embree_ctx);
     rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
     if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-    dist = embree_ray.ray.tfar;
+    distance = embree_ray.ray.tfar;
     uv   = {embree_ray.hit.u, embree_ray.hit.v};
     element_id  = embree_ray.hit.primID;
     instance_id  = embree_ray.hit.instID[0];
@@ -1709,7 +1709,7 @@ void build_embree_bvh(bvh_scene& bvh) { return build_scene_bvh(bvh, true); }
 void refit_embree_bvh(bvh_scene& bvh) { return refit_scene_bvh(bvh); }
 // Intersect BVH using Embree
 bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
-    float& dist, int& instance_id, int& element_id, vec2f& element_uv) {
+    float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
     log_error("this should not have been called");
     return false;
 }
@@ -1725,11 +1725,11 @@ void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality, bool embree) {
 
 // Intersect ray with a bvh.
 bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
-    float& dist, int& instance_id, int& element_id, vec2f& element_uv) {
+    float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(
-            bvh, ray_, find_any, dist, instance_id, element_id, element_uv);
+            bvh, ray_, find_any, distance, instance_id, element_id, element_uv);
 
     // node stack
     int  node_stack[128];
@@ -1771,9 +1771,9 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
                 if (intersect_triangle(ray, bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], dist, element_uv)) {
+                        bvh.positions[t.z], distance, element_uv)) {
                     hit      = true;
-                    ray.tmax = dist;
+                    ray.tmax = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1781,10 +1781,10 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.quads[node.primitive_ids[i]];
                 if (intersect_quad(ray, bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], bvh.positions[t.w], dist,
+                        bvh.positions[t.z], bvh.positions[t.w], distance,
                         element_uv)) {
                     hit      = true;
-                    ray.tmax = dist;
+                    ray.tmax = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1792,19 +1792,19 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh.lines[node.primitive_ids[i]];
                 if (intersect_line(ray, bvh.positions[l.x], bvh.positions[l.y],
-                        bvh.radius[l.x], bvh.radius[l.y], dist, element_uv)) {
+                        bvh.radius[l.x], bvh.radius[l.y], distance, element_uv)) {
                     hit      = true;
-                    ray.tmax = dist;
+                    ray.tmax = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.points.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh.points[node.primitive_ids[i]];
-                if (intersect_point(ray, bvh.positions[p], bvh.radius[p], dist,
+                if (intersect_point(ray, bvh.positions[p], bvh.radius[p], distance,
                         element_uv)) {
                     hit      = true;
-                    ray.tmax = dist;
+                    ray.tmax = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1813,9 +1813,9 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
                 auto& instance = bvh.instances[node.primitive_ids[i]];
                 if (intersect_scene_bvh(bvh.shape_bvhs[instance.shape_id],
                         transform_ray(instance.frame_inverse, ray), find_any,
-                        dist, instance_id, element_id, element_uv)) {
+                        distance, instance_id, element_id, element_uv)) {
                     hit      = true;
-                    ray.tmax = dist;
+                    ray.tmax = distance;
                     instance_id      = node.primitive_ids[i];
                 }
             }
@@ -1832,7 +1832,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
 
 // Finds the closest element with a bvh.
 bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& instance_id, int& element_id, vec2f& element_uv) {
+    bool find_any, float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
     // node stack
     int  node_stack[64];
     auto node_cur          = 0;
@@ -1860,9 +1860,9 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
                 auto& t = bvh.triangles[node.primitive_ids[i]];
                 if (overlap_triangle(pos, max_dist, bvh.positions[t.x],
                         bvh.positions[t.y], bvh.positions[t.z], bvh.radius[t.x],
-                        bvh.radius[t.y], bvh.radius[t.z], dist, element_uv)) {
+                        bvh.radius[t.y], bvh.radius[t.z], distance, element_uv)) {
                     hit      = true;
-                    max_dist = dist;
+                    max_dist = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1872,9 +1872,9 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
                 if (overlap_quad(pos, max_dist, bvh.positions[q.x],
                         bvh.positions[q.y], bvh.positions[q.z],
                         bvh.positions[q.w], bvh.radius[q.x], bvh.radius[q.y],
-                        bvh.radius[q.z], bvh.radius[q.w], dist, element_uv)) {
+                        bvh.radius[q.z], bvh.radius[q.w], distance, element_uv)) {
                     hit      = true;
-                    max_dist = dist;
+                    max_dist = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1883,9 +1883,9 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
                 auto& l = bvh.lines[node.primitive_ids[i]];
                 if (overlap_line(pos, max_dist, bvh.positions[l.x],
                         bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y],
-                        dist, element_uv)) {
+                        distance, element_uv)) {
                     hit      = true;
-                    max_dist = dist;
+                    max_dist = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1893,9 +1893,9 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh.points[node.primitive_ids[i]];
                 if (overlap_point(pos, max_dist, bvh.positions[p],
-                        bvh.radius[p], dist, element_uv)) {
+                        bvh.radius[p], distance, element_uv)) {
                     hit      = true;
-                    max_dist = dist;
+                    max_dist = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1904,9 +1904,9 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
                 auto& instance = bvh.instances[node.primitive_ids[i]];
                 if (overlap_scene_bvh(bvh.shape_bvhs[instance.shape_id],
                         transform_point(instance.frame_inverse, pos), max_dist,
-                        find_any, dist, instance_id, element_id, element_uv)) {
+                        find_any, distance, instance_id, element_id, element_uv)) {
                     hit      = true;
-                    max_dist = dist;
+                    max_dist = distance;
                     instance_id      = node.primitive_ids[i];
                 }
             }
@@ -4529,17 +4529,17 @@ void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width
 // the lens coordinates luv.
 ray3f evaluate_camera_ray(
     const yocto_camera& camera, const vec2f& uv, const vec2f& luv) {
-    auto dist = camera.focal_length;
+    auto distance = camera.focal_length;
     if (camera.focus_distance < maxf) {
-        dist = camera.focal_length * camera.focus_distance /
+        distance = camera.focal_length * camera.focus_distance /
                (camera.focus_distance - camera.focal_length);
     }
     auto e = vec3f{luv.x * camera.lens_aperture, luv.y * camera.lens_aperture, 0};
     // auto q = vec3f{camera.width * (uv.x - 0.5f),
-    //     camera.height * (uv.y - 0.5f), dist};
+    //     camera.height * (uv.y - 0.5f), distance};
     // X flipped for mirror
     auto q   = vec3f{camera.film_size.x * (0.5f - uv.x),
-        camera.film_size.y * (uv.y - 0.5f), dist};
+        camera.film_size.y * (uv.y - 0.5f), distance};
     auto ray = make_ray(transform_point(camera.frame, e),
         transform_direction(camera.frame, normalize(e - q)));
     return ray;
@@ -4721,10 +4721,10 @@ bool is_material_volume_colored(const yocto_material& material) {
 
 vec3f evaluate_transmission(const yocto_scene& scene,
     const yocto_material& material, const vec3f& from, const vec3f& dir,
-    float dist, int channel, rng_state& rng) {
+    float distance, int channel, rng_state& rng) {
     auto& vd = material.volume_density;
     if (is_material_volume_homogeneus(material))
-        return vec3f{exp(-dist * vd.x), exp(-dist * vd.y), exp(-dist * vd.z)};
+        return vec3f{exp(-distance * vd.x), exp(-distance * vd.y), exp(-distance * vd.z)};
 
     // ratio tracking
     auto tr = 1.0f, t = 0.0f;
@@ -4732,7 +4732,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
     while (true) {
         auto step = -log(1 - get_random_float(rng)) / at(vd, channel);
         t += step;
-        if (t >= dist) break;
+        if (t >= distance) break;
         pos += dir * step;
         auto density = material.volume_density;
         if (material.volume_density_texture >= 0) {
@@ -4751,7 +4751,7 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
     if (majorant == 0) return maxf;
 
     // delta tracking
-    auto dist = 0.0f;
+    auto distance = 0.0f;
     while (true) {
         auto r = get_random_float(rng);
         if (r == 0) return maxf;
@@ -4759,14 +4759,14 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
         if (is_material_volume_homogeneus(material)) return step;
 
         pos += dir * step;
-        dist += step;
+        distance += step;
         auto density = material.volume_density;
         if (material.volume_density_texture >= 0) {
             auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
         if (at(density, channel) / majorant >= get_random_float(rng))
-            return dist;
+            return distance;
 
         // Escape from volume.
         if (pos.x > 1 || pos.y > 1 || pos.z > 1) return maxf;
@@ -4789,8 +4789,8 @@ float sample_distance(const yocto_scene& scene, const yocto_instance& instance,
     auto froml = transform_point_inverse(frame, from) / scale;
     auto dirl  = transform_direction_inverse(frame, dir) / scale;
     auto ll    = length(dirl);
-    auto dist = sample_distance(scene, material, froml, dirl / ll, channel, rng);
-    return dist * ll;
+    auto distance = sample_distance(scene, material, froml, dirl / ll, channel, rng);
+    return distance * ll;
 }
 
 vec3f sample_phase_function(float g, const vec2f& u) {
@@ -5776,7 +5776,7 @@ tuple<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Evaluates the weight after sampling distance in a medium.
-vec3f evaluate_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
+vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
     auto weight = zero3f;
 
     // For the sampled channel, transmission / pdf == 1.0
@@ -5784,11 +5784,11 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 
     // Compute weight for the remaining channels i.
     // In order to avoid numerical nasties (NaNs) transmission / pdf is
-    // evaluated. transmission[i] = exp(-dist * vd[i]) pdf             =
-    // exp(-dist * vd[channel])
+    // evaluated. transmission[i] = exp(-distance * vd[i]) pdf             =
+    // exp(-distance * vd[channel])
     int i = (ch + 1) % 3, j = (ch + 2) % 3;
-    at(weight, i) = exp(-dist * (at(vd, i) - at(vd, ch)));
-    at(weight, j) = exp(-dist * (at(vd, j) - at(vd, ch)));
+    at(weight, i) = exp(-distance * (at(vd, i) - at(vd, ch)));
+    at(weight, j) = exp(-distance * (at(vd, j) - at(vd, ch)));
     return weight;
 }
 
@@ -5850,22 +5850,22 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // dist_pdf is unknown due to delta tracking.
         auto bbox = transform_bbox(
             instance.frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
-        auto dist = sample_distance(scene, instance, bbox, ray.o, ray.d, ch, rng);
+        auto distance = sample_distance(scene, instance, bbox, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
         ray       = make_ray(ray.o, ray.d);
-        ray.tmax  = dist;
+        ray.tmax  = distance;
         auto isec = intersect_scene_with_opacity(
             scene, bvh, ray, rng, max_bounces);
 
         // @Hack: When isec.instance == nullptr, we must discern if the ray hit
         // nothing (the environment)
-        //        or a medium interaction was sampled. Doing isec.dist ==
+        //        or a medium interaction was sampled. Doing isec.distance ==
         //        maxf doesn't work, why??
         auto scene_size = max(bvh.nodes[0].bbox.max - bvh.nodes[0].bbox.min);
 
         // environment
-        if (isec.instance_id < 0 && dist > scene_size) {
+        if (isec.instance_id < 0 && distance > scene_size) {
             if (emission) {
                 for (auto& environment : scene.environments)
                     radiance += weight * evaluate_environment_emission(
@@ -5973,7 +5973,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         }
         // medium interaction
         else {
-            ray.o += ray.d * dist;
+            ray.o += ray.d * distance;
             float scattering_prob = at(va, ch);
 
             // absorption and emission
@@ -5985,7 +5985,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 
             // scattering event
             weight /= scattering_prob;
-            weight *= evaluate_transmission_div_pdf(vd, dist, ch);
+            weight *= evaluate_transmission_div_pdf(vd, distance, ch);
 
             // direct lighting
             vec3f direct;

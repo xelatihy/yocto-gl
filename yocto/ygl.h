@@ -2520,25 +2520,25 @@ namespace ygl {
 // Intersect a ray with a point (approximate).
 // Based on http://geomalgorithms.com/a02-lines.html.
 bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& dist, vec2f& uv);
+    const ray3f& ray, const vec3f& p, float r, float& distance, vec2f& uv);
 
 // Intersect a ray with a line (approximate).
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
 // http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
 bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, float& dist, vec2f& uv);
+    float r0, float r1, float& distance, vec2f& uv);
 
 // Intersect a ray with a triangle.
 bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, float& dist, vec2f& uv);
+    const vec3f& p2, float& distance, vec2f& uv);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
 // 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
 // to 1. This is equivalent to Intel's Embree.
 bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, float& dist, vec2f& uv);
+    const vec3f& p2, const vec3f& p3, float& distance, vec2f& uv);
 
 // Intersect a ray with a axis-aligned bounding box.
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
@@ -2551,14 +2551,14 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
 
 // Check if a point overlaps a position within a max distance.
 bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p0, float r0,
-    float& dist, vec2f& uv);
+    float& distance, vec2f& uv);
 
 // Find closest line point to a position.
 float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 
 // Check if a line overlaps a position within a max distance.
 bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, float& dist, vec2f& uv);
+    const vec3f& p1, float r0, float r1, float& distance, vec2f& uv);
 
 // Find closest triangle point to a position.
 vec2f closestuv_triangle(
@@ -2566,13 +2566,13 @@ vec2f closestuv_triangle(
 
 // Check if a triangle overlaps a position within a max distance.
 bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& dist,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& distance,
     vec2f& uv);
 
 // Check if a quad overlaps a position within a max distance.
 bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, float& dist, vec2f& uv);
+    float r2, float r3, float& distance, vec2f& uv);
 
 // Check if a bounding box overlaps a position within a max distance.
 bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
@@ -2651,19 +2651,19 @@ void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality = false);
 void clear_scene_bvh_embree(bvh_scene& bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance `dist`, the instance
+// depending on `find_any`. Returns the ray distance `distance`, the instance
 // id `instance_id`, the shape id `sid`, the shape element index `element_id` and the
 // shape barycentric coordinates `element_uv`.
 bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
-    float& dist, int& instance_id, int& element_id, vec2f& element_uv);
+    float& distance, int& instance_id, int& element_id, vec2f& element_uv);
 
 // Find a shape element that overlaps a point within a given distance
 // `max_dist`, returning either the closest or any overlap depending on
-// `find_any`. Returns the point distance `dist`, the instance id `instance_id`, the
+// `find_any`. Returns the point distance `distance`, the instance id `instance_id`, the
 // shape id `sid`, the shape element index `element_id` and the shape barycentric
 // coordinates `element_uv`.
 bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& instance_id, int& element_id, vec2f& element_uv);
+    bool find_any, float& distance, int& instance_id, int& element_id, vec2f& element_uv);
 
 }  // namespace ygl
 
