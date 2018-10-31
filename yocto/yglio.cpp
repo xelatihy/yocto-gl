@@ -2241,18 +2241,18 @@ struct obj_vertex_hash {
 };
 
 inline bool parse_value(parse_string_view& view, obj_vertex& val) {
-    val     = obj_vertex{0, 0, 0};
-    if(!parse_value(view, val.position)) return false;
+    val = obj_vertex{0, 0, 0};
+    if (!parse_value(view, val.position)) return false;
     if (*view.str == '/') {
         view.str++;
         if (*view.str == '/') {
             view.str++;
-            if(!parse_value(view, val.normal)) return false;
+            if (!parse_value(view, val.normal)) return false;
         } else {
-            if(!parse_value(view, val.texturecoord)) return false;
+            if (!parse_value(view, val.texturecoord)) return false;
             if (*view.str == '/') {
                 view.str++;
-            if(!parse_value(view, val.normal)) return false;
+                if (!parse_value(view, val.normal)) return false;
             }
         }
     }
@@ -2301,7 +2301,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if(line.find('#') != line.npos) line = line.substr(line.find('#')+1);
+        if (line.find('#') != line.npos) line = line.substr(line.find('#') + 1);
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -2312,8 +2312,8 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
         // possible token values
         if (cmd == "newmtl") {
             if (!first && cb.material) cb.material(material);
-            first         = false;
-            material      = obj_material();
+            first    = false;
+            material = obj_material();
             parse_value(view, material.name);
         } else if (cmd == "illum") {
             parse_value(view, material.illum);
@@ -2396,7 +2396,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if(line.find('#') != line.npos) line = line.substr(line.find('#')+1);
+        if (line.find('#') != line.npos) line = line.substr(line.find('#') + 1);
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -2406,7 +2406,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
 
         // possible token values
         if (cmd == "c") {
-            auto camera     = obj_camera();
+            auto camera = obj_camera();
             parse_value(view, camera.name);
             parse_value(view, camera.ortho);
             parse_value(view, camera.film);
@@ -2416,7 +2416,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
             parse_value(view, camera.frame);
             if (cb.camera) cb.camera(camera);
         } else if (cmd == "e") {
-            auto environment        = obj_environment();
+            auto environment = obj_environment();
             parse_value(view, environment.name);
             parse_value(view, environment.ke);
             parse_value(view, environment.ke_txt.path);
@@ -2446,7 +2446,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if(line.find('#') != line.npos) line = line.substr(line.find('#')+1);
+        if (line.find('#') != line.npos) line = line.substr(line.find('#') + 1);
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -2909,8 +2909,10 @@ bool save_mtl(
             print(fs, "  Kt {}\n", material.transmission);
         if (material.roughness != 1.0f)
             print(fs, "  Ns {}\n",
-                (int)clamp(2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2, 0.0f,
-                    1.0e9f));
+                (int)clamp(
+                    2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) -
+                        2,
+                    0.0f, 1.0e9f));
         if (material.opacity != 1.0f) print(fs, "  d {}\n", material.opacity);
         if (material.emission_texture >= 0)
             print(fs, "  map_Ke {}\n",
@@ -5238,10 +5240,10 @@ bool load_ply(const string& filename, ply_data& ply) {
     // parse header
     ply        = ply_data();
     auto ascii = false;
-    auto line = ""s;
+    auto line  = ""s;
     while (read_line(fs, line)) {
-        auto view  = parse_string_view{line.c_str()};
-        auto cmd = ""s;
+        auto view = parse_string_view{line.c_str()};
+        auto cmd  = ""s;
         parse_value(view, cmd);
         if (cmd == "") continue;
         if (cmd == "ply") {
@@ -5252,7 +5254,7 @@ bool load_ply(const string& filename, ply_data& ply) {
             if (fmt != "ascii" && fmt != "binary_little_endian") return false;
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
-            auto elem  = ply_element();
+            auto elem = ply_element();
             parse_value(view, elem.name);
             parse_value(view, elem.count);
             ply.elements.push_back(elem);
@@ -5263,7 +5265,7 @@ bool load_ply(const string& filename, ply_data& ply) {
             if (type == "list") {
                 auto count_type = ""s;
                 parse_value(view, count_type);
-                auto elem_type  = ""s;
+                auto elem_type = ""s;
                 parse_value(view, elem_type);
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
@@ -5291,62 +5293,72 @@ bool load_ply(const string& filename, ply_data& ply) {
     }
 
     // parse content
-    for (auto& elem : ply.elements) {
-        for (auto vid = 0; vid < elem.count; vid++) {
-            auto view = parse_string_view{};
-            if (ascii) {
+    if (ascii) {
+        for (auto& elem : ply.elements) {
+            for (auto vid = 0; vid < elem.count; vid++) {
                 if (!read_line(fs, line)) return false;
-                view = parse_string_view{line.c_str()};
-            }
-            for (auto pid = 0; pid < elem.properties.size(); pid++) {
-                auto& prop = elem.properties[pid];
-                if (prop.type == ply_type::ply_float) {
-                    auto v = 0.0f;
-                    if (ascii) {
+                auto view = parse_string_view{line.c_str()};
+                for (auto pid = 0; pid < elem.properties.size(); pid++) {
+                    auto& prop = elem.properties[pid];
+                    if (prop.type == ply_type::ply_float) {
+                        auto v = 0.0f;
                         parse_value(view, v);
-                    } else {
-                        if (!read_value(fs, v)) return false;
-                    }
-                    prop.scalars[vid] = v;
-                } else if (prop.type == ply_type::ply_int) {
-                    auto v = 0;
-                    if (ascii) {
-                        parse_value(view, v);
-                    } else {
-                        if (!read_value(fs, v)) return false;
-                    }
-                    prop.scalars[vid] = v;
-                } else if (prop.type == ply_type::ply_uchar) {
-                    auto vc = (unsigned char)0;
-                    if (ascii) {
+                        prop.scalars[vid] = v;
+                    } else if (prop.type == ply_type::ply_int) {
                         auto v = 0;
                         parse_value(view, v);
-                        vc     = (unsigned char)v;
-                    } else {
-                        if (!read_value(fs, vc)) return false;
-                    }
-                    prop.scalars[vid] = vc / 255.0f;
-                } else if (prop.type == ply_type::ply_int_list) {
-                    auto vc = (unsigned char)0;
-                    if (ascii) {
-                        auto v = 0;
+                        prop.scalars[vid] = v;
+                    } else if (prop.type == ply_type::ply_uchar) {
+                        auto vc = (unsigned char)0;
+                        auto v  = 0;
                         parse_value(view, v);
-                        vc     = (unsigned char)v;
-                    } else {
-                        if (!read_value(fs, vc)) return false;
-                    }
-                    prop.scalars[vid] = vc;
-                    for (auto i = 0; i < (int)prop.scalars[vid]; i++)
-                        if (ascii) {
+                        vc                = (unsigned char)v;
+                        prop.scalars[vid] = vc / 255.0f;
+                    } else if (prop.type == ply_type::ply_int_list) {
+                        auto vc = (unsigned char)0;
+                        auto v  = 0;
+                        parse_value(view, v);
+                        vc                = (unsigned char)v;
+                        prop.scalars[vid] = vc;
+                        for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
                             auto v = 0;
-                        parse_value(view, v);
+                            parse_value(view, v);
                             prop.lists[vid][i] = v;
-                        } else {
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            }
+        }
+    } else {
+        for (auto& elem : ply.elements) {
+            for (auto vid = 0; vid < elem.count; vid++) {
+                for (auto pid = 0; pid < elem.properties.size(); pid++) {
+                    auto& prop = elem.properties[pid];
+                    if (prop.type == ply_type::ply_float) {
+                        auto v = 0.0f;
+                        if (!read_value(fs, v)) return false;
+                        prop.scalars[vid] = v;
+                    } else if (prop.type == ply_type::ply_int) {
+                        auto v = 0;
+                        if (!read_value(fs, v)) return false;
+                        prop.scalars[vid] = v;
+                    } else if (prop.type == ply_type::ply_uchar) {
+                        auto vc = (unsigned char)0;
+                        if (!read_value(fs, vc)) return false;
+                        prop.scalars[vid] = vc / 255.0f;
+                    } else if (prop.type == ply_type::ply_int_list) {
+                        auto vc = (unsigned char)0;
+                        if (!read_value(fs, vc)) return false;
+                        prop.scalars[vid] = vc;
+                        for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
                             if (!read_value(fs, prop.lists[vid][i]))
                                 return false;
                         }
-                } else {
-                    return false;
+                    } else {
+                        return false;
+                    }
                 }
             }
         }
