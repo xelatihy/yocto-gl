@@ -1332,7 +1332,7 @@ bool serialize_json_objref(
         }
         return true;
     } else {
-        if(!js.is_array()) return false;
+        if (!js.is_array()) return false;
         for (auto& j : js) {
             val.push_back(-1);
             if (!serialize_json_objref(j, val.back(), refs, save)) return false;
@@ -1391,12 +1391,13 @@ bool serialize_json_objarray(
         }
         return true;
     } else {
-    if (!js.is_array()) return false;
-    for (auto& j : js) {
-        val.push_back(T{});
-        if (!serialize_json_object(j, val.back(), scene, save)) return false;
-    }
-    return true;
+        if (!js.is_array()) return false;
+        for (auto& j : js) {
+            val.push_back(T{});
+            if (!serialize_json_object(j, val.back(), scene, save))
+                return false;
+        }
+        return true;
     }
 }
 
@@ -1404,26 +1405,26 @@ bool serialize_json_objarray(
 template <typename T>
 bool serialize_json_objarray(json& js, vector<T>& val, const char* name,
     const yocto_scene& scene, bool save) {
-    if(save) {
-    if (val.empty()) return true;
-    return serialize_json_objarray(js[name], val, scene, save);
+    if (save) {
+        if (val.empty()) return true;
+        return serialize_json_objarray(js[name], val, scene, save);
     } else {
-    if (!js.count(name)) return true;
-    val = {};
-    return serialize_json_objarray(js.at(name), val, scene, save);
+        if (!js.count(name)) return true;
+        val = {};
+        return serialize_json_objarray(js.at(name), val, scene, save);
     }
 }
 
 // Parses and applied a JSON procedural
 template <typename T>
-bool serialize_json_procedural(
-    const json& js, T& val, const char* name, const yocto_scene& scene, bool save) {
-        if(save) {
-            return true;
-        } else {
-    if (!js.count(name)) return true;
-    return apply_json_procedural(js.at(name), val, scene);
-        }
+bool serialize_json_procedural(const json& js, T& val, const char* name,
+    const yocto_scene& scene, bool save) {
+    if (save) {
+        return true;
+    } else {
+        if (!js.count(name)) return true;
+        return apply_json_procedural(js.at(name), val, scene);
+    }
 }
 
 // Procedural commands for cameras
@@ -1445,8 +1446,10 @@ bool serialize_json_object(
     json& js, yocto_camera& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_camera();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
-    if (!serialize_json_value(js, val.frame, "frame", def.frame, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
+    if (!serialize_json_value(js, val.frame, "frame", def.frame, save))
+        return false;
     if (!serialize_json_value(
             js, val.orthographic, "orthographic", def.orthographic, save))
         return false;
@@ -1461,7 +1464,8 @@ bool serialize_json_object(
     if (!serialize_json_value(
             js, val.lens_aperture, "lens_aperture", def.lens_aperture, save))
         return false;
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -1541,7 +1545,8 @@ bool serialize_json_object(
     json& js, yocto_texture& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_texture();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
     if (!serialize_json_value(js, val.filename, "filename", def.filename, save))
         return false;
     if (!serialize_json_value(
@@ -1550,19 +1555,22 @@ bool serialize_json_object(
     if (!serialize_json_value(
             js, val.height_scale, "height_scale", def.height_scale, save))
         return false;
-    if (!serialize_json_value(
-            js, val.no_interpolation, "no_interpolation", def.no_interpolation, save))
+    if (!serialize_json_value(js, val.no_interpolation, "no_interpolation",
+            def.no_interpolation, save))
         return false;
     if (!serialize_json_value(
             js, val.ldr_as_linear, "ldr_as_linear", def.ldr_as_linear, save))
         return false;
     if (val.filename == "" || !save) {
-        if (!serialize_json_value(js, val.hdr_image, "hdr_image", def.hdr_image, save))
+        if (!serialize_json_value(
+                js, val.hdr_image, "hdr_image", def.hdr_image, save))
             return false;
-        if (!serialize_json_value(js, val.ldr_image, "ldr_image", def.ldr_image, save))
+        if (!serialize_json_value(
+                js, val.ldr_image, "ldr_image", def.ldr_image, save))
             return false;
     }
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -1594,19 +1602,21 @@ bool serialize_json_object(
     json& js, yocto_voltexture& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_voltexture();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
     if (!serialize_json_value(js, val.filename, "filename", def.filename, save))
         return false;
     if (!serialize_json_value(
             js, val.clamp_to_edge, "clamp_to_edge", def.clamp_to_edge, save))
         return false;
-    if (!serialize_json_value(
-            js, val.no_interpolation, "no_interpolation", def.no_interpolation, save))
+    if (!serialize_json_value(js, val.no_interpolation, "no_interpolation",
+            def.no_interpolation, save))
         return false;
     if (val.filename == "") {
         if (!val.volume_data.voxels.empty()) js["vol"] = val.volume_data;
     }
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -1622,7 +1632,8 @@ bool serialize_json_object(
     json& js, yocto_material& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_material();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
     if (val.base_metallic != def.base_metallic)
         js["base_metallic"] = val.base_metallic;
     if (val.gltf_textures != def.gltf_textures)
@@ -1658,14 +1669,14 @@ bool serialize_json_object(
     if (!serialize_json_objref(js, val.transmission_texture,
             "transmission_texture", scene.textures, save))
         return false;
-    if (!serialize_json_objref(
-            js, val.roughness_texture, "roughness_texture", scene.textures, save))
+    if (!serialize_json_objref(js, val.roughness_texture, "roughness_texture",
+            scene.textures, save))
         return false;
     if (!serialize_json_objref(
             js, val.opacity_texture, "opacity_texture", scene.textures, save))
         return false;
-    if (!serialize_json_objref(
-            js, val.occlusion_texture, "occlusion_texture", scene.textures, save))
+    if (!serialize_json_objref(js, val.occlusion_texture, "occlusion_texture",
+            scene.textures, save))
         return false;
     if (!serialize_json_objref(
             js, val.bump_texture, "bump_texture", scene.textures, save))
@@ -1679,7 +1690,8 @@ bool serialize_json_object(
     if (!serialize_json_objref(js, val.volume_density_texture,
             "volume_density_texture", scene.voltextures, save))
         return false;
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -1800,54 +1812,59 @@ bool serialize_json_object(
     json& js, yocto_shape& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_shape();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
     if (!serialize_json_value(js, val.filename, "filename", def.filename, save))
         return false;
-    if (!serialize_json_objref(js, val.material, "material", scene.materials, save))
+    if (!serialize_json_objref(
+            js, val.material, "material", scene.materials, save))
         return false;
     if (!serialize_json_value(js, val.subdivision_level, "subdivision_level",
             def.subdivision_level, save))
         return false;
-    if (!serialize_json_value(js, val.catmull_clark, "catmull_clark",
-            def.catmull_clark, save))
+    if (!serialize_json_value(
+            js, val.catmull_clark, "catmull_clark", def.catmull_clark, save))
         return false;
-    if (!serialize_json_value(js, val.compute_vertex_normals, "compute_vertex_normals",
-            def.compute_vertex_normals, save))
+    if (!serialize_json_value(js, val.compute_vertex_normals,
+            "compute_vertex_normals", def.compute_vertex_normals, save))
         return false;
     if (val.filename == "" || !save) {
         if (!serialize_json_value(js, val.points, "points", def.points, save))
             return false;
         if (!serialize_json_value(js, val.lines, "lines", def.lines, save))
             return false;
-        if (!serialize_json_value(js, val.triangles, "triangles", def.triangles, save))
+        if (!serialize_json_value(
+                js, val.triangles, "triangles", def.triangles, save))
             return false;
         if (!serialize_json_value(js, val.quads, "quads", def.quads, save))
             return false;
         if (!serialize_json_value(js, val.quads_positions, "quads_positions",
                 def.quads_positions, save))
             return false;
-        if (!serialize_json_value(
-                js, val.quads_normals, "quads_normals", def.quads_normals, save))
+        if (!serialize_json_value(js, val.quads_normals, "quads_normals",
+                def.quads_normals, save))
             return false;
         if (!serialize_json_value(js, val.quads_texturecoords,
                 "quads_texturecoords", def.quads_texturecoords, save))
             return false;
-        if (!serialize_json_value(js, val.positions, "positions", def.positions, save))
+        if (!serialize_json_value(
+                js, val.positions, "positions", def.positions, save))
             return false;
         if (!serialize_json_value(js, val.normals, "normals", def.normals, save))
             return false;
-        if (!serialize_json_value(
-                js, val.texturecoords, "texturecoords", def.texturecoords, save))
+        if (!serialize_json_value(js, val.texturecoords, "texturecoords",
+                def.texturecoords, save))
             return false;
         if (!serialize_json_value(js, val.colors, "colors", def.colors, save))
             return false;
         if (!serialize_json_value(js, val.radius, "radius", def.radius, save))
             return false;
-        if (!serialize_json_value(
-                js, val.tangentspaces, "tangent_spaces", def.tangentspaces, save))
+        if (!serialize_json_value(js, val.tangentspaces, "tangent_spaces",
+                def.tangentspaces, save))
             return false;
     }
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -1876,11 +1893,14 @@ bool serialize_json_object(
     json& js, yocto_instance& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_instance();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
-    if (!serialize_json_value(js, val.frame, "frame", def.frame, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
+    if (!serialize_json_value(js, val.frame, "frame", def.frame, save))
+        return false;
     if (!serialize_json_objref(js, val.shape, "shape", scene.shapes, save))
         return false;
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -1900,14 +1920,17 @@ bool serialize_json_object(
     json& js, yocto_environment& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_environment();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
-    if (!serialize_json_value(js, val.frame, "frame", def.frame, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
+    if (!serialize_json_value(js, val.frame, "frame", def.frame, save))
+        return false;
     if (!serialize_json_value(js, val.emission, "emission", def.emission, save))
         return false;
     if (!serialize_json_objref(
             js, val.emission_texture, "emission_texture", scene.textures, save))
         return false;
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -1929,31 +1952,36 @@ bool serialize_json_object(
     json& js, yocto_scene_node& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_scene_node();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
-    if (!serialize_json_value(js, val.local, "local", def.local, save)) return false;
-    if (!serialize_json_value(js, val.translation, "translation", def.translation, save))
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
+    if (!serialize_json_value(js, val.local, "local", def.local, save))
+        return false;
+    if (!serialize_json_value(
+            js, val.translation, "translation", def.translation, save))
         return false;
     if (!serialize_json_value(js, val.rotation, "rotation", def.rotation, save))
         return false;
-    if (!serialize_json_value(js, val.scale, "scale", def.scale, save)) return false;
+    if (!serialize_json_value(js, val.scale, "scale", def.scale, save))
+        return false;
     if (!serialize_json_value(js, val.weights, "weights", def.weights, save))
         return false;
     if (!serialize_json_objref(js, val.parent, "parent", scene.nodes, save))
         return false;
     if (!serialize_json_objref(js, val.camera, "camera", scene.cameras, save))
         return false;
-    if (!serialize_json_objref(js, val.instance, "instance", scene.instances, save))
+    if (!serialize_json_objref(
+            js, val.instance, "instance", scene.instances, save))
         return false;
     if (!serialize_json_objref(
             js, val.environment, "environment", scene.environments, save))
         return false;
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
 // Serialize enum
-bool serialize_json_value(
-    json& js, yocto_interpolation_type& val, bool save) {
+bool serialize_json_value(json& js, yocto_interpolation_type& val, bool save) {
     if (save) {
         static auto names = unordered_map<int, string>{
             {(int)yocto_interpolation_type::linear, "linear"},
@@ -1984,11 +2012,12 @@ bool serialize_json_object(
     json& js, yocto_animation& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_animation();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
     if (!serialize_json_value(js, val.filename, "filename", def.filename, save))
         return false;
-    if (!serialize_json_value(
-            js, val.animation_group, "animation_group", def.animation_group, save))
+    if (!serialize_json_value(js, val.animation_group, "animation_group",
+            def.animation_group, save))
         return false;
     if (!serialize_json_value(
             js, val.interpolation_type, "type", def.interpolation_type, save))
@@ -2007,9 +2036,11 @@ bool serialize_json_object(
                 def.scale_keyframes, save))
             return false;
     }
-    if (!serialize_json_objref(js, val.node_targets, "node_targets", scene.nodes, save))
+    if (!serialize_json_objref(
+            js, val.node_targets, "node_targets", scene.nodes, save))
         return false;
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
@@ -2066,7 +2097,8 @@ bool serialize_json_object(
     json& js, yocto_scene& val, const yocto_scene& scene, bool save) {
     static const auto def = yocto_scene();
     if (!serialize_json_objbegin(js, save)) return false;
-    if (!serialize_json_value(js, val.name, "name", def.name, save)) return false;
+    if (!serialize_json_value(js, val.name, "name", def.name, save))
+        return false;
     if (!serialize_json_objarray(js, val.cameras, "cameras", scene, save))
         return false;
     if (!serialize_json_objarray(js, val.textures, "textures", scene, save))
@@ -2075,15 +2107,19 @@ bool serialize_json_object(
         return false;
     if (!serialize_json_objarray(js, val.materials, "materials", scene, save))
         return false;
-    if (!serialize_json_objarray(js, val.shapes, "shapes", scene, save)) return false;
+    if (!serialize_json_objarray(js, val.shapes, "shapes", scene, save))
+        return false;
     if (!serialize_json_objarray(js, val.instances, "instances", scene, save))
         return false;
-    if (!serialize_json_objarray(js, val.environments, "environments", scene, save))
+    if (!serialize_json_objarray(
+            js, val.environments, "environments", scene, save))
         return false;
-    if (!serialize_json_objarray(js, val.nodes, "nodes", scene, save)) return false;
+    if (!serialize_json_objarray(js, val.nodes, "nodes", scene, save))
+        return false;
     if (!serialize_json_objarray(js, val.animations, "animations", scene, save))
         return false;
-    if (!serialize_json_procedural(js, val, "!!proc", scene, save)) return false;
+    if (!serialize_json_procedural(js, val, "!!proc", scene, save))
+        return false;
     return true;
 }
 
