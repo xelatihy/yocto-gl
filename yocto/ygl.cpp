@@ -1360,11 +1360,11 @@ namespace ygl {
 // Cleanup
 void clear_shape_bvh_embree(bvh_shape& bvh) {
 #if YGL_EMBREE
-        if (bvh.embree_bvh) {
-            rtcReleaseScene((RTCScene)bvh.embree_bvh);
-        }
-#endif
+    if (bvh.embree_bvh) {
+        rtcReleaseScene((RTCScene)bvh.embree_bvh);
     }
+#endif
+}
 void clear_scene_bvh_embree(bvh_scene& bvh) {
 #if YGL_EMBREE
     if (bvh.embree_bvh) {
@@ -1701,14 +1701,12 @@ void build_embree_bvh(bvh_shape& bvh) {
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!bvh.quads.empty()) {
-        auto embree_geom = rtcNewGeometry(
-                                          embree_device, RTC_GEOMETRY_TYPE_QUAD);
+        auto embree_geom = rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
-                                            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
-        auto quads = rtcSetNewGeometryBuffer(embree_geom,
-                                                 RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
-                                                 bvh.quads.size());
+            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
+        auto quads = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX,
+            0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
         memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
         memcpy(quads, bvh.quads.data(), bvh.quads.size() * 16);
         rtcCommitGeometry(embree_geom);
@@ -1719,52 +1717,52 @@ void build_embree_bvh(bvh_shape& bvh) {
     rtcCommitScene(embree_scene);
     bvh.embree_bvh = embree_scene;
 }
-    void build_embree_bvh(bvh_scene& bvh) {
-        auto embree_device = get_embree_device();
-        auto embree_scene  = rtcNewScene(embree_device);
-        if (!bvh.instances.empty()) {
-            for (auto instance_id = 0; instance_id < bvh.instances.size();
-                 instance_id++) {
-                auto& instance    = bvh.instances[instance_id];
-                auto embree_geom = rtcNewGeometry(
-                                                  embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
-                rtcSetGeometryInstancedScene(embree_geom,
-                                             (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
-                rtcSetGeometryTransform(embree_geom, 0,
-                                        RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
-                rtcCommitGeometry(embree_geom);
-                rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
-            }
+void build_embree_bvh(bvh_scene& bvh) {
+    auto embree_device = get_embree_device();
+    auto embree_scene  = rtcNewScene(embree_device);
+    if (!bvh.instances.empty()) {
+        for (auto instance_id = 0; instance_id < bvh.instances.size();
+             instance_id++) {
+            auto& instance    = bvh.instances[instance_id];
+            auto  embree_geom = rtcNewGeometry(
+                embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+            rtcSetGeometryInstancedScene(embree_geom,
+                (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
+            rtcSetGeometryTransform(embree_geom, 0,
+                RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+            rtcCommitGeometry(embree_geom);
+            rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
         }
-        rtcCommitScene(embree_scene);
-        bvh.embree_bvh = embree_scene;
     }
+    rtcCommitScene(embree_scene);
+    bvh.embree_bvh = embree_scene;
+}
 // Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
 void refit_embree_bvh(bvh_shape& bvh) { log_error("not yet implemented"); }
 void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
-    bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
-                              float& distance, int& element_id, vec2f& uv) {
-        RTCRayHit embree_ray;
-        embree_ray.ray.org_x     = ray.o.x;
-        embree_ray.ray.org_y     = ray.o.y;
-        embree_ray.ray.org_z     = ray.o.z;
-        embree_ray.ray.dir_x     = ray.d.x;
-        embree_ray.ray.dir_y     = ray.d.y;
-        embree_ray.ray.dir_z     = ray.d.z;
-        embree_ray.ray.tnear     = ray.tmin;
-        embree_ray.ray.tfar      = ray.tmax;
-        embree_ray.ray.flags     = 0;
-        embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-        embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-        RTCIntersectContext embree_ctx;
-        rtcInitIntersectContext(&embree_ctx);
-        rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
-        if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-        distance    = embree_ray.ray.tfar;
-        uv          = {embree_ray.hit.u, embree_ray.hit.v};
-        element_id  = embree_ray.hit.primID;
-        return true;
-    }
+bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
+    float& distance, int& element_id, vec2f& uv) {
+    RTCRayHit embree_ray;
+    embree_ray.ray.org_x     = ray.o.x;
+    embree_ray.ray.org_y     = ray.o.y;
+    embree_ray.ray.org_z     = ray.o.z;
+    embree_ray.ray.dir_x     = ray.d.x;
+    embree_ray.ray.dir_y     = ray.d.y;
+    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.tnear     = ray.tmin;
+    embree_ray.ray.tfar      = ray.tmax;
+    embree_ray.ray.flags     = 0;
+    embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+    RTCIntersectContext embree_ctx;
+    rtcInitIntersectContext(&embree_ctx);
+    rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
+    distance   = embree_ray.ray.tfar;
+    uv         = {embree_ray.hit.u, embree_ray.hit.v};
+    element_id = embree_ray.hit.primID;
+    return true;
+}
 bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& uv) {
     RTCRayHit embree_ray;
