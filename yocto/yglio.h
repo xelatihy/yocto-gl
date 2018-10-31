@@ -78,14 +78,9 @@
 
 #include "ygl.h"
 
-// use fast parsing in OBJ
-#ifndef YGL_FASTPARSE
-#define YGL_FASTPARSE 0
-#endif
-
 // use Happly library for PLY format rather than our library
 #ifndef YGL_HAPPLY
-#define YGL_HAPPLY 1
+#define YGL_HAPPLY 0
 #endif
 
 // -----------------------------------------------------------------------------

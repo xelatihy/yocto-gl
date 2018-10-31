@@ -5623,15 +5623,18 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 // Load ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
-    vector<vec4f>& color, vector<float>& radius, bool force_triangles) {
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& color,
+    vector<float>& radius, bool force_triangles) {
     // clear
-    reset_mesh_data(
-        points, lines, triangles, quads, pos, norm, texcoord, color, radius);
+    reset_mesh_data(points, lines, triangles, quads, quads_positions,
+        quads_normals, quads_texturecoords, positions, normals, texturecoords,
+        color, radius);
 
     // load ply
-    auto ply = unique_ptr<ply_data>{load_ply(filename)};
-    if (ply.elements.empty()) {
+    auto ply = ply_data{};
+    if(!load_ply(filename, ply)) {
         log_io_error("empty ply file {}", filename);
         return false;
     }
@@ -5649,14 +5652,14 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
                 for (auto i = 0; i < count; i++)
                     dst[i * stride + offset] = vals[i];
             };
-            if (prop.name == "x") copy_floats(pos, zero3f, 3, 0);
-            if (prop.name == "y") copy_floats(pos, zero3f, 3, 1);
-            if (prop.name == "z") copy_floats(pos, zero3f, 3, 2);
-            if (prop.name == "nx") copy_floats(norm, zero3f, 3, 0);
-            if (prop.name == "ny") copy_floats(norm, zero3f, 3, 1);
-            if (prop.name == "nz") copy_floats(norm, zero3f, 3, 2);
-            if (prop.name == "u") copy_floats(texcoord, zero2f, 2, 0);
-            if (prop.name == "v") copy_floats(texcoord, zero2f, 2, 1);
+            if (prop.name == "x") copy_floats(positions, zero3f, 3, 0);
+            if (prop.name == "y") copy_floats(positions, zero3f, 3, 1);
+            if (prop.name == "z") copy_floats(positions, zero3f, 3, 2);
+            if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
+            if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
+            if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
+            if (prop.name == "u") copy_floats(texturecoords, zero2f, 2, 0);
+            if (prop.name == "v") copy_floats(texturecoords, zero2f, 2, 1);
             if (prop.name == "red") copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
             if (prop.name == "green")
                 copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);
@@ -5668,7 +5671,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
         }
     }
 
-    // copy triangle data
+    // copy face data
     for (auto& elem : ply.elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
@@ -5688,6 +5691,22 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
         }
     }
 
+    // copy face data
+    for (auto& elem : ply.elements) {
+        if (elem.name != "line") continue;
+        auto count = elem.count;
+        for (auto& prop : elem.properties) {
+            if (prop.name == "vertex_indices") {
+                for (auto fid = 0; fid < count; fid++) {
+                    auto& list = prop.lists[fid];
+                    auto  num  = (int)prop.scalars[fid];
+                    for (auto i = 1; i < num; i++)
+                        lines.push_back({list[i], list[i - 1]});
+                }
+            }
+        }
+    }
+
     merge_triangles_and_quads(triangles, quads, force_triangles);
 
     // done
@@ -5697,7 +5716,9 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
 // Save ply mesh
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
     auto fs = open(filename, "wb");
@@ -5709,25 +5730,23 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         print(fs, "format ascii 1.0\n");
     else
         print(fs, "format binary_little_endian 1.0\n");
-    print(fs, "element vertex {}\n", (int)pos.size());
-    if (!pos.empty())
+    print(fs, "element vertex {}\n", (int)positions.size());
+    if (!positions.empty())
         print(fs, "property float x\nproperty float y\nproperty float z\n");
-    if (!norm.empty())
+    if (!normals.empty())
         print(fs,
-            "property float nx\nproperty float ny\nproperty float "
-            "nz\n");
-    if (!texcoord.empty()) print(fs, "property float u\nproperty float v\n");
-    if (!color.empty())
+            "property float nx\nproperty float ny\nproperty float nz\n");
+    if (!texturecoords.empty()) print(fs, "property float u\nproperty float v\n");
+    if (!colors.empty())
         print(fs,
-            "property float red\nproperty float green\nproperty float "
-            "blue\nproperty float alpha\n");
+            "property float red\nproperty float green\nproperty float blue\nproperty float alpha\n");
     if (!radius.empty()) print(fs, "property float radius\n");
-    if (!lines.empty()) {
-        print(fs, "element line {}\n", (int)lines.size());
-        print(fs, "property list uchar int vertex_indices\n");
-    }
     if (!triangles.empty() || !quads.empty()) {
         print(fs, "element face {}\n", (int)triangles.size() + (int)quads.size());
+        print(fs, "property list uchar int vertex_indices\n");
+    }
+    if (!lines.empty()) {
+        print(fs, "element line {}\n", (int)lines.size());
         print(fs, "property list uchar int vertex_indices\n");
     }
     print(fs, "end_header\n");
@@ -5735,17 +5754,16 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     // body
     if (ascii) {
         // write vertex data
-        for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) print(fs, "{} ", pos[i]);
-            if (!norm.empty()) print(fs, "{} ", norm[i]);
-            if (!texcoord.empty()) print(fs, "{} ", texcoord[i]);
-            if (!color.empty()) print(fs, "{} ", color[i]);
+        for (auto i = 0; i < positions.size(); i++) {
+            if (!positions.empty()) print(fs, "{} ", positions[i]);
+            if (!normals.empty()) print(fs, "{} ", normals[i]);
+            if (!texturecoords.empty()) print(fs, "{} ", texturecoords[i]);
+            if (!colors.empty()) print(fs, "{} ", colors[i]);
             if (!radius.empty()) print(fs, "{} ", radius[i]);
             print(fs, "\n");
         }
 
         // write face data
-        for (auto& l : lines) print(fs, "2 {}\n", l);
         for (auto& t : triangles) print(fs, "3 {}\n", t);
         for (auto& q : quads) {
             if (q.z == q.w)
@@ -5753,22 +5771,18 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
             else
                 print(fs, "4 {}\n", q);
         }
+        for (auto& l : lines) print(fs, "2 {}\n", l);
     } else {
         // write vertex data
-        for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) write_value(fs, pos[i]);
-            if (!norm.empty()) write_value(fs, norm[i]);
-            if (!texcoord.empty()) write_value(fs, texcoord[i]);
-            if (!color.empty()) write_value(fs, color[i]);
+        for (auto i = 0; i < positions.size(); i++) {
+            if (!positions.empty()) write_value(fs, positions[i]);
+            if (!normals.empty()) write_value(fs, normals[i]);
+            if (!texturecoords.empty()) write_value(fs, texturecoords[i]);
+            if (!colors.empty()) write_value(fs, colors[i]);
             if (!radius.empty()) write_value(fs, radius[i]);
         }
 
         // write face data
-        for (auto& l : lines) {
-            auto n = (byte)2;
-            write_value(fs, n);
-            write_value(fs, l);
-        }
         for (auto& t : triangles) {
             auto n = (byte)3;
             write_value(fs, n);
@@ -5784,6 +5798,11 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
                 write_value(fs, n);
                 write_value(fs, q);
             }
+        }
+        for (auto& l : lines) {
+            auto n = (byte)2;
+            write_value(fs, n);
+            write_value(fs, l);
         }
     }
 
