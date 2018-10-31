@@ -156,11 +156,11 @@ inline T parse_arge(cmdline_parser& parser, const string& name, T def,
 namespace ygl {
 
 // Load/save a text file
-string load_text(const string& filename);
+bool load_text(const string& filename, string& str);
 bool   save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-vector<byte> load_binary(const string& filename);
+bool load_binary(const string& filename, vector<byte>& data);
 bool         save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace ygl
@@ -174,17 +174,15 @@ namespace ygl {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channel float image in linear color space.
-image<vec4f> load_image4f(const string& filename);
+bool load_image4f(const string& filename, image<vec4f>& img);
 bool         save_image4f(const string& filename, const image<vec4f>& img);
-image<vec4f> load_image4f_from_memory(const byte* data, int data_size);
+bool load_image4f_from_memory(const byte* data, int data_size, image<vec4f>& img);
 
 // Loads/saves a 4 channel byte image in sRGB color space.
-image<vec4b> load_image4b(const string& filename);
+bool load_image4b(const string& filename, image<vec4b>& img);
 bool         save_image4b(const string& filename, const image<vec4b>& img);
 bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
-image<vec4b> load_image4b_from_memory(const byte* data, int data_size);
-
-// Load 4 channel images with shortened api. Returns empty image on error;
+bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
@@ -199,7 +197,7 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 namespace ygl {
 
 // Loads/saves a 1 channel volume.
-volume<float> load_volume1f(const string& filename);
+bool load_volume1f(const string& filename, volume<float>& vol);
 bool          save_volume1f(const string& filename, const volume<float>& vol);
 
 }  // namespace ygl
