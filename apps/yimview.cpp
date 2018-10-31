@@ -139,7 +139,7 @@ void load_image_async(app_image* img) {
     img->texture_done = false;
     img->error_msg    = "";
     img->img          = {};
-    if (!load_image4f(img->filename, img->img))
+    if (!load_image(img->filename, img->img))
         img->error_msg = "cannot load image";
     img->load_done      = true;
     img->display        = img->img;
@@ -150,11 +150,11 @@ void load_image_async(app_image* img) {
 // save an image
 void save_image_async(app_image* img) {
     if (is_hdr_filename(img->outname)) {
-        if (!save_image4b(img->outname, float_to_byte(img->display))) {
+        if (!save_image(img->outname, float_to_byte(img->display))) {
             img->error_msg = "error saving image";
         }
     } else {
-        if (!save_image4f(img->outname, srgb_to_linear(img->display))) {
+        if (!save_image(img->outname, srgb_to_linear(img->display))) {
             img->error_msg = "error saving image";
         }
     }

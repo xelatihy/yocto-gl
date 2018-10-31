@@ -189,8 +189,8 @@
 // 2. resize images with `resize_image()`
 // 3. tonemap images with `tonemap_filmic()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
-// 5. make various image examples with the `make_XXX_image4f()` functions
-// 6. create procedural sun-sky images with `make_sunsky_image4f()`
+// 5. make various image examples with the `make_XXX_image()` functions
+// 6. create procedural sun-sky images with `make_sunsky_image()`
 //
 //
 // # Simple scene representation
@@ -2939,18 +2939,18 @@ image<vec4f> resize_image(const image<vec4f>& img, int width, int height);
 namespace ygl {
 
 // Make example images.
-image<vec4f> make_grid_image4f(int width, int height, int tile = 8,
+image<vec4f> make_grid_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_checker_image4f(int width, int height, int tile = 8,
+image<vec4f> make_checker_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_bumpdimple_image4f(int width, int height, int tile = 8);
-image<vec4f> make_ramp_image4f(int width, int height, const vec4f& c0,
+image<vec4f> make_bumpdimple_image(int width, int height, int tile = 8);
+image<vec4f> make_ramp_image(int width, int height, const vec4f& c0,
     const vec4f& c1, float srgb = false);
-image<vec4f> make_gammaramp_image4f(int width, int height);
-image<vec4f> make_uvramp_image4f(int width, int height);
-image<vec4f> make_uvgrid_image4f(
+image<vec4f> make_gammaramp_image(int width, int height);
+image<vec4f> make_uvramp_image(int width, int height);
+image<vec4f> make_uvgrid_image(
     int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
@@ -2958,23 +2958,23 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
+image<vec4f> make_sunsky_image(int width, int height, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image4f(int width, int height,
+image<vec4f> make_lights_image(int width, int height,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
     float lwidth = pif / 16, float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image<vec4f> make_noise_image4f(
+image<vec4f> make_noise_image(
     int width, int height, float scale = 1, bool wrap = true);
-image<vec4f> make_fbm_image4f(int width, int height, float scale = 1,
+image<vec4f> make_fbm_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image<vec4f> make_ridge_image4f(int width, int height, float scale = 1,
+image<vec4f> make_ridge_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image<vec4f> make_turbulence_image4f(int width, int height, float scale = 1,
+image<vec4f> make_turbulence_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -3584,7 +3584,7 @@ trace_state make_trace_state(
     const yocto_scene& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image4f(const yocto_scene& scene, const bvh_tree& bvh,
+image<vec4f> trace_image(const yocto_scene& scene, const bvh_tree& bvh,
     const trace_lights& lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.

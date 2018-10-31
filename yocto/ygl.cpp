@@ -3133,7 +3133,7 @@ image<vec4f> tonemap_filmic(
 namespace ygl {
 
 // Make a grid image
-image<vec4f> make_grid_image4f(
+image<vec4f> make_grid_image(
     int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
@@ -3148,7 +3148,7 @@ image<vec4f> make_grid_image4f(
 }
 
 // Make a checkerboard image
-image<vec4f> make_checker_image4f(
+image<vec4f> make_checker_image(
     int width, int height, int tiles, const vec4f& c0, const vec4f& c1) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
@@ -3162,7 +3162,7 @@ image<vec4f> make_checker_image4f(
 }
 
 // Make an image with bumps and dimples.
-image<vec4f> make_bumpdimple_image4f(int width, int height, int tiles) {
+image<vec4f> make_bumpdimple_image(int width, int height, int tiles) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
@@ -3182,7 +3182,7 @@ image<vec4f> make_bumpdimple_image4f(int width, int height, int tiles) {
 }
 
 // Make a uv colored grid
-image<vec4f> make_ramp_image4f(
+image<vec4f> make_ramp_image(
     int width, int height, const vec4f& c0, const vec4f& c1) {
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
@@ -3210,7 +3210,7 @@ image<vec4f> make_gammaramp_imagef(int width, int height) {
 
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
-image<vec4f> make_uvramp_image4f(int width, int height) {
+image<vec4f> make_uvramp_image(int width, int height) {
     auto img = image<vec4f>{width, height};
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
@@ -3222,7 +3222,7 @@ image<vec4f> make_uvramp_image4f(int width, int height) {
 }
 
 // Make a uv colored grid
-image<vec4f> make_uvgrid_image4f(int width, int height, int tiles, bool colored) {
+image<vec4f> make_uvgrid_image(int width, int height, int tiles, bool colored) {
     auto img  = image<vec4f>{width, height};
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
@@ -3272,7 +3272,7 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
 }
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
+image<vec4f> make_sunsky_image(int width, int height, float thetaSun,
     float turbidity, bool has_sun, const vec3f& ground_albedo) {
     auto wSun = vec3f{0, cos(thetaSun), sin(thetaSun)};
 
@@ -3392,7 +3392,7 @@ image<vec4f> make_sunsky_image4f(int width, int height, float thetaSun,
 }
 
 // Make an image of multiple lights.
-image<vec4f> make_lights_image4f(int width, int height, const vec3f& le,
+image<vec4f> make_lights_image(int width, int height, const vec3f& le,
     int nlights, float langle, float lwidth, float lheight) {
     auto img = image<vec4f>{width, height, {0, 0, 0, 1}};
     for (auto j = 0; j < img.height / 2; j++) {
@@ -3413,7 +3413,7 @@ image<vec4f> make_lights_image4f(int width, int height, const vec3f& le,
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
+image<vec4f> make_noise_image(int width, int height, float scale, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
     for (auto j = 0; j < img.height; j++) {
@@ -3429,7 +3429,7 @@ image<vec4f> make_noise_image4f(int width, int height, float scale, bool wrap) {
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_fbm_image4f(int width, int height, float scale,
+image<vec4f> make_fbm_image(int width, int height, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
@@ -3446,7 +3446,7 @@ image<vec4f> make_fbm_image4f(int width, int height, float scale,
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_ridge_image4f(int width, int height, float scale,
+image<vec4f> make_ridge_image(int width, int height, float scale,
     float lacunarity, float gain, float offset, int octaves, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
@@ -3464,7 +3464,7 @@ image<vec4f> make_ridge_image4f(int width, int height, float scale,
 }
 
 // Make a noise image. Wrap works only if size is a power of two.
-image<vec4f> make_turbulence_image4f(int width, int height, float scale,
+image<vec4f> make_turbulence_image(int width, int height, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{width, height};
     auto wrap3i = (wrap) ? vec3i{img.width, img.height, 2} : zero3i;
@@ -4053,7 +4053,7 @@ void add_sky_environment(yocto_scene& scene, float sun_angle) {
     auto texture      = yocto_texture{};
     texture.name      = "<sky>";
     texture.filename  = "textures/sky.hdr";
-    texture.hdr_image = make_sunsky_image4f(1024, 512, sun_angle);
+    texture.hdr_image = make_sunsky_image(1024, 512, sun_angle);
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
     environment.name             = "<sky>";
@@ -6536,7 +6536,7 @@ trace_lights make_trace_lights(
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image4f(const yocto_scene& scene, const bvh_tree& bvh,
+image<vec4f> trace_image(const yocto_scene& scene, const bvh_tree& bvh,
     const trace_lights& lights, const trace_params& params) {
     auto scope = log_trace_scoped("tracing image");
     auto state = make_trace_state(scene, params);
@@ -6634,7 +6634,7 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
         pparams.vertical_resolution = state.rendered_image.height /
                                       params.preview_ratio;
         pparams.num_samples = 1;
-        auto pimg           = trace_image4f(scene, bvh, lights, pparams);
+        auto pimg           = trace_image(scene, bvh, lights, pparams);
         auto pdisplay       = tonemap_filmic(pimg, params.display_exposure,
             params.display_filmic, params.display_srgb);
         auto pwidth = pimg.width, pheight = pimg.height;

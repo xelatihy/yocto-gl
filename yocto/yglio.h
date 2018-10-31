@@ -19,7 +19,7 @@
 // 1. manipulate paths withe path utilities
 // 2. load and save text files with `load_text()` and `save_text()`
 // 3. load and save binary files with `load_binary()` and `save_binary()`
-// 4. load and save images with `load_image4f()` and `save_image4f()`
+// 4. load and save images with `load_image()` and `save_image()`
 // 5. load a scene with `load_json_scene()` and save it with `save_json_scene()`
 // 6. load and save OBJs with `load_obj_scene()` and `save_obj_scene()`
 // 7. load and save glTFs with `load_gltf_scene()` and `save_gltf_scene()`
@@ -174,15 +174,15 @@ namespace ygl {
 bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channel float image in linear color space.
-bool load_image4f(const string& filename, image<vec4f>& img);
-bool save_image4f(const string& filename, const image<vec4f>& img);
-bool load_image4f_from_memory(const byte* data, int data_size, image<vec4f>& img);
+bool load_image(const string& filename, image<vec4f>& img);
+bool save_image(const string& filename, const image<vec4f>& img);
+bool load_image_from_memory(const byte* data, int data_size, image<vec4f>& img);
 
 // Loads/saves a 4 channel byte image in sRGB color space.
-bool load_image4b(const string& filename, image<vec4b>& img);
-bool save_image4b(const string& filename, const image<vec4b>& img);
-bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
-bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
+bool load_image(const string& filename, image<vec4b>& img);
+bool save_image(const string& filename, const image<vec4b>& img);
+bool load_image_from_memory(const byte* data, int data_size, image<vec4b>& img);
+bool load_image_from_memory(const byte* data, int data_size, image<vec4b>& img);
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
