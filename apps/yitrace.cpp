@@ -244,7 +244,7 @@ void run_ui(app_state* app) {
                     {0.5f, 0.5f}, zero2f);
                 auto isec   = intersect_scene(
                     app->scene.get(), app->bvh.get(), ray);
-                if (isec.instance) app->selection = isec.instance;
+                if (isec.instance_id >= 0) app->selection = app->scene->instances[isec.instance_id];
             }
         }
 

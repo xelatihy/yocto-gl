@@ -4171,7 +4171,6 @@ scene_intersection intersect_scene(const yocto_scene* scene,
     if (!intersect_bvh(bvh, ray, find_any, isec.distance, isec.instance_id, isec.element_id,
             isec.element_uv))
         return {};
-    isec.instance = scene->instances[isec.instance_id];
     return isec;
 }
 
@@ -4185,7 +4184,6 @@ scene_intersection intersect_scene(const yocto_scene* scene, int instance_id,
             isec.element_id, isec.element_uv))
         return {};
     isec.instance_id = instance_id;
-    isec.instance = instance;
     return isec;
 }
 
@@ -5030,7 +5028,7 @@ trace_point trace_ray(const yocto_scene* scene, const bvh_tree* bvh,
     const vec3f& position, const vec3f& direction) {
     auto isec = intersect_scene(scene, bvh, make_ray(position, direction));
     _trace_nrays += 1;
-    if (isec.instance) {
+    if (isec.instance_id >= 0) {
         return make_trace_point(
             scene, isec.instance_id, isec.element_id, isec.element_uv, direction);
     } else {
@@ -5063,15 +5061,16 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene* scene,
     for (auto b = 0; b < max_bounces; b++) {
         _trace_nrays += 1;
         auto isec = intersect_scene(scene, bvh, ray);
-        if (!isec.instance) return isec;
-        auto shape    = scene->shapes[isec.instance->shape];
+        if (isec.instance_id < 0) return isec;
+        auto instance = scene->instances[isec.instance_id];
+        auto shape    = scene->shapes[instance->shape];
         auto material = scene->materials[shape->material];
         auto op       = evaluate_material_opacity(scene, material,
             evaluate_shape_texturecoord(shape, isec.element_id, isec.element_uv),
             evaluate_shape_color(shape, isec.element_id, isec.element_uv));
         if (op > 0.999f) return isec;
         if (get_random_float(rng) < op) return isec;
-        ray = make_ray(evaluate_instance_position(scene, isec.instance,
+        ray = make_ray(evaluate_instance_position(scene, instance,
                            isec.element_id, isec.element_uv),
             ray.d);
     }
@@ -5519,12 +5518,13 @@ float sample_instance_direction_pdf(const yocto_scene* scene,const trace_lights&
     auto pdf       = 0.0f;
     auto ray       = make_ray(position, direction);
     auto isec      = intersect_scene(scene, instance_id, bvh, ray);
-    while (isec.instance) {
+    while (isec.instance_id >= 0) {
         // accumulate pdf
+        auto instance = scene->instances[isec.instance_id];
         auto light_position = evaluate_instance_position(
-            scene, isec.instance, isec.element_id, isec.element_uv);
+            scene, instance, isec.element_id, isec.element_uv);
         auto light_normal = evaluate_instance_shading_normal(
-            scene, isec.instance, isec.element_id, isec.element_uv, direction);
+            scene, instance, isec.element_id, isec.element_uv, direction);
         // prob triangle * area triangle = area triangle mesh
         auto area = elements_cdf.back();
         pdf += distance_squared(light_position, position) /
@@ -5651,9 +5651,10 @@ float prob_direct(const microfacet_brdf& brdf) {
 // works for both surface rendering and volume rendering.
 vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights& lights, const vec3f& p, int channel,
-    vector<yocto_instance*> mediums, rng_state& rng, float& pdf, vec3f& le) {
+    const vector<int>& mediums_, rng_state& rng, float& pdf, vec3f& le) {
     auto  incoming = zero3f;
     vec3f weight   = vec3f{1, 1, 1};
+    auto mediums = mediums_;
 
     auto idx = sample_uniform_index(
         lights.instances.size() + lights.environments.size(),
@@ -5673,7 +5674,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
                 scene, lights, environment_id, incoming);
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, incoming), rng, 10);
-        if (isec.instance == nullptr) {
+        if (isec.instance_id < 0) {
             auto environment = scene->environments[environment_id];
             le = evaluate_environment_emission(scene, environment, incoming);
             return incoming;
@@ -5682,20 +5683,21 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
 
     auto isec = intersect_scene(scene, bvh, make_ray(p, incoming));
 
-    while (isec.instance) {
-        auto isec_shape = scene->shapes[isec.instance->shape];
+    while (isec.instance_id >= 0) {
+        auto isec_instance = scene->instances[isec.instance_id];
+        auto isec_shape = scene->shapes[isec_instance->shape];
         auto lp         = evaluate_instance_position(
-            scene, isec.instance, isec.element_id, isec.element_uv);
+            scene, isec_instance, isec.element_id, isec.element_uv);
         auto ln = evaluate_instance_shading_normal(
-            scene, isec.instance, isec.element_id, isec.element_uv, -incoming);
+            scene, isec_instance, isec.element_id, isec.element_uv, -incoming);
         auto isec_material = scene->materials[isec_shape->material];
         auto emission      = evaluate_material_emission(scene, isec_material,
             evaluate_shape_texturecoord(
                 isec_shape, isec.element_id, isec.element_uv),
             evaluate_shape_color(isec_shape, isec.element_id, isec.element_uv));
 
-        yocto_instance* medium       = mediums.back();
-        auto            medium_shape = scene->shapes[medium->shape];
+        auto medium_instance       = scene->instances[mediums.back()];
+        auto            medium_shape = scene->shapes[medium_instance->shape];
         auto medium_material         = scene->materials[medium_shape->material];
         if (medium_material->volume_density != zero3f)
             weight *= evaluate_transmission(scene, medium_material, lp,
@@ -5726,7 +5728,7 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
 
         if (ndi > threshold) {
             // Exiting from medium.
-            if (isec.instance != mediums.back()) {  // exiting a different
+            if (isec.instance_id != mediums.back()) {  // exiting a different
                                                     // medium??
                 pdf = 0;
                 return zero3f;
@@ -5738,11 +5740,11 @@ vec3f direct_illumination(const yocto_scene* scene, const bvh_tree* bvh,
             mediums.pop_back();
         } else if (ndi < -threshold) {
             // Entering new medium.
-            if (isec.instance == mediums.back()) {  // entering the same medium??
+            if (isec.instance_id == mediums.back()) {  // entering the same medium??
                 pdf = 0;
                 return zero3f;
             }
-            mediums.push_back(isec.instance);
+            mediums.push_back(isec.instance_id);
         } else {
             pdf = 0;
             return zero3f;
@@ -5836,9 +5838,6 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
     return weight;
 }
 
-// @Hack: air volume properties should be set in the scene struct.
-static yocto_instance* air = new yocto_instance{"air", {}, -1};
-
 // Iterative volume path tracing.
 tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
@@ -5864,7 +5863,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
 #endif
 
     // List of mediums that contains the path. The path starts in air.
-    auto mediums = vector<yocto_instance*>{air};
+    auto mediums = vector<int>{-1};
 
     // Sample color channel. This won't matter if there are no heterogeneus
     // materials.
@@ -5874,12 +5873,13 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
     int bounce = 0;
     while (bounce < max_bounces) {
         auto        medium   = mediums.back();
-        auto        shape    = scene->shapes[medium->shape];
+        auto        instance = scene->instances[medium];
+        auto        shape    = scene->shapes[instance->shape];
         auto        material = scene->materials[shape->material];
-        const auto& ve       = material->volume_emission;
-        const auto& va       = material->volume_albedo;
-        const auto& vd       = material->volume_density;
-        const auto& vg       = material->volume_phaseg;
+        auto ve       = material->volume_emission;
+        auto va       = material->volume_albedo;
+        auto vd       = material->volume_density;
+        auto vg       = material->volume_phaseg;
 
         // If medium has color but must use delta tracking, integrate only the
         // sampled spectrum.
@@ -5895,8 +5895,8 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         // Sample distance of next absorption/scattering event in the medium.
         // dist_pdf is unknown due to delta tracking.
         auto bbox = transform_bbox(
-            medium->frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
-        auto dist = sample_distance(scene, medium, bbox, ray.o, ray.d, ch, rng);
+            instance->frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
+        auto dist = sample_distance(scene, instance, bbox, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
         ray       = make_ray(ray.o, ray.d);
@@ -5911,7 +5911,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         auto scene_size = max(bvh->nodes[0].bbox.max - bvh->nodes[0].bbox.min);
 
         // environment
-        if (isec.instance == nullptr && dist > scene_size) {
+        if (isec.instance_id < 0 && dist > scene_size) {
             if (emission) {
                 for (auto environment : scene->environments)
                     radiance += weight * evaluate_environment_emission(
@@ -5921,13 +5921,14 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
         }
 
         // surface intersection
-        if (isec.instance) {
-            auto isec_shape    = scene->shapes[isec.instance->shape];
+        if (isec.instance_id >= 0) {
+            auto isec_instance = scene->instances[isec.instance_id];
+            auto isec_shape    = scene->shapes[isec_instance->shape];
             auto outgoing      = -ray.d;
             auto isec_material = scene->materials[isec_shape->material];
             auto p             = evaluate_instance_position(
-                scene, isec.instance, isec.element_id, isec.element_uv);
-            auto normal = evaluate_instance_shading_normal(scene, isec.instance,
+                scene, isec_instance, isec.element_id, isec.element_uv);
+            auto normal = evaluate_instance_shading_normal(scene, isec_instance,
                 isec.element_id, isec.element_uv, outgoing);
             auto brdf   = evaluate_material_brdf(scene, isec_material,
                 evaluate_shape_texturecoord(
@@ -6004,13 +6005,13 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene* scene, const bvh_tree* bvh,
                 float tr = 0.05;  // avoid numerical errors
                 if (ndo < -tr) {
                     // Exiting from medium.
-                    if (isec.instance != medium) break;
+                    if (isec.instance_id != medium) break;
                     if (mediums.size() <= 1) break;
                     mediums.pop_back();
                 } else if (ndo > tr) {
                     // Entering new medium.
-                    if (isec.instance == medium) break;
-                    mediums.push_back(isec.instance);
+                    if (isec.instance_id == medium) break;
+                    mediums.push_back(isec.instance_id);
                 } else
                     break;
             }
@@ -6265,9 +6266,9 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene* scene,
             point.brdf, point.normal, outgoing, next_direction);
         auto emission = evaluate_environment_emission(scene, next_direction);
         if (next_pdf &&
-            !intersect_scene_with_opacity(scene, bvh,
+            intersect_scene_with_opacity(scene, bvh,
                 make_ray(point.position, next_direction), rng, max_bounces)
-                 .instance)
+                 .instance_id < 0)
             radiance += emission * brdf_cosine / next_pdf;
     }
 

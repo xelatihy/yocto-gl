@@ -3362,7 +3362,6 @@ bool is_shape_face_varying(const yocto_shape* shape);
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
 struct scene_intersection {
-    yocto_instance* instance   = nullptr;
     int             instance_id = -1;
     int             element_id = -1;
     vec2f           element_uv = zero2f;
