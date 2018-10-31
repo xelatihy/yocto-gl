@@ -4022,6 +4022,14 @@ inline bool parse_value(parse_string_view& str, string& val) {
     str.str += n;
     return true;
 }
+inline bool parse_value(parse_string_view& str, bool& val) {
+    auto n = 0;
+    auto v = 0;
+    if (sscanf(str.str, "%d%n", &v, &n) != 1) return false;
+    str.str += n;
+    val = (bool)v;
+    return true;
+}
 inline bool parse_value(parse_string_view& str, int& val) {
     auto n = 0;
     if (sscanf(str.str, "%d%n", &val, &n) != 1) return false;

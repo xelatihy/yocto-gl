@@ -2352,23 +2352,23 @@ inline frame3f parse_frame3f(char*& s) {
     return {parse_vec3f(s), parse_vec3f(s), parse_vec3f(s), parse_vec3f(s)};
 }
 
-inline obj_vertex parse_obj_vertex(char*& s) {
-    auto val     = obj_vertex{0, 0, 0};
-    val.position = parse_int(s);
-    if (*s == '/') {
-        s++;
-        if (*s == '/') {
-            s++;
-            val.normal = parse_int(s);
+inline bool parse_value(parse_string_view& view, obj_vertex& val) {
+    val     = obj_vertex{0, 0, 0};
+    if(!parse_value(view, val.position)) return false;
+    if (*view.str == '/') {
+        view.str++;
+        if (*view.str == '/') {
+            view.str++;
+            if(!parse_value(view, val.normal)) return false;
         } else {
-            val.texturecoord = parse_int(s);
-            if (*s == '/') {
-                s++;
-                val.normal = parse_int(s);
+            if(!parse_value(view, val.texturecoord)) return false;
+            if (*view.str == '/') {
+                view.str++;
+            if(!parse_value(view, val.normal)) return false;
             }
         }
     }
-    return val;
+    return true;
 }
 
 // Input for OBJ textures
@@ -2505,34 +2505,33 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
     if (!fs) return false;
 
     // read the file line by line
-    char buf[4096];
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        memcpy(buf, line.c_str(), line.size() + 1);
-        normalize_obj_line(buf);
-        auto ss = buf;
+        if(line.find('#') != line.npos) line = line.substr(line.find('#')+1);
+        auto view = parse_string_view{line.c_str()};
 
         // get command
-        auto cmd = parse_string(ss);
+        auto cmd = ""s;
+        parse_value(view, cmd);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "c") {
             auto camera     = obj_camera();
-            camera.name     = parse_string(ss);
-            camera.ortho    = parse_bool(ss);
-            camera.film     = parse_vec2f(ss);
-            camera.focal    = parse_float(ss);
-            camera.focus    = parse_float(ss);
-            camera.aperture = parse_float(ss);
-            camera.frame    = parse_frame3f(ss);
+            parse_value(view, camera.name);
+            parse_value(view, camera.ortho);
+            parse_value(view, camera.film);
+            parse_value(view, camera.focal);
+            parse_value(view, camera.focus);
+            parse_value(view, camera.aperture);
+            parse_value(view, camera.frame);
             if (cb.camera) cb.camera(camera);
         } else if (cmd == "e") {
             auto environment        = obj_environment();
-            environment.name        = parse_string(ss);
-            environment.ke          = parse_vec3f(ss);
-            environment.ke_txt.path = parse_string(ss);
+            parse_value(view, environment.name);
+            parse_value(view, environment.ke);
+            parse_value(view, environment.ke_txt.path);
             if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
             if (cb.environmnet) cb.environmnet(environment);
         } else {
@@ -2556,34 +2555,39 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
     auto verts     = vector<obj_vertex>();  // buffer to avoid reallocation
 
     // read the file line by line
-    char buf[4096];
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        memcpy(buf, line.c_str(), line.size() + 1);
-        normalize_obj_line(buf);
-        auto ss = buf;
+        if(line.find('#') != line.npos) line = line.substr(line.find('#')+1);
+        auto view = parse_string_view{line.c_str()};
 
         // get command
-        auto cmd = parse_string(ss);
+        auto cmd = ""s;
+        parse_value(view, cmd);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "v") {
-            if (cb.vert) cb.vert(parse_vec3f(ss));
+            auto vert = zero3f;
+            parse_value(view, vert);
+            if (cb.vert) cb.vert(vert);
             vert_size.position += 1;
         } else if (cmd == "vn") {
-            if (cb.norm) cb.norm(parse_vec3f(ss));
+            auto vert = zero3f;
+            parse_value(view, vert);
+            if (cb.norm) cb.norm(vert);
             vert_size.normal += 1;
         } else if (cmd == "vt") {
-            auto v = parse_vec2f(ss);
-            if (flip_texcoord) v.y = 1 - v.y;
-            if (cb.texcoord) cb.texcoord(v);
+            auto vert = zero2f;
+            parse_value(view, vert);
+            if (flip_texcoord) vert.y = 1 - vert.y;
+            if (cb.texcoord) cb.texcoord(vert);
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
             while (true) {
-                auto vert = parse_obj_vertex(ss);
+                auto vert = obj_vertex{};
+                parse_value(view, vert);
                 if (!vert.position) break;
                 if (vert.position < 0)
                     vert.position = vert_size.position + vert.position + 1;
@@ -2598,16 +2602,25 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
             if (cmd == "l" && cb.line) cb.line(verts);
             if (cmd == "p" && cb.point) cb.point(verts);
         } else if (cmd == "o") {
-            if (cb.object) cb.object(parse_string(ss));
+            auto name = ""s;
+            parse_value(view, name);
+            if (cb.object) cb.object(name);
         } else if (cmd == "usemtl") {
-            if (cb.usemtl) cb.usemtl(parse_string(ss));
+            auto name = ""s;
+            parse_value(view, name);
+            if (cb.usemtl) cb.usemtl(name);
         } else if (cmd == "g") {
-            if (cb.group) cb.group(parse_string(ss));
+            auto name = ""s;
+            parse_value(view, name);
+            if (cb.group) cb.group(name);
         } else if (cmd == "s") {
-            if (cb.smoothing) cb.smoothing(parse_string(ss));
+            auto name = ""s;
+            parse_value(view, name);
+            if (cb.smoothing) cb.smoothing(name);
         } else if (cmd == "mtllib") {
             if (geometry_only) continue;
-            auto mtlname = parse_string(ss);
+            auto mtlname = ""s;
+            parse_value(view, mtlname);
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
             if (!load_mtl(mtlpath, cb, flip_tr)) {
