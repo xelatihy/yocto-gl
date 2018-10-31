@@ -2,7 +2,7 @@
 
 Yocto/GL is a collection of utility C++14 libraries for building 
 physically-based graphics algorithms released under the MIT license.
-Yocto?GL is written in a deliberatly data-driven style for ease of
+Yocto/GL is written in a deliberatly data-driven style for ease of
 development and use. 
 
 Features include:
