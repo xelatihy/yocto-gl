@@ -260,6 +260,12 @@ inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& id
     return draw_combobox_glwidget(win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
+    template <typename T>
+    inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
+                                       const deque<T>& vals, bool include_null = false) {
+        return draw_combobox_glwidget(win, lbl, idx, (int)vals.size(),
+                                      [&](int idx) { return vals[idx].name.c_str(); }, include_null);
+    }
 
 void begin_child_glwidget(const glwindow& win, const char* lbl, const vec2i& size);
 void end_child_glwidget(const glwindow& win);
