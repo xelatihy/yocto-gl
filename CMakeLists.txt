@@ -128,7 +128,7 @@ foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomi
                 WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
     endforeach()
 endforeach(tracer)
-foreach(format "json")
+foreach(format "json" "ybin")
     foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json")
         get_filename_component(name ${filename} NAME_WE)
         add_test(NAME yscnproc-${format}-${filename}
