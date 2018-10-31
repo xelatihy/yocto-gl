@@ -3986,7 +3986,6 @@ bvh_tree* make_scene_bvh(
     for (auto instance : scene->instances) {
         bvh->instances.push_back(
             {instance->frame, inverse(instance->frame, false), instance->shape});
-        bvh->instance_ids[instance] = (int)bvh->instances.size() - 1;
     }
 
     // build bvh

@@ -2635,10 +2635,6 @@ struct bvh_tree {
     vector<bvh_instance> instances;
     vector<bvh_tree*>    shape_bvhs;
 
-    // optional application specific data to key from a pointer to internal ids
-    unordered_map<void*, int> instance_ids;
-    unordered_map<void*, int> shape_ids;
-
     // bvh internal nodes
     vector<bvh_node> nodes;
 
