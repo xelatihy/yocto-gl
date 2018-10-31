@@ -1831,7 +1831,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
+bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_distance,
     bool find_any, float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
     // node stack
     int  node_stack[64];
@@ -1847,7 +1847,7 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
         auto node = bvh.nodes[node_stack[--node_cur]];
 
         // intersect bbox
-        if (!distance_check_bbox(pos, max_dist, node.bbox)) continue;
+        if (!distance_check_bbox(pos, max_distance, node.bbox)) continue;
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
@@ -1858,44 +1858,44 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
         } else if (!bvh.triangles.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (overlap_triangle(pos, max_dist, bvh.positions[t.x],
+                if (overlap_triangle(pos, max_distance, bvh.positions[t.x],
                         bvh.positions[t.y], bvh.positions[t.z], bvh.radius[t.x],
                         bvh.radius[t.y], bvh.radius[t.z], distance, element_uv)) {
                     hit      = true;
-                    max_dist = distance;
+                    max_distance = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.quads.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& q = bvh.quads[node.primitive_ids[i]];
-                if (overlap_quad(pos, max_dist, bvh.positions[q.x],
+                if (overlap_quad(pos, max_distance, bvh.positions[q.x],
                         bvh.positions[q.y], bvh.positions[q.z],
                         bvh.positions[q.w], bvh.radius[q.x], bvh.radius[q.y],
                         bvh.radius[q.z], bvh.radius[q.w], distance, element_uv)) {
                     hit      = true;
-                    max_dist = distance;
+                    max_distance = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.lines.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh.lines[node.primitive_ids[i]];
-                if (overlap_line(pos, max_dist, bvh.positions[l.x],
+                if (overlap_line(pos, max_distance, bvh.positions[l.x],
                         bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y],
                         distance, element_uv)) {
                     hit      = true;
-                    max_dist = distance;
+                    max_distance = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.points.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& p = bvh.points[node.primitive_ids[i]];
-                if (overlap_point(pos, max_dist, bvh.positions[p],
+                if (overlap_point(pos, max_distance, bvh.positions[p],
                         bvh.radius[p], distance, element_uv)) {
                     hit      = true;
-                    max_dist = distance;
+                    max_distance = distance;
                     element_id      = node.primitive_ids[i];
                 }
             }
@@ -1903,10 +1903,10 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
                 if (overlap_scene_bvh(bvh.shape_bvhs[instance.shape_id],
-                        transform_point(instance.frame_inverse, pos), max_dist,
+                        transform_point(instance.frame_inverse, pos), max_distance,
                         find_any, distance, instance_id, element_id, element_uv)) {
                     hit      = true;
-                    max_dist = distance;
+                    max_distance = distance;
                     instance_id      = node.primitive_ids[i];
                 }
             }

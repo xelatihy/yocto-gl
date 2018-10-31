@@ -2651,18 +2651,16 @@ void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality = false);
 void clear_scene_bvh_embree(bvh_scene& bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
-// depending on `find_any`. Returns the ray distance `distance`, the instance
-// id `instance_id`, the shape id `sid`, the shape element index `element_id` and the
-// shape barycentric coordinates `element_uv`.
+// depending on `find_any`. Returns the ray distance , the instance id,
+// the shape element index and the element barycentric coordinates.
 bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& element_uv);
 
 // Find a shape element that overlaps a point within a given distance
-// `max_dist`, returning either the closest or any overlap depending on
-// `find_any`. Returns the point distance `distance`, the instance id `instance_id`, the
-// shape id `sid`, the shape element index `element_id` and the shape barycentric
-// coordinates `element_uv`.
-bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
+// max distance, returning either the closest or any overlap depending on
+// `find_any`. Returns the point distance, the instance id, the shape element 
+// index and the element barycentric coordinates.
+bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_distance,
     bool find_any, float& distance, int& instance_id, int& element_id, vec2f& element_uv);
 
 }  // namespace ygl
