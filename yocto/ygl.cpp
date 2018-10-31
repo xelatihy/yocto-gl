@@ -6473,12 +6473,10 @@ vec4f trace_sample(trace_state& state, const yocto_scene& scene,
 // Init a sequence of random number generators.
 image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
     auto rngs  = image<rng_state>{width, height};
-    int  rseed = 1301081;  // large prime
+    auto rng = make_rng(1301081);
     for (auto j = 0; j < rngs.height; j++) {
         for (auto i = 0; i < rngs.width; i++) {
-            at(rngs, i, j) = make_rng(seed, rseed + 1);
-            rseed = (rseed * 1103515245 + 12345) & ((1U << 31) - 1);  // bsd
-                                                                      // rand
+            at(rngs, i, j) = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
     return rngs;
@@ -6554,7 +6552,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_tree& bvh,
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([&, tid]() {
+            threads.push_back(thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
                 for (auto j = tid; j < state.rendered_image.height;
                      j += nthreads) {
                     for (auto i = 0; i < state.rendered_image.width; i++) {
@@ -6598,7 +6596,7 @@ bool trace_samples(trace_state& state, const yocto_scene& scene,
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([&, tid]() {
+            threads.push_back(thread([tid, nthreads, nbatch, &scene, &state, &bvh, &lights, &params]() {
                 for (auto j = tid; j < state.rendered_image.height;
                      j += nthreads) {
                     for (auto i = 0; i < state.rendered_image.width; i++) {
@@ -6652,7 +6650,7 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
     state.async_threads.clear();
     state.async_stop_flag = false;
     for (auto tid = 0; tid < nthreads; tid++) {
-        state.async_threads.push_back(thread([&, tid]() {
+        state.async_threads.push_back(thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
             for (auto s = 0; s < params.num_samples; s++) {
                 if (!tid) state.current_sample = s;
                 for (auto j = tid; j < state.rendered_image.height;
