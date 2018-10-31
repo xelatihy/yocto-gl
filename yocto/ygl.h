@@ -4008,8 +4008,13 @@ inline string to_string(const T& val) {
     return str;
 }
 
+// Trivial wrapper used for simplicity
+struct string_view {
+    const char* str = nullptr;
+};
+
 // Prints basic types to string
-inline bool _parse(const char*& str, string& val) {
+inline bool parse_value(const char*& str, string& val) {
     auto n = 0;
     char buf[4096];
     if (sscanf(str, "%4095s%n", buf, &n) != 1) return false;
@@ -4017,19 +4022,19 @@ inline bool _parse(const char*& str, string& val) {
     str += n;
     return true;
 }
-inline bool _parse(const char*& str, int& val) {
+inline bool parse_value(const char*& str, int& val) {
     auto n = 0;
     if (sscanf(str, "%d%n", &val, &n) != 1) return false;
     str += n;
     return true;
 }
-inline bool _parse(const char*& str, float& val) {
+inline bool parse_value(const char*& str, float& val) {
     auto n = 0;
     if (sscanf(str, "%f%n", &val, &n) != 1) return false;
     str += n;
     return true;
 }
-inline bool _parse(const char*& str, double& val) {
+inline bool parse_value(const char*& str, double& val) {
     auto n = 0;
     if (sscanf(str, "%lf%n", &val, &n) != 1) return false;
     str += n;
@@ -4038,44 +4043,44 @@ inline bool _parse(const char*& str, double& val) {
 
 // Print compound types
 template <typename T, size_t N>
-inline bool _parse(const char*& str, array<T, N>& val) {
+inline bool parse_value(const char*& str, array<T, N>& val) {
     for (auto i = 0; i < N; i++) {
-        if (!_parse(str, val[i])) return false;
+        if (!parse_value(str, val[i])) return false;
     }
     return true;
 }
 // Data acess
 template <typename T, int N>
-inline bool _parse(const char*& str, vec<T, N>& v) {
-    return _parse(str, (array<T, N>&)v);
+inline bool parse_value(const char*& str, vec<T, N>& v) {
+    return parse_value(str, (array<T, N>&)v);
 }
 template <typename T, int N, int M>
-inline bool _parse(const char*& str, mat<T, N, M>& v) {
-    return _parse(str, (array<T, N * M>&)v);
+inline bool parse_value(const char*& str, mat<T, N, M>& v) {
+    return parse_value(str, (array<T, N * M>&)v);
 }
 template <typename T, int N>
-inline bool _parse(const char*& str, frame<T, N>& v) {
-    return _parse(str, (array<T, N*(N + 1)>&)v);
+inline bool parse_value(const char*& str, frame<T, N>& v) {
+    return parse_value(str, (array<T, N*(N + 1)>&)v);
 }
 template <typename T, int N>
-inline bool _parse(const char*& str, bbox<T, N>& v) {
-    return _parse(str, (array<T, N * 2>&)v);
+inline bool parse_value(const char*& str, bbox<T, N>& v) {
+    return parse_value(str, (array<T, N * 2>&)v);
 }
 template <typename T, int N>
-inline bool _parse(const char*& str, ray<T, N>& v) {
-    return _parse(str, (array<T, N * 2 + 2>&)v);
+inline bool parse_value(const char*& str, ray<T, N>& v) {
+    return parse_value(str, (array<T, N * 2 + 2>&)v);
 }
 
 // Prints a string.
-inline bool _parse_next(const char*& str) { return true; }
+inline bool parse_next(const char*& str) { return true; }
 template <typename Arg, typename... Args>
-inline bool _parse_next(const char*& str, Arg& arg, Args&... args) {
-    if (!_parse(str, arg)) return false;
-    return _parse_next(str, args...);
+inline bool parse_next(const char*& str, Arg& arg, Args&... args) {
+    if (!parse_value(str, arg)) return false;
+    return parse_next(str, args...);
 }
 
 // Returns trus if this is white space
-inline bool _is_whitespace(const char* str) {
+inline bool is_whitespace(const char* str) {
     while (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') str++;
     return *str == 0;
 }
@@ -4084,8 +4089,8 @@ inline bool _is_whitespace(const char* str) {
 template <typename... Args>
 inline bool parse(const string& str, Args&... args) {
     auto str_ = str.c_str();
-    if (!_parse_next(str_, args...)) return false;
-    return _is_whitespace(str_);
+    if (!parse_next(str_, args...)) return false;
+    return is_whitespace(str_);
 }
 
 }  // namespace ygl
