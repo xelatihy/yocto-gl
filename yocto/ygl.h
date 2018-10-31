@@ -2633,7 +2633,7 @@ struct bvh_tree {
 
     // data for instance BVH
     vector<bvh_instance> instances;
-    vector<bvh_tree*>    shape_bvhs;
+    vector<bvh_tree>    shape_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -2643,20 +2643,20 @@ struct bvh_tree {
 };
 
 // Build a BVH from the given set of primitives.
-void build_bvh(bvh_tree* bvh, bool high_quality = false);
+void build_bvh(bvh_tree& bvh, bool high_quality = false);
 // Update the node bounds for a shape bvh.
-void refit_bvh(bvh_tree* bvh);
+void refit_bvh(bvh_tree& bvh);
 
 // Build a BVH from the given set of primitives.
 // Uses Embree if available and requested, otherwise the standard build.
-void build_bvh_embree(bvh_tree* bvh, bool high_quality = false);
-void clear_bvh_embree(bvh_tree* bvh);
+void build_bvh_embree(bvh_tree& bvh, bool high_quality = false);
+void clear_bvh_embree(bvh_tree& bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `dist`, the instance
 // id `iid`, the shape id `sid`, the shape element index `eid` and the
 // shape barycentric coordinates `element_uv`.
-bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
+bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray, bool find_any,
     float& dist, int& iid, int& eid, vec2f& element_uv);
 
 // Find a shape element that overlaps a point within a given distance
@@ -2664,7 +2664,7 @@ bool intersect_bvh(const bvh_tree* bvh, const ray3f& ray, bool find_any,
 // `find_any`. Returns the point distance `dist`, the instance id `iid`, the
 // shape id `sid`, the shape element index `eid` and the shape barycentric
 // coordinates `element_uv`.
-bool overlap_bvh(const bvh_tree* bvh, const vec3f& pos, float max_dist,
+bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
     bool find_any, float& dist, int& iid, int& eid, vec2f& element_uv);
 
 }  // namespace ygl
@@ -3324,12 +3324,12 @@ bbox3f compute_scene_bounds(const yocto_scene* scene);
 vector<vec3f> compute_shape_normals(const yocto_shape* shape);
 
 // Updates/refits bvh.
-bvh_tree* make_shape_bvh(
+bvh_tree make_shape_bvh(
     const yocto_shape* shape, bool high_quality, bool embree = false);
-bvh_tree* make_scene_bvh(
+bvh_tree make_scene_bvh(
     const yocto_scene* scene, bool high_quality, bool embree = false);
-void refit_shape_bvh(const yocto_shape* shape, bvh_tree* bvh);
-void refit_scene_bvh(const yocto_scene* scene, bvh_tree* bvh);
+void refit_shape_bvh(const yocto_shape* shape, bvh_tree& bvh);
+void refit_scene_bvh(const yocto_scene* scene, bvh_tree& bvh);
 
 // Apply subdivision and displacement rules.
 yocto_shape* tesselate_shape(const yocto_shape* shape);
@@ -3364,10 +3364,10 @@ struct scene_intersection {
 
 // Intersects a ray with the scene.
 scene_intersection intersect_scene(const yocto_scene* scene,
-    const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
+    const bvh_tree& bvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with a scene instance.
 scene_intersection intersect_scene(const yocto_scene* scene, int instance_id,
-    const bvh_tree* bvh, const ray3f& ray, bool find_any = false);
+    const bvh_tree& bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f evaluate_shape_position(
@@ -3589,19 +3589,19 @@ trace_state make_trace_state(
     const yocto_scene* scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree* bvh,
+image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree& bvh,
     const trace_lights& lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 bool trace_samples(trace_state& state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights& lights, const trace_params& params);
+    const bvh_tree& bvh, const trace_lights& lights, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
 void trace_async_start(trace_state& state, const yocto_scene* scene,
-    const bvh_tree* bvh, const trace_lights& lights, const trace_params& params);
+    const bvh_tree& bvh, const trace_lights& lights, const trace_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state& state);
 

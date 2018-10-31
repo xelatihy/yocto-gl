@@ -35,7 +35,7 @@
 struct app_state {
     // scene
     unique_ptr<yocto_scene> scene = nullptr;
-    unique_ptr<bvh_tree>    bvh   = nullptr;
+    bvh_tree    bvh   = {};
 
     // rendering params
     string       filename   = "scene.json";
@@ -168,18 +168,18 @@ bool update(app_state* app) {
             for (auto sid = 0; sid < app->scene->shapes.size(); sid++) {
                 if (app->scene->shapes[sid] == get<1>(sel)) {
                     refit_shape_bvh(
-                        (yocto_shape*)get<1>(sel), app->bvh->shape_bvhs[sid]);
+                        (yocto_shape*)get<1>(sel), app->bvh.shape_bvhs[sid]);
                     break;
                 }
             }
-            refit_scene_bvh(app->scene.get(), app->bvh.get());
+            refit_scene_bvh(app->scene.get(), app->bvh);
         }
         if (get<0>(sel) == "instance") {
-            refit_scene_bvh(app->scene.get(), app->bvh.get());
+            refit_scene_bvh(app->scene.get(), app->bvh);
         }
         if (get<0>(sel) == "node") {
             update_transforms(app->scene.get(), 0);
-            refit_scene_bvh(app->scene.get(), app->bvh.get());
+            refit_scene_bvh(app->scene.get(), app->bvh);
         }
     }
     app->update_list.clear();
@@ -188,7 +188,7 @@ bool update(app_state* app) {
     app->trace_start = get_time();
     app->state       = make_trace_state(app->scene.get(), app->params);
     trace_async_start(
-        app->state, app->scene.get(), app->bvh.get(), app->lights, app->params);
+        app->state, app->scene.get(), app->bvh, app->lights, app->params);
 
     // updated
     return true;
@@ -243,7 +243,7 @@ void run_ui(app_state* app) {
                         app->state.rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
                 auto isec   = intersect_scene(
-                    app->scene.get(), app->bvh.get(), ray);
+                    app->scene.get(), app->bvh, ray);
                 if (isec.instance_id >= 0) app->selection = app->scene->instances[isec.instance_id];
             }
         }
@@ -314,8 +314,8 @@ int main(int argc, char* argv[]) {
     log_validation_errors(app->scene.get());
 
     // build bvh
-    app->bvh = unique_ptr<bvh_tree>(
-        make_scene_bvh(app->scene.get(), true, embree));
+    app->bvh = 
+        make_scene_bvh(app->scene.get(), true, embree);
 
     // init renderer
     app->lights = make_trace_lights(app->scene.get(), app->params);
@@ -333,7 +333,7 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     app->trace_start = get_time();
     trace_async_start(
-        app->state, app->scene.get(), app->bvh.get(), app->lights, app->params);
+        app->state, app->scene.get(), app->bvh, app->lights, app->params);
 
     // run interactive
     run_ui(app);

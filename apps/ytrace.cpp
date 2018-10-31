@@ -85,7 +85,7 @@ int main(int argc, char* argv[]) {
     log_validation_errors(scene.get());
 
     // build bvh
-    auto bvh = unique_ptr<bvh_tree>{make_scene_bvh(scene.get(), true, embree)};
+    auto bvh = make_scene_bvh(scene.get(), true, embree);
 
     // init renderer
     auto lights = make_trace_lights(scene.get(), params);
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]) {
     auto done  = false;
     auto scope = log_trace_begin("rendering image");
     while (!done) {
-        done = trace_samples(state, scene.get(), bvh.get(), lights, params);
+        done = trace_samples(state, scene.get(), bvh, lights, params);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(state.current_sample) + "." + get_extension(imfilename));

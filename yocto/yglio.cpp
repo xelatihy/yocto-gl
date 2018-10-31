@@ -5337,6 +5337,28 @@ bool serialize_bin_object(vector<T*>& vec, file_stream& fs, bool save) {
 
 // Serialize vector of pointers
 template <typename T>
+bool serialize_bin_object(vector<T>& vec, file_stream& fs, bool save) {
+    if (save) {
+        auto count = (size_t)vec.size();
+        if (!serialize_bin_value(count, fs, true)) return false;
+        for (auto i = 0; i < vec.size(); ++i) {
+            if (!serialize_bin_object(vec[i], fs, true)) return false;
+        }
+        return true;
+    } else {
+        auto count = (size_t)0;
+        if (!serialize_bin_value(count, fs, false)) return false;
+        vec = vector<T>(count);
+        for (auto i = 0; i < vec.size(); ++i) {
+            vec[i] = T{};
+            if (!serialize_bin_object(vec[i], fs, false)) return false;
+        }
+        return true;
+    }
+}
+
+// Serialize vector of pointers
+template <typename T>
 bool serialize_bin_object(
     vector<T*>& vec, const yocto_scene* scene, file_stream& fs, bool save) {
     if (save) {
@@ -5413,17 +5435,17 @@ bool serialize_bin_object(yocto_camera* camera, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_tree* bvh, file_stream& fs, bool save) {
-    if (!serialize_bin_value(bvh->positions, fs, save)) return false;
-    if (!serialize_bin_value(bvh->radius, fs, save)) return false;
-    if (!serialize_bin_value(bvh->points, fs, save)) return false;
-    if (!serialize_bin_value(bvh->lines, fs, save)) return false;
-    if (!serialize_bin_value(bvh->triangles, fs, save)) return false;
-    if (!serialize_bin_value(bvh->quads, fs, save)) return false;
-    if (!serialize_bin_value(bvh->nodes, fs, save)) return false;
-    if (!serialize_bin_value(bvh->instances, fs, save)) return false;
-    if (!serialize_bin_object(bvh->shape_bvhs, fs, save)) return false;
-    if (!serialize_bin_value(bvh->nodes, fs, save)) return false;
+bool serialize_bin_object(bvh_tree& bvh, file_stream& fs, bool save) {
+    if (!serialize_bin_value(bvh.positions, fs, save)) return false;
+    if (!serialize_bin_value(bvh.radius, fs, save)) return false;
+    if (!serialize_bin_value(bvh.points, fs, save)) return false;
+    if (!serialize_bin_value(bvh.lines, fs, save)) return false;
+    if (!serialize_bin_value(bvh.triangles, fs, save)) return false;
+    if (!serialize_bin_value(bvh.quads, fs, save)) return false;
+    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
+    if (!serialize_bin_value(bvh.instances, fs, save)) return false;
+    if (!serialize_bin_object(bvh.shape_bvhs, fs, save)) return false;
+    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
     return true;
 }
 
