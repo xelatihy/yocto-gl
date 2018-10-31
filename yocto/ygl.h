@@ -319,6 +319,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <deque>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -359,6 +360,7 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
+using std::deque;
 using namespace std::string_literals;
 
 using byte = unsigned char;

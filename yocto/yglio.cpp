@@ -57,8 +57,6 @@
 #include "yglio.h"
 
 #include <cstdlib>
-#include <deque>
-#include <map>
 #include <regex>
 
 #include <array>
@@ -2307,26 +2305,26 @@ bool parse_json_object(
 
 // Serialize enum
 bool dump_json_value(json& js, const yocto_interpolation_type& val) {
-    static auto names = map<yocto_interpolation_type, string>{
-        {yocto_interpolation_type::linear, "linear"},
-        {yocto_interpolation_type::step, "step"},
-        {yocto_interpolation_type::bezier, "bezier"},
+    static auto names = unordered_map<int, string>{
+        {(int)yocto_interpolation_type::linear, "linear"},
+        {(int)yocto_interpolation_type::step, "step"},
+        {(int)yocto_interpolation_type::bezier, "bezier"},
     };
-    auto vals = names.at(val);
+    auto vals = names.at((int)val);
     return dump_json_value(js, vals);
 }
 
 // Serialize enum
 bool parse_json_value(const json& js, yocto_interpolation_type& val) {
-    static auto names = map<string, yocto_interpolation_type>{
-        {"linear", yocto_interpolation_type::linear},
-        {"step", yocto_interpolation_type::step},
-        {"bezier", yocto_interpolation_type::bezier},
+    static auto names = unordered_map<string, int>{
+        {"linear", (int)yocto_interpolation_type::linear},
+        {"step", (int)yocto_interpolation_type::step},
+        {"bezier", (int)yocto_interpolation_type::bezier},
     };
     auto vals = ""s;
     if (!parse_json_value(js, vals)) return false;
     try {
-        val = names.at(js.get<string>());
+        val = (yocto_interpolation_type)names.at(js.get<string>());
     } catch (...) {
         return false;
     }
@@ -2997,9 +2995,9 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     auto smoothing = true;
 
     // vertices
-    auto opos      = std::deque<vec3f>();
-    auto onorm     = std::deque<vec3f>();
-    auto otexcoord = std::deque<vec2f>();
+    auto opos      = deque<vec3f>();
+    auto onorm     = deque<vec3f>();
+    auto otexcoord = deque<vec2f>();
 
     // object maps
     auto tmap = unordered_map<string, int>();
