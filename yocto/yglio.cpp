@@ -2240,118 +2240,6 @@ struct obj_vertex_hash {
     }
 };
 
-// prepare obj line (remove comments and normalize whitespace)
-void normalize_obj_line(char* s) {
-    while (*s) {
-        if (*s == '\t' || *s == '\r' || *s == '\n') {
-            *s++ = ' ';
-        } else if (*s == '#') {
-            *s = 0;
-            break;
-        } else {
-            s++;
-        }
-    }
-}
-
-// parse stream
-inline int parse_int(char*& s) {
-    #if YGL_FASTPARSE
-    if (!*s) return 0;
-    while (*s == ' ') s++;
-    if (!*s) return 0;
-    auto val = 0;
-    auto sn  = (*s == '-') ? -1 : 1;
-    if (*s == '-' || *s == '+') s++;
-    while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
-    val *= sn;
-    return val;
-    #else
-    auto val = 0;
-    auto n = 0;
-    sscanf(s, "%d%n", &val, &n);
-    s+=n;
-    return val;
-    #endif
-}
-inline bool   parse_bool(char*& s) { return (bool)parse_int(s); }
-inline double parse_double(char*& s) {
-    #if YGL_FASTPARSE
-    if (!*s) return 0;
-    while (*s == ' ') s++;
-    auto val      = 0.0;
-    auto mantissa = 0ll, fractional = 0ll, fractional_length = 0ll, exponent = 0ll;
-    auto sn = (*s == '-') ? -1 : 1;
-    if (*s == '-' || *s == '+') s++;
-    while (*s >= '0' && *s <= '9') mantissa = mantissa * 10 + (*s++ - '0');
-    if (*s == '.') {
-        s++;
-        while (*s >= '0' && *s <= '9') {
-            fractional = fractional * 10 + (*s++ - '0');
-            fractional_length++;
-        }
-    }
-    mantissa *= sn;
-    fractional *= sn;
-    if (*s == 'e' || *s == 'E') {
-        s++;
-        auto en = (*s == '-') ? -1 : 1;
-        if (*s == '-' || *s == '+') s++;
-        while (*s >= '0' && *s <= '9') exponent = exponent * 10 + (*s++ - '0');
-        exponent *= en;
-    }
-    val = (double)mantissa;
-    if (fractional)
-        val += fractional * std::pow(10.0, -(double)fractional_length);
-    if (exponent) val *= std::pow(10.0, (double)exponent);
-    return val;
-    #else
-    auto val = 0.0;
-    auto n = 0;
-    sscanf(s, "%lf%n", &val, &n);
-    s+=n;
-    return val;
-    #endif
-}
-inline float  parse_float(char*& s) { 
-    #if YGL_FASTPARSE
-    return (float)parse_double(s); 
-    #else
-    auto val = 0.0f;
-    auto n = 0;
-    sscanf(s, "%f%n", &val, &n);
-    s+=n;
-    return val;
-    #endif
-}
-inline string parse_string(char*& s) {
-    if (!*s) return "";
-    char buf[4096];
-    auto valb = buf;
-    while (*s == ' ') s++;
-    while (*s && *s != ' ') *valb++ = *s++;
-    *valb = 0;
-    return buf;
-}
-inline vec2f parse_vec2f(char*& s) { return {parse_float(s), parse_float(s)}; }
-inline vec3f parse_vec3f(char*& s) {
-    return {parse_float(s), parse_float(s), parse_float(s)};
-}
-inline vec4f parse_vec4f(char*& s) {
-    return {parse_float(s), parse_float(s), parse_float(s), parse_float(s)};
-}
-inline vec2i parse_vec2i(char*& s) { return {parse_int(s), parse_int(s)}; }
-inline vec3i parse_vec3i(char*& s) {
-    return {parse_int(s), parse_int(s), parse_int(s)};
-}
-inline vec4i parse_vec4i(char*& s) {
-    return {parse_int(s), parse_int(s), parse_int(s), parse_int(s)};
-}
-inline frame3f parse_frame3f(char*& s) {
-    if (!*s) return identity_frame3f;
-    return {parse_vec3f(s), parse_vec3f(s), parse_vec3f(s), parse_vec3f(s)};
-}
-
 inline bool parse_value(parse_string_view& view, obj_vertex& val) {
     val     = obj_vertex{0, 0, 0};
     if(!parse_value(view, val.position)) return false;
@@ -5340,17 +5228,6 @@ bool save_mesh(const string& filename, const vector<int>& points,
     }
 }
 
-// prepare obj line (remove comments and normalize whitespace)
-void normalize_ply_line(char* s) {
-    while (*s) {
-        if (*s == '\t' || *s == '\r' || *s == '\n') {
-            *s++ = ' ';
-        } else {
-            s++;
-        }
-    }
-}
-
 // Load ply mesh
 bool load_ply(const string& filename, ply_data& ply) {
     // open file
@@ -5361,31 +5238,33 @@ bool load_ply(const string& filename, ply_data& ply) {
     // parse header
     ply        = ply_data();
     auto ascii = false;
-    char buf[4096];
     auto line = ""s;
     while (read_line(fs, line)) {
-        memcpy(buf, line.c_str(), line.size() + 1);
-        normalize_ply_line(buf);
-        auto ss  = buf;
-        auto cmd = parse_string(ss);
+        auto view  = parse_string_view{line.c_str()};
+        auto cmd = ""s;
+        parse_value(view, cmd);
         if (cmd == "") continue;
         if (cmd == "ply") {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
-            auto fmt = parse_string(ss);
+            auto fmt = ""s;
+            parse_value(view, fmt);
             if (fmt != "ascii" && fmt != "binary_little_endian") return false;
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
             auto elem  = ply_element();
-            elem.name  = parse_string(ss);
-            elem.count = parse_int(ss);
+            parse_value(view, elem.name);
+            parse_value(view, elem.count);
             ply.elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
-            auto type = parse_string(ss);
+            auto type = ""s;
+            parse_value(view, type);
             if (type == "list") {
-                auto count_type = parse_string(ss);
-                auto elem_type  = parse_string(ss);
+                auto count_type = ""s;
+                parse_value(view, count_type);
+                auto elem_type  = ""s;
+                parse_value(view, elem_type);
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
                 if (elem_type != "int") log_error("unsupported ply list type");
@@ -5399,7 +5278,7 @@ bool load_ply(const string& filename, ply_data& ply) {
             } else {
                 return false;
             }
-            prop.name = parse_string(ss);
+            parse_value(view, prop.name);
             prop.scalars.resize(ply.elements.back().count);
             if (prop.type == ply_type::ply_int_list)
                 prop.lists.resize(ply.elements.back().count);
@@ -5414,18 +5293,17 @@ bool load_ply(const string& filename, ply_data& ply) {
     // parse content
     for (auto& elem : ply.elements) {
         for (auto vid = 0; vid < elem.count; vid++) {
-            auto ss = (char*)nullptr;
+            auto view = parse_string_view{};
             if (ascii) {
                 if (!read_line(fs, line)) return false;
-                memcpy(buf, line.c_str(), line.size() + 1);
-                ss = buf;
+                view = parse_string_view{line.c_str()};
             }
             for (auto pid = 0; pid < elem.properties.size(); pid++) {
                 auto& prop = elem.properties[pid];
                 if (prop.type == ply_type::ply_float) {
                     auto v = 0.0f;
                     if (ascii) {
-                        v = parse_float(ss);
+                        parse_value(view, v);
                     } else {
                         if (!read_value(fs, v)) return false;
                     }
@@ -5433,7 +5311,7 @@ bool load_ply(const string& filename, ply_data& ply) {
                 } else if (prop.type == ply_type::ply_int) {
                     auto v = 0;
                     if (ascii) {
-                        v = parse_int(ss);
+                        parse_value(view, v);
                     } else {
                         if (!read_value(fs, v)) return false;
                     }
@@ -5441,7 +5319,8 @@ bool load_ply(const string& filename, ply_data& ply) {
                 } else if (prop.type == ply_type::ply_uchar) {
                     auto vc = (unsigned char)0;
                     if (ascii) {
-                        auto v = parse_int(ss);
+                        auto v = 0;
+                        parse_value(view, v);
                         vc     = (unsigned char)v;
                     } else {
                         if (!read_value(fs, vc)) return false;
@@ -5450,7 +5329,8 @@ bool load_ply(const string& filename, ply_data& ply) {
                 } else if (prop.type == ply_type::ply_int_list) {
                     auto vc = (unsigned char)0;
                     if (ascii) {
-                        auto v = parse_int(ss);
+                        auto v = 0;
+                        parse_value(view, v);
                         vc     = (unsigned char)v;
                     } else {
                         if (!read_value(fs, vc)) return false;
@@ -5458,7 +5338,9 @@ bool load_ply(const string& filename, ply_data& ply) {
                     prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
                         if (ascii) {
-                            prop.lists[vid][i] = parse_int(ss);
+                            auto v = 0;
+                        parse_value(view, v);
+                            prop.lists[vid][i] = v;
                         } else {
                             if (!read_value(fs, prop.lists[vid][i]))
                                 return false;
