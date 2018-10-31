@@ -1706,11 +1706,11 @@ void build_embree_bvh(bvh_shape& bvh) {
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
                                             0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
-        auto triangles = rtcSetNewGeometryBuffer(embree_geom,
+        auto quads = rtcSetNewGeometryBuffer(embree_geom,
                                                  RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
                                                  bvh.quads.size());
         memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
-        memcpy(triangles, bvh.triangles.data(), bvh.triangles.size() * 12);
+        memcpy(quads, bvh.quads.data(), bvh.quads.size() * 16);
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else {
