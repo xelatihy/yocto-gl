@@ -5683,7 +5683,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
         pdf += distance_squared(light_position, position) /
                (abs(dot(light_normal, direction)) * area);
         // continue
-        ray  = make_ray(light_position, direction);
+        ray  = make_ray(light_position + direction * 1e-3f, direction);
         isec = intersect_scene(scene, instance_id, bvh, ray);
     }
     return pdf;

@@ -2983,11 +2983,9 @@ bool save_mtl(
             print(fs, "  Kt {}\n", material.transmission);
         if (material.roughness != 1.0f)
             print(fs, "  Ns {}\n",
-                (int)clamp(2 / pow(material.roughness + 1e-10f, 4.0f) - 2, 0.0f,
-                    1.0e12f));
+                (int)clamp(2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) - 2, 0.0f,
+                    1.0e9f));
         if (material.opacity != 1.0f) print(fs, "  d {}\n", material.opacity);
-        if (material.roughness != -1.0f)
-            print(fs, "  Pr {}\n", material.roughness);
         if (material.emission_texture >= 0)
             print(fs, "  map_Ke {}\n",
                 scene.textures[material.emission_texture].filename);
