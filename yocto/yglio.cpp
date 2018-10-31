@@ -2372,18 +2372,19 @@ inline obj_vertex parse_obj_vertex(char*& s) {
 }
 
 // Input for OBJ textures
-inline obj_texture_info parse_obj_texture_info(char*& s) {
+inline bool parse_value(parse_string_view& view, obj_texture_info& info) {
     // initialize
-    auto info = obj_texture_info();
+    info = obj_texture_info();
 
     // get tokens
     auto tokens = vector<string>();
     while (true) {
-        auto v = parse_string(s);
-        if (v == "") break;
-        tokens.push_back(v);
+        auto token = ""s;
+        parse_value(view, token);
+        if (token == "") break;
+        tokens.push_back(token);
     }
-    if (tokens.empty()) return info;
+    if (tokens.empty()) return false;
 
     // texture name
     info.path = normalize_path(tokens.back());
@@ -2395,7 +2396,7 @@ inline obj_texture_info parse_obj_texture_info(char*& s) {
         if (tokens[i] == "-clamp") info.clamp = true;
     }
 
-    return info;
+    return true;
 }
 
 // Load obj materials
@@ -2410,16 +2411,14 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
 
     // read the file line by line
     auto line = ""s;
-    char buf[4096];
     while (read_line(fs, line)) {
         // line
-        assert(line.size() < 4096);
-        memcpy(buf, line.c_str(), line.size() + 1);
-        normalize_obj_line(buf);
-        auto ss = buf;
+        if(line.find('#') != line.npos) line = line.substr(line.find('#')+1);
+        auto view = parse_string_view{line.c_str()};
 
         // get command
-        auto cmd = parse_string(ss);
+        auto cmd = ""s;
+        parse_value(view, cmd);
         if (cmd == "") continue;
 
         // possible token values
@@ -2427,68 +2426,68 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
             if (!first && cb.material) cb.material(material);
             first         = false;
             material      = obj_material();
-            material.name = parse_string(ss);
+            parse_value(view, material.name);
         } else if (cmd == "illum") {
-            material.illum = parse_int(ss);
+            parse_value(view, material.illum);
         } else if (cmd == "Ke") {
-            material.ke = parse_vec3f(ss);
+            parse_value(view, material.ke);
         } else if (cmd == "Kd") {
-            material.kd = parse_vec3f(ss);
+            parse_value(view, material.kd);
         } else if (cmd == "Ks") {
-            material.ks = parse_vec3f(ss);
+            parse_value(view, material.ks);
         } else if (cmd == "Kt") {
-            material.kt = parse_vec3f(ss);
+            parse_value(view, material.kt);
         } else if (cmd == "Tf") {
             material.kt = {-1, -1, -1};
-            material.kt = parse_vec3f(ss);
+            parse_value(view, material.kt);
             if (material.kt.y < 0)
                 material.kt = {material.kt.x, material.kt.x, material.kt.x};
             if (flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
             auto tr = vec3f{-1, -1, -1};
-            tr      = parse_vec3f(ss);
+            parse_value(view, tr);
             if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
             material.op = (tr.x + tr.y + tr.z) / 3;
             if (flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
-            material.ns = parse_float(ss);
+            parse_value(view, material.ns);
             material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
             if (material.rs < 0.01f) material.rs = 0;
             if (material.rs > 0.99f) material.rs = 1;
         } else if (cmd == "d") {
-            material.op = parse_float(ss);
+            parse_value(view, material.op);
         } else if (cmd == "Pr" || cmd == "rs") {
-            material.rs = parse_float(ss);
+            parse_value(view, material.rs);
         } else if (cmd == "map_Ke") {
-            material.ke_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.ke_txt);
         } else if (cmd == "map_Kd") {
-            material.kd_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.kd_txt);
         } else if (cmd == "map_Ks") {
-            material.ks_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.ks_txt);
         } else if (cmd == "map_Tr") {
-            material.kt_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.kt_txt);
         } else if (cmd == "map_d" || cmd == "map_Tr") {
-            material.op_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.op_txt);
         } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            material.rs_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.rs_txt);
         } else if (cmd == "map_occ" || cmd == "occ") {
-            material.occ_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.occ_txt);
         } else if (cmd == "map_bump" || cmd == "bump") {
-            material.bump_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.bump_txt);
         } else if (cmd == "map_disp" || cmd == "disp") {
-            material.disp_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.disp_txt);
         } else if (cmd == "map_norm" || cmd == "norm") {
-            material.norm_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.norm_txt);
         } else if (cmd == "Ve") {
-            material.ve = parse_vec3f(ss);
+            parse_value(view, material.ve);
         } else if (cmd == "Va") {
-            material.va = parse_vec3f(ss);
+            parse_value(view, material.va);
         } else if (cmd == "Vd") {
-            material.vd = parse_vec3f(ss);
+            parse_value(view, material.vd);
         } else if (cmd == "Vg") {
-            material.vg = parse_float(ss);
+            parse_value(view, material.vg);
         } else if (cmd == "map_Vd") {
-            material.vd_txt = parse_obj_texture_info(ss);
+            parse_value(view, material.vd_txt);
         }
     }
 
