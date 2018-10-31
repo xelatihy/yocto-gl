@@ -59,7 +59,7 @@ struct app_state {
     gltexture                  gl_txt         = {};
 };
 
-void draw_glwidgets(glwindow* win) {
+void draw_glwidgets(const glwindow& win) {
     auto& app = *(app_state*)get_user_pointer(win);
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yitrace")) {
@@ -131,7 +131,7 @@ void draw_glwidgets(glwindow* win) {
     end_glwidgets_frame(win);
 }
 
-void draw(glwindow* win) {
+void draw(const glwindow& win) {
     auto& app      = *(app_state*)get_user_pointer(win);
     auto  win_size = get_glwindow_size(win);
     auto  fb_size  = get_glframebuffer_size(win);
@@ -191,7 +191,8 @@ void run_ui(app_state& app) {
     // window
     auto width  = clamp(app.state.rendered_image.width, 256, 1440);
     auto height = clamp(app.state.rendered_image.height, 256, 1440);
-    auto win    = make_glwindow(width, height, "yitrace", &app, draw);
+    auto win = glwindow();
+    init_glwindow(win, width, height, "yitrace", &app, draw);
 
     // init widgets
     init_glwidgets(win);

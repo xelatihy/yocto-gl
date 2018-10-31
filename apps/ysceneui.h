@@ -44,22 +44,22 @@ inline const map<yocto_interpolation_type, string>& animation_type_names() {
 }
 
 template <typename T>
-inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
+inline void draw_glwidgets_scene_tree(const glwindow& win, const string& lbl_,
     yocto_scene& scene, int index, const vector<T>& vals,
     tuple<string, int>& sel, const string& sel_type);
 
 template <typename T>
-inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
+inline void draw_glwidgets_scene_tree(const glwindow& win, const string& lbl_,
     yocto_scene& scene, int index, const vector<T*>& vals,
     tuple<string, int>& sel, const string& sel_type);
 
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_camera& val, tuple<string, int>& sel) {}
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_texture& val, tuple<string, int>& sel) {}
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_voltexture& val, tuple<string, int>& sel) {}
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_material& val, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(win, "emission", scene, val.emission_texture,
         scene.textures, sel, "texture");
@@ -74,23 +74,23 @@ inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
     draw_glwidgets_scene_tree(win, "normal", scene, val.normal_texture,
         scene.textures, sel, "texture");
 }
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_shape& val, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(
         win, "material", scene, val.material, scene.materials, sel, "material");
 }
 
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_instance& val, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(
         win, "shape", scene, val.shape, scene.shapes, sel, "shape");
 }
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_environment& val, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(win, "emission", scene, val.emission_texture,
         scene.textures, sel, "texture");
 }
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_scene_node& val, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(
         win, "instance", scene, val.instance, scene.instances, sel, "instance");
@@ -106,7 +106,7 @@ inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
             scene.nodes, sel, "node");
     }
 }
-inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_animation& val, tuple<string, int>& sel) {
     auto tid = 0;
     for (auto tg : val.node_targets) {
@@ -116,7 +116,7 @@ inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
 }
 
 template <typename T>
-inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
+inline void draw_glwidgets_scene_tree(const glwindow& win, const string& lbl_,
     yocto_scene& scene, int index, const vector<T>& vals,
     tuple<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
@@ -131,7 +131,7 @@ inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
 }
 
 template <typename T>
-inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
+inline void draw_glwidgets_scene_tree(const glwindow& win, const string& lbl_,
     yocto_scene& scene, int index, const vector<T*>& vals,
     tuple<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
@@ -146,7 +146,7 @@ inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
 }
 
 inline void draw_glwidgets_scene_tree(
-    glwindow* win, yocto_scene& scene, tuple<string, int>& sel) {
+    const glwindow& win, yocto_scene& scene, tuple<string, int>& sel) {
     if (!scene.cameras.empty() && begin_treenode_glwidget(win, "cameras")) {
         for (auto v = 0; v < scene.cameras.size(); v++)
             draw_glwidgets_scene_tree(
@@ -200,7 +200,7 @@ inline void draw_glwidgets_scene_tree(
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_camera& val, yocto_scene& scene) {
+    const glwindow& win, yocto_camera& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_slider_glwidget(win, "frame.x", val.frame.x.x, -1, 1);
@@ -217,7 +217,7 @@ inline bool draw_glwidgets_scene_inspector(
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_texture& val, yocto_scene& scene) {
+    const glwindow& win, yocto_texture& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_textinput_glwidget(win, "path", val.filename);
@@ -232,7 +232,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_material& val, yocto_scene& scene) {
+    const glwindow& win, yocto_material& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_coloredit_glwidget(win, "emission", val.emission);  // TODO:
@@ -275,7 +275,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_shape& val, yocto_scene& scene) {
+    const glwindow& win, yocto_shape& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_textinput_glwidget(win, "path", val.filename);
@@ -294,7 +294,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_instance& val, yocto_scene& scene) {
+    const glwindow& win, yocto_instance& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_slider_glwidget(win, "frame.x", val.frame.x, -1, 1);
@@ -306,7 +306,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_environment& val, yocto_scene& scene) {
+    const glwindow& win, yocto_environment& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_slider_glwidget(win, "frame.x", val.frame.x, -1, 1);
@@ -320,7 +320,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_scene_node& val, yocto_scene& scene) {
+    const glwindow& win, yocto_scene_node& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_combobox_glwidget(
@@ -342,7 +342,7 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_animation& val, yocto_scene& scene) {
+    const glwindow& win, yocto_animation& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_textinput_glwidget(win, "path", val.filename);
@@ -360,7 +360,7 @@ inline bool draw_glwidgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
+inline bool draw_glwidgets_scene_tree(const glwindow& win, const string& lbl,
     yocto_scene& scene, tuple<string, int>& sel,
     vector<tuple<string, int>>& update_list, int height) {
     draw_glwidgets_scene_tree(win, scene, sel);
@@ -388,7 +388,7 @@ inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
     return update_list.size() != update_len;
 }
 
-inline bool draw_glwidgets_scene_inspector(glwindow* win, const string& lbl,
+inline bool draw_glwidgets_scene_inspector(const glwindow& win, const string& lbl,
     yocto_scene& scene, tuple<string, int>& sel,
     vector<tuple<string, int>>& update_list, int height) {
     if (get<0>(sel) == "") return false;

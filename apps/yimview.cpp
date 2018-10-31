@@ -177,7 +177,7 @@ void add_new_image(app_state& app, const string& filename, const string& outname
     app.img_id = (int)app.imgs.size() - 1;
 }
 
-void draw_glwidgets(glwindow* win) {
+void draw_glwidgets(const glwindow& win) {
     auto& app    = *(app_state*)get_user_pointer(win);
     auto  edited = false;
     begin_glwidgets_frame(win);
@@ -246,7 +246,7 @@ void draw_glwidgets(glwindow* win) {
     }
 }
 
-void draw(glwindow* win) {
+void draw(const glwindow& win) {
     auto& app      = *(app_state*)get_user_pointer(win);
     auto  img      = app.imgs.at(app.img_id);
     auto  win_size = get_glwindow_size(win);
@@ -276,7 +276,7 @@ void update(app_state& app) {
     }
 }
 
-void drop_callback(glwindow* win, const vector<string>& paths) {
+void drop_callback(const glwindow& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_user_pointer(win);
     for (auto path : paths) add_new_image(app, path, "");
 }
@@ -285,7 +285,8 @@ void run_ui(app_state& app) {
     // window
     auto img   = app.imgs.at(app.img_id);
     auto width = 720 + 320, height = 720;
-    auto win = make_glwindow(720 + 320, 720, "yimview", &app, draw);
+    auto win = glwindow();
+    init_glwindow(win, 720 + 320, 720, "yimview", &app, draw);
     set_drop_callback(win, drop_callback);
 
     // init widgets

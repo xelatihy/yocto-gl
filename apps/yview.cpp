@@ -84,7 +84,7 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
     bool edges, float exposure, float gamma, float near_plane, float far_plane);
 
 // draw with shading
-void draw(glwindow* win) {
+void draw(const glwindow& win) {
     auto& app              = *(app_state*)get_user_pointer(win);
     auto  framebuffer_size = get_glframebuffer_size(win);
     app.resolution         = framebuffer_size.y;
@@ -650,7 +650,7 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
     if (wireframe) set_glwireframe(false);
 }
 
-draw_glstate& init_draw_state(glwindow* win) {
+draw_glstate init_draw_state(const glwindow& win) {
     auto& app   = *(app_state*)get_user_pointer(win);
     auto  state = draw_glstate();
     // load textures and vbos
@@ -726,7 +726,8 @@ void run_ui(app_state& app) {
     auto& camera = app.scene.cameras.at(app.camid);
     auto width = clamp(evaluate_image_size(camera, app.resolution).x, 256, 1440),
          height = clamp(evaluate_image_size(camera, app.resolution).y, 256, 1440);
-    auto win    = make_glwindow(width, height, "yview", &app, draw);
+    auto win    = glwindow();
+    init_glwindow(win, width, height, "yview", &app, draw);
 
     // init widget
     init_glwidgets(win);
