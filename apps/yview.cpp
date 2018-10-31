@@ -40,15 +40,15 @@ struct glshape {
 };
 
 struct draw_glstate {
-    glprogram                                      prog = {};
-    unordered_map<const yocto_shape*, glshape>     shps;
-    unordered_map<const yocto_texture*, gltexture> txts;
+    glprogram         prog = {};
+    vector<glshape>   shps;
+    vector<gltexture> txts;
 };
 
 // Application state
 struct app_state {
     // scene
-    unique_ptr<yocto_scene> scene = nullptr;
+    yocto_scene scene = {};
 
     // parameters
     string filename    = "scene.json";  // scene name
@@ -66,31 +66,31 @@ struct app_state {
     float  near_plane  = 0.01f;         // near plane
     float  far_plane   = 10000.0f;      // far plane
 
-    unique_ptr<draw_glstate> state = nullptr;
+    draw_glstate state = {};
 
-    bool                         widgets_open   = false;
-    bool                         navigation_fps = false;
-    void*                        selection      = nullptr;
-    vector<tuple<string, void*>> update_list;
-    float                        time       = 0;
-    string                       anim_group = "";
-    vec2f                        time_range = zero2f;
-    bool                         animate    = false;
+    bool                       widgets_open   = false;
+    bool                       navigation_fps = false;
+    tuple<string, int>         selection      = {"", -1};
+    vector<tuple<string, int>> update_list;
+    float                      time       = 0;
+    string                     anim_group = "";
+    vec2f                      time_range = zero2f;
+    bool                       animate    = false;
 };
 
-void draw_glscene(draw_glstate* state, const yocto_scene* scene,
-    const yocto_camera* camera, const vec2i& viewport_size,
-    const void* highlighted, bool eyelight, bool wireframe, bool edges,
-    float exposure, float gamma, float near_plane, float far_plane);
+void draw_glscene(draw_glstate& state, const yocto_scene& scene,
+    const yocto_camera& camera, const vec2i& viewport_size,
+    const tuple<string, int>& highlighted, bool eyelight, bool wireframe,
+    bool edges, float exposure, float gamma, float near_plane, float far_plane);
 
 // draw with shading
-void draw(glwindow* win) {
-    auto app              = (app_state*)get_user_pointer(win);
-    auto framebuffer_size = get_glframebuffer_size(win);
-    app->resolution       = framebuffer_size.y;
+void draw(const glwindow& win) {
+    auto& app              = *(app_state*)get_user_pointer(win);
+    auto  framebuffer_size = get_glframebuffer_size(win);
+    app.resolution         = framebuffer_size.y;
 
     static auto last_time = 0.0f;
-    for (auto& sel : app->update_list) {
+    for (auto& sel : app.update_list) {
         if (get<0>(sel) == "texture") {
             // TODO: update texture
             printf("texture update not supported\n");
@@ -104,55 +104,55 @@ void draw(glwindow* win) {
             printf("shape update not supported\n");
         }
         if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
-            app->time != last_time) {
-            update_transforms(app->scene.get(), app->time, app->anim_group);
-            last_time = app->time;
+            app.time != last_time) {
+            update_transforms(app.scene, app.time, app.anim_group);
+            last_time = app.time;
         }
     }
-    app->update_list.clear();
+    app.update_list.clear();
 
-    auto camera = app->scene->cameras.at(app->camid);
+    auto& camera = app.scene.cameras.at(app.camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    draw_glscene(app->state.get(), app->scene.get(), camera, framebuffer_size,
-        app->selection, app->eyelight, app->wireframe, app->edges,
-        app->exposure, app->gamma, app->near_plane, app->far_plane);
+    draw_glscene(app.state, app.scene, camera, framebuffer_size, app.selection,
+        app.eyelight, app.wireframe, app.edges, app.exposure, app.gamma,
+        app.near_plane, app.far_plane);
 
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {
         if (begin_header_glwidget(win, "scene")) {
-            draw_label_glwidgets(win, "scene", "%s", app->filename.c_str());
+            draw_label_glwidgets(win, "scene", "%s", app.filename.c_str());
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "view")) {
             draw_combobox_glwidget(
-                win, "camera", camera, app->scene->cameras, false);
-            draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
-            draw_checkbox_glwidget(win, "eyelight", app->eyelight);
+                win, "camera", app.camid, app.scene.cameras, false);
+            draw_slider_glwidget(win, "resolution", app.resolution, 256, 4096);
+            draw_checkbox_glwidget(win, "eyelight", app.eyelight);
             continue_glwidgets_line(win);
-            draw_checkbox_glwidget(win, "wireframe", app->wireframe);
+            draw_checkbox_glwidget(win, "wireframe", app.wireframe);
             continue_glwidgets_line(win);
-            draw_checkbox_glwidget(win, "edges", app->edges);
-            if (app->time_range != zero2f) {
-                draw_slider_glwidget(win, "time", app->time, app->time_range.x,
-                    app->time_range.y);
-                draw_textinput_glwidget(win, "anim group", app->anim_group);
-                draw_checkbox_glwidget(win, "animate", app->animate);
+            draw_checkbox_glwidget(win, "edges", app.edges);
+            if (app.time_range != zero2f) {
+                draw_slider_glwidget(
+                    win, "time", app.time, app.time_range.x, app.time_range.y);
+                draw_textinput_glwidget(win, "anim group", app.anim_group);
+                draw_checkbox_glwidget(win, "animate", app.animate);
             }
-            draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
-            draw_slider_glwidget(win, "gamma", app->gamma, 0.1f, 4);
-            draw_slider_glwidget(win, "near", app->near_plane, 0.01f, 1.0f);
-            draw_slider_glwidget(win, "far", app->far_plane, 1000.0f, 10000.0f);
-            draw_checkbox_glwidget(win, "fps", app->navigation_fps);
+            draw_slider_glwidget(win, "exposure", app.exposure, -10, 10);
+            draw_slider_glwidget(win, "gamma", app.gamma, 0.1f, 4);
+            draw_slider_glwidget(win, "near", app.near_plane, 0.01f, 1.0f);
+            draw_slider_glwidget(win, "far", app.far_plane, 1000.0f, 10000.0f);
+            draw_checkbox_glwidget(win, "fps", app.navigation_fps);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "navigate")) {
-            draw_glwidgets_scene_tree(win, "", app->scene.get(), app->selection,
-                app->update_list, 200);
+            draw_glwidgets_scene_tree(
+                win, "", app.scene, app.selection, app.update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspect")) {
-            draw_glwidgets_scene_inspector(win, "", app->scene.get(),
-                app->selection, app->update_list, 200);
+            draw_glwidgets_scene_inspector(
+                win, "", app.scene, app.selection, app.update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -468,65 +468,80 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(draw_glstate* state, const yocto_shape* shape,
+void draw_glshape(draw_glstate& state, const yocto_scene& scene, int shape_id,
     const frame3f& frame, bool highlighted, bool eyelight, bool edges) {
-    auto mat   = shape->material;
+    auto& shape    = scene.shapes[shape_id];
+    auto& material = scene.materials[shape.material];
+
     auto xform = frame_to_mat(frame);
 
-    set_gluniform(state->prog, "shape_xform", xform);
-    set_gluniform(state->prog, "shape_normal_offset", 0.0f);
+    set_gluniform(state.prog, "shape_xform", xform);
+    set_gluniform(state.prog, "shape_normal_offset", 0.0f);
 
     auto mtype = 1;
-    if (mat->base_metallic) mtype = 2;
-    if (mat->gltf_textures) mtype = (mat->base_metallic) ? 2 : 3;
-    set_gluniform(state->prog, "mat_type", mtype);
-    set_gluniform(state->prog, "mat_ke", mat->emission);
-    set_gluniform(state->prog, "mat_kd", mat->diffuse);
-    set_gluniform(state->prog, "mat_ks", mat->specular);
-    set_gluniform(state->prog, "mat_rs", mat->roughness);
-    set_gluniform(state->prog, "mat_op", mat->opacity);
-    set_gluniform(state->prog, "mat_double_sided", (int)mat->double_sided);
-    set_gluniform_texture(state->prog, "mat_ke_txt", "mat_ke_txt_on",
-        state->txts.at(mat->emission_texture), 0);
-    set_gluniform_texture(state->prog, "mat_kd_txt", "mat_kd_txt_on",
-        state->txts.at(mat->diffuse_texture), 1);
-    set_gluniform_texture(state->prog, "mat_ks_txt", "mat_ks_txt_on",
-        state->txts.at(mat->specular_texture), 2);
-    set_gluniform_texture(state->prog, "mat_rs_txt", "mat_rs_txt_on",
-        state->txts.at(mat->roughness_texture), 3);
-    set_gluniform_texture(state->prog, "mat_op_txt", "mat_op_txt_on",
-        state->txts.at(mat->opacity_texture), 4);
-    set_gluniform_texture(state->prog, "mat_norm_txt", "mat_norm_txt_on",
-        state->txts.at(mat->normal_texture), 5);
+    if (material.base_metallic) mtype = 2;
+    if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
+    set_gluniform(state.prog, "mat_type", mtype);
+    set_gluniform(state.prog, "mat_ke", material.emission);
+    set_gluniform(state.prog, "mat_kd", material.diffuse);
+    set_gluniform(state.prog, "mat_ks", material.specular);
+    set_gluniform(state.prog, "mat_rs", material.roughness);
+    set_gluniform(state.prog, "mat_op", material.opacity);
+    set_gluniform(state.prog, "mat_double_sided", (int)material.double_sided);
+    set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
+        material.emission_texture >= 0 ? state.txts.at(material.emission_texture) :
+                                         gltexture{},
+        0);
+    set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
+        material.diffuse_texture >= 0 ? state.txts.at(material.diffuse_texture) :
+                                        gltexture{},
+        1);
+    set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
+        material.specular_texture >= 0 ? state.txts.at(material.specular_texture) :
+                                         gltexture{},
+        2);
+    set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
+        material.roughness_texture >= 0 ?
+            state.txts.at(material.roughness_texture) :
+            gltexture{},
+        3);
+    set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
+        material.opacity_texture >= 0 ? state.txts.at(material.opacity_texture) :
+                                        gltexture{},
+        4);
+    set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
+        material.normal_texture >= 0 ? state.txts.at(material.normal_texture) :
+                                       gltexture{},
+        5);
 
-    auto& vbos = state->shps.at(shape);
-    set_gluniform(state->prog, "elem_faceted", (int)shape->normals.empty());
-    set_glvertexattrib(state->prog, "vert_pos", vbos.gl_pos, zero3f);
-    set_glvertexattrib(state->prog, "vert_norm", vbos.gl_norm, zero3f);
-    set_glvertexattrib(state->prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+    auto& vbos = state.shps.at(shape_id);
+    set_gluniform(state.prog, "elem_faceted", (int)shape.normals.empty());
+    set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
+    set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
+    set_glvertexattrib(state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
     set_glvertexattrib(
-        state->prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+        state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
     set_glvertexattrib(
-        state->prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+        state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
-    if (!shape->points.empty()) {
-        set_gluniform(state->prog, "elem_type", 1);
-        draw_glpoints(vbos.gl_points, shape->points.size());
+    if (!shape.points.empty()) {
+        set_gluniform(state.prog, "elem_type", 1);
+        draw_glpoints(vbos.gl_points, shape.points.size());
     }
-    if (!shape->lines.empty()) {
-        set_gluniform(state->prog, "elem_type", 2);
-        draw_gllines(vbos.gl_lines, shape->lines.size());
+    if (!shape.lines.empty()) {
+        set_gluniform(state.prog, "elem_type", 2);
+        draw_gllines(vbos.gl_lines, shape.lines.size());
     }
-    if (!shape->triangles.empty()) {
-        set_gluniform(state->prog, "elem_type", 3);
-        draw_gltriangles(vbos.gl_triangles, shape->triangles.size());
+    if (!shape.triangles.empty()) {
+        set_gluniform(state.prog, "elem_type", 3);
+        draw_gltriangles(vbos.gl_triangles, shape.triangles.size());
     }
-    if (!shape->quads.empty()) {
-        set_gluniform(state->prog, "elem_type", 3);
-        draw_gltriangles(vbos.gl_quads, shape->quads.size() * 2);
+    if (!shape.quads.empty()) {
+        set_gluniform(state.prog, "elem_type", 3);
+        draw_gltriangles(vbos.gl_quads, shape.quads.size() * 2);
     }
-    if (!shape->quads_positions.empty()) {
-        set_gluniform(state->prog, "elem_type", 3);
+    if (!shape.quads_positions.empty()) {
+        set_gluniform(state.prog, "elem_type", 3);
         draw_gltriangles(vbos.gl_quads, vbos.num_facevarying_quads * 2);
     }
 
@@ -534,10 +549,10 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
         check_glerror();
-        set_gluniform(state->prog, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(state->prog, "ke"), 0, 0, 0);
-        set_gluniform(state->prog, "op"), mat->op);
-        set_gluniform(state->prog, "shp_normal_offset"), 0.01f);
+        set_gluniform(state.prog, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state.prog, "ke"), 0, 0, 0);
+        set_gluniform(state.prog, "op"), material.op);
+        set_gluniform(state.prog, "shp_normal_offset"), 0.01f);
         check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
@@ -551,77 +566,81 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
 }
 
 // Display a scene
-void draw_glscene(draw_glstate* state, const yocto_scene* scene,
-    const yocto_camera* camera, const vec2i& viewport_size,
-    const void* highlighted, bool eyelight, bool wireframe, bool edges,
-    float exposure, float gamma, float near_plane, float far_plane) {
+void draw_glscene(draw_glstate& state, const yocto_scene& scene,
+    const yocto_camera& camera, const vec2i& viewport_size,
+    const tuple<string, int>& highlighted, bool eyelight, bool wireframe,
+    bool edges, float exposure, float gamma, float near_plane, float far_plane) {
     set_glviewport(viewport_size);
 
-    auto camera_view = frame_to_mat(inverse(camera->frame));
+    auto camera_view = frame_to_mat(inverse(camera.frame));
     // auto camera_proj =
     //         perspective_mat(evaluate_camera_fovy(camera),
     //             (float)viewport_size.x / (float)viewport_size.y, near_plane);
     auto camera_proj = perspective_mat(evaluate_camera_fovy(camera),
         (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
-    bind_glprogram(state->prog);
-    set_gluniform(state->prog, "cam_pos", camera->frame.o);
-    set_gluniform(state->prog, "cam_xform_inv", camera_view);
-    set_gluniform(state->prog, "cam_proj", camera_proj);
-    set_gluniform(state->prog, "eyelight", (int)eyelight);
-    set_gluniform(state->prog, "exposure", exposure);
-    set_gluniform(state->prog, "gamma", gamma);
+    bind_glprogram(state.prog);
+    set_gluniform(state.prog, "cam_pos", camera.frame.o);
+    set_gluniform(state.prog, "cam_xform_inv", camera_view);
+    set_gluniform(state.prog, "cam_proj", camera_proj);
+    set_gluniform(state.prog, "eyelight", (int)eyelight);
+    set_gluniform(state.prog, "exposure", exposure);
+    set_gluniform(state.prog, "gamma", gamma);
 
     if (!eyelight) {
         auto lights_pos  = vector<vec3f>();
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
-        for (auto lgt : scene->instances) {
-            if (lgt->shape->material->emission == zero3f) continue;
+        for (auto& instance : scene.instances) {
+            auto& shape    = scene.shapes[instance.shape];
+            auto& material = scene.materials[shape.material];
+            if (material.emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
-            auto shape = lgt->shape;
-            auto bbox  = compute_shape_bounds(shape);
-            auto pos   = (bbox.max + bbox.min) / 2;
-            auto area  = 0.0f;
-            if (!shape->triangles.empty()) {
-                for (auto t : shape->triangles)
-                    area += triangle_area(shape->positions[t.x],
-                        shape->positions[t.y], shape->positions[t.z]);
-            } else if (!shape->quads.empty()) {
-                for (auto q : shape->quads)
-                    area += quad_area(shape->positions[q.x],
-                        shape->positions[q.y], shape->positions[q.z],
-                        shape->positions[q.w]);
-            } else if (!shape->lines.empty()) {
-                for (auto l : shape->lines)
+            auto bbox = compute_shape_bounds(shape);
+            auto pos  = (bbox.max + bbox.min) / 2;
+            auto area = 0.0f;
+            if (!shape.triangles.empty()) {
+                for (auto t : shape.triangles)
+                    area += triangle_area(shape.positions[t.x],
+                        shape.positions[t.y], shape.positions[t.z]);
+            } else if (!shape.quads.empty()) {
+                for (auto q : shape.quads)
+                    area += quad_area(shape.positions[q.x], shape.positions[q.y],
+                        shape.positions[q.z], shape.positions[q.w]);
+            } else if (!shape.lines.empty()) {
+                for (auto l : shape.lines)
                     area += line_length(
-                        shape->positions[l.x], shape->positions[l.y]);
+                        shape.positions[l.x], shape.positions[l.y]);
             } else {
-                area += shape->positions.size();
+                area += shape.positions.size();
             }
-            auto ke = lgt->shape->material->emission * area;
-            lights_pos.push_back(transform_point(lgt->frame, pos));
+            auto ke = material.emission * area;
+            lights_pos.push_back(transform_point(instance.frame, pos));
             lights_ke.push_back(ke);
             lights_type.push_back(0);
         }
         if (lights_pos.empty()) eyelight = false;
-        set_gluniform(state->prog, "lamb", zero3f);
-        set_gluniform(state->prog, "lnum", (int)lights_pos.size());
+        set_gluniform(state.prog, "lamb", zero3f);
+        set_gluniform(state.prog, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = to_string(i);
             set_gluniform(
-                state->prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-            set_gluniform(state->prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
-            set_gluniform(state->prog, ("ltype[" + is + "]").c_str(),
-                (int)lights_type[i]);
+                state.prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
+            set_gluniform(state.prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            set_gluniform(
+                state.prog, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
         }
     }
 
     if (wireframe) set_glwireframe(true);
-    for (auto instance : scene->instances) {
-        draw_glshape(state, instance->shape, instance->frame,
-            instance == highlighted || instance->shape == highlighted ||
-                instance->shape->material == highlighted,
+    for (auto instance_id = 0; instance_id < scene.instances.size();
+         instance_id++) {
+        auto& instance = scene.instances[instance_id];
+        // auto& shape     = scene.shapes[instance.shape];
+        // auto& material  = scene.materials[shape.material];
+        auto highlight = highlighted ==
+                         tuple<string, int>{"instance", instance_id};
+        draw_glshape(state, scene, instance.shape, instance.frame, highlight,
             eyelight, edges);
     }
 
@@ -629,58 +648,62 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
     if (wireframe) set_glwireframe(false);
 }
 
-draw_glstate* init_draw_state(glwindow* win) {
-    auto app   = (app_state*)get_user_pointer(win);
-    auto state = new draw_glstate();
+draw_glstate init_draw_state(const glwindow& win) {
+    auto& app   = *(app_state*)get_user_pointer(win);
+    auto  state = draw_glstate();
     // load textures and vbos
-    state->prog          = make_glprogram(vertex, fragment);
-    state->txts[nullptr] = {};
-    for (auto texture : app->scene->textures) {
-        if (!texture->hdr_image.pixels.empty()) {
-            state->txts[texture] = make_gltexture(
-                texture->hdr_image, true, true, true);
-        } else if (!texture->ldr_image.pixels.empty()) {
-            state->txts[texture] = make_gltexture(
-                texture->ldr_image, !texture->ldr_as_linear, true, true);
+    state.prog = make_glprogram(vertex, fragment);
+    state.txts.resize(app.scene.textures.size());
+    for (auto texture_id = 0; texture_id < app.scene.textures.size();
+         texture_id++) {
+        auto texture = app.scene.textures[texture_id];
+        if (!texture.hdr_image.pixels.empty()) {
+            state.txts[texture_id] = make_gltexture(
+                texture.hdr_image, true, true, true);
+        } else if (!texture.ldr_image.pixels.empty()) {
+            state.txts[texture_id] = make_gltexture(
+                texture.ldr_image, !texture.ldr_as_linear, true, true);
         } else {
             printf("bad texture");
         }
     }
-    for (auto& shape : app->scene->shapes) {
-        if (!shape->quads_positions.empty()) continue;
+    state.shps.resize(app.scene.shapes.size());
+    for (auto shape_id = 0; shape_id < app.scene.shapes.size(); shape_id++) {
+        auto& shape = app.scene.shapes[shape_id];
+        if (!shape.quads_positions.empty()) continue;
         auto vbos = glshape();
-        if (!shape->positions.empty())
-            vbos.gl_pos = make_glarraybuffer(shape->positions, false);
-        if (!shape->normals.empty())
-            vbos.gl_norm = make_glarraybuffer(shape->normals, false);
-        if (!shape->texturecoords.empty())
-            vbos.gl_texcoord = make_glarraybuffer(shape->texturecoords, false);
-        if (!shape->colors.empty())
-            vbos.gl_color = make_glarraybuffer(shape->colors, false);
-        if (!shape->tangentspaces.empty())
-            vbos.gl_tangsp = make_glarraybuffer(shape->tangentspaces, false);
-        if (!shape->points.empty())
-            vbos.gl_points = make_glelementbuffer(shape->points, false);
-        if (!shape->lines.empty())
-            vbos.gl_lines = make_glelementbuffer(shape->lines, false);
-        if (!shape->triangles.empty())
-            vbos.gl_triangles = make_glelementbuffer(shape->triangles, false);
-        if (!shape->quads.empty())
+        if (!shape.positions.empty())
+            vbos.gl_pos = make_glarraybuffer(shape.positions, false);
+        if (!shape.normals.empty())
+            vbos.gl_norm = make_glarraybuffer(shape.normals, false);
+        if (!shape.texturecoords.empty())
+            vbos.gl_texcoord = make_glarraybuffer(shape.texturecoords, false);
+        if (!shape.colors.empty())
+            vbos.gl_color = make_glarraybuffer(shape.colors, false);
+        if (!shape.tangentspaces.empty())
+            vbos.gl_tangsp = make_glarraybuffer(shape.tangentspaces, false);
+        if (!shape.points.empty())
+            vbos.gl_points = make_glelementbuffer(shape.points, false);
+        if (!shape.lines.empty())
+            vbos.gl_lines = make_glelementbuffer(shape.lines, false);
+        if (!shape.triangles.empty())
+            vbos.gl_triangles = make_glelementbuffer(shape.triangles, false);
+        if (!shape.quads.empty())
             vbos.gl_quads = make_glelementbuffer(
-                convert_quads_to_triangles(shape->quads), false);
-        state->shps[shape] = vbos;
+                convert_quads_to_triangles(shape.quads), false);
+        state.shps[shape_id] = vbos;
     }
-    for (auto& shape : app->scene->shapes) {
-        if (shape->quads_positions.empty()) continue;
+    for (auto shape_id = 0; shape_id < app.scene.shapes.size(); shape_id++) {
+        auto& shape = app.scene.shapes[shape_id];
+        if (shape.quads_positions.empty()) continue;
         auto vbos                                     = glshape();
         auto quads                                    = vector<vec4i>();
         auto positions                                = vector<vec3f>();
         auto normals                                  = vector<vec3f>();
         auto texturecoords                            = vector<vec2f>();
         tie(quads, positions, normals, texturecoords) = convert_face_varying(
-            shape->quads_positions, shape->quads_normals,
-            shape->quads_texturecoords, shape->positions, shape->normals,
-            shape->texturecoords);
+            shape.quads_positions, shape.quads_normals, shape.quads_texturecoords,
+            shape.positions, shape.normals, shape.texturecoords);
         if (!positions.empty())
             vbos.gl_pos = make_glarraybuffer(positions, false);
         if (!normals.empty()) vbos.gl_norm = make_glarraybuffer(normals, false);
@@ -690,28 +713,28 @@ draw_glstate* init_draw_state(glwindow* win) {
             vbos.gl_quads = make_glelementbuffer(
                 convert_quads_to_triangles(quads), false);
         vbos.num_facevarying_quads = (int)quads.size();
-        state->shps[shape]         = vbos;
+        state.shps[shape_id]       = vbos;
     }
     return state;
 }
 
 // run ui loop
-void run_ui(app_state* app) {
+void run_ui(app_state& app) {
     // window
-    auto camera = app->scene->cameras.at(app->camid);
-    auto width = clamp(evaluate_image_size(camera, app->resolution).x, 256, 1440),
-         height = clamp(
-             evaluate_image_size(camera, app->resolution).y, 256, 1440);
-    auto win = make_glwindow(width, height, "yview", app, draw);
+    auto& camera = app.scene.cameras.at(app.camid);
+    auto width = clamp(evaluate_image_size(camera, app.resolution).x, 256, 1440),
+         height = clamp(evaluate_image_size(camera, app.resolution).y, 256, 1440);
+    auto win    = glwindow();
+    init_glwindow(win, width, height, "yview", &app, draw);
 
     // init widget
     init_glwidgets(win);
 
     // load textures and vbos
-    update_transforms(app->scene.get(), app->time);
+    update_transforms(app.scene, app.time);
 
     // init gl data
-    app->state = unique_ptr<draw_glstate>{init_draw_state(win)};
+    app.state = init_draw_state(win);
 
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -733,18 +756,18 @@ void run_ui(app_state* app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto camera = app->scene->cameras.at(app->camid);
+            auto& camera = app.scene.cameras.at(app.camid);
             camera_turntable(
-                camera->frame, camera->focus_distance, rotate, dolly, pan);
-            app->update_list.push_back({"camera", camera});
+                camera.frame, camera.focus_distance, rotate, dolly, pan);
+            app.update_list.push_back({"camera", app.camid});
         }
 
         // animation
-        if (app->animate) {
-            app->time += 1 / 60.0f;
-            if (app->time < app->time_range.x || app->time > app->time_range.y)
-                app->time = app->time_range.x;
-            update_transforms(app->scene.get(), app->time);
+        if (app.animate) {
+            app.time += 1 / 60.0f;
+            if (app.time < app.time_range.x || app.time > app.time_range.y)
+                app.time = app.time_range.x;
+            update_transforms(app.scene, app.time);
         }
 
         // draw
@@ -800,15 +823,15 @@ unordered_map<string, unordered_map<string, string>> load_ini(
 
 int main(int argc, char* argv[]) {
     // initialize app
-    auto app = new app_state();
+    auto app = app_state();
 
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "views scenes inteactively", "yview");
-    app->camid      = parse_arg(parser, "--camera", 0, "Camera index.");
-    app->resolution = parse_arg(
+    app.camid      = parse_arg(parser, "--camera", 0, "Camera index.");
+    app.resolution = parse_arg(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    app->eyelight = parse_arg(
+    app.eyelight = parse_arg(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
     auto double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
@@ -816,37 +839,33 @@ int main(int argc, char* argv[]) {
         parser, "--quiet,-q", false, "Print only errors messages");
     auto highlight_filename = parse_arg(
         parser, "--highlights", ""s, "Highlight filename");
-    app->imfilename = parse_arg(
+    app.imfilename = parse_arg(
         parser, "--output-image,-o", "out.png"s, "Image filename");
-    app->filename = parse_arg(
+    app.filename = parse_arg(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
-    if (!quiet) log_info("loading scene ", app->filename);
-    app->scene = unique_ptr<yocto_scene>{load_scene(app->filename)};
-    if (!app->scene) log_fatal("cannot load scene {}", app->filename);
+    if (!load_scene(app.filename, app.scene))
+        log_fatal("cannot load scene {}", app.filename);
 
     // tesselate
     if (!quiet) log_info("tesselating scene elements\n");
-    tesselate_shapes(app->scene.get());
+    tesselate_shapes(app.scene);
 
     // add components
     if (!quiet) log_info("adding scene elements\n");
     if (double_sided) {
-        for (auto mat : app->scene->materials) mat->double_sided = true;
+        for (auto& material : app.scene.materials) material.double_sided = true;
     }
-    for (auto& err : validate_scene(app->scene.get())) log_error(err);
+    for (auto& err : validate_scene(app.scene)) log_error(err);
 
     // animation
-    auto time_range = compute_animation_range(app->scene.get());
-    app->time       = time_range.x;
+    auto time_range = compute_animation_range(app.scene);
+    app.time        = time_range.x;
 
     // run ui
     run_ui(app);
-
-    // cleanup
-    delete app;
 
     // done
     return 0;

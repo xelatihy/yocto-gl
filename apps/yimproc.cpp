@@ -36,7 +36,7 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto width = imgs[0].size().x * tilex;
     auto height = imgs[0].size().y * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
-    auto ret = make_image4f(width, height, (bool)imgs[0].hdr);
+    auto ret = make_image(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (extents(img) != extents(imgs[0])) {
@@ -155,13 +155,13 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // load
-    auto img = load_image4f(filename);
-    if (img.pixels.empty()) log_fatal("cannot load image {}", filename);
+    auto img = image<vec4f>();
+    if (!load_image(filename, img)) log_fatal("cannot load image {}", filename);
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = load_image4f(alpha_filename);
-        if (alpha.pixels.empty())
+        auto alpha = image<vec4f>();
+        if (!load_image(alpha_filename, alpha))
             log_fatal("cannot load image {}", alpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size");
@@ -174,8 +174,8 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = load_image4f(coloralpha_filename);
-        if (alpha.pixels.empty())
+        auto alpha = image<vec4f>();
+        if (!load_image(alpha_filename, alpha))
             log_fatal("cannot load image {}", coloralpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size");
@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
     if (tonemap) img = tonemap_filmic(img, exposure, filmic, srgb);
 
     // save
-    if (!save_image4f(output, img)) log_fatal("cannot save image {}", output);
+    if (!save_image(output, img)) log_fatal("cannot save image {}", output);
 
     // done
     return 0;
