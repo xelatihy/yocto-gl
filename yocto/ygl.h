@@ -9,9 +9,13 @@
 //
 // ## Design Considerations
 //
-// Yocto/GL tries to follow a "data-driven programming model" that makes data
-// explicit. Data is stored in simple structs and access with free functions
-// or directly. All data is public, so we make no attempt at encapsulation.
+// Yocto/GL follows a "data-driven programming model" that makes data explicit.
+// Data is stored in simple structs and access with free functions or directly.
+// All data is public, so we make no attempt at encapsulation.
+// All objects is Yocto?GL have value semantic and we do not use pointers
+// in data structure but indices. This means that everything can be trivially
+// serialized and there is no need for memory management.
+//
 // We do this since this makes Yocto/GL easier to extend and quicker to learn,
 // which a more explicit data flow that is easier whrn writing parallel code.
 // Since Yocto/GL is mainly used for research and teaching,
