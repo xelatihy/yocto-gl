@@ -308,7 +308,7 @@ bool load_text(const string& filename, string& str) {
     auto fs = open(filename, "rb");
     if (!fs) return false;
     auto buf = vector<char>(get_length(fs));
-    if (!read_values(fs, buf)) return {};
+    if (!read_values(fs, buf)) return false;
     str = string{buf.begin(), buf.end()};
     return true;
 }
@@ -327,7 +327,7 @@ bool load_binary(const string& filename, vector<byte>& data) {
     auto fs = open(filename, "rb");
     if (!fs) return false;
     data = vector<byte>(get_length(fs));
-    if (!read_values(fs, data)) return {};
+    if (!read_values(fs, data)) return false;
     return true;
 }
 
@@ -5681,13 +5681,14 @@ void normalize_ply_line(char* s) {
 }
 
 // Load ply mesh
-ply_data* load_ply(const string& filename) {
+bool load_ply(const string& filename, ply_data& ply) {
     // open file
+    ply = {};
     auto fs = open(filename, "rb");
-    if (!fs) return {};
+    if (!fs) return false;
 
     // parse header
-    auto ply   = make_unique<ply_data>();
+    ply   = ply_data();
     auto ascii = false;
     char buf[4096];
     auto line = ""s;
@@ -5701,13 +5702,13 @@ ply_data* load_ply(const string& filename) {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
             auto fmt = parse_string(ss);
-            if (fmt != "ascii" && fmt != "binary_little_endian") return {};
+            if (fmt != "ascii" && fmt != "binary_little_endian") return false;
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
             auto elem  = ply_element();
             elem.name  = parse_string(ss);
             elem.count = parse_int(ss);
-            ply->elements.push_back(elem);
+            ply.elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
             auto type = parse_string(ss);
@@ -5725,26 +5726,26 @@ ply_data* load_ply(const string& filename) {
             } else if (type == "int") {
                 prop.type = ply_type::ply_int;
             } else {
-                return {};
+                return false;
             }
             prop.name = parse_string(ss);
-            prop.scalars.resize(ply->elements.back().count);
+            prop.scalars.resize(ply.elements.back().count);
             if (prop.type == ply_type::ply_int_list)
-                prop.lists.resize(ply->elements.back().count);
-            ply->elements.back().properties.push_back(prop);
+                prop.lists.resize(ply.elements.back().count);
+            ply.elements.back().properties.push_back(prop);
         } else if (cmd == "end_header") {
             break;
         } else {
-            return {};
+            return false;
         }
     }
 
     // parse content
-    for (auto& elem : ply->elements) {
+    for (auto& elem : ply.elements) {
         for (auto vid = 0; vid < elem.count; vid++) {
             auto ss = (char*)nullptr;
             if (ascii) {
-                if (!read_line(fs, line)) return {};
+                if (!read_line(fs, line)) return false;
                 memcpy(buf, line.c_str(), line.size() + 1);
                 ss = buf;
             }
@@ -5755,7 +5756,7 @@ ply_data* load_ply(const string& filename) {
                     if (ascii) {
                         v = parse_float(ss);
                     } else {
-                        if (!read_value(fs, v)) return {};
+                        if (!read_value(fs, v)) return false;
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_int) {
@@ -5763,7 +5764,7 @@ ply_data* load_ply(const string& filename) {
                     if (ascii) {
                         v = parse_int(ss);
                     } else {
-                        if (!read_value(fs, v)) return {};
+                        if (!read_value(fs, v)) return false;
                     }
                     prop.scalars[vid] = v;
                 } else if (prop.type == ply_type::ply_uchar) {
@@ -5772,7 +5773,7 @@ ply_data* load_ply(const string& filename) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (!read_value(fs, vc)) return {};
+                        if (!read_value(fs, vc)) return false;
                     }
                     prop.scalars[vid] = vc / 255.0f;
                 } else if (prop.type == ply_type::ply_int_list) {
@@ -5781,23 +5782,23 @@ ply_data* load_ply(const string& filename) {
                         auto v = parse_int(ss);
                         vc     = (unsigned char)v;
                     } else {
-                        if (!read_value(fs, vc)) return {};
+                        if (!read_value(fs, vc)) return false;
                     }
                     prop.scalars[vid] = vc;
                     for (auto i = 0; i < (int)prop.scalars[vid]; i++)
                         if (ascii) {
                             prop.lists[vid][i] = parse_int(ss);
                         } else {
-                            if (!read_value(fs, prop.lists[vid][i])) return {};
+                            if (!read_value(fs, prop.lists[vid][i])) return false;
                         }
                 } else {
-                    return {};
+                    return false;
                 }
             }
         }
     }
 
-    return ply.release();
+    return true;
 }
 
 #if YGL_HAPPLY
@@ -5814,18 +5815,19 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
         quads_normals, quads_texturecoords, positions, normals, texturecoords,
         color, radius);
 
-    // open ply
-    auto ply = unique_ptr<happly::PLYData>();
+    // open ply with a workaround for the bad api
+    auto ply_ = (happly::PLYData*)nullptr;
     try {
-        ply = make_unique<happly::PLYData>(filename);
+        ply_ = new happly::PLYData(filename);
     } catch (...) {
         log_io_error("could not open PLY {}", filename);
         return false;
     }
+    auto& ply = *ply_;
 
     // get vertex data
-    if (ply->hasElement("vertex")) {
-        auto& vertex_element = ply->getElement("vertex");
+    if (ply.hasElement("vertex")) {
+        auto& vertex_element = ply.getElement("vertex");
         if (vertex_element.hasProperty("x") &&
             vertex_element.hasProperty("y") && vertex_element.hasProperty("z")) {
             auto x = vertex_element.getProperty<float>("x");
@@ -5870,8 +5872,8 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     }
 
     // faces
-    if (ply->hasElement("face")) {
-        auto& face_element = ply->getElement("face");
+    if (ply.hasElement("face")) {
+        auto& face_element = ply.getElement("face");
         if (face_element.hasProperty("vertex_indices")) {
             auto indices = face_element.getListProperty<int>("vertex_indices");
             for (auto& f : indices) {
@@ -5886,8 +5888,8 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     }
 
     // lines
-    if (ply->hasElement("line")) {
-        auto& face_element = ply->getElement("line");
+    if (ply.hasElement("line")) {
+        auto& face_element = ply.getElement("line");
         if (face_element.hasProperty("vertex_indices")) {
             auto indices = face_element.getListProperty<int>("vertex_indices");
             for (auto& l : indices) {
@@ -5898,6 +5900,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     }
 
     // done
+    delete ply_;
     return true;
 }
 
@@ -6062,13 +6065,13 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
 
     // load ply
     auto ply = unique_ptr<ply_data>{load_ply(filename)};
-    if (ply->elements.empty()) {
+    if (ply.elements.empty()) {
         log_io_error("empty ply file {}", filename);
         return false;
     }
 
     // copy vertex data
-    for (auto& elem : ply->elements) {
+    for (auto& elem : ply.elements) {
         if (elem.name != "vertex") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {
@@ -6100,7 +6103,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     }
 
     // copy triangle data
-    for (auto& elem : ply->elements) {
+    for (auto& elem : ply.elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
         for (auto& prop : elem.properties) {

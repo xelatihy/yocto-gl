@@ -314,7 +314,6 @@
 #include <functional>  // for std::hash
 #include <limits>
 #include <map>
-#include <memory>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -358,7 +357,6 @@ using std::string;
 using std::thread;
 using std::tie;
 using std::tuple;
-using std::unique_ptr;
 using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
