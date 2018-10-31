@@ -651,16 +651,16 @@ draw_glstate* init_draw_state(glwindow* win) {
     auto state = new draw_glstate();
     // load textures and vbos
     state->prog = make_glprogram(vertex, fragment);
-    state->txts.resize(app->scene->textures.size());
-    for (auto texture_id = 0; texture_id < app->scene->textures.size();
+    state->txts.resize(app->scene->textures_.size());
+    for (auto texture_id = 0; texture_id < app->scene->textures_.size();
          texture_id++) {
-        auto texture = app->scene->textures[texture_id];
-        if (!texture->hdr_image.pixels.empty()) {
+        auto texture = app->scene->textures_[texture_id];
+        if (!texture.hdr_image.pixels.empty()) {
             state->txts[texture_id] = make_gltexture(
-                texture->hdr_image, true, true, true);
-        } else if (!texture->ldr_image.pixels.empty()) {
+                texture.hdr_image, true, true, true);
+        } else if (!texture.ldr_image.pixels.empty()) {
             state->txts[texture_id] = make_gltexture(
-                texture->ldr_image, !texture->ldr_as_linear, true, true);
+                texture.ldr_image, !texture.ldr_as_linear, true, true);
         } else {
             printf("bad texture");
         }

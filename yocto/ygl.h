@@ -3277,9 +3277,9 @@ struct yocto_scene {
     vector<yocto_shape*>       shapes       = {};
     vector<yocto_instance*>    instances    = {};
     vector<yocto_material*>    materials    = {};
-    vector<yocto_texture*>     textures     = {};
+    vector<yocto_texture>     textures_     = {};
     vector<yocto_environment*> environments = {};
-    vector<yocto_voltexture*>  voltextures  = {};
+    vector<yocto_voltexture>  voltextures_  = {};
     vector<yocto_scene_node>  nodes_        = {};
     vector<yocto_animation>   animations_   = {};
 
@@ -3420,10 +3420,10 @@ vec3f evaluate_environment_emission(
     const yocto_scene* scene, const vec3f& direction);
 
 // Evaluate a texture.
-vec2i evaluate_texture_size(const yocto_texture* texture);
-vec4f lookup_texture(const yocto_texture* texture, int i, int j);
-vec4f evaluate_texture(const yocto_texture* texture, const vec2f& texcoord);
-float evaluate_voltexture(const yocto_voltexture* texture, const vec3f& texcoord);
+vec2i evaluate_texture_size(const yocto_texture& texture);
+vec4f lookup_texture(const yocto_texture& texture, int i, int j);
+vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
+float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float evaluate_camera_fovy(const yocto_camera& camera);

@@ -61,9 +61,9 @@ int main(int argc, char** argv) {
 
     // change texture names
     if (uniform_txt) {
-        for (auto texture : scene->textures) {
-            auto ext = get_extension(texture->filename);
-            if (is_hdr_filename(texture->filename)) {
+        for (auto& texture : scene->textures_) {
+            auto ext = get_extension(texture.filename);
+            if (is_hdr_filename(texture.filename)) {
                 if (ext == "hdr" || ext == "exr") continue;
                 if (ext == "pfm")
                     replace_extension(filename, "hdr");
