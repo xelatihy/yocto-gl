@@ -72,16 +72,16 @@ int main(int argc, char* argv[]) {
 
     // scene loading
     auto scene = yocto_scene{};
-    if(!load_scene(filename, scene)) log_fatal("cannot load scene {}", filename);
+    if (!load_scene(filename, scene))
+        log_fatal("cannot load scene {}", filename);
 
     // tesselate
     tesselate_shapes(scene);
 
     // add components
-    if (add_skyenv && scene.environments_.empty())
-        add_sky_environment(scene);
+    if (add_skyenv && scene.environments.empty()) add_sky_environment(scene);
     if (double_sided)
-        for (auto& material : scene.materials_) material.double_sided = true;
+        for (auto& material : scene.materials) material.double_sided = true;
     log_validation_errors(scene);
 
     // build bvh

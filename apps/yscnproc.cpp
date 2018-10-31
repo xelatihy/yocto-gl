@@ -57,11 +57,12 @@ int main(int argc, char** argv) {
 
     // load scene
     auto scene = yocto_scene{};
-    if(!load_scene(filename, scene, !notextures)) log_fatal("cannot load scene {}", filename);
+    if (!load_scene(filename, scene, !notextures))
+        log_fatal("cannot load scene {}", filename);
 
     // change texture names
     if (uniform_txt) {
-        for (auto& texture : scene.textures_) {
+        for (auto& texture : scene.textures) {
             auto ext = get_extension(texture.filename);
             if (is_hdr_filename(texture.filename)) {
                 if (ext == "hdr" || ext == "exr") continue;

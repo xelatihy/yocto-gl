@@ -3272,16 +3272,16 @@ struct yocto_animation {
 // the hierarchy. Animation is also optional, with keyframe data that
 // updates node transformations only if defined.
 struct yocto_scene {
-    string                     name         = "";
-    vector<yocto_camera>       cameras_     = {};
-    vector<yocto_shape>       shapes_       = {};
-    vector<yocto_instance>    instances_    = {};
-    vector<yocto_material>    materials_    = {};
-    vector<yocto_texture>     textures_     = {};
-    vector<yocto_environment> environments_ = {};
-    vector<yocto_voltexture>  voltextures_  = {};
-    vector<yocto_scene_node>  nodes_        = {};
-    vector<yocto_animation>   animations_   = {};
+    string                    name         = "";
+    vector<yocto_camera>      cameras      = {};
+    vector<yocto_shape>       shapes       = {};
+    vector<yocto_instance>    instances    = {};
+    vector<yocto_material>    materials    = {};
+    vector<yocto_texture>     textures     = {};
+    vector<yocto_environment> environments = {};
+    vector<yocto_voltexture>  voltextures  = {};
+    vector<yocto_scene_node>  nodes        = {};
+    vector<yocto_animation>   animations   = {};
 };
 
 }  // namespace ygl
@@ -3912,7 +3912,7 @@ inline bool print_value(string& str, double val) {
     str += std::to_string(val);
     return true;
 }
-template<typename T>
+template <typename T>
 inline bool print_value(string& str, const T* val) {
     char buf[512];
     sprintf(buf, "%p", val);

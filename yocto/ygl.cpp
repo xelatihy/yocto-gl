@@ -3523,10 +3523,10 @@ bbox3f compute_shape_bounds(const yocto_shape& shape) {
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_scene_bounds(const yocto_scene& scene) {
     auto sbbox = vector<bbox3f>();
-    for (auto shape_id = 0; shape_id < scene.shapes_.size(); shape_id++)
-        sbbox[shape_id] = compute_shape_bounds(scene.shapes_[shape_id]);
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
+        sbbox[shape_id] = compute_shape_bounds(scene.shapes[shape_id]);
     auto bbox = invalid_bbox3f;
-    for (auto& instance : scene.instances_)
+    for (auto& instance : scene.instances)
         bbox += transform_bbox(instance.frame, sbbox[instance.shape]);
     return bbox;
 }
@@ -3559,7 +3559,7 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
         log_error("point subdivision not supported");
     } else if (!subdivided_shape.lines.empty()) {
         for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_lines            = subdivided_shape.lines;
+            auto tesselated_lines           = subdivided_shape.lines;
             tie(subdivided_shape.lines,
                 subdivided_shape.positions) = subdivide_lines(tesselated_lines,
                 subdivided_shape.positions);
@@ -3585,7 +3585,7 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
         }
     } else if (!subdivided_shape.quads.empty() && !catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_quads            = subdivided_shape.quads;
+            auto tesselated_quads           = subdivided_shape.quads;
             tie(subdivided_shape.quads,
                 subdivided_shape.positions) = subdivide_quads(tesselated_quads,
                 subdivided_shape.positions);
@@ -3598,7 +3598,7 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
         }
     } else if (!subdivided_shape.quads.empty() && catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_quads            = subdivided_shape.quads;
+            auto tesselated_quads           = subdivided_shape.quads;
             tie(subdivided_shape.quads,
                 subdivided_shape.positions) = subdivide_catmullclark(tesselated_quads,
                 subdivided_shape.positions);
@@ -3611,29 +3611,24 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
         }
     } else if (!subdivided_shape.quads_positions.empty() && !catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
-            tie(subdivided_shape.quads_positions,
-                subdivided_shape.positions) = subdivide_quads(subdivided_shape
-                                                                   .quads_positions,
-                subdivided_shape.positions);
+            tie(subdivided_shape.quads_positions, subdivided_shape.positions) = subdivide_quads(
+                subdivided_shape.quads_positions, subdivided_shape.positions);
             tie(subdivided_shape.quads_normals, subdivided_shape.normals) = subdivide_quads(
                 subdivided_shape.quads_normals, subdivided_shape.normals);
             tie(subdivided_shape.quads_texturecoords,
                 subdivided_shape
                     .texturecoords) = subdivide_quads(subdivided_shape
-                                                           .quads_texturecoords,
+                                                          .quads_texturecoords,
                 subdivided_shape.texturecoords);
         }
     } else if (!subdivided_shape.quads_positions.empty() && catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
-            tie(subdivided_shape.quads_positions,
-                subdivided_shape
-                    .positions)     = subdivide_catmullclark(subdivided_shape
-                                                              .quads_positions,
-                subdivided_shape.positions);
+            tie(subdivided_shape.quads_positions, subdivided_shape.positions) = subdivide_catmullclark(
+                subdivided_shape.quads_positions, subdivided_shape.positions);
             tie(subdivided_shape.quads_texturecoords,
                 subdivided_shape
                     .texturecoords) = subdivide_catmullclark(subdivided_shape
-                                                                  .quads_texturecoords,
+                                                                 .quads_texturecoords,
                 subdivided_shape.texturecoords, true);
         }
     }
@@ -3655,13 +3650,12 @@ yocto_shape displace_shape(const yocto_shape& shape,
     auto displaced_shape = shape;
     if (shape.quads_positions.empty()) {
         auto normals = (shape.normals.empty()) ? compute_shape_normals(shape) :
-                                                  shape.normals;
+                                                 shape.normals;
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
             displaced_shape.positions[vid] += normals[vid] *
-                                               displacement.height_scale *
-                                               mean(xyz(evaluate_texture(
-                                                   displacement,
-                                                   shape.texturecoords[vid])));
+                                              displacement.height_scale *
+                                              mean(xyz(evaluate_texture(displacement,
+                                                  shape.texturecoords[vid])));
         }
     } else {
         auto offset = vector<float>(shape.positions.size(), 0);
@@ -3680,7 +3674,7 @@ yocto_shape displace_shape(const yocto_shape& shape,
             shape.quads_positions, shape.positions);
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
             displaced_shape.positions[vid] += normals[vid] * offset[vid] /
-                                               count[vid];
+                                              count[vid];
         }
     }
 
@@ -3696,21 +3690,21 @@ yocto_shape displace_shape(const yocto_shape& shape,
 // Updates tesselation.
 void tesselate_shapes(yocto_scene& scene) {
     auto scope = log_trace_scoped("tesselating surfaces");
-    for (auto& shape : scene.shapes_) {
-        auto& material = scene.materials_[shape.material];
+    for (auto& shape : scene.shapes) {
+        auto& material = scene.materials[shape.material];
         if (!shape.subdivision_level && material.displacement_texture < 0)
             continue;
         auto tesselated_shape = shape;
-    if (shape.subdivision_level)
-        tesselated_shape = subdivide_shape(
-            tesselated_shape, tesselated_shape.subdivision_level,
-            tesselated_shape.catmull_clark,
-            tesselated_shape.compute_vertex_normals);
-    if ( material.displacement_texture >= 0) {
-        tesselated_shape = 
-            displace_shape(tesselated_shape, scene.textures_[material.displacement_texture],
+        if (shape.subdivision_level)
+            tesselated_shape = subdivide_shape(tesselated_shape,
+                tesselated_shape.subdivision_level,
+                tesselated_shape.catmull_clark,
+                tesselated_shape.compute_vertex_normals);
+        if (material.displacement_texture >= 0) {
+            tesselated_shape = displace_shape(tesselated_shape,
+                scene.textures[material.displacement_texture],
                 shape.compute_vertex_normals);
-    }
+        }
         shape = tesselated_shape;
     }
 }
@@ -3738,7 +3732,7 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
             default: log_error("should not have been here");
         }
         for (auto target : animation.node_targets)
-            scene.nodes_[target].translation = val;
+            scene.nodes[target].translation = val;
     }
     if (!animation.rotation_keyframes.empty()) {
         auto val = vec4f{0, 0, 0, 1};
@@ -3757,26 +3751,26 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
                 break;
         }
         for (auto target : animation.node_targets)
-            scene.nodes_[target].rotation = val;
+            scene.nodes[target].rotation = val;
     }
     if (!animation.scale_keyframes.empty()) {
         auto val = vec3f{1, 1, 1};
         switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                val = evaluate_keyframed_step(animation.keyframes_times,
-                    animation.scale_keyframes, time);
+                val = evaluate_keyframed_step(
+                    animation.keyframes_times, animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = evaluate_keyframed_linear(animation.keyframes_times,
-                    animation.scale_keyframes, time);
+                val = evaluate_keyframed_linear(
+                    animation.keyframes_times, animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = evaluate_keyframed_bezier(animation.keyframes_times,
-                    animation.scale_keyframes, time);
+                val = evaluate_keyframed_bezier(
+                    animation.keyframes_times, animation.scale_keyframes, time);
                 break;
         }
         for (auto target : animation.node_targets)
-            scene.nodes_[target].scale = val;
+            scene.nodes[target].scale = val;
     }
 }
 
@@ -3785,33 +3779,33 @@ void update_transforms(yocto_scene& scene, yocto_scene_node& node,
     const frame3f& parent = identity_frame3f) {
     auto frame = parent * node.local * translation_frame(node.translation) *
                  rotation_frame(node.rotation) * scaling_frame(node.scale);
-    if (node.instance >= 0) scene.instances_[node.instance].frame = frame;
-    if (node.camera >= 0) scene.cameras_[node.camera].frame = frame;
+    if (node.instance >= 0) scene.instances[node.instance].frame = frame;
+    if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
     if (node.environment >= 0)
-        scene.environments_[node.environment].frame = frame;
+        scene.environments[node.environment].frame = frame;
     for (auto child : node.children)
-        update_transforms(scene, scene.nodes_[child], frame);
+        update_transforms(scene, scene.nodes[child], frame);
 }
 
 // Update node transforms
 void update_transforms(yocto_scene& scene, float time, const string& anim_group) {
-    for (auto& agr : scene.animations_)
+    for (auto& agr : scene.animations)
         update_transforms(scene, agr, time, anim_group);
-    for (auto& node : scene.nodes_) node.children.clear();
-    for (auto node_id = 0; node_id < scene.nodes_.size(); node_id++) {
-        auto& node = scene.nodes_[node_id];
+    for (auto& node : scene.nodes) node.children.clear();
+    for (auto node_id = 0; node_id < scene.nodes.size(); node_id++) {
+        auto& node = scene.nodes[node_id];
         if (node.parent >= 0)
-            scene.nodes_[node.parent].children.push_back(node_id);
+            scene.nodes[node.parent].children.push_back(node_id);
     }
-    for (auto& node : scene.nodes_)
+    for (auto& node : scene.nodes)
         if (node.parent >= 0) update_transforms(scene, node);
 }
 
 // Compute animation range
 vec2f compute_animation_range(const yocto_scene& scene, const string& anim_group) {
-    if (scene.animations_.empty()) return zero2f;
+    if (scene.animations.empty()) return zero2f;
     auto range = vec2f{+maxf, -maxf};
-    for (auto& animation : scene.animations_) {
+    for (auto& animation : scene.animations) {
         if (anim_group != "" && animation.animation_group != anim_group)
             continue;
         range.x = min(range.x, animation.keyframes_times.front());
@@ -3869,9 +3863,9 @@ float sample_shape_element_pdf(const yocto_shape& shape,
 vector<float> compute_environment_texels_cdf(
     const yocto_scene& scene, const yocto_environment& environment) {
     if (environment.emission_texture < 0) return {};
-    auto& texture  = scene.textures_[environment.emission_texture];
-    auto size     = evaluate_texture_size(texture);
-    auto elem_cdf = vector<float>(size.x * size.y);
+    auto& texture  = scene.textures[environment.emission_texture];
+    auto  size     = evaluate_texture_size(texture);
+    auto  elem_cdf = vector<float>(size.x * size.y);
     if (size != zero2i) {
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
@@ -3891,11 +3885,11 @@ vec3f sample_environment_direction(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv) {
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
-        auto& texture = scene.textures_[environment.emission_texture];
-        auto idx     = sample_discrete_distribution(texels_cdf, re);
-        auto size    = evaluate_texture_size(texture);
-        auto u       = (idx % size.x + 0.5f) / size.x;
-        auto v       = (idx / size.x + 0.5f) / size.y;
+        auto& texture = scene.textures[environment.emission_texture];
+        auto  idx     = sample_discrete_distribution(texels_cdf, re);
+        auto  size    = evaluate_texture_size(texture);
+        auto  u       = (idx % size.x + 0.5f) / size.x;
+        auto  v       = (idx / size.x + 0.5f) / size.y;
         return evaluate_environment_direction(environment, {u, v});
     } else {
         return sample_sphere_direction(ruv);
@@ -3907,8 +3901,8 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction) {
     if (!texels_cdf.empty() && environment.emission_texture >= 0) {
-        auto& texture = scene.textures_[environment.emission_texture];
-        auto size    = evaluate_texture_size(texture);
+        auto& texture = scene.textures[environment.emission_texture];
+        auto  size    = evaluate_texture_size(texture);
         auto texcoord = evaluate_environment_texturecoord(environment, direction);
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
@@ -3951,12 +3945,12 @@ bvh_tree make_scene_bvh(const yocto_scene& scene, bool high_quality, bool embree
     auto bvh = bvh_tree{};
 
     // shapes
-    for (auto& shape : scene.shapes_) {
+    for (auto& shape : scene.shapes) {
         bvh.shape_bvhs.push_back(make_shape_bvh(shape, high_quality, embree));
     }
 
     // instances
-    for (auto& instance : scene.instances_) {
+    for (auto& instance : scene.instances) {
         bvh.instances.push_back(
             {instance.frame, inverse(instance.frame, false), instance.shape});
     }
@@ -3977,8 +3971,8 @@ void refit_shape_bvh(const yocto_shape& shape, bvh_tree& bvh) {
 
 // Refits a scene BVH
 void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh) {
-    for (auto iid = 0; iid < scene.instances_.size(); iid++) {
-        auto& instance = scene.instances_[iid];
+    for (auto iid = 0; iid < scene.instances.size(); iid++) {
+        auto& instance     = scene.instances[iid];
         bvh.instances[iid] = {
             instance.frame, inverse(instance.frame), instance.shape};
     }
@@ -3999,24 +3993,23 @@ void add_missing_names(yocto_scene& scene) {
             }
         }
     };
-    fix_names(scene.cameras_, "camera");
-    fix_names(scene.shapes_, "shape");
-    fix_names(scene.textures_, "texture");
-    fix_names(scene.voltextures_, "voltexture");
-    fix_names(scene.materials_, "mat");
-    fix_names(scene.environments_, "environment");
-    fix_names(scene.nodes_, "node");
-    fix_names(scene.animations_, "animation");
+    fix_names(scene.cameras, "camera");
+    fix_names(scene.shapes, "shape");
+    fix_names(scene.textures, "texture");
+    fix_names(scene.voltextures, "voltexture");
+    fix_names(scene.materials, "mat");
+    fix_names(scene.environments, "environment");
+    fix_names(scene.nodes, "node");
+    fix_names(scene.animations, "animation");
 }
 
 // Add missing tangent space if needed.
 void add_missing_tangent_space(yocto_scene& scene) {
-    for (auto& shape : scene.shapes_) {
-        auto& material = scene.materials_[shape.material];
+    for (auto& shape : scene.shapes) {
+        auto& material = scene.materials[shape.material];
         if (!shape.tangentspaces.empty() || shape.texturecoords.empty())
             continue;
-        if (material.normal_texture < 0 && material.bump_texture < 0)
-            continue;
+        if (material.normal_texture < 0 && material.bump_texture < 0) continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty())
                 shape.normals = compute_vertex_normals(
@@ -4032,14 +4025,14 @@ void add_missing_tangent_space(yocto_scene& scene) {
 // Add missing materials.
 void add_missing_materials(yocto_scene& scene) {
     auto material_id = -1;
-    for (auto& shape : scene.shapes_) {
+    for (auto& shape : scene.shapes) {
         if (shape.material >= 0) continue;
         if (material_id < 0) {
-            auto material     = yocto_material{};
+            auto material    = yocto_material{};
             material.name    = "<default>";
             material.diffuse = {0.2f, 0.2f, 0.2f};
-            scene.materials_.push_back(material);
-            material_id = (int)scene.materials_.size() - 1;
+            scene.materials.push_back(material);
+            material_id = (int)scene.materials.size() - 1;
         }
         shape.material = material_id;
     }
@@ -4047,26 +4040,26 @@ void add_missing_materials(yocto_scene& scene) {
 
 // Add missing cameras.
 void add_missing_cameras(yocto_scene& scene) {
-    if (scene.cameras_.empty()) {
+    if (scene.cameras.empty()) {
         auto camera = yocto_camera{};
         camera.name = "<view>";
         set_camera_view(camera, compute_scene_bounds(scene));
-        scene.cameras_.push_back(camera);
+        scene.cameras.push_back(camera);
     }
 }
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle) {
-    auto texture       = yocto_texture{};
+    auto texture      = yocto_texture{};
     texture.name      = "<sky>";
     texture.filename  = "textures/sky.hdr";
     texture.hdr_image = make_sunsky_image4f(1024, 512, sun_angle);
-    scene.textures_.push_back(texture);
-    auto environment              = yocto_environment{};
+    scene.textures.push_back(texture);
+    auto environment             = yocto_environment{};
     environment.name             = "<sky>";
     environment.emission         = {1, 1, 1};
-    environment.emission_texture = (int)scene.textures_.size() - 1;
-    scene.environments_.push_back(environment);
+    environment.emission_texture = (int)scene.textures.size() - 1;
+    scene.environments.push_back(environment);
 }
 
 // Checks for validity of the scene.
@@ -4091,15 +4084,15 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
         }
     };
 
-    check_names(scene.cameras_, "camera");
-    check_names(scene.shapes_, "shape");
-    check_names(scene.textures_, "texture");
-    check_names(scene.voltextures_, "voltexture");
-    check_names(scene.materials_, "material");
-    check_names(scene.environments_, "environment");
-    check_names(scene.nodes_, "node");
-    check_names(scene.animations_, "animation");
-    if (!skip_textures) check_empty_textures(scene.textures_);
+    check_names(scene.cameras, "camera");
+    check_names(scene.shapes, "shape");
+    check_names(scene.textures, "texture");
+    check_names(scene.voltextures, "voltexture");
+    check_names(scene.materials, "material");
+    check_names(scene.environments, "environment");
+    check_names(scene.nodes, "node");
+    check_names(scene.animations, "animation");
+    if (!skip_textures) check_empty_textures(scene.textures);
 
     return errs;
 }
@@ -4148,9 +4141,9 @@ scene_intersection intersect_scene(const yocto_scene& scene,
 // Instance intersection.
 scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
     const bvh_tree& bvh, const ray3f& ray, bool find_any) {
-    auto& instance = scene.instances_[instance_id];
-    auto isec     = scene_intersection();
-    auto tray     = transform_ray_inverse(instance.frame, ray);
+    auto& instance = scene.instances[instance_id];
+    auto  isec     = scene_intersection();
+    auto  tray     = transform_ray_inverse(instance.frame, ray);
     if (!intersect_bvh(bvh.shape_bvhs[instance.shape], tray, find_any,
             isec.distance, isec.instance_id, isec.element_id, isec.element_uv))
         return {};
@@ -4163,8 +4156,8 @@ vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {
     auto norm = zero3f;
     if (!shape.triangles.empty()) {
         auto t = shape.triangles[element_id];
-        norm   = triangle_normal(shape.positions[t.x], shape.positions[t.y],
-            shape.positions[t.z]);
+        norm   = triangle_normal(
+            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
     } else if (!shape.quads.empty()) {
         auto q = shape.quads[element_id];
         norm   = quad_normal(shape.positions[q.x], shape.positions[q.y],
@@ -4188,8 +4181,8 @@ vec4f evaluate_shape_element_tangentspace(
     auto tangsp = zero4f;
     if (!shape.triangles.empty()) {
         auto t    = shape.triangles[element_id];
-        auto norm = triangle_normal(shape.positions[t.x],
-            shape.positions[t.y], shape.positions[t.z]);
+        auto norm = triangle_normal(
+            shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
         auto txty = tuple<vec3f, vec3f>();
         if (shape.texturecoords.empty()) {
             txty = triangle_tangents_fromuv(shape.positions[t.x],
@@ -4262,10 +4255,9 @@ vec3f evaluate_shape_normal(
     if (shape.normals.empty())
         return evaluate_shape_element_normal(shape, element_id);
     if (!shape.quads_positions.empty())
-        return normalize(evaluate_elem(shape, shape.normals,
-            shape.quads_normals, element_id, element_uv));
-    return normalize(
-        evaluate_elem(shape, shape.normals, element_id, element_uv));
+        return normalize(evaluate_elem(
+            shape, shape.normals, shape.quads_normals, element_id, element_uv));
+    return normalize(evaluate_elem(shape, shape.normals, element_id, element_uv));
 }
 vec2f evaluate_shape_texturecoord(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
@@ -4304,15 +4296,15 @@ vec3f evaluate_shape_tangentspace(const yocto_shape& shape, int element_id,
 vec3f evaluate_shading_normal(const yocto_scene& scene, const yocto_shape& shape,
     int element_id, const vec2f& element_uv, const vec3f& outgoing) {
     if (!shape.triangles.empty()) {
-        auto normal   = evaluate_shape_normal(shape, element_id, element_uv);
-        auto& material = scene.materials_[shape.material];
+        auto  normal   = evaluate_shape_normal(shape, element_id, element_uv);
+        auto& material = scene.materials[shape.material];
         if (material.normal_texture >= 0) {
             auto texcoord = evaluate_shape_texturecoord(
                 shape, element_id, element_uv);
-            auto left_handed    = false;
-            auto& normal_texture = scene.textures_[material.normal_texture];
-            auto texture = xyz(evaluate_texture(normal_texture, texcoord));
-            texture      = texture * 2 - vec3f{1, 1, 1};
+            auto  left_handed    = false;
+            auto& normal_texture = scene.textures[material.normal_texture];
+            auto  texture = xyz(evaluate_texture(normal_texture, texcoord));
+            texture       = texture * 2 - vec3f{1, 1, 1};
             texture.y = -texture.y;  // flip vertical axis to align green with
                                      // image up
             auto tu = orthonormalize(evaluate_shape_tangentspace(shape,
@@ -4340,27 +4332,27 @@ vec3f evaluate_shading_normal(const yocto_scene& scene, const yocto_shape& shape
 // Instance values interpolated using barycentric coordinates.
 vec3f evaluate_instance_position(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    auto& shape = scene.shapes_[instance.shape];
-    return transform_point(instance.frame,
-        evaluate_shape_position(shape, element_id, element_uv));
+    auto& shape = scene.shapes[instance.shape];
+    return transform_point(
+        instance.frame, evaluate_shape_position(shape, element_id, element_uv));
 }
 vec3f evaluate_shape_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    auto& shape = scene.shapes_[instance.shape];
+    auto& shape = scene.shapes[instance.shape];
     return transform_direction(
         instance.frame, evaluate_shape_normal(shape, element_id, element_uv));
 }
 vec3f evaluate_instance_tangentspace(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     bool& left_handed) {
-    auto& shape = scene.shapes_[instance.shape];
+    auto& shape = scene.shapes[instance.shape];
     return transform_direction(instance.frame,
         evaluate_shape_tangentspace(shape, element_id, element_uv, left_handed));
 }
 // Instance element values.
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id) {
-    auto& shape = scene.shapes_[instance.shape];
+    auto& shape = scene.shapes[instance.shape];
     return transform_direction(
         instance.frame, evaluate_shape_element_normal(shape, element_id));
 }
@@ -4368,7 +4360,7 @@ vec3f evaluate_instance_element_normal(
 vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& outgoing) {
-    auto& shape = scene.shapes_[instance.shape];
+    auto& shape = scene.shapes[instance.shape];
     return transform_direction(instance.frame,
         evaluate_shading_normal(scene, shape, element_id, element_uv,
             transform_direction_inverse(instance.frame, outgoing)));
@@ -4396,7 +4388,7 @@ vec3f evaluate_environment_emission(const yocto_scene& scene,
     const yocto_environment& environment, const vec3f& direction) {
     auto ke = environment.emission;
     if (environment.emission_texture >= 0) {
-        auto& emission_texture = scene.textures_[environment.emission_texture];
+        auto& emission_texture = scene.textures[environment.emission_texture];
         ke *= xyz(evaluate_texture(emission_texture,
             evaluate_environment_texturecoord(environment, direction)));
     }
@@ -4406,7 +4398,7 @@ vec3f evaluate_environment_emission(const yocto_scene& scene,
 vec3f evaluate_environment_emission(
     const yocto_scene& scene, const vec3f& direction) {
     auto ke = zero3f;
-    for (auto& environment : scene.environments_)
+    for (auto& environment : scene.environments)
         ke += evaluate_environment_emission(scene, environment, direction);
     return ke;
 }
@@ -4579,7 +4571,7 @@ vec3f evaluate_material_emission(const yocto_scene& scene,
     const vec4f& shape_color) {
     auto emission = material.emission * xyz(shape_color);
     if (material.emission_texture >= 0) {
-        auto& emission_texture = scene.textures_[material.emission_texture];
+        auto& emission_texture = scene.textures[material.emission_texture];
         emission *= xyz(evaluate_texture(emission_texture, texturecoord));
     }
     return emission;
@@ -4590,19 +4582,19 @@ vec3f evaluate_material_diffuse(const yocto_scene& scene,
     if (!material.base_metallic) {
         auto diffuse = material.diffuse * xyz(shape_color);
         if (material.diffuse_texture >= 0) {
-            auto& diffuse_texture = scene.textures_[material.diffuse_texture];
+            auto& diffuse_texture = scene.textures[material.diffuse_texture];
             diffuse *= xyz(evaluate_texture(diffuse_texture, texturecoord));
         }
         return diffuse;
     } else {
         auto base = material.diffuse * xyz(shape_color);
         if (material.diffuse_texture >= 0) {
-            auto& diffuse_texture = scene.textures_[material.diffuse_texture];
+            auto& diffuse_texture = scene.textures[material.diffuse_texture];
             base *= xyz(evaluate_texture(diffuse_texture, texturecoord));
         }
         auto metallic = material.specular;
         if (material.specular_texture >= 0) {
-            auto& specular_texture = scene.textures_[material.specular_texture];
+            auto& specular_texture = scene.textures[material.specular_texture];
             metallic *= evaluate_texture(specular_texture, texturecoord).z;
         }
         return base * (1 - metallic);
@@ -4614,19 +4606,19 @@ vec3f evaluate_material_specular(const yocto_scene& scene,
     if (!material.base_metallic) {
         auto specular = material.specular * xyz(shape_color);
         if (material.specular_texture >= 0) {
-            auto& specular_texture = scene.textures_[material.specular_texture];
+            auto& specular_texture = scene.textures[material.specular_texture];
             specular *= xyz(evaluate_texture(specular_texture, texturecoord));
         }
         return specular;
     } else {
         auto base = material.diffuse * xyz(shape_color);
         if (material.diffuse_texture >= 0) {
-            auto& diffuse_texture = scene.textures_[material.diffuse_texture];
+            auto& diffuse_texture = scene.textures[material.diffuse_texture];
             base *= xyz(evaluate_texture(diffuse_texture, texturecoord));
         }
         auto metallic = material.specular.x;
         if (material.specular_texture >= 0) {
-            auto& specular_texture = scene.textures_[material.specular_texture];
+            auto& specular_texture = scene.textures[material.specular_texture];
             metallic *= evaluate_texture(specular_texture, texturecoord).z;
         }
         return base * metallic + 0.04f * (1 - metallic);
@@ -4639,14 +4631,14 @@ float evaluate_material_roughness(const yocto_scene& scene,
         if (!material.gltf_textures) {
             auto roughness = material.roughness;
             if (material.roughness_texture >= 0) {
-                auto& roughness_texture = scene.textures_[material.roughness_texture];
+                auto& roughness_texture = scene.textures[material.roughness_texture];
                 roughness *= evaluate_texture(roughness_texture, texturecoord).x;
             }
             return roughness * roughness;
         } else {
             auto glossiness = 1 - material.roughness;
             if (material.roughness_texture >= 0) {
-                auto& roughness_texture = scene.textures_[material.roughness_texture];
+                auto& roughness_texture = scene.textures[material.roughness_texture];
                 glossiness *= evaluate_texture(roughness_texture, texturecoord).w;
             }
             auto roughness = 1 - glossiness;
@@ -4655,7 +4647,7 @@ float evaluate_material_roughness(const yocto_scene& scene,
     } else {
         auto roughness = material.roughness;
         if (material.roughness_texture >= 0) {
-            auto& roughness_texture = scene.textures_[material.roughness_texture];
+            auto& roughness_texture = scene.textures[material.roughness_texture];
             roughness *= evaluate_texture(roughness_texture, texturecoord).y;
         }
         return roughness * roughness;
@@ -4666,7 +4658,7 @@ vec3f evaluate_material_transmission(const yocto_scene& scene,
     const vec4f& shape_color) {
     auto transmission = material.transmission * xyz(shape_color);
     if (material.transmission_texture >= 0) {
-        auto& transmission_texture = scene.textures_[material.transmission_texture];
+        auto& transmission_texture = scene.textures[material.transmission_texture];
         transmission *= xyz(evaluate_texture(transmission_texture, texturecoord));
     }
     return transmission;
@@ -4676,7 +4668,7 @@ float evaluate_material_opacity(const yocto_scene& scene,
     const vec4f& shape_color) {
     auto opacity = material.opacity * shape_color.w;
     if (material.opacity_texture >= 0) {
-        auto& opacity_texture = scene.textures_[material.opacity_texture];
+        auto& opacity_texture = scene.textures[material.opacity_texture];
         opacity *= evaluate_texture(opacity_texture, texturecoord).w;
     }
     return opacity;
@@ -4744,7 +4736,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
         pos += dir * step;
         auto density = material.volume_density;
         if (material.volume_density_texture >= 0) {
-            auto& volume_density_texture = scene.voltextures_[material.volume_density_texture];
+            auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
         tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
@@ -4770,7 +4762,7 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
         dist += step;
         auto density = material.volume_density;
         if (material.volume_density_texture >= 0) {
-            auto& volume_density_texture = scene.voltextures_[material.volume_density_texture];
+            auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
         if (at(density, channel) / majorant >= get_random_float(rng))
@@ -4785,8 +4777,8 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
 float sample_distance(const yocto_scene& scene, const yocto_instance& instance,
     const bbox3f& bbox, const vec3f& from, const vec3f& dir, int channel,
     rng_state& rng) {
-    auto& shape = scene.shapes_[instance.shape];
-    auto& material = scene.materials_[shape.material];
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[shape.material];
     if (material.volume_density == zero3f) return maxf;
 
     // Transform coordinates so that every position in the bounding box of the
@@ -4836,13 +4828,13 @@ void merge_scene(yocto_scene& merge_scene, const yocto_scene& merge_from) {
     auto merge_ = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());
     };
-    merge_(merge_scene.cameras_, merge_from.cameras_);
-    merge(merge_scene.textures_, merge_from.textures_);
-    merge(merge_scene.materials_, merge_from.materials_);
-    merge(merge_scene.shapes_, merge_from.shapes_);
-    merge(merge_scene.environments_, merge_from.environments_);
-    merge_(merge_scene.nodes_, merge_from.nodes_);
-    merge_(merge_scene.animations_, merge_from.animations_);
+    merge_(merge_scene.cameras, merge_from.cameras);
+    merge(merge_scene.textures, merge_from.textures);
+    merge(merge_scene.materials, merge_from.materials);
+    merge(merge_scene.shapes, merge_from.shapes);
+    merge(merge_scene.environments, merge_from.environments);
+    merge_(merge_scene.nodes, merge_from.nodes);
+    merge_(merge_scene.animations, merge_from.animations);
 }
 
 void print_stats(const yocto_scene& scene) {
@@ -4877,16 +4869,16 @@ void print_stats(const yocto_scene& scene) {
 
     auto bbox = compute_scene_bounds(scene);
 
-    num_cameras      = scene.cameras_.size();
-    num_shapes       = scene.shapes_.size();
-    num_materials    = scene.materials_.size();
-    num_textures     = scene.textures_.size();
-    num_environments = scene.environments_.size();
-    num_instances    = scene.instances_.size();
-    num_nodes        = scene.nodes_.size();
-    num_animations   = scene.animations_.size();
+    num_cameras      = scene.cameras.size();
+    num_shapes       = scene.shapes.size();
+    num_materials    = scene.materials.size();
+    num_textures     = scene.textures.size();
+    num_environments = scene.environments.size();
+    num_instances    = scene.instances.size();
+    num_nodes        = scene.nodes.size();
+    num_animations   = scene.animations.size();
 
-    for (auto& shape : scene.shapes_) {
+    for (auto& shape : scene.shapes) {
         elem_points += shape.points.size();
         elem_lines += shape.lines.size();
         elem_triangles += shape.triangles.size();
@@ -4903,7 +4895,7 @@ void print_stats(const yocto_scene& scene) {
                    vert_texcoord * sizeof(vec3f) + vert_color * sizeof(vec4f) +
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);
 
-    for (auto& texture : scene.textures_) {
+    for (auto& texture : scene.textures) {
         texel_hdr += texture.hdr_image.width * texture.hdr_image.height;
         texel_ldr += texture.ldr_image.width * texture.ldr_image.height;
     }
@@ -4966,10 +4958,10 @@ struct trace_point {
 trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     int element_id, const vec2f& element_uv,
     const vec3f& shading_direction = zero3f) {
-    auto& instance = scene.instances_[instance_id];
-    auto& shape = scene.shapes_[instance.shape];
-    auto& material = scene.materials_[shape.material];
-    auto point        = trace_point();
+    auto& instance    = scene.instances[instance_id];
+    auto& shape       = scene.shapes[instance.shape];
+    auto& material    = scene.materials[shape.material];
+    auto  point       = trace_point();
     point.instance_id = instance_id;
     point.element_id  = element_id;
     point.element_uv  = element_uv;
@@ -5028,10 +5020,10 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene& scene,
         _trace_nrays += 1;
         auto isec = intersect_scene(scene, bvh, ray);
         if (isec.instance_id < 0) return isec;
-        auto& instance = scene.instances_[isec.instance_id];
-        auto& shape = scene.shapes_[instance.shape];
-        auto& material = scene.materials_[shape.material];
-        auto op       = evaluate_material_opacity(scene, material,
+        auto& instance = scene.instances[isec.instance_id];
+        auto& shape    = scene.shapes[instance.shape];
+        auto& material = scene.materials[shape.material];
+        auto  op       = evaluate_material_opacity(scene, material,
             evaluate_shape_texturecoord(shape, isec.element_id, isec.element_uv),
             evaluate_shape_color(shape, isec.element_id, isec.element_uv));
         if (op > 0.999f) return isec;
@@ -5353,8 +5345,8 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 // Picks a point on a light.
 trace_point sample_instance_point(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, float rel, const vec2f& ruv) {
-    auto& instance = scene.instances_[instance_id];
-    auto& shape = scene.shapes_[instance.shape];
+    auto& instance              = scene.instances[instance_id];
+    auto& shape                 = scene.shapes[instance.shape];
     auto& elements_cdf          = lights.shape_elements_cdf[instance.shape];
     auto  element_id            = 0;
     auto  element_uv            = zero2f;
@@ -5367,9 +5359,9 @@ trace_point sample_instance_point(const yocto_scene& scene,
 float sample_instance_point_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, int element_id,
     const vec2f& element_uv) {
-    auto& instance = scene.instances_[instance_id];
-    auto& shape = scene.shapes_[instance.shape];
-    auto& material = scene.materials_[shape.material];
+    auto& instance     = scene.instances[instance_id];
+    auto& shape        = scene.shapes[instance.shape];
+    auto& material     = scene.materials[shape.material];
     auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
     if (material.emission == zero3f) return 0;
     return sample_shape_element_pdf(shape, elements_cdf, element_id, element_uv);
@@ -5387,7 +5379,7 @@ trace_point sample_lights_point(const yocto_scene& scene,
     auto point = sample_instance_point(scene, lights, instance_id, rel, ruv);
     auto direction = normalize(position - point.position);
     point.normal   = evaluate_instance_shading_normal(scene,
-        scene.instances_[instance_id], point.element_id, point.element_uv,
+        scene.instances[instance_id], point.element_id, point.element_uv,
         direction);
     return point;
 }
@@ -5396,9 +5388,9 @@ trace_point sample_lights_point(const yocto_scene& scene,
 float sample_lights_point_pdf(const yocto_scene& scene,
     const trace_lights& lights, const vec3f& position,
     const trace_point& light_point) {
-    auto& instance = scene.instances_[light_point.instance_id];
-    auto& shape = scene.shapes_[instance.shape];
-    auto& material = scene.materials_[shape.material];
+    auto& instance = scene.instances[light_point.instance_id];
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[shape.material];
     if (lights.instances.empty()) return 0;
     if (material.emission == zero3f) return 0;
     return sample_instance_point_pdf(scene, lights, light_point.instance_id,
@@ -5409,11 +5401,11 @@ float sample_lights_point_pdf(const yocto_scene& scene,
 // Sample pdf for an environment.
 float sample_environment_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
-    auto& environment = scene.environments_[environment_id];
+    auto& environment = scene.environments[environment_id];
     if (environment.emission_texture >= 0) {
         auto& elements_cdf = lights.environment_texture_cdf[environment.emission_texture];
-        auto& emission_texture = scene.textures_[environment.emission_texture];
-        auto size             = evaluate_texture_size(emission_texture);
+        auto& emission_texture = scene.textures[environment.emission_texture];
+        auto  size             = evaluate_texture_size(emission_texture);
         auto texcoord = evaluate_environment_texturecoord(environment, incoming);
         auto i        = (int)(texcoord.x * size.x);
         auto j        = (int)(texcoord.y * size.y);
@@ -5431,14 +5423,14 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 // Picks a point on an environment.
 vec3f sample_environment_direction(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, float rel, const vec2f& ruv) {
-    auto& environment = scene.environments_[environment_id];
+    auto& environment = scene.environments[environment_id];
     if (environment.emission_texture >= 0) {
         auto& elements_cdf = lights.environment_texture_cdf[environment.emission_texture];
-        auto& emission_texture = scene.textures_[environment.emission_texture];
-        auto idx              = sample_discrete_distribution(elements_cdf, rel);
-        auto size             = evaluate_texture_size(emission_texture);
-        auto u                = (idx % size.x + 0.5f) / size.x;
-        auto v                = (idx / size.x + 0.5f) / size.y;
+        auto& emission_texture = scene.textures[environment.emission_texture];
+        auto  idx  = sample_discrete_distribution(elements_cdf, rel);
+        auto  size = evaluate_texture_size(emission_texture);
+        auto  u    = (idx % size.x + 0.5f) / size.x;
+        auto  v    = (idx / size.x + 0.5f) / size.y;
         return evaluate_environment_direction(environment, {u, v});
     } else {
         return sample_sphere_direction(ruv);
@@ -5458,8 +5450,8 @@ vec3f sample_environment_direction(const yocto_scene& scene,
 vec3f sample_instance_direction(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const vec3f& p, float rel,
     const vec2f& ruv) {
-    auto& instance = scene.instances_[instance_id];
-    auto& shape = scene.shapes_[instance.shape];
+    auto& instance     = scene.instances[instance_id];
+    auto& shape        = scene.shapes[instance.shape];
     auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
     auto  sample       = sample_shape_element(shape, elements_cdf, rel, ruv);
     return normalize(evaluate_instance_position(
@@ -5471,9 +5463,9 @@ vec3f sample_instance_direction(const yocto_scene& scene,
 float sample_instance_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const bvh_tree& bvh,
     const vec3f& position, const vec3f& direction) {
-    auto& instance = scene.instances_[instance_id];
-    auto& shape = scene.shapes_[instance.shape];
-    auto& material = scene.materials_[shape.material];
+    auto& instance     = scene.instances[instance_id];
+    auto& shape        = scene.shapes[instance.shape];
+    auto& material     = scene.materials[shape.material];
     auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
     if (material.emission == zero3f) return 0;
     // check all intersection
@@ -5482,8 +5474,8 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     auto isec = intersect_scene(scene, instance_id, bvh, ray);
     while (isec.instance_id >= 0) {
         // accumulate pdf
-        auto& instance = scene.instances_[isec.instance_id];
-        auto light_position = evaluate_instance_position(
+        auto& instance       = scene.instances[isec.instance_id];
+        auto  light_position = evaluate_instance_position(
             scene, instance, isec.element_id, isec.element_uv);
         auto light_normal = evaluate_instance_shading_normal(
             scene, instance, isec.element_id, isec.element_uv, direction);
@@ -5623,9 +5615,9 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_tree& bvh,
     pdf = 1.0f / (lights.instances.size() + lights.environments.size());
     if (idx < lights.instances.size()) {
         auto instance_id = lights.instances[idx];
-        incoming      = sample_instance_direction(scene, lights, instance_id, p,
+        incoming = sample_instance_direction(scene, lights, instance_id, p,
             get_random_float(rng), get_random_vec2f(rng));
-        auto& instance = scene.instances_[instance_id];
+        auto& instance = scene.instances[instance_id];
         pdf *= 1.0 / lights.shape_elements_cdf[instance.shape].back();
     } else {
         auto environment_id = lights.environments[idx - lights.instances.size()];
@@ -5636,7 +5628,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_tree& bvh,
         auto isec = intersect_scene_with_opacity(
             scene, bvh, make_ray(p, incoming), rng, 10);
         if (isec.instance_id < 0) {
-            auto& environment = scene.environments_[environment_id];
+            auto& environment = scene.environments[environment_id];
             le = evaluate_environment_emission(scene, environment, incoming);
             return incoming;
         }
@@ -5645,21 +5637,21 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_tree& bvh,
     auto isec = intersect_scene(scene, bvh, make_ray(p, incoming));
 
     while (isec.instance_id >= 0) {
-        auto& isec_instance = scene.instances_[isec.instance_id];
-        auto& isec_shape    = scene.shapes_[isec_instance.shape];
-        auto lp            = evaluate_instance_position(
+        auto& isec_instance = scene.instances[isec.instance_id];
+        auto& isec_shape    = scene.shapes[isec_instance.shape];
+        auto  lp            = evaluate_instance_position(
             scene, isec_instance, isec.element_id, isec.element_uv);
         auto ln = evaluate_instance_shading_normal(
             scene, isec_instance, isec.element_id, isec.element_uv, -incoming);
-        auto& isec_material = scene.materials_[isec_shape.material];
-        auto emission      = evaluate_material_emission(scene, isec_material,
+        auto& isec_material = scene.materials[isec_shape.material];
+        auto  emission      = evaluate_material_emission(scene, isec_material,
             evaluate_shape_texturecoord(
                 isec_shape, isec.element_id, isec.element_uv),
             evaluate_shape_color(isec_shape, isec.element_id, isec.element_uv));
 
-        auto& medium_instance = scene.instances_[mediums.back()];
-        auto& medium_shape    = scene.shapes_[medium_instance.shape];
-        auto& medium_material = scene.materials_[medium_shape.material];
+        auto& medium_instance = scene.instances[mediums.back()];
+        auto& medium_shape    = scene.shapes[medium_instance.shape];
+        auto& medium_material = scene.materials[medium_shape.material];
         if (medium_material.volume_density != zero3f)
             weight *= evaluate_transmission(scene, medium_material, lp,
                 incoming, isec.distance, channel, rng);
@@ -5834,14 +5826,14 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_tree& bvh,
 
     int bounce = 0;
     while (bounce < max_bounces) {
-        auto medium   = mediums.back();
-        auto& instance = scene.instances_[medium];
-        auto& shape = scene.shapes_[instance.shape];
-        auto& material = scene.materials_[shape.material];
-        auto ve       = material.volume_emission;
-        auto va       = material.volume_albedo;
-        auto vd       = material.volume_density;
-        auto vg       = material.volume_phaseg;
+        auto  medium   = mediums.back();
+        auto& instance = scene.instances[medium];
+        auto& shape    = scene.shapes[instance.shape];
+        auto& material = scene.materials[shape.material];
+        auto  ve       = material.volume_emission;
+        auto  va       = material.volume_albedo;
+        auto  vd       = material.volume_density;
+        auto  vg       = material.volume_phaseg;
 
         // If medium has color but must use delta tracking, integrate only the
         // sampled spectrum.
@@ -5875,7 +5867,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_tree& bvh,
         // environment
         if (isec.instance_id < 0 && dist > scene_size) {
             if (emission) {
-                for (auto& environment : scene.environments_)
+                for (auto& environment : scene.environments)
                     radiance += weight * evaluate_environment_emission(
                                              scene, environment, ray.d);
             }
@@ -5884,11 +5876,11 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_tree& bvh,
 
         // surface intersection
         if (isec.instance_id >= 0) {
-            auto& isec_instance = scene.instances_[isec.instance_id];
-            auto& isec_shape    = scene.shapes_[isec_instance.shape];
-            auto outgoing      = -ray.d;
-            auto& isec_material = scene.materials_[isec_shape.material];
-            auto p             = evaluate_instance_position(
+            auto& isec_instance = scene.instances[isec.instance_id];
+            auto& isec_shape    = scene.shapes[isec_instance.shape];
+            auto  outgoing      = -ray.d;
+            auto& isec_material = scene.materials[isec_shape.material];
+            auto  p             = evaluate_instance_position(
                 scene, isec_instance, isec.element_id, isec.element_uv);
             auto normal = evaluate_instance_shading_normal(scene, isec_instance,
                 isec.element_id, isec.element_uv, outgoing);
@@ -6460,7 +6452,7 @@ vec4f trace_sample(trace_state& state, const yocto_scene& scene,
     const bvh_tree& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params) {
     _trace_npaths += 1;
-    auto& camera       = scene.cameras_.at(params.camera_id);
+    auto& camera       = scene.cameras.at(params.camera_id);
     auto& rng          = at(state.random_number_generators, i, j);
     auto  ray          = sample_camera_ray(camera, {i, j},
         {state.rendered_image.width, state.rendered_image.height}, rng);
@@ -6475,7 +6467,7 @@ vec4f trace_sample(trace_state& state, const yocto_scene& scene,
     if (max(radiance) > params.pixel_clamp)
         radiance = radiance * (params.pixel_clamp / max(radiance));
     return {radiance.x, radiance.y, radiance.z,
-        (hit || !scene.environments_.empty()) ? 1.0f : 0.0f};
+        (hit || !scene.environments.empty()) ? 1.0f : 0.0f};
 }
 
 // Init a sequence of random number generators.
@@ -6497,7 +6489,7 @@ trace_state make_trace_state(
     const yocto_scene& scene, const trace_params& params) {
     auto  scope  = log_trace_scoped("making trace state");
     auto  state  = trace_state();
-    auto& camera = scene.cameras_[params.camera_id];
+    auto& camera = scene.cameras[params.camera_id];
     auto  size   = evaluate_image_size(camera, params.vertical_resolution);
     state.rendered_image           = image<vec4f>{size.x, size.y, zero4f};
     state.display_image            = image<vec4f>{size.x, size.y, zero4f};
@@ -6514,12 +6506,12 @@ trace_lights make_trace_lights(
     auto scope  = log_trace_scoped("making trace lights");
     auto lights = trace_lights{};
 
-    lights.shape_elements_cdf.resize(scene.shapes_.size());
-    for (auto instance_id = 0; instance_id < scene.instances_.size();
+    lights.shape_elements_cdf.resize(scene.shapes.size());
+    for (auto instance_id = 0; instance_id < scene.instances.size();
          instance_id++) {
-        auto& instance = scene.instances_[instance_id];
-        auto& shape = scene.shapes_[instance.shape];
-        auto& material = scene.materials_[shape.material];
+        auto& instance = scene.instances[instance_id];
+        auto& shape    = scene.shapes[instance.shape];
+        auto& material = scene.materials[shape.material];
         if (material.emission == zero3f) continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
         lights.instances.push_back(instance_id);
@@ -6527,10 +6519,10 @@ trace_lights make_trace_lights(
             shape);
     }
 
-    lights.environment_texture_cdf.resize(scene.textures_.size());
-    for (auto environment_id = 0; environment_id < scene.environments_.size();
+    lights.environment_texture_cdf.resize(scene.textures.size());
+    for (auto environment_id = 0; environment_id < scene.environments.size();
          environment_id++) {
-        auto& environment = scene.environments_[environment_id];
+        auto& environment = scene.environments[environment_id];
         if (environment.emission == zero3f) continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {

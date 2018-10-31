@@ -241,8 +241,7 @@ bool draw_combobox_glwidget(
 bool draw_combobox_glwidget(
     glwindow* win, const char* lbl, string& val, const vector<string>& labels);
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx, int num,
-    const function<const char*(int)>& labels,
-    bool include_null = false);
+    const function<const char*(int)>& labels, bool include_null = false);
 
 template <typename T>
 inline bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
