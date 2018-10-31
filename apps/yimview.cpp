@@ -79,152 +79,147 @@ struct app_image {
 
 struct app_state {
     // images
-    vector<app_image*> imgs;
-    int                img_id = 0;
-
-    ~app_state() {
-        for (auto img : imgs) delete img;
-    }
+    deque<app_image> imgs;
+    int              img_id = 0;
 };
 
 // compute min/max
-void update_stats_async(app_image* img) {
-    img->stats_done       = false;
-    img->stats.pxl_bounds = invalid_bbox4f;
-    img->stats.lum_bounds = invalid_bbox1f;
-    for (auto p : img->img.pixels) {
-        img->stats.pxl_bounds += p;
-        img->stats.lum_bounds += luminance(xyz(p));
+void update_stats_async(app_image& img) {
+    img.stats_done       = false;
+    img.stats.pxl_bounds = invalid_bbox4f;
+    img.stats.lum_bounds = invalid_bbox1f;
+    for (auto p : img.img.pixels) {
+        img.stats.pxl_bounds += p;
+        img.stats.lum_bounds += luminance(xyz(p));
     }
-    img->stats_done = true;
+    img.stats_done = true;
 }
 
-void update_display_async(app_image* img) {
-    auto scope        = log_trace_scoped("computing display image");
-    img->display_done = false;
-    img->texture_done = false;
-    if (img->img.width * img->img.height > 1024 * 1024) {
+void update_display_async(app_image& img) {
+    auto scope       = log_trace_scoped("computing display image");
+    img.display_done = false;
+    img.texture_done = false;
+    if (img.img.width * img.img.height > 1024 * 1024) {
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([img, tid, nthreads]() {
-                for (auto j = tid; j < img->img.height; j += nthreads) {
-                    if (img->display_stop) break;
-                    for (auto i = 0; i < img->img.width; i++) {
-                        at(img->display, i, j) = tonemap_filmic(
-                            at(img->img, i, j), img->exposure, img->filmic,
-                            img->srgb);
+            threads.push_back(thread([&img, tid, nthreads]() {
+                for (auto j = tid; j < img.img.height; j += nthreads) {
+                    if (img.display_stop) break;
+                    for (auto i = 0; i < img.img.width; i++) {
+                        at(img.display, i, j) = tonemap_filmic(at(img.img, i, j),
+                            img.exposure, img.filmic, img.srgb);
                     }
                 }
             }));
         }
         for (auto& t : threads) t.join();
     } else {
-        for (auto j = 0; j < img->img.height; j++) {
-            if (img->display_stop) break;
-            for (auto i = 0; i < img->img.width; i++) {
-                at(img->display, i, j) = tonemap_filmic(
-                    at(img->img, i, j), img->exposure, img->filmic, img->srgb);
+        for (auto j = 0; j < img.img.height; j++) {
+            if (img.display_stop) break;
+            for (auto i = 0; i < img.img.width; i++) {
+                at(img.display, i, j) = tonemap_filmic(
+                    at(img.img, i, j), img.exposure, img.filmic, img.srgb);
             }
         }
     }
-    img->display_done = true;
+    img.display_done = true;
 }
 
 // load image
-void load_image_async(app_image* img) {
-    img->load_done    = false;
-    img->stats_done   = false;
-    img->display_done = false;
-    img->texture_done = false;
-    img->error_msg    = "";
-    img->img          = load_image4f(img->filename);
-    if (img->img.pixels.empty()) img->error_msg = "cannot load image";
-    img->load_done      = true;
-    img->display        = img->img;
-    img->display_thread = thread(update_display_async, img);
-    img->stats_thread   = thread(update_stats_async, img);
+void load_image_async(app_image& img) {
+    img.load_done    = false;
+    img.stats_done   = false;
+    img.display_done = false;
+    img.texture_done = false;
+    img.error_msg    = "";
+    img.img          = {};
+    if (!load_image(img.filename, img.img)) img.error_msg = "cannot load image";
+    img.load_done      = true;
+    img.display        = img.img;
+    img.display_thread = thread([&img]() { update_display_async(img); });
+    img.stats_thread   = thread([&img]() { update_stats_async(img); });
 }
 
 // save an image
-void save_image_async(app_image* img) {
-    if (is_hdr_filename(img->outname)) {
-        if (!save_image4b(img->outname, float_to_byte(img->display))) {
-            img->error_msg = "error saving image";
+void save_image_async(app_image& img) {
+    if (is_hdr_filename(img.outname)) {
+        if (!save_image(img.outname, float_to_byte(img.display))) {
+            img.error_msg = "error saving image";
         }
     } else {
-        if (!save_image4f(img->outname, srgb_to_linear(img->display))) {
-            img->error_msg = "error saving image";
+        if (!save_image(img.outname, srgb_to_linear(img.display))) {
+            img.error_msg = "error saving image";
         }
     }
 }
 
 // add a new image
-void add_new_image(app_state* app, const string& filename, const string& outname,
+void add_new_image(app_state& app, const string& filename, const string& outname,
     float exposure = 0, bool filmic = false, bool srgb = true) {
-    auto img      = new app_image();
-    img->filename = filename;
-    img->outname = (outname == "") ? replace_extension(filename, ".display.png") :
-                                     outname;
-    img->name        = get_filename(filename);
-    img->is_hdr      = is_hdr_filename(filename);
-    img->exposure    = exposure;
-    img->filmic      = filmic;
-    img->srgb        = srgb;
-    img->load_thread = thread(load_image_async, img);
-    app->imgs.push_back(img);
-    app->img_id = (int)app->imgs.size() - 1;
+    app.imgs.emplace_back();
+    auto& img    = app.imgs.back();
+    img.filename = filename;
+    img.outname = (outname == "") ? replace_extension(filename, ".display.png") :
+                                    outname;
+    img.name        = get_filename(filename);
+    img.is_hdr      = is_hdr_filename(filename);
+    img.exposure    = exposure;
+    img.filmic      = filmic;
+    img.srgb        = srgb;
+    img.load_thread = thread([&img]() { load_image_async(img); });
+    app.img_id      = (int)app.imgs.size() - 1;
 }
 
-void draw_glwidgets(glwindow* win) {
-    auto app    = (app_state*)get_user_pointer(win);
-    auto edited = false;
+void draw_glwidgets(const glwindow& win) {
+    auto& app    = *(app_state*)get_user_pointer(win);
+    auto  edited = false;
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yimview")) {
-        auto img = app->imgs.at(app->img_id);
+        auto& img = app.imgs.at(app.img_id);
         if (begin_header_glwidget(win, "image")) {
-            draw_combobox_glwidget(win, "image", app->img_id, app->imgs);
-            draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
-            draw_textinput_glwidget(win, "outname", img->outname);
+            draw_combobox_glwidget(win, "image", app.img_id, app.imgs, false);
+            draw_label_glwidgets(win, "filename", "%s", img.filename.c_str());
+            draw_textinput_glwidget(win, "outname", img.outname);
             if (draw_button_glwidget(win, "save display")) {
-                if (img->display_done) {
-                    img->save_thread = thread(save_image_async, img);
+                if (img.display_done) {
+                    img.save_thread = thread([&img]() { save_image_async(img); });
                 }
             }
             auto status = string();
-            if (img->error_msg != "")
-                status = "error: " + img->error_msg;
-            else if (!img->load_done)
+            if (img.error_msg != "")
+                status = "error: " + img.error_msg;
+            else if (!img.load_done)
                 status = "loading...";
-            else if (!img->display_done)
+            else if (!img.display_done)
                 status = "displaying...";
             else
                 status = "done";
             draw_label_glwidgets(win, "status", status.c_str());
             draw_label_glwidgets(
-                win, "size", "%d x %d ", img->img.width, img->img.height);
-            draw_slider_glwidget(win, "zoom", img->imscale, 0.1, 10);
-            draw_checkbox_glwidget(win, "zoom to fit", img->zoom_to_fit);
+                win, "size", "%d x %d ", img.img.width, img.img.height);
+            draw_slider_glwidget(win, "zoom", img.imscale, 0.1, 10);
+            draw_checkbox_glwidget(win, "zoom to fit", img.zoom_to_fit);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "adjust")) {
-            edited += draw_slider_glwidget(win, "exposure", img->exposure, -5, 5);
-            edited += draw_checkbox_glwidget(win, "filmic", img->filmic);
-            edited += draw_checkbox_glwidget(win, "srgb", img->srgb);
+            edited += draw_slider_glwidget(win, "exposure", img.exposure, -5, 5);
+            edited += draw_checkbox_glwidget(win, "filmic", img.filmic);
+            edited += draw_checkbox_glwidget(win, "srgb", img.srgb);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, img->imcenter, img->imscale,
-                {img->img.width, img->img.height});
+            auto ij = get_image_coords(mouse_pos, img.imcenter, img.imscale,
+                {img.img.width, img.img.height});
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img->img.width && ij.y >= 0 &&
-                ij.y < img->img.height) {
-                pixel = at(img->img, ij.x, ij.y);
+            if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
+                ij.y < img.img.height) {
+                pixel = at(img.img, ij.x, ij.y);
             }
             draw_coloredit_glwidget(win, "pixel", pixel);
-            auto stats = (img->stats_done) ? img->stats : image_stats{};
+            auto stats = (img.stats_done) ? img.stats : image_stats{};
             draw_dragger_glwidget(win, "pxl min", stats.pxl_bounds.min);
             draw_dragger_glwidget(win, "pxl max", stats.pxl_bounds.max);
             draw_dragger_glwidget(win, "lum min", stats.lum_bounds.min);
@@ -234,65 +229,65 @@ void draw_glwidgets(glwindow* win) {
     }
     end_glwidgets_frame(win);
     if (edited) {
-        auto img = app->imgs.at(app->img_id);
-        if (img->display_thread.joinable()) {
-            img->display_stop = true;
-            img->display_thread.join();
+        auto& img = app.imgs.at(app.img_id);
+        if (img.display_thread.joinable()) {
+            img.display_stop = true;
+            img.display_thread.join();
         }
-        if (img->save_thread.joinable()) img->save_thread.join();
-        img->display_stop   = false;
-        img->display_thread = thread(update_display_async, img);
+        if (img.save_thread.joinable()) img.save_thread.join();
+        img.display_stop   = false;
+        img.display_thread = thread([&img]() { update_display_async(img); });
     }
 }
 
-void draw(glwindow* win) {
-    auto app      = (app_state*)get_user_pointer(win);
-    auto img      = app->imgs.at(app->img_id);
-    auto win_size = get_glwindow_size(win);
-    auto fb_size  = get_glframebuffer_size(win);
+void draw(const glwindow& win) {
+    auto& app      = *(app_state*)get_user_pointer(win);
+    auto& img      = app.imgs.at(app.img_id);
+    auto  win_size = get_glwindow_size(win);
+    auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    if (img->gl_txt) {
-        center_image(img->imcenter, img->imscale,
-            {img->display.width, img->display.height}, win_size,
-            img->zoom_to_fit);
-        draw_glimage(img->gl_txt, {img->display.width, img->display.height},
-            win_size, img->imcenter, img->imscale);
+    if (img.gl_txt) {
+        center_image(img.imcenter, img.imscale,
+            {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
+        draw_glimage(img.gl_txt, {img.display.width, img.display.height},
+            win_size, img.imcenter, img.imscale);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
 }
 
-void update(app_state* app) {
-    for (auto img : app->imgs) {
-        if (!img->display_done || img->texture_done) continue;
-        if (!img->gl_txt) {
-            img->gl_txt = make_gltexture(img->display, false, false, true);
+void update(app_state& app) {
+    for (auto& img : app.imgs) {
+        if (!img.display_done || img.texture_done) continue;
+        if (!img.gl_txt) {
+            img.gl_txt = make_gltexture(img.display, false, false, true);
         } else {
-            update_gltexture(img->gl_txt, img->display, false, false, true);
+            update_gltexture(img.gl_txt, img.display, false, false, true);
         }
-        img->texture_done = true;
+        img.texture_done = true;
     }
 }
 
-void drop_callback(glwindow* win, const vector<string>& paths) {
-    auto app = (app_state*)get_user_pointer(win);
+void drop_callback(const glwindow& win, const vector<string>& paths) {
+    auto& app = *(app_state*)get_user_pointer(win);
     for (auto path : paths) add_new_image(app, path, "");
 }
 
-void run_ui(app_state* app) {
+void run_ui(app_state& app) {
     // window
-    auto img   = app->imgs.at(app->img_id);
-    auto width = 720 + 320, height = 720;
-    auto win = make_glwindow(720 + 320, 720, "yimview", app, draw);
+    auto& img   = app.imgs.at(app.img_id);
+    auto  width = 720 + 320, height = 720;
+    auto  win = glwindow();
+    init_glwindow(win, 720 + 320, 720, "yimview", &app, draw);
     set_drop_callback(win, drop_callback);
 
     // init widgets
     init_glwidgets(win);
 
     // center image
-    center_image(img->imcenter, img->imscale, {img->img.width, img->img.height},
-        {width, height}, img->img.width > width || img->img.height > height);
+    center_image(img.imcenter, img.imscale, {img.img.width, img.img.height},
+        {width, height}, img.img.width > width || img.img.height > height);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -304,10 +299,9 @@ void run_ui(app_state* app) {
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse
-        if (mouse_left && !widgets_active)
-            img->imcenter += mouse_pos - last_pos;
+        if (mouse_left && !widgets_active) img.imcenter += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
-            img->imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+            img.imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
 
         // update
         update(app);
@@ -326,7 +320,7 @@ void run_ui(app_state* app) {
 
 int main(int argc, char* argv[]) {
     // prepare application
-    auto app = new app_state();
+    auto app = app_state();
 
     // command line params
     auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
@@ -343,13 +337,10 @@ int main(int argc, char* argv[]) {
     // loading images
     for (auto filename : filenames)
         add_new_image(app, filename, outfilename, exposure, filmic, srgb);
-    app->img_id = 0;
+    app.img_id = 0;
 
     // run ui
     run_ui(app);
-
-    // cleanup
-    delete app;
 
     // done
     return 0;

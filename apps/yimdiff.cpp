@@ -82,16 +82,17 @@ int main(int argc, char* argv[]) {
 
     // check image type
     if (is_hdr_filename(filename1) && is_hdr_filename(filename2)) {
-        auto img1 = load_image4f(filename1);
-        if (img1.pixels.empty()) log_fatal("cannot open image {}", filename1);
-        auto img2 = load_image4f(filename2);
-        if (img2.pixels.empty()) log_fatal("cannot open image {}", filename2);
+        auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
+        if (!load_image(filename1, img1))
+            log_fatal("cannot open image {}", filename1);
+        if (!load_image(filename2, img2))
+            log_fatal("cannot open image {}", filename2);
         if (img1.width != img2.width || img1.height != img2.height)
             log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
-            if (!save_image4f(output, display_diff(diff, 1.0f)))
+            if (!save_image(output, display_diff(diff, 1.0f)))
                 log_fatal("cannot save image {}", output);
         }
         if (max(max_diff) > threshold) {
@@ -99,16 +100,17 @@ int main(int argc, char* argv[]) {
             log_fatal("image content differs");
         }
     } else if (!is_hdr_filename(filename1) && !is_hdr_filename(filename2)) {
-        auto img1 = load_image4b(filename1);
-        if (img1.pixels.empty()) log_fatal("cannot open image {}", filename1);
-        auto img2 = load_image4b(filename2);
-        if (img2.pixels.empty()) log_fatal("cannot open image {}", filename2);
+        auto img1 = image<vec4b>{}, img2 = image<vec4b>{};
+        if (!load_image(filename1, img1))
+            log_fatal("cannot open image {}", filename1);
+        if (!load_image(filename2, img2))
+            log_fatal("cannot open image {}", filename2);
         if (img1.width != img2.width || img1.height != img2.height)
             log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
-            if (!save_image4b(output, display_diff(diff, (byte)255)))
+            if (!save_image(output, display_diff(diff, (byte)255)))
                 log_fatal("cannot save image {}", output);
         }
         if (max(max_diff) > threshold) {

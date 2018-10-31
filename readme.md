@@ -1,9 +1,11 @@
-# Yocto/GL: Tiny C++ Libraries for Physically-based Graphics
+# Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
 Yocto/GL is a collection of utility C++14 libraries for building 
 physically-based graphics algorithms released under the MIT license.
-Features include:
+Yocto?GL is written in a deliberatly data-driven style for ease of
+development and use. 
 
+Features include:
 - convenience math functions for graphics
 - static length vectors for 2, 3, 4 length of arbitrary type
 - static length matrices for 2x2, 3x3, 4x4 of arbitrary type
@@ -101,9 +103,13 @@ defined at build time.
 
 ## Design Considerations
 
-Yocto/GL tries to follow a "data-driven programming model" that makes data
-explicit. Data is stored in simple structs and access with free functions
-or directly. All data is public, so we make no attempt at encapsulation.
+Yocto/GL follows a "data-driven programming model" that makes data explicit.
+Data is stored in simple structs and access with free functions or directly.
+All data is public, so we make no attempt at encapsulation.
+All objects is Yocto?GL have value semantic and we do not use pointers
+in data structure but indices. This means that everything can be trivially
+serialized and there is no need for memory management.
+
 We do this since this makes Yocto/GL easier to extend and quicker to learn,
 which a more explicit data flow that is easier whrn writing parallel code.
 Since Yocto/GL is mainly used for research and teaching,

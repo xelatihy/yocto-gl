@@ -1,7 +1,7 @@
 mkdir -p build
 mkdir -p build/release
 cd build/release
-cmake ../.. -GNinja
+cmake ../.. -GNinja -DYOCTO_EMBREE=ON
 cmake --build .
 rm tests/run-tests/output/*.png
 rm tests/run-tests/difference/*.png
