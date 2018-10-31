@@ -1358,7 +1358,7 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
 namespace ygl {
 
 // Cleanup
-void clear_bvh_embree(bvh_tree& bvh) {
+void clear_scene_bvh_embree(bvh_scene& bvh) {
 #if YGL_EMBREE
     if (embree_bvh) {
         for (auto i = 0; i < max(1, (int)instances.size()); i++) {
@@ -1518,7 +1518,7 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
 }
 
 // Build a BVH from a set of primitives.
-void build_bvh(bvh_tree& bvh, bool high_quality) {
+void build_scene_bvh(bvh_scene& bvh, bool high_quality) {
     // get the number of primitives and the primitive type
     auto prims = vector<bvh_prim>();
     if (!bvh.points.empty()) {
@@ -1561,13 +1561,13 @@ void build_bvh(bvh_tree& bvh, bool high_quality) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(bvh_tree& bvh, int nodeid) {
+void refit_scene_bvh(bvh_scene& bvh, int nodeid) {
     // refit
     auto& node = bvh.nodes[nodeid];
     node.bbox  = invalid_bbox3f;
     if (node.is_internal) {
         for (auto i = 0; i < 2; i++) {
-            refit_bvh(bvh, node.primitive_ids[i]);
+            refit_scene_bvh(bvh, node.primitive_ids[i]);
             node.bbox += bvh.nodes[node.primitive_ids[i]].bbox;
         }
     } else if (!bvh.triangles.empty()) {
@@ -1605,7 +1605,7 @@ void refit_bvh(bvh_tree& bvh, int nodeid) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_bvh(bvh_tree& bvh) { refit_bvh(bvh, 0); }
+void refit_scene_bvh(bvh_scene& bvh) { refit_scene_bvh(bvh, 0); }
 
 #if YGL_EMBREE
 void embree_error(void* ctx, RTCError code, const char* str) {
@@ -1637,8 +1637,8 @@ RTCDevice get_embree_device() {
     return device;
 }
 
-// Build a BVH using Embree. Calls `build_bvh()` if Embree is not available.
-void build_embree_bvh(bvh_tree& bvh) {
+// Build a BVH using Embree. Calls `build_scene_bvh()` if Embree is not available.
+void build_embree_bvh(bvh_scene& bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     if (!bvh.points.empty()) {
@@ -1661,8 +1661,8 @@ void build_embree_bvh(bvh_tree& bvh) {
     } else if (!bvh.quads.empty()) {
         log_error("not yet implemented");
     } else if (!bvh.instances.empty()) {
-        for (auto iid = 0; iid < bvh.instances.size(); iid++) {
-            auto instance    = bvh.instances[iid];
+        for (auto instance_id = 0; instance_id < bvh.instances.size(); instance_id++) {
+            auto instance    = bvh.instances[instance_id];
             auto embree_geom = rtcNewGeometry(
                 embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
             rtcSetGeometryInstancedScene(embree_geom,
@@ -1670,16 +1670,16 @@ void build_embree_bvh(bvh_tree& bvh) {
             rtcSetGeometryTransform(embree_geom, 0,
                 RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
             rtcCommitGeometry(embree_geom);
-            rtcAttachGeometryByID(embree_scene, embree_geom, iid);
+            rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
         }
     }
     rtcCommitScene(embree_scene);
     bvh.embree_bvh = embree_scene;
 }
-// Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
-void refit_embree_bvh(bvh_tree& bvh) { log_error("not yet implemented"); }
-bool intersect_embree_bvh(const bvh_tree& bvh, const ray3f& ray, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& uv) {
+// Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
+void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
+bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
+    float& dist, int& instance_id, int& element_id, vec2f& uv) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -1698,38 +1698,38 @@ bool intersect_embree_bvh(const bvh_tree& bvh, const ray3f& ray, bool find_any,
     if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
     dist = embree_ray.ray.tfar;
     uv   = {embree_ray.hit.u, embree_ray.hit.v};
-    eid  = embree_ray.hit.primID;
-    iid  = embree_ray.hit.instID[0];
+    element_id  = embree_ray.hit.primID;
+    instance_id  = embree_ray.hit.instID[0];
     return true;
 }
 #else
-// Build a BVH using Embree. Calls `build_bvh()` if Embree is not available.
-void build_embree_bvh(bvh_tree& bvh) { return build_bvh(bvh, true); }
-// Refit a BVH using Embree. Calls `refit_bvh()` if Embree is not available.
-void refit_embree_bvh(bvh_tree& bvh) { return refit_bvh(bvh); }
+// Build a BVH using Embree. Calls `build_scene_bvh()` if Embree is not available.
+void build_embree_bvh(bvh_scene& bvh) { return build_scene_bvh(bvh, true); }
+// Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
+void refit_embree_bvh(bvh_scene& bvh) { return refit_scene_bvh(bvh); }
 // Intersect BVH using Embree
-bool intersect_embree_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& element_uv) {
+bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
+    float& dist, int& instance_id, int& element_id, vec2f& element_uv) {
     log_error("this should not have been called");
     return false;
 }
 #endif
 
 // Build a BVH from a set of primitives.
-void build_bvh_embree(bvh_tree& bvh, bool high_quality, bool embree) {
+void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality, bool embree) {
 #if YGL_EMBREE
     if (embree) return build_embree_bvh(bvh);
 #endif
-    build_bvh(bvh, high_quality);
+    build_scene_bvh(bvh, high_quality);
 }
 
 // Intersect ray with a bvh.
-bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& element_uv) {
+bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
+    float& dist, int& instance_id, int& element_id, vec2f& element_uv) {
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(
-            bvh, ray_, find_any, dist, iid, eid, element_uv);
+            bvh, ray_, find_any, dist, instance_id, element_id, element_uv);
 
     // node stack
     int  node_stack[128];
@@ -1774,7 +1774,7 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
                         bvh.positions[t.z], dist, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.quads.empty()) {
@@ -1785,7 +1785,7 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
                         element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.lines.empty()) {
@@ -1795,7 +1795,7 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
                         bvh.radius[l.x], bvh.radius[l.y], dist, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.points.empty()) {
@@ -1805,18 +1805,18 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
                         element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.instances.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
-                if (intersect_bvh(bvh.shape_bvhs[instance.shape_id],
+                if (intersect_scene_bvh(bvh.shape_bvhs[instance.shape_id],
                         transform_ray(instance.frame_inverse, ray), find_any,
-                        dist, iid, eid, element_uv)) {
+                        dist, instance_id, element_id, element_uv)) {
                     hit      = true;
                     ray.tmax = dist;
-                    iid      = node.primitive_ids[i];
+                    instance_id      = node.primitive_ids[i];
                 }
             }
         } else {
@@ -1831,8 +1831,8 @@ bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray_, bool find_any,
 }
 
 // Finds the closest element with a bvh.
-bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& element_uv) {
+bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
+    bool find_any, float& dist, int& instance_id, int& element_id, vec2f& element_uv) {
     // node stack
     int  node_stack[64];
     auto node_cur          = 0;
@@ -1863,7 +1863,7 @@ bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
                         bvh.radius[t.y], bvh.radius[t.z], dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.quads.empty()) {
@@ -1875,7 +1875,7 @@ bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
                         bvh.radius[q.z], bvh.radius[q.w], dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.lines.empty()) {
@@ -1886,7 +1886,7 @@ bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
                         dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.points.empty()) {
@@ -1896,18 +1896,18 @@ bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
                         bvh.radius[p], dist, element_uv)) {
                     hit      = true;
                     max_dist = dist;
-                    eid      = node.primitive_ids[i];
+                    element_id      = node.primitive_ids[i];
                 }
             }
         } else if (!bvh.instances.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
-                if (overlap_bvh(bvh.shape_bvhs[instance.shape_id],
+                if (overlap_scene_bvh(bvh.shape_bvhs[instance.shape_id],
                         transform_point(instance.frame_inverse, pos), max_dist,
-                        find_any, dist, iid, eid, element_uv)) {
+                        find_any, dist, instance_id, element_id, element_uv)) {
                     hit      = true;
                     max_dist = dist;
-                    iid      = node.primitive_ids[i];
+                    instance_id      = node.primitive_ids[i];
                 }
             }
         } else {
@@ -1924,7 +1924,7 @@ bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
 #if 0
     // Finds the overlap between BVH leaf nodes.
     template <typename OverlapElem>
-    void overlap_bvh_elems(const bvh_tree& bvh1, const bvh_tree& bvh2,
+    void overlap_bvh_elems(const bvh_scene& bvh1, const bvh_scene& bvh2,
                            bool skip_duplicates, bool skip_self, vector<vec2i>& overlaps,
                            const OverlapElem& overlap_elems) {
         // node stack
@@ -3918,9 +3918,9 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a shape BVH
-bvh_tree make_shape_bvh(const yocto_shape& shape, bool high_quality, bool embree) {
+bvh_scene make_shape_bvh(const yocto_shape& shape, bool high_quality, bool embree) {
     // create bvh
-    auto bvh = bvh_tree{};
+    auto bvh = bvh_scene{};
 
     // set data
     bvh.positions = shape.positions;
@@ -3932,17 +3932,17 @@ bvh_tree make_shape_bvh(const yocto_shape& shape, bool high_quality, bool embree
     if (!shape.quads_positions.empty()) bvh.quads = shape.quads_positions;
 
     // build bvh
-    build_bvh_embree(bvh, high_quality, embree);
+    build_scene_bvh_embree(bvh, high_quality, embree);
 
     // done
     return bvh;
 }
 
 // Build a scene BVH
-bvh_tree make_scene_bvh(const yocto_scene& scene, bool high_quality, bool embree) {
+bvh_scene make_scene_bvh(const yocto_scene& scene, bool high_quality, bool embree) {
     auto scope = log_trace_scoped("building scene bvh");
     // create bvh
-    auto bvh = bvh_tree{};
+    auto bvh = bvh_scene{};
 
     // shapes
     for (auto& shape : scene.shapes) {
@@ -3956,27 +3956,27 @@ bvh_tree make_scene_bvh(const yocto_scene& scene, bool high_quality, bool embree
     }
 
     // build bvh
-    build_bvh_embree(bvh, high_quality, embree);
+    build_scene_bvh_embree(bvh, high_quality, embree);
 
     // done
     return bvh;
 }
 
 // Refits a shape BVH
-void refit_shape_bvh(const yocto_shape& shape, bvh_tree& bvh) {
+void refit_shape_bvh(const yocto_shape& shape, bvh_scene& bvh) {
     bvh.positions = shape.positions;
     bvh.radius    = shape.radius;
-    refit_bvh(bvh);
+    refit_scene_bvh(bvh);
 }
 
 // Refits a scene BVH
-void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh) {
-    for (auto iid = 0; iid < scene.instances.size(); iid++) {
-        auto& instance     = scene.instances[iid];
-        bvh.instances[iid] = {
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh) {
+    for (auto instance_id = 0; instance_id < scene.instances.size(); instance_id++) {
+        auto& instance     = scene.instances[instance_id];
+        bvh.instances[instance_id] = {
             instance.frame, inverse(instance.frame), instance.shape};
     }
-    refit_bvh(bvh);
+    refit_scene_bvh(bvh);
 }
 
 // Add missing names and resolve duplicated names.
@@ -4130,9 +4130,9 @@ namespace ygl {
 
 // Scene intersection.
 scene_intersection intersect_scene(const yocto_scene& scene,
-    const bvh_tree& bvh, const ray3f& ray, bool find_any) {
+    const bvh_scene& bvh, const ray3f& ray, bool find_any) {
     auto isec = scene_intersection();
-    if (!intersect_bvh(bvh, ray, find_any, isec.distance, isec.instance_id,
+    if (!intersect_scene_bvh(bvh, ray, find_any, isec.distance, isec.instance_id,
             isec.element_id, isec.element_uv))
         return {};
     return isec;
@@ -4140,11 +4140,11 @@ scene_intersection intersect_scene(const yocto_scene& scene,
 
 // Instance intersection.
 scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
-    const bvh_tree& bvh, const ray3f& ray, bool find_any) {
+    const bvh_scene& bvh, const ray3f& ray, bool find_any) {
     auto& instance = scene.instances[instance_id];
     auto  isec     = scene_intersection();
     auto  tray     = transform_ray_inverse(instance.frame, ray);
-    if (!intersect_bvh(bvh.shape_bvhs[instance.shape], tray, find_any,
+    if (!intersect_scene_bvh(bvh.shape_bvhs[instance.shape], tray, find_any,
             isec.distance, isec.instance_id, isec.element_id, isec.element_uv))
         return {};
     isec.instance_id = instance_id;
@@ -4982,7 +4982,7 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
 }
 
 // Intersects a ray and returns a point
-trace_point trace_ray(const yocto_scene& scene, const bvh_tree& bvh,
+trace_point trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
     auto isec = intersect_scene(scene, bvh, make_ray(position, direction));
     _trace_nrays += 1;
@@ -4999,7 +4999,7 @@ trace_point trace_ray(const yocto_scene& scene, const bvh_tree& bvh,
 // Intersects a ray and returns a point accounting for opacity treated as
 // coveregae
 trace_point trace_ray_with_opacity(const yocto_scene& scene,
-    const bvh_tree& bvh, const vec3f& position_, const vec3f& direction,
+    const bvh_scene& bvh, const vec3f& position_, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     auto position = position_;
     for (auto b = 0; b < max_bounces; b++) {
@@ -5014,7 +5014,7 @@ trace_point trace_ray_with_opacity(const yocto_scene& scene,
 
 // Intersect a scene handling opacity.
 scene_intersection intersect_scene_with_opacity(const yocto_scene& scene,
-    const bvh_tree& bvh, const ray3f& ray_, rng_state& rng, int max_bounces) {
+    const bvh_scene& bvh, const ray3f& ray_, rng_state& rng, int max_bounces) {
     auto ray = ray_;
     for (auto b = 0; b < max_bounces; b++) {
         _trace_nrays += 1;
@@ -5461,7 +5461,7 @@ vec3f sample_instance_direction(const yocto_scene& scene,
 
 // Sample pdf for a light point.
 float sample_instance_direction_pdf(const yocto_scene& scene,
-    const trace_lights& lights, int instance_id, const bvh_tree& bvh,
+    const trace_lights& lights, int instance_id, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
     auto& instance     = scene.instances[instance_id];
     auto& shape        = scene.shapes[instance.shape];
@@ -5492,7 +5492,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
 
 // Sample lights wrt solid angle
 vec3f sample_lights_direction(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_tree& bvh, const vec3f& position,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
     rng_state& rng) {
     auto light_id = sample_uniform_index(
         lights.instances.size() + lights.environments.size(),
@@ -5514,7 +5514,7 @@ vec3f sample_lights_direction(const yocto_scene& scene,
 
 // Sample lights pdf
 float sample_lights_direction_pdf(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_tree& bvh, const vec3f& position,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
     const vec3f& direction) {
     auto pdf = 0.0f;
     for (auto instance : lights.instances) {
@@ -5532,7 +5532,7 @@ float sample_lights_direction_pdf(const yocto_scene& scene,
 
 // Sample a direction accoding to either ligts or brdf
 vec3f sample_lights_or_brdf_direction(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_tree& bvh,
+    const trace_lights& lights, const bvh_scene& bvh,
     const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, rng_state& rng) {
     auto rmode = get_random_float(rng);
@@ -5545,7 +5545,7 @@ vec3f sample_lights_or_brdf_direction(const yocto_scene& scene,
 
 // Pdf for direction sampling
 float sample_lights_or_brdf_direction_pdf(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_tree& bvh,
+    const trace_lights& lights, const bvh_scene& bvh,
     const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     return 0.5f * sample_lights_direction_pdf(
@@ -5570,7 +5570,7 @@ float sample_russian_roulette_pdf(
 
 #if 0
 // Test occlusion.
-vec3f evaluate_transmission(const yocto_scene& scene, const bvh_tree& bvh,
+vec3f evaluate_transmission(const yocto_scene& scene, const bvh_scene& bvh,
     const vec3f& from, const vec3f& to, int max_bounces) {
     auto weight = vec3f{1, 1, 1};
     auto p      = from;
@@ -5602,7 +5602,7 @@ float prob_direct(const microfacet_brdf& brdf) {
 // Sample a direction of direct illumination from the point p, which is inside
 // mediums.back(). pdf and incoming radiance le are returned in reference. It
 // works for both surface rendering and volume rendering.
-vec3f direct_illumination(const yocto_scene& scene, const bvh_tree& bvh,
+vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& p, int channel,
     const vector<int>& mediums_, rng_state& rng, float& pdf, vec3f& le) {
     auto  incoming = zero3f;
@@ -5713,7 +5713,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_tree& bvh,
 }
 
 // Recursive path tracing.
-tuple<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_tree& bvh,
+tuple<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
@@ -5793,7 +5793,7 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float dist, int ch) {
 }
 
 // Iterative volume path tracing.
-tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_tree& bvh,
+tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     if (empty(lights)) return {zero3f, false};
@@ -6018,7 +6018,7 @@ tuple<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_tree& bvh,
 
 // Recursive path tracing.
 tuple<vec3f, bool> trace_path_naive(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6065,7 +6065,7 @@ tuple<vec3f, bool> trace_path_naive(const yocto_scene& scene,
 
 // Recursive path tracing.
 tuple<vec3f, bool> trace_path_nomis(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6135,7 +6135,7 @@ tuple<vec3f, bool> trace_path_nomis(const yocto_scene& scene,
 }
 
 // Direct illumination.
-tuple<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_tree& bvh,
+tuple<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
@@ -6180,7 +6180,7 @@ tuple<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_tree& bvh,
 
 // Direct illumination.
 tuple<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6247,7 +6247,7 @@ tuple<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
 
 // Environment illumination only with no shadows.
 tuple<vec3f, bool> trace_environment(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6277,7 +6277,7 @@ tuple<vec3f, bool> trace_environment(const yocto_scene& scene,
 }
 
 // Eyelight for quick previewing.
-tuple<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_tree& bvh,
+tuple<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
@@ -6300,7 +6300,7 @@ tuple<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_tree& bvh,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_normal(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6313,7 +6313,7 @@ tuple<vec3f, bool> trace_debug_normal(const yocto_scene& scene,
 
 // Debug frontfacing.
 tuple<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6328,7 +6328,7 @@ tuple<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6342,7 +6342,7 @@ tuple<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6355,7 +6355,7 @@ tuple<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6368,7 +6368,7 @@ tuple<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_roughness(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6382,7 +6382,7 @@ tuple<vec3f, bool> trace_debug_roughness(const yocto_scene& scene,
 
 // Debug previewing.
 tuple<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const vec3f& position,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
@@ -6394,7 +6394,7 @@ tuple<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene,
 }
 
 // Trace a single ray from the camera using the given algorithm.
-tuple<vec3f, bool> trace_func(const yocto_scene& scene, const bvh_tree& bvh,
+tuple<vec3f, bool> trace_func(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, trace_type tracer, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces) {
     switch (tracer) {
@@ -6449,7 +6449,7 @@ tuple<vec3f, bool> trace_func(const yocto_scene& scene, const bvh_tree& bvh,
 
 // Trace a single sample
 vec4f trace_sample(trace_state& state, const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, int i, int j,
+    const bvh_scene& bvh, const trace_lights& lights, int i, int j,
     const trace_params& params) {
     _trace_npaths += 1;
     auto& camera       = scene.cameras.at(params.camera_id);
@@ -6534,7 +6534,7 @@ trace_lights make_trace_lights(
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_tree& bvh,
+image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params) {
     auto scope = log_trace_scoped("tracing image");
     auto state = make_trace_state(scene, params);
@@ -6572,7 +6572,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_tree& bvh,
 
 // Progressively compute an image by calling trace_samples multiple times.
 bool trace_samples(trace_state& state, const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const trace_params& params) {
+    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params) {
     auto scope = log_trace_scoped(
         "tracing samples {}/{}", state.current_sample, params.num_samples);
     auto nbatch = min(
@@ -6626,7 +6626,7 @@ bool trace_samples(trace_state& state, const yocto_scene& scene,
 
 // Starts an anyncrhounous renderer.
 void trace_async_start(trace_state& state, const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const trace_params& params) {
+    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params) {
     log_trace("start tracing async");
     // render preview image
     if (params.preview_ratio) {

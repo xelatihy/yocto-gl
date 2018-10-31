@@ -171,10 +171,10 @@
 // applications.
 //
 // 1. fill the shape or instance data
-// 2. build the BVH with `build_bvh()`
-// 3. perform ray-element intersection with `intersect_bvh()`
-// 4. perform point overlap queries with `overlap_bvh()`
-// 5. refit the BVH with `refit_bvh()` after updating internal data
+// 2. build the BVH with `build_scene_bvh()`
+// 3. perform ray-element intersection with `intersect_scene_bvh()`
+// 4. perform point overlap queries with `overlap_scene_bvh()`
+// 5. refit the BVH with `refit_scene_bvh()` after updating internal data
 //
 //
 // ## Image Utilities
@@ -237,7 +237,7 @@
 // general (you can even more an arbitrary shape sun). For now only the first
 // environment is used.
 //
-// 1. prepare the ray-tracing acceleration structure with `build_bvh()`
+// 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
 // 2. prepare lights for rendering with `make_trace_lights()`
 // 3. create the image buffer and random number generators `make_trace_state()`
 // 4. render blocks of samples with `trace_samples()`
@@ -2594,7 +2594,7 @@ const int bvh_max_prims = 4;
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
 // indices refer to primitives for leaf nodes or other nodes for internal
-// nodes. See bvh_tree for more details.
+// nodes. See bvh_scene for more details.
 struct bvh_node {
     bbox3f   bbox;
     uint16_t num_primitives;
@@ -2619,8 +2619,8 @@ struct bvh_instance {
 // a two-level hierarchy with the outer BVH, the scene BVH, containing inner
 // BVHs, shape BVHs, each of which of a uniform primitive type.
 // To build a BVH, first fill in either the shape or instance data, then
-// call `build_bvh()`.
-struct bvh_tree {
+// call `build_scene_bvh()`.
+struct bvh_scene {
     // data for shape BVH
     vector<vec3f> positions;
     vector<float> radius;
@@ -2631,7 +2631,7 @@ struct bvh_tree {
 
     // data for instance BVH
     vector<bvh_instance> instances;
-    vector<bvh_tree>     shape_bvhs;
+    vector<bvh_scene>     shape_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -2641,29 +2641,29 @@ struct bvh_tree {
 };
 
 // Build a BVH from the given set of primitives.
-void build_bvh(bvh_tree& bvh, bool high_quality = false);
+void build_scene_bvh(bvh_scene& bvh, bool high_quality = false);
 // Update the node bounds for a shape bvh.
-void refit_bvh(bvh_tree& bvh);
+void refit_scene_bvh(bvh_scene& bvh);
 
 // Build a BVH from the given set of primitives.
 // Uses Embree if available and requested, otherwise the standard build.
-void build_bvh_embree(bvh_tree& bvh, bool high_quality = false);
-void clear_bvh_embree(bvh_tree& bvh);
+void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality = false);
+void clear_scene_bvh_embree(bvh_scene& bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance `dist`, the instance
-// id `iid`, the shape id `sid`, the shape element index `eid` and the
+// id `instance_id`, the shape id `sid`, the shape element index `element_id` and the
 // shape barycentric coordinates `element_uv`.
-bool intersect_bvh(const bvh_tree& bvh, const ray3f& ray, bool find_any,
-    float& dist, int& iid, int& eid, vec2f& element_uv);
+bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
+    float& dist, int& instance_id, int& element_id, vec2f& element_uv);
 
 // Find a shape element that overlaps a point within a given distance
 // `max_dist`, returning either the closest or any overlap depending on
-// `find_any`. Returns the point distance `dist`, the instance id `iid`, the
-// shape id `sid`, the shape element index `eid` and the shape barycentric
+// `find_any`. Returns the point distance `dist`, the instance id `instance_id`, the
+// shape id `sid`, the shape element index `element_id` and the shape barycentric
 // coordinates `element_uv`.
-bool overlap_bvh(const bvh_tree& bvh, const vec3f& pos, float max_dist,
-    bool find_any, float& dist, int& iid, int& eid, vec2f& element_uv);
+bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_dist,
+    bool find_any, float& dist, int& instance_id, int& element_id, vec2f& element_uv);
 
 }  // namespace ygl
 
@@ -3092,7 +3092,7 @@ volume<float> make_test_volume1f(
 namespace ygl {
 
 // forward declaration
-struct bvh_tree;
+struct bvh_scene;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
@@ -3319,12 +3319,12 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 vector<vec3f> compute_shape_normals(const yocto_shape& shape);
 
 // Updates/refits bvh.
-bvh_tree make_shape_bvh(
+bvh_scene make_shape_bvh(
     const yocto_shape& shape, bool high_quality, bool embree = false);
-bvh_tree make_scene_bvh(
+bvh_scene make_scene_bvh(
     const yocto_scene& scene, bool high_quality, bool embree = false);
-void refit_shape_bvh(const yocto_shape& shape, bvh_tree& bvh);
-void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh);
+void refit_shape_bvh(const yocto_shape& shape, bvh_scene& bvh);
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
 
 // Apply subdivision and displacement rules.
 yocto_shape& tesselate_shape(const yocto_shape& shape);
@@ -3359,10 +3359,10 @@ struct scene_intersection {
 
 // Intersects a ray with the scene.
 scene_intersection intersect_scene(const yocto_scene& scene,
-    const bvh_tree& bvh, const ray3f& ray, bool find_any = false);
+    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with a scene instance.
 scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
-    const bvh_tree& bvh, const ray3f& ray, bool find_any = false);
+    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f evaluate_shape_position(
@@ -3584,19 +3584,19 @@ trace_state make_trace_state(
     const yocto_scene& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_tree& bvh,
+image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 bool trace_samples(trace_state& state, const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const trace_params& params);
+    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
 void trace_async_start(trace_state& state, const yocto_scene& scene,
-    const bvh_tree& bvh, const trace_lights& lights, const trace_params& params);
+    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state& state);
 

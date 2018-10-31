@@ -35,7 +35,7 @@
 struct app_state {
     // scene
     yocto_scene scene = {};
-    bvh_tree    bvh   = {};
+    bvh_scene    bvh   = {};
 
     // rendering params
     string       filename   = "scene.json";

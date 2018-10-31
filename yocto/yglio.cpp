@@ -3251,8 +3251,8 @@ static bool startswith(const string& str, const string& substr) {
 bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) {
     // convert textures
     if (gltf.count("images")) {
-        for (auto iid = 0; iid < gltf.at("images").size(); iid++) {
-            auto& gimg       = gltf.at("images").at(iid);
+        for (auto instance_id = 0; instance_id < gltf.at("images").size(); instance_id++) {
+            auto& gimg       = gltf.at("images").at(instance_id);
             auto  texture    = yocto_texture{};
             texture.name     = gimg.value("name", ""s);
             texture.filename = (startswith(gimg.value("uri", ""s), "data:")) ?
@@ -5079,7 +5079,7 @@ bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_tree& bvh, file_stream& fs, bool save) {
+bool serialize_bin_object(bvh_scene& bvh, file_stream& fs, bool save) {
     if (!serialize_bin_value(bvh.positions, fs, save)) return false;
     if (!serialize_bin_value(bvh.radius, fs, save)) return false;
     if (!serialize_bin_value(bvh.points, fs, save)) return false;
