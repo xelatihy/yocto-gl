@@ -2256,6 +2256,7 @@ void normalize_obj_line(char* s) {
 
 // parse stream
 inline int parse_int(char*& s) {
+    #if YGL_FASTPARSE
     if (!*s) return 0;
     while (*s == ' ') s++;
     if (!*s) return 0;
@@ -2265,9 +2266,17 @@ inline int parse_int(char*& s) {
     while (*s >= '0' && *s <= '9') val = val * 10 + (*s++ - '0');
     val *= sn;
     return val;
+    #else
+    auto val = 0;
+    auto n = 0;
+    sscanf(s, "%d%n", &val, &n);
+    s+=n;
+    return val;
+    #endif
 }
 inline bool   parse_bool(char*& s) { return (bool)parse_int(s); }
 inline double parse_double(char*& s) {
+    #if YGL_FASTPARSE
     if (!*s) return 0;
     while (*s == ' ') s++;
     auto val      = 0.0;
@@ -2296,8 +2305,25 @@ inline double parse_double(char*& s) {
         val += fractional * std::pow(10.0, -(double)fractional_length);
     if (exponent) val *= std::pow(10.0, (double)exponent);
     return val;
+    #else
+    auto val = 0.0;
+    auto n = 0;
+    sscanf(s, "%lf%n", &val, &n);
+    s+=n;
+    return val;
+    #endif
 }
-inline float  parse_float(char*& s) { return (float)parse_double(s); }
+inline float  parse_float(char*& s) { 
+    #if YGL_FASTPARSE
+    return (float)parse_double(s); 
+    #else
+    auto val = 0.0f;
+    auto n = 0;
+    sscanf(s, "%f%n", &val, &n);
+    s+=n;
+    return val;
+    #endif
+}
 inline string parse_string(char*& s) {
     if (!*s) return "";
     char buf[4096];
