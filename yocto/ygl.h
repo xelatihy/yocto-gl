@@ -3274,17 +3274,14 @@ struct yocto_animation {
 struct yocto_scene {
     string                     name         = "";
     vector<yocto_camera>       cameras_     = {};
-    vector<yocto_shape*>       shapes       = {};
-    vector<yocto_instance*>    instances    = {};
-    vector<yocto_material*>    materials    = {};
+    vector<yocto_shape>       shapes_       = {};
+    vector<yocto_instance>    instances_    = {};
+    vector<yocto_material>    materials_    = {};
     vector<yocto_texture>     textures_     = {};
-    vector<yocto_environment*> environments = {};
+    vector<yocto_environment> environments_ = {};
     vector<yocto_voltexture>  voltextures_  = {};
     vector<yocto_scene_node>  nodes_        = {};
     vector<yocto_animation>   animations_   = {};
-
-    // cleanup
-    ~yocto_scene();
 };
 
 }  // namespace ygl
@@ -3295,11 +3292,11 @@ struct yocto_scene {
 namespace ygl {
 
 // Print scene statistics.
-void print_stats(const yocto_scene* scene);
+void print_stats(const yocto_scene& scene);
 
 // Merge scene into one another. Note that the objects are _moved_ from
 // merge_from to merged_into, so merge_from will be empty after this function.
-void merge_scene(yocto_scene* merge_into, yocto_scene* merge_from);
+void merge_scene(yocto_scene& merge_into, yocto_scene& merge_from);
 
 }  // namespace ygl
 
@@ -3310,48 +3307,48 @@ namespace ygl {
 
 // Update node transforms.
 void update_transforms(
-    yocto_scene* scene, float time = 0, const string& anim_group = "");
+    yocto_scene& scene, float time = 0, const string& anim_group = "");
 
 // Compute animation range.
 vec2f compute_animation_range(
-    const yocto_scene* scene, const string& anim_group = "");
+    const yocto_scene& scene, const string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
-bbox3f compute_shape_bounds(const yocto_shape* shape);
-bbox3f compute_scene_bounds(const yocto_scene* scene);
+bbox3f compute_shape_bounds(const yocto_shape& shape);
+bbox3f compute_scene_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-vector<vec3f> compute_shape_normals(const yocto_shape* shape);
+vector<vec3f> compute_shape_normals(const yocto_shape& shape);
 
 // Updates/refits bvh.
 bvh_tree make_shape_bvh(
-    const yocto_shape* shape, bool high_quality, bool embree = false);
+    const yocto_shape& shape, bool high_quality, bool embree = false);
 bvh_tree make_scene_bvh(
-    const yocto_scene* scene, bool high_quality, bool embree = false);
-void refit_shape_bvh(const yocto_shape* shape, bvh_tree& bvh);
-void refit_scene_bvh(const yocto_scene* scene, bvh_tree& bvh);
+    const yocto_scene& scene, bool high_quality, bool embree = false);
+void refit_shape_bvh(const yocto_shape& shape, bvh_tree& bvh);
+void refit_scene_bvh(const yocto_scene& scene, bvh_tree& bvh);
 
 // Apply subdivision and displacement rules.
-yocto_shape* tesselate_shape(const yocto_shape* shape);
-void         tesselate_shapes(yocto_scene* scene);
+yocto_shape& tesselate_shape(const yocto_shape& shape);
+void         tesselate_shapes(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
-void add_missing_names(yocto_scene* scene);
-void add_missing_normals(yocto_scene* scene);
-void add_missing_tangent_space(yocto_scene* scene);
-void add_missing_materials(yocto_scene* scene);
-void add_missing_cameras(yocto_scene* scene);
+void add_missing_names(yocto_scene& scene);
+void add_missing_normals(yocto_scene& scene);
+void add_missing_tangent_space(yocto_scene& scene);
+void add_missing_materials(yocto_scene& scene);
+void add_missing_cameras(yocto_scene& scene);
 
 // Add a sky environment
-void add_sky_environment(yocto_scene* scene, float sun_angle = pif / 4);
+void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
 
 // Checks for validity of the scene.
 vector<string> validate_scene(
-    const yocto_scene* scene, bool skip_textures = false);
-void log_validation_errors(const yocto_scene* scene, bool skip_textures = false);
+    const yocto_scene& scene, bool skip_textures = false);
+void log_validation_errors(const yocto_scene& scene, bool skip_textures = false);
 
 // Queries on objects
-bool is_shape_face_varying(const yocto_shape* shape);
+bool is_shape_face_varying(const yocto_shape& shape);
 
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.
@@ -3363,61 +3360,61 @@ struct scene_intersection {
 };
 
 // Intersects a ray with the scene.
-scene_intersection intersect_scene(const yocto_scene* scene,
+scene_intersection intersect_scene(const yocto_scene& scene,
     const bvh_tree& bvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with a scene instance.
-scene_intersection intersect_scene(const yocto_scene* scene, int instance_id,
+scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
     const bvh_tree& bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f evaluate_shape_position(
-    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec3f evaluate_shape_normal(
-    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec2f evaluate_shape_texturecoord(
-    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec4f evaluate_shape_color(
-    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 float evaluate_shape_radius(
-    const yocto_shape* shape, int element_id, const vec2f& element_uv);
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 vec4f evaluate_shape_tangentspace(
-    const yocto_shape* shape, int element_id, const vec2f& element_uv);
-vec3f evaluate_shape_tangentspace(const yocto_shape* shape, int element_id,
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_shape_tangentspace(const yocto_shape& shape, int element_id,
     const vec2f& element_uv, bool& left_handed);
 // Shape element values.
-vec3f evaluate_shape_element_normal(const yocto_shape* shape, int element_id);
+vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
 vec4f evaluate_shape_element_tangentspace(
-    const yocto_shape* shape, int element_id);
+    const yocto_shape& shape, int element_id);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f evaluate_instance_position(const yocto_scene* scene,
-    const yocto_instance* instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_normal(const yocto_scene* scene,
-    const yocto_instance* instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_tangentspace(const yocto_scene* scene,
-    const yocto_instance* instance, int element_id, const vec2f& element_uv,
+vec3f evaluate_instance_position(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_tangentspace(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
     bool& left_handed);
 // Instance element values.
 vec3f evaluate_instance_element_normal(
-    const yocto_scene* scene, const yocto_instance* instance, int element_id);
+    const yocto_scene& scene, const yocto_instance& instance, int element_id);
 // Shading normals including material perturbations.
-vec3f evaluate_instance_shading_normal(const yocto_scene* scene,
-    const yocto_instance* instance, int element_id, const vec2f& element_uv,
+vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& o);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
-    const yocto_environment* environment, const vec3f& direction);
+    const yocto_environment& environment, const vec3f& direction);
 // Evaluate the incoming direction from the element_uv.
 vec3f evaluate_environment_direction(
-    const yocto_environment* environment, const vec2f& environment_uv);
+    const yocto_environment& environment, const vec2f& environment_uv);
 // Evaluate the environment emission.
-vec3f evaluate_environment_emission(const yocto_scene* scene,
-    const yocto_environment* environment, const vec3f& direction);
+vec3f evaluate_environment_emission(const yocto_scene& scene,
+    const yocto_environment& environment, const vec3f& direction);
 // Evaluate all environment emission.
 vec3f evaluate_environment_emission(
-    const yocto_scene* scene, const vec3f& direction);
+    const yocto_scene& scene, const vec3f& direction);
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
@@ -3451,23 +3448,23 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f evaluate_material_emission(const yocto_scene* scene,
-    const yocto_material* material, const vec2f& texturecoord,
+vec3f evaluate_material_emission(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_diffuse(const yocto_scene* scene,
-    const yocto_material* material, const vec2f& texturecoord,
+vec3f evaluate_material_diffuse(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_specular(const yocto_scene* scene,
-    const yocto_material* material, const vec2f& texturecoord,
+vec3f evaluate_material_specular(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_transmission(const yocto_scene* scene,
-    const yocto_material* material, const vec2f& texturecoord,
+vec3f evaluate_material_transmission(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_material_roughness(const yocto_scene* scene,
-    const yocto_material* material, const vec2f& texturecoord,
+float evaluate_material_roughness(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_material_opacity(const yocto_scene* scene,
-    const yocto_material* material, const vec2f& texturecoord,
+float evaluate_material_opacity(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
 
 // Material values packed into a convenience structure.
@@ -3478,30 +3475,30 @@ struct microfacet_brdf {
     float roughness    = 1;
     bool  refract      = false;
 };
-microfacet_brdf evaluate_material_brdf(const yocto_scene* scene,
-    const yocto_material* material, const vec2f& texturecoord,
+microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
 bool            is_bsdf_delta(const microfacet_brdf& f);
 
 // Check volume properties.
-bool is_material_volume_homogeneus(const yocto_material* vol);
-bool is_material_volume_colored(const yocto_material* vol);
+bool is_material_volume_homogeneus(const yocto_material& vol);
+bool is_material_volume_colored(const yocto_material& vol);
 
 // Sample a shape element based on area/length.
-vector<float>     compute_shape_elements_cdf(const yocto_shape* shape);
-tuple<int, vec2f> sample_shape_element(const yocto_shape* shape,
+vector<float>     compute_shape_elements_cdf(const yocto_shape& shape);
+tuple<int, vec2f> sample_shape_element(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float             sample_shape_element_pdf(const yocto_shape* shape,
+float             sample_shape_element_pdf(const yocto_shape& shape,
                 const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Sample an environment based on either texel values of uniform
 vector<float> compute_environment_texels_cdf(
-    const yocto_scene* scene, const yocto_environment* environment);
-vec3f sample_environment_direction(const yocto_scene* scene,
-    const yocto_environment* environment, const vector<float>& texels_cdf,
+    const yocto_scene& scene, const yocto_environment& environment);
+vec3f sample_environment_direction(const yocto_scene& scene,
+    const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv);
-float sample_environment_direction_pdf(const yocto_scene* scene,
-    const yocto_environment* environment, const vector<float>& texels_cdf,
+float sample_environment_direction_pdf(const yocto_scene& scene,
+    const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction);
 
 }  // namespace ygl
@@ -3579,28 +3576,28 @@ struct trace_state {
 
 // Initialize lights.
 trace_lights make_trace_lights(
-    const yocto_scene* scene, const trace_params& params);
+    const yocto_scene& scene, const trace_params& params);
 inline bool empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
 // Initialize state of the renderer.
 trace_state make_trace_state(
-    const yocto_scene* scene, const trace_params& params);
+    const yocto_scene& scene, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image4f(const yocto_scene* scene, const bvh_tree& bvh,
+image<vec4f> trace_image4f(const yocto_scene& scene, const bvh_tree& bvh,
     const trace_lights& lights, const trace_params& params);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state& state, const yocto_scene* scene,
+bool trace_samples(trace_state& state, const yocto_scene& scene,
     const bvh_tree& bvh, const trace_lights& lights, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(trace_state& state, const yocto_scene* scene,
+void trace_async_start(trace_state& state, const yocto_scene& scene,
     const bvh_tree& bvh, const trace_lights& lights, const trace_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state& state);

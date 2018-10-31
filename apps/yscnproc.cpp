@@ -56,12 +56,12 @@ int main(int argc, char** argv) {
     check_cmdline(parser);
 
     // load scene
-    auto scene = unique_ptr<yocto_scene>{load_scene(filename, !notextures)};
-    if (!scene) log_fatal("cannot load scene {}", filename);
+    auto scene = yocto_scene{};
+    if(!load_scene(filename, scene, !notextures)) log_fatal("cannot load scene {}", filename);
 
     // change texture names
     if (uniform_txt) {
-        for (auto& texture : scene->textures_) {
+        for (auto& texture : scene.textures_) {
             auto ext = get_extension(texture.filename);
             if (is_hdr_filename(texture.filename)) {
                 if (ext == "hdr" || ext == "exr") continue;
@@ -84,7 +84,7 @@ int main(int argc, char** argv) {
         log_fatal("cannot create directory {}", get_dirname(output));
 
     // save scene
-    if (!save_scene(output, scene.get(), !notextures))
+    if (!save_scene(output, scene, !notextures))
         log_fatal("cannot save scene {}", output);
 
     // done

@@ -71,24 +71,24 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // scene loading
-    auto scene = unique_ptr<yocto_scene>{load_scene(filename)};
-    if (!scene) log_fatal("cannot load scene {}", filename);
+    auto scene = yocto_scene{};
+    if(!load_scene(filename, scene)) log_fatal("cannot load scene {}", filename);
 
     // tesselate
-    tesselate_shapes(scene.get());
+    tesselate_shapes(scene);
 
     // add components
-    if (add_skyenv && scene->environments.empty())
-        add_sky_environment(scene.get());
+    if (add_skyenv && scene.environments_.empty())
+        add_sky_environment(scene);
     if (double_sided)
-        for (auto mat : scene->materials) mat->double_sided = true;
-    log_validation_errors(scene.get());
+        for (auto& material : scene.materials_) material.double_sided = true;
+    log_validation_errors(scene);
 
     // build bvh
-    auto bvh = make_scene_bvh(scene.get(), true, embree);
+    auto bvh = make_scene_bvh(scene, true, embree);
 
     // init renderer
-    auto lights = make_trace_lights(scene.get(), params);
+    auto lights = make_trace_lights(scene, params);
 
     // fix renderer type if no lights
     if (empty(lights) && params.sample_tracer != trace_type::eyelight) {
@@ -97,13 +97,13 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    auto state = make_trace_state(scene.get(), params);
+    auto state = make_trace_state(scene, params);
 
     // render
     auto done  = false;
     auto scope = log_trace_begin("rendering image");
     while (!done) {
-        done = trace_samples(state, scene.get(), bvh, lights, params);
+        done = trace_samples(state, scene, bvh, lights, params);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(state.current_sample) + "." + get_extension(imfilename));

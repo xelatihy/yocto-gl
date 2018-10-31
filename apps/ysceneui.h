@@ -45,79 +45,79 @@ inline const map<yocto_interpolation_type, string>& animation_type_names() {
 
 template <typename T>
 inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
-    yocto_scene* scene, int index, const vector<T>& vals,
+    yocto_scene& scene, int index, const vector<T>& vals,
                                       tuple<string, int>& sel, const string& sel_type);
 
 template <typename T>
 inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
-    yocto_scene* scene, int index, const vector<T*>& vals,
+    yocto_scene& scene, int index, const vector<T*>& vals,
                                       tuple<string, int>& sel, const string& sel_type);
 
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, const yocto_camera& val, tuple<string, int>& sel) {}
+    yocto_scene& scene, const yocto_camera& val, tuple<string, int>& sel) {}
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, const yocto_texture& val, tuple<string, int>& sel) {}
+    yocto_scene& scene, const yocto_texture& val, tuple<string, int>& sel) {}
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, const yocto_voltexture& val, tuple<string, int>& sel) {}
+    yocto_scene& scene, const yocto_voltexture& val, tuple<string, int>& sel) {}
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, yocto_material* val, tuple<string, int>& sel) {
-    draw_glwidgets_scene_tree(win, "emission", scene, val->emission_texture,
-        scene->textures_, sel, "texture");
-    draw_glwidgets_scene_tree(win, "diffuse", scene, val->diffuse_texture,
-        scene->textures_, sel, "texture");
-    draw_glwidgets_scene_tree(win, "specular", scene, val->specular_texture,
-        scene->textures_, sel, "texture");
+    yocto_scene& scene, const yocto_material& val, tuple<string, int>& sel) {
+    draw_glwidgets_scene_tree(win, "emission", scene, val.emission_texture,
+        scene.textures_, sel, "texture");
+    draw_glwidgets_scene_tree(win, "diffuse", scene, val.diffuse_texture,
+        scene.textures_, sel, "texture");
+    draw_glwidgets_scene_tree(win, "specular", scene, val.specular_texture,
+        scene.textures_, sel, "texture");
     draw_glwidgets_scene_tree(
-        win, "bump", scene, val->bump_texture, scene->textures_, sel, "texture");
+        win, "bump", scene, val.bump_texture, scene.textures_, sel, "texture");
     draw_glwidgets_scene_tree(win, "displament", scene,
-        val->displacement_texture, scene->textures_, sel, "texture");
-    draw_glwidgets_scene_tree(win, "normal", scene, val->normal_texture,
-        scene->textures_, sel, "texture");
+        val.displacement_texture, scene.textures_, sel, "texture");
+    draw_glwidgets_scene_tree(win, "normal", scene, val.normal_texture,
+        scene.textures_, sel, "texture");
 }
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, yocto_shape* val, tuple<string, int>& sel) {
-    draw_glwidgets_scene_tree(win, "material", scene, val->material,
-        scene->materials, sel, "material");
+    yocto_scene& scene, const yocto_shape& val, tuple<string, int>& sel) {
+    draw_glwidgets_scene_tree(win, "material", scene, val.material,
+        scene.materials_, sel, "material");
 }
 
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, yocto_instance* val, tuple<string, int>& sel) {
+    yocto_scene& scene, const yocto_instance& val, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(
-        win, "shape", scene, val->shape, scene->shapes, sel, "shape");
+        win, "shape", scene, val.shape, scene.shapes_, sel, "shape");
 }
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, yocto_environment* val, tuple<string, int>& sel) {
-    draw_glwidgets_scene_tree(win, "emission", scene, val->emission_texture,
-        scene->textures_, sel, "texture");
+    yocto_scene& scene, const yocto_environment& val, tuple<string, int>& sel) {
+    draw_glwidgets_scene_tree(win, "emission", scene, val.emission_texture,
+        scene.textures_, sel, "texture");
 }
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, const yocto_scene_node& val, tuple<string, int>& sel) {
+    yocto_scene& scene, const yocto_scene_node& val, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(win, "instance", scene, val.instance,
-        scene->instances, sel, "instance");
+        scene.instances_, sel, "instance");
     draw_glwidgets_scene_tree(
-        win, "camera", scene, val.camera, scene->cameras_, sel, "camera");
+        win, "camera", scene, val.camera, scene.cameras_, sel, "camera");
     draw_glwidgets_scene_tree(win, "environment", scene, val.environment,
-        scene->environments, sel, "environment");
+        scene.environments_, sel, "environment");
     draw_glwidgets_scene_tree(
-        win, "parent", scene, val.parent, scene->nodes_, sel, "node");
+        win, "parent", scene, val.parent, scene.nodes_, sel, "node");
     auto cid = 0;
     for (auto ch : val.children) {
         draw_glwidgets_scene_tree(win, "child" + to_string(cid++), scene, ch,
-            scene->nodes_, sel, "node");
+            scene.nodes_, sel, "node");
     }
 }
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, const yocto_animation& val, tuple<string, int>& sel) {
+    yocto_scene& scene, const yocto_animation& val, tuple<string, int>& sel) {
     auto tid = 0;
     for (auto tg : val.node_targets) {
         draw_glwidgets_scene_tree(win, "target" + to_string(tid++), scene, tg,
-            scene->nodes_, sel, "node");
+            scene.nodes_, sel, "node");
     }
 }
 
 template <typename T>
 inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
-                                      yocto_scene* scene, int index, const vector<T>& vals,
+                                      yocto_scene& scene, int index, const vector<T>& vals,
                                       tuple<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
     auto lbl = vals[index].name;
@@ -132,7 +132,7 @@ inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
 
 template <typename T>
 inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
-                                      yocto_scene* scene, int index, const vector<T*>& vals,
+                                      yocto_scene& scene, int index, const vector<T*>& vals,
                                       tuple<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
     auto lbl = vals[index]->name;
@@ -146,61 +146,61 @@ inline void draw_glwidgets_scene_tree(glwindow* win, const string& lbl_,
 }
 
 inline void draw_glwidgets_scene_tree(
-    glwindow* win, yocto_scene* scene, tuple<string, int>& sel) {
-    if (!scene->cameras_.empty() && begin_treenode_glwidget(win, "cameras")) {
-        for (auto v = 0; v < scene->cameras_.size(); v++)
+    glwindow* win, yocto_scene& scene, tuple<string, int>& sel) {
+    if (!scene.cameras_.empty() && begin_treenode_glwidget(win, "cameras")) {
+        for (auto v = 0; v < scene.cameras_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->cameras_, sel, "camera");
+                win, "", scene, v, scene.cameras_, sel, "camera");
         end_treenode_glwidget(win);
     }
-    if (!scene->shapes.empty() && begin_treenode_glwidget(win, "shapes")) {
-        for (auto v = 0; v < scene->shapes.size(); v++)
+    if (!scene.shapes_.empty() && begin_treenode_glwidget(win, "shapes")) {
+        for (auto v = 0; v < scene.shapes_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->shapes, sel, "shape");
+                win, "", scene, v, scene.shapes_, sel, "shape");
         end_treenode_glwidget(win);
     }
-    if (!scene->instances.empty() && begin_treenode_glwidget(win, "instances")) {
-        for (auto v = 0; v < scene->instances.size(); v++)
+    if (!scene.instances_.empty() && begin_treenode_glwidget(win, "instances")) {
+        for (auto v = 0; v < scene.instances_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->instances, sel, "instance");
+                win, "", scene, v, scene.instances_, sel, "instance");
         end_treenode_glwidget(win);
     }
-    if (!scene->materials.empty() && begin_treenode_glwidget(win, "materials")) {
-        for (auto v = 0; v < scene->materials.size(); v++)
+    if (!scene.materials_.empty() && begin_treenode_glwidget(win, "materials")) {
+        for (auto v = 0; v < scene.materials_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->materials, sel, "material");
+                win, "", scene, v, scene.materials_, sel, "material");
         end_treenode_glwidget(win);
     }
-    if (!scene->textures_.empty() && begin_treenode_glwidget(win, "textures_")) {
-        for (auto v = 0; v < scene->textures_.size(); v++)
+    if (!scene.textures_.empty() && begin_treenode_glwidget(win, "textures_")) {
+        for (auto v = 0; v < scene.textures_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->textures_, sel, "texture");
+                win, "", scene, v, scene.textures_, sel, "texture");
         end_treenode_glwidget(win);
     }
-    if (!scene->environments.empty() &&
+    if (!scene.environments_.empty() &&
         begin_treenode_glwidget(win, "environments")) {
-        for (auto v = 0; v < scene->environments.size(); v++)
+        for (auto v = 0; v < scene.environments_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->environments, sel, "environment");
+                win, "", scene, v, scene.environments_, sel, "environment");
         end_treenode_glwidget(win);
     }
-    if (!scene->nodes_.empty() && begin_treenode_glwidget(win, "nodes")) {
-        for (auto v = 0; v < scene->nodes_.size(); v++)
+    if (!scene.nodes_.empty() && begin_treenode_glwidget(win, "nodes")) {
+        for (auto v = 0; v < scene.nodes_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->nodes_, sel, "node");
+                win, "", scene, v, scene.nodes_, sel, "node");
         end_treenode_glwidget(win);
     }
-    if (!scene->animations_.empty() && begin_treenode_glwidget(win, "animations")) {
-        for (auto v = 0; v < scene->animations_.size(); v++)
+    if (!scene.animations_.empty() && begin_treenode_glwidget(win, "animations")) {
+        for (auto v = 0; v < scene.animations_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->animations_, sel, "animation");
+                win, "", scene, v, scene.animations_, sel, "animation");
         end_treenode_glwidget(win);
     }
 }
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_camera& val, yocto_scene* scene) {
+    glwindow* win, yocto_camera& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_slider_glwidget(win, "frame.x", val.frame.x.x, -1, 1);
@@ -217,7 +217,7 @@ inline bool draw_glwidgets_scene_inspector(
 
 /// Visit struct elements.
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_texture& val, yocto_scene* scene) {
+    glwindow* win, yocto_texture& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_textinput_glwidget(win, "path", val.filename);
@@ -232,100 +232,100 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_material* val, yocto_scene* scene) {
+    glwindow* win, yocto_material& val, yocto_scene& scene) {
     auto edited = 0;
-    edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_coloredit_glwidget(win, "emission", val->emission);  // TODO:
+    edited += draw_textinput_glwidget(win, "name", val.name);
+    edited += draw_coloredit_glwidget(win, "emission", val.emission);  // TODO:
                                                                         // HDR
-    edited += draw_coloredit_glwidget(win, "diffuse", val->diffuse);
-    edited += draw_coloredit_glwidget(win, "specular", val->specular);
-    edited += draw_coloredit_glwidget(win, "transmission", val->transmission);
-    edited += draw_slider_glwidget(win, "roughness", val->roughness, 0, 1);
-    edited += draw_slider_glwidget(win, "opacity", val->opacity, 0, 1);
-    edited += draw_checkbox_glwidget(win, "fresnel", val->fresnel);
+    edited += draw_coloredit_glwidget(win, "diffuse", val.diffuse);
+    edited += draw_coloredit_glwidget(win, "specular", val.specular);
+    edited += draw_coloredit_glwidget(win, "transmission", val.transmission);
+    edited += draw_slider_glwidget(win, "roughness", val.roughness, 0, 1);
+    edited += draw_slider_glwidget(win, "opacity", val.opacity, 0, 1);
+    edited += draw_checkbox_glwidget(win, "fresnel", val.fresnel);
     continue_glwidgets_line(win);
-    edited += draw_checkbox_glwidget(win, "refract", val->refract);
+    edited += draw_checkbox_glwidget(win, "refract", val.refract);
     edited += draw_coloredit_glwidget(
-        win, "volume_density", val->volume_density);  // 0, 10
+        win, "volume_density", val.volume_density);  // 0, 10
     edited += draw_coloredit_glwidget(
-        win, "volume_albedo", val->volume_albedo);  // 0, 1
+        win, "volume_albedo", val.volume_albedo);  // 0, 1
     edited += draw_slider_glwidget(
-        win, "volume_phaseg", val->volume_phaseg, -1, 1);
+        win, "volume_phaseg", val.volume_phaseg, -1, 1);
     edited += draw_combobox_glwidget(
-        win, "emission_texture", val->emission_texture, scene->textures_, true);
+        win, "emission_texture", val.emission_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(
-        win, "diffuse_texture", val->diffuse_texture, scene->textures_, true);
+        win, "diffuse_texture", val.diffuse_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(
-        win, "specular_texture", val->specular_texture, scene->textures_, true);
+        win, "specular_texture", val.specular_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(win, "transmission_texture",
-        val->transmission_texture, scene->textures_, true);
+        val.transmission_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(
-        win, "opacity_texture", val->opacity_texture, scene->textures_, true);
+        win, "opacity_texture", val.opacity_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(win, "roughness_texture",
-        val->roughness_texture, scene->textures_, true);
+        val.roughness_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(
-        win, "bump_texture", val->bump_texture, scene->textures_, true);
+        win, "bump_texture", val.bump_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(win, "displacement_texture",
-        val->displacement_texture, scene->textures_, true);
+        val.displacement_texture, scene.textures_, true);
     edited += draw_combobox_glwidget(
-        win, "normal_texture", val->normal_texture, scene->textures_, true);
-    edited += draw_checkbox_glwidget(win, "base metallic", val->base_metallic);
-    edited += draw_checkbox_glwidget(win, "glTF textures_", val->gltf_textures);
+        win, "normal_texture", val.normal_texture, scene.textures_, true);
+    edited += draw_checkbox_glwidget(win, "base metallic", val.base_metallic);
+    edited += draw_checkbox_glwidget(win, "glTF textures_", val.gltf_textures);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_shape* val, yocto_scene* scene) {
+    glwindow* win, yocto_shape& val, yocto_scene& scene) {
     auto edited = 0;
-    edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_textinput_glwidget(win, "path", val->filename);
+    edited += draw_textinput_glwidget(win, "name", val.name);
+    edited += draw_textinput_glwidget(win, "path", val.filename);
     edited += draw_combobox_glwidget(
-        win, "material", val->material, scene->materials, true);
-    draw_label_glwidgets(win, "lines", "%ld", val->lines.size());
-    draw_label_glwidgets(win, "triangles", "%ld", val->triangles.size());
-    draw_label_glwidgets(win, "quads", "%ld", val->quads.size());
-    draw_label_glwidgets(win, "pos", "%ld", val->positions.size());
-    draw_label_glwidgets(win, "norm", "%ld", val->normals.size());
-    draw_label_glwidgets(win, "texcoord", "%ld", val->texturecoords.size());
-    draw_label_glwidgets(win, "color", "%ld", val->colors.size());
-    draw_label_glwidgets(win, "radius", "%ld", val->radius.size());
-    draw_label_glwidgets(win, "tangsp", "%ld", val->tangentspaces.size());
+        win, "material", val.material, scene.materials_, true);
+    draw_label_glwidgets(win, "lines", "%ld", val.lines.size());
+    draw_label_glwidgets(win, "triangles", "%ld", val.triangles.size());
+    draw_label_glwidgets(win, "quads", "%ld", val.quads.size());
+    draw_label_glwidgets(win, "pos", "%ld", val.positions.size());
+    draw_label_glwidgets(win, "norm", "%ld", val.normals.size());
+    draw_label_glwidgets(win, "texcoord", "%ld", val.texturecoords.size());
+    draw_label_glwidgets(win, "color", "%ld", val.colors.size());
+    draw_label_glwidgets(win, "radius", "%ld", val.radius.size());
+    draw_label_glwidgets(win, "tangsp", "%ld", val.tangentspaces.size());
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_instance* val, yocto_scene* scene) {
+    glwindow* win, yocto_instance& val, yocto_scene& scene) {
     auto edited = 0;
-    edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
-    edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
-    edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
-    edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
+    edited += draw_textinput_glwidget(win, "name", val.name);
+    edited += draw_slider_glwidget(win, "frame.x", val.frame.x, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.y", val.frame.y, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.z", val.frame.z, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.o", val.frame.o, -10, 10);
     edited += draw_combobox_glwidget(
-        win, "shape", val->shape, scene->shapes, true);
+        win, "shape", val.shape, scene.shapes_, true);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_environment* val, yocto_scene* scene) {
+    glwindow* win, yocto_environment& val, yocto_scene& scene) {
     auto edited = 0;
-    edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_slider_glwidget(win, "frame.x", val->frame.x, -1, 1);
-    edited += draw_slider_glwidget(win, "frame.y", val->frame.y, -1, 1);
-    edited += draw_slider_glwidget(win, "frame.z", val->frame.z, -1, 1);
-    edited += draw_slider_glwidget(win, "frame.o", val->frame.o, -10, 10);
-    edited += draw_coloredit_glwidget(win, "ke", val->emission);  // TODO: HDR
+    edited += draw_textinput_glwidget(win, "name", val.name);
+    edited += draw_slider_glwidget(win, "frame.x", val.frame.x, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.y", val.frame.y, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.z", val.frame.z, -1, 1);
+    edited += draw_slider_glwidget(win, "frame.o", val.frame.o, -10, 10);
+    edited += draw_coloredit_glwidget(win, "ke", val.emission);  // TODO: HDR
     edited += draw_combobox_glwidget(
-        win, "ke texture", val->emission_texture, scene->textures_, true);
+        win, "ke texture", val.emission_texture, scene.textures_, true);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_scene_node& val, yocto_scene* scene) {
+    glwindow* win, yocto_scene_node& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_combobox_glwidget(
-        win, "parent", val.parent, scene->nodes_, true);
+        win, "parent", val.parent, scene.nodes_, true);
     edited += draw_slider_glwidget(win, "local.x", val.local.x, -1, 1);
     edited += draw_slider_glwidget(win, "local.y", val.local.y, -1, 1);
     edited += draw_slider_glwidget(win, "local.z", val.local.z, -1, 1);
@@ -334,16 +334,16 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "rotation", val.rotation, -1, 1);
     edited += draw_slider_glwidget(win, "scale", val.scale, 0, 10);
     edited += draw_combobox_glwidget(
-        win, "camera", val.camera, scene->cameras_, true);
+        win, "camera", val.camera, scene.cameras_, true);
     edited += draw_combobox_glwidget(
-        win, "instance", val.instance, scene->instances, true);
+        win, "instance", val.instance, scene.instances_, true);
     edited += draw_combobox_glwidget(
-        win, "environment", val.environment, scene->environments, true);
+        win, "environment", val.environment, scene.environments_, true);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_animation& val, yocto_scene* scene) {
+    glwindow* win, yocto_animation& val, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_textinput_glwidget(win, "path", val.filename);
@@ -362,28 +362,27 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
-    yocto_scene* scene, tuple<string, int>& sel,
+    yocto_scene& scene, tuple<string, int>& sel,
     vector<tuple<string, int>>& update_list, int height) {
-    if (!scene) return false;
     draw_glwidgets_scene_tree(win, scene, sel);
     auto update_len = update_list.size();
 #if 0
     if (test_scn) {
         draw_add_elem_glwidgets(
-            scene, "camera", scene->cameras, test_scn->cameras, sel, update_list);
-        draw_add_elem_glwidgets(scene, "texture", scene->textures_,
+            scene, "camera", scene.cameras, test_scn->cameras, sel, update_list);
+        draw_add_elem_glwidgets(scene, "texture", scene.textures_,
             test_scn->textures_, sel, update_list);
-        draw_add_elem_glwidgets(scene, "mat", scene->materials,
+        draw_add_elem_glwidgets(scene, "mat", scene.materials,
             test_scn->materials, sel, update_list);
         draw_add_elem_glwidgets(
-            scene, "shape", scene->shapes, test_scn->shapes, sel, update_list);
-        draw_add_elem_glwidgets(scene, "instance", scene->instances,
-            test_scn->instances, sel, update_list);
+            scene, "shape", scene.shapes_, test_scn->shapes_, sel, update_list);
+        draw_add_elem_glwidgets(scene, "instance", scene.instances_,
+            test_scn->instances_, sel, update_list);
         draw_add_elem_glwidgets(
-            scene, "node", scene->nodes, test_scn->nodes, sel, update_list);
-        draw_add_elem_glwidgets(scene, "environment", scene->environments,
-            test_scn->environments, sel, update_list);
-        draw_add_elem_glwidgets(scene, "anim", scene->animations,
+            scene, "node", scene.nodes, test_scn->nodes, sel, update_list);
+        draw_add_elem_glwidgets(scene, "environment", scene.environments_,
+            test_scn->environments_, sel, update_list);
+        draw_add_elem_glwidgets(scene, "anim", scene.animations,
             test_scn->animations, sel, update_list);
     }
 #endif
@@ -391,42 +390,42 @@ inline bool draw_glwidgets_scene_tree(glwindow* win, const string& lbl,
 }
 
 inline bool draw_glwidgets_scene_inspector(glwindow* win, const string& lbl,
-    yocto_scene* scene, tuple<string, int>& sel,
+    yocto_scene& scene, tuple<string, int>& sel,
     vector<tuple<string, int>>& update_list, int height) {
-    if (!scene || get<0>(sel) == "") return false;
+    if (get<0>(sel) == "") return false;
     begin_child_glwidget(win, "scrolling scene inspector", {0, height});
 
     auto update_len = update_list.size();
 
     if (get<0>(sel) == "camera")
         if (draw_glwidgets_scene_inspector(
-                win, scene->cameras_[get<1>(sel)], scene))
+                win, scene.cameras_[get<1>(sel)], scene))
             update_list.push_back({"camera", get<1>(sel)});
     if (get<0>(sel) == "shape")
-        if (draw_glwidgets_scene_inspector(win, scene->shapes[get<1>(sel)], scene))
+        if (draw_glwidgets_scene_inspector(win, scene.shapes_[get<1>(sel)], scene))
             update_list.push_back({"shape", get<1>(sel)});
     if (get<0>(sel) == "texture")
         if (draw_glwidgets_scene_inspector(
-                win, scene->textures_[get<1>(sel)], scene))
+                win, scene.textures_[get<1>(sel)], scene))
             update_list.push_back({"texture", get<1>(sel)});
     if (get<0>(sel) == "material")
         if (draw_glwidgets_scene_inspector(
-                win, scene->materials[get<1>(sel)], scene))
+                win, scene.materials_[get<1>(sel)], scene))
             update_list.push_back({"material", get<1>(sel)});
     if (get<0>(sel) == "environment")
         if (draw_glwidgets_scene_inspector(
-                win, scene->environments[get<1>(sel)], scene))
+                win, scene.environments_[get<1>(sel)], scene))
             update_list.push_back({"environment", get<1>(sel)});
     if (get<0>(sel) == "instance")
         if (draw_glwidgets_scene_inspector(
-                win, scene->instances[get<1>(sel)], scene))
+                win, scene.instances_[get<1>(sel)], scene))
             update_list.push_back({"instance", get<1>(sel)});
     if (get<0>(sel) == "node")
-        if (draw_glwidgets_scene_inspector(win, scene->nodes_[get<1>(sel)], scene))
+        if (draw_glwidgets_scene_inspector(win, scene.nodes_[get<1>(sel)], scene))
             update_list.push_back({"node", get<1>(sel)});
     if (get<0>(sel) == "animation")
         if (draw_glwidgets_scene_inspector(
-                win, scene->animations_[get<1>(sel)], scene))
+                win, scene.animations_[get<1>(sel)], scene))
             update_list.push_back({"animation", get<1>(sel)});
 
     end_child_glwidget(win);
