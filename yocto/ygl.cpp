@@ -6599,9 +6599,9 @@ tuple<vec3f, bool> trace_func(const yocto_scene& scene, const bvh_scene& bvh,
         case trace_type::path:
             return trace_path(
                 scene, bvh, lights, position, direction, rng, max_bounces);
-        case trace_type::volpath:
-            return trace_volpath(
-                scene, bvh, lights, position, direction, rng, max_bounces);
+        // case trace_type::volpath:
+        //     return trace_volpath(
+        //         scene, bvh, lights, position, direction, rng, max_bounces);
         case trace_type::direct:
             return trace_direct(
                 scene, bvh, lights, position, direction, rng, max_bounces);

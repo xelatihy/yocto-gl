@@ -3533,7 +3533,6 @@ const auto trace_default_seed = 961748941;
 // Type of tracing algorithm to use
 enum struct trace_type {
     path,               // path tracing
-    volpath,            // volumetric path tracing
     direct,             // direct illumination
     environment,        // environment illumination only
     eyelight,           // eyelight rendering
@@ -3549,10 +3548,10 @@ enum struct trace_type {
     debug_roughness,    // debug - roughness
 };
 
-const auto trace_type_names = vector<string>{"path", "volpath", "direct",
-    "environment", "eyelight", "path_nomis", "path_naive", "direct_nomis",
-    "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
-    "debug_diffuse", "debug_specular", "debug_roughness"};
+const auto trace_type_names = vector<string>{"path", "direct", "environment",
+    "eyelight", "path_nomis", "path_naive", "direct_nomis", "debug_normal",
+    "debug_albedo", "debug_texcoord", "debug_frontfacing", "debug_diffuse",
+    "debug_specular", "debug_roughness"};
 
 // Trace options
 struct trace_params {
