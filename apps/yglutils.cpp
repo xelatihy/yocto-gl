@@ -514,7 +514,7 @@ bool init_glwindow(glwindow& win, int width, int height, const char* title,
 #endif
 
     // create window
-    win = glwindow();
+    win     = glwindow();
     win.win = glfwCreateWindow(width, height, title, nullptr, nullptr);
     if (!win.win) return false;
     glfwMakeContextCurrent(win.win);
@@ -540,7 +540,7 @@ void delete_glwindow(glwindow& win) {
 
 void* get_user_pointer(const glwindow& win) { return win.user_ptr; }
 
-void set_drop_callback(glwindow&                               win,
+void set_drop_callback(glwindow&                                     win,
     function<void(const glwindow& win, const vector<string>& paths)> drop_cb) {
     win.drop_cb = drop_cb;
     glfwSetDropCallback(win.win, _glfw_drop_callback);
@@ -646,11 +646,13 @@ bool draw_button_glwidget(const glwindow& win, const char* lbl) {
     return ImGui::Button(lbl);
 }
 
-void draw_label_glwidgets(const glwindow& win, const char* lbl, const string& texture) {
+void draw_label_glwidgets(
+    const glwindow& win, const char* lbl, const string& texture) {
     ImGui::LabelText(lbl, "%s", texture.c_str());
 }
 
-void draw_label_glwidgets(const glwindow& win, const char* lbl, const char* fmt, ...) {
+void draw_label_glwidgets(
+    const glwindow& win, const char* lbl, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
     ImGui::LabelTextV(lbl, fmt, args);
@@ -722,20 +724,20 @@ bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec4f& val,
     return ImGui::DragFloat4(lbl, &val.x, speed, min, max);
 }
 
-bool draw_dragger_glwidget(
-    const glwindow& win, const char* lbl, int& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, int& val,
+    float speed, int min, int max) {
     return ImGui::DragInt(lbl, &val, speed, min, max);
 }
-bool draw_dragger_glwidget(
-    const glwindow& win, const char* lbl, vec2i& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec2i& val,
+    float speed, int min, int max) {
     return ImGui::DragInt2(lbl, &val.x, speed, min, max);
 }
-bool draw_dragger_glwidget(
-    const glwindow& win, const char* lbl, vec3i& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec3i& val,
+    float speed, int min, int max) {
     return ImGui::DragInt3(lbl, &val.x, speed, min, max);
 }
-bool draw_dragger_glwidget(
-    const glwindow& win, const char* lbl, vec4i& val, float speed, int min, int max) {
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec4i& val,
+    float speed, int min, int max) {
     return ImGui::DragInt4(lbl, &val.x, speed, min, max);
 }
 
@@ -776,8 +778,8 @@ void begin_selectabletreeleaf_glwidget(
     if (ImGui::IsItemClicked()) selected = true;
 }
 
-bool draw_combobox_glwidget(
-    const glwindow& win, const char* lbl, int& val, const vector<string>& labels) {
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& val,
+    const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, labels[val].c_str())) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -790,8 +792,8 @@ bool draw_combobox_glwidget(
     return val != old_val;
 }
 
-bool draw_combobox_glwidget(
-    const glwindow& win, const char* lbl, string& val, const vector<string>& labels) {
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, string& val,
+    const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, val.c_str())) return false;
     auto old_val = val;
     for (auto i = 0; i < labels.size(); i++) {
@@ -805,8 +807,8 @@ bool draw_combobox_glwidget(
     return val != old_val;
 }
 
-bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx, int num,
-    const function<const char*(int)>& labels, bool include_null) {
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
+    int num, const function<const char*(int)>& labels, bool include_null) {
     if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>"))
         return false;
     auto old_idx = idx;
@@ -826,7 +828,8 @@ bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx, int 
     return idx != old_idx;
 }
 
-void begin_child_glwidget(const glwindow& win, const char* lbl, const vec2i& size) {
+void begin_child_glwidget(
+    const glwindow& win, const char* lbl, const vec2i& size) {
     ImGui::PushID(lbl);
     ImGui::BeginChild(lbl, ImVec2(size.x, size.y), false);
 }

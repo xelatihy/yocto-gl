@@ -80,7 +80,7 @@ struct app_image {
 struct app_state {
     // images
     deque<app_image> imgs;
-    int                img_id = 0;
+    int              img_id = 0;
 };
 
 // compute min/max
@@ -96,7 +96,7 @@ void update_stats_async(app_image& img) {
 }
 
 void update_display_async(app_image& img) {
-    auto scope        = log_trace_scoped("computing display image");
+    auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
     if (img.img.width * img.img.height > 1024 * 1024) {
@@ -107,9 +107,8 @@ void update_display_async(app_image& img) {
                 for (auto j = tid; j < img.img.height; j += nthreads) {
                     if (img.display_stop) break;
                     for (auto i = 0; i < img.img.width; i++) {
-                        at(img.display, i, j) = tonemap_filmic(
-                            at(img.img, i, j), img.exposure, img.filmic,
-                            img.srgb);
+                        at(img.display, i, j) = tonemap_filmic(at(img.img, i, j),
+                            img.exposure, img.filmic, img.srgb);
                     }
                 }
             }));
@@ -135,12 +134,11 @@ void load_image_async(app_image& img) {
     img.texture_done = false;
     img.error_msg    = "";
     img.img          = {};
-    if (!load_image(img.filename, img.img))
-        img.error_msg = "cannot load image";
+    if (!load_image(img.filename, img.img)) img.error_msg = "cannot load image";
     img.load_done      = true;
     img.display        = img.img;
     img.display_thread = thread([&img]() { update_display_async(img); });
-    img.stats_thread   = thread([&img](){ update_stats_async(img); });
+    img.stats_thread   = thread([&img]() { update_stats_async(img); });
 }
 
 // save an image
@@ -160,17 +158,17 @@ void save_image_async(app_image& img) {
 void add_new_image(app_state& app, const string& filename, const string& outname,
     float exposure = 0, bool filmic = false, bool srgb = true) {
     app.imgs.emplace_back();
-    auto& img      = app.imgs.back();
+    auto& img    = app.imgs.back();
     img.filename = filename;
     img.outname = (outname == "") ? replace_extension(filename, ".display.png") :
-                                     outname;
+                                    outname;
     img.name        = get_filename(filename);
     img.is_hdr      = is_hdr_filename(filename);
     img.exposure    = exposure;
     img.filmic      = filmic;
     img.srgb        = srgb;
-    img.load_thread = thread([&img](){load_image_async(img);});
-    app.img_id = (int)app.imgs.size() - 1;
+    img.load_thread = thread([&img]() { load_image_async(img); });
+    app.img_id      = (int)app.imgs.size() - 1;
 }
 
 void draw_glwidgets(const glwindow& win) {
@@ -185,7 +183,7 @@ void draw_glwidgets(const glwindow& win) {
             draw_textinput_glwidget(win, "outname", img.outname);
             if (draw_button_glwidget(win, "save display")) {
                 if (img.display_done) {
-                    img.save_thread = thread([&img](){ save_image_async(img); });
+                    img.save_thread = thread([&img]() { save_image_async(img); });
                 }
             }
             auto status = string();
@@ -238,21 +236,20 @@ void draw_glwidgets(const glwindow& win) {
         }
         if (img.save_thread.joinable()) img.save_thread.join();
         img.display_stop   = false;
-        img.display_thread = thread([&img](){update_display_async(img);});
+        img.display_thread = thread([&img]() { update_display_async(img); });
     }
 }
 
 void draw(const glwindow& win) {
     auto& app      = *(app_state*)get_user_pointer(win);
-    auto&  img      = app.imgs.at(app.img_id);
+    auto& img      = app.imgs.at(app.img_id);
     auto  win_size = get_glwindow_size(win);
     auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img.gl_txt) {
         center_image(img.imcenter, img.imscale,
-            {img.display.width, img.display.height}, win_size,
-            img.zoom_to_fit);
+            {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
         draw_glimage(img.gl_txt, {img.display.width, img.display.height},
             win_size, img.imcenter, img.imscale);
     }
@@ -280,8 +277,8 @@ void drop_callback(const glwindow& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
     // window
     auto& img   = app.imgs.at(app.img_id);
-    auto width = 720 + 320, height = 720;
-    auto win = glwindow();
+    auto  width = 720 + 320, height = 720;
+    auto  win = glwindow();
     init_glwindow(win, 720 + 320, 720, "yimview", &app, draw);
     set_drop_callback(win, drop_callback);
 
@@ -302,8 +299,7 @@ void run_ui(app_state& app) {
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse
-        if (mouse_left && !widgets_active)
-            img.imcenter += mouse_pos - last_pos;
+        if (mouse_left && !widgets_active) img.imcenter += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
             img.imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
 

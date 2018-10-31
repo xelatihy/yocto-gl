@@ -388,8 +388,8 @@ inline bool draw_glwidgets_scene_tree(const glwindow& win, const string& lbl,
     return update_list.size() != update_len;
 }
 
-inline bool draw_glwidgets_scene_inspector(const glwindow& win, const string& lbl,
-    yocto_scene& scene, tuple<string, int>& sel,
+inline bool draw_glwidgets_scene_inspector(const glwindow& win,
+    const string& lbl, yocto_scene& scene, tuple<string, int>& sel,
     vector<tuple<string, int>>& update_list, int height) {
     if (get<0>(sel) == "") return false;
     begin_child_glwidget(win, "scrolling scene inspector", {0, height});

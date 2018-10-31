@@ -140,17 +140,17 @@ void draw_glimage(const gltexture& texture, vec2i imsize, vec2i winsize,
     vec2f imcenter, float imscale);
 
 struct glwindow {
-    GLFWwindow*                                           win        = nullptr;
-    void*                                                 user_ptr   = nullptr;
+    GLFWwindow*                                            win        = nullptr;
+    void*                                                  user_ptr   = nullptr;
     function<void(const glwindow&)>                        refresh_cb = {};
     function<void(const glwindow&, const vector<string>&)> drop_cb    = {};
 };
 
 bool init_glwindow(glwindow& win, int width, int height, const char* title,
     void* user_pointer, function<void(const glwindow&)> refresh_cb);
-void      delete_glwindow(glwindow& win);
+void delete_glwindow(glwindow& win);
 
-void set_drop_callback(glwindow&                               win,
+void set_drop_callback(glwindow&                                     win,
     function<void(const glwindow& win, const vector<string>& paths)> drop_cb);
 
 void* get_user_pointer(const glwindow& win);
@@ -180,8 +180,10 @@ bool begin_glwidgets_window(const glwindow& win, const char* title);
 bool begin_header_glwidget(const glwindow& win, const char* title);
 void end_header_glwidget(const glwindow& win);
 
-void draw_label_glwidgets(const glwindow& win, const char* lbl, const string& texture);
-void draw_label_glwidgets(const glwindow& win, const char* lbl, const char* fmt, ...);
+void draw_label_glwidgets(
+    const glwindow& win, const char* lbl, const string& texture);
+void draw_label_glwidgets(
+    const glwindow& win, const char* lbl, const char* fmt, ...);
 
 bool begin_header_widget(const glwindow& win, const char* label);
 void end_header_widget(const glwindow& win);
@@ -241,33 +243,34 @@ bool begin_selectabletreenode_glwidget(
 void begin_selectabletreeleaf_glwidget(
     const glwindow& win, const char* lbl, bool& selected);
 
-bool draw_combobox_glwidget(
-    const glwindow& win, const char* lbl, int& idx, const vector<string>& labels);
-bool draw_combobox_glwidget(
-    const glwindow& win, const char* lbl, string& val, const vector<string>& labels);
-bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx, int num,
-    const function<const char*(int)>& labels, bool include_null = false);
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
+    const vector<string>& labels);
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, string& val,
+    const vector<string>& labels);
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
+    int num, const function<const char*(int)>& labels, bool include_null = false);
 
 template <typename T>
-inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
-    const vector<T*>& vals, bool include_null = false) {
+inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl,
+    int& idx, const vector<T*>& vals, bool include_null = false) {
     return draw_combobox_glwidget(win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
-inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
-    const vector<T>& vals, bool include_null = false) {
+inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl,
+    int& idx, const vector<T>& vals, bool include_null = false) {
     return draw_combobox_glwidget(win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
-    template <typename T>
-    inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
-                                       const deque<T>& vals, bool include_null = false) {
-        return draw_combobox_glwidget(win, lbl, idx, (int)vals.size(),
-                                      [&](int idx) { return vals[idx].name.c_str(); }, include_null);
-    }
+template <typename T>
+inline bool draw_combobox_glwidget(const glwindow& win, const char* lbl,
+    int& idx, const deque<T>& vals, bool include_null = false) {
+    return draw_combobox_glwidget(win, lbl, idx, (int)vals.size(),
+        [&](int idx) { return vals[idx].name.c_str(); }, include_null);
+}
 
-void begin_child_glwidget(const glwindow& win, const char* lbl, const vec2i& size);
+void begin_child_glwidget(
+    const glwindow& win, const char* lbl, const vec2i& size);
 void end_child_glwidget(const glwindow& win);
 
 }  // namespace ygl

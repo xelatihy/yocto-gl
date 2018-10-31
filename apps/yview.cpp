@@ -113,9 +113,9 @@ void draw(const glwindow& win) {
 
     auto& camera = app.scene.cameras.at(app.camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    draw_glscene(app.state, app.scene, camera, framebuffer_size,
-        app.selection, app.eyelight, app.wireframe, app.edges, app.exposure,
-        app.gamma, app.near_plane, app.far_plane);
+    draw_glscene(app.state, app.scene, camera, framebuffer_size, app.selection,
+        app.eyelight, app.wireframe, app.edges, app.exposure, app.gamma,
+        app.near_plane, app.far_plane);
 
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {
@@ -489,18 +489,16 @@ void draw_glshape(draw_glstate& state, const yocto_scene& scene, int shape_id,
     set_gluniform(state.prog, "mat_op", material.opacity);
     set_gluniform(state.prog, "mat_double_sided", (int)material.double_sided);
     set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
-        material.emission_texture >= 0 ?
-            state.txts.at(material.emission_texture) :
-            gltexture{},
+        material.emission_texture >= 0 ? state.txts.at(material.emission_texture) :
+                                         gltexture{},
         0);
     set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
         material.diffuse_texture >= 0 ? state.txts.at(material.diffuse_texture) :
                                         gltexture{},
         1);
     set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
-        material.specular_texture >= 0 ?
-            state.txts.at(material.specular_texture) :
-            gltexture{},
+        material.specular_texture >= 0 ? state.txts.at(material.specular_texture) :
+                                         gltexture{},
         2);
     set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
         material.roughness_texture >= 0 ?
@@ -629,8 +627,8 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
             set_gluniform(
                 state.prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
             set_gluniform(state.prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
-            set_gluniform(state.prog, ("ltype[" + is + "]").c_str(),
-                (int)lights_type[i]);
+            set_gluniform(
+                state.prog, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
         }
     }
 
@@ -715,7 +713,7 @@ draw_glstate init_draw_state(const glwindow& win) {
             vbos.gl_quads = make_glelementbuffer(
                 convert_quads_to_triangles(quads), false);
         vbos.num_facevarying_quads = (int)quads.size();
-        state.shps[shape_id]      = vbos;
+        state.shps[shape_id]       = vbos;
     }
     return state;
 }

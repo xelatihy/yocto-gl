@@ -311,6 +311,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <deque>
 #include <functional>  // for std::hash
 #include <limits>
 #include <map>
@@ -319,7 +320,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-#include <deque>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -349,6 +349,7 @@ using std::tan;
 
 using std::array;
 using std::atomic;
+using std::deque;
 using std::function;
 using std::ignore;
 using std::make_unique;
@@ -360,7 +361,6 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
-using std::deque;
 using namespace std::string_literals;
 
 using byte = unsigned char;

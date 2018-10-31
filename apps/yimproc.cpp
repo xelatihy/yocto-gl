@@ -156,8 +156,7 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = image<vec4f>();
-    if (!load_image(filename, img))
-        log_fatal("cannot load image {}", filename);
+    if (!load_image(filename, img)) log_fatal("cannot load image {}", filename);
 
     // set alpha
     if (alpha_filename != "") {

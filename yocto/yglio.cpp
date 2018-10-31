@@ -1667,8 +1667,7 @@ bool apply_json_procedural(
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        val.hdr_image = make_bumpdimple_image(
-            width, height, js.value("tile", 8));
+        val.hdr_image = make_bumpdimple_image(width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
         val.hdr_image = make_uvramp_image(width, height);
     } else if (type == "uvgrid") {
@@ -1688,10 +1687,10 @@ bool apply_json_procedural(
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        val.hdr_image = make_ridge_image(width, height,
-            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
-            js.value("gain", 0.5f), js.value("offset", 1.0f),
-            js.value("octaves", 6), js.value("wrap", true));
+        val.hdr_image = make_ridge_image(width, height, js.value("scale", 1.0f),
+            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+            js.value("offset", 1.0f), js.value("octaves", 6),
+            js.value("wrap", true));
     } else if (type == "turbulence") {
         val.hdr_image = make_turbulence_image(width, height,
             js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
@@ -5681,12 +5680,12 @@ void normalize_ply_line(char* s) {
 // Load ply mesh
 bool load_ply(const string& filename, ply_data& ply) {
     // open file
-    ply = {};
+    ply     = {};
     auto fs = open(filename, "rb");
     if (!fs) return false;
 
     // parse header
-    ply   = ply_data();
+    ply        = ply_data();
     auto ascii = false;
     char buf[4096];
     auto line = ""s;
@@ -5787,7 +5786,8 @@ bool load_ply(const string& filename, ply_data& ply) {
                         if (ascii) {
                             prop.lists[vid][i] = parse_int(ss);
                         } else {
-                            if (!read_value(fs, prop.lists[vid][i])) return false;
+                            if (!read_value(fs, prop.lists[vid][i]))
+                                return false;
                         }
                 } else {
                     return false;
