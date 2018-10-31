@@ -352,14 +352,14 @@ using json = nlohmann::json;
 // Load a JSON object
 bool load_json(const string& filename, json& js) {
     auto text = ""s;
-    if(!load_text(filename, text)) return false;
+    if (!load_text(filename, text)) return false;
     try {
         js = json::parse(text.begin(), text.end());
     } catch (...) {
         log_io_error("could not parse json {}", filename);
         return false;
     }
-        return true;
+    return true;
 }
 
 // Save a JSON object
@@ -496,8 +496,8 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     // read w, h
     if (!fgets(buf, 256, fs.fs)) return {};
     toks = split_string(buf);
-    w   = atoi(toks[0].c_str());
-    h   = atoi(toks[1].c_str());
+    w    = atoi(toks[0].c_str());
+    h    = atoi(toks[1].c_str());
 
     // read scale
     if (!fgets(buf, 256, fs.fs)) return {};
@@ -726,7 +726,8 @@ bool save_hdr_image4f(const string& filename, const image<vec4f>& img) {
 }
 
 // load an image using stbi library
-bool load_stb_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img) {
+bool load_stb_image4b_from_memory(
+    const byte* data, int data_size, image<vec4b>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4b*)stbi_load_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
@@ -738,7 +739,8 @@ bool load_stb_image4b_from_memory(const byte* data, int data_size, image<vec4b>&
     free(pixels);
     return true;
 }
-bool load_stbi_image4f_from_memory(const byte* data, int data_size, image<vec4f>& img) {
+bool load_stbi_image4f_from_memory(
+    const byte* data, int data_size, image<vec4f>& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
@@ -768,22 +770,22 @@ bool load_image4f_nolog(const string& filename, image<vec4f>& img) {
         return load_stb_image4f(filename, img);
     } else if (ext == "png" || ext == "PNG") {
         auto img8 = image<vec4b>{};
-        if(!load_stb_image4b(filename, img8)) return false;
+        if (!load_stb_image4b(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "jpg" || ext == "JPG") {
         auto img8 = image<vec4b>{};
-        if(!load_stb_image4b(filename, img8)) return false;
+        if (!load_stb_image4b(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "tga" || ext == "TGA") {
         auto img8 = image<vec4b>{};
-        if(!load_stb_image4b(filename, img8)) return false;
+        if (!load_stb_image4b(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "bmp" || ext == "BMP") {
         auto img8 = image<vec4b>{};
-        if(!load_stb_image4b(filename, img8)) return false;
+        if (!load_stb_image4b(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else {
@@ -824,7 +826,8 @@ bool save_image4f(const string& filename, const image<vec4f>& img) {
 }
 
 // Loads an hdr image.
-bool load_image4f_from_memory_nolog(const byte* data, int data_size, image<vec4f>& img) {
+bool load_image4f_from_memory_nolog(
+    const byte* data, int data_size, image<vec4f>& img) {
     return load_stbi_image4f_from_memory(data, data_size, img);
 }
 bool load_image4f_from_memory(const byte* data, int data_size, image<vec4f>& img) {
@@ -837,17 +840,17 @@ bool load_image4b_nolog(const string& filename, image<vec4b>& img) {
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
         auto imgf = image<vec4f>{};
-        if(!load_exr_image4f(filename, imgf)) return false;
+        if (!load_exr_image4f(filename, imgf)) return false;
         img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "pfm" || ext == "PFM") {
         auto imgf = image<vec4f>{};
-        if(!load_pfm_image4f(filename, imgf)) return false;
+        if (!load_pfm_image4f(filename, imgf)) return false;
         img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "hdr" || ext == "HDR") {
         auto imgf = image<vec4f>{};
-        if(!load_stb_image4f(filename, imgf)) return false;
+        if (!load_stb_image4f(filename, imgf)) return false;
         img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "png" || ext == "PNG") {
@@ -896,7 +899,8 @@ bool save_image4b(const string& filename, const image<vec4b>& img) {
 }
 
 // Loads an ldr image.
-bool load_image4b_from_memory_nolog(const byte* data, int data_size, image<vec4b>& img) {
+bool load_image4b_from_memory_nolog(
+    const byte* data, int data_size, image<vec4b>& img) {
     return load_stb_image4b_from_memory(data, data_size, img);
 }
 bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img) {
@@ -1025,14 +1029,12 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
             continue;
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (is_hdr_filename(filename)) {
-             if(!load_image4f_nolog(filename, texture.hdr_image)) {
-            if (!skip_missing) return false;
-
-             }
+            if (!load_image4f_nolog(filename, texture.hdr_image)) {
+                if (!skip_missing) return false;
+            }
         } else {
-            if(!load_image4b_nolog(filename, texture.ldr_image)) {
-            if (!skip_missing) return false;
-
+            if (!load_image4b_nolog(filename, texture.ldr_image)) {
+                if (!skip_missing) return false;
             }
         }
     }
@@ -1041,8 +1043,8 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     for (auto& texture : scene.voltextures) {
         if (texture.filename == "" || !texture.volume_data.voxels.empty())
             continue;
-        auto filename       = normalize_path(dirname + "/" + texture.filename);
-        if(!load_volume1f_nolog(filename, texture.volume_data)) {
+        auto filename = normalize_path(dirname + "/" + texture.filename);
+        if (!load_volume1f_nolog(filename, texture.volume_data)) {
             if (!skip_missing) return false;
         }
     }
@@ -2506,7 +2508,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
 
     // load jsonz
     auto js = json();
-    if(!load_json(filename, js)) return false;
+    if (!load_json(filename, js)) return false;
 
     // deserialize json
     try {
@@ -3653,7 +3655,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                     (unsigned char*)data_char.c_str() + data_char.length());
             } else {
                 auto filename = normalize_path(dirname + "/" + uri);
-                if(!load_binary(filename, data)) return false;
+                if (!load_binary(filename, data)) return false;
             }
             if (gbuf.value("byteLength", -1) != data.size()) {
                 return false;
@@ -4145,7 +4147,7 @@ bool load_gltf_scene(const string& filename, yocto_scene& scene,
 
     // convert json
     auto js = json();
-    if(!load_json(filename, js))  return false;
+    if (!load_json(filename, js)) return false;
     try {
         if (!gltf_to_scene(scene, js, get_dirname(filename))) return false;
     } catch (...) {

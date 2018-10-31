@@ -157,11 +157,11 @@ namespace ygl {
 
 // Load/save a text file
 bool load_text(const string& filename, string& str);
-bool   save_text(const string& filename, const string& str);
+bool save_text(const string& filename, const string& str);
 
 // Load/save a binary file
 bool load_binary(const string& filename, vector<byte>& data);
-bool         save_binary(const string& filename, const vector<byte>& data);
+bool save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace ygl
 
@@ -175,12 +175,12 @@ bool is_hdr_filename(const string& filename);
 
 // Loads/saves a 4 channel float image in linear color space.
 bool load_image4f(const string& filename, image<vec4f>& img);
-bool         save_image4f(const string& filename, const image<vec4f>& img);
+bool save_image4f(const string& filename, const image<vec4f>& img);
 bool load_image4f_from_memory(const byte* data, int data_size, image<vec4f>& img);
 
 // Loads/saves a 4 channel byte image in sRGB color space.
 bool load_image4b(const string& filename, image<vec4b>& img);
-bool         save_image4b(const string& filename, const image<vec4b>& img);
+bool save_image4b(const string& filename, const image<vec4b>& img);
 bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
 bool load_image4b_from_memory(const byte* data, int data_size, image<vec4b>& img);
 
@@ -198,7 +198,7 @@ namespace ygl {
 
 // Loads/saves a 1 channel volume.
 bool load_volume1f(const string& filename, volume<float>& vol);
-bool          save_volume1f(const string& filename, const volume<float>& vol);
+bool save_volume1f(const string& filename, const volume<float>& vol);
 
 }  // namespace ygl
 

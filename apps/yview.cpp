@@ -85,9 +85,9 @@ void draw_glscene(draw_glstate* state, const yocto_scene& scene,
 
 // draw with shading
 void draw(glwindow* win) {
-    auto& app  = *(app_state*)get_user_pointer(win);
-    auto framebuffer_size = get_glframebuffer_size(win);
-    app.resolution       = framebuffer_size.y;
+    auto& app              = *(app_state*)get_user_pointer(win);
+    auto  framebuffer_size = get_glframebuffer_size(win);
+    app.resolution         = framebuffer_size.y;
 
     static auto last_time = 0.0f;
     for (auto& sel : app.update_list) {
@@ -114,8 +114,8 @@ void draw(glwindow* win) {
     auto& camera = app.scene.cameras.at(app.camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     draw_glscene(app.state.get(), app.scene, camera, framebuffer_size,
-        app.selection, app.eyelight, app.wireframe, app.edges,
-        app.exposure, app.gamma, app.near_plane, app.far_plane);
+        app.selection, app.eyelight, app.wireframe, app.edges, app.exposure,
+        app.gamma, app.near_plane, app.far_plane);
 
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {
@@ -133,8 +133,8 @@ void draw(glwindow* win) {
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "edges", app.edges);
             if (app.time_range != zero2f) {
-                draw_slider_glwidget(win, "time", app.time, app.time_range.x,
-                    app.time_range.y);
+                draw_slider_glwidget(
+                    win, "time", app.time, app.time_range.x, app.time_range.y);
                 draw_textinput_glwidget(win, "anim group", app.anim_group);
                 draw_checkbox_glwidget(win, "animate", app.animate);
             }
@@ -651,8 +651,8 @@ void draw_glscene(draw_glstate* state, const yocto_scene& scene,
 }
 
 draw_glstate* init_draw_state(glwindow* win) {
-    auto& app  = *(app_state*)get_user_pointer(win);
-    auto state = new draw_glstate();
+    auto& app   = *(app_state*)get_user_pointer(win);
+    auto  state = new draw_glstate();
     // load textures and vbos
     state->prog = make_glprogram(vertex, fragment);
     state->txts.resize(app.scene.textures.size());
@@ -725,9 +725,8 @@ void run_ui(app_state& app) {
     // window
     auto& camera = app.scene.cameras.at(app.camid);
     auto width = clamp(evaluate_image_size(camera, app.resolution).x, 256, 1440),
-         height = clamp(
-             evaluate_image_size(camera, app.resolution).y, 256, 1440);
-    auto win = make_glwindow(width, height, "yview", &app, draw);
+         height = clamp(evaluate_image_size(camera, app.resolution).y, 256, 1440);
+    auto win    = make_glwindow(width, height, "yview", &app, draw);
 
     // init widget
     init_glwidgets(win);
@@ -858,14 +857,13 @@ int main(int argc, char* argv[]) {
     // add components
     if (!quiet) log_info("adding scene elements\n");
     if (double_sided) {
-        for (auto& material : app.scene.materials)
-            material.double_sided = true;
+        for (auto& material : app.scene.materials) material.double_sided = true;
     }
     for (auto& err : validate_scene(app.scene)) log_error(err);
 
     // animation
     auto time_range = compute_animation_range(app.scene);
-    app.time       = time_range.x;
+    app.time        = time_range.x;
 
     // run ui
     run_ui(app);

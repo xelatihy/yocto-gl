@@ -60,7 +60,7 @@ struct app_state {
 };
 
 void draw_glwidgets(glwindow* win) {
-    auto& app  = *(app_state*)get_user_pointer(win);
+    auto& app = *(app_state*)get_user_pointer(win);
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yitrace")) {
         if (begin_header_glwidget(win, "scene")) {
@@ -69,8 +69,8 @@ void draw_glwidgets(glwindow* win) {
         }
         if (begin_header_glwidget(win, "trace")) {
             draw_label_glwidgets(win, "image", "%d x %d @ %d",
-                app.state.rendered_image.width,
-                app.state.rendered_image.height, app.state.current_sample);
+                app.state.rendered_image.width, app.state.rendered_image.height,
+                app.state.current_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
                 cam_names.push_back(camera.name);
@@ -105,8 +105,7 @@ void draw_glwidgets(glwindow* win) {
             draw_checkbox_glwidget(win, "fps", app.navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
             auto ij = get_image_coords(mouse_pos, app.imcenter, app.imscale,
-                {app.state.rendered_image.width,
-                    app.state.rendered_image.height});
+                {app.state.rendered_image.width, app.state.rendered_image.height});
             draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app.state.rendered_image.width &&
                 ij.y >= 0 && ij.y < app.state.rendered_image.height) {
@@ -133,17 +132,16 @@ void draw_glwidgets(glwindow* win) {
 }
 
 void draw(glwindow* win) {
-    auto& app  = *(app_state*)get_user_pointer(win);
-    auto win_size = get_glwindow_size(win);
-    auto fb_size  = get_glframebuffer_size(win);
+    auto& app      = *(app_state*)get_user_pointer(win);
+    auto  win_size = get_glwindow_size(win);
+    auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     center_image(app.imcenter, app.imscale,
         {app.state.display_image.width, app.state.display_image.height},
         win_size, app.zoom_to_fit);
     if (!app.gl_txt) {
-        app.gl_txt = make_gltexture(
-            app.state.display_image, false, false, false);
+        app.gl_txt = make_gltexture(app.state.display_image, false, false, false);
     } else {
         update_gltexture(
             app.gl_txt, app.state.display_image, false, false, false);
@@ -165,8 +163,8 @@ bool update(app_state& app) {
     // update BVH
     for (auto& sel : app.update_list) {
         if (get<0>(sel) == "shape") {
-            refit_shape_bvh(app.scene.shapes[get<1>(sel)],
-                app.bvh.shape_bvhs[get<1>(sel)]);
+            refit_shape_bvh(
+                app.scene.shapes[get<1>(sel)], app.bvh.shape_bvhs[get<1>(sel)]);
             refit_scene_bvh(app.scene, app.bvh);
         }
         if (get<0>(sel) == "instance") {
@@ -227,8 +225,7 @@ void run_ui(app_state& app) {
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.imcenter, app.imscale,
-                {app.state.rendered_image.width,
-                    app.state.rendered_image.height});
+                {app.state.rendered_image.width, app.state.rendered_image.height});
             if (ij.x < 0 || ij.x >= app.state.rendered_image.width ||
                 ij.y < 0 || ij.y >= app.state.rendered_image.height) {
                 auto& camera = app.scene.cameras.at(app.params.camera_id);
@@ -302,8 +299,7 @@ int main(int argc, char* argv[]) {
     if (add_skyenv && app.scene.environments.empty())
         add_sky_environment(app.scene);
     if (double_sided)
-        for (auto& material : app.scene.materials)
-            material.double_sided = true;
+        for (auto& material : app.scene.materials) material.double_sided = true;
     add_missing_cameras(app.scene);
     add_missing_names(app.scene);
     log_validation_errors(app.scene);

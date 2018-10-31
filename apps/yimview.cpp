@@ -139,7 +139,8 @@ void load_image_async(app_image* img) {
     img->texture_done = false;
     img->error_msg    = "";
     img->img          = {};
-    if (!load_image4f(img->filename, img->img)) img->error_msg = "cannot load image";
+    if (!load_image4f(img->filename, img->img))
+        img->error_msg = "cannot load image";
     img->load_done      = true;
     img->display        = img->img;
     img->display_thread = thread(update_display_async, img);
@@ -177,8 +178,8 @@ void add_new_image(app_state& app, const string& filename, const string& outname
 }
 
 void draw_glwidgets(glwindow* win) {
-    auto& app  = *(app_state*)get_user_pointer(win);
-    auto edited = false;
+    auto& app    = *(app_state*)get_user_pointer(win);
+    auto  edited = false;
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yimview")) {
         auto img = app.imgs.at(app.img_id);
@@ -246,10 +247,10 @@ void draw_glwidgets(glwindow* win) {
 }
 
 void draw(glwindow* win) {
-    auto& app  = *(app_state*)get_user_pointer(win);
-    auto img      = app.imgs.at(app.img_id);
-    auto win_size = get_glwindow_size(win);
-    auto fb_size  = get_glframebuffer_size(win);
+    auto& app      = *(app_state*)get_user_pointer(win);
+    auto  img      = app.imgs.at(app.img_id);
+    auto  win_size = get_glwindow_size(win);
+    auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
     if (img->gl_txt) {
@@ -276,7 +277,7 @@ void update(app_state& app) {
 }
 
 void drop_callback(glwindow* win, const vector<string>& paths) {
-    auto& app  = *(app_state*)get_user_pointer(win);
+    auto& app = *(app_state*)get_user_pointer(win);
     for (auto path : paths) add_new_image(app, path, "");
 }
 
