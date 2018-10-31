@@ -2271,7 +2271,7 @@ inline double parse_double(char*& s) {
     if (!*s) return 0;
     while (*s == ' ') s++;
     auto val      = 0.0;
-    auto mantissa = 0, fractional = 0, fractional_length = 0, exponent = 0;
+    auto mantissa = 0ll, fractional = 0ll, fractional_length = 0ll, exponent = 0ll;
     auto sn = (*s == '-') ? -1 : 1;
     if (*s == '-' || *s == '+') s++;
     while (*s >= '0' && *s <= '9') mantissa = mantissa * 10 + (*s++ - '0');
