@@ -6652,7 +6652,7 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
     state.async_threads.clear();
     state.async_stop_flag = false;
     for (auto tid = 0; tid < nthreads; tid++) {
-        state.async_threads.push_back(thread([&, scene, tid]() {
+        state.async_threads.push_back(thread([&, tid]() {
             for (auto s = 0; s < params.num_samples; s++) {
                 if (!tid) state.current_sample = s;
                 for (auto j = tid; j < state.rendered_image.height;
