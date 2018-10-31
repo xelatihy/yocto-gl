@@ -85,12 +85,12 @@ void draw_glscene(draw_glstate* state, const yocto_scene& scene,
 
 // draw with shading
 void draw(glwindow* win) {
-    auto app              = (app_state*)get_user_pointer(win);
+    auto& app  = *(app_state*)get_user_pointer(win);
     auto framebuffer_size = get_glframebuffer_size(win);
-    app->resolution       = framebuffer_size.y;
+    app.resolution       = framebuffer_size.y;
 
     static auto last_time = 0.0f;
-    for (auto& sel : app->update_list) {
+    for (auto& sel : app.update_list) {
         if (get<0>(sel) == "texture") {
             // TODO: update texture
             printf("texture update not supported\n");
@@ -104,55 +104,55 @@ void draw(glwindow* win) {
             printf("shape update not supported\n");
         }
         if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
-            app->time != last_time) {
-            update_transforms(app->scene, app->time, app->anim_group);
-            last_time = app->time;
+            app.time != last_time) {
+            update_transforms(app.scene, app.time, app.anim_group);
+            last_time = app.time;
         }
     }
-    app->update_list.clear();
+    app.update_list.clear();
 
-    auto& camera = app->scene.cameras.at(app->camid);
+    auto& camera = app.scene.cameras.at(app.camid);
     clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    draw_glscene(app->state.get(), app->scene, camera, framebuffer_size,
-        app->selection, app->eyelight, app->wireframe, app->edges,
-        app->exposure, app->gamma, app->near_plane, app->far_plane);
+    draw_glscene(app.state.get(), app.scene, camera, framebuffer_size,
+        app.selection, app.eyelight, app.wireframe, app.edges,
+        app.exposure, app.gamma, app.near_plane, app.far_plane);
 
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {
         if (begin_header_glwidget(win, "scene")) {
-            draw_label_glwidgets(win, "scene", "%s", app->filename.c_str());
+            draw_label_glwidgets(win, "scene", "%s", app.filename.c_str());
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "view")) {
             draw_combobox_glwidget(
-                win, "camera", app->camid, app->scene.cameras, false);
-            draw_slider_glwidget(win, "resolution", app->resolution, 256, 4096);
-            draw_checkbox_glwidget(win, "eyelight", app->eyelight);
+                win, "camera", app.camid, app.scene.cameras, false);
+            draw_slider_glwidget(win, "resolution", app.resolution, 256, 4096);
+            draw_checkbox_glwidget(win, "eyelight", app.eyelight);
             continue_glwidgets_line(win);
-            draw_checkbox_glwidget(win, "wireframe", app->wireframe);
+            draw_checkbox_glwidget(win, "wireframe", app.wireframe);
             continue_glwidgets_line(win);
-            draw_checkbox_glwidget(win, "edges", app->edges);
-            if (app->time_range != zero2f) {
-                draw_slider_glwidget(win, "time", app->time, app->time_range.x,
-                    app->time_range.y);
-                draw_textinput_glwidget(win, "anim group", app->anim_group);
-                draw_checkbox_glwidget(win, "animate", app->animate);
+            draw_checkbox_glwidget(win, "edges", app.edges);
+            if (app.time_range != zero2f) {
+                draw_slider_glwidget(win, "time", app.time, app.time_range.x,
+                    app.time_range.y);
+                draw_textinput_glwidget(win, "anim group", app.anim_group);
+                draw_checkbox_glwidget(win, "animate", app.animate);
             }
-            draw_slider_glwidget(win, "exposure", app->exposure, -10, 10);
-            draw_slider_glwidget(win, "gamma", app->gamma, 0.1f, 4);
-            draw_slider_glwidget(win, "near", app->near_plane, 0.01f, 1.0f);
-            draw_slider_glwidget(win, "far", app->far_plane, 1000.0f, 10000.0f);
-            draw_checkbox_glwidget(win, "fps", app->navigation_fps);
+            draw_slider_glwidget(win, "exposure", app.exposure, -10, 10);
+            draw_slider_glwidget(win, "gamma", app.gamma, 0.1f, 4);
+            draw_slider_glwidget(win, "near", app.near_plane, 0.01f, 1.0f);
+            draw_slider_glwidget(win, "far", app.far_plane, 1000.0f, 10000.0f);
+            draw_checkbox_glwidget(win, "fps", app.navigation_fps);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "navigate")) {
             draw_glwidgets_scene_tree(
-                win, "", app->scene, app->selection, app->update_list, 200);
+                win, "", app.scene, app.selection, app.update_list, 200);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "inspect")) {
             draw_glwidgets_scene_inspector(
-                win, "", app->scene, app->selection, app->update_list, 200);
+                win, "", app.scene, app.selection, app.update_list, 200);
             end_header_glwidget(win);
         }
     }
@@ -651,14 +651,14 @@ void draw_glscene(draw_glstate* state, const yocto_scene& scene,
 }
 
 draw_glstate* init_draw_state(glwindow* win) {
-    auto app   = (app_state*)get_user_pointer(win);
+    auto& app  = *(app_state*)get_user_pointer(win);
     auto state = new draw_glstate();
     // load textures and vbos
     state->prog = make_glprogram(vertex, fragment);
-    state->txts.resize(app->scene.textures.size());
-    for (auto texture_id = 0; texture_id < app->scene.textures.size();
+    state->txts.resize(app.scene.textures.size());
+    for (auto texture_id = 0; texture_id < app.scene.textures.size();
          texture_id++) {
-        auto texture = app->scene.textures[texture_id];
+        auto texture = app.scene.textures[texture_id];
         if (!texture.hdr_image.pixels.empty()) {
             state->txts[texture_id] = make_gltexture(
                 texture.hdr_image, true, true, true);
@@ -669,9 +669,9 @@ draw_glstate* init_draw_state(glwindow* win) {
             printf("bad texture");
         }
     }
-    state->shps.resize(app->scene.shapes.size());
-    for (auto shape_id = 0; shape_id < app->scene.shapes.size(); shape_id++) {
-        auto& shape = app->scene.shapes[shape_id];
+    state->shps.resize(app.scene.shapes.size());
+    for (auto shape_id = 0; shape_id < app.scene.shapes.size(); shape_id++) {
+        auto& shape = app.scene.shapes[shape_id];
         if (!shape.quads_positions.empty()) continue;
         auto vbos = glshape();
         if (!shape.positions.empty())
@@ -695,8 +695,8 @@ draw_glstate* init_draw_state(glwindow* win) {
                 convert_quads_to_triangles(shape.quads), false);
         state->shps[shape_id] = vbos;
     }
-    for (auto shape_id = 0; shape_id < app->scene.shapes.size(); shape_id++) {
-        auto& shape = app->scene.shapes[shape_id];
+    for (auto shape_id = 0; shape_id < app.scene.shapes.size(); shape_id++) {
+        auto& shape = app.scene.shapes[shape_id];
         if (shape.quads_positions.empty()) continue;
         auto vbos                                     = glshape();
         auto quads                                    = vector<vec4i>();
@@ -721,22 +721,22 @@ draw_glstate* init_draw_state(glwindow* win) {
 }
 
 // run ui loop
-void run_ui(app_state* app) {
+void run_ui(app_state& app) {
     // window
-    auto& camera = app->scene.cameras.at(app->camid);
-    auto width = clamp(evaluate_image_size(camera, app->resolution).x, 256, 1440),
+    auto& camera = app.scene.cameras.at(app.camid);
+    auto width = clamp(evaluate_image_size(camera, app.resolution).x, 256, 1440),
          height = clamp(
-             evaluate_image_size(camera, app->resolution).y, 256, 1440);
-    auto win = make_glwindow(width, height, "yview", app, draw);
+             evaluate_image_size(camera, app.resolution).y, 256, 1440);
+    auto win = make_glwindow(width, height, "yview", &app, draw);
 
     // init widget
     init_glwidgets(win);
 
     // load textures and vbos
-    update_transforms(app->scene, app->time);
+    update_transforms(app.scene, app.time);
 
     // init gl data
-    app->state = unique_ptr<draw_glstate>{init_draw_state(win)};
+    app.state = unique_ptr<draw_glstate>{init_draw_state(win)};
 
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -758,18 +758,18 @@ void run_ui(app_state* app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto& camera = app->scene.cameras.at(app->camid);
+            auto& camera = app.scene.cameras.at(app.camid);
             camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app->update_list.push_back({"camera", app->camid});
+            app.update_list.push_back({"camera", app.camid});
         }
 
         // animation
-        if (app->animate) {
-            app->time += 1 / 60.0f;
-            if (app->time < app->time_range.x || app->time > app->time_range.y)
-                app->time = app->time_range.x;
-            update_transforms(app->scene, app->time);
+        if (app.animate) {
+            app.time += 1 / 60.0f;
+            if (app.time < app.time_range.x || app.time > app.time_range.y)
+                app.time = app.time_range.x;
+            update_transforms(app.scene, app.time);
         }
 
         // draw
@@ -825,15 +825,15 @@ unordered_map<string, unordered_map<string, string>> load_ini(
 
 int main(int argc, char* argv[]) {
     // initialize app
-    auto app = new app_state();
+    auto app = app_state();
 
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "views scenes inteactively", "yview");
-    app->camid      = parse_arg(parser, "--camera", 0, "Camera index.");
-    app->resolution = parse_arg(
+    app.camid      = parse_arg(parser, "--camera", 0, "Camera index.");
+    app.resolution = parse_arg(
         parser, "--resolution,-r", 512, "Image vertical resolution.");
-    app->eyelight = parse_arg(
+    app.eyelight = parse_arg(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
     auto double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
@@ -841,37 +841,34 @@ int main(int argc, char* argv[]) {
         parser, "--quiet,-q", false, "Print only errors messages");
     auto highlight_filename = parse_arg(
         parser, "--highlights", ""s, "Highlight filename");
-    app->imfilename = parse_arg(
+    app.imfilename = parse_arg(
         parser, "--output-image,-o", "out.png"s, "Image filename");
-    app->filename = parse_arg(
+    app.filename = parse_arg(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
     // scene loading
-    if (!load_scene(app->filename, app->scene))
-        log_fatal("cannot load scene {}", app->filename);
+    if (!load_scene(app.filename, app.scene))
+        log_fatal("cannot load scene {}", app.filename);
 
     // tesselate
     if (!quiet) log_info("tesselating scene elements\n");
-    tesselate_shapes(app->scene);
+    tesselate_shapes(app.scene);
 
     // add components
     if (!quiet) log_info("adding scene elements\n");
     if (double_sided) {
-        for (auto& material : app->scene.materials)
+        for (auto& material : app.scene.materials)
             material.double_sided = true;
     }
-    for (auto& err : validate_scene(app->scene)) log_error(err);
+    for (auto& err : validate_scene(app.scene)) log_error(err);
 
     // animation
-    auto time_range = compute_animation_range(app->scene);
-    app->time       = time_range.x;
+    auto time_range = compute_animation_range(app.scene);
+    app.time       = time_range.x;
 
     // run ui
     run_ui(app);
-
-    // cleanup
-    delete app;
 
     // done
     return 0;

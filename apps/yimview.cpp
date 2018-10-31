@@ -160,7 +160,7 @@ void save_image_async(app_image* img) {
 }
 
 // add a new image
-void add_new_image(app_state* app, const string& filename, const string& outname,
+void add_new_image(app_state& app, const string& filename, const string& outname,
     float exposure = 0, bool filmic = false, bool srgb = true) {
     auto img      = new app_image();
     img->filename = filename;
@@ -172,18 +172,18 @@ void add_new_image(app_state* app, const string& filename, const string& outname
     img->filmic      = filmic;
     img->srgb        = srgb;
     img->load_thread = thread(load_image_async, img);
-    app->imgs.push_back(img);
-    app->img_id = (int)app->imgs.size() - 1;
+    app.imgs.push_back(img);
+    app.img_id = (int)app.imgs.size() - 1;
 }
 
 void draw_glwidgets(glwindow* win) {
-    auto app    = (app_state*)get_user_pointer(win);
+    auto& app  = *(app_state*)get_user_pointer(win);
     auto edited = false;
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yimview")) {
-        auto img = app->imgs.at(app->img_id);
+        auto img = app.imgs.at(app.img_id);
         if (begin_header_glwidget(win, "image")) {
-            draw_combobox_glwidget(win, "image", app->img_id, app->imgs, false);
+            draw_combobox_glwidget(win, "image", app.img_id, app.imgs, false);
             draw_label_glwidgets(win, "filename", "%s", img->filename.c_str());
             draw_textinput_glwidget(win, "outname", img->outname);
             if (draw_button_glwidget(win, "save display")) {
@@ -234,7 +234,7 @@ void draw_glwidgets(glwindow* win) {
     }
     end_glwidgets_frame(win);
     if (edited) {
-        auto img = app->imgs.at(app->img_id);
+        auto img = app.imgs.at(app.img_id);
         if (img->display_thread.joinable()) {
             img->display_stop = true;
             img->display_thread.join();
@@ -246,8 +246,8 @@ void draw_glwidgets(glwindow* win) {
 }
 
 void draw(glwindow* win) {
-    auto app      = (app_state*)get_user_pointer(win);
-    auto img      = app->imgs.at(app->img_id);
+    auto& app  = *(app_state*)get_user_pointer(win);
+    auto img      = app.imgs.at(app.img_id);
     auto win_size = get_glwindow_size(win);
     auto fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
@@ -263,8 +263,8 @@ void draw(glwindow* win) {
     swap_glbuffers(win);
 }
 
-void update(app_state* app) {
-    for (auto img : app->imgs) {
+void update(app_state& app) {
+    for (auto& img : app.imgs) {
         if (!img->display_done || img->texture_done) continue;
         if (!img->gl_txt) {
             img->gl_txt = make_gltexture(img->display, false, false, true);
@@ -276,15 +276,15 @@ void update(app_state* app) {
 }
 
 void drop_callback(glwindow* win, const vector<string>& paths) {
-    auto app = (app_state*)get_user_pointer(win);
+    auto& app  = *(app_state*)get_user_pointer(win);
     for (auto path : paths) add_new_image(app, path, "");
 }
 
-void run_ui(app_state* app) {
+void run_ui(app_state& app) {
     // window
-    auto img   = app->imgs.at(app->img_id);
+    auto img   = app.imgs.at(app.img_id);
     auto width = 720 + 320, height = 720;
-    auto win = make_glwindow(720 + 320, 720, "yimview", app, draw);
+    auto win = make_glwindow(720 + 320, 720, "yimview", &app, draw);
     set_drop_callback(win, drop_callback);
 
     // init widgets
@@ -326,7 +326,7 @@ void run_ui(app_state* app) {
 
 int main(int argc, char* argv[]) {
     // prepare application
-    auto app = new app_state();
+    auto app = app_state();
 
     // command line params
     auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
@@ -343,13 +343,10 @@ int main(int argc, char* argv[]) {
     // loading images
     for (auto filename : filenames)
         add_new_image(app, filename, outfilename, exposure, filmic, srgb);
-    app->img_id = 0;
+    app.img_id = 0;
 
     // run ui
     run_ui(app);
-
-    // cleanup
-    delete app;
 
     // done
     return 0;
