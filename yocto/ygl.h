@@ -2566,8 +2566,8 @@ vec2f closestuv_triangle(
 
 // Check if a triangle overlaps a position within a max distance.
 bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2, float& distance,
-    vec2f& uv);
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2,
+    float& distance, vec2f& uv);
 
 // Check if a quad overlaps a position within a max distance.
 bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
@@ -2603,24 +2603,13 @@ struct bvh_node {
     uint32_t primitive_ids[bvh_max_prims];
 };
 
-// Instance for a scene BVH.
-struct bvh_instance {
-    frame3f frame         = identity_frame3f;
-    frame3f frame_inverse = identity_frame3f;
-    int     shape_id      = -1;
-};
-
-// BVH tree, stored as a node array. The tree structure is encoded using array
-// indices instead of pointers, both for speed but also to simplify code.
-// BVH nodes indices refer to either the node array, for internal nodes,
-// or the primitive arrays, for leaf nodes. BVH trees may contain only one type
-// of geometric primitive, like points, lines, triangle or instances of other
-// BVHs. To handle multiple primitive types and transformed primitives, build
-// a two-level hierarchy with the outer BVH, the scene BVH, containing inner
-// BVHs, shape BVHs, each of which of a uniform primitive type.
-// To build a BVH, first fill in either the shape or instance data, then
-// call `build_scene_bvh()`.
-struct bvh_scene {
+// BVH for shapes made of points, lines, triangles or quads. Only one primitive
+// type can be used.
+// To build, fill in the shape data, then call `build_shape_bvh()`.
+// The BVH is stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+struct bvh_shape {
     // data for shape BVH
     vector<vec3f> positions;
     vector<float> radius;
@@ -2629,9 +2618,30 @@ struct bvh_scene {
     vector<vec3i> triangles;
     vector<vec4i> quads;
 
+    // bvh internal nodes
+    vector<bvh_node> nodes;
+
+    // Embree opaque data
+    void* embree_bvh = nullptr;
+};
+
+// Instance for a scene BVH.
+struct bvh_instance {
+    frame3f frame         = identity_frame3f;
+    frame3f frame_inverse = identity_frame3f;
+    int     shape_id      = -1;
+};
+
+// BVH for scenes made of instances to shapes.
+// To build, first build the shape BVHs, then fill in the instance data,
+// then call `build_scene_bvh()`.
+// The BVH is stored as a node array with the tree structure is encoded using
+// array indices. BVH nodes indices refer to either the node array,
+// for internal nodes, or the primitive arrays, for leaf nodes.
+struct bvh_scene {
     // data for instance BVH
     vector<bvh_instance> instances;
-    vector<bvh_scene>     shape_bvhs;
+    vector<bvh_shape>    shape_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -2641,27 +2651,36 @@ struct bvh_scene {
 };
 
 // Build a BVH from the given set of primitives.
+void build_shape_bvh(bvh_shape& bvh, bool high_quality = false);
 void build_scene_bvh(bvh_scene& bvh, bool high_quality = false);
 // Update the node bounds for a shape bvh.
+void refit_shape_bvh(bvh_shape& bvh);
 void refit_scene_bvh(bvh_scene& bvh);
 
 // Build a BVH from the given set of primitives.
 // Uses Embree if available and requested, otherwise the standard build.
+void build_shape_bvh_embree(bvh_shape& bvh, bool high_quality = false);
+void clear_shape_bvh_embree(bvh_shape& bvh);
 void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality = false);
 void clear_scene_bvh_embree(bvh_scene& bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
+bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
+    float& distance, int& element_id, vec2f& element_uv);
 bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& element_uv);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
-// `find_any`. Returns the point distance, the instance id, the shape element 
+// `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos, float max_distance,
-    bool find_any, float& distance, int& instance_id, int& element_id, vec2f& element_uv);
+bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos, float max_distance,
+    bool find_any, float& distance, int& element_id, vec2f& element_uv);
+bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
+    float max_distance, bool find_any, float& distance, int& instance_id,
+    int& element_id, vec2f& element_uv);
 
 }  // namespace ygl
 
@@ -3317,11 +3336,11 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 vector<vec3f> compute_shape_normals(const yocto_shape& shape);
 
 // Updates/refits bvh.
-bvh_scene make_shape_bvh(
+bvh_shape make_shape_bvh(
     const yocto_shape& shape, bool high_quality, bool embree = false);
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, bool high_quality, bool embree = false);
-void refit_shape_bvh(const yocto_shape& shape, bvh_scene& bvh);
+void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
 
 // Apply subdivision and displacement rules.

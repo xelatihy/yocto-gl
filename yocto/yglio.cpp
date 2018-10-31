@@ -3251,7 +3251,8 @@ static bool startswith(const string& str, const string& substr) {
 bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) {
     // convert textures
     if (gltf.count("images")) {
-        for (auto instance_id = 0; instance_id < gltf.at("images").size(); instance_id++) {
+        for (auto instance_id = 0; instance_id < gltf.at("images").size();
+             instance_id++) {
             auto& gimg       = gltf.at("images").at(instance_id);
             auto  texture    = yocto_texture{};
             texture.name     = gimg.value("name", ""s);
@@ -3799,8 +3800,8 @@ bool load_gltf_scene(const string& filename, yocto_scene& scene,
     // fix cameras
     auto bbox = compute_scene_bounds(scene);
     for (auto& camera : scene.cameras) {
-        auto center = (bbox.min + bbox.max) / 2;
-        auto distance   = dot(-camera.frame.z, center - camera.frame.o);
+        auto center   = (bbox.min + bbox.max) / 2;
+        auto distance = dot(-camera.frame.z, center - camera.frame.o);
         if (distance > 0) camera.focus_distance = distance;
     }
 
@@ -5079,13 +5080,19 @@ bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_scene& bvh, file_stream& fs, bool save) {
+bool serialize_bin_object(bvh_shape& bvh, file_stream& fs, bool save) {
     if (!serialize_bin_value(bvh.positions, fs, save)) return false;
     if (!serialize_bin_value(bvh.radius, fs, save)) return false;
     if (!serialize_bin_value(bvh.points, fs, save)) return false;
     if (!serialize_bin_value(bvh.lines, fs, save)) return false;
     if (!serialize_bin_value(bvh.triangles, fs, save)) return false;
     if (!serialize_bin_value(bvh.quads, fs, save)) return false;
+    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
+    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
+    return true;
+}
+
+bool serialize_bin_object(bvh_scene& bvh, file_stream& fs, bool save) {
     if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
     if (!serialize_bin_value(bvh.instances, fs, save)) return false;
     if (!serialize_bin_object(bvh.shape_bvhs, fs, save)) return false;
