@@ -5367,271 +5367,20 @@ bool load_ply(const string& filename, ply_data& ply) {
     return true;
 }
 
-#if YGL_HAPPLY
-
-// Load ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& color,
     vector<float>& radius, bool force_triangles) {
-    // reset data
+    // clear
     reset_mesh_data(points, lines, triangles, quads, quads_positions,
         quads_normals, quads_texturecoords, positions, normals, texturecoords,
         color, radius);
 
-    // open ply with a workaround for the bad api
-    auto ply_ = (happly::PLYData*)nullptr;
-    try {
-        ply_ = new happly::PLYData(filename);
-    } catch (...) {
-        log_io_error("could not open PLY {}", filename);
-        return false;
-    }
-    auto& ply = *ply_;
-
-    // get vertex data
-    if (ply.hasElement("vertex")) {
-        auto& vertex_element = ply.getElement("vertex");
-        if (vertex_element.hasProperty("x") &&
-            vertex_element.hasProperty("y") && vertex_element.hasProperty("z")) {
-            auto x = vertex_element.getProperty<float>("x");
-            auto y = vertex_element.getProperty<float>("y");
-            auto z = vertex_element.getProperty<float>("z");
-            positions.resize(x.size());
-            for (auto i = 0; i < x.size(); i++)
-                positions[i] = {x[i], y[i], z[i]};
-        }
-        if (vertex_element.hasProperty("nx") && vertex_element.hasProperty("ny") &&
-            vertex_element.hasProperty("nz")) {
-            auto x = vertex_element.getProperty<float>("nx");
-            auto y = vertex_element.getProperty<float>("ny");
-            auto z = vertex_element.getProperty<float>("nz");
-            normals.resize(x.size());
-            for (auto i = 0; i < x.size(); i++) normals[i] = {x[i], y[i], z[i]};
-        }
-        if (vertex_element.hasProperty("u") && vertex_element.hasProperty("v")) {
-            auto x = vertex_element.getProperty<float>("u");
-            auto y = vertex_element.getProperty<float>("v");
-            texturecoords.resize(x.size());
-            for (auto i = 0; i < x.size(); i++) texturecoords[i] = {x[i], y[i]};
-        }
-        if (vertex_element.hasProperty("red") &&
-            vertex_element.hasProperty("green") &&
-            vertex_element.hasProperty("blue")) {
-            auto x = vertex_element.getProperty<float>("red");
-            auto y = vertex_element.getProperty<float>("green");
-            auto z = vertex_element.getProperty<float>("blue");
-            for (auto i = 0; i < x.size(); i++)
-                color[i] = {x[i], y[i], z[i], 1};
-            if (vertex_element.hasProperty("alpha")) {
-                auto w = vertex_element.getProperty<float>("alpha");
-                for (auto i = 0; i < x.size(); i++) color[i].w = w[i];
-            }
-        }
-        if (vertex_element.hasProperty("radius")) {
-            auto x = vertex_element.getProperty<float>("radius");
-            radius.resize(x.size());
-            for (auto i = 0; i < x.size(); i++) radius[i] = x[i];
-        }
-    }
-
-    // faces
-    if (ply.hasElement("face")) {
-        auto& face_element = ply.getElement("face");
-        if (face_element.hasProperty("vertex_indices")) {
-            auto indices = face_element.getListProperty<int>("vertex_indices");
-            for (auto& f : indices) {
-                if (f.size() == 4) {
-                    quads.push_back({f[0], f[1], f[2], f[3]});
-                } else {
-                    for (auto i = 2; i < f.size(); i++)
-                        triangles.push_back({f[0], f[i - 1], f[i]});
-                }
-            }
-        }
-    }
-
-    // lines
-    if (ply.hasElement("line")) {
-        auto& face_element = ply.getElement("line");
-        if (face_element.hasProperty("vertex_indices")) {
-            auto indices = face_element.getListProperty<int>("vertex_indices");
-            for (auto& l : indices) {
-                for (auto i = 1; i < l.size(); i++)
-                    lines.push_back({l[i - 1], l[i]});
-            }
-        }
-    }
-
-    // done
-    delete ply_;
-    return true;
-}
-
-// Save ply mesh
-bool save_ply_mesh(const string& filename, const vector<int>& points,
-    const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
-    const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
-    using namespace happly;
-
-    PLYData ply;
-
-    auto get_channel = [](const auto& data, int channel_index,
-                           int length) -> vector<float> {
-        auto channel = vector<float>(length, 0.0f);
-        for (auto i = 0; i < min((int)channel.size(), length); i++)
-            channel[i] = ((float*)&data[i])[channel_index];
-        return channel;
-    };
-
-    // for the number of vertices, we pad data to support face varying
-    auto nverts = max(positions.size(),
-        max(normals.size(),
-            max(texturecoords.size(), max(colors.size(), radius.size()))));
-
-    if (!positions.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
-        ply.getElement("vertex").addProperty(
-            "x", get_channel(positions, 0, nverts));
-        ply.getElement("vertex").addProperty(
-            "y", get_channel(positions, 1, nverts));
-        ply.getElement("vertex").addProperty(
-            "z", get_channel(positions, 2, nverts));
-    }
-
-    if (!normals.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
-        ply.getElement("vertex").addProperty(
-            "nx", get_channel(normals, 0, nverts));
-        ply.getElement("vertex").addProperty(
-            "ny", get_channel(normals, 1, nverts));
-        ply.getElement("vertex").addProperty(
-            "nz", get_channel(normals, 2, nverts));
-    }
-
-    if (!texturecoords.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
-        ply.getElement("vertex").addProperty(
-            "u", get_channel(texturecoords, 0, nverts));
-        ply.getElement("vertex").addProperty(
-            "v", get_channel(texturecoords, 1, nverts));
-    }
-
-    if (!colors.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
-        ply.getElement("vertex").addProperty(
-            "red", get_channel(colors, 0, nverts));
-        ply.getElement("vertex").addProperty(
-            "green", get_channel(colors, 1, nverts));
-        ply.getElement("vertex").addProperty(
-            "blue", get_channel(colors, 2, nverts));
-        ply.getElement("vertex").addProperty(
-            "alpha", get_channel(colors, 3, nverts));
-    }
-
-    if (!radius.empty()) {
-        if (!ply.hasElement("vertex")) ply.addElement("vertex", nverts);
-        ply.getElement("vertex").addProperty(
-            "radius", get_channel(radius, 0, nverts));
-    }
-
-    if (!triangles.empty() || !quads.empty()) {
-        if (!ply.hasElement("face"))
-            ply.addElement("face", triangles.size() + quads.size());
-        auto face_property = vector<vector<int>>();
-        for (auto t : triangles) face_property.push_back({t.x, t.y, t.z});
-        for (auto q : quads) {
-            if (q.z == q.w) {
-                face_property.push_back({q.x, q.y, q.z});
-            } else {
-                face_property.push_back({q.x, q.y, q.z, q.w});
-            }
-        }
-        ply.getElement("face").addListProperty("vertex_indices", face_property);
-    }
-
-    if (!lines.empty()) {
-        if (!ply.hasElement("line")) ply.addElement("line", lines.size());
-        auto line_property = vector<vector<int>>();
-        for (auto l : lines) line_property.push_back({l.x, l.y});
-        ply.getElement("line").addListProperty("vertex_indices", line_property);
-    }
-
-    if (!quads_positions.empty()) {
-        if (!ply.hasElement("face"))
-            ply.addElement("face", quads_positions.size());
-        auto face_property = vector<vector<int>>();
-        for (auto q : quads_positions) {
-            if (q.z == q.w) {
-                face_property.push_back({q.x, q.y, q.z});
-            } else {
-                face_property.push_back({q.x, q.y, q.z, q.w});
-            }
-        }
-        ply.getElement("face").addListProperty(
-            "vertex_position_indices", face_property);
-    }
-
-    if (!quads_normals.empty()) {
-        if (!ply.hasElement("face"))
-            ply.addElement("face", quads_positions.size());
-        auto face_property = vector<vector<int>>();
-        for (auto q : quads_normals) {
-            if (q.z == q.w) {
-                face_property.push_back({q.x, q.y, q.z});
-            } else {
-                face_property.push_back({q.x, q.y, q.z, q.w});
-            }
-        }
-        ply.getElement("face").addListProperty(
-            "vertex_normal_indices", face_property);
-    }
-
-    if (!quads_texturecoords.empty()) {
-        if (!ply.hasElement("face"))
-            ply.addElement("face", quads_positions.size());
-        auto face_property = vector<vector<int>>();
-        for (auto q : quads_texturecoords) {
-            if (q.z == q.w) {
-                face_property.push_back({q.x, q.y, q.z});
-            } else {
-                face_property.push_back({q.x, q.y, q.z, q.w});
-            }
-        }
-        ply.getElement("face").addListProperty(
-            "vertex_texturecoord_indices", face_property);
-    }
-
-    // save
-    try {
-        ply.write(filename, ascii ? DataFormat::ASCII : DataFormat::Binary);
-    } catch (...) {
-        return false;
-    }
-
-    return true;
-}
-
-#else
-
-// Load ply mesh
-bool load_ply_mesh(const string& filename, vector<int>& points,
-    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
-    vector<vec3f>& pos, vector<vec3f>& norm, vector<vec2f>& texcoord,
-    vector<vec4f>& color, vector<float>& radius, bool force_triangles) {
-    // clear
-    reset_mesh_data(
-        points, lines, triangles, quads, pos, norm, texcoord, color, radius);
-
     // load ply
-    auto ply = unique_ptr<ply_data>{load_ply(filename)};
-    if (ply.elements.empty()) {
+    auto ply = ply_data{};
+    if (!load_ply(filename, ply)) {
         log_io_error("empty ply file {}", filename);
         return false;
     }
@@ -5649,14 +5398,14 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
                 for (auto i = 0; i < count; i++)
                     dst[i * stride + offset] = vals[i];
             };
-            if (prop.name == "x") copy_floats(pos, zero3f, 3, 0);
-            if (prop.name == "y") copy_floats(pos, zero3f, 3, 1);
-            if (prop.name == "z") copy_floats(pos, zero3f, 3, 2);
-            if (prop.name == "nx") copy_floats(norm, zero3f, 3, 0);
-            if (prop.name == "ny") copy_floats(norm, zero3f, 3, 1);
-            if (prop.name == "nz") copy_floats(norm, zero3f, 3, 2);
-            if (prop.name == "u") copy_floats(texcoord, zero2f, 2, 0);
-            if (prop.name == "v") copy_floats(texcoord, zero2f, 2, 1);
+            if (prop.name == "x") copy_floats(positions, zero3f, 3, 0);
+            if (prop.name == "y") copy_floats(positions, zero3f, 3, 1);
+            if (prop.name == "z") copy_floats(positions, zero3f, 3, 2);
+            if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
+            if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
+            if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
+            if (prop.name == "u") copy_floats(texturecoords, zero2f, 2, 0);
+            if (prop.name == "v") copy_floats(texturecoords, zero2f, 2, 1);
             if (prop.name == "red") copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
             if (prop.name == "green")
                 copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);
@@ -5668,7 +5417,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
         }
     }
 
-    // copy triangle data
+    // copy face data
     for (auto& elem : ply.elements) {
         if (elem.name != "face") continue;
         auto count = elem.count;
@@ -5688,6 +5437,22 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
         }
     }
 
+    // copy face data
+    for (auto& elem : ply.elements) {
+        if (elem.name != "line") continue;
+        auto count = elem.count;
+        for (auto& prop : elem.properties) {
+            if (prop.name == "vertex_indices") {
+                for (auto fid = 0; fid < count; fid++) {
+                    auto& list = prop.lists[fid];
+                    auto  num  = (int)prop.scalars[fid];
+                    for (auto i = 1; i < num; i++)
+                        lines.push_back({list[i], list[i - 1]});
+                }
+            }
+        }
+    }
+
     merge_triangles_and_quads(triangles, quads, force_triangles);
 
     // done
@@ -5697,7 +5462,9 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
 // Save ply mesh
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec4i>& quads, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
     auto fs = open(filename, "wb");
@@ -5709,25 +5476,23 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         print(fs, "format ascii 1.0\n");
     else
         print(fs, "format binary_little_endian 1.0\n");
-    print(fs, "element vertex {}\n", (int)pos.size());
-    if (!pos.empty())
+    print(fs, "element vertex {}\n", (int)positions.size());
+    if (!positions.empty())
         print(fs, "property float x\nproperty float y\nproperty float z\n");
-    if (!norm.empty())
+    if (!normals.empty())
+        print(fs, "property float nx\nproperty float ny\nproperty float nz\n");
+    if (!texturecoords.empty())
+        print(fs, "property float u\nproperty float v\n");
+    if (!colors.empty())
         print(fs,
-            "property float nx\nproperty float ny\nproperty float "
-            "nz\n");
-    if (!texcoord.empty()) print(fs, "property float u\nproperty float v\n");
-    if (!color.empty())
-        print(fs,
-            "property float red\nproperty float green\nproperty float "
-            "blue\nproperty float alpha\n");
+            "property float red\nproperty float green\nproperty float blue\nproperty float alpha\n");
     if (!radius.empty()) print(fs, "property float radius\n");
-    if (!lines.empty()) {
-        print(fs, "element line {}\n", (int)lines.size());
-        print(fs, "property list uchar int vertex_indices\n");
-    }
     if (!triangles.empty() || !quads.empty()) {
         print(fs, "element face {}\n", (int)triangles.size() + (int)quads.size());
+        print(fs, "property list uchar int vertex_indices\n");
+    }
+    if (!lines.empty()) {
+        print(fs, "element line {}\n", (int)lines.size());
         print(fs, "property list uchar int vertex_indices\n");
     }
     print(fs, "end_header\n");
@@ -5735,17 +5500,16 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     // body
     if (ascii) {
         // write vertex data
-        for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) print(fs, "{} ", pos[i]);
-            if (!norm.empty()) print(fs, "{} ", norm[i]);
-            if (!texcoord.empty()) print(fs, "{} ", texcoord[i]);
-            if (!color.empty()) print(fs, "{} ", color[i]);
+        for (auto i = 0; i < positions.size(); i++) {
+            if (!positions.empty()) print(fs, "{} ", positions[i]);
+            if (!normals.empty()) print(fs, "{} ", normals[i]);
+            if (!texturecoords.empty()) print(fs, "{} ", texturecoords[i]);
+            if (!colors.empty()) print(fs, "{} ", colors[i]);
             if (!radius.empty()) print(fs, "{} ", radius[i]);
             print(fs, "\n");
         }
 
         // write face data
-        for (auto& l : lines) print(fs, "2 {}\n", l);
         for (auto& t : triangles) print(fs, "3 {}\n", t);
         for (auto& q : quads) {
             if (q.z == q.w)
@@ -5753,22 +5517,18 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
             else
                 print(fs, "4 {}\n", q);
         }
+        for (auto& l : lines) print(fs, "2 {}\n", l);
     } else {
         // write vertex data
-        for (auto i = 0; i < pos.size(); i++) {
-            if (!pos.empty()) write_value(fs, pos[i]);
-            if (!norm.empty()) write_value(fs, norm[i]);
-            if (!texcoord.empty()) write_value(fs, texcoord[i]);
-            if (!color.empty()) write_value(fs, color[i]);
+        for (auto i = 0; i < positions.size(); i++) {
+            if (!positions.empty()) write_value(fs, positions[i]);
+            if (!normals.empty()) write_value(fs, normals[i]);
+            if (!texturecoords.empty()) write_value(fs, texturecoords[i]);
+            if (!colors.empty()) write_value(fs, colors[i]);
             if (!radius.empty()) write_value(fs, radius[i]);
         }
 
         // write face data
-        for (auto& l : lines) {
-            auto n = (byte)2;
-            write_value(fs, n);
-            write_value(fs, l);
-        }
         for (auto& t : triangles) {
             auto n = (byte)3;
             write_value(fs, n);
@@ -5785,13 +5545,16 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
                 write_value(fs, q);
             }
         }
+        for (auto& l : lines) {
+            auto n = (byte)2;
+            write_value(fs, n);
+            write_value(fs, l);
+        }
     }
 
     // done
     return true;
 }
-
-#endif
 
 // Load ply mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
