@@ -91,27 +91,27 @@ inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
         scene->textures, sel, "texture");
 }
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, yocto_scene_node* val, tuple<string, int>& sel) {
-    draw_glwidgets_scene_tree(win, "instance", scene, val->instance,
+    yocto_scene* scene, const yocto_scene_node& val, tuple<string, int>& sel) {
+    draw_glwidgets_scene_tree(win, "instance", scene, val.instance,
         scene->instances, sel, "instance");
     draw_glwidgets_scene_tree(
-        win, "camera", scene, val->camera, scene->cameras_, sel, "camera");
-    draw_glwidgets_scene_tree(win, "environment", scene, val->environment,
+        win, "camera", scene, val.camera, scene->cameras_, sel, "camera");
+    draw_glwidgets_scene_tree(win, "environment", scene, val.environment,
         scene->environments, sel, "environment");
     draw_glwidgets_scene_tree(
-        win, "parent", scene, val->parent, scene->nodes, sel, "node");
+        win, "parent", scene, val.parent, scene->nodes_, sel, "node");
     auto cid = 0;
-    for (auto ch : val->children) {
+    for (auto ch : val.children) {
         draw_glwidgets_scene_tree(win, "child" + to_string(cid++), scene, ch,
-            scene->nodes, sel, "node");
+            scene->nodes_, sel, "node");
     }
 }
 inline void draw_scene_tree_glwidgets_rec(glwindow* win, const string& lbl_,
-    yocto_scene* scene, yocto_animation* val, tuple<string, int>& sel) {
+    yocto_scene* scene, const yocto_animation& val, tuple<string, int>& sel) {
     auto tid = 0;
-    for (auto tg : val->node_targets) {
+    for (auto tg : val.node_targets) {
         draw_glwidgets_scene_tree(win, "target" + to_string(tid++), scene, tg,
-            scene->nodes, sel, "node");
+            scene->nodes_, sel, "node");
     }
 }
 
@@ -184,16 +184,16 @@ inline void draw_glwidgets_scene_tree(
                 win, "", scene, v, scene->environments, sel, "environment");
         end_treenode_glwidget(win);
     }
-    if (!scene->nodes.empty() && begin_treenode_glwidget(win, "nodes")) {
-        for (auto v = 0; v < scene->nodes.size(); v++)
+    if (!scene->nodes_.empty() && begin_treenode_glwidget(win, "nodes")) {
+        for (auto v = 0; v < scene->nodes_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->nodes, sel, "node");
+                win, "", scene, v, scene->nodes_, sel, "node");
         end_treenode_glwidget(win);
     }
-    if (!scene->animations.empty() && begin_treenode_glwidget(win, "animations")) {
-        for (auto v = 0; v < scene->animations.size(); v++)
+    if (!scene->animations_.empty() && begin_treenode_glwidget(win, "animations")) {
+        for (auto v = 0; v < scene->animations_.size(); v++)
             draw_glwidgets_scene_tree(
-                win, "", scene, v, scene->animations, sel, "animation");
+                win, "", scene, v, scene->animations_, sel, "animation");
         end_treenode_glwidget(win);
     }
 }
@@ -321,43 +321,43 @@ inline bool draw_glwidgets_scene_inspector(
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_scene_node* val, yocto_scene* scene) {
+    glwindow* win, yocto_scene_node& val, yocto_scene* scene) {
     auto edited = 0;
-    edited += draw_textinput_glwidget(win, "name", val->name);
+    edited += draw_textinput_glwidget(win, "name", val.name);
     edited += draw_combobox_glwidget(
-        win, "parent", val->parent, scene->nodes, true);
-    edited += draw_slider_glwidget(win, "local.x", val->local.x, -1, 1);
-    edited += draw_slider_glwidget(win, "local.y", val->local.y, -1, 1);
-    edited += draw_slider_glwidget(win, "local.z", val->local.z, -1, 1);
-    edited += draw_slider_glwidget(win, "local.o", val->local.o, -10, 10);
-    edited += draw_slider_glwidget(win, "translation", val->translation, -10, 10);
-    edited += draw_slider_glwidget(win, "rotation", val->rotation, -1, 1);
-    edited += draw_slider_glwidget(win, "scale", val->scale, 0, 10);
+        win, "parent", val.parent, scene->nodes_, true);
+    edited += draw_slider_glwidget(win, "local.x", val.local.x, -1, 1);
+    edited += draw_slider_glwidget(win, "local.y", val.local.y, -1, 1);
+    edited += draw_slider_glwidget(win, "local.z", val.local.z, -1, 1);
+    edited += draw_slider_glwidget(win, "local.o", val.local.o, -10, 10);
+    edited += draw_slider_glwidget(win, "translation", val.translation, -10, 10);
+    edited += draw_slider_glwidget(win, "rotation", val.rotation, -1, 1);
+    edited += draw_slider_glwidget(win, "scale", val.scale, 0, 10);
     edited += draw_combobox_glwidget(
-        win, "camera", val->camera, scene->cameras_, true);
+        win, "camera", val.camera, scene->cameras_, true);
     edited += draw_combobox_glwidget(
-        win, "instance", val->instance, scene->instances, true);
+        win, "instance", val.instance, scene->instances, true);
     edited += draw_combobox_glwidget(
-        win, "environment", val->environment, scene->environments, true);
+        win, "environment", val.environment, scene->environments, true);
     return edited;
 }
 
 inline bool draw_glwidgets_scene_inspector(
-    glwindow* win, yocto_animation* val, yocto_scene* scene) {
+    glwindow* win, yocto_animation& val, yocto_scene* scene) {
     auto edited = 0;
-    edited += draw_textinput_glwidget(win, "name", val->name);
-    edited += draw_textinput_glwidget(win, "path", val->filename);
-    edited += draw_textinput_glwidget(win, "group", val->animation_group);
-    // edited += draw_combobox_glwidget(win, "type", &val->type,
+    edited += draw_textinput_glwidget(win, "name", val.name);
+    edited += draw_textinput_glwidget(win, "path", val.filename);
+    edited += draw_textinput_glwidget(win, "group", val.animation_group);
+    // edited += draw_combobox_glwidget(win, "type", &val.type,
     // animation_type_names());
-    draw_label_glwidgets(win, "times", "%ld", val->keyframes_times.size());
+    draw_label_glwidgets(win, "times", "%ld", val.keyframes_times.size());
     draw_label_glwidgets(
-        win, "translation", "%ld", val->translation_keyframes.size());
-    draw_label_glwidgets(win, "rotation", "%ld", val->rotation_keyframes.size());
-    draw_label_glwidgets(win, "scale", "%ld", val->scale_keyframes.size());
+        win, "translation", "%ld", val.translation_keyframes.size());
+    draw_label_glwidgets(win, "rotation", "%ld", val.rotation_keyframes.size());
+    draw_label_glwidgets(win, "scale", "%ld", val.scale_keyframes.size());
     draw_label_glwidgets(
-        win, "weights", "%ld", val->morph_weights_keyframes.size());
-    draw_label_glwidgets(win, "targets", "%ld", val->node_targets.size());
+        win, "weights", "%ld", val.morph_weights_keyframes.size());
+    draw_label_glwidgets(win, "targets", "%ld", val.node_targets.size());
     return edited;
 }
 
@@ -422,11 +422,11 @@ inline bool draw_glwidgets_scene_inspector(glwindow* win, const string& lbl,
                 win, scene->instances[get<1>(sel)], scene))
             update_list.push_back({"instance", get<1>(sel)});
     if (get<0>(sel) == "node")
-        if (draw_glwidgets_scene_inspector(win, scene->nodes[get<1>(sel)], scene))
+        if (draw_glwidgets_scene_inspector(win, scene->nodes_[get<1>(sel)], scene))
             update_list.push_back({"node", get<1>(sel)});
     if (get<0>(sel) == "animation")
         if (draw_glwidgets_scene_inspector(
-                win, scene->animations[get<1>(sel)], scene))
+                win, scene->animations_[get<1>(sel)], scene))
             update_list.push_back({"animation", get<1>(sel)});
 
     end_child_glwidget(win);

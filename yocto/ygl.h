@@ -3280,8 +3280,8 @@ struct yocto_scene {
     vector<yocto_texture*>     textures     = {};
     vector<yocto_environment*> environments = {};
     vector<yocto_voltexture*>  voltextures  = {};
-    vector<yocto_scene_node*>  nodes        = {};
-    vector<yocto_animation*>   animations   = {};
+    vector<yocto_scene_node>  nodes_        = {};
+    vector<yocto_animation>   animations_   = {};
 
     // cleanup
     ~yocto_scene();

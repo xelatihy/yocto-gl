@@ -3521,8 +3521,6 @@ yocto_scene::~yocto_scene() {
     for (auto v : textures) delete v;
     for (auto v : environments) delete v;
     for (auto v : voltextures) delete v;
-    for (auto v : nodes) delete v;
-    for (auto v : animations) delete v;
 }
 
 // Computes a shape bounding box.
@@ -3738,106 +3736,106 @@ void tesselate_shapes(yocto_scene* scene) {
 }
 
 // Update animation transforms
-void update_transforms(yocto_scene* scene, yocto_animation* animation,
+void update_transforms(yocto_scene* scene, yocto_animation& animation,
     float time, const string& anim_group) {
-    if (anim_group != "" && anim_group != animation->animation_group) return;
+    if (anim_group != "" && anim_group != animation.animation_group) return;
 
-    if (!animation->translation_keyframes.empty()) {
+    if (!animation.translation_keyframes.empty()) {
         auto val = vec3f{0, 0, 0};
-        switch (animation->interpolation_type) {
+        switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                val = evaluate_keyframed_step(animation->keyframes_times,
-                    animation->translation_keyframes, time);
+                val = evaluate_keyframed_step(animation.keyframes_times,
+                    animation.translation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = evaluate_keyframed_linear(animation->keyframes_times,
-                    animation->translation_keyframes, time);
+                val = evaluate_keyframed_linear(animation.keyframes_times,
+                    animation.translation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = evaluate_keyframed_bezier(animation->keyframes_times,
-                    animation->translation_keyframes, time);
+                val = evaluate_keyframed_bezier(animation.keyframes_times,
+                    animation.translation_keyframes, time);
                 break;
             default: log_error("should not have been here");
         }
-        for (auto target : animation->node_targets)
-            scene->nodes[target]->translation = val;
+        for (auto target : animation.node_targets)
+            scene->nodes_[target].translation = val;
     }
-    if (!animation->rotation_keyframes.empty()) {
+    if (!animation.rotation_keyframes.empty()) {
         auto val = vec4f{0, 0, 0, 1};
-        switch (animation->interpolation_type) {
+        switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                val = evaluate_keyframed_step(animation->keyframes_times,
-                    animation->rotation_keyframes, time);
+                val = evaluate_keyframed_step(animation.keyframes_times,
+                    animation.rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = evaluate_keyframed_linear(animation->keyframes_times,
-                    animation->rotation_keyframes, time);
+                val = evaluate_keyframed_linear(animation.keyframes_times,
+                    animation.rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = evaluate_keyframed_bezier(animation->keyframes_times,
-                    animation->rotation_keyframes, time);
+                val = evaluate_keyframed_bezier(animation.keyframes_times,
+                    animation.rotation_keyframes, time);
                 break;
         }
-        for (auto target : animation->node_targets)
-            scene->nodes[target]->rotation = val;
+        for (auto target : animation.node_targets)
+            scene->nodes_[target].rotation = val;
     }
-    if (!animation->scale_keyframes.empty()) {
+    if (!animation.scale_keyframes.empty()) {
         auto val = vec3f{1, 1, 1};
-        switch (animation->interpolation_type) {
+        switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                val = evaluate_keyframed_step(animation->keyframes_times,
-                    animation->scale_keyframes, time);
+                val = evaluate_keyframed_step(animation.keyframes_times,
+                    animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = evaluate_keyframed_linear(animation->keyframes_times,
-                    animation->scale_keyframes, time);
+                val = evaluate_keyframed_linear(animation.keyframes_times,
+                    animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = evaluate_keyframed_bezier(animation->keyframes_times,
-                    animation->scale_keyframes, time);
+                val = evaluate_keyframed_bezier(animation.keyframes_times,
+                    animation.scale_keyframes, time);
                 break;
         }
-        for (auto target : animation->node_targets)
-            scene->nodes[target]->scale = val;
+        for (auto target : animation.node_targets)
+            scene->nodes_[target].scale = val;
     }
 }
 
 // Update node transforms
-void update_transforms(yocto_scene* scene, yocto_scene_node* node,
+void update_transforms(yocto_scene* scene, yocto_scene_node& node,
     const frame3f& parent = identity_frame3f) {
-    auto frame = parent * node->local * translation_frame(node->translation) *
-                 rotation_frame(node->rotation) * scaling_frame(node->scale);
-    if (node->instance >= 0) scene->instances[node->instance]->frame = frame;
-    if (node->camera >= 0) scene->cameras_[node->camera].frame = frame;
-    if (node->environment >= 0)
-        scene->environments[node->environment]->frame = frame;
-    for (auto child : node->children)
-        update_transforms(scene, scene->nodes[child], frame);
+    auto frame = parent * node.local * translation_frame(node.translation) *
+                 rotation_frame(node.rotation) * scaling_frame(node.scale);
+    if (node.instance >= 0) scene->instances[node.instance]->frame = frame;
+    if (node.camera >= 0) scene->cameras_[node.camera].frame = frame;
+    if (node.environment >= 0)
+        scene->environments[node.environment]->frame = frame;
+    for (auto child : node.children)
+        update_transforms(scene, scene->nodes_[child], frame);
 }
 
 // Update node transforms
 void update_transforms(yocto_scene* scene, float time, const string& anim_group) {
-    for (auto& agr : scene->animations)
+    for (auto& agr : scene->animations_)
         update_transforms(scene, agr, time, anim_group);
-    for (auto& node : scene->nodes) node->children.clear();
-    for (auto node_id = 0; node_id < scene->nodes.size(); node_id++) {
-        auto& node = scene->nodes[node_id];
-        if (node->parent >= 0)
-            scene->nodes[node->parent]->children.push_back(node_id);
+    for (auto& node : scene->nodes_) node.children.clear();
+    for (auto node_id = 0; node_id < scene->nodes_.size(); node_id++) {
+        auto& node = scene->nodes_[node_id];
+        if (node.parent >= 0)
+            scene->nodes_[node.parent].children.push_back(node_id);
     }
-    for (auto& node : scene->nodes)
-        if (node->parent >= 0) update_transforms(scene, node);
+    for (auto& node : scene->nodes_)
+        if (node.parent >= 0) update_transforms(scene, node);
 }
 
 // Compute animation range
 vec2f compute_animation_range(const yocto_scene* scene, const string& anim_group) {
-    if (scene->animations.empty()) return zero2f;
+    if (scene->animations_.empty()) return zero2f;
     auto range = vec2f{+maxf, -maxf};
-    for (auto animation : scene->animations) {
-        if (anim_group != "" && animation->animation_group != anim_group)
+    for (auto& animation : scene->animations_) {
+        if (anim_group != "" && animation.animation_group != anim_group)
             continue;
-        range.x = min(range.x, animation->keyframes_times.front());
-        range.y = max(range.y, animation->keyframes_times.back());
+        range.x = min(range.x, animation.keyframes_times.front());
+        range.y = max(range.y, animation.keyframes_times.back());
     }
     if (range.y < range.x) return zero2f;
     return range;
@@ -4041,8 +4039,8 @@ void add_missing_names(yocto_scene* scene) {
     fix_names(scene->textures, "texture");
     fix_names(scene->materials, "mat");
     fix_names(scene->environments, "environment");
-    fix_names(scene->nodes, "node");
-    fix_names(scene->animations, "animation");
+    fix_names_(scene->nodes_, "node");
+    fix_names_(scene->animations_, "animation");
 }
 
 // Add missing tangent space if needed.
@@ -4143,8 +4141,8 @@ vector<string> validate_scene(const yocto_scene* scene, bool skip_textures) {
     check_names(scene->textures, "texture");
     check_names(scene->materials, "material");
     check_names(scene->environments, "environment");
-    check_names(scene->nodes, "node");
-    check_names(scene->animations, "animation");
+    check_names_(scene->nodes_, "node");
+    check_names_(scene->animations_, "animation");
     if (!skip_textures) check_empty_textures(scene->textures);
 
     return errs;
@@ -4894,8 +4892,8 @@ void merge_scene(yocto_scene* merge_scene, yocto_scene* merge_from) {
     merge(merge_scene->materials, merge_from->materials);
     merge(merge_scene->shapes, merge_from->shapes);
     merge(merge_scene->environments, merge_from->environments);
-    merge(merge_scene->nodes, merge_from->nodes);
-    merge(merge_scene->animations, merge_from->animations);
+    merge_(merge_scene->nodes_, merge_from->nodes_);
+    merge_(merge_scene->animations_, merge_from->animations_);
 }
 
 void print_stats(const yocto_scene* scene) {
@@ -4936,8 +4934,8 @@ void print_stats(const yocto_scene* scene) {
     num_textures     = scene->textures.size();
     num_environments = scene->environments.size();
     num_instances    = scene->instances.size();
-    num_nodes        = scene->nodes.size();
-    num_animations   = scene->animations.size();
+    num_nodes        = scene->nodes_.size();
+    num_animations   = scene->animations_.size();
 
     for (auto shape : scene->shapes) {
         elem_points += shape->points.size();

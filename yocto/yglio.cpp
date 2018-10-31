@@ -2231,65 +2231,65 @@ bool parse_json_object(
 
 // Serialize struct
 bool dump_json_object(
-    json& js, const yocto_scene_node* val, const yocto_scene* scene) {
+    json& js, const yocto_scene_node& val, const yocto_scene* scene) {
     static const auto def = yocto_scene_node();
     if (!dump_json_objbegin(js)) return false;
-    if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->local, "local", def.local)) return false;
-    if (!dump_json_value(js, val->translation, "translation", def.translation))
+    if (!dump_json_value(js, val.name, "name", def.name)) return false;
+    if (!dump_json_value(js, val.local, "local", def.local)) return false;
+    if (!dump_json_value(js, val.translation, "translation", def.translation))
         return false;
-    if (!dump_json_value(js, val->rotation, "rotation", def.rotation))
+    if (!dump_json_value(js, val.rotation, "rotation", def.rotation))
         return false;
-    if (!dump_json_value(js, val->scale, "scale", def.scale)) return false;
-    if (!dump_json_value(js, val->weights, "weights", def.weights))
+    if (!dump_json_value(js, val.scale, "scale", def.scale)) return false;
+    if (!dump_json_value(js, val.weights, "weights", def.weights))
         return false;
-    if (!dump_json_objref(js, val->parent, "parent", scene->nodes))
+    if (!dump_json_objref(js, val.parent, "parent", scene->nodes_))
         return false;
-    if (!dump_json_objref(js, val->camera, "camera", scene->cameras_))
+    if (!dump_json_objref(js, val.camera, "camera", scene->cameras_))
         return false;
-    if (!dump_json_objref(js, val->instance, "instance", scene->instances))
+    if (!dump_json_objref(js, val.instance, "instance", scene->instances))
         return false;
     if (!dump_json_objref(
-            js, val->environment, "environment", scene->environments))
+            js, val.environment, "environment", scene->environments))
         return false;
     return true;
 }
 
 // Procedural commands for nodes
 bool apply_json_procedural(
-    const json& js, yocto_scene_node* val, const yocto_scene* scene) {
+    const json& js, yocto_scene_node& val, const yocto_scene* scene) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("from")) {
         auto from  = js.value("from", zero3f);
         auto to    = js.value("to", zero3f);
         auto up    = js.value("up", vec3f{0, 1, 0});
-        val->local = lookat_frame(from, to, up, true);
+        val.local = lookat_frame(from, to, up, true);
     }
     return true;
 }
 
 // Serialize struct
 bool parse_json_object(
-    const json& js, yocto_scene_node* val, const yocto_scene* scene) {
+    const json& js, yocto_scene_node& val, const yocto_scene* scene) {
     static const auto def = yocto_scene_node();
     if (!parse_json_objbegin(js)) return false;
-    if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->local, "local", def.local)) return false;
-    if (!parse_json_value(js, val->translation, "translation", def.translation))
+    if (!parse_json_value(js, val.name, "name", def.name)) return false;
+    if (!parse_json_value(js, val.local, "local", def.local)) return false;
+    if (!parse_json_value(js, val.translation, "translation", def.translation))
         return false;
-    if (!parse_json_value(js, val->rotation, "rotation", def.rotation))
+    if (!parse_json_value(js, val.rotation, "rotation", def.rotation))
         return false;
-    if (!parse_json_value(js, val->scale, "scale", def.scale)) return false;
-    if (!parse_json_value(js, val->weights, "weights", def.weights))
+    if (!parse_json_value(js, val.scale, "scale", def.scale)) return false;
+    if (!parse_json_value(js, val.weights, "weights", def.weights))
         return false;
-    if (!parse_json_objref(js, val->parent, "parent", scene->nodes))
+    if (!parse_json_objref(js, val.parent, "parent", scene->nodes_))
         return false;
-    if (!parse_json_objref(js, val->instance, "instance", scene->instances))
+    if (!parse_json_objref(js, val.instance, "instance", scene->instances))
         return false;
-    if (!parse_json_objref(js, val->camera, "camera", scene->cameras_))
+    if (!parse_json_objref(js, val.camera, "camera", scene->cameras_))
         return false;
     if (!parse_json_objref(
-            js, val->environment, "environment", scene->environments))
+            js, val.environment, "environment", scene->environments))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scene)) return false;
     return true;
@@ -2325,44 +2325,44 @@ bool parse_json_value(const json& js, yocto_interpolation_type& val) {
 
 // Serialize struct
 bool dump_json_object(
-    json& js, const yocto_animation* val, const yocto_scene* scene) {
+    json& js, const yocto_animation& val, const yocto_scene* scene) {
     static const auto def = yocto_animation();
     if (!dump_json_objbegin(js)) return false;
-    if (!dump_json_value(js, val->name, "name", def.name)) return false;
-    if (!dump_json_value(js, val->filename, "filename", def.filename))
+    if (!dump_json_value(js, val.name, "name", def.name)) return false;
+    if (!dump_json_value(js, val.filename, "filename", def.filename))
         return false;
     if (!dump_json_value(
-            js, val->animation_group, "animation_group", def.animation_group))
+            js, val.animation_group, "animation_group", def.animation_group))
         return false;
     if (!dump_json_value(
-            js, val->interpolation_type, "type", def.interpolation_type))
+            js, val.interpolation_type, "type", def.interpolation_type))
         return false;
-    if (val->filename == "") {
-        if (!dump_json_value(js, val->keyframes_times, "keyframes_times",
+    if (val.filename == "") {
+        if (!dump_json_value(js, val.keyframes_times, "keyframes_times",
                 def.keyframes_times))
             return false;
-        if (!dump_json_value(js, val->translation_keyframes,
+        if (!dump_json_value(js, val.translation_keyframes,
                 "translation_keyframes", def.translation_keyframes))
             return false;
-        if (!dump_json_value(js, val->rotation_keyframes, "rotation_keyframes",
+        if (!dump_json_value(js, val.rotation_keyframes, "rotation_keyframes",
                 def.rotation_keyframes))
             return false;
-        if (!dump_json_value(js, val->scale_keyframes, "scale_keyframes",
+        if (!dump_json_value(js, val.scale_keyframes, "scale_keyframes",
                 def.scale_keyframes))
             return false;
     }
-    if (!dump_json_objref(js, val->node_targets, "node_targets", scene->nodes))
+    if (!dump_json_objref(js, val.node_targets, "node_targets", scene->nodes_))
         return false;
     return true;
 }
 
 // Procedural commands for animations
 bool apply_json_procedural(
-    const json& js, yocto_animation* val, const yocto_scene* scene) {
+    const json& js, yocto_animation& val, const yocto_scene* scene) {
     if (!parse_json_objbegin(js)) return false;
     if (js.count("rotation_axisangle")) {
         for (auto& j : js.at("rotation_axisangle")) {
-            val->rotation_keyframes.push_back(rotation_quat(j.get<vec4f>()));
+            val.rotation_keyframes.push_back(rotation_quat(j.get<vec4f>()));
         }
     }
     return true;
@@ -2370,31 +2370,31 @@ bool apply_json_procedural(
 
 // Serialize struct
 bool parse_json_object(
-    const json& js, yocto_animation* val, const yocto_scene* scene) {
+    const json& js, yocto_animation& val, const yocto_scene* scene) {
     static const auto def = yocto_animation();
     if (!parse_json_objbegin(js)) return false;
-    if (!parse_json_value(js, val->name, "name", def.name)) return false;
-    if (!parse_json_value(js, val->filename, "filename", def.filename))
+    if (!parse_json_value(js, val.name, "name", def.name)) return false;
+    if (!parse_json_value(js, val.filename, "filename", def.filename))
         return false;
     if (!parse_json_value(
-            js, val->animation_group, "animation_group", def.animation_group))
+            js, val.animation_group, "animation_group", def.animation_group))
         return false;
-    if (!parse_json_value(js, val->interpolation_type, "interpolation_type",
+    if (!parse_json_value(js, val.interpolation_type, "interpolation_type",
             def.interpolation_type))
         return false;
     if (!parse_json_value(
-            js, val->keyframes_times, "keyframes_times", def.keyframes_times))
+            js, val.keyframes_times, "keyframes_times", def.keyframes_times))
         return false;
-    if (!parse_json_value(js, val->translation_keyframes,
+    if (!parse_json_value(js, val.translation_keyframes,
             "translation_keyframes", def.translation_keyframes))
         return false;
-    if (!parse_json_value(js, val->rotation_keyframes, "rotation_keyframes",
+    if (!parse_json_value(js, val.rotation_keyframes, "rotation_keyframes",
             def.rotation_keyframes))
         return false;
     if (!parse_json_value(
-            js, val->scale_keyframes, "scale_keyframes", def.scale_keyframes))
+            js, val.scale_keyframes, "scale_keyframes", def.scale_keyframes))
         return false;
-    if (!parse_json_objref(js, val->node_targets, "node_targets", scene->nodes))
+    if (!parse_json_objref(js, val.node_targets, "node_targets", scene->nodes_))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scene)) return false;
     return true;
@@ -2414,8 +2414,8 @@ bool dump_json_object(json& js, const yocto_scene* val, const yocto_scene* scene
         return false;
     if (!dump_json_objarray(js, val->environments, "environments", scene))
         return false;
-    if (!dump_json_objarray(js, val->nodes, "nodes", scene)) return false;
-    if (!dump_json_objarray(js, val->animations, "animations", scene))
+    if (!dump_json_objarray(js, val->nodes_, "nodes", scene)) return false;
+    if (!dump_json_objarray(js, val->animations_, "animations", scene))
         return false;
     return true;
 }
@@ -2474,8 +2474,8 @@ bool parse_json_object(
         return false;
     if (!parse_json_objarray(js, val->environments, "environments", scene))
         return false;
-    if (!parse_json_objarray(js, val->nodes, "nodes", scene)) return false;
-    if (!parse_json_objarray(js, val->animations, "animations", scene))
+    if (!parse_json_objarray(js, val->nodes_, "nodes", scene)) return false;
+    if (!parse_json_objarray(js, val->animations_, "animations", scene))
         return false;
     if (!parse_json_procedural(js, val, "!!proc", scene)) return false;
     return true;
@@ -3971,14 +3971,14 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
     if (gltf.count("nodes")) {
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            auto  node = new yocto_scene_node();
-            node->name = gnde.value("name", ""s);
-            if (gnde.count("camera")) node->camera = gnde.value("camera", 0);
-            node->translation = gnde.value("translation", zero3f);
-            node->rotation    = gnde.value("rotation", vec4f{0, 0, 0, 1});
-            node->scale       = gnde.value("scale", vec3f{1, 1, 1});
-            node->local = mat_to_frame(gnde.value("matrix", identity_mat4f));
-            scene->nodes.push_back(node);
+            auto  node = yocto_scene_node{};
+            node.name = gnde.value("name", ""s);
+            if (gnde.count("camera")) node.camera = gnde.value("camera", 0);
+            node.translation = gnde.value("translation", zero3f);
+            node.rotation    = gnde.value("rotation", vec4f{0, 0, 0, 1});
+            node.scale       = gnde.value("scale", vec3f{1, 1, 1});
+            node.local = mat_to_frame(gnde.value("matrix", identity_mat4f));
+            scene->nodes_.push_back(node);
         }
 
         // set up parent pointers
@@ -3986,34 +3986,34 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
             auto& gnde = gltf.at("nodes").at(nid);
             if (!gnde.count("children")) continue;
             for (auto& cid : gnde.at("children"))
-                scene->nodes[cid.get<int>()]->parent = nid;
+                scene->nodes_[cid.get<int>()].parent = nid;
         }
 
         // set up instances
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
             if (!gnde.count("mesh")) continue;
-            auto  node = scene->nodes[nid];
+            auto  node = scene->nodes_[nid];
             auto& shps = meshes.at(gnde.value("mesh", 0));
             if (shps.empty()) continue;
             if (shps.size() == 1) {
                 auto instance   = new yocto_instance();
-                instance->name  = node->name;
+                instance->name  = node.name;
                 instance->shape = shps[0];
                 scene->instances.push_back(instance);
-                node->instance = (int)scene->instances.size() - 1;
+                node.instance = (int)scene->instances.size() - 1;
             } else {
                 for (auto shp : shps) {
                     auto shape      = scene->shapes[shp];
                     auto instance   = new yocto_instance();
-                    instance->name  = node->name + "_" + shape->name;
+                    instance->name  = node.name + "_" + shape->name;
                     instance->shape = shp;
                     scene->instances.push_back(instance);
-                    auto child      = new yocto_scene_node();
-                    child->name     = node->name + "_" + shape->name;
-                    child->parent   = nid;
-                    child->instance = (int)scene->instances.size() - 1;
-                    scene->nodes.push_back(child);
+                    auto child      = yocto_scene_node{};
+                    child.name     = node.name + "_" + shape->name;
+                    child.parent   = nid;
+                    child.instance = (int)scene->instances.size() - 1;
+                    scene->nodes_.push_back(child);
                 }
             }
         }
@@ -4035,51 +4035,51 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                     sampler_map.end()) {
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
-                    auto animation  = new yocto_animation();
-                    animation->name = (ganm.count("name") ?
+                    auto animation  = yocto_animation{};
+                    animation.name = (ganm.count("name") ?
                                               ganm.value("name", ""s) :
                                               "anim") +
                                       std::to_string(aid++);
-                    animation->animation_group = ganm.value("name", ""s);
+                    animation.animation_group = ganm.value("name", ""s);
                     auto input_view            = accessor_values(
                         gltf.at("accessors").at(gsampler.value("input", -1)));
-                    animation->keyframes_times.resize(input_view.size());
+                    animation.keyframes_times.resize(input_view.size());
                     for (auto i = 0; i < input_view.size(); i++)
-                        animation->keyframes_times[i] = input_view[i][0];
+                        animation.keyframes_times[i] = input_view[i][0];
                     auto type = gsampler.value("interpolation", "LINEAR");
                     if (type == "LINEAR")
-                        animation->interpolation_type = yocto_interpolation_type::linear;
+                        animation.interpolation_type = yocto_interpolation_type::linear;
                     if (type == "STEP")
-                        animation->interpolation_type = yocto_interpolation_type::step;
+                        animation.interpolation_type = yocto_interpolation_type::step;
                     if (type == "CUBICSPLINE")
-                        animation->interpolation_type = yocto_interpolation_type::bezier;
+                        animation.interpolation_type = yocto_interpolation_type::bezier;
                     auto output_view = accessor_values(
                         gltf.at("accessors").at(gsampler.value("output", -1)));
                     switch (path) {
                         case 0: {  // translation
-                            animation->translation_keyframes.reserve(
+                            animation.translation_keyframes.reserve(
                                 output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                animation->translation_keyframes.push_back(
+                                animation.translation_keyframes.push_back(
                                     {(float)output_view[i][0],
                                         (float)output_view[i][1],
                                         (float)output_view[i][2]});
                         } break;
                         case 1: {  // rotation
-                            animation->rotation_keyframes.reserve(
+                            animation.rotation_keyframes.reserve(
                                 output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                animation->rotation_keyframes.push_back(
+                                animation.rotation_keyframes.push_back(
                                     {(float)output_view[i][0],
                                         (float)output_view[i][1],
                                         (float)output_view[i][2],
                                         (float)output_view[i][3]});
                         } break;
                         case 2: {  // scale
-                            animation->scale_keyframes.reserve(
+                            animation.scale_keyframes.reserve(
                                 output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
-                                animation->scale_keyframes.push_back(
+                                animation.scale_keyframes.push_back(
                                     {(float)output_view[i][0],
                                         (float)output_view[i][1],
                                         (float)output_view[i][2]});
@@ -4101,11 +4101,11 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                             values.reserve(output_view.size());
                             for (auto i = 0; i < output_view.size(); i++)
                                 values.push_back(output_view.get(i));
-                            animation->weights.resize(values.size() / ncomp);
-                            for (auto i = 0; i < animation->weights.size(); i++) {
-                                animation->weights[i].resize(ncomp);
+                            animation.weights.resize(values.size() / ncomp);
+                            for (auto i = 0; i < animation.weights.size(); i++) {
+                                animation.weights[i].resize(ncomp);
                                 for (auto j = 0; j < ncomp; j++)
-                                    animation->weights[i][j] = values[i * ncomp + j];
+                                    animation.weights[i][j] = values[i * ncomp + j];
                             }
                         }
 #endif
@@ -4113,13 +4113,13 @@ bool gltf_to_scene(yocto_scene* scene, const json& gltf, const string& dirname) 
                         default: { return false; }
                     }
                     sampler_map[{gchannel.at("sampler").get<int>(),
-                        path}] = (int)scene->animations.size();
-                    scene->animations.push_back(animation);
+                        path}] = (int)scene->animations_.size();
+                    scene->animations_.push_back(animation);
                 }
                 scene
-                    ->animations[sampler_map.at(
-                        {gchannel.at("sampler").get<int>(), path})]
-                    ->node_targets.push_back(
+                    ->animations_[sampler_map.at(
+                        {gchannel.at("sampler").get<int>(), path})].
+                    node_targets.push_back(
                         (int)gchannel.at("target").at("node").get<int>());
             }
         }
@@ -4192,7 +4192,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
         js["accessors"]   = json::array();
     }
     if (!scene->instances.empty()) js["nodes"] = json::array();
-    if (!scene->nodes.empty()) js["nodes"] = json::array();
+    if (!scene->nodes_.empty()) js["nodes"] = json::array();
 
     // convert cameras
     for (auto& camera : scene->cameras_) {
@@ -4222,7 +4222,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     }
 
     // material
-    for (auto mat : scene->materials) {
+    for (auto& mat : scene->materials) {
         auto mjs           = json();
         mjs["name"]        = mat->name;
         mjs["doubleSided"] = mat->double_sided;
@@ -4260,7 +4260,7 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     }
 
     // shapes
-    for (auto shape : scene->shapes) {
+    for (auto& shape : scene->shapes) {
         auto mjs = json(), bjs = json(), pjs = json();
         auto bid          = js["buffers"].size();
         mjs["name"]       = shape->name;
@@ -4328,28 +4328,28 @@ bool scene_to_gltf(const yocto_scene* scene, json& js) {
     }
 
     // nodes
-    for (auto& node : scene->nodes) {
+    for (auto& node : scene->nodes_) {
         auto njs           = json();
-        njs["name"]        = node->name;
-        njs["matrix"]      = frame_to_mat(node->local);
-        njs["translation"] = node->translation;
-        njs["rotation"]    = node->rotation;
-        njs["scale"]       = node->scale;
-        if (node->camera >= 0) njs["camera"] = node->camera;
-        if (node->instance >= 0)
-            njs["mesh"] = scene->instances[node->instance]->shape;
-        if (!node->children.empty()) {
+        njs["name"]        = node.name;
+        njs["matrix"]      = frame_to_mat(node.local);
+        njs["translation"] = node.translation;
+        njs["rotation"]    = node.rotation;
+        njs["scale"]       = node.scale;
+        if (node.camera >= 0) njs["camera"] = node.camera;
+        if (node.instance >= 0)
+            njs["mesh"] = scene->instances[node.instance]->shape;
+        if (!node.children.empty()) {
             njs["children"] = json::array();
-            for (auto& c : node->children) njs["children"].push_back(c);
+            for (auto& c : node.children) njs["children"].push_back(c);
         }
         js["nodes"].push_back(njs);
     }
 
     // animations not supported yet
-    if (!scene->animations.empty()) printf("animation not supported yet\n");
+    if (!scene->animations_.empty()) printf("animation not supported yet\n");
 
     // nodes from instances
-    if (scene->nodes.empty()) {
+    if (scene->nodes_.empty()) {
         auto camera_id = 0;
         for (auto& camera : scene->cameras_) {
             auto njs      = json();
@@ -5084,19 +5084,19 @@ yocto_scene* load_pbrt_scene(
     if (use_hierarchy) {
         auto camera_id = 0;
         for (auto& camera : scene->cameras_) {
-            auto node    = new yocto_scene_node();
-            node->name   = camera.name;
-            node->local  = camera.frame;
-            node->camera = camera_id++;
-            scene->nodes.insert(scene->nodes.begin(), node);
+            auto node    = yocto_scene_node{};
+            node.name   = camera.name;
+            node.local  = camera.frame;
+            node.camera = camera_id++;
+            scene->nodes_.insert(scene->nodes_.begin(), node);
         }
         auto environment_id = 0;
         for (auto environment : scene->environments) {
-            auto node         = new yocto_scene_node();
-            node->name        = environment->name;
-            node->local       = environment->frame;
-            node->environment = environment_id++;
-            scene->nodes.push_back(node);
+            auto node         = yocto_scene_node{};
+            node.name        = environment->name;
+            node.local       = environment->frame;
+            node.environment = environment_id++;
+            scene->nodes_.push_back(node);
         }
     }
 
