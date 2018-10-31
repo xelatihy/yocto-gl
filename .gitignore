@@ -1,7 +1,6 @@
 bin
 cmake
 build
-run_tests
 cmake-build-debug
 cmake-build-release
 .idea
