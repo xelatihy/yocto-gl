@@ -232,9 +232,9 @@ bool begin_treenode_glwidget(glwindow* win, const char* lbl);
 void end_treenode_glwidget(glwindow* win);
 
 bool begin_selectabletreenode_glwidget(
-    glwindow* win, const char* lbl, void*& selection, void* content);
+    glwindow* win, const char* lbl, bool& selected);
 void begin_selectabletreeleaf_glwidget(
-    glwindow* win, const char* lbl, void*& selection, void* content);
+    glwindow* win, const char* lbl, bool& selected);
 
 bool draw_combobox_glwidget(
     glwindow* win, const char* lbl, int& idx, const vector<string>& labels);

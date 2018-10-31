@@ -70,8 +70,8 @@ struct app_state {
 
     bool                         widgets_open   = false;
     bool                         navigation_fps = false;
-    void*                        selection      = nullptr;
-    vector<tuple<string, void*>> update_list;
+    tuple<string, int>                        selection      = {"", -1};
+    vector<tuple<string, int>> update_list;
     float                        time       = 0;
     string                       anim_group = "";
     vec2f                        time_range = zero2f;
@@ -80,7 +80,7 @@ struct app_state {
 
 void draw_glscene(draw_glstate* state, const yocto_scene* scene,
     const yocto_camera* camera, const vec2i& viewport_size,
-    const void* highlighted, bool eyelight, bool wireframe, bool edges,
+    const tuple<string, int>& highlighted, bool eyelight, bool wireframe, bool edges,
     float exposure, float gamma, float near_plane, float far_plane);
 
 // draw with shading
@@ -565,7 +565,7 @@ void draw_glshape(draw_glstate* state, const yocto_shape* shape,
 // Display a scene
 void draw_glscene(draw_glstate* state, const yocto_scene* scene,
     const yocto_camera* camera, const vec2i& viewport_size,
-    const void* highlighted, bool eyelight, bool wireframe, bool edges,
+    const tuple<string, int>& highlighted, bool eyelight, bool wireframe, bool edges,
     float exposure, float gamma, float near_plane, float far_plane) {
     set_glviewport(viewport_size);
 
@@ -631,11 +631,13 @@ void draw_glscene(draw_glstate* state, const yocto_scene* scene,
     }
 
     if (wireframe) set_glwireframe(true);
-    for (auto instance : scene->instances) {
+    for (auto instance_id = 0; instance_id < scene->instances.size(); instance_id++) {
+        auto instance = scene->instances[instance_id];
         auto shape    = scene->shapes[instance->shape];
         auto material = scene->materials[shape->material];
+        auto highlight = highlighted == tuple<string, int>{"instance", instance_id};
         draw_glshape(state, shape, material, instance->frame,
-            instance == highlighted || shape == highlighted, eyelight, edges);
+            highlight, eyelight, edges);
     }
 
     unbind_glprogram();
@@ -751,7 +753,7 @@ void run_ui(app_state* app) {
             auto camera = app->scene->cameras.at(app->camid);
             camera_turntable(
                 camera->frame, camera->focus_distance, rotate, dolly, pan);
-            app->update_list.push_back({"camera", camera});
+            app->update_list.push_back({"camera", app->camid});
         }
 
         // animation

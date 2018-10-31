@@ -765,22 +765,22 @@ bool begin_treenode_glwidget(glwindow* win, const char* lbl) {
 void end_treenode_glwidget(glwindow* win) { ImGui::TreePop(); }
 
 bool begin_selectabletreenode_glwidget(
-    glwindow* win, const char* lbl, void*& selection, void* content) {
+    glwindow* win, const char* lbl, bool& selected) {
     ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow |
                                     ImGuiTreeNodeFlags_OpenOnDoubleClick;
-    if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
-    auto open = ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
-    if (ImGui::IsItemClicked()) selection = content;
+    if (selected) node_flags |= ImGuiTreeNodeFlags_Selected;
+    auto open = ImGui::TreeNodeEx(lbl, node_flags, "%s", lbl);
+    if (ImGui::IsItemClicked()) selected = true;
     return open;
 }
 
 void begin_selectabletreeleaf_glwidget(
-    glwindow* win, const char* lbl, void*& selection, void* content) {
+    glwindow* win, const char* lbl, bool& selected) {
     ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_Leaf |
                                     ImGuiTreeNodeFlags_NoTreePushOnOpen;
-    if (selection == content) node_flags |= ImGuiTreeNodeFlags_Selected;
-    ImGui::TreeNodeEx(content, node_flags, "%s", lbl);
-    if (ImGui::IsItemClicked()) selection = content;
+    if (selected) node_flags |= ImGuiTreeNodeFlags_Selected;
+    ImGui::TreeNodeEx(lbl, node_flags, "%s", lbl);
+    if (ImGui::IsItemClicked()) selected = true;
 }
 
 bool draw_combobox_glwidget(
@@ -814,7 +814,7 @@ bool draw_combobox_glwidget(
 
 bool draw_combobox_glwidget(glwindow* win, const char* lbl, int& idx,
     const vector<void*>& vals, const char* (*label)(void*), bool include_null) {
-    if (!ImGui::BeginCombo(lbl, label(vals.at(idx)))) return false;
+    if (!ImGui::BeginCombo(lbl, idx >= 0 ? label(vals.at(idx)) : "<none>")) return false;
     auto old_idx = idx;
     if (include_null) {
         ImGui::PushID(100000);

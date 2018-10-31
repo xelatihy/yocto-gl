@@ -51,8 +51,8 @@ struct app_state {
     float                        imscale      = 1;
     bool                         zoom_to_fit  = true;
     bool                         widgets_open = false;
-    void*                        selection    = nullptr;
-    vector<tuple<string, void*>> update_list;
+    tuple<string, int>                        selection    = {"", -1};
+    vector<tuple<string, int>> update_list;
     bool                         navigation_fps = false;
     bool                         quiet          = false;
     int64_t                      trace_start    = 0;
@@ -89,7 +89,7 @@ void draw_glwidgets(glwindow* win) {
                 win, "seed", (int&)app->params.random_seed, 0, 1000);
             edited += draw_slider_glwidget(
                 win, "pratio", app->params.preview_ratio, 1, 64);
-            if (edited) app->update_list.push_back({"app", app});
+            if (edited) app->update_list.push_back({"app", -1});
             draw_label_glwidgets(win, "time/sample", "%0.3lf",
                 (app->state.current_sample) ?
                     (get_time() - app->trace_start) /
@@ -165,13 +165,8 @@ bool update(app_state* app) {
     // update BVH
     for (auto& sel : app->update_list) {
         if (get<0>(sel) == "shape") {
-            for (auto sid = 0; sid < app->scene->shapes.size(); sid++) {
-                if (app->scene->shapes[sid] == get<1>(sel)) {
-                    refit_shape_bvh(
-                        (yocto_shape*)get<1>(sel), app->bvh.shape_bvhs[sid]);
-                    break;
-                }
-            }
+            refit_shape_bvh(
+                app->scene->shapes[get<1>(sel)], app->bvh.shape_bvhs[get<1>(sel)]);
             refit_scene_bvh(app->scene.get(), app->bvh);
         }
         if (get<0>(sel) == "instance") {
@@ -227,7 +222,7 @@ void run_ui(app_state* app) {
             auto camera = app->scene->cameras.at(app->params.camera_id);
             camera_turntable(
                 camera->frame, camera->focus_distance, rotate, dolly, pan);
-            app->update_list.push_back({"camera", camera});
+            app->update_list.push_back({"camera", app->params.camera_id});
         }
 
         // selection
@@ -244,7 +239,7 @@ void run_ui(app_state* app) {
                     {0.5f, 0.5f}, zero2f);
                 auto isec   = intersect_scene(
                     app->scene.get(), app->bvh, ray);
-                if (isec.instance_id >= 0) app->selection = app->scene->instances[isec.instance_id];
+                if (isec.instance_id >= 0) app->selection = {"instance", isec.instance_id};
             }
         }
 
