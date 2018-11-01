@@ -246,12 +246,12 @@
         {
             "name": "obj1",
             "filename": "meshes/obj1.ply",
-            "materials": [ "obj1" ],
+            "materials": [ "obj3_1", "obj3_2", "obj3_3", "obj3_4", "obj3_5", "obj3_6" ],
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_vertex_normals": true,
             "!!proc": {
-                "type": "cube_facevarying"
+                "type": "cube_multiplematerials"
             }
         },
         {
