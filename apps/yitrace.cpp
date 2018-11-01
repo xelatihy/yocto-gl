@@ -294,7 +294,7 @@ int main(int argc, char* argv[]) {
         log_fatal("cannot load scene " + app.filename);
 
     // tesselate
-    tesselate_shapes(app.scene);
+    tesselate_shapes_and_surfaces(app.scene);
 
     // add components
     if (add_skyenv && app.scene.environments.empty())

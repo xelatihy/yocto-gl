@@ -40,9 +40,10 @@ struct glshape {
 };
 
 struct draw_glstate {
-    glprogram         prog = {};
-    vector<glshape>   shps;
-    vector<gltexture> txts;
+    glprogram         prog     = {};
+    vector<glshape>   shapes   = {};
+    vector<glshape>   surfaces = {};
+    vector<gltexture> textures = {};
 };
 
 // Application state
@@ -468,82 +469,84 @@ static const char* fragment =
 #endif
 
 // Draw a shape
-void draw_glshape(draw_glstate& state, const yocto_scene& scene, int shape_id,
-    const frame3f& frame, bool highlighted, bool eyelight, bool edges) {
-    auto& shape    = scene.shapes[shape_id];
-    auto& material = scene.materials[shape.material];
+void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
+    const yocto_instance& instance, bool highlighted, bool eyelight, bool edges) {
+    if (instance.shape >= 0) {
+        auto& shape    = scene.shapes[instance.shape];
+        auto& material = scene.materials[shape.material];
 
-    auto xform = frame_to_mat(frame);
+        auto xform = frame_to_mat(instance.frame);
 
-    set_gluniform(state.prog, "shape_xform", xform);
-    set_gluniform(state.prog, "shape_normal_offset", 0.0f);
+        set_gluniform(state.prog, "shape_xform", xform);
+        set_gluniform(state.prog, "shape_normal_offset", 0.0f);
 
-    auto mtype = 1;
-    if (material.base_metallic) mtype = 2;
-    if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
-    set_gluniform(state.prog, "mat_type", mtype);
-    set_gluniform(state.prog, "mat_ke", material.emission);
-    set_gluniform(state.prog, "mat_kd", material.diffuse);
-    set_gluniform(state.prog, "mat_ks", material.specular);
-    set_gluniform(state.prog, "mat_rs", material.roughness);
-    set_gluniform(state.prog, "mat_op", material.opacity);
-    set_gluniform(state.prog, "mat_double_sided", (int)material.double_sided);
-    set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
-        material.emission_texture >= 0 ? state.txts.at(material.emission_texture) :
-                                         gltexture{},
-        0);
-    set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
-        material.diffuse_texture >= 0 ? state.txts.at(material.diffuse_texture) :
-                                        gltexture{},
-        1);
-    set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
-        material.specular_texture >= 0 ? state.txts.at(material.specular_texture) :
-                                         gltexture{},
-        2);
-    set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
-        material.roughness_texture >= 0 ?
-            state.txts.at(material.roughness_texture) :
-            gltexture{},
-        3);
-    set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
-        material.opacity_texture >= 0 ? state.txts.at(material.opacity_texture) :
-                                        gltexture{},
-        4);
-    set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
-        material.normal_texture >= 0 ? state.txts.at(material.normal_texture) :
-                                       gltexture{},
-        5);
+        auto mtype = 1;
+        if (material.base_metallic) mtype = 2;
+        if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
+        set_gluniform(state.prog, "mat_type", mtype);
+        set_gluniform(state.prog, "mat_ke", material.emission);
+        set_gluniform(state.prog, "mat_kd", material.diffuse);
+        set_gluniform(state.prog, "mat_ks", material.specular);
+        set_gluniform(state.prog, "mat_rs", material.roughness);
+        set_gluniform(state.prog, "mat_op", material.opacity);
+        set_gluniform(state.prog, "mat_double_sided", (int)material.double_sided);
+        set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
+            material.emission_texture >= 0 ?
+                state.textures.at(material.emission_texture) :
+                gltexture{},
+            0);
+        set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
+            material.diffuse_texture >= 0 ?
+                state.textures.at(material.diffuse_texture) :
+                gltexture{},
+            1);
+        set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
+            material.specular_texture >= 0 ?
+                state.textures.at(material.specular_texture) :
+                gltexture{},
+            2);
+        set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
+            material.roughness_texture >= 0 ?
+                state.textures.at(material.roughness_texture) :
+                gltexture{},
+            3);
+        set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
+            material.opacity_texture >= 0 ?
+                state.textures.at(material.opacity_texture) :
+                gltexture{},
+            4);
+        set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
+            material.normal_texture >= 0 ?
+                state.textures.at(material.normal_texture) :
+                gltexture{},
+            5);
 
-    auto& vbos = state.shps.at(shape_id);
-    set_gluniform(state.prog, "elem_faceted", (int)shape.normals.empty());
-    set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
-    set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
-    set_glvertexattrib(state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
-    set_glvertexattrib(
-        state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
-    set_glvertexattrib(
-        state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+        auto& vbos = state.shapes.at(instance.shape);
+        set_gluniform(state.prog, "elem_faceted", (int)shape.normals.empty());
+        set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
+        set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
+        set_glvertexattrib(state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+        set_glvertexattrib(
+            state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+        set_glvertexattrib(
+            state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
-    if (!shape.points.empty()) {
-        set_gluniform(state.prog, "elem_type", 1);
-        draw_glpoints(vbos.gl_points, shape.points.size());
-    }
-    if (!shape.lines.empty()) {
-        set_gluniform(state.prog, "elem_type", 2);
-        draw_gllines(vbos.gl_lines, shape.lines.size());
-    }
-    if (!shape.triangles.empty()) {
-        set_gluniform(state.prog, "elem_type", 3);
-        draw_gltriangles(vbos.gl_triangles, shape.triangles.size());
-    }
-    if (!shape.quads.empty()) {
-        set_gluniform(state.prog, "elem_type", 3);
-        draw_gltriangles(vbos.gl_quads, shape.quads.size() * 2);
-    }
-    if (!shape.quads_positions.empty()) {
-        set_gluniform(state.prog, "elem_type", 3);
-        draw_gltriangles(vbos.gl_quads, vbos.num_facevarying_quads * 2);
-    }
+        if (!shape.points.empty()) {
+            set_gluniform(state.prog, "elem_type", 1);
+            draw_glpoints(vbos.gl_points, shape.points.size());
+        }
+        if (!shape.lines.empty()) {
+            set_gluniform(state.prog, "elem_type", 2);
+            draw_gllines(vbos.gl_lines, shape.lines.size());
+        }
+        if (!shape.triangles.empty()) {
+            set_gluniform(state.prog, "elem_type", 3);
+            draw_gltriangles(vbos.gl_triangles, shape.triangles.size());
+        }
+        if (!shape.quads.empty()) {
+            set_gluniform(state.prog, "elem_type", 3);
+            draw_gltriangles(vbos.gl_quads, shape.quads.size() * 2);
+        }
 
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
@@ -560,9 +563,93 @@ void draw_glshape(draw_glstate& state, const yocto_scene& scene, int shape_id,
         check_glerror();
     }
 #endif
-    if (edges) printf("edges are momentarily disabled\n");
+        if (edges) printf("edges are momentarily disabled\n");
 
-    // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
+        // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
+    } else if (instance.surface >= 0) {
+        auto& surface  = scene.surfaces[instance.surface];
+        auto& material = scene.materials[surface.material];
+
+        auto xform = frame_to_mat(instance.frame);
+
+        set_gluniform(state.prog, "shape_xform", xform);
+        set_gluniform(state.prog, "shape_normal_offset", 0.0f);
+
+        auto mtype = 1;
+        if (material.base_metallic) mtype = 2;
+        if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
+        set_gluniform(state.prog, "mat_type", mtype);
+        set_gluniform(state.prog, "mat_ke", material.emission);
+        set_gluniform(state.prog, "mat_kd", material.diffuse);
+        set_gluniform(state.prog, "mat_ks", material.specular);
+        set_gluniform(state.prog, "mat_rs", material.roughness);
+        set_gluniform(state.prog, "mat_op", material.opacity);
+        set_gluniform(state.prog, "mat_double_sided", (int)material.double_sided);
+        set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
+            material.emission_texture >= 0 ?
+                state.textures.at(material.emission_texture) :
+                gltexture{},
+            0);
+        set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
+            material.diffuse_texture >= 0 ?
+                state.textures.at(material.diffuse_texture) :
+                gltexture{},
+            1);
+        set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
+            material.specular_texture >= 0 ?
+                state.textures.at(material.specular_texture) :
+                gltexture{},
+            2);
+        set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
+            material.roughness_texture >= 0 ?
+                state.textures.at(material.roughness_texture) :
+                gltexture{},
+            3);
+        set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
+            material.opacity_texture >= 0 ?
+                state.textures.at(material.opacity_texture) :
+                gltexture{},
+            4);
+        set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
+            material.normal_texture >= 0 ?
+                state.textures.at(material.normal_texture) :
+                gltexture{},
+            5);
+
+        auto& vbos = state.surfaces.at(instance.surface);
+        set_gluniform(state.prog, "elem_faceted", (int)surface.normals.empty());
+        set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
+        set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
+        set_glvertexattrib(state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+        set_glvertexattrib(
+            state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+        set_glvertexattrib(
+            state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+
+        if (!surface.quads_positions.empty()) {
+            set_gluniform(state.prog, "elem_type", 3);
+            draw_gltriangles(vbos.gl_quads, vbos.num_facevarying_quads * 2);
+        }
+
+#if 0
+    if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
+        enable_glculling(false);
+        check_glerror();
+        set_gluniform(state.prog, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state.prog, "ke"), 0, 0, 0);
+        set_gluniform(state.prog, "op"), material.op);
+        set_gluniform(state.prog, "shp_normal_offset"), 0.01f);
+        check_glerror();
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
+        glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        check_glerror();
+    }
+#endif
+        if (edges) printf("edges are momentarily disabled\n");
+
+        // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
+    }
 }
 
 // Display a scene
@@ -592,6 +679,7 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
         for (auto& instance : scene.instances) {
+            if (instance.shape < 0) continue;
             auto& shape    = scene.shapes[instance.shape];
             auto& material = scene.materials[shape.material];
             if (material.emission == zero3f) continue;
@@ -640,8 +728,7 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
         // auto& material  = scene.materials[shape.material];
         auto highlight = highlighted ==
                          tuple<string, int>{"instance", instance_id};
-        draw_glshape(state, scene, instance.shape, instance.frame, highlight,
-            eyelight, edges);
+        draw_glinstance(state, scene, instance, highlight, eyelight, edges);
     }
 
     unbind_glprogram();
@@ -653,25 +740,24 @@ draw_glstate init_draw_state(const glwindow& win) {
     auto  state = draw_glstate();
     // load textures and vbos
     state.prog = make_glprogram(vertex, fragment);
-    state.txts.resize(app.scene.textures.size());
+    state.textures.resize(app.scene.textures.size());
     for (auto texture_id = 0; texture_id < app.scene.textures.size();
          texture_id++) {
         auto texture = app.scene.textures[texture_id];
         if (!texture.hdr_image.pixels.empty()) {
-            state.txts[texture_id] = make_gltexture(
+            state.textures[texture_id] = make_gltexture(
                 texture.hdr_image, true, true, true);
         } else if (!texture.ldr_image.pixels.empty()) {
-            state.txts[texture_id] = make_gltexture(
+            state.textures[texture_id] = make_gltexture(
                 texture.ldr_image, !texture.ldr_as_linear, true, true);
         } else {
             printf("bad texture");
         }
     }
-    state.shps.resize(app.scene.shapes.size());
+    state.shapes.resize(app.scene.shapes.size());
     for (auto shape_id = 0; shape_id < app.scene.shapes.size(); shape_id++) {
         auto& shape = app.scene.shapes[shape_id];
-        if (!shape.quads_positions.empty()) continue;
-        auto vbos = glshape();
+        auto  vbos  = glshape();
         if (!shape.positions.empty())
             vbos.gl_pos = make_glarraybuffer(shape.positions, false);
         if (!shape.normals.empty())
@@ -691,19 +777,20 @@ draw_glstate init_draw_state(const glwindow& win) {
         if (!shape.quads.empty())
             vbos.gl_quads = make_glelementbuffer(
                 convert_quads_to_triangles(shape.quads), false);
-        state.shps[shape_id] = vbos;
+        state.shapes[shape_id] = vbos;
     }
-    for (auto shape_id = 0; shape_id < app.scene.shapes.size(); shape_id++) {
-        auto& shape = app.scene.shapes[shape_id];
-        if (shape.quads_positions.empty()) continue;
-        auto vbos                                     = glshape();
-        auto quads                                    = vector<vec4i>();
-        auto positions                                = vector<vec3f>();
-        auto normals                                  = vector<vec3f>();
-        auto texturecoords                            = vector<vec2f>();
+    for (auto surface_id = 0; surface_id < app.scene.surfaces.size();
+         surface_id++) {
+        auto& surface       = app.scene.surfaces[surface_id];
+        auto  vbos          = glshape();
+        auto  quads         = vector<vec4i>();
+        auto  positions     = vector<vec3f>();
+        auto  normals       = vector<vec3f>();
+        auto  texturecoords = vector<vec2f>();
         tie(quads, positions, normals, texturecoords) = convert_face_varying(
-            shape.quads_positions, shape.quads_normals, shape.quads_texturecoords,
-            shape.positions, shape.normals, shape.texturecoords);
+            surface.quads_positions, surface.quads_normals,
+            surface.quads_texturecoords, surface.positions, surface.normals,
+            surface.texturecoords);
         if (!positions.empty())
             vbos.gl_pos = make_glarraybuffer(positions, false);
         if (!normals.empty()) vbos.gl_norm = make_glarraybuffer(normals, false);
@@ -713,7 +800,7 @@ draw_glstate init_draw_state(const glwindow& win) {
             vbos.gl_quads = make_glelementbuffer(
                 convert_quads_to_triangles(quads), false);
         vbos.num_facevarying_quads = (int)quads.size();
-        state.shps[shape_id]       = vbos;
+        state.surfaces[surface_id] = vbos;
     }
     return state;
 }
@@ -851,7 +938,7 @@ int main(int argc, char* argv[]) {
 
     // tesselate
     if (!quiet) log_info("tesselating scene elements\n");
-    tesselate_shapes(app.scene);
+    tesselate_shapes_and_surfaces(app.scene);
 
     // add components
     if (!quiet) log_info("adding scene elements\n");

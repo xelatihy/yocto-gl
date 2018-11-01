@@ -2634,6 +2634,7 @@ struct bvh_instance {
     frame3f frame         = identity_frame3f;
     frame3f frame_inverse = identity_frame3f;
     int     shape_id      = -1;
+    int     surface_id    = -1;
 };
 
 // BVH for scenes made of instances to shapes.
@@ -2646,6 +2647,7 @@ struct bvh_scene {
     // data for instance BVH
     vector<bvh_instance> instances;
     vector<bvh_shape>    shape_bvhs;
+    vector<bvh_shape>    surface_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -2753,7 +2755,9 @@ make_shape_data make_suzanne_shape(float size, bool as_triangles);
 make_shape_data make_cube_shape(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_shape_data make_fvcube_shape(
+make_shape_data make_cube_facevarying_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+make_shape_data make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
@@ -3220,11 +3224,6 @@ struct yocto_shape {
     vector<vec3i> triangles = {};
     vector<vec4i> quads     = {};
 
-    // face-varying primitives
-    vector<vec4i> quads_positions     = {};
-    vector<vec4i> quads_normals       = {};
-    vector<vec4i> quads_texturecoords = {};
-
     // vertex data
     vector<vec3f> positions     = {};
     vector<vec3f> normals       = {};
@@ -3234,11 +3233,38 @@ struct yocto_shape {
     vector<vec4f> tangentspaces = {};
 };
 
-// Shape instance.
+// Shape data represented as an indexed meshes of elements with face-varying
+// data. Each face maintains different topologies for positions, normals and
+// texture coordinates.
+struct yocto_surface {
+    // shape data
+    string name     = "";
+    string filename = "";
+    int    material = -1;
+
+    // subdision properties
+    int  subdivision_level      = 0;
+    bool catmull_clark          = false;
+    bool compute_vertex_normals = false;
+
+    // face-varying primitives
+    vector<vec4i> quads_positions     = {};
+    vector<vec4i> quads_normals       = {};
+    vector<vec4i> quads_texturecoords = {};
+
+    // vertex data
+    vector<vec3f> positions     = {};
+    vector<vec3f> normals       = {};
+    vector<vec2f> texturecoords = {};
+};
+
+// Instance of a visible object in the scene. For now, this can be either
+// a shape or a surface.
 struct yocto_instance {
-    string  name  = "";
-    frame3f frame = identity_frame3f;
-    int     shape = -1;
+    string  name    = "";
+    frame3f frame   = identity_frame3f;
+    int     shape   = -1;
+    int     surface = -1;
 };
 
 // Environment map.
@@ -3294,6 +3320,7 @@ struct yocto_scene {
     string                    name         = "";
     vector<yocto_camera>      cameras      = {};
     vector<yocto_shape>       shapes       = {};
+    vector<yocto_surface>     surfaces     = {};
     vector<yocto_instance>    instances    = {};
     vector<yocto_material>    materials    = {};
     vector<yocto_texture>     textures     = {};
@@ -3342,14 +3369,15 @@ vector<vec3f> compute_shape_normals(const yocto_shape& shape);
 // Updates/refits bvh.
 bvh_shape make_shape_bvh(
     const yocto_shape& shape, bool high_quality, bool embree = false);
+bvh_shape make_surface_bvh(
+    const yocto_surface& surface, bool high_quality, bool embree = false);
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, bool high_quality, bool embree = false);
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
 
 // Apply subdivision and displacement rules.
-yocto_shape& tesselate_shape(const yocto_shape& shape);
-void         tesselate_shapes(yocto_scene& scene);
+void tesselate_shapes_and_surfaces(yocto_scene& scene);
 
 // Add missing names, normals, tangents and hierarchy.
 void add_missing_names(yocto_scene& scene);
@@ -3405,35 +3433,29 @@ vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
 vec4f evaluate_shape_element_tangentspace(
     const yocto_shape& shape, int element_id);
 
-// Instance values interpolated using barycentric coordinates.
-// Handles defaults if data is missing.
-vec3f evaluate_instance_position(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_tangentspace(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    bool& left_handed);
-// Instance element values.
-vec3f evaluate_instance_element_normal(
-    const yocto_scene& scene, const yocto_instance& instance, int element_id);
-// Shading normals including material perturbations.
-vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    const vec3f& o);
+// Sample a shape element based on area/length.
+vector<float>     compute_shape_elements_cdf(const yocto_shape& shape);
+tuple<int, vec2f> sample_shape_element(const yocto_shape& shape,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
+float             sample_shape_element_pdf(const yocto_shape& shape,
+                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
-// Environment texture coordinates from the incoming direction.
-vec2f evaluate_environment_texturecoord(
-    const yocto_environment& environment, const vec3f& direction);
-// Evaluate the incoming direction from the element_uv.
-vec3f evaluate_environment_direction(
-    const yocto_environment& environment, const vec2f& environment_uv);
-// Evaluate the environment emission.
-vec3f evaluate_environment_emission(const yocto_scene& scene,
-    const yocto_environment& environment, const vec3f& direction);
-// Evaluate all environment emission.
-vec3f evaluate_environment_emission(
-    const yocto_scene& scene, const vec3f& direction);
+// Surface values interpolated using barycentric coordinates.
+vec3f evaluate_surface_position(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_surface_normal(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec2f evaluate_surface_texturecoord(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+// Surface element values.
+vec3f evaluate_surface_element_normal(const yocto_shape& shape, int element_id);
+
+// Sample a surface element based on area.
+vector<float>     compute_surface_elements_cdf(const yocto_surface& surface);
+tuple<int, vec2f> sample_surface_element(const yocto_surface& surface,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
+float             sample_surface_element_pdf(const yocto_surface& surface,
+                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
@@ -3485,6 +3507,8 @@ float evaluate_material_roughness(const yocto_scene& scene,
 float evaluate_material_opacity(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
+// Query material properties
+bool is_material_emissive(const yocto_material& material);
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
@@ -3503,12 +3527,51 @@ bool            is_bsdf_delta(const microfacet_brdf& f);
 bool is_material_volume_homogeneus(const yocto_material& vol);
 bool is_material_volume_colored(const yocto_material& vol);
 
-// Sample a shape element based on area/length.
-vector<float>     compute_shape_elements_cdf(const yocto_shape& shape);
-tuple<int, vec2f> sample_shape_element(const yocto_shape& shape,
-    const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float             sample_shape_element_pdf(const yocto_shape& shape,
-                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
+// Instance values interpolated using barycentric coordinates.
+// Handles defaults if data is missing.
+vec3f evaluate_instance_position(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec4f evaluate_instance_color(
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_tangentspace(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
+    bool& left_handed);
+// Instance element values.
+vec3f evaluate_instance_element_normal(
+    const yocto_scene& scene, const yocto_instance& instance, int element_id);
+// Shading normals including material perturbations.
+vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv,
+    const vec3f& o);
+
+// Material values
+int             get_instance_material_id(const yocto_scene& scene,
+                const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f           evaluate_instance_emission(const yocto_scene& scene,
+              const yocto_instance& instance, int element_id, const vec2f& element_uv);
+microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+float           evaluate_instance_opacity(const yocto_scene& scene,
+              const yocto_instance& instance, int element_id, const vec2f& element_uv);
+bool            is_instance_emissive(
+               const yocto_scene& scene, const yocto_instance& instance);
+
+// Environment texture coordinates from the incoming direction.
+vec2f evaluate_environment_texturecoord(
+    const yocto_environment& environment, const vec3f& direction);
+// Evaluate the incoming direction from the element_uv.
+vec3f evaluate_environment_direction(
+    const yocto_environment& environment, const vec2f& environment_uv);
+// Evaluate the environment emission.
+vec3f evaluate_environment_emission(const yocto_scene& scene,
+    const yocto_environment& environment, const vec3f& direction);
+// Evaluate all environment emission.
+vec3f evaluate_environment_emission(
+    const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
 vector<float> compute_environment_texels_cdf(
@@ -3575,6 +3638,7 @@ struct trace_lights {
     vector<int>           instances               = {};
     vector<int>           environments            = {};
     vector<vector<float>> shape_elements_cdf      = {};
+    vector<vector<float>> surface_elements_cdf    = {};
     vector<vector<float>> environment_texture_cdf = {};
 };
 
