@@ -1568,8 +1568,15 @@ void build_scene_bvh(bvh_scene& bvh, bool high_quality) {
     auto prims = vector<bvh_prim>();
     if (!bvh.instances.empty()) {
         for (auto& instance : bvh.instances) {
-            auto sbvh = bvh.shape_bvhs[instance.shape_id];
-            prims.push_back({transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+            if(instance.shape_id >= 0) {
+                auto& sbvh = bvh.shape_bvhs[instance.shape_id];
+                prims.push_back({transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+            } else if(instance.surface_id >= 0) {
+                auto& sbvh = bvh.surface_bvhs[instance.surface_id];
+                prims.push_back({transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+            } else {
+                log_error("empty instance");
+            }
         }
     }
 
@@ -1964,12 +1971,24 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.instances.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
-                if (intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
-                        transform_ray(instance.frame_inverse, ray), find_any,
-                        distance, element_id, element_uv)) {
-                    hit         = true;
-                    ray.tmax    = distance;
-                    instance_id = node.primitive_ids[i];
+                if(instance.shape_id >= 0) {
+                    if (intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
+                            transform_ray(instance.frame_inverse, ray), find_any,
+                            distance, element_id, element_uv)) {
+                        hit         = true;
+                        ray.tmax    = distance;
+                        instance_id = node.primitive_ids[i];
+                    }
+                } else if(instance.surface_id >= 0) {
+                    if (intersect_shape_bvh(bvh.surface_bvhs[instance.surface_id],
+                                            transform_ray(instance.frame_inverse, ray), find_any,
+                                            distance, element_id, element_uv)) {
+                        hit         = true;
+                        ray.tmax    = distance;
+                        instance_id = node.primitive_ids[i];
+                    }
+                } else {
+                    log_error("empty instance");
                 }
             }
         } else {
