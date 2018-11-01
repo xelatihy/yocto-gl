@@ -2726,7 +2726,6 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     auto mmap = unordered_map<string, int>();
 
     // vertex maps
-    auto name_map     = unordered_map<string, int>();
     auto vertex_map   = unordered_map<obj_vertex, int, obj_vertex_hash>();
     auto pos_map      = unordered_map<int, int>();
     auto norm_map     = unordered_map<int, int>();
@@ -2742,16 +2741,9 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         return true;
     };
     auto add_instance = [&](yocto_scene& scene, const string& objname) {
-        if (scene.shapes.empty() || objname != scene.instances.back().name ||
-            !is_instance_empty(scene, scene.instances.back())) {
-            auto instance = yocto_instance();
-            scene.instances.push_back(instance);
-        }
-        name_map[objname] += 1;
-        auto name = (name_map[objname] == 1) ?
-                        objname :
-                        objname + "_" + std::to_string(name_map[objname] - 1);
-        if (objname == "") name = "object" + name;
+        auto instance = yocto_instance();
+        instance.name = objname;
+        scene.instances.push_back(instance);
         vertex_map.clear();
         pos_map.clear();
         norm_map.clear();
