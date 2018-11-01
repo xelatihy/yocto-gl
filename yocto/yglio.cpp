@@ -2902,7 +2902,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                     for (auto i = 2; i < verts.size(); i++)
                         surface.quads_positions.push_back(
                             {pos_map.at(verts[0].position),
-                                pos_map.at(verts[i-1].position),
+                                pos_map.at(verts[i - 1].position),
                                 pos_map.at(verts[i].position),
                                 pos_map.at(verts[i].position)});
                 }
@@ -2910,7 +2910,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                     for (auto i = 2; i < verts.size(); i++)
                         surface.quads_texturecoords.push_back(
                             {texcoord_map.at(verts[0].texturecoord),
-                                texcoord_map.at(verts[i-1].texturecoord),
+                                texcoord_map.at(verts[i - 1].texturecoord),
                                 texcoord_map.at(verts[i].texturecoord),
                                 texcoord_map.at(verts[i].texturecoord)});
                 }
@@ -2918,7 +2918,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                     for (auto i = 2; i < verts.size(); i++)
                         surface.quads_normals.push_back(
                             {norm_map.at(verts[0].normal),
-                                norm_map.at(verts[i-1].normal),
+                                norm_map.at(verts[i - 1].normal),
                                 norm_map.at(verts[i].normal),
                                 norm_map.at(verts[i].normal)});
                 }
@@ -3048,11 +3048,11 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     }
 
     // merging quads and triangles
-    for(auto& shape : scene.shapes) {
-        if(shape.triangles.empty() || shape.quads.empty()) continue;
+    for (auto& shape : scene.shapes) {
+        if (shape.triangles.empty() || shape.quads.empty()) continue;
         merge_triangles_and_quads(shape.triangles, shape.quads, false);
     }
-    
+
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
@@ -5250,7 +5250,8 @@ bool serialize_bin_object(
     if (!serialize_bin_value(shape.material, fs, save)) return false;
     if (!serialize_bin_value(shape.subdivision_level, fs, save)) return false;
     if (!serialize_bin_value(shape.catmull_clark, fs, save)) return false;
-    if (!serialize_bin_value(shape.compute_vertex_normals, fs, save)) return false;
+    if (!serialize_bin_value(shape.compute_vertex_normals, fs, save))
+        return false;
     if (!serialize_bin_value(shape.points, fs, save)) return false;
     if (!serialize_bin_value(shape.lines, fs, save)) return false;
     if (!serialize_bin_value(shape.triangles, fs, save)) return false;
@@ -5271,7 +5272,8 @@ bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
     if (!serialize_bin_value(surface.material, fs, save)) return false;
     if (!serialize_bin_value(surface.subdivision_level, fs, save)) return false;
     if (!serialize_bin_value(surface.catmull_clark, fs, save)) return false;
-    if (!serialize_bin_value(surface.compute_vertex_normals, fs, save)) return false;
+    if (!serialize_bin_value(surface.compute_vertex_normals, fs, save))
+        return false;
     if (!serialize_bin_value(surface.quads_positions, fs, save)) return false;
     if (!serialize_bin_value(surface.quads_normals, fs, save)) return false;
     if (!serialize_bin_value(surface.quads_texturecoords, fs, save))
@@ -5697,9 +5699,9 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
         for (auto i = 0; i < verts.size(); i++)
             points.push_back(vertex_map.at(verts[i]));
     };
-    
+
     // load obj
-    if(!load_obj(filename, cb, true, true, flip_texcoord)) return false;
+    if (!load_obj(filename, cb, true, true, flip_texcoord)) return false;
 
     // merging quads and triangles
     merge_triangles_and_quads(triangles, quads, force_triangles);

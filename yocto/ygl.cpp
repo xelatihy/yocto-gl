@@ -1568,12 +1568,14 @@ void build_scene_bvh(bvh_scene& bvh, bool high_quality) {
     auto prims = vector<bvh_prim>();
     if (!bvh.instances.empty()) {
         for (auto& instance : bvh.instances) {
-            if(instance.shape_id >= 0) {
+            if (instance.shape_id >= 0) {
                 auto& sbvh = bvh.shape_bvhs[instance.shape_id];
-                prims.push_back({transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
-            } else if(instance.surface_id >= 0) {
+                prims.push_back(
+                    {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+            } else if (instance.surface_id >= 0) {
                 auto& sbvh = bvh.surface_bvhs[instance.surface_id];
-                prims.push_back({transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+                prims.push_back(
+                    {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
             } else {
                 log_error("empty instance");
             }
@@ -1733,12 +1735,12 @@ void build_embree_bvh(bvh_scene& bvh) {
             auto& instance    = bvh.instances[instance_id];
             auto  embree_geom = rtcNewGeometry(
                 embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
-            if(instance.shape_id >= 0) {
-            rtcSetGeometryInstancedScene(embree_geom,
-                (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
-            } else if(instance.surface_id >= 0) {
-            rtcSetGeometryInstancedScene(embree_geom,
-                (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
+            if (instance.shape_id >= 0) {
+                rtcSetGeometryInstancedScene(embree_geom,
+                    (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
+            } else if (instance.surface_id >= 0) {
+                rtcSetGeometryInstancedScene(embree_geom,
+                    (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
             } else {
                 log_error("empty instance");
             }
@@ -1978,18 +1980,18 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.instances.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
-                if(instance.shape_id >= 0) {
+                if (instance.shape_id >= 0) {
                     if (intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
-                            transform_ray(instance.frame_inverse, ray), find_any,
-                            distance, element_id, element_uv)) {
+                            transform_ray(instance.frame_inverse, ray),
+                            find_any, distance, element_id, element_uv)) {
                         hit         = true;
                         ray.tmax    = distance;
                         instance_id = node.primitive_ids[i];
                     }
-                } else if(instance.surface_id >= 0) {
+                } else if (instance.surface_id >= 0) {
                     if (intersect_shape_bvh(bvh.surface_bvhs[instance.surface_id],
-                                            transform_ray(instance.frame_inverse, ray), find_any,
-                                            distance, element_id, element_uv)) {
+                            transform_ray(instance.frame_inverse, ray),
+                            find_any, distance, element_id, element_uv)) {
                         hit         = true;
                         ray.tmax    = distance;
                         instance_id = node.primitive_ids[i];
@@ -2562,8 +2564,7 @@ make_shape_data make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
     auto fvshp = make_shape_data{};
-    tie(fvshp.quads, fvshp.positions) = weld_quads(qshp.quads,
-        qshp.positions,
+    tie(fvshp.quads, fvshp.positions) = weld_quads(qshp.quads, qshp.positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     return fvshp;
 }
@@ -3753,7 +3754,7 @@ bbox3f compute_surface_bounds(const yocto_surface& surface) {
     for (auto p : surface.positions) bbox += p;
     return bbox;
 }
-    
+
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_scene_bounds(const yocto_scene& scene) {
     auto shape_bbox = vector<bbox3f>(scene.shapes.size());
@@ -3761,13 +3762,15 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
         shape_bbox[shape_id] = compute_shape_bounds(scene.shapes[shape_id]);
     auto surface_bbox = vector<bbox3f>(scene.shapes.size());
     for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++)
-        surface_bbox[surface_id] = compute_surface_bounds(scene.surfaces[surface_id]);
+        surface_bbox[surface_id] = compute_surface_bounds(
+            scene.surfaces[surface_id]);
     auto bbox = invalid_bbox3f;
     for (auto& instance : scene.instances) {
-        if(instance.shape >= 0) {
+        if (instance.shape >= 0) {
             bbox += transform_bbox(instance.frame, shape_bbox[instance.shape]);
-        } else if(instance.surface >= 0) {
-            bbox += transform_bbox(instance.frame, surface_bbox[instance.surface]);
+        } else if (instance.surface >= 0) {
+            bbox += transform_bbox(
+                instance.frame, surface_bbox[instance.surface]);
         }
     }
     return bbox;
