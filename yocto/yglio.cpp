@@ -2904,7 +2904,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                     for (auto i = 2; i < verts.size(); i++)
                         surface.quads_positions.push_back(
                             {pos_map.at(verts[0].position),
-                                pos_map.at(verts[1].position),
+                                pos_map.at(verts[i-1].position),
                                 pos_map.at(verts[i].position),
                                 pos_map.at(verts[i].position)});
                 }
@@ -2912,7 +2912,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                     for (auto i = 2; i < verts.size(); i++)
                         surface.quads_texturecoords.push_back(
                             {texcoord_map.at(verts[0].texturecoord),
-                                texcoord_map.at(verts[1].texturecoord),
+                                texcoord_map.at(verts[i-1].texturecoord),
                                 texcoord_map.at(verts[i].texturecoord),
                                 texcoord_map.at(verts[i].texturecoord)});
                 }
@@ -2920,7 +2920,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                     for (auto i = 2; i < verts.size(); i++)
                         surface.quads_normals.push_back(
                             {norm_map.at(verts[0].normal),
-                                norm_map.at(verts[1].normal),
+                                norm_map.at(verts[i-1].normal),
                                 norm_map.at(verts[i].normal),
                                 norm_map.at(verts[i].normal)});
                 }
@@ -3049,6 +3049,12 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         idx--;
     }
 
+    // merging quads and triangles
+    for(auto& shape : scene.shapes) {
+        if(shape.triangles.empty() || shape.quads.empty()) continue;
+        merge_triangles_and_quads(shape.triangles, shape.quads, false);
+    }
+    
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
