@@ -2755,7 +2755,9 @@ make_shape_data make_suzanne_shape(float size, bool as_triangles);
 make_shape_data make_cube_shape(const vec3f& size, bool as_triangles);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_shape_data make_fvcube_shape(
+make_shape_data make_cube_facevarying_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+make_shape_data make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.

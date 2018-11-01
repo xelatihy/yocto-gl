@@ -2519,7 +2519,7 @@ make_shape_data make_geodesic_sphere_shape(
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-make_shape_data make_fvcube_shape(
+make_shape_data make_cube_facevarying_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
     auto fvshp = make_shape_data{};
@@ -2530,6 +2530,15 @@ make_shape_data make_fvcube_shape(
     fvshp.normals                               = qshp.normals;
     fvshp.quads_texturecoords                   = qshp.quads;
     fvshp.texturecoords                         = qshp.texturecoords;
+    return fvshp;
+}
+make_shape_data make_cube_posonly_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
+    auto qshp  = make_cube_shape(steps, size, uvsize, false);
+    auto fvshp = make_shape_data{};
+    tie(fvshp.quads, fvshp.positions) = weld_quads(qshp.quads,
+        qshp.positions,
+        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     return fvshp;
 }
 

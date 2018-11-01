@@ -31,14 +31,6 @@
             "!!proc": {
                 "type": "grid"
             }
-        },
-        {
-            "name": "uvgrid",
-            "filename": "textures/uvgrid.png",
-            "gamma": 2.2,
-            "!!proc": {
-                "type": "uvgrid"
-            }
         }
     ],
     "materials": [
@@ -54,17 +46,16 @@
         {
             "name": "obj1",
             "diffuse": [
-                1,
-                1,
-                1
+                0.5,
+                0.5,
+                0.7
             ],
             "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "roughness": 0.1,
-            "diffuse_texture": "uvgrid"
+            "roughness": 0.1
         },
         {
             "name": "obj2",
@@ -83,17 +74,16 @@
         {
             "name": "obj3",
             "diffuse": [
-                1,
-                1,
-                1
+                0.5,
+                0.5,
+                0.7
             ],
             "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "roughness": 0.1,
-            "diffuse_texture": "uvgrid"
+            "roughness": 0.1
         },
         {
             "name": "light1",
@@ -129,7 +119,7 @@
             "catmull_clark": true,
             "compute_vertex_normals": true,
             "!!proc": {
-                "type": "fvcube"
+                "type": "cube_posonly"
             }
         },
         {
@@ -147,11 +137,11 @@
             "name": "obj3",
             "filename": "meshes/obj3.ply",
             "material": "obj3",
-            "subdivision_level": 4,
-            "catmull_clark": true,
+            "subdivision_level": 2,
+            "catmull_clark": false,
             "compute_vertex_normals": true,
             "!!proc": {
-                "type": "fvcube"
+                "type": "sphere_geodesic"
             }
         },
         {

@@ -1782,8 +1782,11 @@ bool apply_json_procedural(
             32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
     } else if (type == "suzanne") {
         shape = make_suzanne_shape(js.value("size", 2.0f), as_triangles);
-    } else if (type == "fvcube") {
-        shape = make_fvcube_shape(js.value("steps", vec3i{1, 1, 1}),
+    } else if (type == "cube_facevarying") {
+        shape = make_cube_facevarying_shape(js.value("steps", vec3i{1, 1, 1}),
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
+    } else if (type == "cube_posonly") {
+        shape = make_cube_posonly_shape(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
@@ -1941,8 +1944,11 @@ bool apply_json_procedural(
             32, js.value("size", 2.0f) * 0.8f, 1, as_triangles);
     } else if (type == "suzanne") {
         shape = make_suzanne_shape(js.value("size", 2.0f), as_triangles);
-    } else if (type == "fvcube") {
-        shape = make_fvcube_shape(js.value("steps", vec3i{1, 1, 1}),
+    } else if (type == "cube_facevarying") {
+        shape = make_cube_facevarying_shape(js.value("steps", vec3i{1, 1, 1}),
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
+    } else if (type == "cube_posonly") {
+        shape = make_cube_posonly_shape(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
