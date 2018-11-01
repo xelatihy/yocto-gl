@@ -6053,7 +6053,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
-    if (is_instance_emissive(scene, instance)) return 0;
+    if (!is_instance_emissive(scene, instance)) return 0;
     auto& elements_cdf = instance.shape >= 0 ?
                              lights.shape_elements_cdf[instance.shape] :
                              lights.surface_elements_cdf[instance.surface];
