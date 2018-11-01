@@ -2390,7 +2390,7 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-inline bool operator==(obj_vertex a, obj_vertex b) {
+inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
     return a.position == b.position && a.texturecoord == b.texturecoord &&
            a.normal == b.normal;
 }
@@ -5672,8 +5672,8 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
                 vertex_map.at(verts[2]), vertex_map.at(verts[3])});
         } else {
             for (auto i = 2; i < verts.size(); i++)
-                triangles.push_back({vertex_map.at(verts[0]),
-                    vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+                quads.push_back({vertex_map.at(verts[0]),
+                    vertex_map.at(verts[i - 1]), vertex_map.at(verts[i]), vertex_map.at(verts[i])});
         }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
