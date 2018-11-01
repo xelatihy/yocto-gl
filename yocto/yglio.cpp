@@ -2328,7 +2328,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
         auto filename = normalize_path(dirname + "/" + surface.filename);
         if (!load_facevarying_mesh(filename, surface.quads_positions,
                 surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords)) {
+                surface.positions, surface.normals, surface.texturecoords, surface.quads_materials)) {
             if (!skip_missing) return false;
         }
     }
@@ -2383,7 +2383,7 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
         auto filename = normalize_path(dirname + "/" + surface.filename);
         if (!save_facevarying_mesh(filename, surface.quads_positions,
                 surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords)) {
+                surface.positions, surface.normals, surface.texturecoords, surface.quads_materials)) {
             if (!skip_missing) return false;
         }
     }
@@ -5776,27 +5776,29 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
 void reset_facevarying_mesh_data(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_textuercoords,
     vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords) {
+    vector<vec2f>& texturecoords, vector<int>& quads_materials) {
     quads_positions     = {};
     quads_normals       = {};
     quads_textuercoords = {};
     positions           = {};
     normals             = {};
     texturecoords       = {};
+    quads_materials     = {};
 }
 
 // Load ply mesh
-bool load_facevarying_mesh(const string& filename,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords) {
+bool load_facevarying_mesh(const string& filename, vector<vec4i>& quads_positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<int>& quads_materials) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        return load_obj_facevarying_mesh(filename, quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords);
+        return load_obj_facevarying_mesh(filename, quads_positions,
+            quads_normals, quads_texturecoords, positions, normals,
+            texturecoords, quads_materials);
     } else {
         reset_facevarying_mesh_data(quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords);
+            quads_texturecoords, positions, normals, texturecoords, quads_materials);
         return false;
     }
 }
@@ -5805,11 +5807,13 @@ bool load_facevarying_mesh(const string& filename,
 bool save_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, bool ascii) {
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<int>& quads_materials, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        return save_obj_facevarying_mesh(filename, quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords);
+        return save_obj_facevarying_mesh(filename, quads_positions,
+            quads_normals, quads_texturecoords, positions, normals,
+            texturecoords, quads_materials);
     } else {
         return false;
     }
@@ -5819,10 +5823,11 @@ bool save_facevarying_mesh(const string& filename,
 bool load_obj_facevarying_mesh(const string& filename,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, bool flip_texcoord) {
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    vector<int>& quads_materials, bool flip_texcoord) {
     // clear
     reset_facevarying_mesh_data(quads_positions, quads_normals,
-        quads_texturecoords, positions, normals, texturecoords);
+        quads_texturecoords, positions, normals, texturecoords, quads_materials);
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -5833,6 +5838,10 @@ bool load_obj_facevarying_mesh(const string& filename,
     auto pos_map      = unordered_map<int, int>();
     auto texcoord_map = unordered_map<int, int>();
     auto norm_map     = unordered_map<int, int>();
+
+    // material group
+    auto material_group      = vector<string>();
+    auto current_material_id = -1;
 
     // add vertex
     auto add_fvverts = [&](const vector<obj_vertex>& verts) {
@@ -5886,6 +5895,7 @@ bool load_obj_facevarying_mesh(const string& filename,
                     norm_map.at(verts[1].normal), norm_map.at(verts[2].normal),
                     norm_map.at(verts[3].normal)});
             }
+            quads_materials.push_back(current_material_id);
         } else {
             if (verts[0].position) {
                 for (auto i = 2; i < verts.size(); i++)
@@ -5908,6 +5918,8 @@ bool load_obj_facevarying_mesh(const string& filename,
                         norm_map.at(verts[1].normal), norm_map.at(verts[i].normal),
                         norm_map.at(verts[i].normal)});
             }
+            for (auto i = 2; i < verts.size(); i++)
+                quads_materials.push_back(current_material_id);
         }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
@@ -5916,9 +5928,24 @@ bool load_obj_facevarying_mesh(const string& filename,
     cb.point = [&](const vector<obj_vertex>& verts) {
         log_error("points not supported!");
     };
+    cb.usemtl = [&](const string& name) {
+        auto pos = std::find(material_group.begin(), material_group.end(), name);
+        if (pos == material_group.end()) {
+            material_group.push_back(name);
+            current_material_id = (int)material_group.size() - 1;
+        } else {
+            current_material_id = (int)(pos - material_group.begin());
+        }
+    };
 
-    // load obj
-    return load_obj(filename, cb, true, true, flip_texcoord);
+    // cleanup materials ids
+    if (std::all_of(quads_materials.begin(), quads_materials.end(),
+            [b = quads_materials.front()](auto a) { return a == b; })) {
+                quads_materials.clear();
+            }
+
+        // load obj
+        return load_obj(filename, cb, true, true, flip_texcoord);
 }
 
 // Load ply mesh
@@ -5926,7 +5953,7 @@ bool save_obj_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    bool flip_texcoord) {
+    const vector<int>& quads_materials, bool flip_texcoord) {
     auto fs = open(filename, "wt");
     if (!fs) return false;
 
@@ -5941,7 +5968,12 @@ bool save_obj_facevarying_mesh(const string& filename,
         return obj_vertex{(pi + 1) * fvmask.position,
             (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
     };
+    auto last_material_id = -1;
     for (auto i = 0; i < quads_positions.size(); i++) {
+        if (!quads_materials.empty() && quads_materials[i] != last_material_id) {
+            last_material_id = quads_materials[i];
+            print(fs, "usemtl material_{}\n", last_material_id);
+        }
         auto qp = quads_positions.at(i);
         auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i) :
                                                  vec4i{-1, -1, -1, -1};
