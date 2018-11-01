@@ -5938,14 +5938,17 @@ bool load_obj_facevarying_mesh(const string& filename,
         }
     };
 
+        // load obj
+    if(!load_obj(filename, cb, true, true, flip_texcoord)) return false;
+
     // cleanup materials ids
     if (std::all_of(quads_materials.begin(), quads_materials.end(),
-            [b = quads_materials.front()](auto a) { return a == b; })) {
-                quads_materials.clear();
-            }
-
-        // load obj
-        return load_obj(filename, cb, true, true, flip_texcoord);
+                    [b = quads_materials.front()](auto a) { return a == b; })) {
+        quads_materials.clear();
+    }
+    
+    // done
+    return true;
 }
 
 // Load ply mesh

@@ -245,7 +245,7 @@
     "surfaces": [
         {
             "name": "obj1",
-            "filename": "meshes/obj1.ply",
+            "filename": "meshes/obj1.obj",
             "materials": [ "obj3_1", "obj3_2", "obj3_3", "obj3_4", "obj3_5", "obj3_6" ],
             "subdivision_level": 4,
             "catmull_clark": true,
@@ -256,7 +256,7 @@
         },
         {
             "name": "obj2",
-            "filename": "meshes/obj2.ply",
+            "filename": "meshes/obj2.obj",
             "materials": [ "obj2" ],
             "subdivision_level": 2,
             "catmull_clark": true,
@@ -267,7 +267,7 @@
         },
         {
             "name": "obj3",
-            "filename": "meshes/obj3.ply",
+            "filename": "meshes/obj3.obj",
             "materials": [ "obj3_1", "obj3_2", "obj3_3", "obj3_4", "obj3_5", "obj3_6" ],
             "subdivision_level": 0,
             "catmull_clark": false,
