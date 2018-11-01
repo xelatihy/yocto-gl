@@ -2739,7 +2739,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
             return scene.shapes[instance.shape].positions.empty();
         if (instance.surface >= 0)
             return scene.surfaces[instance.surface].positions.empty();
-        return false;
+        return true;
     };
     auto add_instance = [&](yocto_scene& scene, const string& objname) {
         if (scene.shapes.empty() || objname != scene.instances.back().name ||
