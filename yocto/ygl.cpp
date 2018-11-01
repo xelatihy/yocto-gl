@@ -3712,14 +3712,29 @@ bbox3f compute_shape_bounds(const yocto_shape& shape) {
     return bbox;
 }
 
+// Computes a surface bounding box.
+bbox3f compute_surface_bounds(const yocto_surface& surface) {
+    auto bbox = invalid_bbox3f;
+    for (auto p : surface.positions) bbox += p;
+    return bbox;
+}
+    
 // Updates the scene and scene's instances bounding boxes
 bbox3f compute_scene_bounds(const yocto_scene& scene) {
-    auto sbbox = vector<bbox3f>();
+    auto shape_bbox = vector<bbox3f>(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
-        sbbox[shape_id] = compute_shape_bounds(scene.shapes[shape_id]);
+        shape_bbox[shape_id] = compute_shape_bounds(scene.shapes[shape_id]);
+    auto surface_bbox = vector<bbox3f>(scene.shapes.size());
+    for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++)
+        surface_bbox[surface_id] = compute_surface_bounds(scene.surfaces[surface_id]);
     auto bbox = invalid_bbox3f;
-    for (auto& instance : scene.instances)
-        bbox += transform_bbox(instance.frame, sbbox[instance.shape]);
+    for (auto& instance : scene.instances) {
+        if(instance.shape >= 0) {
+            bbox += transform_bbox(instance.frame, shape_bbox[instance.shape]);
+        } else if(instance.surface >= 0) {
+            bbox += transform_bbox(instance.frame, surface_bbox[instance.surface]);
+        }
+    }
     return bbox;
 }
 
