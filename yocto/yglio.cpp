@@ -5672,8 +5672,8 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
                 vertex_map.at(verts[2]), vertex_map.at(verts[3])});
         } else {
             for (auto i = 2; i < verts.size(); i++)
-                quads.push_back({vertex_map.at(verts[0]),
-                    vertex_map.at(verts[i - 1]), vertex_map.at(verts[i]), vertex_map.at(verts[i])});
+                triangles.push_back({vertex_map.at(verts[0]),
+                    vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
         }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
@@ -5687,12 +5687,15 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
         for (auto i = 0; i < verts.size(); i++)
             points.push_back(vertex_map.at(verts[i]));
     };
+    
+    // load obj
+    if(!load_obj(filename, cb, true, true, flip_texcoord)) return false;
 
     // merging quads and triangles
     merge_triangles_and_quads(triangles, quads, force_triangles);
 
-    // load obj
-    return load_obj(filename, cb, true, true, flip_texcoord);
+    // done
+    return true;
 }
 
 // Load ply mesh
