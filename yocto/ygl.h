@@ -2714,6 +2714,7 @@ struct make_shape_data {
     vector<vec4i> quads_positions;
     vector<vec4i> quads_normals;
     vector<vec4i> quads_texturecoords;
+    vector<int>   quads_materials;
 };
 
 // Make examples shapes that are not watertight (besides quads).
@@ -2758,6 +2759,8 @@ make_shape_data make_cube_shape(const vec3f& size, bool as_triangles);
 make_shape_data make_cube_facevarying_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 make_shape_data make_cube_posonly_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+make_shape_data make_cube_multiplematerials_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
@@ -3238,9 +3241,9 @@ struct yocto_shape {
 // texture coordinates.
 struct yocto_surface {
     // shape data
-    string name     = "";
-    string filename = "";
-    vector<int>    materials = {};
+    string      name      = "";
+    string      filename  = "";
+    vector<int> materials = {};
 
     // subdision properties
     int  subdivision_level      = 0;
@@ -3251,14 +3254,12 @@ struct yocto_surface {
     vector<vec4i> quads_positions     = {};
     vector<vec4i> quads_normals       = {};
     vector<vec4i> quads_texturecoords = {};
+    vector<int>   quads_materials     = {};
 
     // vertex data
     vector<vec3f> positions     = {};
     vector<vec3f> normals       = {};
     vector<vec2f> texturecoords = {};
-
-    // group ids
-    vector<int> material_ids = {};
 };
 
 // Instance of a visible object in the scene. For now, this can be either
