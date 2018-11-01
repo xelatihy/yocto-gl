@@ -1733,8 +1733,15 @@ void build_embree_bvh(bvh_scene& bvh) {
             auto& instance    = bvh.instances[instance_id];
             auto  embree_geom = rtcNewGeometry(
                 embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+            if(instance.shape_id >= 0) {
             rtcSetGeometryInstancedScene(embree_geom,
                 (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
+            } else if(instance.surface_id >= 0) {
+            rtcSetGeometryInstancedScene(embree_geom,
+                (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
+            } else {
+                log_error("empty instance");
+            }
             rtcSetGeometryTransform(embree_geom, 0,
                 RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
             rtcCommitGeometry(embree_geom);
