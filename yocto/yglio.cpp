@@ -5248,6 +5248,9 @@ bool serialize_bin_object(
     if (!serialize_bin_value(shape.name, fs, save)) return false;
     if (!serialize_bin_value(shape.filename, fs, save)) return false;
     if (!serialize_bin_value(shape.material, fs, save)) return false;
+    if (!serialize_bin_value(shape.subdivision_level, fs, save)) return false;
+    if (!serialize_bin_value(shape.catmull_clark, fs, save)) return false;
+    if (!serialize_bin_value(shape.compute_vertex_normals, fs, save)) return false;
     if (!serialize_bin_value(shape.points, fs, save)) return false;
     if (!serialize_bin_value(shape.lines, fs, save)) return false;
     if (!serialize_bin_value(shape.triangles, fs, save)) return false;
@@ -5266,6 +5269,9 @@ bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
     if (!serialize_bin_value(surface.name, fs, save)) return false;
     if (!serialize_bin_value(surface.filename, fs, save)) return false;
     if (!serialize_bin_value(surface.material, fs, save)) return false;
+    if (!serialize_bin_value(surface.subdivision_level, fs, save)) return false;
+    if (!serialize_bin_value(surface.catmull_clark, fs, save)) return false;
+    if (!serialize_bin_value(surface.compute_vertex_normals, fs, save)) return false;
     if (!serialize_bin_value(surface.quads_positions, fs, save)) return false;
     if (!serialize_bin_value(surface.quads_normals, fs, save)) return false;
     if (!serialize_bin_value(surface.quads_texturecoords, fs, save))
