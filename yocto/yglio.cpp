@@ -1984,7 +1984,7 @@ bool serialize_json_object(
     if (!serialize_json_value(js, val.filename, "filename", def.filename, save))
         return false;
     if (!serialize_json_objref(
-            js, val.material, "material", scene.materials, save))
+            js, val.materials, "materials", scene.materials, save))
         return false;
     if (!serialize_json_value(js, val.subdivision_level, "subdivision_level",
             def.subdivision_level, save))
@@ -2865,7 +2865,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                     string::npos) {
                 scene.surfaces.push_back({});
                 scene.surfaces.back().name     = scene.instances.back().name;
-                scene.surfaces.back().material = get_material_id(matname);
+                scene.surfaces.back().materials.push_back(get_material_id(matname));
                 scene.instances.back().surface = (int)scene.surfaces.size() - 1;
             } else {
                 scene.shapes.push_back({});
@@ -3202,8 +3202,8 @@ bool save_obj(const string& filename, const yocto_scene& scene,
         if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
             print(fs, "o {}\n", instance.name);
-            if (surface.material >= 0)
-                print(fs, "usemtl {}\n", scene.materials[surface.material].name);
+            if (!surface.materials.empty() && surface.material_ids.empty())
+                print(fs, "usemtl {}\n", scene.materials[surface.materials.front()].name);
             if (instance.frame == identity_frame3f) {
                 for (auto& p : surface.positions) print(fs, "v {}\n", p);
                 for (auto& n : surface.normals) print(fs, "vn {}\n", n);
@@ -3221,7 +3221,12 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
+            auto last_material_id = -1;
             for (auto i = 0; i < surface.quads_positions.size(); i++) {
+                if (!surface.material_ids.empty() && surface.material_ids[i] != last_material_id) {
+                    last_material_id = surface.material_ids[i];
+                    print(fs, "usemtl {}\n", scene.materials[surface.materials[last_material_id]].name);
+                }
                 if (!surface.texturecoords.empty() && surface.normals.empty()) {
                     auto vert = [offset](int ip, int it) {
                         return obj_vertex{ip + offset.position + 1,
@@ -5269,7 +5274,7 @@ bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
     file_stream& fs, bool save) {
     if (!serialize_bin_value(surface.name, fs, save)) return false;
     if (!serialize_bin_value(surface.filename, fs, save)) return false;
-    if (!serialize_bin_value(surface.material, fs, save)) return false;
+    if (!serialize_bin_value(surface.materials, fs, save)) return false;
     if (!serialize_bin_value(surface.subdivision_level, fs, save)) return false;
     if (!serialize_bin_value(surface.catmull_clark, fs, save)) return false;
     if (!serialize_bin_value(surface.compute_vertex_normals, fs, save))

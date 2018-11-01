@@ -3988,7 +3988,7 @@ void tesselate_shapes_and_surfaces(yocto_scene& scene) {
         shape = tesselated_shape;
     }
     for (auto& surface : scene.surfaces) {
-        auto& material = scene.materials[surface.material];
+        auto& material = scene.materials[surface.materials.front()];
         if (!surface.subdivision_level && material.displacement_texture < 0)
             continue;
         auto tesselated_surface = surface;
@@ -4393,7 +4393,7 @@ void add_missing_materials(yocto_scene& scene) {
         shape.material = material_id;
     }
     for (auto& surface : scene.surfaces) {
-        if (surface.material >= 0) continue;
+        if (!surface.materials.empty()) continue;
         if (material_id < 0) {
             auto material    = yocto_material{};
             material.name    = "<default>";
@@ -4401,7 +4401,7 @@ void add_missing_materials(yocto_scene& scene) {
             scene.materials.push_back(material);
             material_id = (int)scene.materials.size() - 1;
         }
-        surface.material = material_id;
+        surface.materials.push_back(material_id);
     }
 }
 
@@ -4751,13 +4751,19 @@ vec3f evaluate_surface_shading_normal(const yocto_scene& scene,
     const vec3f& outgoing) {
     if (!surface.quads_positions.empty()) {
         auto  normal = evaluate_surface_normal(surface, element_id, element_uv);
-        auto& material = scene.materials[surface.material];
+        auto& material = scene.materials[get_surface_element_material(surface, element_id)];
         if (material.double_sided && dot(normal, outgoing) < 0)
             normal = -normal;
         return normal;
     } else {
         return outgoing;
     }
+}
+// Per-element material.
+int get_surface_element_material(const yocto_surface& surface, int element_id) {
+    if(surface.materials.empty()) return -1;
+    if(surface.material_ids.empty()) return surface.materials.front();
+    return surface.materials[surface.material_ids[element_id]];
 }
 
 // Instance values interpolated using barycentric coordinates.
@@ -4857,16 +4863,6 @@ vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
 }
 
 // Material values
-int get_instance_material_id(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    if (instance.shape >= 0) {
-        return scene.shapes[instance.shape].material;
-    } else if (instance.surface >= 0) {
-        return scene.surfaces[instance.surface].material;
-    } else {
-        return -1;
-    }
-}
 vec3f evaluate_instance_emission(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
     if (instance.shape >= 0) {
@@ -4877,7 +4873,7 @@ vec3f evaluate_instance_emission(const yocto_scene& scene,
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
         return evaluate_material_emission(scene,
-            scene.materials[surface.material],
+            scene.materials[get_surface_element_material(surface, element_id)],
             evaluate_surface_texturecoord(surface, element_id, element_uv),
             {1, 1, 1, 1});
     } else {
@@ -4893,7 +4889,7 @@ microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
             evaluate_shape_color(shape, element_id, element_uv));
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
-        return evaluate_material_brdf(scene, scene.materials[surface.material],
+        return evaluate_material_brdf(scene, scene.materials[get_surface_element_material(surface, element_id)],
             evaluate_surface_texturecoord(surface, element_id, element_uv),
             {1, 1, 1, 1});
     } else {
@@ -4909,7 +4905,7 @@ float evaluate_instance_opacity(const yocto_scene& scene,
             evaluate_shape_color(shape, element_id, element_uv));
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
-        return evaluate_material_opacity(scene, scene.materials[surface.material],
+        return evaluate_material_opacity(scene, scene.materials[get_surface_element_material(surface, element_id)],
             evaluate_surface_texturecoord(surface, element_id, element_uv),
             {1, 1, 1, 1});
     } else {
@@ -4923,7 +4919,9 @@ bool is_instance_emissive(
         return scene.materials[shape.material].emission != zero3f;
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
-        return scene.materials[surface.material].emission != zero3f;
+        for(auto material_id : surface.materials) 
+        if(scene.materials[material_id].emission != zero3f) return true;
+        return false;
     } else {
         return false;
     }

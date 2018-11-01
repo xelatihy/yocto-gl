@@ -568,7 +568,7 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
         // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
     } else if (instance.surface >= 0) {
         auto& surface  = scene.surfaces[instance.surface];
-        auto& material = scene.materials[surface.material];
+        auto& material = scene.materials[surface.materials.at(0)];
 
         auto xform = frame_to_mat(instance.frame);
 

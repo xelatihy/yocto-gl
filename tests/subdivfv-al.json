@@ -148,7 +148,7 @@
         {
             "name": "obj1",
             "filename": "meshes/obj1.ply",
-            "material": "obj1",
+            "materials": [ "obj1" ],
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_vertex_normals": true,
@@ -159,7 +159,7 @@
         {
             "name": "obj2",
             "filename": "meshes/obj2.ply",
-            "material": "obj2",
+            "materials": [ "obj2" ],
             "subdivision_level": 2,
             "catmull_clark": true,
             "compute_vertex_normals": true,
@@ -170,7 +170,7 @@
         {
             "name": "obj3",
             "filename": "meshes/obj3.ply",
-            "material": "obj3",
+            "materials": [ "obj3" ],
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_vertex_normals": true,

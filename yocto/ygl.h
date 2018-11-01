@@ -3240,7 +3240,7 @@ struct yocto_surface {
     // shape data
     string name     = "";
     string filename = "";
-    int    material = -1;
+    vector<int>    materials = {};
 
     // subdision properties
     int  subdivision_level      = 0;
@@ -3256,6 +3256,9 @@ struct yocto_surface {
     vector<vec3f> positions     = {};
     vector<vec3f> normals       = {};
     vector<vec2f> texturecoords = {};
+
+    // group ids
+    vector<int> material_ids = {};
 };
 
 // Instance of a visible object in the scene. For now, this can be either
@@ -3442,13 +3445,15 @@ float             sample_shape_element_pdf(const yocto_shape& shape,
 
 // Surface values interpolated using barycentric coordinates.
 vec3f evaluate_surface_position(
-    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 vec3f evaluate_surface_normal(
-    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 vec2f evaluate_surface_texturecoord(
-    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 // Surface element values.
-vec3f evaluate_surface_element_normal(const yocto_shape& shape, int element_id);
+vec3f evaluate_surface_element_normal(const yocto_surface& shape, int element_id);
+// Per-element material.
+int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
 vector<float>     compute_surface_elements_cdf(const yocto_surface& surface);
