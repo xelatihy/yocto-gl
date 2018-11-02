@@ -1947,6 +1947,10 @@ bool apply_json_procedural(
     } else if (type == "cube_facevarying") {
         shape = make_cube_facevarying_shape(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
+    } else if (type == "cube_multiplematerials") {
+        shape = make_cube_multiplematerials_shape(
+            js.value("steps", vec3i{1, 1, 1}), js.value("size", vec3f{2, 2, 2}),
+            js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_posonly") {
         shape = make_cube_posonly_shape(js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
@@ -1968,6 +1972,7 @@ bool apply_json_procedural(
     val.quads_positions     = shape.quads_positions;
     val.quads_normals       = shape.quads_normals;
     val.quads_texturecoords = shape.quads_texturecoords;
+    val.quads_materials     = shape.quads_materials;
     val.positions           = shape.positions;
     val.normals             = shape.normals;
     val.texturecoords       = shape.texturecoords;
@@ -1984,7 +1989,7 @@ bool serialize_json_object(
     if (!serialize_json_value(js, val.filename, "filename", def.filename, save))
         return false;
     if (!serialize_json_objref(
-            js, val.material, "material", scene.materials, save))
+            js, val.materials, "materials", scene.materials, save))
         return false;
     if (!serialize_json_value(js, val.subdivision_level, "subdivision_level",
             def.subdivision_level, save))
@@ -2004,6 +2009,9 @@ bool serialize_json_object(
             return false;
         if (!serialize_json_value(js, val.quads_texturecoords,
                 "quads_texturecoords", def.quads_texturecoords, save))
+            return false;
+        if (!serialize_json_value(js, val.quads_materials, "quads_materials",
+                def.quads_materials, save))
             return false;
         if (!serialize_json_value(
                 js, val.positions, "positions", def.positions, save))
@@ -2320,7 +2328,8 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
         auto filename = normalize_path(dirname + "/" + surface.filename);
         if (!load_facevarying_mesh(filename, surface.quads_positions,
                 surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords)) {
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials)) {
             if (!skip_missing) return false;
         }
     }
@@ -2375,7 +2384,8 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
         auto filename = normalize_path(dirname + "/" + surface.filename);
         if (!save_facevarying_mesh(filename, surface.quads_positions,
                 surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords)) {
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials)) {
             if (!skip_missing) return false;
         }
     }
@@ -2864,8 +2874,9 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                 scene.instances.back().name.find("[ygl::facevarying]") !=
                     string::npos) {
                 scene.surfaces.push_back({});
-                scene.surfaces.back().name     = scene.instances.back().name;
-                scene.surfaces.back().material = get_material_id(matname);
+                scene.surfaces.back().name = scene.instances.back().name;
+                scene.surfaces.back().materials.push_back(
+                    get_material_id(matname));
                 scene.instances.back().surface = (int)scene.surfaces.size() - 1;
             } else {
                 scene.shapes.push_back({});
@@ -3202,8 +3213,9 @@ bool save_obj(const string& filename, const yocto_scene& scene,
         if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
             print(fs, "o {}\n", instance.name);
-            if (surface.material >= 0)
-                print(fs, "usemtl {}\n", scene.materials[surface.material].name);
+            if (!surface.materials.empty() && surface.quads_materials.empty())
+                print(fs, "usemtl {}\n",
+                    scene.materials[surface.materials.front()].name);
             if (instance.frame == identity_frame3f) {
                 for (auto& p : surface.positions) print(fs, "v {}\n", p);
                 for (auto& n : surface.normals) print(fs, "vn {}\n", n);
@@ -3221,7 +3233,14 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                     print(fs, "vt {}\n",
                         vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
+            auto last_material_id = -1;
             for (auto i = 0; i < surface.quads_positions.size(); i++) {
+                if (!surface.quads_materials.empty() &&
+                    surface.quads_materials[i] != last_material_id) {
+                    last_material_id = surface.quads_materials[i];
+                    print(fs, "usemtl {}\n",
+                        scene.materials[surface.materials[last_material_id]].name);
+                }
                 if (!surface.texturecoords.empty() && surface.normals.empty()) {
                     auto vert = [offset](int ip, int it) {
                         return obj_vertex{ip + offset.position + 1,
@@ -5269,7 +5288,7 @@ bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
     file_stream& fs, bool save) {
     if (!serialize_bin_value(surface.name, fs, save)) return false;
     if (!serialize_bin_value(surface.filename, fs, save)) return false;
-    if (!serialize_bin_value(surface.material, fs, save)) return false;
+    if (!serialize_bin_value(surface.materials, fs, save)) return false;
     if (!serialize_bin_value(surface.subdivision_level, fs, save)) return false;
     if (!serialize_bin_value(surface.catmull_clark, fs, save)) return false;
     if (!serialize_bin_value(surface.compute_vertex_normals, fs, save))
@@ -5278,6 +5297,7 @@ bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
     if (!serialize_bin_value(surface.quads_normals, fs, save)) return false;
     if (!serialize_bin_value(surface.quads_texturecoords, fs, save))
         return false;
+    if (!serialize_bin_value(surface.quads_materials, fs, save)) return false;
     if (!serialize_bin_value(surface.positions, fs, save)) return false;
     if (!serialize_bin_value(surface.normals, fs, save)) return false;
     if (!serialize_bin_value(surface.texturecoords, fs, save)) return false;
@@ -5758,27 +5778,30 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
 void reset_facevarying_mesh_data(vector<vec4i>& quads_positions,
     vector<vec4i>& quads_normals, vector<vec4i>& quads_textuercoords,
     vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords) {
+    vector<vec2f>& texturecoords, vector<int>& quads_materials) {
     quads_positions     = {};
     quads_normals       = {};
     quads_textuercoords = {};
     positions           = {};
     normals             = {};
     texturecoords       = {};
+    quads_materials     = {};
 }
 
 // Load ply mesh
-bool load_facevarying_mesh(const string& filename,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords) {
+bool load_facevarying_mesh(const string& filename, vector<vec4i>& quads_positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<int>& quads_materials) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        return load_obj_facevarying_mesh(filename, quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords);
+        return load_obj_facevarying_mesh(filename, quads_positions,
+            quads_normals, quads_texturecoords, positions, normals,
+            texturecoords, quads_materials);
     } else {
         reset_facevarying_mesh_data(quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords);
+            quads_texturecoords, positions, normals, texturecoords,
+            quads_materials);
         return false;
     }
 }
@@ -5787,11 +5810,13 @@ bool load_facevarying_mesh(const string& filename,
 bool save_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords, bool ascii) {
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<int>& quads_materials, bool ascii) {
     auto ext = get_extension(filename);
     if (ext == "obj" || ext == "OBJ") {
-        return save_obj_facevarying_mesh(filename, quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords);
+        return save_obj_facevarying_mesh(filename, quads_positions,
+            quads_normals, quads_texturecoords, positions, normals,
+            texturecoords, quads_materials);
     } else {
         return false;
     }
@@ -5801,10 +5826,11 @@ bool save_facevarying_mesh(const string& filename,
 bool load_obj_facevarying_mesh(const string& filename,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, bool flip_texcoord) {
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    vector<int>& quads_materials, bool flip_texcoord) {
     // clear
     reset_facevarying_mesh_data(quads_positions, quads_normals,
-        quads_texturecoords, positions, normals, texturecoords);
+        quads_texturecoords, positions, normals, texturecoords, quads_materials);
 
     // obj vertices
     auto opos      = std::deque<vec3f>();
@@ -5815,6 +5841,10 @@ bool load_obj_facevarying_mesh(const string& filename,
     auto pos_map      = unordered_map<int, int>();
     auto texcoord_map = unordered_map<int, int>();
     auto norm_map     = unordered_map<int, int>();
+
+    // material group
+    auto material_group      = vector<string>();
+    auto current_material_id = -1;
 
     // add vertex
     auto add_fvverts = [&](const vector<obj_vertex>& verts) {
@@ -5868,6 +5898,7 @@ bool load_obj_facevarying_mesh(const string& filename,
                     norm_map.at(verts[1].normal), norm_map.at(verts[2].normal),
                     norm_map.at(verts[3].normal)});
             }
+            quads_materials.push_back(current_material_id);
         } else {
             if (verts[0].position) {
                 for (auto i = 2; i < verts.size(); i++)
@@ -5890,6 +5921,8 @@ bool load_obj_facevarying_mesh(const string& filename,
                         norm_map.at(verts[1].normal), norm_map.at(verts[i].normal),
                         norm_map.at(verts[i].normal)});
             }
+            for (auto i = 2; i < verts.size(); i++)
+                quads_materials.push_back(current_material_id);
         }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
@@ -5898,9 +5931,27 @@ bool load_obj_facevarying_mesh(const string& filename,
     cb.point = [&](const vector<obj_vertex>& verts) {
         log_error("points not supported!");
     };
+    cb.usemtl = [&](const string& name) {
+        auto pos = std::find(material_group.begin(), material_group.end(), name);
+        if (pos == material_group.end()) {
+            material_group.push_back(name);
+            current_material_id = (int)material_group.size() - 1;
+        } else {
+            current_material_id = (int)(pos - material_group.begin());
+        }
+    };
 
     // load obj
-    return load_obj(filename, cb, true, true, flip_texcoord);
+    if (!load_obj(filename, cb, true, true, flip_texcoord)) return false;
+
+    // cleanup materials ids
+    if (std::all_of(quads_materials.begin(), quads_materials.end(),
+            [b = quads_materials.front()](auto a) { return a == b; })) {
+        quads_materials.clear();
+    }
+
+    // done
+    return true;
 }
 
 // Load ply mesh
@@ -5908,7 +5959,7 @@ bool save_obj_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    bool flip_texcoord) {
+    const vector<int>& quads_materials, bool flip_texcoord) {
     auto fs = open(filename, "wt");
     if (!fs) return false;
 
@@ -5923,7 +5974,12 @@ bool save_obj_facevarying_mesh(const string& filename,
         return obj_vertex{(pi + 1) * fvmask.position,
             (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
     };
+    auto last_material_id = -1;
     for (auto i = 0; i < quads_positions.size(); i++) {
+        if (!quads_materials.empty() && quads_materials[i] != last_material_id) {
+            last_material_id = quads_materials[i];
+            print(fs, "usemtl material_{}\n", last_material_id);
+        }
         auto qp = quads_positions.at(i);
         auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i) :
                                                  vec4i{-1, -1, -1, -1};

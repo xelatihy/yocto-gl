@@ -1,5 +1,5 @@
 {
-    "name": "subdivfv-al",
+    "name": "multimat-al",
     "cameras": [
         {
             "name": "cam",
@@ -38,6 +38,14 @@
             "gamma": 2.2,
             "!!proc": {
                 "type": "uvgrid"
+            }
+        },
+        {
+            "name": "grid",
+            "filename": "textures/grid.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid"
             }
         }
     ],
@@ -96,6 +104,96 @@
             "diffuse_texture": "uvgrid"
         },
         {
+            "name": "obj3_1",
+            "diffuse": [
+                1,
+                0.25,
+                0.25
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "grid"
+        },
+        {
+            "name": "obj3_2",
+            "diffuse": [
+                0.25,
+                1,
+                0.25
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "grid"
+        },
+        {
+            "name": "obj3_3",
+            "diffuse": [
+                0.25,
+                0.25,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "grid"
+        },
+        {
+            "name": "obj3_4",
+            "diffuse": [
+                1,
+                1,
+                0.25
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "grid"
+        },
+        {
+            "name": "obj3_5",
+            "diffuse": [
+                1,
+                0.25,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "grid"
+        },
+        {
+            "name": "obj3_6",
+            "diffuse": [
+                0.25,
+                1,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "grid"
+        },
+        {
             "name": "light1",
             "emission": [
                 20,
@@ -147,18 +245,18 @@
     "surfaces": [
         {
             "name": "obj1",
-            "filename": "meshes/obj1.ply",
-            "materials": [ "obj1" ],
+            "filename": "meshes/obj1.obj",
+            "materials": [ "obj3_1", "obj3_2", "obj3_3", "obj3_4", "obj3_5", "obj3_6" ],
             "subdivision_level": 4,
             "catmull_clark": true,
             "compute_vertex_normals": true,
             "!!proc": {
-                "type": "cube_facevarying"
+                "type": "cube_multiplematerials"
             }
         },
         {
             "name": "obj2",
-            "filename": "meshes/obj2.ply",
+            "filename": "meshes/obj2.obj",
             "materials": [ "obj2" ],
             "subdivision_level": 2,
             "catmull_clark": true,
@@ -169,13 +267,13 @@
         },
         {
             "name": "obj3",
-            "filename": "meshes/obj3.ply",
-            "materials": [ "obj3" ],
-            "subdivision_level": 4,
-            "catmull_clark": true,
-            "compute_vertex_normals": true,
+            "filename": "meshes/obj3.obj",
+            "materials": [ "obj3_1", "obj3_2", "obj3_3", "obj3_4", "obj3_5", "obj3_6" ],
+            "subdivision_level": 0,
+            "catmull_clark": false,
+            "compute_vertex_normals": false,
             "!!proc": {
-                "type": "cube_facevarying"
+                "type": "cube_multiplematerials"
             }
         }
     ],

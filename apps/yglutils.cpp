@@ -130,6 +130,8 @@ gltexture make_gltexture(
     auto texture = gltexture();
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.tid);
+    texture.width  = img.width;
+    texture.height = img.height;
     glBindTexture(GL_TEXTURE_2D, texture.tid);
     if (as_float) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.width, img.height, 0,
@@ -181,6 +183,8 @@ gltexture make_gltexture(
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.tid);
     glBindTexture(GL_TEXTURE_2D, texture.tid);
+    texture.width  = img.width;
+    texture.height = img.height;
     if (as_srgb) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, img.width, img.height, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, img.pixels.data());
@@ -227,7 +231,9 @@ void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
 
 template <typename T>
 glarraybuffer make_glarraybuffer_impl(const vector<T>& data, bool dynamic) {
-    auto buf = glarraybuffer{};
+    auto buf      = glarraybuffer{};
+    buf.num       = data.size();
+    buf.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &buf.bid);
     glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
@@ -252,7 +258,9 @@ glarraybuffer make_glarraybuffer(const vector<vec4f>& data, bool dynamic) {
 
 template <typename T>
 glelementbuffer make_glelementbuffer_impl(const vector<T>& data, bool dynamic) {
-    auto buf = glelementbuffer{};
+    auto buf      = glelementbuffer{};
+    buf.num       = data.size();
+    buf.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &buf.bid);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);

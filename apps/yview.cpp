@@ -35,8 +35,9 @@ struct glshape {
     glarraybuffer gl_pos = {}, gl_norm = {}, gl_texcoord = {}, gl_color = {},
                   gl_tangsp   = {};
     glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {},
-                    gl_quads  = {};
-    int num_facevarying_quads = 0;
+                    gl_quads                      = {};
+    vector<glelementbuffer> gl_split_quads        = {};
+    int                     num_facevarying_quads = 0;
 };
 
 struct draw_glstate {
@@ -473,6 +474,7 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
     const yocto_instance& instance, bool highlighted, bool eyelight, bool edges) {
     if (instance.shape >= 0) {
         auto& shape    = scene.shapes[instance.shape];
+        auto& vbos     = state.shapes.at(instance.shape);
         auto& material = scene.materials[shape.material];
 
         auto xform = frame_to_mat(instance.frame);
@@ -521,7 +523,6 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
                 gltexture{},
             5);
 
-        auto& vbos = state.shapes.at(instance.shape);
         set_gluniform(state.prog, "elem_faceted", (int)shape.normals.empty());
         set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
         set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
@@ -531,21 +532,21 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
         set_glvertexattrib(
             state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
-        if (!shape.points.empty()) {
+        if (vbos.gl_points) {
             set_gluniform(state.prog, "elem_type", 1);
-            draw_glpoints(vbos.gl_points, shape.points.size());
+            draw_glpoints(vbos.gl_points, vbos.gl_points.num);
         }
-        if (!shape.lines.empty()) {
+        if (vbos.gl_lines) {
             set_gluniform(state.prog, "elem_type", 2);
-            draw_gllines(vbos.gl_lines, shape.lines.size());
+            draw_gllines(vbos.gl_lines, vbos.gl_lines.num);
         }
-        if (!shape.triangles.empty()) {
+        if (vbos.gl_triangles) {
             set_gluniform(state.prog, "elem_type", 3);
-            draw_gltriangles(vbos.gl_triangles, shape.triangles.size());
+            draw_gltriangles(vbos.gl_triangles, vbos.gl_triangles.num);
         }
-        if (!shape.quads.empty()) {
+        if (vbos.gl_quads) {
             set_gluniform(state.prog, "elem_type", 3);
-            draw_gltriangles(vbos.gl_quads, shape.quads.size() * 2);
+            draw_gltriangles(vbos.gl_quads, vbos.gl_quads.num);
         }
 
 #if 0
@@ -567,68 +568,76 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
 
         // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
     } else if (instance.surface >= 0) {
-        auto& surface  = scene.surfaces[instance.surface];
-        auto& material = scene.materials[surface.material];
+        auto& surface = scene.surfaces[instance.surface];
+        auto& vbos    = state.surfaces.at(instance.surface);
+        for (auto group_id = 0; group_id < vbos.gl_split_quads.size();
+             group_id++) {
+            auto& material = scene.materials[surface.materials.at(group_id)];
 
-        auto xform = frame_to_mat(instance.frame);
+            auto xform = frame_to_mat(instance.frame);
 
-        set_gluniform(state.prog, "shape_xform", xform);
-        set_gluniform(state.prog, "shape_normal_offset", 0.0f);
+            set_gluniform(state.prog, "shape_xform", xform);
+            set_gluniform(state.prog, "shape_normal_offset", 0.0f);
 
-        auto mtype = 1;
-        if (material.base_metallic) mtype = 2;
-        if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
-        set_gluniform(state.prog, "mat_type", mtype);
-        set_gluniform(state.prog, "mat_ke", material.emission);
-        set_gluniform(state.prog, "mat_kd", material.diffuse);
-        set_gluniform(state.prog, "mat_ks", material.specular);
-        set_gluniform(state.prog, "mat_rs", material.roughness);
-        set_gluniform(state.prog, "mat_op", material.opacity);
-        set_gluniform(state.prog, "mat_double_sided", (int)material.double_sided);
-        set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
-            material.emission_texture >= 0 ?
-                state.textures.at(material.emission_texture) :
-                gltexture{},
-            0);
-        set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
-            material.diffuse_texture >= 0 ?
-                state.textures.at(material.diffuse_texture) :
-                gltexture{},
-            1);
-        set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
-            material.specular_texture >= 0 ?
-                state.textures.at(material.specular_texture) :
-                gltexture{},
-            2);
-        set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
-            material.roughness_texture >= 0 ?
-                state.textures.at(material.roughness_texture) :
-                gltexture{},
-            3);
-        set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
-            material.opacity_texture >= 0 ?
-                state.textures.at(material.opacity_texture) :
-                gltexture{},
-            4);
-        set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
-            material.normal_texture >= 0 ?
-                state.textures.at(material.normal_texture) :
-                gltexture{},
-            5);
+            auto mtype = 1;
+            if (material.base_metallic) mtype = 2;
+            if (material.gltf_textures)
+                mtype = (material.base_metallic) ? 2 : 3;
+            set_gluniform(state.prog, "mat_type", mtype);
+            set_gluniform(state.prog, "mat_ke", material.emission);
+            set_gluniform(state.prog, "mat_kd", material.diffuse);
+            set_gluniform(state.prog, "mat_ks", material.specular);
+            set_gluniform(state.prog, "mat_rs", material.roughness);
+            set_gluniform(state.prog, "mat_op", material.opacity);
+            set_gluniform(
+                state.prog, "mat_double_sided", (int)material.double_sided);
+            set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
+                material.emission_texture >= 0 ?
+                    state.textures.at(material.emission_texture) :
+                    gltexture{},
+                0);
+            set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
+                material.diffuse_texture >= 0 ?
+                    state.textures.at(material.diffuse_texture) :
+                    gltexture{},
+                1);
+            set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
+                material.specular_texture >= 0 ?
+                    state.textures.at(material.specular_texture) :
+                    gltexture{},
+                2);
+            set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
+                material.roughness_texture >= 0 ?
+                    state.textures.at(material.roughness_texture) :
+                    gltexture{},
+                3);
+            set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
+                material.opacity_texture >= 0 ?
+                    state.textures.at(material.opacity_texture) :
+                    gltexture{},
+                4);
+            set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
+                material.normal_texture >= 0 ?
+                    state.textures.at(material.normal_texture) :
+                    gltexture{},
+                5);
 
-        auto& vbos = state.surfaces.at(instance.surface);
-        set_gluniform(state.prog, "elem_faceted", (int)surface.normals.empty());
-        set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
-        set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
-        set_glvertexattrib(state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
-        set_glvertexattrib(
-            state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
-        set_glvertexattrib(
-            state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+            set_gluniform(
+                state.prog, "elem_faceted", (int)surface.normals.empty());
+            set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
+            set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
+            set_glvertexattrib(
+                state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+            set_glvertexattrib(
+                state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+            set_glvertexattrib(
+                state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
-        if (!surface.quads_positions.empty()) {
-            set_gluniform(state.prog, "elem_type", 3);
-            draw_gltriangles(vbos.gl_quads, vbos.num_facevarying_quads * 2);
+            if (vbos.gl_split_quads[group_id]) {
+                set_gluniform(state.prog, "elem_type", 3);
+                draw_gltriangles(vbos.gl_split_quads[group_id],
+                    vbos.gl_split_quads[group_id].num);
+            }
         }
 
 #if 0
@@ -779,6 +788,7 @@ draw_glstate init_draw_state(const glwindow& win) {
                 convert_quads_to_triangles(shape.quads), false);
         state.shapes[shape_id] = vbos;
     }
+    state.surfaces.resize(app.scene.surfaces.size());
     for (auto surface_id = 0; surface_id < app.scene.surfaces.size();
          surface_id++) {
         auto& surface       = app.scene.surfaces[surface_id];
@@ -791,14 +801,23 @@ draw_glstate init_draw_state(const glwindow& win) {
             surface.quads_positions, surface.quads_normals,
             surface.quads_texturecoords, surface.positions, surface.normals,
             surface.texturecoords);
+        auto split_quads = vector<vector<vec4i>>();
+        if (surface.materials.size() > 1 && !surface.quads_materials.empty()) {
+            split_quads = ungroup_quads(quads, surface.quads_materials);
+        } else {
+            split_quads = {quads};
+        }
         if (!positions.empty())
             vbos.gl_pos = make_glarraybuffer(positions, false);
         if (!normals.empty()) vbos.gl_norm = make_glarraybuffer(normals, false);
         if (!texturecoords.empty())
             vbos.gl_texcoord = make_glarraybuffer(texturecoords, false);
-        if (!quads.empty())
-            vbos.gl_quads = make_glelementbuffer(
+        vbos.gl_split_quads = {};
+        for (auto& quads : split_quads) {
+            if (!quads.empty()) vbos.gl_split_quads.push_back({});
+            vbos.gl_split_quads.back() = make_glelementbuffer(
                 convert_quads_to_triangles(quads), false);
+        }
         vbos.num_facevarying_quads = (int)quads.size();
         state.surfaces[surface_id] = vbos;
     }

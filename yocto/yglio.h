@@ -280,27 +280,27 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
     bool flip_texcoord = true);
 
 // Load/Save a face-varying mesh
-bool load_facevarying_mesh(const string& filename,
-    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords);
+bool load_facevarying_mesh(const string& filename, vector<vec4i>& quads_positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<int>& quads_materials);
 bool save_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    bool ascii = false);
+    const vector<int>& quads_materials, bool ascii = false);
 
 // Load/Save an OBJ mesh
 bool load_obj_facevarying_mesh(const string& filename,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    bool flip_texcoord = true);
+    vector<int>& quads_materials, bool flip_texcoord = true);
 bool save_obj_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    bool flip_texcoord = true);
+    const vector<int>& quads_materials, bool flip_texcoord = true);
 
 }  // namespace ygl
 
