@@ -43,6 +43,10 @@
 
 namespace ygl {
 
+void check_glerror() {
+    if(glGetError() != GL_NO_ERROR) log_error("gl error");
+}
+
 void clear_glframebuffer(const vec4f& color, bool clear_depth) {
     glClearColor(color.x, color.y, color.z, color.w);
     if (clear_depth) {
@@ -457,8 +461,8 @@ void draw_gltriangles(const glelementbuffer& buf, int num) {
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(const gltexture& gl_txt, vec2i imsize, vec2i winsize,
-    vec2f imcenter, float imscale) {
+void draw_glimage(const gltexture& gl_txt, const vec2i& imsize, const vec2i& winsize,
+    const vec2f& imcenter, float imscale) {
     static glprogram       gl_prog      = {};
     static glarraybuffer   gl_texcoord  = {};
     static glelementbuffer gl_triangles = {};
@@ -495,8 +499,63 @@ void draw_glimage(const gltexture& gl_txt, vec2i imsize, vec2i winsize,
     }
 
     // draw
+    check_glerror();
     bind_glprogram(gl_prog);
     set_gluniform_texture(gl_prog, "txt", gl_txt, 0);
+    set_gluniform(gl_prog, "winsize", vec2f{(float)winsize.x, (float)winsize.y});
+    set_gluniform(gl_prog, "imsize", vec2f{(float)imsize.x, (float)imsize.y});
+    set_gluniform(gl_prog, "imcenter", imcenter);
+    set_gluniform(gl_prog, "imscale", imscale);
+    set_glvertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
+    draw_gltriangles(gl_triangles, 2);
+    unbind_glprogram();
+    check_glerror();
+}
+
+void draw_glimage_background(const vec2i& imsize, const vec2i& winsize,
+    const vec2f& imcenter, float imscale) {
+    static glprogram       gl_prog      = {};
+    static glarraybuffer   gl_texcoord  = {};
+    static glelementbuffer gl_triangles = {};
+
+    // initialization
+    if (!gl_prog) {
+        auto vert   = R"(
+            #version 330
+            in vec2 texcoord;
+            out vec2 frag_texcoord;
+            uniform vec2 winsize, imsize;
+            uniform vec2 imcenter;
+            uniform float imscale;
+            void main() {
+                vec2 pos = (texcoord - vec2(0.5,0.5)) * imsize * imscale + imcenter;
+                gl_Position = vec4(2 * pos.x / winsize.x - 1, 1 - 2 * pos.y / winsize.y, 0.1, 1);
+                frag_texcoord = texcoord;
+            }
+        )";
+        auto frag   = R"(
+            #version 330
+            in vec2 frag_texcoord;
+            out vec4 frag_color;
+            uniform vec2 imsize;
+            void main() {
+                ivec2 imcoord = ivec2(frag_texcoord * imsize);
+                ivec2 tile = imcoord / 32;
+                if(imcoord.x < 0 || imcoord.y < 0 || 
+                    imcoord.x > imsize.x || imcoord.y > imsize.y) frag_color = vec4(0,0,0,1);
+                else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
+                else frag_color = vec4(0.3,0.3,0.3,1);
+            }
+        )";
+        gl_prog     = make_glprogram(vert, frag);
+        gl_texcoord = make_glarraybuffer(
+            vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+        gl_triangles = make_glelementbuffer(
+            vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+    }
+
+    // draw
+    bind_glprogram(gl_prog);
     set_gluniform(gl_prog, "winsize", vec2f{(float)winsize.x, (float)winsize.y});
     set_gluniform(gl_prog, "imsize", vec2f{(float)imsize.x, (float)imsize.y});
     set_gluniform(gl_prog, "imcenter", imcenter);
