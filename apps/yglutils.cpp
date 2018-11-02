@@ -64,6 +64,16 @@ void set_glwireframe(bool enabled) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+void set_glblending(bool enabled) {
+    if(enabled) {
+        glEnable(GL_BLEND);
+        glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+    } else {
+        glDisable(GL_BLEND);
+    }
+}
+
 glprogram make_glprogram(const char* vertex, const char* fragment) {
     auto prog = glprogram();
 

@@ -43,6 +43,7 @@ void set_glviewport(int x, int y, int w, int h);
 void set_glviewport(const vec2i& size);
 
 void set_glwireframe(bool enabled);
+void set_glblending(bool enabled);
 
 struct glprogram {
     uint pid = 0;

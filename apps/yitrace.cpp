@@ -146,9 +146,11 @@ void draw(const glwindow& win) {
         update_gltexture(
             app.gl_txt, app.state.display_image, false, false, false);
     }
+    set_glblending(true);
     draw_glimage(app.gl_txt,
         {app.state.display_image.width, app.state.display_image.height},
         win_size, app.imcenter, app.imscale);
+    set_glblending(false);
     draw_glwidgets(win);
     swap_glbuffers(win);
 }

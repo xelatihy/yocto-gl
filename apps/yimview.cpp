@@ -250,8 +250,10 @@ void draw(const glwindow& win) {
     if (img.gl_txt) {
         center_image(img.imcenter, img.imscale,
             {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
+        set_glblending(true);
         draw_glimage(img.gl_txt, {img.display.width, img.display.height},
             win_size, img.imcenter, img.imscale);
+        set_glblending(false);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
