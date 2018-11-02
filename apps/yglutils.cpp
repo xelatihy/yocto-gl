@@ -510,7 +510,7 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     }
 }
 
-bool init_glwindow(glwindow& win, int width, int height, const char* title,
+bool init_glwindow(glwindow& win, int width, int height, const string& title,
     void* user_pointer, std::function<void(const glwindow&)> refresh_cb) {
     // init glfw
     if (!glfwInit()) log_fatal("cannot initialize windowing system");
@@ -523,7 +523,7 @@ bool init_glwindow(glwindow& win, int width, int height, const char* title,
 
     // create window
     win     = glwindow();
-    win.win = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    win.win = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
     if (!win.win) return false;
     glfwMakeContextCurrent(win.win);
     glfwSwapInterval(1);  // Enable vsync

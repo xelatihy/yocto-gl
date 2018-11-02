@@ -155,7 +155,7 @@ struct glwindow {
     function<void(const glwindow&, const vector<string>&)> drop_cb    = {};
 };
 
-bool init_glwindow(glwindow& win, int width, int height, const char* title,
+bool init_glwindow(glwindow& win, int width, int height, const string& title,
     void* user_pointer, function<void(const glwindow&)> refresh_cb);
 void delete_glwindow(glwindow& win);
 

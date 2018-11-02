@@ -279,7 +279,8 @@ void run_ui(app_state& app) {
     auto& img   = app.imgs.at(app.img_id);
     auto  width = 720 + 320, height = 720;
     auto  win = glwindow();
-    init_glwindow(win, 720 + 320, 720, "yimview", &app, draw);
+    init_glwindow(
+        win, 720 + 320, 720, "yimview | " + app.imgs.front().name, &app, draw);
     set_drop_callback(win, drop_callback);
 
     // init widgets

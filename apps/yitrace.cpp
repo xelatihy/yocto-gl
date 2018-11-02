@@ -192,7 +192,8 @@ void run_ui(app_state& app) {
     auto width  = clamp(app.state.rendered_image.width, 256, 1440);
     auto height = clamp(app.state.rendered_image.height, 256, 1440);
     auto win    = glwindow();
-    init_glwindow(win, width, height, "yitrace", &app, draw);
+    init_glwindow(win, width, height, "yitrace | " + get_filename(app.filename),
+        &app, draw);
 
     // init widgets
     init_glwidgets(win);

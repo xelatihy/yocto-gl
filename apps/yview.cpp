@@ -831,7 +831,8 @@ void run_ui(app_state& app) {
     auto width = clamp(evaluate_image_size(camera, app.resolution).x, 256, 1440),
          height = clamp(evaluate_image_size(camera, app.resolution).y, 256, 1440);
     auto win    = glwindow();
-    init_glwindow(win, width, height, "yview", &app, draw);
+    init_glwindow(win, width, height, "yview | " + get_filename(app.filename),
+        &app, draw);
 
     // init widget
     init_glwidgets(win);
