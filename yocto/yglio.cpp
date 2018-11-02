@@ -2328,7 +2328,8 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
         auto filename = normalize_path(dirname + "/" + surface.filename);
         if (!load_facevarying_mesh(filename, surface.quads_positions,
                 surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords, surface.quads_materials)) {
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials)) {
             if (!skip_missing) return false;
         }
     }
@@ -2383,7 +2384,8 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
         auto filename = normalize_path(dirname + "/" + surface.filename);
         if (!save_facevarying_mesh(filename, surface.quads_positions,
                 surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords, surface.quads_materials)) {
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials)) {
             if (!skip_missing) return false;
         }
     }
@@ -5798,7 +5800,8 @@ bool load_facevarying_mesh(const string& filename, vector<vec4i>& quads_position
             texturecoords, quads_materials);
     } else {
         reset_facevarying_mesh_data(quads_positions, quads_normals,
-            quads_texturecoords, positions, normals, texturecoords, quads_materials);
+            quads_texturecoords, positions, normals, texturecoords,
+            quads_materials);
         return false;
     }
 }
@@ -5938,15 +5941,15 @@ bool load_obj_facevarying_mesh(const string& filename,
         }
     };
 
-        // load obj
-    if(!load_obj(filename, cb, true, true, flip_texcoord)) return false;
+    // load obj
+    if (!load_obj(filename, cb, true, true, flip_texcoord)) return false;
 
     // cleanup materials ids
     if (std::all_of(quads_materials.begin(), quads_materials.end(),
-                    [b = quads_materials.front()](auto a) { return a == b; })) {
+            [b = quads_materials.front()](auto a) { return a == b; })) {
         quads_materials.clear();
     }
-    
+
     // done
     return true;
 }
