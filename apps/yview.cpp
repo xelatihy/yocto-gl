@@ -780,6 +780,7 @@ draw_glstate init_draw_state(const glwindow& win) {
                 convert_quads_to_triangles(shape.quads), false);
         state.shapes[shape_id] = vbos;
     }
+    state.surfaces.resize(app.scene.surfaces.size());
     for (auto surface_id = 0; surface_id < app.scene.surfaces.size();
          surface_id++) {
         auto& surface       = app.scene.surfaces[surface_id];
