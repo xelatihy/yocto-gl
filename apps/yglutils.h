@@ -58,7 +58,10 @@ void      unbind_glprogram();
 
 struct gltexture {
     uint tid = 0;
-         operator bool() const { return (bool)tid; }
+    int width = 0;
+    int height = 0;
+
+    operator bool() const { return (bool)tid; }
 };
 
 gltexture make_gltexture(
@@ -73,12 +76,18 @@ void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
 
 struct glarraybuffer {
     uint bid = 0;
-         operator bool() const { return (bool)bid; }
+    int num = 0;
+    int elem_size = 0;
+    
+    operator bool() const { return (bool)bid; }
 };
 
 struct glelementbuffer {
     uint bid = 0;
-         operator bool() const { return (bool)bid; }
+    int num = 0;
+    int elem_size = 0;
+
+    operator bool() const { return (bool)bid; }
 };
 
 glarraybuffer make_glarraybuffer(const vector<float>& buf, bool dynamic = false);

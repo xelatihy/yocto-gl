@@ -590,6 +590,26 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_v
     return {qquads, qpos, qnorm, qtexcoord};
 }
 
+// Split primitives per id
+template<typename T>
+vector<vector<T>> ungroup_elems(const vector<T>& elems, const vector<int>& ids) {
+    auto max_id = *std::max_element(ids.begin(), ids.end());
+    auto split_elems = vector<vector<T>>(max_id);
+    for(auto elem_id = 0; elem_id < elems.size(); elem_id++) {
+        split_elems[ids[elem_id]].push_back(elems[elem_id]);
+    }
+    return split_elems;
+}
+vector<vector<vec2i>> ungroup_lines(const vector<vec2i>& lines, const vector<int>& ids) {
+    return ungroup_elems(lines, ids);
+}
+vector<vector<vec3i>> ungroup_triangles(const vector<vec3i>& triangles, const vector<int>& ids) {
+    return ungroup_elems(triangles, ids);
+}
+vector<vector<vec4i>> ungroup_quads(const vector<vec4i>& quads, const vector<int>& ids) {
+    return ungroup_elems(quads, ids);
+}
+
 // Subdivide lines.
 template <typename T>
 tuple<vector<vec2i>, vector<T>> subdivide_lines(

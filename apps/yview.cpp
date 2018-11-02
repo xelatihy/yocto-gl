@@ -36,6 +36,7 @@ struct glshape {
                   gl_tangsp   = {};
     glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {},
                     gl_quads  = {};
+    vector<glelementbuffer> gl_split_quads = {};
     int num_facevarying_quads = 0;
 };
 
@@ -531,21 +532,21 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
         set_glvertexattrib(
             state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
-        if (!shape.points.empty()) {
+        if (vbos.gl_points) {
             set_gluniform(state.prog, "elem_type", 1);
-            draw_glpoints(vbos.gl_points, shape.points.size());
+            draw_glpoints(vbos.gl_points, vbos.gl_points.num);
         }
-        if (!shape.lines.empty()) {
+        if (vbos.gl_lines) {
             set_gluniform(state.prog, "elem_type", 2);
-            draw_gllines(vbos.gl_lines, shape.lines.size());
+            draw_gllines(vbos.gl_lines, vbos.gl_lines.num);
         }
-        if (!shape.triangles.empty()) {
+        if (vbos.gl_triangles) {
             set_gluniform(state.prog, "elem_type", 3);
-            draw_gltriangles(vbos.gl_triangles, shape.triangles.size());
+            draw_gltriangles(vbos.gl_triangles, vbos.gl_triangles.num);
         }
-        if (!shape.quads.empty()) {
+        if (vbos.gl_quads) {
             set_gluniform(state.prog, "elem_type", 3);
-            draw_gltriangles(vbos.gl_quads, shape.quads.size() * 2);
+            draw_gltriangles(vbos.gl_quads, vbos.gl_quads.num);
         }
 
 #if 0
@@ -626,9 +627,9 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
         set_glvertexattrib(
             state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
-        if (!surface.quads_positions.empty()) {
+        if (vbos.gl_quads) {
             set_gluniform(state.prog, "elem_type", 3);
-            draw_gltriangles(vbos.gl_quads, vbos.num_facevarying_quads * 2);
+            draw_gltriangles(vbos.gl_quads, vbos.gl_quads.num);
         }
 
 #if 0
