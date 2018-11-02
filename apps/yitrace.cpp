@@ -136,7 +136,7 @@ void draw(const glwindow& win) {
     auto  win_size = get_glwindow_size(win);
     auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
-    clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
+    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     center_image(app.imcenter, app.imscale,
         {app.state.display_image.width, app.state.display_image.height},
         win_size, app.zoom_to_fit);

@@ -114,7 +114,7 @@ void draw(const glwindow& win) {
     app.update_list.clear();
 
     auto& camera = app.scene.cameras.at(app.camid);
-    clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
+    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
     draw_glscene(app.state, app.scene, camera, framebuffer_size, app.selection,
         app.eyelight, app.wireframe, app.edges, app.exposure, app.gamma,
         app.near_plane, app.far_plane);
