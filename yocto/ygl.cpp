@@ -590,6 +590,29 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_v
     return {qquads, qpos, qnorm, qtexcoord};
 }
 
+// Split primitives per id
+template <typename T>
+vector<vector<T>> ungroup_elems(const vector<T>& elems, const vector<int>& ids) {
+    auto max_id      = *std::max_element(ids.begin(), ids.end());
+    auto split_elems = vector<vector<T>>(max_id + 1);
+    for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
+        split_elems[ids[elem_id]].push_back(elems[elem_id]);
+    }
+    return split_elems;
+}
+vector<vector<vec2i>> ungroup_lines(
+    const vector<vec2i>& lines, const vector<int>& ids) {
+    return ungroup_elems(lines, ids);
+}
+vector<vector<vec3i>> ungroup_triangles(
+    const vector<vec3i>& triangles, const vector<int>& ids) {
+    return ungroup_elems(triangles, ids);
+}
+vector<vector<vec4i>> ungroup_quads(
+    const vector<vec4i>& quads, const vector<int>& ids) {
+    return ungroup_elems(quads, ids);
+}
+
 // Subdivide lines.
 template <typename T>
 tuple<vector<vec2i>, vector<T>> subdivide_lines(
@@ -2560,6 +2583,16 @@ make_shape_data make_cube_facevarying_shape(
     fvshp.texturecoords                         = qshp.texturecoords;
     return fvshp;
 }
+make_shape_data make_cube_multiplematerials_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
+    auto shp            = make_cube_facevarying_shape(steps, size, uvsize);
+    shp.quads_materials = vector<int>(shp.quads_positions.size());
+    auto quads_per_face = (int)shp.quads_positions.size() / 6;
+    for (auto i = 0; i < shp.quads_positions.size(); i++) {
+        shp.quads_materials[i] = i / quads_per_face;
+    }
+    return shp;
+}
 make_shape_data make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
@@ -3802,112 +3835,109 @@ vector<vec3f> compute_surface_normals(const yocto_surface& shape) {
 yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
     bool catmull_clark, bool compute_normals) {
     if (!subdivision_level) return shape;
-    auto subdivided_shape = shape;
-    if (!subdivided_shape.points.empty()) {
+    auto subdivided = shape;
+    if (!subdivided.points.empty()) {
         log_error("point subdivision not supported");
-    } else if (!subdivided_shape.lines.empty()) {
+    } else if (!subdivided.lines.empty()) {
         for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_lines           = subdivided_shape.lines;
-            tie(subdivided_shape.lines,
-                subdivided_shape.positions) = subdivide_lines(tesselated_lines,
-                subdivided_shape.positions);
-            tie(ignore, subdivided_shape.normals) = subdivide_lines(
-                tesselated_lines, subdivided_shape.normals);
-            tie(ignore, subdivided_shape.texturecoords) = subdivide_lines(
-                tesselated_lines, subdivided_shape.texturecoords);
-            tie(ignore, subdivided_shape.colors) = subdivide_lines(
-                tesselated_lines, subdivided_shape.colors);
+            auto tesselated_lines                       = subdivided.lines;
+            tie(subdivided.lines, subdivided.positions) = subdivide_lines(
+                tesselated_lines, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_lines(
+                tesselated_lines, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_lines(
+                tesselated_lines, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_lines(
+                tesselated_lines, subdivided.colors);
         }
-    } else if (!subdivided_shape.triangles.empty()) {
+    } else if (!subdivided.triangles.empty()) {
         for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_triangles = subdivided_shape.triangles;
-            tie(subdivided_shape.triangles,
-                subdivided_shape.positions) = subdivide_triangles(tesselated_triangles,
-                subdivided_shape.positions);
-            tie(ignore, subdivided_shape.normals) = subdivide_triangles(
-                tesselated_triangles, subdivided_shape.normals);
-            tie(ignore, subdivided_shape.texturecoords) = subdivide_triangles(
-                tesselated_triangles, subdivided_shape.texturecoords);
-            tie(ignore, subdivided_shape.colors) = subdivide_triangles(
-                tesselated_triangles, subdivided_shape.colors);
+            auto tesselated_triangles = subdivided.triangles;
+            tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
+                tesselated_triangles, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_triangles(
+                tesselated_triangles, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_triangles(
+                tesselated_triangles, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_triangles(
+                tesselated_triangles, subdivided.colors);
         }
-    } else if (!subdivided_shape.quads.empty() && !catmull_clark) {
+    } else if (!subdivided.quads.empty() && !catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_quads           = subdivided_shape.quads;
-            tie(subdivided_shape.quads,
-                subdivided_shape.positions) = subdivide_quads(tesselated_quads,
-                subdivided_shape.positions);
-            tie(ignore, subdivided_shape.normals) = subdivide_quads(
-                tesselated_quads, subdivided_shape.normals);
-            tie(ignore, subdivided_shape.texturecoords) = subdivide_quads(
-                tesselated_quads, subdivided_shape.texturecoords);
-            tie(ignore, subdivided_shape.colors) = subdivide_quads(
-                tesselated_quads, subdivided_shape.colors);
+            auto tesselated_quads                       = subdivided.quads;
+            tie(subdivided.quads, subdivided.positions) = subdivide_quads(
+                tesselated_quads, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_quads(
+                tesselated_quads, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_quads(
+                tesselated_quads, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_quads(
+                tesselated_quads, subdivided.colors);
         }
-    } else if (!subdivided_shape.quads.empty() && catmull_clark) {
+    } else if (!subdivided.quads.empty() && catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_quads           = subdivided_shape.quads;
-            tie(subdivided_shape.quads,
-                subdivided_shape.positions) = subdivide_catmullclark(tesselated_quads,
-                subdivided_shape.positions);
-            tie(ignore, subdivided_shape.normals) = subdivide_catmullclark(
-                tesselated_quads, subdivided_shape.normals);
-            tie(ignore, subdivided_shape.texturecoords) = subdivide_catmullclark(
-                tesselated_quads, subdivided_shape.texturecoords);
-            tie(ignore, subdivided_shape.colors) = subdivide_catmullclark(
-                tesselated_quads, subdivided_shape.colors);
+            auto tesselated_quads                       = subdivided.quads;
+            tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
+                tesselated_quads, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_catmullclark(
+                tesselated_quads, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_catmullclark(
+                tesselated_quads, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_catmullclark(
+                tesselated_quads, subdivided.colors);
         }
     }
 
     if (compute_normals) {
-        subdivided_shape.normals = compute_shape_normals(subdivided_shape);
+        subdivided.normals = compute_shape_normals(subdivided);
     }
 
-    return subdivided_shape;
+    return subdivided;
 }
 // Apply subdivision and displacement rules.
 yocto_surface subdivide_surface(const yocto_surface& surface,
     int subdivision_level, bool catmull_clark, bool compute_normals) {
     if (!subdivision_level) return surface;
-    auto subdivided_surface = surface;
-    if (!subdivided_surface.quads_positions.empty() && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            tie(subdivided_surface.quads_positions,
-                subdivided_surface
-                    .positions) = subdivide_quads(subdivided_surface.quads_positions,
-                subdivided_surface.positions);
-            tie(subdivided_surface.quads_normals,
-                subdivided_surface.normals) = subdivide_quads(subdivided_surface
-                                                                  .quads_normals,
-                subdivided_surface.normals);
-            tie(subdivided_surface.quads_texturecoords,
-                subdivided_surface
-                    .texturecoords)         = subdivide_quads(subdivided_surface
-                                                          .quads_texturecoords,
-                subdivided_surface.texturecoords);
+    auto subdivided    = surface;
+    auto subdivide_ids = [](const vector<vec4i>& quads, const vector<int> ids) {
+        if (ids.empty()) return vector<int>();
+        auto new_ids = vector<int>();
+        for (int quad_id = 0; quad_id < quads.size(); quad_id++) {
+            auto quad = quads[quad_id];
+            for (auto i = 0; i < (quad.z == quad.w ? 3 : 4); i++)
+                new_ids.push_back(ids[quad_id]);
         }
-    } else if (!subdivided_surface.quads_positions.empty() && catmull_clark) {
+        return new_ids;
+    };
+    if (!subdivided.quads_positions.empty() && !catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
-            tie(subdivided_surface.quads_positions,
-                subdivided_surface
-                    .positions)     = subdivide_catmullclark(subdivided_surface
-                                                             .quads_positions,
-                subdivided_surface.positions);
-            tie(subdivided_surface.quads_texturecoords,
-                subdivided_surface
-                    .texturecoords) = subdivide_catmullclark(subdivided_surface
-                                                                 .quads_texturecoords,
-                subdivided_surface.texturecoords, true);
+            subdivided.quads_materials = subdivide_ids(
+                subdivided.quads_positions, subdivided.quads_materials);
+            tie(subdivided.quads_positions, subdivided.positions) = subdivide_quads(
+                subdivided.quads_positions, subdivided.positions);
+            tie(subdivided.quads_normals, subdivided.normals) = subdivide_quads(
+                subdivided.quads_normals, subdivided.normals);
+            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_quads(
+                subdivided.quads_texturecoords, subdivided.texturecoords);
+        }
+    } else if (!subdivided.quads_positions.empty() && catmull_clark) {
+        for (auto l = 0; l < subdivision_level; l++) {
+            subdivided.quads_materials = subdivide_ids(
+                subdivided.quads_positions, subdivided.quads_materials);
+            tie(subdivided.quads_positions, subdivided.positions) = subdivide_catmullclark(
+                subdivided.quads_positions, subdivided.positions);
+            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_catmullclark(
+                subdivided.quads_texturecoords, subdivided.texturecoords, true);
         }
     }
 
     if (compute_normals) {
-        if (!subdivided_surface.quads_positions.empty())
-            subdivided_surface.quads_normals = subdivided_surface.quads_positions;
-        subdivided_surface.normals = compute_surface_normals(subdivided_surface);
+        if (!subdivided.quads_positions.empty())
+            subdivided.quads_normals = subdivided.quads_positions;
+        subdivided.normals = compute_surface_normals(subdivided);
     }
 
-    return subdivided_surface;
+    return subdivided;
 }
 yocto_shape displace_shape(const yocto_shape& shape,
     const yocto_texture& displacement, bool compute_normals) {
@@ -3988,7 +4018,7 @@ void tesselate_shapes_and_surfaces(yocto_scene& scene) {
         shape = tesselated_shape;
     }
     for (auto& surface : scene.surfaces) {
-        auto& material = scene.materials[surface.material];
+        auto& material = scene.materials[surface.materials.front()];
         if (!surface.subdivision_level && material.displacement_texture < 0)
             continue;
         auto tesselated_surface = surface;
@@ -4393,7 +4423,7 @@ void add_missing_materials(yocto_scene& scene) {
         shape.material = material_id;
     }
     for (auto& surface : scene.surfaces) {
-        if (surface.material >= 0) continue;
+        if (!surface.materials.empty()) continue;
         if (material_id < 0) {
             auto material    = yocto_material{};
             material.name    = "<default>";
@@ -4401,7 +4431,7 @@ void add_missing_materials(yocto_scene& scene) {
             scene.materials.push_back(material);
             material_id = (int)scene.materials.size() - 1;
         }
-        surface.material = material_id;
+        surface.materials.push_back(material_id);
     }
 }
 
@@ -4751,13 +4781,20 @@ vec3f evaluate_surface_shading_normal(const yocto_scene& scene,
     const vec3f& outgoing) {
     if (!surface.quads_positions.empty()) {
         auto  normal = evaluate_surface_normal(surface, element_id, element_uv);
-        auto& material = scene.materials[surface.material];
+        auto& material = scene.materials[get_surface_element_material(
+            surface, element_id)];
         if (material.double_sided && dot(normal, outgoing) < 0)
             normal = -normal;
         return normal;
     } else {
         return outgoing;
     }
+}
+// Per-element material.
+int get_surface_element_material(const yocto_surface& surface, int element_id) {
+    if (surface.materials.empty()) return -1;
+    if (surface.quads_materials.empty()) return surface.materials.front();
+    return surface.materials[surface.quads_materials[element_id]];
 }
 
 // Instance values interpolated using barycentric coordinates.
@@ -4857,16 +4894,6 @@ vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
 }
 
 // Material values
-int get_instance_material_id(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    if (instance.shape >= 0) {
-        return scene.shapes[instance.shape].material;
-    } else if (instance.surface >= 0) {
-        return scene.surfaces[instance.surface].material;
-    } else {
-        return -1;
-    }
-}
 vec3f evaluate_instance_emission(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
     if (instance.shape >= 0) {
@@ -4877,7 +4904,7 @@ vec3f evaluate_instance_emission(const yocto_scene& scene,
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
         return evaluate_material_emission(scene,
-            scene.materials[surface.material],
+            scene.materials[get_surface_element_material(surface, element_id)],
             evaluate_surface_texturecoord(surface, element_id, element_uv),
             {1, 1, 1, 1});
     } else {
@@ -4893,7 +4920,8 @@ microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
             evaluate_shape_color(shape, element_id, element_uv));
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
-        return evaluate_material_brdf(scene, scene.materials[surface.material],
+        return evaluate_material_brdf(scene,
+            scene.materials[get_surface_element_material(surface, element_id)],
             evaluate_surface_texturecoord(surface, element_id, element_uv),
             {1, 1, 1, 1});
     } else {
@@ -4909,7 +4937,8 @@ float evaluate_instance_opacity(const yocto_scene& scene,
             evaluate_shape_color(shape, element_id, element_uv));
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
-        return evaluate_material_opacity(scene, scene.materials[surface.material],
+        return evaluate_material_opacity(scene,
+            scene.materials[get_surface_element_material(surface, element_id)],
             evaluate_surface_texturecoord(surface, element_id, element_uv),
             {1, 1, 1, 1});
     } else {
@@ -4923,7 +4952,9 @@ bool is_instance_emissive(
         return scene.materials[shape.material].emission != zero3f;
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
-        return scene.materials[surface.material].emission != zero3f;
+        for (auto material_id : surface.materials)
+            if (scene.materials[material_id].emission != zero3f) return true;
+        return false;
     } else {
         return false;
     }

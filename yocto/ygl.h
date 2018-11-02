@@ -2394,11 +2394,20 @@ vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles);
 vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
-// and face ids and filled vectors for pos, norm and texcoord.
+// and face ids and filled vectors for pos, norm and texcoord. When used
+// with ids, it also plits the faces per id.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
+
+// Split primitives per id
+vector<vector<vec2i>> ungroup_lines(
+    const vector<vec2i>& lines, const vector<int>& ids);
+vector<vector<vec3i>> ungroup_triangles(
+    const vector<vec3i>& triangles, const vector<int>& ids);
+vector<vector<vec4i>> ungroup_quads(
+    const vector<vec4i>& quads, const vector<int>& ids);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
@@ -2714,6 +2723,7 @@ struct make_shape_data {
     vector<vec4i> quads_positions;
     vector<vec4i> quads_normals;
     vector<vec4i> quads_texturecoords;
+    vector<int>   quads_materials;
 };
 
 // Make examples shapes that are not watertight (besides quads).
@@ -2758,6 +2768,8 @@ make_shape_data make_cube_shape(const vec3f& size, bool as_triangles);
 make_shape_data make_cube_facevarying_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 make_shape_data make_cube_posonly_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+make_shape_data make_cube_multiplematerials_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
@@ -3238,9 +3250,9 @@ struct yocto_shape {
 // texture coordinates.
 struct yocto_surface {
     // shape data
-    string name     = "";
-    string filename = "";
-    int    material = -1;
+    string      name      = "";
+    string      filename  = "";
+    vector<int> materials = {};
 
     // subdision properties
     int  subdivision_level      = 0;
@@ -3251,6 +3263,7 @@ struct yocto_surface {
     vector<vec4i> quads_positions     = {};
     vector<vec4i> quads_normals       = {};
     vector<vec4i> quads_texturecoords = {};
+    vector<int>   quads_materials     = {};
 
     // vertex data
     vector<vec3f> positions     = {};
@@ -3442,13 +3455,15 @@ float             sample_shape_element_pdf(const yocto_shape& shape,
 
 // Surface values interpolated using barycentric coordinates.
 vec3f evaluate_surface_position(
-    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 vec3f evaluate_surface_normal(
-    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 vec2f evaluate_surface_texturecoord(
-    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 // Surface element values.
-vec3f evaluate_surface_element_normal(const yocto_shape& shape, int element_id);
+vec3f evaluate_surface_element_normal(const yocto_surface& shape, int element_id);
+// Per-element material.
+int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
 vector<float>     compute_surface_elements_cdf(const yocto_surface& surface);
