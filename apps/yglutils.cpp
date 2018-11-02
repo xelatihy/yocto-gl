@@ -606,6 +606,7 @@ void init_glwidgets(const glwindow& win) {
     // init widgets
     ImGui::CreateContext();
     ImGui::GetIO().IniFilename = nullptr;
+    ImGui::GetStyle().WindowRounding = 0;
     ImGui_ImplGlfw_InitForOpenGL(win.win, true);
 #ifndef __APPLE__
     ImGui_ImplOpenGL3_Init();
