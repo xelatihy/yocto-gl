@@ -91,10 +91,14 @@ struct glelementbuffer {
     operator bool() const { return (bool)bid; }
 };
 
-glarraybuffer make_glarraybuffer(const vector<float>& buffer, bool dynamic = false);
-glarraybuffer make_glarraybuffer(const vector<vec2f>& buffer, bool dynamic = false);
-glarraybuffer make_glarraybuffer(const vector<vec3f>& buffer, bool dynamic = false);
-glarraybuffer make_glarraybuffer(const vector<vec4f>& buffer, bool dynamic = false);
+glarraybuffer make_glarraybuffer(
+    const vector<float>& buffer, bool dynamic = false);
+glarraybuffer make_glarraybuffer(
+    const vector<vec2f>& buffer, bool dynamic = false);
+glarraybuffer make_glarraybuffer(
+    const vector<vec3f>& buffer, bool dynamic = false);
+glarraybuffer make_glarraybuffer(
+    const vector<vec4f>& buffer, bool dynamic = false);
 
 glelementbuffer make_glelementbuffer(
     const vector<int>& buffer, bool dynamic = false);
@@ -117,7 +121,8 @@ void set_gluniform(int locatiom, const mat4f& value);
 void set_gluniform(int locatiom, const frame3f& value);
 
 template <typename T>
-inline void set_gluniform(const glprogram& program, const char* name, const T& value) {
+inline void set_gluniform(
+    const glprogram& program, const char* name, const T& value) {
     set_gluniform(get_gluniform_location(program, name), value);
 }
 
@@ -126,15 +131,18 @@ void set_gluniform_texture(
     glprogram& program, const char* name, const gltexture& texture, int unit);
 void set_gluniform_texture(
     int locatiom, int locatiom_on, const gltexture& texture, int unit);
-void set_gluniform_texture(glprogram& program, const char* name, const char* name_on,
-    const gltexture& texture, int unit);
+void set_gluniform_texture(glprogram& program, const char* name,
+    const char* name_on, const gltexture& texture, int unit);
 
 int get_glvertexattrib_location(const glprogram& program, const char* name);
 
 void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, float value);
-void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec2f& value);
-void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec3f& value);
-void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec4f& value);
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec2f& value);
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec3f& value);
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec4f& value);
 
 template <typename T>
 inline void set_glvertexattrib(const glprogram& program, const char* name,
@@ -146,8 +154,8 @@ void draw_glpoints(const glelementbuffer& buffer, int num);
 void draw_gllines(const glelementbuffer& buffer, int num);
 void draw_gltriangles(const glelementbuffer& buffer, int num);
 
-void draw_glimage(const gltexture& texture, const vec2i& image_size, const vec2i& window_size,
-    const vec2f& image_center, float image_scale);
+void draw_glimage(const gltexture& texture, const vec2i& image_size,
+    const vec2i& window_size, const vec2f& image_center, float image_scale);
 void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
     const vec2f& image_center, float image_scale);
 
@@ -156,17 +164,17 @@ using refresh_glcallback = function<void(const glwindow&)>;
 using drop_glcallback = function<void(const glwindow&, const vector<string>&)>;
 
 struct glwindow {
-    GLFWwindow*                                            win        = nullptr;
-    void*                                                  user_ptr   = nullptr;
-    refresh_glcallback                        refresh_cb = {};
-    drop_glcallback drop_cb    = {};
+    GLFWwindow*        win        = nullptr;
+    void*              user_ptr   = nullptr;
+    refresh_glcallback refresh_cb = {};
+    drop_glcallback    drop_cb    = {};
 };
 
 bool init_glwindow(glwindow& win, int width, int height, const string& title,
     void* user_pointer, refresh_glcallback refresh_cb);
 void delete_glwindow(glwindow& win);
 
-void set_drop_glcallback(glwindow&                                     win, drop_glcallback drop_cb);
+void set_drop_glcallback(glwindow& win, drop_glcallback drop_cb);
 
 void* get_user_pointer(const glwindow& win);
 

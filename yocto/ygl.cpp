@@ -4224,7 +4224,7 @@ vector<float> compute_environment_texels_cdf(
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
-            auto value    = lookup_texture(texture, ij.x, ij.y);
+            auto value  = lookup_texture(texture, ij.x, ij.y);
             elem_cdf[i] = max(xyz(value)) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }

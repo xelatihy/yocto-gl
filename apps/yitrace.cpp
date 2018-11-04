@@ -47,8 +47,8 @@ struct app_state {
     trace_lights lights = {};
 
     // view image
-    vec2f                      image_center     = zero2f;
-    float                      image_scale      = 1;
+    vec2f                      image_center = zero2f;
+    float                      image_scale  = 1;
     bool                       zoom_to_fit  = true;
     bool                       widgets_open = false;
     tuple<string, int>         selection    = {"", -1};
@@ -104,7 +104,8 @@ void draw_glwidgets(const glwindow& win) {
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "fps", app.navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, app.image_center, app.image_scale,
+            auto ij        = get_image_coords(mouse_pos, app.image_center,
+                app.image_scale,
                 {app.state.rendered_image.width, app.state.rendered_image.height});
             draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app.state.rendered_image.width &&
@@ -228,7 +229,8 @@ void run_ui(app_state& app) {
 
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
-            auto ij = get_image_coords(mouse_pos, app.image_center, app.image_scale,
+            auto ij = get_image_coords(mouse_pos, app.image_center,
+                app.image_scale,
                 {app.state.rendered_image.width, app.state.rendered_image.height});
             if (ij.x < 0 || ij.x >= app.state.rendered_image.width ||
                 ij.y < 0 || ij.y >= app.state.rendered_image.height) {

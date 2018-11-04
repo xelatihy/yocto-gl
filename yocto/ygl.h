@@ -1996,7 +1996,8 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 inline void center_image(vec2f& center, float& scale, const vec2i& image_size,
     const vec2i& window_size, bool zoom_to_fit) {
     if (zoom_to_fit) {
-        scale  = min(window_size.x / (float)image_size.x, window_size.y / (float)image_size.y);
+        scale  = min(window_size.x / (float)image_size.x,
+            window_size.y / (float)image_size.y);
         center = {(float)window_size.x / 2, (float)window_size.y / 2};
     } else {
         if (window_size.x >= image_size.x * scale) center.x = window_size.x / 2;
@@ -3492,13 +3493,13 @@ void  set_camera_view(yocto_camera& camera, const bbox3f& bbox,
 ray3f evaluate_camera_ray(
     const yocto_camera& camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the image size
-// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
-// the image resolution `res`.
+// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv`
+// and the image resolution `res`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv);
 // Generates a ray from a camera for pixel index `idx`, the image size
-// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
-// the image resolution `res`.
+// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv`
+// and the image resolution `res`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
     const vec2i& image_size, const vec2f& puv, const vec2f& luv);
 

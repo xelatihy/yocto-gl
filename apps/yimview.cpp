@@ -63,9 +63,9 @@ struct app_image {
     string       error_msg = "";
 
     // viewing properties
-    vec2f image_center    = zero2f;
-    float image_scale     = 1;
-    bool  zoom_to_fit = false;
+    vec2f image_center = zero2f;
+    float image_scale  = 1;
+    bool  zoom_to_fit  = false;
 
     // cleanup and stop threads
     ~app_image() {
@@ -210,8 +210,8 @@ void draw_glwidgets(const glwindow& win) {
         }
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, img.image_center, img.image_scale,
-                {img.img.width, img.img.height});
+            auto ij        = get_image_coords(mouse_pos, img.image_center,
+                img.image_scale, {img.img.width, img.img.height});
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
@@ -291,8 +291,9 @@ void run_ui(app_state& app) {
     init_glwidgets(win);
 
     // center image
-    center_image(img.image_center, img.image_scale, {img.img.width, img.img.height},
-        {width, height}, img.img.width > width || img.img.height > height);
+    center_image(img.image_center, img.image_scale,
+        {img.img.width, img.img.height}, {width, height},
+        img.img.width > width || img.img.height > height);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -304,7 +305,8 @@ void run_ui(app_state& app) {
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse
-        if (mouse_left && !widgets_active) img.image_center += mouse_pos - last_pos;
+        if (mouse_left && !widgets_active)
+            img.image_center += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
             img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
 

@@ -57,8 +57,9 @@ inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl
     yocto_scene& scene, const yocto_camera& value, tuple<string, int>& sel) {}
 inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_texture& value, tuple<string, int>& sel) {}
-inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
-    yocto_scene& scene, const yocto_voltexture& value, tuple<string, int>& sel) {}
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win,
+    const string& lbl_, yocto_scene& scene, const yocto_voltexture& value,
+    tuple<string, int>& sel) {}
 inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_material& value, tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(win, "emission", scene, value.emission_texture,
@@ -76,8 +77,8 @@ inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl
 }
 inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_shape& value, tuple<string, int>& sel) {
-    draw_glwidgets_scene_tree(
-        win, "material", scene, value.material, scene.materials, sel, "material");
+    draw_glwidgets_scene_tree(win, "material", scene, value.material,
+        scene.materials, sel, "material");
 }
 
 inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
@@ -85,15 +86,16 @@ inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl
     draw_glwidgets_scene_tree(
         win, "shape", scene, value.shape, scene.shapes, sel, "shape");
 }
-inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
-    yocto_scene& scene, const yocto_environment& value, tuple<string, int>& sel) {
+inline void draw_scene_tree_glwidgets_rec(const glwindow& win,
+    const string& lbl_, yocto_scene& scene, const yocto_environment& value,
+    tuple<string, int>& sel) {
     draw_glwidgets_scene_tree(win, "emission", scene, value.emission_texture,
         scene.textures, sel, "texture");
 }
 inline void draw_scene_tree_glwidgets_rec(const glwindow& win, const string& lbl_,
     yocto_scene& scene, const yocto_scene_node& value, tuple<string, int>& sel) {
-    draw_glwidgets_scene_tree(
-        win, "instance", scene, value.instance, scene.instances, sel, "instance");
+    draw_glwidgets_scene_tree(win, "instance", scene, value.instance,
+        scene.instances, sel, "instance");
     draw_glwidgets_scene_tree(
         win, "camera", scene, value.camera, scene.cameras, sel, "camera");
     draw_glwidgets_scene_tree(win, "environment", scene, value.environment,
@@ -210,7 +212,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_checkbox_glwidget(win, "ortho", value.orthographic);
     edited += draw_slider_glwidget(win, "film", value.film_size, 0.01f, 1);
     edited += draw_slider_glwidget(win, "focal", value.focal_length, 0.01f, 1);
-    edited += draw_slider_glwidget(win, "focus", value.focus_distance, 0.01f, 1000);
+    edited += draw_slider_glwidget(
+        win, "focus", value.focus_distance, 0.01f, 1000);
     edited += draw_slider_glwidget(win, "aperture", value.lens_aperture, 0, 5);
     return edited;
 }
@@ -224,10 +227,10 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_checkbox_glwidget(win, "clamp_to_edge", value.clamp_to_edge);
     edited += draw_slider_glwidget(win, "scale", value.height_scale, 0, 1);
     edited += draw_checkbox_glwidget(win, "ldr_as_linear", value.ldr_as_linear);
-    draw_label_glwidgets(
-        win, "hdr_image", "%d x %d", value.hdr_image.width, value.hdr_image.height);
-    draw_label_glwidgets(
-        win, "ldr_image", "%d x %d", value.ldr_image.width, value.ldr_image.height);
+    draw_label_glwidgets(win, "hdr_image", "%d x %d", value.hdr_image.width,
+        value.hdr_image.height);
+    draw_label_glwidgets(win, "ldr_image", "%d x %d", value.ldr_image.width,
+        value.ldr_image.height);
     return edited;
 }
 
@@ -236,7 +239,7 @@ inline bool draw_glwidgets_scene_inspector(
     auto edited = 0;
     edited += draw_textinput_glwidget(win, "name", value.name);
     edited += draw_coloredit_glwidget(win, "emission", value.emission);  // TODO:
-                                                                       // HDR
+                                                                         // HDR
     edited += draw_coloredit_glwidget(win, "diffuse", value.diffuse);
     edited += draw_coloredit_glwidget(win, "specular", value.specular);
     edited += draw_coloredit_glwidget(win, "transmission", value.transmission);
@@ -261,8 +264,8 @@ inline bool draw_glwidgets_scene_inspector(
         value.transmission_texture, scene.textures, true);
     edited += draw_combobox_glwidget(
         win, "opacity_texture", value.opacity_texture, scene.textures, true);
-    edited += draw_combobox_glwidget(
-        win, "roughness_texture", value.roughness_texture, scene.textures, true);
+    edited += draw_combobox_glwidget(win, "roughness_texture",
+        value.roughness_texture, scene.textures, true);
     edited += draw_combobox_glwidget(
         win, "bump_texture", value.bump_texture, scene.textures, true);
     edited += draw_combobox_glwidget(win, "displacement_texture",
@@ -301,7 +304,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "frame.y", value.frame.y, -1, 1);
     edited += draw_slider_glwidget(win, "frame.z", value.frame.z, -1, 1);
     edited += draw_slider_glwidget(win, "frame.o", value.frame.o, -10, 10);
-    edited += draw_combobox_glwidget(win, "shape", value.shape, scene.shapes, true);
+    edited += draw_combobox_glwidget(
+        win, "shape", value.shape, scene.shapes, true);
     return edited;
 }
 
@@ -329,7 +333,8 @@ inline bool draw_glwidgets_scene_inspector(
     edited += draw_slider_glwidget(win, "local.y", value.local.y, -1, 1);
     edited += draw_slider_glwidget(win, "local.z", value.local.z, -1, 1);
     edited += draw_slider_glwidget(win, "local.o", value.local.o, -10, 10);
-    edited += draw_slider_glwidget(win, "translation", value.translation, -10, 10);
+    edited += draw_slider_glwidget(
+        win, "translation", value.translation, -10, 10);
     edited += draw_slider_glwidget(win, "rotation", value.rotation, -1, 1);
     edited += draw_slider_glwidget(win, "scale", value.scale, 0, 10);
     edited += draw_combobox_glwidget(

@@ -41,7 +41,7 @@ struct glshape {
 };
 
 struct draw_glstate {
-    glprogram         program     = {};
+    glprogram         program  = {};
     vector<glshape>   shapes   = {};
     vector<glshape>   surfaces = {};
     vector<gltexture> textures = {};
@@ -491,7 +491,8 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
         set_gluniform(state.program, "mat_ks", material.specular);
         set_gluniform(state.program, "mat_rs", material.roughness);
         set_gluniform(state.program, "mat_op", material.opacity);
-        set_gluniform(state.program, "mat_double_sided", (int)material.double_sided);
+        set_gluniform(
+            state.program, "mat_double_sided", (int)material.double_sided);
         set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
             material.emission_texture >= 0 ?
                 state.textures.at(material.emission_texture) :
@@ -526,7 +527,8 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
         set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
         set_glvertexattrib(state.program, "vert_pos", vbos.gl_pos, zero3f);
         set_glvertexattrib(state.program, "vert_norm", vbos.gl_norm, zero3f);
-        set_glvertexattrib(state.program, "vert_texcoord", vbos.gl_texcoord, zero2f);
+        set_glvertexattrib(
+            state.program, "vert_texcoord", vbos.gl_texcoord, zero2f);
         set_glvertexattrib(
             state.program, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
         set_glvertexattrib(
@@ -616,7 +618,8 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
                     state.textures.at(material.opacity_texture) :
                     gltexture{},
                 4);
-            set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
+            set_gluniform_texture(state.program, "mat_norm_txt",
+                "mat_norm_txt_on",
                 material.normal_texture >= 0 ?
                     state.textures.at(material.normal_texture) :
                     gltexture{},
@@ -630,8 +633,8 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
                 state.program, "vert_texcoord", vbos.gl_texcoord, zero2f);
             set_glvertexattrib(
                 state.program, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
-            set_glvertexattrib(
-                state.program, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+            set_glvertexattrib(state.program, "vert_tangsp", vbos.gl_tangsp,
+                vec4f{0, 0, 1, 1});
 
             if (vbos.gl_split_quads[group_id]) {
                 set_gluniform(state.program, "elem_type", 3);
@@ -723,9 +726,10 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
             auto is = to_string(i);
             set_gluniform(
                 state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-            set_gluniform(state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
             set_gluniform(
-                state.program, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
+                state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            set_gluniform(state.program, ("ltype[" + is + "]").c_str(),
+                (int)lights_type[i]);
         }
     }
 
@@ -915,7 +919,7 @@ unordered_map<string, unordered_map<string, string>> load_ini(
             ret[cur_group] = {};
         } else if (line.find('=') != line.npos) {
             auto name            = line.substr(0, line.find('='));
-            auto value            = line.substr(line.find('=') + 1);
+            auto value           = line.substr(line.find('=') + 1);
             ret[cur_group][name] = value;
         } else {
             log_error("bad INI format");

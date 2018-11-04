@@ -44,7 +44,7 @@
 namespace ygl {
 
 void check_glerror() {
-    if(glGetError() != GL_NO_ERROR) log_error("gl error");
+    if (glGetError() != GL_NO_ERROR) log_error("gl error");
 }
 
 void clear_glframebuffer(const vec4f& color, bool clear_depth) {
@@ -69,10 +69,11 @@ void set_glwireframe(bool enabled) {
 }
 
 void set_glblending(bool enabled) {
-    if(enabled) {
+    if (enabled) {
         glEnable(GL_BLEND);
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
-        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+        glBlendFuncSeparate(
+            GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
     } else {
         glDisable(GL_BLEND);
     }
@@ -388,8 +389,8 @@ void set_gluniform_texture(
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(glprogram& program, const char* name, const char* name_on,
-    const gltexture& texture, int unit) {
+void set_gluniform_texture(glprogram& program, const char* name,
+    const char* name_on, const gltexture& texture, int unit) {
     set_gluniform_texture(get_gluniform_location(program, name),
         get_gluniform_location(program, name_on), texture, unit);
 }
@@ -410,7 +411,8 @@ void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, float value) 
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec2f& value) {
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec2f& value) {
     assert(glGetError() == GL_NO_ERROR);
     if (buffer.bid) {
         glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
@@ -422,7 +424,8 @@ void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec2f& 
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec3f& value) {
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec3f& value) {
     assert(glGetError() == GL_NO_ERROR);
     if (buffer.bid) {
         glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
@@ -434,7 +437,8 @@ void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec3f& 
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, const vec4f& value) {
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec4f& value) {
     assert(glGetError() == GL_NO_ERROR);
     if (buffer.bid) {
         glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
@@ -461,8 +465,8 @@ void draw_gltriangles(const glelementbuffer& buffer, int num) {
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(const gltexture& gl_txt, const vec2i& image_size, const vec2i& window_size,
-    const vec2f& image_center, float image_scale) {
+void draw_glimage(const gltexture& gl_txt, const vec2i& image_size,
+    const vec2i& window_size, const vec2f& image_center, float image_scale) {
     static glprogram       gl_prog      = {};
     static glarraybuffer   gl_texcoord  = {};
     static glelementbuffer gl_triangles = {};
@@ -502,8 +506,10 @@ void draw_glimage(const gltexture& gl_txt, const vec2i& image_size, const vec2i&
     check_glerror();
     bind_glprogram(gl_prog);
     set_gluniform_texture(gl_prog, "txt", gl_txt, 0);
-    set_gluniform(gl_prog, "window_size", vec2f{(float)window_size.x, (float)window_size.y});
-    set_gluniform(gl_prog, "image_size", vec2f{(float)image_size.x, (float)image_size.y});
+    set_gluniform(gl_prog, "window_size",
+        vec2f{(float)window_size.x, (float)window_size.y});
+    set_gluniform(
+        gl_prog, "image_size", vec2f{(float)image_size.x, (float)image_size.y});
     set_gluniform(gl_prog, "image_center", image_center);
     set_gluniform(gl_prog, "image_scale", image_scale);
     set_glvertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
@@ -556,8 +562,10 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
 
     // draw
     bind_glprogram(gl_prog);
-    set_gluniform(gl_prog, "window_size", vec2f{(float)window_size.x, (float)window_size.y});
-    set_gluniform(gl_prog, "image_size", vec2f{(float)image_size.x, (float)image_size.y});
+    set_gluniform(gl_prog, "window_size",
+        vec2f{(float)window_size.x, (float)window_size.y});
+    set_gluniform(
+        gl_prog, "image_size", vec2f{(float)image_size.x, (float)image_size.y});
     set_gluniform(gl_prog, "image_center", image_center);
     set_gluniform(gl_prog, "image_scale", image_scale);
     set_glvertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
@@ -617,8 +625,7 @@ void delete_glwindow(glwindow& win) {
 
 void* get_user_pointer(const glwindow& win) { return win.user_ptr; }
 
-void set_drop_glcallback(glwindow&                                     win,
-    drop_glcallback drop_cb) {
+void set_drop_glcallback(glwindow& win, drop_glcallback drop_cb) {
     win.drop_cb = drop_cb;
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
@@ -674,7 +681,7 @@ void swap_glbuffers(const glwindow& win) { glfwSwapBuffers(win.win); }
 void init_glwidgets(const glwindow& win) {
     // init widgets
     ImGui::CreateContext();
-    ImGui::GetIO().IniFilename = nullptr;
+    ImGui::GetIO().IniFilename       = nullptr;
     ImGui::GetStyle().WindowRounding = 0;
     ImGui_ImplGlfw_InitForOpenGL(win.win, true);
 #ifndef __APPLE__
@@ -745,7 +752,7 @@ bool draw_textinput_glwidget(const glwindow& win, const char* lbl, string& value
     char buffer[4096];
     auto num = 0;
     for (auto c : value) buffer[num++] = c;
-    buffer[num]    = 0;
+    buffer[num] = 0;
     auto edited = ImGui::InputText(lbl, buffer, sizeof(buffer));
     if (edited) value = buffer;
     return edited;

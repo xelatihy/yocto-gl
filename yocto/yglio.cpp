@@ -428,7 +428,7 @@ inline void from_json(const json& js, image<T>& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<T>>();
-    value         = image<T>{width, height, pixels.data()};
+    value       = image<T>{width, height, pixels.data()};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
@@ -444,7 +444,7 @@ inline void from_json(const json& js, volume<T>& value) {
     auto height = js.at("height").get<int>();
     auto depth  = js.at("depth").get<int>();
     auto voxels = js.at("voxels").get<vector<T>>();
-    value         = volume<T>{width, height, depth, voxels.data()};
+    value       = volume<T>{width, height, depth, voxels.data()};
 }
 
 }  // namespace ygl
@@ -1300,7 +1300,8 @@ bool serialize_json_value(
 
 // Dumps a json value
 template <typename T>
-bool serialize_json_objref(json& js, int& value, const vector<T>& refs, bool save) {
+bool serialize_json_objref(
+    json& js, int& value, const vector<T>& refs, bool save) {
     if (save) {
         auto vals = value >= 0 ? refs[value].name : ""s;
         return serialize_json_value(js, vals, save);
@@ -1335,7 +1336,8 @@ bool serialize_json_objref(
         if (!js.is_array()) return false;
         for (auto& j : js) {
             value.push_back(-1);
-            if (!serialize_json_objref(j, value.back(), refs, save)) return false;
+            if (!serialize_json_objref(j, value.back(), refs, save))
+                return false;
         }
         return true;
     }
@@ -1432,9 +1434,9 @@ bool apply_json_procedural(
     const json& js, yocto_camera& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("from") || js.count("to")) {
-        auto from          = js.value("from", zero3f);
-        auto to            = js.value("to", zero3f);
-        auto up            = js.value("up", vec3f{0, 1, 0});
+        auto from            = js.value("from", zero3f);
+        auto to              = js.value("to", zero3f);
+        auto up              = js.value("up", vec3f{0, 1, 0});
         value.frame          = lookat_frame(from, to, up);
         value.focus_distance = length(from - to);
     }
@@ -1453,13 +1455,14 @@ bool serialize_json_object(
     if (!serialize_json_value(
             js, value.orthographic, "orthographic", def.orthographic, save))
         return false;
-    if (!serialize_json_value(js, value.film_size, "film_size", def.film_size, save))
+    if (!serialize_json_value(
+            js, value.film_size, "film_size", def.film_size, save))
         return false;
     if (!serialize_json_value(
             js, value.focal_length, "focal_length", def.focal_length, save))
         return false;
-    if (!serialize_json_value(
-            js, value.focus_distance, "focus_distance", def.focus_distance, save))
+    if (!serialize_json_value(js, value.focus_distance, "focus_distance",
+            def.focus_distance, save))
         return false;
     if (!serialize_json_value(
             js, value.lens_aperture, "lens_aperture", def.lens_aperture, save))
@@ -1487,7 +1490,8 @@ bool apply_json_procedural(
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        value.hdr_image = make_bumpdimple_image(width, height, js.value("tile", 8));
+        value.hdr_image = make_bumpdimple_image(
+            width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
         value.hdr_image = make_uvramp_image(width, height);
     } else if (type == "uvgrid") {
@@ -1498,7 +1502,7 @@ bool apply_json_procedural(
             js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
             js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        is_hdr        = true;
+        is_hdr          = true;
     } else if (type == "noise") {
         value.hdr_image = make_noise_image(
             width, height, js.value("scale", 1.0f), js.value("wrap", true));
@@ -1507,10 +1511,10 @@ bool apply_json_procedural(
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        value.hdr_image = make_ridge_image(width, height, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("offset", 1.0f), js.value("octaves", 6),
-            js.value("wrap", true));
+        value.hdr_image = make_ridge_image(width, height,
+            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f), js.value("offset", 1.0f),
+            js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "turbulence") {
         value.hdr_image = make_turbulence_image(width, height,
             js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
@@ -1534,7 +1538,7 @@ bool apply_json_procedural(
         value.hdr_image = {};
     }
     if (value.filename == "") {
-        auto ext     = (is_hdr) ? string("hdr") : string("png");
+        auto ext       = (is_hdr) ? string("hdr") : string("png");
         value.filename = "textures/" + value.name + "." + ext;
     }
     return true;
@@ -1591,7 +1595,7 @@ bool apply_json_procedural(
         return false;
     }
     if (value.filename == "") {
-        auto ext     = string("vol");
+        auto ext       = string("vol");
         value.filename = "textures/" + value.name + "." + ext;
     }
     return true;
@@ -1649,7 +1653,8 @@ bool serialize_json_object(
     if (!serialize_json_value(
             js, value.transmission, "transmission", def.transmission, save))
         return false;
-    if (!serialize_json_value(js, value.roughness, "roughness", def.roughness, save))
+    if (!serialize_json_value(
+            js, value.roughness, "roughness", def.roughness, save))
         return false;
     if (!serialize_json_value(js, value.opacity, "opacity", def.opacity, save))
         return false;
@@ -1657,14 +1662,14 @@ bool serialize_json_object(
         return false;
     if (!serialize_json_value(js, value.refract, "refract", def.refract, save))
         return false;
-    if (!serialize_json_objref(
-            js, value.emission_texture, "emission_texture", scene.textures, save))
+    if (!serialize_json_objref(js, value.emission_texture, "emission_texture",
+            scene.textures, save))
         return false;
     if (!serialize_json_objref(
             js, value.diffuse_texture, "diffuse_texture", scene.textures, save))
         return false;
-    if (!serialize_json_objref(
-            js, value.specular_texture, "specular_texture", scene.textures, save))
+    if (!serialize_json_objref(js, value.specular_texture, "specular_texture",
+            scene.textures, save))
         return false;
     if (!serialize_json_objref(js, value.transmission_texture,
             "transmission_texture", scene.textures, save))
@@ -2032,9 +2037,9 @@ bool apply_json_procedural(
     const json& js, yocto_instance& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("from")) {
-        auto from = js.value("from", zero3f);
-        auto to   = js.value("to", zero3f);
-        auto up   = js.value("up", vec3f{0, 1, 0});
+        auto from   = js.value("from", zero3f);
+        auto to     = js.value("to", zero3f);
+        auto up     = js.value("up", vec3f{0, 1, 0});
         value.frame = lookat_frame(from, to, up, true);
     }
     if (js.count("translation") || js.count("rotation") || js.count("scale")) {
@@ -2042,7 +2047,7 @@ bool apply_json_procedural(
         auto rotation    = js.value("rotation", zero4f);
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
         value.frame = translation_frame(translation) * scaling_frame(scaling) *
-                    rotation_frame(xyz(rotation), rotation.w);
+                      rotation_frame(xyz(rotation), rotation.w);
     }
     return true;
 }
@@ -2071,7 +2076,7 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
-        value.frame     = rotation_frame(xyz(rotation), rotation.w);
+        value.frame   = rotation_frame(xyz(rotation), rotation.w);
     }
     return true;
 }
@@ -2087,8 +2092,8 @@ bool serialize_json_object(
         return false;
     if (!serialize_json_value(js, value.emission, "emission", def.emission, save))
         return false;
-    if (!serialize_json_objref(
-            js, value.emission_texture, "emission_texture", scene.textures, save))
+    if (!serialize_json_objref(js, value.emission_texture, "emission_texture",
+            scene.textures, save))
         return false;
     if (!serialize_json_procedural(js, value, "!!proc", scene, save))
         return false;
@@ -2100,9 +2105,9 @@ bool apply_json_procedural(
     const json& js, yocto_scene_node& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("from")) {
-        auto from = js.value("from", zero3f);
-        auto to   = js.value("to", zero3f);
-        auto up   = js.value("up", vec3f{0, 1, 0});
+        auto from   = js.value("from", zero3f);
+        auto to     = js.value("to", zero3f);
+        auto up     = js.value("up", vec3f{0, 1, 0});
         value.local = lookat_frame(from, to, up, true);
     }
     return true;
@@ -2264,7 +2269,8 @@ bool serialize_json_object(
         return false;
     if (!serialize_json_objarray(js, value.textures, "textures", scene, save))
         return false;
-    if (!serialize_json_objarray(js, value.voltextures, "voltextures", scene, save))
+    if (!serialize_json_objarray(
+            js, value.voltextures, "voltextures", scene, save))
         return false;
     if (!serialize_json_objarray(js, value.materials, "materials", scene, save))
         return false;
@@ -5076,9 +5082,9 @@ void pbrt_flipyz_scene(yocto_scene& scene) {
 namespace ygl {
 
 // serialize_bin( ) can both save/load data to/from a binary file. The behaviour
-// is set by the boolean 'save'. serialize_bin(name, file, true) : writes name as
-// binary into file serialize_bin(name, file, false): read file as binary and set
-// name
+// is set by the boolean 'save'. serialize_bin(name, file, true) : writes name
+// as binary into file serialize_bin(name, file, false): read file as binary and
+// set name
 
 // Serialize type or struct with no allocated resource
 template <typename T>

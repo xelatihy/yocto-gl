@@ -484,14 +484,15 @@ inline vector<string> get_option_names(const string& name_) {
 }
 
 // add help
-inline string get_option_usage(const string& name,
-    const string& usage, const string& def_, const vector<string>& choices) {
+inline string get_option_usage(const string& name, const string& usage,
+    const string& def_, const vector<string>& choices) {
     auto def = def_;
     if (def != "") def = "[" + def + "]";
     auto namevar = name;
     if (name != "") namevar += " " + name;
     char buffer[4096];
-    sprintf(buffer, "  %-24s %s %s\n", namevar.c_str(), usage.c_str(), def.c_str());
+    sprintf(
+        buffer, "  %-24s %s %s\n", namevar.c_str(), usage.c_str(), def.c_str());
     auto usagelines = string(buffer);
     if (!choices.empty()) {
         usagelines += "        accepted values:";
@@ -539,8 +540,7 @@ inline void check_cmdline(cmdline_parser& parser) {
 template <typename T>
 inline T parse_option(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_opt += get_option_usage(
-        name, usage, to_string(def), choices);
+    parser.usage_opt += get_option_usage(name, usage, to_string(def), choices);
     if (parser.error != "") return def;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
@@ -575,8 +575,7 @@ inline T parse_option(cmdline_parser& parser, const string& name, T def,
 template <typename T>
 inline T parse_argument(cmdline_parser& parser, const string& name, const T def,
     const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_arg += get_option_usage(
-        name, usage, to_string(def), choices);
+    parser.usage_arg += get_option_usage(name, usage, to_string(def), choices);
     if (parser.error != "") return def;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
@@ -650,10 +649,10 @@ inline bool parse_arg<bool>(cmdline_parser& parser, const string& name,
 template <typename T>
 inline T parse_arge(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req) {
-    auto value = is_option(name) ? parse_option(parser, name, labels.at((int)def),
-                                     usage, req, labels) :
-                                 parse_argument(parser, name,
-                                     labels.at((int)def), usage, req, labels);
+    auto value = is_option(name) ? parse_option(parser, name,
+                                       labels.at((int)def), usage, req, labels) :
+                                   parse_argument(parser, name,
+                                       labels.at((int)def), usage, req, labels);
     return (T)(std::find(labels.begin(), labels.end(), value) - labels.begin());
 }
 
