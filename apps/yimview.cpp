@@ -285,7 +285,7 @@ void run_ui(app_state& app) {
     auto  win = glwindow();
     init_glwindow(
         win, 720 + 320, 720, "yimview | " + app.imgs.front().name, &app, draw);
-    set_drop_callback(win, drop_callback);
+    set_drop_glcallback(win, drop_callback);
 
     // init widgets
     init_glwidgets(win);
