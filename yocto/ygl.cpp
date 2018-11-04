@@ -5146,16 +5146,16 @@ vec2i evaluate_image_size(const yocto_camera& camera, int yresolution) {
 
 // Generates a ray from a camera.
 ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
-    auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
+    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
     return evaluate_camera_ray(camera, uv, luv);
 }
 
 // Generates a ray from a camera.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
-    auto ij = vec2i{idx % imsize.x, idx / imsize.x};
-    auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
+    auto ij = vec2i{idx % image_size.x, idx / image_size.x};
+    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
     return evaluate_camera_ray(camera, uv, luv);
 }
 
@@ -5685,12 +5685,12 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene& scene,
 
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& imsize, rng_state& rng) {
+    const vec2i& image_size, rng_state& rng) {
     auto puv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
     auto luv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
-    return evaluate_camera_ray(camera, ij, imsize, puv, luv);
+    return evaluate_camera_ray(camera, ij, image_size, puv, luv);
 }
 
 // Check if we are near the mirror direction.
