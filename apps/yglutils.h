@@ -146,10 +146,10 @@ void draw_glpoints(const glelementbuffer& buf, int num);
 void draw_gllines(const glelementbuffer& buf, int num);
 void draw_gltriangles(const glelementbuffer& buf, int num);
 
-void draw_glimage(const gltexture& texture, const vec2i& imsize, const vec2i& winsize,
-    const vec2f& imcenter, float imscale);
-void draw_glimage_background(const vec2i& imsize, const vec2i& winsize,
-    const vec2f& imcenter, float imscale);
+void draw_glimage(const gltexture& texture, const vec2i& image_size, const vec2i& window_size,
+    const vec2f& image_center, float image_scale);
+void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
+    const vec2f& image_center, float image_scale);
 
 struct glwindow {
     GLFWwindow*                                            win        = nullptr;

@@ -1993,14 +1993,14 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 }
 
 // Center image and autofit.
-inline void center_image(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
+inline void center_image(vec2f& center, float& scale, const vec2i& image_size,
+    const vec2i& window_size, bool zoom_to_fit) {
     if (zoom_to_fit) {
-        scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
-        center = {(float)winsize.x / 2, (float)winsize.y / 2};
+        scale  = min(window_size.x / (float)image_size.x, window_size.y / (float)image_size.y);
+        center = {(float)window_size.x / 2, (float)window_size.y / 2};
     } else {
-        if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
-        if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
+        if (window_size.x >= image_size.x * scale) center.x = window_size.x / 2;
+        if (window_size.y >= image_size.y * scale) center.y = window_size.y / 2;
     }
 }
 
@@ -3492,15 +3492,15 @@ void  set_camera_view(yocto_camera& camera, const bbox3f& bbox,
 ray3f evaluate_camera_ray(
     const yocto_camera& camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the image size
-// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv);
 // Generates a ray from a camera for pixel index `idx`, the image size
-// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
+// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
 // the image resolution `res`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
