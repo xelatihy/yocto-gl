@@ -157,7 +157,7 @@ void draw_gltriangles(const glelementbuffer& buffer, int num);
 void draw_glimage(const gltexture& texture, const vec2i& image_size,
     const vec2i& window_size, const vec2f& image_center, float image_scale);
 void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
-    const vec2f& image_center, float image_scale);
+    const vec2f& image_center, float image_scale, float border_size = 2);
 
 struct glwindow;
 using refresh_glcallback = function<void(const glwindow&)>;

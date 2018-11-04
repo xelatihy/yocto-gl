@@ -148,6 +148,9 @@ void draw(const glwindow& win) {
             app.gl_txt, app.state.display_image, false, false, false);
     }
     set_glblending(true);
+    draw_glimage_background(
+        {app.state.display_image.width, app.state.display_image.height},
+        win_size, app.image_center, app.image_scale);
     draw_glimage(app.gl_txt,
         {app.state.display_image.width, app.state.display_image.height},
         win_size, app.image_center, app.image_scale);

@@ -519,7 +519,7 @@ void draw_glimage(const gltexture& gl_txt, const vec2i& image_size,
 }
 
 void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
-    const vec2f& image_center, float image_scale) {
+    const vec2f& image_center, float image_scale, float border_size) {
     static glprogram       gl_prog      = {};
     static glarraybuffer   gl_texcoord  = {};
     static glelementbuffer gl_triangles = {};
@@ -530,11 +530,11 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
             #version 330
             in vec2 texcoord;
             out vec2 frag_texcoord;
-            uniform vec2 window_size, image_size;
+            uniform vec2 window_size, image_size, border_size;
             uniform vec2 image_center;
             uniform float image_scale;
             void main() {
-                vec2 pos = (texcoord - vec2(0.5,0.5)) * image_size * image_scale + image_center;
+                vec2 pos = (texcoord - vec2(0.5,0.5)) * (image_size + border_size*2) * image_scale + image_center;
                 gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
                 frag_texcoord = texcoord;
             }
@@ -543,12 +543,12 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
             #version 330
             in vec2 frag_texcoord;
             out vec4 frag_color;
-            uniform vec2 image_size;
+            uniform vec2 image_size, border_size;
             void main() {
-                ivec2 imcoord = ivec2(frag_texcoord * image_size);
+                ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
                 ivec2 tile = imcoord / 32;
-                if(imcoord.x < 0 || imcoord.y < 0 || 
-                    imcoord.x > image_size.x || imcoord.y > image_size.y) frag_color = vec4(0,0,0,1);
+                if(imcoord.x <= 0 || imcoord.y <= 0 || 
+                    imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
                 else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
                 else frag_color = vec4(0.3,0.3,0.3,1);
             }
@@ -566,6 +566,8 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
         vec2f{(float)window_size.x, (float)window_size.y});
     set_gluniform(
         gl_prog, "image_size", vec2f{(float)image_size.x, (float)image_size.y});
+    set_gluniform(
+        gl_prog, "border_size", vec2f{(float)border_size, (float)border_size});
     set_gluniform(gl_prog, "image_center", image_center);
     set_gluniform(gl_prog, "image_scale", image_scale);
     set_glvertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
