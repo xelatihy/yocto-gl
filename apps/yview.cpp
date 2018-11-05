@@ -32,12 +32,16 @@
 #include "ysceneui.h"
 
 struct glshape {
-    glarraybuffer gl_pos = {}, gl_norm = {}, gl_texcoord = {}, gl_color = {},
-                  gl_tangsp   = {};
-    glelementbuffer gl_points = {}, gl_lines = {}, gl_triangles = {},
-                    gl_quads                      = {};
-    vector<glelementbuffer> gl_split_quads        = {};
-    int                     num_facevarying_quads = 0;
+    glarraybuffer positions_buffer = {};
+    glarraybuffer normals_buffer = {};
+    glarraybuffer texturecoords_buffer = {};
+    glarraybuffer colors_buffer = {};
+    glarraybuffer tangentspaces_buffer   = {};
+    glelementbuffer points_buffer = {};
+    glelementbuffer lines_buffer = {};
+    glelementbuffer triangles_buffer = {};
+    glelementbuffer quads_buffer                      = {};
+    vector<glelementbuffer> split_quads_buffer        = {};
 };
 
 struct draw_glstate {
@@ -525,30 +529,30 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
             5);
 
         set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
-        set_glvertexattrib(state.program, "vert_pos", vbos.gl_pos, zero3f);
-        set_glvertexattrib(state.program, "vert_norm", vbos.gl_norm, zero3f);
+        set_glvertexattrib(state.program, "vert_pos", vbos.positions_buffer, zero3f);
+        set_glvertexattrib(state.program, "vert_norm", vbos.normals_buffer, zero3f);
         set_glvertexattrib(
-            state.program, "vert_texcoord", vbos.gl_texcoord, zero2f);
+            state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
         set_glvertexattrib(
-            state.program, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+            state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
         set_glvertexattrib(
-            state.program, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+            state.program, "vert_tangsp", vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
 
-        if (vbos.gl_points) {
+        if (vbos.points_buffer) {
             set_gluniform(state.program, "elem_type", 1);
-            draw_glpoints(vbos.gl_points, vbos.gl_points.num);
+            draw_glpoints(vbos.points_buffer, vbos.points_buffer.num);
         }
-        if (vbos.gl_lines) {
+        if (vbos.lines_buffer) {
             set_gluniform(state.program, "elem_type", 2);
-            draw_gllines(vbos.gl_lines, vbos.gl_lines.num);
+            draw_gllines(vbos.lines_buffer, vbos.lines_buffer.num);
         }
-        if (vbos.gl_triangles) {
+        if (vbos.triangles_buffer) {
             set_gluniform(state.program, "elem_type", 3);
-            draw_gltriangles(vbos.gl_triangles, vbos.gl_triangles.num);
+            draw_gltriangles(vbos.triangles_buffer, vbos.triangles_buffer.num);
         }
-        if (vbos.gl_quads) {
+        if (vbos.quads_buffer) {
             set_gluniform(state.program, "elem_type", 3);
-            draw_gltriangles(vbos.gl_quads, vbos.gl_quads.num);
+            draw_gltriangles(vbos.quads_buffer, vbos.quads_buffer.num);
         }
 
 #if 0
@@ -572,7 +576,7 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
         auto& vbos    = state.surfaces.at(instance.surface);
-        for (auto group_id = 0; group_id < vbos.gl_split_quads.size();
+        for (auto group_id = 0; group_id < vbos.split_quads_buffer.size();
              group_id++) {
             auto& material = scene.materials[surface.materials.at(group_id)];
 
@@ -627,19 +631,19 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
 
             set_gluniform(
                 state.program, "elem_faceted", (int)surface.normals.empty());
-            set_glvertexattrib(state.program, "vert_pos", vbos.gl_pos, zero3f);
-            set_glvertexattrib(state.program, "vert_norm", vbos.gl_norm, zero3f);
+            set_glvertexattrib(state.program, "vert_pos", vbos.positions_buffer, zero3f);
+            set_glvertexattrib(state.program, "vert_norm", vbos.normals_buffer, zero3f);
             set_glvertexattrib(
-                state.program, "vert_texcoord", vbos.gl_texcoord, zero2f);
+                state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
             set_glvertexattrib(
-                state.program, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
-            set_glvertexattrib(state.program, "vert_tangsp", vbos.gl_tangsp,
+                state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
+            set_glvertexattrib(state.program, "vert_tangsp", vbos.tangentspaces_buffer,
                 vec4f{0, 0, 1, 1});
 
-            if (vbos.gl_split_quads[group_id]) {
+            if (vbos.split_quads_buffer[group_id]) {
                 set_gluniform(state.program, "elem_type", 3);
-                draw_gltriangles(vbos.gl_split_quads[group_id],
-                    vbos.gl_split_quads[group_id].num);
+                draw_gltriangles(vbos.split_quads_buffer[group_id],
+                    vbos.split_quads_buffer[group_id].num);
             }
         }
 
@@ -772,23 +776,23 @@ draw_glstate init_draw_state(const glwindow& win) {
         auto& shape = app.scene.shapes[shape_id];
         auto  vbos  = glshape();
         if (!shape.positions.empty())
-            vbos.gl_pos = make_glarraybuffer(shape.positions, false);
+            vbos.positions_buffer = make_glarraybuffer(shape.positions, false);
         if (!shape.normals.empty())
-            vbos.gl_norm = make_glarraybuffer(shape.normals, false);
+            vbos.normals_buffer = make_glarraybuffer(shape.normals, false);
         if (!shape.texturecoords.empty())
-            vbos.gl_texcoord = make_glarraybuffer(shape.texturecoords, false);
+            vbos.texturecoords_buffer = make_glarraybuffer(shape.texturecoords, false);
         if (!shape.colors.empty())
-            vbos.gl_color = make_glarraybuffer(shape.colors, false);
+            vbos.colors_buffer = make_glarraybuffer(shape.colors, false);
         if (!shape.tangentspaces.empty())
-            vbos.gl_tangsp = make_glarraybuffer(shape.tangentspaces, false);
+            vbos.tangentspaces_buffer = make_glarraybuffer(shape.tangentspaces, false);
         if (!shape.points.empty())
-            vbos.gl_points = make_glelementbuffer(shape.points, false);
+            vbos.points_buffer = make_glelementbuffer(shape.points, false);
         if (!shape.lines.empty())
-            vbos.gl_lines = make_glelementbuffer(shape.lines, false);
+            vbos.lines_buffer = make_glelementbuffer(shape.lines, false);
         if (!shape.triangles.empty())
-            vbos.gl_triangles = make_glelementbuffer(shape.triangles, false);
+            vbos.triangles_buffer = make_glelementbuffer(shape.triangles, false);
         if (!shape.quads.empty())
-            vbos.gl_quads = make_glelementbuffer(
+            vbos.quads_buffer = make_glelementbuffer(
                 convert_quads_to_triangles(shape.quads), false);
         state.shapes[shape_id] = vbos;
     }
@@ -812,17 +816,16 @@ draw_glstate init_draw_state(const glwindow& win) {
             split_quads = {quads};
         }
         if (!positions.empty())
-            vbos.gl_pos = make_glarraybuffer(positions, false);
-        if (!normals.empty()) vbos.gl_norm = make_glarraybuffer(normals, false);
+            vbos.positions_buffer = make_glarraybuffer(positions, false);
+        if (!normals.empty()) vbos.normals_buffer = make_glarraybuffer(normals, false);
         if (!texturecoords.empty())
-            vbos.gl_texcoord = make_glarraybuffer(texturecoords, false);
-        vbos.gl_split_quads = {};
+            vbos.texturecoords_buffer = make_glarraybuffer(texturecoords, false);
+        vbos.split_quads_buffer = {};
         for (auto& quads : split_quads) {
-            if (!quads.empty()) vbos.gl_split_quads.push_back({});
-            vbos.gl_split_quads.back() = make_glelementbuffer(
+            if (!quads.empty()) vbos.split_quads_buffer.push_back({});
+            vbos.split_quads_buffer.back() = make_glelementbuffer(
                 convert_quads_to_triangles(quads), false);
         }
-        vbos.num_facevarying_quads = (int)quads.size();
         state.surfaces[surface_id] = vbos;
     }
     return state;
