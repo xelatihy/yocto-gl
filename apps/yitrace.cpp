@@ -33,21 +33,19 @@
 
 // Application state
 struct app_state {
-    // scene
-    yocto_scene scene = {};
-    bvh_scene   bvh   = {};
-
-    // rendering params
+    // loading params
     string       filename   = "scene.json";
     string       imfilename = "out.obj";
-    trace_params params     = {};
-
-    // loading params
     bool use_embree_bvh = false;
     bool double_sided = false;
     bool add_skyenv = false;
 
+    // scene
+    yocto_scene scene = {};
+    bvh_scene   bvh   = {};
+
     // rendering state
+    trace_params params     = {};
     trace_state  state  = {};
     trace_lights lights = {};
 
