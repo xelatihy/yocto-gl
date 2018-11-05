@@ -3128,9 +3128,6 @@ volume<float> make_test_volume1f(
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// forward declaration
-struct bvh_scene;
-
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the focal lengthm the focus
