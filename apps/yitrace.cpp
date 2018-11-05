@@ -283,12 +283,20 @@ bool update(app_state& app) {
     return true;
 }
 
+void drop_callback(const glwindow& win, const vector<string>& paths) {
+    auto& app = *(app_state*)get_user_pointer(win);
+    trace_async_stop(app.state);
+    app.filename = paths.front();
+    load_scene_async(app);
+}
+
 // run ui loop
 void run_ui(app_state& app) {
     // window
     auto win    = glwindow();
     init_glwindow(win, 1280, 720, "yitrace | " + get_filename(app.filename),
         &app, draw);
+    set_drop_glcallback(win, drop_callback);
 
     // init widgets
     init_glwidgets(win);
