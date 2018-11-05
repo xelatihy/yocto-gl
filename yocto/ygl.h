@@ -3705,8 +3705,6 @@ struct trace_lights {
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
 struct trace_state {
-    image<vec4f>     accumulation_buffer      = {};
-    image<int>       samples_per_pixel        = {};
     image<rng_state> random_number_generators = {};
     int              current_sample           = 0;
     vector<thread>   async_threads;

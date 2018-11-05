@@ -7208,8 +7208,6 @@ image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t seed) {
 trace_state make_trace_state(const vec2i& image_size, int random_seed) {
     auto  scope          = log_trace_scoped("making trace state");
     auto  state          = trace_state();
-    state.accumulation_buffer      = image<vec4f>{image_size, zero4f};
-    state.samples_per_pixel        = image<int>{image_size, 0};
     state.random_number_generators = make_trace_rngs(image_size, random_seed);
     return state;
 }
@@ -7308,14 +7306,12 @@ bool trace_samples(trace_state& state, image<vec4f>& rendered_image, const yocto
     if (params.no_parallel) {
         for (auto j = 0; j < rendered_image.height; j++) {
             for (auto i = 0; i < rendered_image.width; i++) {
+                at(rendered_image, i, j) *= state.current_sample;
                 for (auto s = 0; s < nbatch; s++) {
-                    at(state.accumulation_buffer, i, j) += trace_sample(
+                    at(rendered_image, i, j) += trace_sample(
                         state, scene, bvh, lights, {i, j}, {rendered_image.width, rendered_image.height}, params);
-                    at(state.samples_per_pixel, i, j) += 1;
                 }
-                at(rendered_image, i,
-                    j) = at(state.accumulation_buffer, i, j) /
-                         at(state.samples_per_pixel, i, j);
+                at(rendered_image, i, j) /= state.current_sample + nbatch;
             }
         }
     } else {
@@ -7327,14 +7323,12 @@ bool trace_samples(trace_state& state, image<vec4f>& rendered_image, const yocto
                 for (auto j = tid; j < rendered_image.height;
                      j += nthreads) {
                     for (auto i = 0; i < rendered_image.width; i++) {
+                        at(rendered_image, i, j) *= state.current_sample;
                         for (auto s = 0; s < nbatch; s++) {
-                            at(state.accumulation_buffer, i, j) += trace_sample(
+                            at(rendered_image, i, j) += trace_sample(
                                 state, scene, bvh, lights, {i, j}, {rendered_image.width, rendered_image.height}, params);
-                            at(state.samples_per_pixel, i, j) += 1;
                         }
-                        at(rendered_image, i,
-                            j) = at(state.accumulation_buffer, i, j) /
-                                 at(state.samples_per_pixel, i, j);
+                        at(rendered_image, i, j) /= state.current_sample + nbatch;
                     }
                 }
             }));
@@ -7376,16 +7370,13 @@ void trace_async_start(trace_state& state, image<vec4f>& rendered_image, image<v
             thread([tid, nthreads, &scene, &state, &rendered_image, &display_image, &bvh, &lights, &params]() {
                 for (auto s = 0; s < params.num_samples; s++) {
                     if (!tid) state.current_sample = s;
-                    for (auto j = tid; j < rendered_image.height;
-                         j += nthreads) {
+                    for (auto j = tid; j < rendered_image.height; j += nthreads) {
                         for (auto i = 0; i < rendered_image.width; i++) {
                             if (state.async_stop_flag) return;
-                            at(state.accumulation_buffer, i, j) += trace_sample(
+                            at(rendered_image, i, j) *= s;
+                            at(rendered_image, i, j) += trace_sample(
                                 state, scene, bvh, lights, {i, j},  {rendered_image.width, rendered_image.height}, params);
-                            at(state.samples_per_pixel, i, j) += 1;
-                            at(rendered_image, i,
-                                j) = at(state.accumulation_buffer, i, j) /
-                                     at(state.samples_per_pixel, i, j);
+                            at(rendered_image, i, j) /= s + 1;
                             at(display_image, i, j) = tonemap_filmic(
                                 at(rendered_image, i, j),
                                 params.display_exposure, params.display_filmic,
