@@ -5094,14 +5094,14 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float get_camera_fovx(const yocto_camera& camera) {
-    return 2 * std::atan(camera.film_size.x / (2 * camera.focal_length));
+    return 2 * atan(camera.film_size.x / (2 * camera.focal_length));
 }
 float get_camera_fovy(const yocto_camera& camera) {
-    return 2 * std::atan(camera.film_size.y / (2 * camera.focal_length));
+    return 2 * atan(camera.film_size.y / (2 * camera.focal_length));
 }
 void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
     camera.film_size    = {width, width / aspect};
-    camera.focal_length = camera.film_size.y / (2 * std::tan(fovy / 2));
+    camera.focal_length = camera.film_size.y / (2 * tan(fovy / 2));
 }
 
 // add missing camera
@@ -5117,8 +5117,8 @@ void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
     if (camera_dir == zero3f) camera_dir = {0, 0, 1};
     auto camera_fov = min(get_camera_fovx(camera), get_camera_fovy(camera));
     if (camera_fov == 0) camera_fov = 45 * pif / 180;
-    auto camera_dist      = bbox_radius / sin(camera_fov);
-    auto from             = camera_dir * (camera_dist * 1.1f) + bbox_center;
+    auto camera_dist      = bbox_radius / sin(camera_fov / 2);
+    auto from             = camera_dir * (camera_dist * 1) + bbox_center;
     auto to               = bbox_center;
     auto up               = vec3f{0, 1, 0};
     camera.frame          = lookat_frame(from, to, up);
