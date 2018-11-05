@@ -104,11 +104,14 @@ int main(int argc, char* argv[]) {
 
     // render
     auto scope = log_trace_begin("rendering image");
-    for(auto sample = 0; sample < params.num_samples; sample += params.samples_per_batch) {
-        trace_samples(rendered_image, scene, bvh, lights, sample, params.samples_per_batch, trace_rngs, params);
+    for (auto sample = 0; sample < params.num_samples;
+         sample += params.samples_per_batch) {
+        trace_samples(rendered_image, scene, bvh, lights, sample,
+            params.samples_per_batch, trace_rngs, params);
         if (save_batch) {
-            auto filename = replace_extension(imfilename,
-                to_string(sample + params.samples_per_batch) + "." + get_extension(imfilename));
+            auto filename = replace_extension(
+                imfilename, to_string(sample + params.samples_per_batch) + "." +
+                                get_extension(imfilename));
             if (!save_tonemapped_image(
                     filename, rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);

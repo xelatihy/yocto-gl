@@ -45,15 +45,15 @@ struct app_state {
     bvh_scene   bvh   = {};
 
     // rendering state
-    trace_params params         = {};
-    trace_lights lights         = {};
-    image<rng_state> trace_rngs = {};
-    image<vec4f> rendered_image = {};
-    image<vec4f> display_image  = {};
-    bool trace_stop             = false;
-    int  trace_sample = 0;
-    vector<thread> trace_threads = {};
-    concurrent_queue<image_region> trace_queue = {};
+    trace_params                   params         = {};
+    trace_lights                   lights         = {};
+    image<rng_state>               trace_rngs     = {};
+    image<vec4f>                   rendered_image = {};
+    image<vec4f>                   display_image  = {};
+    bool                           trace_stop     = false;
+    int                            trace_sample   = 0;
+    vector<thread>                 trace_threads  = {};
+    concurrent_queue<image_region> trace_queue    = {};
 
     // view image
     vec2f                      image_center = zero2f;
@@ -81,13 +81,14 @@ void start_rendering_async(app_state& app) {
     app.rendered_image = image<vec4f>{image_size};
     app.display_image  = image<vec4f>{image_size};
     app.trace_rngs     = make_trace_rngs(image_size, app.params.random_seed);
-    trace_async_start(app.rendered_image, app.display_image,
-        app.scene, app.bvh, app.lights, app.trace_rngs,
-        app.trace_threads, app.trace_stop, 
-        app.trace_sample, app.trace_queue,  app.params);
+    trace_async_start(app.rendered_image, app.display_image, app.scene, app.bvh,
+        app.lights, app.trace_rngs, app.trace_threads, app.trace_stop,
+        app.trace_sample, app.trace_queue, app.params);
 }
 
-void stop_rendering_async(app_state& app) { trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue); }
+void stop_rendering_async(app_state& app) {
+    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
+}
 
 bool load_scene_sync(app_state& app) {
     // scene loading
@@ -191,10 +192,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                 win, "pratio", app.params.preview_ratio, 1, 64);
             if (edited) app.update_list.push_back({"app", -1});
             draw_label_opengl_widget(win, "time/sample", "%0.3lf",
-                (app.trace_sample) ?
-                    (get_time() - app.trace_start) /
-                        (1000000000.0 * app.trace_sample) :
-                    0.0);
+                (app.trace_sample) ? (get_time() - app.trace_start) /
+                                         (1000000000.0 * app.trace_sample) :
+                                     0.0);
             draw_slider_opengl_widget(
                 win, "exposure", app.params.display_exposure, -5, 5);
             draw_checkbox_opengl_widget(win, "filmic", app.params.display_filmic);
@@ -242,12 +242,14 @@ void draw(const opengl_window& win) {
             {app.display_image.width, app.display_image.height}, win_size,
             app.zoom_to_fit);
         if (!app.gl_txt) {
-            init_opengl_texture(
-                app.gl_txt, {app.display_image.width, app.display_image.height}, false, false, false, false);
+            init_opengl_texture(app.gl_txt,
+                {app.display_image.width, app.display_image.height}, false,
+                false, false, false);
         } else {
             auto region = image_region{};
-            while(app.trace_queue.try_pop(region))
-                update_opengl_texture_region(app.gl_txt, app.display_image, region, false);
+            while (app.trace_queue.try_pop(region))
+                update_opengl_texture_region(
+                    app.gl_txt, app.display_image, region, false);
         }
         set_glblending(true);
         draw_glimage_background(

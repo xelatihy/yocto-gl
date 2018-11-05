@@ -2032,11 +2032,11 @@ template <typename T>
 struct concurrent_queue {
     concurrent_queue() {}
     concurrent_queue(const concurrent_queue& other) {
-        if(!other._queue.empty()) log_error("cannot copy full queue");
+        if (!other._queue.empty()) log_error("cannot copy full queue");
         clear();
     }
     concurrent_queue& operator=(const concurrent_queue& other) {
-        if(!other._queue.empty()) log_error("cannot copy full queue");
+        if (!other._queue.empty()) log_error("cannot copy full queue");
         clear();
     }
 
@@ -3738,18 +3738,16 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-void trace_samples(image<vec4f>& rendered_image,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int current_sample, int num_samples, image<rng_state>& rngs, 
-    const trace_params& params);
+void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, int current_sample,
+    int num_samples, image<rng_state>& rngs, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
 void trace_async_start(image<vec4f>& rendered_image,
     image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, image<rng_state>& rngs, 
-    vector<thread>& threads, bool& stop_flag, int& current_sample, 
-    concurrent_queue<image_region>& queue,
+    const trace_lights& lights, image<rng_state>& rngs, vector<thread>& threads,
+    bool& stop_flag, int& current_sample, concurrent_queue<image_region>& queue,
     const trace_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(vector<thread>& threads, bool& stop_flag,
