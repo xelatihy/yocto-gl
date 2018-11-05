@@ -2030,6 +2030,24 @@ namespace ygl {
 // a simple concurrent queue that locks at every call
 template <typename T>
 struct concurrent_queue {
+    concurrent_queue() {}
+    concurrent_queue(const concurrent_queue& other) {
+        if(!other._queue.empty()) log_error("cannot copy full queue");
+        clear();
+    }
+    concurrent_queue& operator=(const concurrent_queue& other) {
+        if(!other._queue.empty()) log_error("cannot copy full queue");
+        clear();
+    }
+
+    bool empty() {
+        lock_guard<mutex> lock(_mutex);
+        return _queue.empty();
+    }
+    void clear() {
+        lock_guard<mutex> lock(_mutex);
+        _queue.clear();
+    }
     void push(const T& value) {
         lock_guard<mutex> lock(_mutex);
         _queue.push_back(value);
@@ -3731,9 +3749,11 @@ void trace_async_start(image<vec4f>& rendered_image,
     image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, image<rng_state>& rngs, 
     vector<thread>& threads, bool& stop_flag, int& current_sample, 
+    concurrent_queue<image_region>& queue,
     const trace_params& params);
 // Stop the asynchronous renderer.
-void trace_async_stop(vector<thread>& threads, bool& stop_flag);
+void trace_async_stop(vector<thread>& threads, bool& stop_flag,
+    concurrent_queue<image_region>& queue);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.

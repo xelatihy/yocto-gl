@@ -7336,6 +7336,7 @@ void trace_async_start(image<vec4f>& rendered_image,
     image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, image<rng_state>& rngs,
     vector<thread>& threads, bool& stop_flag, int& current_sample,
+        concurrent_queue<image_region>& queue,
     const trace_params& params) {
     log_trace("start tracing async");
     // render preview image
@@ -7355,6 +7356,7 @@ void trace_async_start(image<vec4f>& rendered_image,
                 at(display_image, i, j)  = at(pdisplay, pi, pj);
             }
         }
+        queue.push({zero2i,{rendered_image.width, rendered_image.height}});
     }
 
     auto nthreads = thread::hardware_concurrency();
@@ -7376,6 +7378,7 @@ void trace_async_start(image<vec4f>& rendered_image,
                         tonemap_image_region(display_image, region,
                             rendered_image, params.display_exposure,
                             params.display_filmic, params.display_srgb);
+                        queue.push(region);
                     }
                 }
                 if (!tid) current_sample = params.num_samples;
@@ -7384,10 +7387,11 @@ void trace_async_start(image<vec4f>& rendered_image,
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(vector<thread>& threads, bool& stop_flag) {
+void trace_async_stop(vector<thread>& threads, bool& stop_flag, concurrent_queue<image_region>& queue) {
     stop_flag = true;
     for (auto& t : threads) t.join();
     threads.clear();
+    queue.clear();
 }
 
 // Trace statistics for last run used for fine tuning implementation.

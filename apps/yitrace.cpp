@@ -53,6 +53,7 @@ struct app_state {
     bool trace_stop             = false;
     int  trace_sample = 0;
     vector<thread> trace_threads = {};
+    concurrent_queue<image_region> trace_queue = {};
 
     // view image
     vec2f                      image_center = zero2f;
@@ -72,7 +73,7 @@ struct app_state {
 };
 
 void start_rendering_async(app_state& app) {
-    trace_async_stop(app.trace_threads, app.trace_stop);
+    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
     app.status      = "rendering image";
     app.trace_start = get_time();
     auto image_size = get_camera_image_size(
@@ -83,10 +84,10 @@ void start_rendering_async(app_state& app) {
     trace_async_start(app.rendered_image, app.display_image,
         app.scene, app.bvh, app.lights, app.trace_rngs,
         app.trace_threads, app.trace_stop, 
-        app.trace_sample,  app.params);
+        app.trace_sample, app.trace_queue,  app.params);
 }
 
-void stop_rendering_async(app_state& app) { trace_async_stop(app.trace_threads, app.trace_stop); }
+void stop_rendering_async(app_state& app) { trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue); }
 
 bool load_scene_sync(app_state& app) {
     // scene loading
@@ -242,9 +243,11 @@ void draw(const opengl_window& win) {
             app.zoom_to_fit);
         if (!app.gl_txt) {
             init_opengl_texture(
-                app.gl_txt, app.display_image, false, false, false);
+                app.gl_txt, {app.display_image.width, app.display_image.height}, false, false, false, false);
         } else {
-            update_opengl_texture(app.gl_txt, app.display_image, false);
+            auto region = image_region{};
+            while(app.trace_queue.try_pop(region))
+                update_opengl_texture_region(app.gl_txt, app.display_image, region, false);
         }
         set_glblending(true);
         draw_glimage_background(
@@ -292,7 +295,7 @@ bool update(app_state& app) {
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
-    trace_async_stop(app.trace_threads, app.trace_stop);
+    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
     app.filename = paths.front();
     load_scene_async(app);
 }
@@ -408,7 +411,7 @@ int main(int argc, char* argv[]) {
     run_ui(app);
 
     // cleanup
-    trace_async_stop(app.trace_threads, app.trace_stop);
+    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
 
     // done
     return 0;
