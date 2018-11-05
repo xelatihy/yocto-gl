@@ -84,89 +84,6 @@ struct app_state {
     bool                       animate    = false;
 };
 
-void draw_glscene(draw_glstate& state, const yocto_scene& scene,
-    const yocto_camera& camera, const vec2i& viewport_size,
-    const tuple<string, int>& highlighted, bool eyelight, bool wireframe,
-    bool edges, float exposure, float gamma, float near_plane, float far_plane);
-
-// draw with shading
-void draw(const glwindow& win) {
-    auto& app              = *(app_state*)get_user_pointer(win);
-    auto  framebuffer_size = get_glframebuffer_size(win);
-    app.resolution         = framebuffer_size.y;
-
-    static auto last_time = 0.0f;
-    for (auto& sel : app.update_list) {
-        if (get<0>(sel) == "texture") {
-            // TODO: update texture
-            printf("texture update not supported\n");
-        }
-        if (get<0>(sel) == "subdiv") {
-            // TODO: update subdiv
-            printf("subdiv update not supported\n");
-        }
-        if (get<0>(sel) == "shape") {
-            // TODO: update shape
-            printf("shape update not supported\n");
-        }
-        if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
-            app.time != last_time) {
-            update_transforms(app.scene, app.time, app.anim_group);
-            last_time = app.time;
-        }
-    }
-    app.update_list.clear();
-
-    auto& camera = app.scene.cameras.at(app.camid);
-    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
-    draw_glscene(app.state, app.scene, camera, framebuffer_size, app.selection,
-        app.eyelight, app.wireframe, app.edges, app.exposure, app.gamma,
-        app.near_plane, app.far_plane);
-
-    begin_glwidgets_frame(win);
-    if (begin_glwidgets_window(win, "yview")) {
-        if (begin_header_glwidget(win, "scene")) {
-            draw_label_glwidgets(win, "scene", "%s", app.filename.c_str());
-            end_header_glwidget(win);
-        }
-        if (begin_header_glwidget(win, "view")) {
-            draw_combobox_glwidget(
-                win, "camera", app.camid, app.scene.cameras, false);
-            draw_slider_glwidget(win, "resolution", app.resolution, 256, 4096);
-            draw_checkbox_glwidget(win, "eyelight", app.eyelight);
-            continue_glwidgets_line(win);
-            draw_checkbox_glwidget(win, "wireframe", app.wireframe);
-            continue_glwidgets_line(win);
-            draw_checkbox_glwidget(win, "edges", app.edges);
-            if (app.time_range != zero2f) {
-                draw_slider_glwidget(
-                    win, "time", app.time, app.time_range.x, app.time_range.y);
-                draw_textinput_glwidget(win, "anim group", app.anim_group);
-                draw_checkbox_glwidget(win, "animate", app.animate);
-            }
-            draw_slider_glwidget(win, "exposure", app.exposure, -10, 10);
-            draw_slider_glwidget(win, "gamma", app.gamma, 0.1f, 4);
-            draw_slider_glwidget(win, "near", app.near_plane, 0.01f, 1.0f);
-            draw_slider_glwidget(win, "far", app.far_plane, 1000.0f, 10000.0f);
-            draw_checkbox_glwidget(win, "fps", app.navigation_fps);
-            end_header_glwidget(win);
-        }
-        if (begin_header_glwidget(win, "navigate")) {
-            draw_glwidgets_scene_tree(
-                win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_glwidget(win);
-        }
-        if (begin_header_glwidget(win, "inspect")) {
-            draw_glwidgets_scene_inspector(
-                win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_glwidget(win);
-        }
-    }
-    end_glwidgets_frame(win);
-
-    swap_glbuffers(win);
-}
-
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
@@ -833,10 +750,93 @@ void init_draw_glstate(draw_glstate& state, const yocto_scene& scene) {
     }
 }
 
+// draw with shading
+void draw_widgets(const glwindow& win) {
+    auto& app              = *(app_state*)get_user_pointer(win);
+
+    begin_glwidgets_frame(win);
+    if (begin_glwidgets_window(win, "yview")) {
+        if (begin_header_glwidget(win, "scene")) {
+            draw_label_glwidgets(win, "scene", "%s", app.filename.c_str());
+            end_header_glwidget(win);
+        }
+        if (begin_header_glwidget(win, "view")) {
+            draw_combobox_glwidget(
+                win, "camera", app.camid, app.scene.cameras, false);
+            draw_slider_glwidget(win, "resolution", app.resolution, 256, 4096);
+            draw_checkbox_glwidget(win, "eyelight", app.eyelight);
+            continue_glwidgets_line(win);
+            draw_checkbox_glwidget(win, "wireframe", app.wireframe);
+            continue_glwidgets_line(win);
+            draw_checkbox_glwidget(win, "edges", app.edges);
+            if (app.time_range != zero2f) {
+                draw_slider_glwidget(
+                    win, "time", app.time, app.time_range.x, app.time_range.y);
+                draw_textinput_glwidget(win, "anim group", app.anim_group);
+                draw_checkbox_glwidget(win, "animate", app.animate);
+            }
+            draw_slider_glwidget(win, "exposure", app.exposure, -10, 10);
+            draw_slider_glwidget(win, "gamma", app.gamma, 0.1f, 4);
+            draw_slider_glwidget(win, "near", app.near_plane, 0.01f, 1.0f);
+            draw_slider_glwidget(win, "far", app.far_plane, 1000.0f, 10000.0f);
+            draw_checkbox_glwidget(win, "fps", app.navigation_fps);
+            end_header_glwidget(win);
+        }
+        if (begin_header_glwidget(win, "navigate")) {
+            draw_glwidgets_scene_tree(
+                win, "", app.scene, app.selection, app.update_list, 200);
+            end_header_glwidget(win);
+        }
+        if (begin_header_glwidget(win, "inspect")) {
+            draw_glwidgets_scene_inspector(
+                win, "", app.scene, app.selection, app.update_list, 200);
+            end_header_glwidget(win);
+        }
+    }
+    end_glwidgets_frame(win);
+}
+
+// draw with shading
+void draw(const glwindow& win) {
+    auto& app              = *(app_state*)get_user_pointer(win);
+    auto  framebuffer_size = get_glframebuffer_size(win);
+    app.resolution         = framebuffer_size.y;
+
+    auto& camera = app.scene.cameras.at(app.camid);
+    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
+    draw_glscene(app.state, app.scene, camera, framebuffer_size, app.selection,
+        app.eyelight, app.wireframe, app.edges, app.exposure, app.gamma,
+        app.near_plane, app.far_plane);
+    draw_widgets(win);
+    swap_glbuffers(win);
+}
+
 // update
 void update(app_state& app) {
     // initialize gl state if needed
     if (!app.state.program) init_draw_glstate(app.state, app.scene);
+
+    static auto last_time = 0.0f;
+    for (auto& sel : app.update_list) {
+        if (get<0>(sel) == "texture") {
+            // TODO: update texture
+            printf("texture update not supported\n");
+        }
+        if (get<0>(sel) == "subdiv") {
+            // TODO: update subdiv
+            printf("subdiv update not supported\n");
+        }
+        if (get<0>(sel) == "shape") {
+            // TODO: update shape
+            printf("shape update not supported\n");
+        }
+        if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
+            app.time != last_time) {
+            update_transforms(app.scene, app.time, app.anim_group);
+            last_time = app.time;
+        }
+    }
+    app.update_list.clear();
 }
 
 // run ui loop
