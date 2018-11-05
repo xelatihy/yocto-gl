@@ -3698,7 +3698,6 @@ const auto trace_type_names = vector<string>{"path", "direct", "environment",
 
 // Trace options
 struct trace_params {
-    vec2i      image_size        = {1280, 720};
     trace_type sample_tracer     = trace_type::path;
     int        num_samples       = 256;
     int        max_bounces       = 8;

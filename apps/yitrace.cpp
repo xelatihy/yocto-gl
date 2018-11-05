@@ -46,6 +46,7 @@ struct app_state {
 
     // rendering params
     int        camera_id         = 0;
+    vec2i      image_size        = {1280, 720};
     float      display_exposure  = 0;
     bool       display_filmic    = false;
     bool       display_srgb      = true;
@@ -91,15 +92,13 @@ void start_rendering_async(app_state& app) {
     app.trace_start = get_time();
 
     auto& camera = app.scene.cameras[app.camera_id];
-    auto image_size = get_camera_image_size(camera
-        , app.params.image_size);
+    auto image_size = get_camera_image_size(camera, app.image_size);
     app.rendered_image = make_image<vec4f>(image_size);
     app.display_image  = make_image<vec4f>(image_size);
     app.preview_image  = make_image<vec4f>(image_size / app.preview_ratio);
     app.trace_rngs     = make_trace_rngs(image_size, app.random_seed);
 
     auto preview_params = app.params;
-    preview_params.image_size /= app.preview_ratio;
     preview_params.num_samples = 1;
     trace_image(app.preview_image,
         app.scene, camera, app.bvh, app.lights, preview_params);
@@ -199,7 +198,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "camera", app.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
-                win, "size", app.params.image_size, 256, 4096);
+                win, "size", app.image_size, 256, 4096);
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.params.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
@@ -416,7 +415,7 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
     app.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.params.image_size  = {0,
+    app.image_size  = {0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     app.params.num_samples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");

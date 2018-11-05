@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
     auto camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
-    params.image_size  = {0,
+    auto image_size  = vec2i{0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     params.num_samples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
@@ -98,7 +98,7 @@ int main(int argc, char* argv[]) {
 
     // initialize rendering objects
     auto& camera = scene.cameras[camera_id];
-    auto image_size = get_camera_image_size(camera, params.image_size);
+    image_size = get_camera_image_size(camera, image_size);
     auto rendered_image = make_image<vec4f>(image_size);
     auto trace_rngs     = make_trace_rngs(image_size, random_seed);
 
