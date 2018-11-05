@@ -7332,31 +7332,11 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
 
 // Starts an anyncrhounous renderer.
 void trace_async_start(image<vec4f>& rendered_image,
-    image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
+    const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, image<rng_state>& rngs, vector<thread>& threads,
     bool& stop_flag, int& current_sample, concurrent_queue<image_region>& queue,
     const trace_params& params) {
     log_trace("start tracing async");
-    // render preview image
-    if (params.preview_ratio) {
-        auto pparams        = params;
-        pparams.image_size  = params.image_size / params.preview_ratio;
-        pparams.num_samples = 1;
-        auto pimg           = trace_image(scene, bvh, lights, pparams);
-        auto pdisplay       = tonemap_image(pimg, params.display_exposure,
-            params.display_filmic, params.display_srgb);
-        auto pwidth = pimg.size.x, pheight = pimg.size.y;
-        for (auto j = 0; j < rendered_image.size.y; j++) {
-            for (auto i = 0; i < rendered_image.size.x; i++) {
-                auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
-                     pj = clamp(j / params.preview_ratio, 0, pheight - 1);
-                at(rendered_image, {i, j}) = at(pimg, {pi, pj});
-                at(display_image, {i, j})  = at(pdisplay, {pi, pj});
-            }
-        }
-        queue.push({zero2i, rendered_image.size});
-    }
-
     auto nthreads = thread::hardware_concurrency();
     threads.clear();
     stop_flag = false;
@@ -7372,9 +7352,6 @@ void trace_async_start(image<vec4f>& rendered_image,
                     auto& region = regions[region_id];
                     trace_image_region(rendered_image, scene, bvh, lights,
                         region, s, 1, rngs, params);
-                    tonemap_image_region(display_image, region, rendered_image,
-                        params.display_exposure, params.display_filmic,
-                        params.display_srgb);
                     queue.push(region);
                 }
             }

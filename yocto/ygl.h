@@ -3706,10 +3706,6 @@ struct trace_params {
     float      pixel_clamp       = 100;
     int        samples_per_batch = 16;
     bool       no_parallel       = false;
-    int        preview_ratio     = 8;
-    float      display_exposure  = 0;
-    bool       display_filmic    = false;
-    bool       display_srgb      = true;
     int        random_seed       = trace_default_seed;
 };
 
@@ -3745,7 +3741,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
 void trace_async_start(image<vec4f>& rendered_image,
-    image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
+    const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, image<rng_state>& rngs, vector<thread>& threads,
     bool& stop_flag, int& current_sample, concurrent_queue<image_region>& queue,
     const trace_params& params);

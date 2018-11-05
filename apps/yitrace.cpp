@@ -44,6 +44,12 @@ struct app_state {
     yocto_scene scene = {};
     bvh_scene   bvh   = {};
 
+    // rendering params
+    float      display_exposure  = 0;
+    bool       display_filmic    = false;
+    bool       display_srgb      = true;
+    int                        preview_ratio = 8;
+
     // rendering state
     trace_params                   params         = {};
     trace_lights                   lights         = {};
@@ -57,18 +63,16 @@ struct app_state {
     concurrent_queue<image_region> trace_queue    = {};
 
     // view image
-    vec2f                      image_center = zero2f;
-    float                      image_scale  = 1;
-    int                        preview_ratio = 8;
-    bool                       zoom_to_fit  = true;
-    bool                       widgets_open = false;
-    tuple<string, int>         selection    = {"", -1};
+    vec2f                      image_center  = zero2f;
+    float                      image_scale   = 1;
+    bool                       zoom_to_fit   = true;
+    bool                       widgets_open  = false;
+    tuple<string, int>         selection     = {"", -1};
     vector<tuple<string, int>> update_list;
-    bool                       navigation_fps = false;
-    bool                       quiet          = false;
-    int64_t                    trace_start    = 0;
-    opengl_texture             display_texture         = {};
-    opengl_texture             preview_texture         = {};
+    bool                       navigation_fps  = false;
+    bool                       quiet           = false;
+    int64_t                    trace_start     = 0;
+    opengl_texture             display_texture = {};
 
     // app status
     bool   load_done = false, load_running = false;
@@ -83,7 +87,7 @@ void start_rendering_async(app_state& app) {
     stop_rendering_async(app);
     app.status      = "rendering image";
     app.trace_start = get_time();
-    
+
     auto image_size = get_camera_image_size(
         app.scene.cameras[app.params.camera_id], app.params.image_size);
     app.rendered_image = make_image<vec4f>(image_size);
@@ -94,12 +98,13 @@ void start_rendering_async(app_state& app) {
     auto preview_params = app.params;
     preview_params.image_size /= app.preview_ratio;
     preview_params.num_samples = 1;
-    app.preview_image = trace_image(app.scene, app.bvh, app.lights, preview_params);
-    app.preview_image = tonemap_image(app.preview_image, app.params.display_exposure, app.params.display_filmic, app.params.display_srgb);
+    app.preview_image          = trace_image(
+        app.scene, app.bvh, app.lights, preview_params);
+    app.trace_queue.push({zero2i, zero2i});
 
-    trace_async_start(app.rendered_image, app.display_image, app.scene, app.bvh,
-        app.lights, app.trace_rngs, app.trace_threads, app.trace_stop,
-        app.trace_sample, app.trace_queue, app.params);
+    trace_async_start(app.rendered_image, app.scene, app.bvh, app.lights,
+        app.trace_rngs, app.trace_threads, app.trace_stop, app.trace_sample,
+        app.trace_queue, app.params);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -201,16 +206,16 @@ void draw_opengl_widgets(const opengl_window& win) {
             edited += draw_slider_opengl_widget(
                 win, "seed", (int&)app.params.random_seed, 0, 1000);
             edited += draw_slider_opengl_widget(
-                win, "pratio", app.params.preview_ratio, 1, 64);
+                win, "pratio", app.preview_ratio, 1, 64);
             if (edited) app.update_list.push_back({"app", -1});
             draw_label_opengl_widget(win, "time/sample", "%0.3lf",
                 (app.trace_sample) ? (get_time() - app.trace_start) /
                                          (1000000000.0 * app.trace_sample) :
                                      0.0);
             draw_slider_opengl_widget(
-                win, "exposure", app.params.display_exposure, -5, 5);
-            draw_checkbox_opengl_widget(win, "filmic", app.params.display_filmic);
-            draw_checkbox_opengl_widget(win, "srgb", app.params.display_srgb);
+                win, "exposure", app.display_exposure, -5, 5);
+            draw_checkbox_opengl_widget(win, "filmic", app.display_filmic);
+            draw_checkbox_opengl_widget(win, "srgb", app.display_srgb);
             draw_slider_opengl_widget(win, "zoom", app.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", app.zoom_to_fit);
             continue_opengl_widget_line(win);
@@ -252,15 +257,33 @@ void draw(const opengl_window& win) {
         center_image(app.image_center, app.image_scale, app.display_image.size,
             win_size, app.zoom_to_fit);
         if (!app.display_texture) {
-            init_opengl_texture(
-                app.preview_texture, app.preview_image.size, false, false, false, false);
-            init_opengl_texture(
-                app.display_texture, app.display_image.size, false, false, false, false);
+            init_opengl_texture(app.display_texture, app.display_image.size,
+                false, false, false, false);
         } else {
             auto region = image_region{};
             while (app.trace_queue.try_pop(region)) {
-                update_opengl_texture_region(
-                    app.display_texture, app.display_image, region, false);
+                if (region.size == zero2i) {
+                    auto display_preview = tonemap_image(app.preview_image,
+                        app.display_exposure, app.display_filmic,
+                        app.display_srgb);
+                    for (auto j = 0; j < app.rendered_image.size.y; j++) {
+                        for (auto i = 0; i < app.rendered_image.size.x; i++) {
+                            auto pi = clamp(
+                                     i / app.preview_ratio, 0, display_preview.size.x - 1),
+                                 pj = clamp(
+                                     j / app.preview_ratio, 0, display_preview.size.y - 1);
+                            at(app.display_image, {i, j})  = at(display_preview, {pi, pj});
+                        }
+                    }
+                    update_opengl_texture(
+                        app.display_texture, app.display_image, false);
+                } else {
+                    tonemap_image_region(app.display_image, region,
+                        app.rendered_image, app.display_exposure,
+                        app.display_filmic, app.display_srgb);
+                    update_opengl_texture_region(
+                        app.display_texture, app.display_image, region, false);
+                }
             }
         }
         set_glblending(true);
