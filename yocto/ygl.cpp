@@ -4440,7 +4440,7 @@ void add_missing_cameras(yocto_scene& scene) {
     if (scene.cameras.empty()) {
         auto camera = yocto_camera{};
         camera.name = "<view>";
-        set_camera_view(camera, compute_scene_bounds(scene));
+        set_camera_view(camera, compute_scene_bounds(scene), {0, 0, 1});
         scene.cameras.push_back(camera);
     }
 }
@@ -4500,24 +4500,6 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
 void log_validation_errors(const yocto_scene& scene, bool skip_textures) {
     for (auto err : validate_scene(scene, skip_textures))
         log_error(err + " [validation]");
-}
-
-// add missing camera
-void set_camera_view(
-    yocto_camera& camera, const bbox3f& bbox, const vec2f& film, float focal) {
-    auto bbox_center    = (bbox.max + bbox.min) / 2.0f;
-    auto bbox_size      = bbox.max - bbox.min;
-    auto bbox_msize     = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto camera_dir     = vec3f{1, 0.4f, 1};
-    auto from           = camera_dir * bbox_msize + bbox_center;
-    auto to             = bbox_center;
-    auto up             = vec3f{0, 1, 0};
-    camera.frame        = lookat_frame(from, to, up);
-    camera.orthographic = false;
-    if (film != zero2f) camera.film_size = film;
-    if (focal != 0) camera.focal_length = focal;
-    camera.focus_distance = length(from - to);
-    camera.lens_aperture  = 0;
 }
 
 }  // namespace ygl
@@ -5111,52 +5093,77 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float evaluate_camera_fovy(const yocto_camera& camera) {
-    return 2 * std::atan(camera.film_size.y / (2 * camera.focal_length));
+float get_camera_fovx(const yocto_camera& camera) {
+    return 2 * atan(camera.film_size.x / (2 * camera.focal_length));
+}
+float get_camera_fovy(const yocto_camera& camera) {
+    return 2 * atan(camera.film_size.y / (2 * camera.focal_length));
 }
 void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
     camera.film_size    = {width, width / aspect};
-    camera.focal_length = camera.film_size.y / (2 * std::tan(fovy / 2));
+    camera.focal_length = camera.film_size.y / (2 * tan(fovy / 2));
+}
+
+// add missing camera
+void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
+    const vec3f& view_direction, const vec2f& film, float focal) {
+    camera.orthographic = false;
+    if (film != zero2f) camera.film_size = film;
+    if (focal != 0) camera.focal_length = focal;
+    auto bbox_center = (bbox.max + bbox.min) / 2.0f;
+    auto bbox_radius = length(bbox.max - bbox.min) / 2;
+    auto camera_dir = (view_direction == zero3f) ? camera.frame.o - bbox_center :
+                                                   view_direction;
+    if (camera_dir == zero3f) camera_dir = {0, 0, 1};
+    auto camera_fov = min(get_camera_fovx(camera), get_camera_fovy(camera));
+    if (camera_fov == 0) camera_fov = 45 * pif / 180;
+    auto camera_dist      = bbox_radius / sin(camera_fov / 2);
+    auto from             = camera_dir * (camera_dist * 1) + bbox_center;
+    auto to               = bbox_center;
+    auto up               = vec3f{0, 1, 0};
+    camera.frame          = lookat_frame(from, to, up);
+    camera.focus_distance = length(from - to);
+    camera.lens_aperture  = 0;
 }
 
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 ray3f evaluate_camera_ray(
-    const yocto_camera& camera, const vec2f& uv, const vec2f& luv) {
+    const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
     auto distance = camera.focal_length;
     if (camera.focus_distance < maxf) {
         distance = camera.focal_length * camera.focus_distance /
                    (camera.focus_distance - camera.focal_length);
     }
-    auto e = vec3f{luv.x * camera.lens_aperture, luv.y * camera.lens_aperture, 0};
-    // auto q = vec3f{camera.width * (uv.x - 0.5f),
-    //     camera.height * (uv.y - 0.5f), distance};
-    // X flipped for mirror
-    auto q   = vec3f{camera.film_size.x * (0.5f - uv.x),
-        camera.film_size.y * (uv.y - 0.5f), distance};
+    auto e = vec3f{
+        lens_uv.x * camera.lens_aperture, lens_uv.y * camera.lens_aperture, 0};
+    auto q   = vec3f{camera.film_size.x * (0.5f - image_uv.x),
+        camera.film_size.y * (image_uv.y - 0.5f), distance};
     auto ray = make_ray(transform_point(camera.frame, e),
         transform_direction(camera.frame, normalize(e - q)));
     return ray;
 }
 
-vec2i evaluate_image_size(const yocto_camera& camera, int yresolution) {
+vec2i get_image_size(const yocto_camera& camera, int yresolution) {
     return {(int)round(yresolution * camera.film_size.x / camera.film_size.y),
         yresolution};
 }
 
 // Generates a ray from a camera.
-ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
-    return evaluate_camera_ray(camera, uv, luv);
+ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& image_ij,
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
+    auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
+        (image_ij.y + pixel_uv.y) / image_size.y};
+    return evaluate_camera_ray(camera, image_uv, lens_uv);
 }
 
 // Generates a ray from a camera.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-    auto ij = vec2i{idx % image_size.x, idx / image_size.x};
-    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
-    return evaluate_camera_ray(camera, uv, luv);
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
+    auto image_ij = vec2i{idx % image_size.x, idx / image_size.x};
+    auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x,
+        (image_ij.y + pixel_uv.y) / image_size.y};
+    return evaluate_camera_ray(camera, image_uv, lens_uv);
 }
 
 // Evaluates material parameters.
@@ -7159,12 +7166,12 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
 // Init trace state
 trace_state make_trace_state(
     const yocto_scene& scene, const trace_params& params) {
-    auto  scope  = log_trace_scoped("making trace state");
-    auto  state  = trace_state();
-    auto& camera = scene.cameras[params.camera_id];
-    auto  size   = evaluate_image_size(camera, params.vertical_resolution);
-    state.rendered_image           = image<vec4f>{size.x, size.y, zero4f};
-    state.display_image            = image<vec4f>{size.x, size.y, zero4f};
+    auto  scope          = log_trace_scoped("making trace state");
+    auto  state          = trace_state();
+    auto& camera         = scene.cameras[params.camera_id];
+    auto  size           = get_image_size(camera, params.vertical_resolution);
+    state.rendered_image = image<vec4f>{size.x, size.y, zero4f};
+    state.display_image  = image<vec4f>{size.x, size.y, zero4f};
     state.accumulation_buffer      = image<vec4f>{size.x, size.y, zero4f};
     state.samples_per_pixel        = image<int>{size.x, size.y, 0};
     state.random_number_generators = make_trace_rngs(

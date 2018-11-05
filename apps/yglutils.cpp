@@ -544,9 +544,11 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
             in vec2 frag_texcoord;
             out vec4 frag_color;
             uniform vec2 image_size, border_size;
+            uniform float image_scale;
             void main() {
                 ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
-                ivec2 tile = imcoord / 32;
+                ivec2 tilecoord = ivec2(frag_texcoord * (image_size + border_size*2) * image_scale - border_size);
+                ivec2 tile = tilecoord / 16;
                 if(imcoord.x <= 0 || imcoord.y <= 0 || 
                     imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
                 else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);

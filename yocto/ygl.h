@@ -3480,28 +3480,30 @@ vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
 float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float evaluate_camera_fovy(const yocto_camera& camera);
-float evaluate_camera_aspect(const yocto_camera& camera);
+float get_camera_fovx(const yocto_camera& camera);
+float get_camera_fovy(const yocto_camera& camera);
+float set_camera_aspect(const yocto_camera& camera);
 void  set_camera_fovy(
      yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
-vec2i evaluate_image_size(const yocto_camera& camera, int yresolution);
-void  set_camera_view(yocto_camera& camera, const bbox3f& bbox,
-     const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
+vec2i get_image_size(const yocto_camera& camera, int yresolution);
+// Sets camera field of view to enclose all the bbox. Camera view direction
+// fiom size and forcal lemgth can be overridden if we pass non zero values.
+void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
+    const vec3f& view_direction = zero3f, const vec2f& film = zero2f,
+    float focal = 0);
 
-// Generates a ray from a camera image coordinate `uv` and lens coordinates
-// `luv`.
+// Generates a ray from a camera image coordinate and lens coordinates.
 ray3f evaluate_camera_ray(
-    const yocto_camera& camera, const vec2f& uv, const vec2f& luv);
-// Generates a ray from a camera for pixel coordinates `ij`, the image size
-// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv`
-// and the image resolution `res`.
-ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv);
-// Generates a ray from a camera for pixel index `idx`, the image size
-// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv`
-// and the image resolution `res`.
+    const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
+// Generates a ray from a camera for pixel `image_ij`, the image size,
+// the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`
+// and the image resolution `image_size`.
+ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& image_ij,
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
+// Generates a ray from a camera for pixel index `idx`, the image size,
+// the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv);
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
@@ -3565,16 +3567,18 @@ vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
     const vec3f& o);
 
 // Material values
-int             get_instance_material_id(const yocto_scene& scene,
-                const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f           evaluate_instance_emission(const yocto_scene& scene,
-              const yocto_instance& instance, int element_id, const vec2f& element_uv);
+int   get_instance_material_id(const yocto_scene& scene,
+      const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_emission(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+float evaluate_instance_opacity(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+bool  is_instance_emissive(
+     const yocto_scene& scene, const yocto_instance& instance);
+
+// <aterial brdf
 microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-float           evaluate_instance_opacity(const yocto_scene& scene,
-              const yocto_instance& instance, int element_id, const vec2f& element_uv);
-bool            is_instance_emissive(
-               const yocto_scene& scene, const yocto_instance& instance);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
