@@ -2959,6 +2959,10 @@ struct image {
         : width{w}, height{h}, pixels(w * h, v) {}
     image(int w, int h, const T* v)
         : width{w}, height{h}, pixels(v, v + w * h) {}
+    image(const vec2i& size, const T& v = T{})
+        : width{size.x}, height{size.y}, pixels(size.x * size.y, v) {}
+    image(const vec2i& size, const T* v)
+        : width{size.x}, height{size.y}, pixels(v, v + size.x * size.y) {}
 };
 
 // Element access.
@@ -2973,14 +2977,12 @@ inline const T& at(const image<T>& img, int i, int j) {
 
 // Image region defined by its corner at x,y and with size width x height
 struct image_region {
-    int x = 0;
-    int y = 0;
-    int width = 0;
-    int height = 0;
+    vec2i offset = {0, 0};
+    vec2i size = {0, 0};
 };
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(int width, int height, int region_size = 32);
+vector<image_region> make_image_regions(const vec2i& image_size, int region_size = 32);
 
 // Gets pixels in an image region
 template<typename T>
@@ -4024,10 +4026,10 @@ namespace ygl {
 // Gets pixels in an image region
 template<typename T>
 inline image<T> get_image_region(const image<T>& img, const image_region& region) {
-    auto clipped = image<T>{region.width, region.height};
-    for(auto j = 0; j < region.height; j ++) {
-        for(auto i = 0; i < region.width; i ++) {
-            at(clipped, i, j) = at(img, i + region.x, j + region.y);
+    auto clipped = image<T>{region.size};
+    for(auto j = 0; j < region.size.y; j ++) {
+        for(auto i = 0; i < region.size.x; i ++) {
+            at(clipped, i, j) = at(img, i + region.offset.x, j + region.offset.y);
         }
     }
     return clipped;

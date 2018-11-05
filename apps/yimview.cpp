@@ -99,7 +99,7 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = make_image_regions(img.img.width, img.img.height);
+    auto regions     = make_image_regions({img.img.width, img.img.height});
     for (auto region_id = 0; region_id < regions.size(); region_id++) {
         if (img.display_stop) break;
         tonemap_image_region(img.display, regions[region_id], img.img,

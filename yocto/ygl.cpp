@@ -3327,15 +3327,15 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
 namespace ygl {
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(int width, int height, int region_size) {
-    if(width == 0 || height == 0) return {};
+vector<image_region> make_image_regions(const vec2i& image_size, int region_size) {
+    if(image_size == zero2i) return {};
     auto regions = vector<image_region>{};
-    for(auto y = 0; y < height; y += region_size) {
-        for(auto x = 0; x < width; x += region_size) {
+    for(auto y = 0; y < image_size.y; y += region_size) {
+        for(auto x = 0; x < image_size.x; x += region_size) {
             regions.push_back({
-                x, y,
-                min(region_size, width - x),
-                min(region_size, height - y)
+                {x, y},
+                {min(region_size, image_size.x - x),
+                min(region_size, image_size.y - y)}
             });
         }
     }
@@ -3405,8 +3405,8 @@ image<vec4f> tonemap_image(
 // Tonemap image
 void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
-    for (auto j = region.y; j < region.y + region.height; j++) {
-        for (auto i = region.x; i < region.x + region.width; i++) {
+    for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
+        for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
             at(ldr, i, j) = tonemap_filmic(at(hdr, i, j), exposure, filmic, srgb);
         }
     }
