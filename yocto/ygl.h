@@ -3704,7 +3704,6 @@ struct trace_params {
     int        max_bounces       = 8;
     float      pixel_clamp       = 100;
     int        samples_per_batch = 16;
-    bool       no_parallel       = false;
 };
 
 // Trace lights used during rendering.
@@ -3727,14 +3726,14 @@ image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed =
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
-    const trace_lights& lights, const trace_params& params);
+    const trace_lights& lights, const trace_params& params, bool no_parallel = false);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera,const bvh_scene& bvh, const trace_lights& lights, int current_sample,
-    int num_samples, image<rng_state>& rngs, const trace_params& params);
+    int num_samples, image<rng_state>& rngs, const trace_params& params, bool no_parallel = false);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.

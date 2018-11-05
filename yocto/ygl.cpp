@@ -7267,13 +7267,13 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
-    const trace_lights& lights, const trace_params& params) {
+    const trace_lights& lights, const trace_params& params, bool no_parallel) {
     auto scope      = log_trace_scoped("tracing image");
     auto image_size = get_camera_image_size(camera, params.image_size);
     auto rendered_image = make_image<vec4f>(image_size);
     auto rngs           = make_trace_rngs(image_size);
 
-    if (params.no_parallel) {
+    if (no_parallel) {
         for (auto& region : make_image_regions(image_size)) {
             trace_image_region(rendered_image, scene, camera, bvh, lights, region, 0,
                 params.num_samples, rngs, params);
@@ -7301,11 +7301,11 @@ image<vec4f> trace_image(const yocto_scene& scene, const yocto_camera& camera,co
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera,const bvh_scene& bvh, const trace_lights& lights, int current_sample,
-    int num_samples, image<rng_state>& rngs, const trace_params& params) {
+    int num_samples, image<rng_state>& rngs, const trace_params& params, bool no_parallel) {
     auto scope = log_trace_scoped(
         "tracing samples {}/{}", current_sample, params.num_samples);
     num_samples = min(num_samples, params.num_samples - current_sample);
-    if (params.no_parallel) {
+    if (no_parallel) {
         for (auto& region : make_image_regions(rendered_image.size)) {
             trace_image_region(rendered_image, scene, camera, bvh, lights, region,
                 current_sample, num_samples, rngs, params);

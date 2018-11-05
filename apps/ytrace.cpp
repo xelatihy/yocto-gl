@@ -48,7 +48,7 @@ int main(int argc, char* argv[]) {
         parser, "--nbounces", 8, "Maximum number of bounces.");
     params.pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
-    params.no_parallel = parse_arg(
+    auto no_parallel = parse_arg(
         parser, "--noparallel", false, "Disable parallel execution.");
     auto random_seed = parse_arg(
         parser, "--seed", 13, "Seed for the random number generators.");
@@ -107,7 +107,7 @@ int main(int argc, char* argv[]) {
     for (auto sample = 0; sample < params.num_samples;
          sample += params.samples_per_batch) {
         trace_samples(rendered_image, scene,  camera, bvh, lights, sample,
-            params.samples_per_batch, trace_rngs, params);
+            params.samples_per_batch, trace_rngs, params, no_parallel);
         if (save_batch) {
             auto filename = replace_extension(
                 imfilename, to_string(sample + params.samples_per_batch) + "." +
