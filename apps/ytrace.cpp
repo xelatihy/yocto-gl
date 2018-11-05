@@ -99,17 +99,16 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     auto image_size = get_camera_image_size(
         scene.cameras[params.camera_id], params.image_size);
-    auto state          = make_trace_state(image_size, params.random_seed);
     auto rendered_image = image<vec4f>{image_size};
+    auto trace_rngs     = make_trace_rngs(image_size, params.random_seed);
 
     // render
-    auto done  = false;
     auto scope = log_trace_begin("rendering image");
-    while (!done) {
-        done = trace_samples(state, rendered_image, scene, bvh, lights, params);
+    for(auto sample = 0; sample < params.num_samples; sample += params.samples_per_batch) {
+        trace_samples(rendered_image, scene, bvh, lights, sample, params.samples_per_batch, trace_rngs, params);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
-                to_string(state.current_sample) + "." + get_extension(imfilename));
+                to_string(sample + params.samples_per_batch) + "." + get_extension(imfilename));
             if (!save_tonemapped_image(
                     filename, rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);

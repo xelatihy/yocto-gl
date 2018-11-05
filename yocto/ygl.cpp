@@ -7168,12 +7168,12 @@ tuple<vec3f, bool> trace_func(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Trace a single sample
-vec4f trace_sample(trace_state& state, const yocto_scene& scene,
+vec4f trace_sample(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec2i& ij,
-    const vec2i& image_size, const trace_params& params) {
+    const vec2i& image_size, image<rng_state>& rngs, const trace_params& params) {
     _trace_npaths += 1;
     auto& camera       = scene.cameras.at(params.camera_id);
-    auto& rng          = at(state.random_number_generators, ij.x, ij.y);
+    auto& rng          = at(rngs, ij.x, ij.y);
     auto  ray          = sample_camera_ray(camera, ij, image_size, rng);
     auto  radiance     = zero3f;
     auto  hit          = false;
@@ -7190,17 +7190,17 @@ vec4f trace_sample(trace_state& state, const yocto_scene& scene,
 }
 
 // Trace a block of samples
-void trace_image_region(trace_state& state, image<vec4f>& rendered_image,
+void trace_image_region(image<vec4f>& rendered_image,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const image_region& region, int current_sample, int num_samples,
-    const trace_params& params) {
+    const image_region& region, int current_sample, int num_samples, 
+    image<rng_state>& rngs, const trace_params& params) {
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
             at(rendered_image, i, j) *= current_sample;
             for (auto s = 0; s < num_samples; s++) {
-                at(rendered_image, i, j) += trace_sample(state, scene, bvh,
+                at(rendered_image, i, j) += trace_sample(scene, bvh,
                     lights, {i, j},
-                    {rendered_image.width, rendered_image.height}, params);
+                    {rendered_image.width, rendered_image.height}, rngs, params);
             }
             at(rendered_image, i, j) /= current_sample + num_samples;
         }
@@ -7217,14 +7217,6 @@ image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t seed) {
         }
     }
     return rngs;
-}
-
-// Init trace state
-trace_state make_trace_state(const vec2i& image_size, int random_seed) {
-    auto scope                     = log_trace_scoped("making trace state");
-    auto state                     = trace_state();
-    state.random_number_generators = make_trace_rngs(image_size, random_seed);
-    return state;
 }
 
 // Init trace lights
@@ -7279,27 +7271,26 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto image_size = get_camera_image_size(
         scene.cameras[params.camera_id], params.image_size);
     auto rendered_image = image<vec4f>{image_size};
-    auto state          = make_trace_state(image_size, params.random_seed);
+    auto rngs          = make_trace_rngs(image_size, params.random_seed);
 
     if (params.no_parallel) {
         for (auto& region : make_image_regions(image_size)) {
-            trace_image_region(state, rendered_image, scene, bvh, lights,
-                region, 0, params.num_samples, params);
+            trace_image_region(rendered_image, scene, bvh, lights,
+                region, 0, params.num_samples, rngs, params);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(
-                thread([tid, nthreads, &scene, &state, &rendered_image, &bvh,
-                           &lights, &params]() {
+                thread([&, tid, nthreads]() {
                     auto regions = make_image_regions(
                         {rendered_image.width, rendered_image.height});
                     for (auto region_id = tid; region_id < regions.size();
                          region_id += nthreads) {
                         auto& region = regions[region_id];
-                        trace_image_region(state, rendered_image, scene, bvh,
-                            lights, region, 0, params.num_samples, params);
+                        trace_image_region(rendered_image, scene, bvh,
+                            lights, region, 0, params.num_samples, rngs, params);
                     }
                 }));
         }
@@ -7309,46 +7300,43 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-bool trace_samples(trace_state& state, image<vec4f>& rendered_image,
+void trace_samples(image<vec4f>& rendered_image,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_params& params) {
-    auto scope = log_trace_scoped(
-        "tracing samples {}/{}", state.current_sample, params.num_samples);
-    auto nbatch = min(
-        params.samples_per_batch, params.num_samples - state.current_sample);
+    int current_sample, int num_samples, 
+    image<rng_state>& rngs, const trace_params& params) {
+    auto scope = log_trace_scoped("tracing samples {}/{}", current_sample, params.num_samples);
+    num_samples = min(num_samples, params.num_samples - current_sample);
     if (params.no_parallel) {
         for (auto& region :
             make_image_regions({rendered_image.width, rendered_image.height})) {
-            trace_image_region(state, rendered_image, scene, bvh, lights,
-                region, state.current_sample, nbatch, params);
+            trace_image_region(rendered_image, scene, bvh, lights,
+                region, current_sample, num_samples, rngs, params);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([tid, nthreads, nbatch, &scene, &state,
-                                         &rendered_image, &bvh, &lights,
-                                         &params]() {
+            threads.push_back(thread([&, tid, nthreads, num_samples]() {
                 auto regions = make_image_regions(
                     {rendered_image.width, rendered_image.height});
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
                     auto& region = regions[region_id];
-                    trace_image_region(state, rendered_image, scene, bvh,
-                        lights, region, state.current_sample, nbatch, params);
+                    trace_image_region(rendered_image, scene, bvh,
+                        lights, region, current_sample, num_samples, rngs, params);
                 }
             }));
         }
         for (auto& t : threads) t.join();
     }
-    state.current_sample += nbatch;
-    return state.current_sample >= params.num_samples;
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_state& state, image<vec4f>& rendered_image,
+void trace_async_start(image<vec4f>& rendered_image,
     image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_params& params) {
+    const trace_lights& lights, image<rng_state>& rngs,
+    vector<thread>& threads, bool& stop_flag, int& current_sample,
+    const trace_params& params) {
     log_trace("start tracing async");
     // render preview image
     if (params.preview_ratio) {
@@ -7370,37 +7358,36 @@ void trace_async_start(trace_state& state, image<vec4f>& rendered_image,
     }
 
     auto nthreads = thread::hardware_concurrency();
-    state.async_threads.clear();
-    state.async_stop_flag = false;
+    threads.clear();
+    stop_flag = false;
     for (auto tid = 0; tid < nthreads; tid++) {
-        state.async_threads.push_back(
-            thread([tid, nthreads, &scene, &state, &rendered_image,
-                       &display_image, &bvh, &lights, &params]() {
+        threads.push_back(
+            thread([&, tid, nthreads]() {
                 auto regions = make_image_regions(
                     {rendered_image.width, rendered_image.height});
                 for (auto s = 0; s < params.num_samples; s++) {
-                    if (!tid) state.current_sample = s;
+                    if (!tid) current_sample = s;
                     for (auto region_id = tid; region_id < regions.size();
                          region_id += nthreads) {
-                        if (state.async_stop_flag) return;
+                        if (stop_flag) return;
                         auto& region = regions[region_id];
-                        trace_image_region(state, rendered_image, scene, bvh,
-                            lights, region, s, 1, params);
+                        trace_image_region(rendered_image, scene, bvh,
+                            lights, region, s, 1, rngs, params);
                         tonemap_image_region(display_image, region,
                             rendered_image, params.display_exposure,
                             params.display_filmic, params.display_srgb);
                     }
                 }
-                if (!tid) state.current_sample = params.num_samples;
+                if (!tid) current_sample = params.num_samples;
             }));
     }
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_state& state) {
-    state.async_stop_flag = true;
-    for (auto& t : state.async_threads) t.join();
-    state.async_threads.clear();
+void trace_async_stop(vector<thread>& threads, bool& stop_flag) {
+    stop_flag = true;
+    for (auto& t : threads) t.join();
+    threads.clear();
 }
 
 // Trace statistics for last run used for fine tuning implementation.

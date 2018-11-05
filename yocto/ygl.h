@@ -3704,14 +3704,6 @@ struct trace_lights {
     vector<vector<float>> environment_texture_cdf = {};
 };
 
-// Trace data used during rendering. Initialize with `make_trace_state()`
-struct trace_state {
-    image<rng_state> random_number_generators = {};
-    int              current_sample           = 0;
-    vector<thread>   async_threads;
-    bool             async_stop_flag = false;
-};
-
 // Initialize lights.
 trace_lights make_trace_lights(const yocto_scene& scene);
 inline bool  empty(const trace_lights& lights) {
@@ -3719,7 +3711,7 @@ inline bool  empty(const trace_lights& lights) {
 }
 
 // Initialize state of the renderer.
-trace_state make_trace_state(const vec2i& image_size, int random_seed);
+image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
@@ -3728,17 +3720,20 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state& state, image<vec4f>& rendered_image,
+void trace_samples(image<vec4f>& rendered_image,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int current_sample, int num_samples, image<rng_state>& rngs, 
     const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(trace_state& state, image<vec4f>& rendered_image,
+void trace_async_start(image<vec4f>& rendered_image,
     image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_params& params);
+    const trace_lights& lights, image<rng_state>& rngs, 
+    vector<thread>& threads, bool& stop_flag, int& current_sample, 
+    const trace_params& params);
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_state& state);
+void trace_async_stop(vector<thread>& threads, bool& stop_flag);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.

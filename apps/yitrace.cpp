@@ -46,10 +46,13 @@ struct app_state {
 
     // rendering state
     trace_params params         = {};
-    trace_state  state          = {};
     trace_lights lights         = {};
+    image<rng_state> trace_rngs = {};
     image<vec4f> rendered_image = {};
     image<vec4f> display_image  = {};
+    bool trace_stop             = false;
+    int  trace_sample = 0;
+    vector<thread> trace_threads = {};
 
     // view image
     vec2f                      image_center = zero2f;
@@ -69,19 +72,21 @@ struct app_state {
 };
 
 void start_rendering_async(app_state& app) {
-    trace_async_stop(app.state);
+    trace_async_stop(app.trace_threads, app.trace_stop);
     app.status      = "rendering image";
     app.trace_start = get_time();
     auto image_size = get_camera_image_size(
         app.scene.cameras[app.params.camera_id], app.params.image_size);
     app.rendered_image = image<vec4f>{image_size};
     app.display_image  = image<vec4f>{image_size};
-    app.state          = make_trace_state(image_size, app.params.random_seed);
-    trace_async_start(app.state, app.rendered_image, app.display_image,
-        app.scene, app.bvh, app.lights, app.params);
+    app.trace_rngs     = make_trace_rngs(image_size, app.params.random_seed);
+    trace_async_start(app.rendered_image, app.display_image,
+        app.scene, app.bvh, app.lights, app.trace_rngs,
+        app.trace_threads, app.trace_stop, 
+        app.trace_sample,  app.params);
 }
 
-void stop_rendering_async(app_state& app) { trace_async_stop(app.state); }
+void stop_rendering_async(app_state& app) { trace_async_stop(app.trace_threads, app.trace_stop); }
 
 bool load_scene_sync(app_state& app) {
     // scene loading
@@ -141,7 +146,6 @@ void load_scene_async(app_state& app) {
     app.scene        = {};
     app.bvh          = {};
     app.lights       = {};
-    app.state        = {};
     auto load_thread = thread([&app]() { load_scene_sync(app); });
     load_thread.detach();
 }
@@ -163,7 +167,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
                 app.rendered_image.width, app.rendered_image.height,
-                app.state.current_sample);
+                app.trace_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
                 cam_names.push_back(camera.name);
@@ -186,9 +190,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                 win, "pratio", app.params.preview_ratio, 1, 64);
             if (edited) app.update_list.push_back({"app", -1});
             draw_label_opengl_widget(win, "time/sample", "%0.3lf",
-                (app.state.current_sample) ?
+                (app.trace_sample) ?
                     (get_time() - app.trace_start) /
-                        (1000000000.0 * app.state.current_sample) :
+                        (1000000000.0 * app.trace_sample) :
                     0.0);
             draw_slider_opengl_widget(
                 win, "exposure", app.params.display_exposure, -5, 5);
@@ -288,7 +292,7 @@ bool update(app_state& app) {
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
-    trace_async_stop(app.state);
+    trace_async_stop(app.trace_threads, app.trace_stop);
     app.filename = paths.front();
     load_scene_async(app);
 }
@@ -404,7 +408,7 @@ int main(int argc, char* argv[]) {
     run_ui(app);
 
     // cleanup
-    trace_async_stop(app.state);
+    trace_async_stop(app.trace_threads, app.trace_stop);
 
     // done
     return 0;
