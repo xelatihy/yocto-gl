@@ -102,22 +102,21 @@ void update_display_async(app_image& img) {
     if (img.img.width * img.img.height > 1024 * 1024) {
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
+        auto regions = make_image_regions(img.img.width, img.img.height);
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([&img, tid, nthreads]() {
-                for (auto j = tid; j < img.img.height; j += nthreads) {
+            threads.push_back(thread([&img, &regions, tid, nthreads]() {
+                for (auto region_id = tid; region_id < regions.size(); region_id+=nthreads) {
                     if (img.display_stop) break;
-                    for (auto i = 0; i < img.img.width; i++) {
-                        at(img.display, i, j) = tonemap_filmic(at(img.img, i, j),
-                            img.exposure, img.filmic, img.srgb);
-                    }
+                    tonemap_image_region(img.display, regions[region_id], img.img, img.exposure, img.filmic, img.srgb);
                 }
             }));
         }
         for (auto& t : threads) t.join();
     } else {
-        for (auto& region : make_image_regions(img.img.width, img.img.height)) {
+        auto regions = make_image_regions(img.img.width, img.img.height);
+        for (auto region_id = 0; region_id < regions.size(); region_id++) {
             if (img.display_stop) break;
-            tonemap_image_region(img.display, region, img.img, img.exposure, img.filmic, img.srgb);
+            tonemap_image_region(img.display, regions[region_id], img.img, img.exposure, img.filmic, img.srgb);
         }
     }
     img.display_done = true;
