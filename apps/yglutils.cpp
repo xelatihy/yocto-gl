@@ -182,7 +182,7 @@ void update_opengl_texture(
     opengl_texture& texture, const image<vec4f>& img, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size.x, img.size.y, GL_RGBA,
         GL_FLOAT, img.pixels.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
@@ -203,7 +203,7 @@ void update_opengl_texture(
     opengl_texture& texture, const image<vec4b>& img, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size.x, img.size.y, GL_RGBA,
         GL_UNSIGNED_BYTE, img.pixels.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
@@ -601,7 +601,7 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     }
 }
 
-bool init_opengl_window(opengl_window& win, int width, int height,
+bool init_opengl_window(opengl_window& win, const vec2i& size,
     const string& title, void* user_pointer, refresh_opengl_callback refresh_cb) {
     // init glfw
     if (!glfwInit()) log_fatal("cannot initialize windowing system");
@@ -614,7 +614,7 @@ bool init_opengl_window(opengl_window& win, int width, int height,
 
     // create window
     win     = opengl_window();
-    win.win = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
+    win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
     if (!win.win) return false;
     glfwMakeContextCurrent(win.win);
     glfwSwapInterval(1);  // Enable vsync

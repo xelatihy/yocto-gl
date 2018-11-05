@@ -99,7 +99,7 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = make_image_regions({img.img.width, img.img.height});
+    auto regions     = make_image_regions(img.img.size);
     for (auto region_id = 0; region_id < regions.size(); region_id++) {
         if (img.display_stop) break;
         tonemap_image_region(img.display, regions[region_id], img.img,
@@ -180,7 +180,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 status = "done";
             draw_label_opengl_widget(win, "status", status.c_str());
             draw_label_opengl_widget(
-                win, "size", "%d x %d ", img.img.width, img.img.height);
+                win, "size", "%d x %d ", img.img.size.x, img.img.size.y);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             end_header_opengl_widget(win);
@@ -194,13 +194,13 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "inspect")) {
             auto mouse_pos = get_opengl_mouse_pos(win);
-            auto ij        = get_image_coords(mouse_pos, img.image_center,
-                img.image_scale, {img.img.width, img.img.height});
+            auto ij        = get_image_coords(
+                mouse_pos, img.image_center, img.image_scale, img.img.size);
             draw_dragger_opengl_widget(win, "mouse", ij);
             auto pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
-                ij.y < img.img.height) {
-                pixel = at(img.img, ij.x, ij.y);
+            if (ij.x >= 0 && ij.x < img.img.size.x && ij.y >= 0 &&
+                ij.y < img.img.size.y) {
+                pixel = at(img.img, ij);
             }
             draw_coloredit_opengl_widget(win, "pixel", pixel);
             auto stats = (img.stats_done) ? img.stats : image_stats{};
@@ -232,13 +232,13 @@ void draw(const opengl_window& win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        center_image(img.image_center, img.image_scale,
-            {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
-        draw_glimage_background({img.display.width, img.display.height},
-            win_size, img.image_center, img.image_scale);
+        center_image(img.image_center, img.image_scale, img.display.size,
+            win_size, img.zoom_to_fit);
+        draw_glimage_background(
+            img.display.size, win_size, img.image_center, img.image_scale);
         set_glblending(true);
-        draw_glimage(img.gl_txt, {img.display.width, img.display.height},
-            win_size, img.image_center, img.image_scale);
+        draw_glimage(img.gl_txt, img.display.size, win_size, img.image_center,
+            img.image_scale);
         set_glblending(false);
     }
     draw_opengl_widgets(win);
@@ -267,20 +267,14 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 
 void run_ui(app_state& app) {
     // window
-    auto& img   = app.imgs.at(app.img_id);
-    auto  width = 720 + 320, height = 720;
+    auto& img = app.imgs.at(app.img_id);
     auto  win = opengl_window();
     init_opengl_window(
-        win, 720 + 320, 720, "yimview | " + app.imgs.front().name, &app, draw);
+        win, {1280, 720}, "yimview | " + app.imgs.front().name, &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
     init_opengl_widgets(win);
-
-    // center image
-    center_image(img.image_center, img.image_scale,
-        {img.img.width, img.img.height}, {width, height},
-        img.img.width > width || img.img.height > height);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;

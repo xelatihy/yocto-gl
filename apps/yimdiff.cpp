@@ -37,8 +37,8 @@ using namespace ygl;
 template <typename T>
 image<vec<T, 4>> compute_diff_image(
     const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
-    auto diff = image<vec<T, 4>>(a.width, a.height);
-    for (auto i = 0; i < a.width * a.height; i++) {
+    auto diff = make_image<vec<T, 4>>(a.size);
+    for (auto i = 0; i < a.size.x * a.size.y; i++) {
         diff.pixels[i] = {(T)abs(a.pixels[i].x - b.pixels[i].x),
             (T)abs(a.pixels[i].y - b.pixels[i].y),
             (T)abs(a.pixels[i].z - b.pixels[i].z),
@@ -59,7 +59,7 @@ vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
 
 template <typename T>
 image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
-    auto display = image<vec<T, 4>>(diff.width, diff.height);
+    auto display = make_image<vec<T, 4>>(diff.size);
     for (auto i = 0; i < diff.pixels.size(); i++) {
         auto diff_value   = max(diff.pixels[i]);
         display.pixels[i] = {diff_value, diff_value, diff_value, alpha};
@@ -87,8 +87,7 @@ int main(int argc, char* argv[]) {
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
-        if (img1.width != img2.width || img1.height != img2.height)
-            log_fatal("image size differs");
+        if (img1.size != img2.size) log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
@@ -105,8 +104,7 @@ int main(int argc, char* argv[]) {
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
-        if (img1.width != img2.width || img1.height != img2.height)
-            log_fatal("image size differs");
+        if (img1.size != img2.size) log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {

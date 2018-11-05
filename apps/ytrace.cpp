@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     auto image_size = get_camera_image_size(
         scene.cameras[params.camera_id], params.image_size);
-    auto rendered_image = image<vec4f>{image_size};
+    auto rendered_image = make_image<vec4f>(image_size);
     auto trace_rngs     = make_trace_rngs(image_size, params.random_seed);
 
     // render

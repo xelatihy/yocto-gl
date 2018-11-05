@@ -1013,7 +1013,7 @@ void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
     init_opengl_window(
-        win, 1280, 720, "yview | " + get_filename(app.filename), &app, draw);
+        win, {1280, 720}, "yview | " + get_filename(app.filename), &app, draw);
 
     // init widget
     init_opengl_widgets(win);

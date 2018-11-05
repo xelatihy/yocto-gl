@@ -78,8 +78,8 @@ void start_rendering_async(app_state& app) {
     app.trace_start = get_time();
     auto image_size = get_camera_image_size(
         app.scene.cameras[app.params.camera_id], app.params.image_size);
-    app.rendered_image = image<vec4f>{image_size};
-    app.display_image  = image<vec4f>{image_size};
+    app.rendered_image = make_image<vec4f>(image_size);
+    app.display_image  = make_image<vec4f>(image_size);
     app.trace_rngs     = make_trace_rngs(image_size, app.params.random_seed);
     trace_async_start(app.rendered_image, app.display_image, app.scene, app.bvh,
         app.lights, app.trace_rngs, app.trace_threads, app.trace_stop,
@@ -168,7 +168,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                app.rendered_image.width, app.rendered_image.height,
+                app.rendered_image.size.x, app.rendered_image.size.y,
                 app.trace_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
@@ -205,13 +205,12 @@ void draw_opengl_widgets(const opengl_window& win) {
             draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale,
-                {app.rendered_image.width, app.rendered_image.height});
+                app.image_scale, app.rendered_image.size);
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app.rendered_image.width && ij.y >= 0 &&
-                ij.y < app.rendered_image.height) {
+            if (ij.x >= 0 && ij.x < app.rendered_image.size.x && ij.y >= 0 &&
+                ij.y < app.rendered_image.size.y) {
                 draw_coloredit_opengl_widget(
-                    win, "pixel", at(app.rendered_image, ij.x, ij.y));
+                    win, "pixel", at(app.rendered_image, ij));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);
@@ -238,13 +237,11 @@ void draw(const opengl_window& win) {
     set_glviewport(get_opengl_framebuffer_size(win));
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
-        center_image(app.image_center, app.image_scale,
-            {app.display_image.width, app.display_image.height}, win_size,
-            app.zoom_to_fit);
+        center_image(app.image_center, app.image_scale, app.display_image.size,
+            win_size, app.zoom_to_fit);
         if (!app.gl_txt) {
-            init_opengl_texture(app.gl_txt,
-                {app.display_image.width, app.display_image.height}, false,
-                false, false, false);
+            init_opengl_texture(
+                app.gl_txt, app.display_image.size, false, false, false, false);
         } else {
             auto region = image_region{};
             while (app.trace_queue.try_pop(region))
@@ -252,11 +249,9 @@ void draw(const opengl_window& win) {
                     app.gl_txt, app.display_image, region, false);
         }
         set_glblending(true);
-        draw_glimage_background(
-            {app.display_image.width, app.display_image.height}, win_size,
+        draw_glimage_background(app.display_image.size, win_size,
             app.image_center, app.image_scale);
-        draw_glimage(app.gl_txt,
-            {app.display_image.width, app.display_image.height}, win_size,
+        draw_glimage(app.gl_txt, app.display_image.size, win_size,
             app.image_center, app.image_scale);
         set_glblending(false);
     }
@@ -306,8 +301,8 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
-    init_opengl_window(
-        win, 1280, 720, "yitrace | " + get_filename(app.filename), &app, draw);
+    init_opengl_window(win, {1280, 720},
+        "yitrace | " + get_filename(app.filename), &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
@@ -344,15 +339,13 @@ void run_ui(app_state& app) {
         if (app.load_done && (mouse_left || mouse_right) && alt_down &&
             !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale,
-                {app.rendered_image.width, app.rendered_image.height});
-            if (ij.x < 0 || ij.x >= app.rendered_image.width || ij.y < 0 ||
-                ij.y >= app.rendered_image.height) {
+                app.image_scale, app.rendered_image.size);
+            if (ij.x < 0 || ij.x >= app.rendered_image.size.x || ij.y < 0 ||
+                ij.y >= app.rendered_image.size.y) {
                 auto& camera = app.scene.cameras.at(app.params.camera_id);
-                auto  ray    = evaluate_camera_ray(camera, ij,
-                    {app.rendered_image.width, app.rendered_image.height},
-                    {0.5f, 0.5f}, zero2f);
-                auto  isec   = intersect_scene(app.scene, app.bvh, ray);
+                auto  ray    = evaluate_camera_ray(
+                    camera, ij, app.rendered_image.size, {0.5f, 0.5f}, zero2f);
+                auto isec = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {"instance", isec.instance_id};
             }
