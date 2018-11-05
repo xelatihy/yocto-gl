@@ -45,6 +45,7 @@ struct app_state {
     bvh_scene   bvh   = {};
 
     // rendering params
+    int        camera_id         = 0;
     float      display_exposure  = 0;
     bool       display_filmic    = false;
     bool       display_srgb      = true;
@@ -89,8 +90,9 @@ void start_rendering_async(app_state& app) {
     app.status      = "rendering image";
     app.trace_start = get_time();
 
-    auto image_size = get_camera_image_size(
-        app.scene.cameras[app.params.camera_id], app.params.image_size);
+    auto& camera = app.scene.cameras[app.camera_id];
+    auto image_size = get_camera_image_size(camera
+        , app.params.image_size);
     app.rendered_image = make_image<vec4f>(image_size);
     app.display_image  = make_image<vec4f>(image_size);
     app.preview_image  = make_image<vec4f>(image_size / app.preview_ratio);
@@ -100,10 +102,10 @@ void start_rendering_async(app_state& app) {
     preview_params.image_size /= app.preview_ratio;
     preview_params.num_samples = 1;
     app.preview_image          = trace_image(
-        app.scene, app.bvh, app.lights, preview_params);
+        app.scene, camera, app.bvh, app.lights, preview_params);
     app.trace_queue.push({zero2i, zero2i});
 
-    trace_async_start(app.rendered_image, app.scene, app.bvh, app.lights,
+    trace_async_start(app.rendered_image, app.scene, camera, app.bvh, app.lights,
         app.trace_rngs, app.trace_threads, app.trace_stop, app.trace_sample,
         app.trace_queue, app.params);
 }
@@ -194,7 +196,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto edited = 0;
             if (app.load_done) {
                 edited += draw_combobox_opengl_widget(
-                    win, "camera", app.params.camera_id, cam_names);
+                    win, "camera", app.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
                 win, "size", app.params.image_size, 256, 4096);
@@ -368,10 +370,10 @@ void run_ui(app_state& app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto& camera = app.scene.cameras.at(app.params.camera_id);
+            auto& camera = app.scene.cameras.at(app.camera_id);
             camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({"camera", app.params.camera_id});
+            app.update_list.push_back({"camera", app.camera_id});
         }
 
         // selection
@@ -381,7 +383,7 @@ void run_ui(app_state& app) {
                 app.image_scale, app.rendered_image.size);
             if (ij.x < 0 || ij.x >= app.rendered_image.size.x || ij.y < 0 ||
                 ij.y >= app.rendered_image.size.y) {
-                auto& camera = app.scene.cameras.at(app.params.camera_id);
+                auto& camera = app.scene.cameras.at(app.camera_id);
                 auto  ray    = evaluate_camera_ray(
                     camera, ij, app.rendered_image.size, {0.5f, 0.5f}, zero2f);
                 auto isec = intersect_scene(app.scene, app.bvh, ray);
@@ -413,7 +415,7 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
-    app.params.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
+    app.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
     app.params.image_size  = {0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     app.params.num_samples = parse_arg(

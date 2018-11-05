@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
-    params.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
+    auto camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
     params.image_size  = {0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     params.num_samples = parse_arg(
@@ -97,8 +97,8 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    auto image_size = get_camera_image_size(
-        scene.cameras[params.camera_id], params.image_size);
+    auto& camera = scene.cameras[camera_id];
+    auto image_size = get_camera_image_size(camera, params.image_size);
     auto rendered_image = make_image<vec4f>(image_size);
     auto trace_rngs     = make_trace_rngs(image_size, random_seed);
 
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     auto scope = log_trace_begin("rendering image");
     for (auto sample = 0; sample < params.num_samples;
          sample += params.samples_per_batch) {
-        trace_samples(rendered_image, scene, bvh, lights, sample,
+        trace_samples(rendered_image, scene,  camera, bvh, lights, sample,
             params.samples_per_batch, trace_rngs, params);
         if (save_batch) {
             auto filename = replace_extension(
