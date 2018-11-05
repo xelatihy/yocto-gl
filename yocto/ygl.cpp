@@ -5126,18 +5126,15 @@ void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width
 // Generates a ray from a camera for image plane coordinate uv and
 // the lens coordinates luv.
 ray3f evaluate_camera_ray(
-    const yocto_camera& camera, const vec2f& uv, const vec2f& luv) {
+    const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
     auto distance = camera.focal_length;
     if (camera.focus_distance < maxf) {
         distance = camera.focal_length * camera.focus_distance /
                    (camera.focus_distance - camera.focal_length);
     }
-    auto e = vec3f{luv.x * camera.lens_aperture, luv.y * camera.lens_aperture, 0};
-    // auto q = vec3f{camera.width * (uv.x - 0.5f),
-    //     camera.height * (uv.y - 0.5f), distance};
-    // X flipped for mirror
-    auto q   = vec3f{camera.film_size.x * (0.5f - uv.x),
-        camera.film_size.y * (uv.y - 0.5f), distance};
+    auto e = vec3f{lens_uv.x * camera.lens_aperture, lens_uv.y * camera.lens_aperture, 0};
+    auto q   = vec3f{camera.film_size.x * (0.5f - image_uv.x),
+        camera.film_size.y * (image_uv.y - 0.5f), distance};
     auto ray = make_ray(transform_point(camera.frame, e),
         transform_direction(camera.frame, normalize(e - q)));
     return ray;
@@ -5149,18 +5146,20 @@ vec2i get_image_size(const yocto_camera& camera, int yresolution) {
 }
 
 // Generates a ray from a camera.
-ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
-    return evaluate_camera_ray(camera, uv, luv);
+ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& image_ij,
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
+    auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x, 
+                    (image_ij.y + pixel_uv.y) / image_size.y};
+    return evaluate_camera_ray(camera, image_uv, lens_uv);
 }
 
 // Generates a ray from a camera.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
-    auto ij = vec2i{idx % image_size.x, idx / image_size.x};
-    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
-    return evaluate_camera_ray(camera, uv, luv);
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv) {
+    auto image_ij = vec2i{idx % image_size.x, idx / image_size.x};
+    auto image_uv = vec2f{(image_ij.x + pixel_uv.x) / image_size.x, 
+                          (image_ij.y + pixel_uv.y) / image_size.y};
+    return evaluate_camera_ray(camera, image_uv, lens_uv);
 }
 
 // Evaluates material parameters.
