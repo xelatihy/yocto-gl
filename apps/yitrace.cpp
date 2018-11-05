@@ -230,8 +230,7 @@ void draw_glwidgets(const glwindow& win) {
 void draw(const glwindow& win) {
     auto& app      = *(app_state*)get_user_pointer(win);
     auto  win_size = get_glwindow_size(win);
-    auto  fb_size  = get_glframebuffer_size(win);
-    set_glviewport(fb_size);
+    set_glviewport(get_glframebuffer_size(win));
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if(app.load_done) {
         center_image(app.image_center, app.image_scale,

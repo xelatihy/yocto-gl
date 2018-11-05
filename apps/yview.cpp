@@ -799,12 +799,11 @@ void draw_widgets(const glwindow& win) {
 // draw with shading
 void draw(const glwindow& win) {
     auto& app              = *(app_state*)get_user_pointer(win);
-    auto  framebuffer_size = get_glframebuffer_size(win);
-    app.resolution         = framebuffer_size.y;
+    app.resolution         = get_glframebuffer_size(win).y;
 
-    auto& camera = app.scene.cameras.at(app.camid);
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
-    draw_glscene(app.state, app.scene, camera, framebuffer_size, app.selection,
+    set_glviewport(get_glframebuffer_size(win));
+    draw_glscene(app.state, app.scene, app.scene.cameras.at(app.camid), get_glframebuffer_size(win), app.selection,
         app.eyelight, app.wireframe, app.edges, app.exposure, app.gamma,
         app.near_plane, app.far_plane);
     draw_widgets(win);
