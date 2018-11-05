@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
         parser, "--nsamples,-s", 256, "Number of samples.");
     params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,
         "Trace type.", trace_type_names);
-    params.max_bounces   = parse_arg(
+    auto max_bounces   = parse_arg(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     auto pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
@@ -108,7 +108,7 @@ int main(int argc, char* argv[]) {
          sample += samples_per_batch) {
         auto nsamples = min(samples_per_batch, num_samples - sample);
         trace_samples(rendered_image, scene,  camera, bvh, lights, sample,
-            nsamples, trace_rngs, params, pixel_clamp, no_parallel);
+            nsamples, max_bounces, trace_rngs, params, pixel_clamp, no_parallel);
         if (save_batch) {
             auto filename = replace_extension(
                 imfilename, to_string(sample + nsamples) + "." +

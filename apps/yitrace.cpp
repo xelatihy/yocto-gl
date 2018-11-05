@@ -48,6 +48,7 @@ struct app_state {
     int        camera_id         = 0;
     vec2i      image_size        = {1280, 720};
     int        num_samples       = 256;
+    int        max_bounces       = 8;
     float      display_exposure  = 0;
     bool       display_filmic    = false;
     bool       display_srgb      = true;
@@ -102,11 +103,11 @@ void start_rendering_async(app_state& app) {
 
     auto preview_params = app.params;
     trace_image(app.preview_image,
-        app.scene, camera, app.bvh, app.lights, 1, preview_params);
+        app.scene, camera, app.bvh, app.lights, 1, app.max_bounces, preview_params);
     app.trace_queue.push({zero2i, zero2i});
 
     trace_async_start(app.rendered_image, app.scene, camera, app.bvh, app.lights,
-        app.num_samples, app.trace_rngs, app.trace_threads, app.trace_stop, app.trace_sample,
+        app.num_samples, app.max_bounces, app.trace_rngs, app.trace_threads, app.trace_stop, app.trace_sample,
         app.trace_queue, app.params);
 }
 
@@ -205,7 +206,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             edited += draw_combobox_opengl_widget(win, "tracer",
                 (int&)app.params.sample_tracer, trace_type_names);
             edited += draw_slider_opengl_widget(
-                win, "nbounces", app.params.max_bounces, 1, 10);
+                win, "nbounces", app.max_bounces, 1, 10);
             edited += draw_slider_opengl_widget(
                 win, "seed", (int&)app.random_seed, 0, 1000000);
             edited += draw_slider_opengl_widget(
@@ -422,7 +423,7 @@ int main(int argc, char* argv[]) {
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.params.sample_tracer = parse_arge(parser, "--tracer,-t",
         trace_type::path, "Tracer type.", trace_type_names);
-    app.params.max_bounces   = parse_arg(
+    app.max_bounces   = parse_arg(
         parser, "--nbounces", 4, "Maximum number of bounces.");
     app.pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
