@@ -183,6 +183,21 @@ bool load_scene_sync(app_state& app) {
     return false;
 }
 
+void load_scene_async(app_state& app) {
+    if(app.load_running) {
+        log_error("already loading");
+        return;
+    }
+    app.load_done = false;
+    app.load_running = true;
+    app.status = "uninitialized";
+    app.scene = {};
+    app.lights = {};
+    app.state = {};
+    auto load_thread = thread([&app](){load_scene_sync(app);});
+    load_thread.detach();
+}
+
 #ifndef _WIN32
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Woverlength-strings"
@@ -1053,7 +1068,7 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // load
-    load_scene_sync(app);
+    load_scene_async(app);
 
     // run ui
     run_ui(app);
