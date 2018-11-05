@@ -53,6 +53,7 @@ struct app_state {
     bool       display_srgb      = true;
     int                        preview_ratio = 8;
     uint64_t   random_seed = 7;
+    float pixel_clamp = 100;
 
     // rendering state
     trace_params                   params         = {};
@@ -423,7 +424,7 @@ int main(int argc, char* argv[]) {
         trace_type::path, "Tracer type.", trace_type_names);
     app.params.max_bounces   = parse_arg(
         parser, "--nbounces", 4, "Maximum number of bounces.");
-    app.params.pixel_clamp = parse_arg(
+    app.pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.random_seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");

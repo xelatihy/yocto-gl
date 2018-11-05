@@ -3700,7 +3700,6 @@ const auto trace_type_names = vector<string>{"path", "direct", "environment",
 struct trace_params {
     trace_type sample_tracer     = trace_type::path;
     int        max_bounces       = 8;
-    float      pixel_clamp       = 100;
 };
 
 // Trace lights used during rendering.
@@ -3723,14 +3722,14 @@ image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed =
 
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
-    const trace_lights& lights, int num_samples, const trace_params& params, bool no_parallel = false);
+    const trace_lights& lights, int num_samples, const trace_params& params, float      pixel_clamp       = 100, bool no_parallel = false);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera,const bvh_scene& bvh, const trace_lights& lights, int current_sample,
-    int num_samples, image<rng_state>& rngs, const trace_params& params, bool no_parallel = false);
+    int num_samples, image<rng_state>& rngs, const trace_params& params, float      pixel_clamp       = 100, bool no_parallel = false);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
@@ -3738,7 +3737,7 @@ void trace_async_start(image<vec4f>& rendered_image,
     const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
     const trace_lights& lights, int num_samples, image<rng_state>& rngs, vector<thread>& threads,
     bool& stop_flag, int& current_sample, concurrent_queue<image_region>& queue,
-    const trace_params& params);
+    const trace_params& params, float      pixel_clamp       = 100);
 // Stop the asynchronous renderer.
 void trace_async_stop(vector<thread>& threads, bool& stop_flag,
     concurrent_queue<image_region>& queue);
