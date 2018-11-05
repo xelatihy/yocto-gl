@@ -3758,9 +3758,9 @@ volume<float> make_test_volume1f(
             for (auto i = 0; i < vol.width; i++) {
                 auto p = vec3f{
                     i / (float)width, j / (float)height, k / (float)depth};
-                float val = pow(
+                float value = pow(
                     max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
-                at(vol, i, j, k) = clamp(val, 0.0f, 1.0f);
+                at(vol, i, j, k) = clamp(value, 0.0f, 1.0f);
             }
         }
     }
@@ -4044,62 +4044,62 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
     if (anim_group != "" && anim_group != animation.animation_group) return;
 
     if (!animation.translation_keyframes.empty()) {
-        auto val = vec3f{0, 0, 0};
+        auto value = vec3f{0, 0, 0};
         switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                val = evaluate_keyframed_step(animation.keyframes_times,
+                value = evaluate_keyframed_step(animation.keyframes_times,
                     animation.translation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = evaluate_keyframed_linear(animation.keyframes_times,
+                value = evaluate_keyframed_linear(animation.keyframes_times,
                     animation.translation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = evaluate_keyframed_bezier(animation.keyframes_times,
+                value = evaluate_keyframed_bezier(animation.keyframes_times,
                     animation.translation_keyframes, time);
                 break;
             default: log_error("should not have been here");
         }
         for (auto target : animation.node_targets)
-            scene.nodes[target].translation = val;
+            scene.nodes[target].translation = value;
     }
     if (!animation.rotation_keyframes.empty()) {
-        auto val = vec4f{0, 0, 0, 1};
+        auto value = vec4f{0, 0, 0, 1};
         switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                val = evaluate_keyframed_step(animation.keyframes_times,
+                value = evaluate_keyframed_step(animation.keyframes_times,
                     animation.rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = evaluate_keyframed_linear(animation.keyframes_times,
+                value = evaluate_keyframed_linear(animation.keyframes_times,
                     animation.rotation_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = evaluate_keyframed_bezier(animation.keyframes_times,
+                value = evaluate_keyframed_bezier(animation.keyframes_times,
                     animation.rotation_keyframes, time);
                 break;
         }
         for (auto target : animation.node_targets)
-            scene.nodes[target].rotation = val;
+            scene.nodes[target].rotation = value;
     }
     if (!animation.scale_keyframes.empty()) {
-        auto val = vec3f{1, 1, 1};
+        auto value = vec3f{1, 1, 1};
         switch (animation.interpolation_type) {
             case yocto_interpolation_type::step:
-                val = evaluate_keyframed_step(
+                value = evaluate_keyframed_step(
                     animation.keyframes_times, animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::linear:
-                val = evaluate_keyframed_linear(
+                value = evaluate_keyframed_linear(
                     animation.keyframes_times, animation.scale_keyframes, time);
                 break;
             case yocto_interpolation_type::bezier:
-                val = evaluate_keyframed_bezier(
+                value = evaluate_keyframed_bezier(
                     animation.keyframes_times, animation.scale_keyframes, time);
                 break;
         }
         for (auto target : animation.node_targets)
-            scene.nodes[target].scale = val;
+            scene.nodes[target].scale = value;
     }
 }
 
@@ -4224,8 +4224,8 @@ vector<float> compute_environment_texels_cdf(
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
-            auto val    = lookup_texture(texture, ij.x, ij.y);
-            elem_cdf[i] = max(xyz(val)) * sin(th);
+            auto value  = lookup_texture(texture, ij.x, ij.y);
+            elem_cdf[i] = max(xyz(value)) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
     } else {
@@ -4367,13 +4367,13 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh) {
 void add_missing_names(yocto_scene& scene) {
     auto fix_names = [](auto& vals, const string& base) {
         auto nmap = unordered_map<string, int>();
-        for (auto& val : vals) {
-            if (val.name == "") val.name = base;
-            if (nmap.find(val.name) == nmap.end()) {
-                nmap[val.name] = 0;
+        for (auto& value : vals) {
+            if (value.name == "") value.name = base;
+            if (nmap.find(value.name) == nmap.end()) {
+                nmap[value.name] = 0;
             } else {
-                nmap[val.name] += 1;
-                val.name = val.name + "_" + std::to_string(nmap[val.name]);
+                nmap[value.name] += 1;
+                value.name = value.name + "_" + std::to_string(nmap[value.name]);
             }
         }
     };
@@ -4464,7 +4464,7 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto errs        = vector<string>();
     auto check_names = [&errs](const auto& vals, const string& base) {
         auto used = unordered_map<string, int>();
-        for (auto& val : vals) used[val.name] += 1;
+        for (auto& value : vals) used[value.name] += 1;
         for (auto& kv : used) {
             if (kv.first == "") {
                 errs.push_back("empty " + base + " name");
@@ -4474,9 +4474,9 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
         }
     };
     auto check_empty_textures = [&errs](const vector<yocto_texture>& vals) {
-        for (auto& val : vals) {
-            if (val.hdr_image.pixels.empty() && val.ldr_image.pixels.empty()) {
-                errs.push_back("empty texture " + val.name);
+        for (auto& value : vals) {
+            if (value.hdr_image.pixels.empty() && value.ldr_image.pixels.empty()) {
+                errs.push_back("empty texture " + value.name);
             }
         }
     };
@@ -5146,16 +5146,16 @@ vec2i evaluate_image_size(const yocto_camera& camera, int yresolution) {
 
 // Generates a ray from a camera.
 ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
-    auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
+    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
     return evaluate_camera_ray(camera, uv, luv);
 }
 
 // Generates a ray from a camera.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv) {
-    auto ij = vec2i{idx % imsize.x, idx / imsize.x};
-    auto uv = vec2f{(ij.x + puv.x) / imsize.x, (ij.y + puv.y) / imsize.y};
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
+    auto ij = vec2i{idx % image_size.x, idx / image_size.x};
+    auto uv = vec2f{(ij.x + puv.x) / image_size.x, (ij.y + puv.y) / image_size.y};
     return evaluate_camera_ray(camera, uv, luv);
 }
 
@@ -5685,12 +5685,12 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene& scene,
 
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& imsize, rng_state& rng) {
+    const vec2i& image_size, rng_state& rng) {
     auto puv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
     auto luv = get_random_vec2f(rng);  // force order of evaluation with
                                        // assignments
-    return evaluate_camera_ray(camera, ij, imsize, puv, luv);
+    return evaluate_camera_ray(camera, ij, image_size, puv, luv);
 }
 
 // Check if we are near the mirror direction.

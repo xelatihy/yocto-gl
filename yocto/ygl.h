@@ -426,7 +426,7 @@ inline string format(const string& fmt, const Args&... args);
 
 // Converts to string.
 template <typename T>
-inline string to_string(const T& val);
+inline string to_string(const T& value);
 
 // Prints a formatted string to stdout or file.
 template <typename... Args>
@@ -1993,14 +1993,15 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 }
 
 // Center image and autofit.
-inline void center_image(vec2f& center, float& scale, const vec2i& imsize,
-    const vec2i& winsize, bool zoom_to_fit) {
+inline void center_image(vec2f& center, float& scale, const vec2i& image_size,
+    const vec2i& window_size, bool zoom_to_fit) {
     if (zoom_to_fit) {
-        scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
-        center = {(float)winsize.x / 2, (float)winsize.y / 2};
+        scale  = min(window_size.x / (float)image_size.x,
+            window_size.y / (float)image_size.y);
+        center = {(float)window_size.x / 2, (float)window_size.y / 2};
     } else {
-        if (winsize.x >= imsize.x * scale) center.x = winsize.x / 2;
-        if (winsize.y >= imsize.y * scale) center.y = winsize.y / 2;
+        if (window_size.x >= image_size.x * scale) center.x = window_size.x / 2;
+        if (window_size.y >= image_size.y * scale) center.y = window_size.y / 2;
     }
 }
 
@@ -3492,15 +3493,15 @@ void  set_camera_view(yocto_camera& camera, const bbox3f& bbox,
 ray3f evaluate_camera_ray(
     const yocto_camera& camera, const vec2f& uv, const vec2f& luv);
 // Generates a ray from a camera for pixel coordinates `ij`, the image size
-// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
-// the image resolution `res`.
+// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv`
+// and the image resolution `res`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& ij,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv);
 // Generates a ray from a camera for pixel index `idx`, the image size
-// `imsize`, the sub-pixel coordinates `puv` and the lens coordinates `luv` and
-// the image resolution `res`.
+// `image_size`, the sub-pixel coordinates `puv` and the lens coordinates `luv`
+// and the image resolution `res`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-    const vec2i& imsize, const vec2f& puv, const vec2f& luv);
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
@@ -3989,39 +3990,39 @@ inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
 namespace ygl {
 
 // Prints basic types
-inline bool print_value(string& str, const string& val) {
-    str += val;
+inline bool print_value(string& str, const string& value) {
+    str += value;
     return true;
 }
-inline bool print_value(string& str, const char* val) {
-    str += val;
+inline bool print_value(string& str, const char* value) {
+    str += value;
     return true;
 }
-inline bool print_value(string& str, int val) {
-    str += std::to_string(val);
+inline bool print_value(string& str, int value) {
+    str += std::to_string(value);
     return true;
 }
-inline bool print_value(string& str, float val) {
-    str += std::to_string(val);
+inline bool print_value(string& str, float value) {
+    str += std::to_string(value);
     return true;
 }
-inline bool print_value(string& str, double val) {
-    str += std::to_string(val);
+inline bool print_value(string& str, double value) {
+    str += std::to_string(value);
     return true;
 }
 template <typename T>
-inline bool print_value(string& str, const T* val) {
-    char buf[512];
-    sprintf(buf, "%p", val);
-    str += buf;
+inline bool print_value(string& str, const T* value) {
+    char buffer[512];
+    sprintf(buffer, "%p", value);
+    str += buffer;
     return true;
 }
 
 template <typename T, size_t N>
-inline bool print_value(string& str, const array<T, N>& val) {
+inline bool print_value(string& str, const array<T, N>& value) {
     for (auto i = 0; i < N; i++) {
         if (i) str += " ";
-        str += std::to_string(val[i]);
+        str += std::to_string(value[i]);
     }
     return true;
 }
@@ -4080,9 +4081,9 @@ inline bool print(FILE* fs, const string& fmt, const Args&... args) {
 
 // Converts to string.
 template <typename T>
-inline string to_string(const T& val) {
+inline string to_string(const T& value) {
     auto str = string();
-    print_value(str, val);
+    print_value(str, value);
     return str;
 }
 
@@ -4092,46 +4093,46 @@ struct parse_string_view {
 };
 
 // Prints basic types to string
-inline bool parse_value(parse_string_view& str, string& val) {
+inline bool parse_value(parse_string_view& str, string& value) {
     auto n = 0;
-    char buf[4096];
-    if (sscanf(str.str, "%4095s%n", buf, &n) != 1) return false;
-    val = buf;
+    char buffer[4096];
+    if (sscanf(str.str, "%4095s%n", buffer, &n) != 1) return false;
+    value = buffer;
     str.str += n;
     return true;
 }
-inline bool parse_value(parse_string_view& str, bool& val) {
+inline bool parse_value(parse_string_view& str, bool& value) {
     auto n = 0;
     auto v = 0;
     if (sscanf(str.str, "%d%n", &v, &n) != 1) return false;
     str.str += n;
-    val = (bool)v;
+    value = (bool)v;
     return true;
 }
-inline bool parse_value(parse_string_view& str, int& val) {
+inline bool parse_value(parse_string_view& str, int& value) {
     auto n = 0;
-    if (sscanf(str.str, "%d%n", &val, &n) != 1) return false;
+    if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
     str.str += n;
     return true;
 }
-inline bool parse_value(parse_string_view& str, float& val) {
+inline bool parse_value(parse_string_view& str, float& value) {
     auto n = 0;
-    if (sscanf(str.str, "%f%n", &val, &n) != 1) return false;
+    if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
     str.str += n;
     return true;
 }
-inline bool parse_value(parse_string_view& str, double& val) {
+inline bool parse_value(parse_string_view& str, double& value) {
     auto n = 0;
-    if (sscanf(str.str, "%lf%n", &val, &n) != 1) return false;
+    if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
     str.str += n;
     return true;
 }
 
 // Print compound types
 template <typename T, size_t N>
-inline bool parse_value(parse_string_view& str, array<T, N>& val) {
+inline bool parse_value(parse_string_view& str, array<T, N>& value) {
     for (auto i = 0; i < N; i++) {
-        if (!parse_value(str, val[i])) return false;
+        if (!parse_value(str, value[i])) return false;
     }
     return true;
 }
@@ -4286,9 +4287,9 @@ inline string format_duration(int64_t duration) {
     elapsed %= 60000;
     auto secs  = (int)(elapsed / 1000);
     auto msecs = (int)(elapsed % 1000);
-    char buf[256];
-    sprintf(buf, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
-    return buf;
+    char buffer[256];
+    sprintf(buffer, "%02d:%02d:%02d.%03d", hours, mins, secs, msecs);
+    return buffer;
 }
 // Format a large integer number in human readable form
 inline string format_num(uint64_t num) {

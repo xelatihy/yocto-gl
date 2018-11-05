@@ -47,8 +47,8 @@ struct app_state {
     trace_lights lights = {};
 
     // view image
-    vec2f                      imcenter     = zero2f;
-    float                      imscale      = 1;
+    vec2f                      image_center = zero2f;
+    float                      image_scale  = 1;
     bool                       zoom_to_fit  = true;
     bool                       widgets_open = false;
     tuple<string, int>         selection    = {"", -1};
@@ -99,12 +99,13 @@ void draw_glwidgets(const glwindow& win) {
                 win, "exposure", app.params.display_exposure, -5, 5);
             draw_checkbox_glwidget(win, "filmic", app.params.display_filmic);
             draw_checkbox_glwidget(win, "srgb", app.params.display_srgb);
-            draw_slider_glwidget(win, "zoom", app.imscale, 0.1, 10);
+            draw_slider_glwidget(win, "zoom", app.image_scale, 0.1, 10);
             draw_checkbox_glwidget(win, "zoom to fit", app.zoom_to_fit);
             continue_glwidgets_line(win);
             draw_checkbox_glwidget(win, "fps", app.navigation_fps);
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, app.imcenter, app.imscale,
+            auto ij        = get_image_coords(mouse_pos, app.image_center,
+                app.image_scale,
                 {app.state.rendered_image.width, app.state.rendered_image.height});
             draw_dragger_glwidget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app.state.rendered_image.width &&
@@ -136,8 +137,8 @@ void draw(const glwindow& win) {
     auto  win_size = get_glwindow_size(win);
     auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
-    clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
-    center_image(app.imcenter, app.imscale,
+    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    center_image(app.image_center, app.image_scale,
         {app.state.display_image.width, app.state.display_image.height},
         win_size, app.zoom_to_fit);
     if (!app.gl_txt) {
@@ -146,9 +147,14 @@ void draw(const glwindow& win) {
         update_gltexture(
             app.gl_txt, app.state.display_image, false, false, false);
     }
+    set_glblending(true);
+    draw_glimage_background(
+        {app.state.display_image.width, app.state.display_image.height},
+        win_size, app.image_center, app.image_scale);
     draw_glimage(app.gl_txt,
         {app.state.display_image.width, app.state.display_image.height},
-        win_size, app.imcenter, app.imscale);
+        win_size, app.image_center, app.image_scale);
+    set_glblending(false);
     draw_glwidgets(win);
     swap_glbuffers(win);
 }
@@ -192,7 +198,8 @@ void run_ui(app_state& app) {
     auto width  = clamp(app.state.rendered_image.width, 256, 1440);
     auto height = clamp(app.state.rendered_image.height, 256, 1440);
     auto win    = glwindow();
-    init_glwindow(win, width, height, "yitrace", &app, draw);
+    init_glwindow(win, width, height, "yitrace | " + get_filename(app.filename),
+        &app, draw);
 
     // init widgets
     init_glwidgets(win);
@@ -225,7 +232,8 @@ void run_ui(app_state& app) {
 
         // selection
         if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
-            auto ij = get_image_coords(mouse_pos, app.imcenter, app.imscale,
+            auto ij = get_image_coords(mouse_pos, app.image_center,
+                app.image_scale,
                 {app.state.rendered_image.width, app.state.rendered_image.height});
             if (ij.x < 0 || ij.x >= app.state.rendered_image.width ||
                 ij.y < 0 || ij.y >= app.state.rendered_image.height) {
