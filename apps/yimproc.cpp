@@ -136,10 +136,8 @@ int main(int argc, char* argv[]) {
     auto srgb     = parse_arg(parser, "--srgb", true, "Tonemap to sRGB.");
     auto filmic   = parse_arg(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto res_width = parse_arg(
-        parser, "--res-width", 0, "resize width (0 to maintain aspect)");
-    auto res_height = parse_arg(
-        parser, "--res-height", 0, "resize height (0 to maintain aspect)");
+    auto resize_size = parse_arg(
+        parser, "--resize", zero2i, "resize size (0 to maintain aspect)");
     auto spatial_sigma = parse_arg(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
     auto range_sigma = parse_arg(
@@ -187,8 +185,8 @@ int main(int argc, char* argv[]) {
     }
 
     // resize
-    if (res_width || res_height) {
-        img = resize_image(img, res_width, res_height);
+    if (resize_size != zero2i) {
+        img = resize_image(img, resize_size);
     }
 
     // bilateral
@@ -197,7 +195,7 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) img = tonemap_filmic(img, exposure, filmic, srgb);
+    if (tonemap) img = tonemap_image(img, exposure, filmic, srgb);
 
     // save
     if (!save_image(output, img)) log_fatal("cannot save image {}", output);

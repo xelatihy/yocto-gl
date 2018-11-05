@@ -38,15 +38,14 @@ struct image_stats {
 
 struct app_image {
     // original data
-    string       filename;  // filename
-    string       outname;   // output filename for display
-    string       name;
-    image<vec4f> img;
-    bool         is_hdr = false;
+    string       filename = "";
+    string       outname  = "";
+    string       name     = "";
+    image<vec4f> img      = {};
 
     // diplay image
-    image<vec4f>   display;
-    opengl_texture gl_txt = {};
+    image<vec4f>   display = {};
+    opengl_texture gl_txt  = {};
 
     // image stats
     image_stats stats;
@@ -60,7 +59,8 @@ struct app_image {
     atomic<bool> load_done, display_done, stats_done, texture_done;
     thread       load_thread, display_thread, stats_thread, save_thread;
     atomic<bool> display_stop;
-    string       error_msg = "";
+    concurrent_queue<image_region> display_queue;
+    string                         error_msg = "";
 
     // viewing properties
     vec2f image_center = zero2f;
@@ -99,29 +99,12 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    if (img.img.width * img.img.height > 1024 * 1024) {
-        auto nthreads = thread::hardware_concurrency();
-        auto threads  = vector<thread>();
-        for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([&img, tid, nthreads]() {
-                for (auto j = tid; j < img.img.height; j += nthreads) {
-                    if (img.display_stop) break;
-                    for (auto i = 0; i < img.img.width; i++) {
-                        at(img.display, i, j) = tonemap_filmic(at(img.img, i, j),
-                            img.exposure, img.filmic, img.srgb);
-                    }
-                }
-            }));
-        }
-        for (auto& t : threads) t.join();
-    } else {
-        for (auto j = 0; j < img.img.height; j++) {
-            if (img.display_stop) break;
-            for (auto i = 0; i < img.img.width; i++) {
-                at(img.display, i, j) = tonemap_filmic(
-                    at(img.img, i, j), img.exposure, img.filmic, img.srgb);
-            }
-        }
+    auto regions     = make_image_regions({img.img.width, img.img.height});
+    for (auto region_id = 0; region_id < regions.size(); region_id++) {
+        if (img.display_stop) break;
+        tonemap_image_region(img.display, regions[region_id], img.img,
+            img.exposure, img.filmic, img.srgb);
+        img.display_queue.push(regions[region_id]);
     }
     img.display_done = true;
 }
@@ -143,7 +126,7 @@ void load_image_async(app_image& img) {
 
 // save an image
 void save_image_async(app_image& img) {
-    if (is_hdr_filename(img.outname)) {
+    if (!is_hdr_filename(img.outname)) {
         if (!save_image(img.outname, float_to_byte(img.display))) {
             img.error_msg = "error saving image";
         }
@@ -163,7 +146,6 @@ void add_new_image(app_state& app, const string& filename, const string& outname
     img.outname = (outname == "") ? replace_extension(filename, ".display.png") :
                                     outname;
     img.name        = get_filename(filename);
-    img.is_hdr      = is_hdr_filename(filename);
     img.exposure    = exposure;
     img.filmic      = filmic;
     img.srgb        = srgb;
@@ -265,13 +247,16 @@ void draw(const opengl_window& win) {
 
 void update(app_state& app) {
     for (auto& img : app.imgs) {
-        if (!img.display_done || img.texture_done) continue;
+        if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(img.gl_txt, img.display, false, false, true);
+            init_opengl_texture(img.gl_txt, img.display, false, false, false);
         } else {
-            update_opengl_texture(img.gl_txt, img.display, false, false, true);
+            auto region = image_region{};
+            while (img.display_queue.try_pop(region)) {
+                update_opengl_texture_region(
+                    img.gl_txt, img.display, region, false);
+            }
         }
-        img.texture_done = true;
     }
 }
 

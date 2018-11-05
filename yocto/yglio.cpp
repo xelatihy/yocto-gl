@@ -913,24 +913,22 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     if (is_hdr_filename(filename)) {
         return save_image(filename, hdr);
     } else {
-        auto ldr = float_to_byte(tonemap_filmic(hdr, exposure, filmic, srgb));
+        auto ldr = float_to_byte(tonemap_image(hdr, exposure, filmic, srgb));
         return save_image(filename, ldr);
     }
 }
 
 // Resize image.
-image<vec4f> resize_image(const image<vec4f>& img, int width, int height) {
-    if (!width && !height) {
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
+    if (size == zero2i) {
         log_error("bad image size in resize_image");
         return img;
     }
-    if (!width) width = (int)round(img.width * (height / (float)img.height));
-    if (!height) height = (int)round(img.height * (width / (float)img.width));
-    auto res_img = image<vec4f>{width, height};
+    auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
     stbir_resize_float_generic((float*)img.pixels.data(), img.width, img.height,
-        sizeof(vec4f) * img.width, (float*)res_img.pixels.data(), width, height,
-        sizeof(vec4f) * width, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
-        STBIR_COLORSPACE_LINEAR, nullptr);
+        sizeof(vec4f) * img.width, (float*)res_img.pixels.data(), res_img.width,
+        res_img.height, sizeof(vec4f) * res_img.width, 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return res_img;
 }
 
@@ -4967,6 +4965,7 @@ WorldEnd
     auto  from   = camera.frame.o;
     auto  to     = camera.frame.o - camera.frame.z;
     auto  up     = camera.frame.y;
+    auto  res    = get_image_size({0, 512}, get_camera_aspect(camera));
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         get_camera_fovy(camera) * 180 / pif);
@@ -4978,8 +4977,7 @@ WorldEnd
     print(fs,
         "Film \"image\" \"string filename\" [\"{}\"] "
         "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), get_image_size(camera, 512).x,
-        get_image_size(camera, 512).y);
+        replace_extension(filename, "exr"), res.x, res.y);
 
     // start world
     print(fs, "WorldBegin\n");

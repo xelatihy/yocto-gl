@@ -59,7 +59,7 @@ struct drawgl_lights {
 
 struct drawgl_params {
     int   camera_id   = 0;
-    int   resolution  = 512;
+    vec2i image_size  = {1280, 720};
     bool  wireframe   = false;
     bool  edges       = false;
     float edge_offset = 0.01f;
@@ -919,7 +919,7 @@ void draw_widgets(const opengl_window& win) {
                     app.scene.cameras, false);
             }
             draw_slider_opengl_widget(
-                win, "resolution", app.params.resolution, 256, 4096);
+                win, "resolution", app.params.image_size, 256, 4096);
             draw_checkbox_opengl_widget(win, "eyelight", app.params.eyelight);
             continue_opengl_widget_line(win);
             draw_checkbox_opengl_widget(win, "wireframe", app.params.wireframe);
@@ -962,7 +962,7 @@ void draw(const opengl_window& win) {
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
     set_glviewport(get_opengl_framebuffer_size(win));
     if (app.load_done) {
-        app.params.resolution = get_opengl_framebuffer_size(win).y;
+        app.params.image_size = {0, get_opengl_framebuffer_size(win).y};
         draw_glscene(app.state, app.scene, get_opengl_framebuffer_size(win),
             app.selection, app.params);
     }
@@ -1119,9 +1119,9 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "views scenes inteactively", "yview");
     app.params.camera_id  = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.params.resolution = parse_arg(
-        parser, "--resolution,-r", 512, "Image vertical resolution.");
-    app.params.eyelight = parse_arg(
+    app.params.image_size = {0,
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
+    app.params.eyelight   = parse_arg(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
     app.double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");

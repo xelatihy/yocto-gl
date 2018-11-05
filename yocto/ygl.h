@@ -355,7 +355,9 @@ using std::atomic;
 using std::deque;
 using std::function;
 using std::ignore;
+using std::lock_guard;
 using std::make_unique;
+using std::mutex;
 using std::runtime_error;
 using std::string;
 using std::thread;
@@ -2021,6 +2023,50 @@ inline bool contains(const unordered_map<K, V>& container, const K& value) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// CONCURRENCY UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// a simple concurrent queue that locks at every call
+template <typename T>
+struct concurrent_queue {
+    concurrent_queue() {}
+    concurrent_queue(const concurrent_queue& other) {
+        if (!other._queue.empty()) log_error("cannot copy full queue");
+        clear();
+    }
+    concurrent_queue& operator=(const concurrent_queue& other) {
+        if (!other._queue.empty()) log_error("cannot copy full queue");
+        clear();
+    }
+
+    bool empty() {
+        lock_guard<mutex> lock(_mutex);
+        return _queue.empty();
+    }
+    void clear() {
+        lock_guard<mutex> lock(_mutex);
+        _queue.clear();
+    }
+    void push(const T& value) {
+        lock_guard<mutex> lock(_mutex);
+        _queue.push_back(value);
+    }
+    bool try_pop(T& value) {
+        lock_guard<mutex> lock(_mutex);
+        if (_queue.empty()) return false;
+        value = _queue.front();
+        _queue.pop_front();
+        return true;
+    }
+
+    mutex    _mutex;
+    deque<T> _queue;
+};
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2807,38 +2853,6 @@ make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMAGE TYPE
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Image container.
-template <typename T>
-struct image {
-    int       width  = 0;
-    int       height = 0;
-    vector<T> pixels = {};
-
-    // constructors
-    image() : width{0}, height{0}, pixels() {}
-    image(int w, int h, const T& v = T{})
-        : width{w}, height{h}, pixels(w * h, v) {}
-    image(int w, int h, const T* v)
-        : width{w}, height{h}, pixels(v, v + w * h) {}
-};
-
-// Element access.
-template <typename T>
-inline T& at(image<T>& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
-template <typename T>
-inline const T& at(const image<T>& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2950,6 +2964,60 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Image container.
+template <typename T>
+struct image {
+    int       width  = 0;
+    int       height = 0;
+    vector<T> pixels = {};
+
+    // constructors
+    image() : width{0}, height{0}, pixels() {}
+    image(int w, int h, const T& v = T{})
+        : width{w}, height{h}, pixels(w * h, v) {}
+    image(int w, int h, const T* v)
+        : width{w}, height{h}, pixels(v, v + w * h) {}
+    image(const vec2i& size, const T& v = T{})
+        : width{size.x}, height{size.y}, pixels(size.x * size.y, v) {}
+    image(const vec2i& size, const T* v)
+        : width{size.x}, height{size.y}, pixels(v, v + size.x * size.y) {}
+};
+
+// Element access.
+template <typename T>
+inline T& at(image<T>& img, int i, int j) {
+    return img.pixels[j * img.width + i];
+}
+template <typename T>
+inline const T& at(const image<T>& img, int i, int j) {
+    return img.pixels[j * img.width + i];
+}
+
+// Size
+template <typename T>
+inline float get_image_aspect(const image<T>& img) {
+    return (float)img.width / (float)img.height;
+}
+
+// Image region defined by its corner at x,y and with size width x height
+struct image_region {
+    vec2i offset = {0, 0};
+    vec2i size   = {0, 0};
+};
+
+// Splits an image into an array of regions
+vector<image_region> make_image_regions(
+    const vec2i& image_size, int region_size = 32);
+
+// Gets pixels in an image region
+template <typename T>
+inline image<T> get_image_region(const image<T>& img, const image_region& region);
+
+// Gets an image size from a suggested size and an aspect ratio. The suggested
+// size may have zeros in either components. In which case, we use the aspect
+// ration to compute the other.
+vec2i get_image_size(const vec2i& size, float aspect);
+
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
 image<vec4b> float_to_byte(const image<vec4f>& fl);
@@ -2963,11 +3031,13 @@ image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
 image<vec4f> linear_to_srgb(const image<vec4f>& lin);
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_filmic(
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image<vec4f> resize_image(const image<vec4f>& img, int width, int height);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 
 }  // namespace ygl
 
@@ -3081,7 +3151,7 @@ inline T evaluate_keyframed_bezier(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// VOLUME TYPE
+// VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -3111,13 +3181,6 @@ const T& at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
 
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// SCENE DATA
-// -----------------------------------------------------------------------------
-namespace ygl {
-
 // make a simple example volume
 volume<float> make_test_volume1f(
     int width, int height, int depth, float scale = 10, float exponent = 6);
@@ -3128,9 +3191,6 @@ volume<float> make_test_volume1f(
 // SCENE DATA
 // -----------------------------------------------------------------------------
 namespace ygl {
-
-// forward declaration
-struct bvh_scene;
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
@@ -3482,10 +3542,10 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float get_camera_fovx(const yocto_camera& camera);
 float get_camera_fovy(const yocto_camera& camera);
-float set_camera_aspect(const yocto_camera& camera);
+float get_camera_aspect(const yocto_camera& camera);
+vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size);
 void  set_camera_fovy(
      yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
-vec2i get_image_size(const yocto_camera& camera, int yresolution);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
@@ -3638,19 +3698,19 @@ const auto trace_type_names = vector<string>{"path", "direct", "environment",
 
 // Trace options
 struct trace_params {
-    int        camera_id           = 0;
-    int        vertical_resolution = 256;
-    trace_type sample_tracer       = trace_type::path;
-    int        num_samples         = 256;
-    int        max_bounces         = 8;
-    float      pixel_clamp         = 100;
-    int        samples_per_batch   = 16;
-    bool       no_parallel         = false;
-    int        preview_ratio       = 8;
-    float      display_exposure    = 0;
-    bool       display_filmic      = false;
-    bool       display_srgb        = true;
-    int        random_seed         = trace_default_seed;
+    int        camera_id         = 0;
+    vec2i      image_size        = {1280, 720};
+    trace_type sample_tracer     = trace_type::path;
+    int        num_samples       = 256;
+    int        max_bounces       = 8;
+    float      pixel_clamp       = 100;
+    int        samples_per_batch = 16;
+    bool       no_parallel       = false;
+    int        preview_ratio     = 8;
+    float      display_exposure  = 0;
+    bool       display_filmic    = false;
+    bool       display_srgb      = true;
+    int        random_seed       = trace_default_seed;
 };
 
 // Trace lights used during rendering.
@@ -3662,30 +3722,14 @@ struct trace_lights {
     vector<vector<float>> environment_texture_cdf = {};
 };
 
-// Trace data used during rendering. Initialize with `make_trace_state()`
-struct trace_state {
-    image<vec4f> rendered_image = {};
-    image<vec4f> display_image  = {};
-
-    // internal data used during rendering
-    image<vec4f>     accumulation_buffer      = {};
-    image<int>       samples_per_pixel        = {};
-    image<rng_state> random_number_generators = {};
-    int              current_sample           = 0;
-    vector<thread>   async_threads;
-    bool             async_stop_flag = false;
-};
-
 // Initialize lights.
-trace_lights make_trace_lights(
-    const yocto_scene& scene, const trace_params& params);
-inline bool empty(const trace_lights& lights) {
+trace_lights make_trace_lights(const yocto_scene& scene);
+inline bool  empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
 // Initialize state of the renderer.
-trace_state make_trace_state(
-    const yocto_scene& scene, const trace_params& params);
+image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
@@ -3694,15 +3738,20 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state& state, const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
+void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, int current_sample,
+    int num_samples, image<rng_state>& rngs, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(trace_state& state, const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
+void trace_async_start(image<vec4f>& rendered_image,
+    image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, image<rng_state>& rngs, vector<thread>& threads,
+    bool& stop_flag, int& current_sample, concurrent_queue<image_region>& queue,
+    const trace_params& params);
 // Stop the asynchronous renderer.
-void trace_async_stop(trace_state& state);
+void trace_async_stop(vector<thread>& threads, bool& stop_flag,
+    concurrent_queue<image_region>& queue);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
@@ -3989,6 +4038,25 @@ inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Gets pixels in an image region
+template <typename T>
+inline image<T> get_image_region(const image<T>& img, const image_region& region) {
+    auto clipped = image<T>{region.size};
+    for (auto j = 0; j < region.size.y; j++) {
+        for (auto i = 0; i < region.size.x; i++) {
+            at(clipped, i, j) = at(img, i + region.offset.x, j + region.offset.y);
+        }
+    }
+    return clipped;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -4051,6 +4119,9 @@ inline bool print_value(string& str, const bbox<T, N>& v) {
 template <typename T, int N>
 inline bool print_value(string& str, const ray<T, N>& v) {
     return print_value(str, (const array<T, N * 2 + 2>&)v);
+}
+inline bool print_value(string& str, const image_region& v) {
+    return print_value(str, (const array<int, 4>&)v);
 }
 
 // Prints a string.
@@ -4160,6 +4231,9 @@ inline bool parse_value(parse_string_view& str, bbox<T, N>& v) {
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, ray<T, N>& v) {
     return parse_value(str, (array<T, N * 2 + 2>&)v);
+}
+inline bool parse_value(parse_string_view& str, image_region& v) {
+    return parse_value(str, (array<int, 4>&)v);
 }
 
 // Prints a string.
