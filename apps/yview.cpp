@@ -1119,9 +1119,9 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "views scenes inteactively", "yview");
     app.params.camera_id  = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.params.image_size = {0, parse_arg(
-        parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    app.params.eyelight = parse_arg(
+    app.params.image_size = {0,
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
+    app.params.eyelight   = parse_arg(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
     app.double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");

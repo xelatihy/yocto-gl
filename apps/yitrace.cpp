@@ -45,11 +45,11 @@ struct app_state {
     bvh_scene   bvh   = {};
 
     // rendering state
-    trace_params params = {};
-    trace_state  state  = {};
-    trace_lights lights = {};
+    trace_params params         = {};
+    trace_state  state          = {};
+    trace_lights lights         = {};
     image<vec4f> rendered_image = {};
-    image<vec4f> display_image = {};
+    image<vec4f> display_image  = {};
 
     // view image
     vec2f                      image_center = zero2f;
@@ -72,11 +72,13 @@ void start_rendering_async(app_state& app) {
     trace_async_stop(app.state);
     app.status      = "rendering image";
     app.trace_start = get_time();
-    auto image_size = get_camera_image_size(app.scene.cameras[app.params.camera_id], app.params.image_size);
+    auto image_size = get_camera_image_size(
+        app.scene.cameras[app.params.camera_id], app.params.image_size);
     app.rendered_image = image<vec4f>{image_size};
-    app.display_image = image<vec4f>{image_size};
-    app.state       = make_trace_state(image_size, app.params.random_seed);
-    trace_async_start(app.state, app.rendered_image, app.display_image, app.scene, app.bvh, app.lights, app.params);
+    app.display_image  = image<vec4f>{image_size};
+    app.state          = make_trace_state(image_size, app.params.random_seed);
+    trace_async_start(app.state, app.rendered_image, app.display_image,
+        app.scene, app.bvh, app.lights, app.params);
 }
 
 void stop_rendering_async(app_state& app) { trace_async_stop(app.state); }
@@ -201,8 +203,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 app.image_scale,
                 {app.rendered_image.width, app.rendered_image.height});
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app.rendered_image.width &&
-                ij.y >= 0 && ij.y < app.rendered_image.height) {
+            if (ij.x >= 0 && ij.x < app.rendered_image.width && ij.y >= 0 &&
+                ij.y < app.rendered_image.height) {
                 draw_coloredit_opengl_widget(
                     win, "pixel", at(app.rendered_image, ij.x, ij.y));
             } else {
@@ -232,22 +234,21 @@ void draw(const opengl_window& win) {
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
         center_image(app.image_center, app.image_scale,
-            {app.display_image.width, app.display_image.height},
-            win_size, app.zoom_to_fit);
+            {app.display_image.width, app.display_image.height}, win_size,
+            app.zoom_to_fit);
         if (!app.gl_txt) {
             init_opengl_texture(
                 app.gl_txt, app.display_image, false, false, false);
         } else {
-            update_opengl_texture(
-                app.gl_txt, app.display_image, false);
+            update_opengl_texture(app.gl_txt, app.display_image, false);
         }
         set_glblending(true);
         draw_glimage_background(
-            {app.display_image.width, app.display_image.height},
-            win_size, app.image_center, app.image_scale);
+            {app.display_image.width, app.display_image.height}, win_size,
+            app.image_center, app.image_scale);
         draw_glimage(app.gl_txt,
-            {app.display_image.width, app.display_image.height},
-            win_size, app.image_center, app.image_scale);
+            {app.display_image.width, app.display_image.height}, win_size,
+            app.image_center, app.image_scale);
         set_glblending(false);
     }
     draw_opengl_widgets(win);
@@ -336,12 +337,11 @@ void run_ui(app_state& app) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale,
                 {app.rendered_image.width, app.rendered_image.height});
-            if (ij.x < 0 || ij.x >= app.rendered_image.width ||
-                ij.y < 0 || ij.y >= app.rendered_image.height) {
+            if (ij.x < 0 || ij.x >= app.rendered_image.width || ij.y < 0 ||
+                ij.y >= app.rendered_image.height) {
                 auto& camera = app.scene.cameras.at(app.params.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
-                    {app.rendered_image.width,
-                        app.rendered_image.height},
+                    {app.rendered_image.width, app.rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
                 auto  isec   = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
@@ -372,9 +372,9 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
-    app.params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.params.image_size = {0, parse_arg(
-        parser, "--resolution,-r", 512, "Image vertical resolution.")};
+    app.params.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
+    app.params.image_size  = {0,
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     app.params.num_samples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.params.sample_tracer = parse_arge(parser, "--tracer,-t",

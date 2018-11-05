@@ -37,9 +37,9 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
-    params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
-    params.image_size = {0, parse_arg(
-        parser, "--resolution,-r", 512, "Image vertical resolution.")};
+    params.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
+    params.image_size  = {0,
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     params.num_samples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
     params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,
@@ -97,8 +97,9 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    auto image_size = get_camera_image_size(scene.cameras[params.camera_id], params.image_size);
-    auto state = make_trace_state(image_size, params.random_seed);
+    auto image_size = get_camera_image_size(
+        scene.cameras[params.camera_id], params.image_size);
+    auto state          = make_trace_state(image_size, params.random_seed);
     auto rendered_image = image<vec4f>{image_size};
 
     // render
@@ -117,8 +118,7 @@ int main(int argc, char* argv[]) {
     log_trace_end(scope);
 
     // save image
-    if (!save_tonemapped_image(
-            imfilename, rendered_image, exposure, filmic, srgb))
+    if (!save_tonemapped_image(imfilename, rendered_image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);
 
     // done

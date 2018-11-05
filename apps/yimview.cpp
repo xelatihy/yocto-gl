@@ -39,9 +39,9 @@ struct image_stats {
 struct app_image {
     // original data
     string       filename = "";
-    string       outname = "";
-    string       name = "";
-    image<vec4f> img = {};
+    string       outname  = "";
+    string       name     = "";
+    image<vec4f> img      = {};
 
     // diplay image
     image<vec4f>   display = {};
@@ -126,7 +126,7 @@ void load_image_async(app_image& img) {
 
 // save an image
 void save_image_async(app_image& img) {
-    if(!is_hdr_filename(img.outname)) {
+    if (!is_hdr_filename(img.outname)) {
         if (!save_image(img.outname, float_to_byte(img.display))) {
             img.error_msg = "error saving image";
         }

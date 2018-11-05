@@ -926,9 +926,9 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
     }
     auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
     stbir_resize_float_generic((float*)img.pixels.data(), img.width, img.height,
-        sizeof(vec4f) * img.width, (float*)res_img.pixels.data(), res_img.width, res_img.height,
-        sizeof(vec4f) * res_img.width, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT,
-        STBIR_COLORSPACE_LINEAR, nullptr);
+        sizeof(vec4f) * img.width, (float*)res_img.pixels.data(), res_img.width,
+        res_img.height, sizeof(vec4f) * res_img.width, 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return res_img;
 }
 
@@ -4965,7 +4965,7 @@ WorldEnd
     auto  from   = camera.frame.o;
     auto  to     = camera.frame.o - camera.frame.z;
     auto  up     = camera.frame.y;
-    auto res     = get_image_size({0, 512}, get_camera_aspect(camera));
+    auto  res    = get_image_size({0, 512}, get_camera_aspect(camera));
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         get_camera_fovy(camera) * 180 / pif);

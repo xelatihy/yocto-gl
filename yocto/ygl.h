@@ -355,7 +355,9 @@ using std::atomic;
 using std::deque;
 using std::function;
 using std::ignore;
+using std::lock_guard;
 using std::make_unique;
+using std::mutex;
 using std::runtime_error;
 using std::string;
 using std::thread;
@@ -363,8 +365,6 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
-using std::mutex;
-using std::lock_guard;
 using namespace std::string_literals;
 
 using byte = unsigned char;
@@ -2028,7 +2028,7 @@ inline bool contains(const unordered_map<K, V>& container, const K& value) {
 namespace ygl {
 
 // a simple concurrent queue that locks at every call
-template<typename T>
+template <typename T>
 struct concurrent_queue {
     void push(const T& value) {
         lock_guard<mutex> lock(_mutex);
@@ -2036,13 +2036,13 @@ struct concurrent_queue {
     }
     bool try_pop(T& value) {
         lock_guard<mutex> lock(_mutex);
-        if(_queue.empty()) return false;
+        if (_queue.empty()) return false;
         value = _queue.front();
         _queue.pop_front();
         return true;
     }
 
-    mutex _mutex;
+    mutex    _mutex;
     deque<T> _queue;
 };
 
@@ -2976,7 +2976,7 @@ inline const T& at(const image<T>& img, int i, int j) {
 }
 
 // Size
-template<typename T>
+template <typename T>
 inline float get_image_aspect(const image<T>& img) {
     return (float)img.width / (float)img.height;
 }
@@ -2984,14 +2984,15 @@ inline float get_image_aspect(const image<T>& img) {
 // Image region defined by its corner at x,y and with size width x height
 struct image_region {
     vec2i offset = {0, 0};
-    vec2i size = {0, 0};
+    vec2i size   = {0, 0};
 };
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(const vec2i& image_size, int region_size = 32);
+vector<image_region> make_image_regions(
+    const vec2i& image_size, int region_size = 32);
 
 // Gets pixels in an image region
-template<typename T>
+template <typename T>
 inline image<T> get_image_region(const image<T>& img, const image_region& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
@@ -3014,7 +3015,7 @@ image<vec4f> linear_to_srgb(const image<vec4f>& lin);
 // Apply exposure and filmic tone mapping
 image<vec4f> tonemap_image(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image<vec4f>& ldr, const image_region& region, 
+void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
@@ -3679,19 +3680,19 @@ const auto trace_type_names = vector<string>{"path", "direct", "environment",
 
 // Trace options
 struct trace_params {
-    int        camera_id           = 0;
-    vec2i      image_size          = {1280, 720};
-    trace_type sample_tracer       = trace_type::path;
-    int        num_samples         = 256;
-    int        max_bounces         = 8;
-    float      pixel_clamp         = 100;
-    int        samples_per_batch   = 16;
-    bool       no_parallel         = false;
-    int        preview_ratio       = 8;
-    float      display_exposure    = 0;
-    bool       display_filmic      = false;
-    bool       display_srgb        = true;
-    int        random_seed         = trace_default_seed;
+    int        camera_id         = 0;
+    vec2i      image_size        = {1280, 720};
+    trace_type sample_tracer     = trace_type::path;
+    int        num_samples       = 256;
+    int        max_bounces       = 8;
+    float      pixel_clamp       = 100;
+    int        samples_per_batch = 16;
+    bool       no_parallel       = false;
+    int        preview_ratio     = 8;
+    float      display_exposure  = 0;
+    bool       display_filmic    = false;
+    bool       display_srgb      = true;
+    int        random_seed       = trace_default_seed;
 };
 
 // Trace lights used during rendering.
@@ -3713,7 +3714,7 @@ struct trace_state {
 
 // Initialize lights.
 trace_lights make_trace_lights(const yocto_scene& scene);
-inline bool empty(const trace_lights& lights) {
+inline bool  empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
@@ -3727,13 +3728,15 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state& state, image<vec4f>& rendered_image, const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
+bool trace_samples(trace_state& state, image<vec4f>& rendered_image,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(trace_state& state, image<vec4f>& rendered_image, image<vec4f>& display_image, const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
+void trace_async_start(trace_state& state, image<vec4f>& rendered_image,
+    image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const trace_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state& state);
 
@@ -4027,18 +4030,18 @@ inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
 namespace ygl {
 
 // Gets pixels in an image region
-template<typename T>
+template <typename T>
 inline image<T> get_image_region(const image<T>& img, const image_region& region) {
     auto clipped = image<T>{region.size};
-    for(auto j = 0; j < region.size.y; j ++) {
-        for(auto i = 0; i < region.size.x; i ++) {
+    for (auto j = 0; j < region.size.y; j++) {
+        for (auto i = 0; i < region.size.x; i++) {
             at(clipped, i, j) = at(img, i + region.offset.x, j + region.offset.y);
         }
     }
     return clipped;
 }
 
-}
+}  // namespace ygl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
