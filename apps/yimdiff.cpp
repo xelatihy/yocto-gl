@@ -87,8 +87,7 @@ int main(int argc, char* argv[]) {
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
-        if (img1.size != img2.size)
-            log_fatal("image size differs");
+        if (img1.size != img2.size) log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
@@ -105,8 +104,7 @@ int main(int argc, char* argv[]) {
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
-        if (img1.size != img2.size)
-            log_fatal("image size differs");
+        if (img1.size != img2.size) log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {

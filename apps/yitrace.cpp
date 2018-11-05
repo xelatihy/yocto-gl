@@ -205,8 +205,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale,
-                app.rendered_image.size);
+                app.image_scale, app.rendered_image.size);
             draw_dragger_opengl_widget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app.rendered_image.size.x && ij.y >= 0 &&
                 ij.y < app.rendered_image.size.y) {
@@ -238,13 +237,11 @@ void draw(const opengl_window& win) {
     set_glviewport(get_opengl_framebuffer_size(win));
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
-        center_image(app.image_center, app.image_scale,
-            app.display_image.size, win_size,
-            app.zoom_to_fit);
+        center_image(app.image_center, app.image_scale, app.display_image.size,
+            win_size, app.zoom_to_fit);
         if (!app.gl_txt) {
-            init_opengl_texture(app.gl_txt,
-                app.display_image.size, false,
-                false, false, false);
+            init_opengl_texture(
+                app.gl_txt, app.display_image.size, false, false, false, false);
         } else {
             auto region = image_region{};
             while (app.trace_queue.try_pop(region))
@@ -252,11 +249,9 @@ void draw(const opengl_window& win) {
                     app.gl_txt, app.display_image, region, false);
         }
         set_glblending(true);
-        draw_glimage_background(
-            app.display_image.size, win_size,
+        draw_glimage_background(app.display_image.size, win_size,
             app.image_center, app.image_scale);
-        draw_glimage(app.gl_txt,
-            app.display_image.size, win_size,
+        draw_glimage(app.gl_txt, app.display_image.size, win_size,
             app.image_center, app.image_scale);
         set_glblending(false);
     }
@@ -306,8 +301,8 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
-    init_opengl_window(
-        win, {1280, 720}, "yitrace | " + get_filename(app.filename), &app, draw);
+    init_opengl_window(win, {1280, 720},
+        "yitrace | " + get_filename(app.filename), &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
@@ -348,10 +343,9 @@ void run_ui(app_state& app) {
             if (ij.x < 0 || ij.x >= app.rendered_image.size.x || ij.y < 0 ||
                 ij.y >= app.rendered_image.size.y) {
                 auto& camera = app.scene.cameras.at(app.params.camera_id);
-                auto  ray    = evaluate_camera_ray(camera, ij,
-                    app.rendered_image.size,
-                    {0.5f, 0.5f}, zero2f);
-                auto  isec   = intersect_scene(app.scene, app.bvh, ray);
+                auto  ray    = evaluate_camera_ray(
+                    camera, ij, app.rendered_image.size, {0.5f, 0.5f}, zero2f);
+                auto isec = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {"instance", isec.instance_id};
             }

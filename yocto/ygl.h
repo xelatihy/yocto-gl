@@ -365,7 +365,6 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
-using std::mutex;
 using namespace std::string_literals;
 
 using byte = unsigned char;
@@ -2968,18 +2967,18 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
-    vec2i     size  = {0, 0};
+    vec2i     size   = {0, 0};
     vector<T> pixels = {};
 };
 
 // Image onstructors
-template<typename T>
+template <typename T>
 inline image<T> make_image(const vec2i& size, const T& v = T{}) {
     return image<T>{size, vector<T>((size_t)(size.x * size.y), v)};
 }
-template<typename T>
+template <typename T>
 inline image<T> make_image(const vec2i& size, const T* v) {
-    return image<T>{size, vector<T>(v, v + size.x * size.y)};    
+    return image<T>{size, vector<T>(v, v + size.x * size.y)};
 }
 
 // Element access.
@@ -3053,8 +3052,8 @@ image<vec4f> make_checker_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 image<vec4f> make_bumpdimple_image(const vec2i& size, int tile = 8);
-image<vec4f> make_ramp_image(const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float srgb = false);
+image<vec4f> make_ramp_image(
+    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
 image<vec4f> make_gammaramp_image(const vec2i& size);
 image<vec4f> make_uvramp_image(const vec2i& size);
 image<vec4f> make_uvgrid_image(
@@ -3069,9 +3068,9 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image(const vec2i& size,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
+image<vec4f> make_lights_image(const vec2i& size, const vec3f& le = {1, 1, 1},
+    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
+    float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 image<vec4f> make_noise_image(
@@ -3157,16 +3156,16 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
-    vec3i     size  = {0, 0, 0};
+    vec3i     size   = {0, 0, 0};
     vector<T> voxels = {};
 };
 
 // Volume onstructors
-template<typename T>
+template <typename T>
 inline volume<T> make_volume(const vec3i& size, const T& v = T{}) {
     return volume<T>{size, vector<T>((size_t)(size.x * size.y * size.z), v)};
 }
-template<typename T>
+template <typename T>
 inline volume<T> make_volume(const vec3i& size, const T* v) {
     return volume<T>{size, vector<T>(v, v + size.x * size.y * size.z)};
 }
@@ -3182,7 +3181,8 @@ const T& at(const volume<T>& vol, const vec3i& ijk) {
 }
 
 // make a simple example volume
-volume<float> make_test_volume1f(const vec3i& size, float scale = 10, float exponent = 6);
+volume<float> make_test_volume1f(
+    const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
@@ -4048,7 +4048,8 @@ inline image<T> get_image_region(const image<T>& img, const image_region& region
     auto clipped = make_image<T>(region.size);
     for (auto j = 0; j < region.size.y; j++) {
         for (auto i = 0; i < region.size.x; i++) {
-            at(clipped, {i, j}) = at(img, {i + region.offset.x, j + region.offset.y});
+            at(clipped, {i, j}) = at(
+                img, {i + region.offset.x, j + region.offset.y});
         }
     }
     return clipped;

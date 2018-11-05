@@ -419,24 +419,24 @@ inline void from_json(const json& js, bbox<T, N>& value) {
 template <typename T>
 inline void to_json(json& js, const image<T>& value) {
     js           = json::object();
-    js["size"]  = value.size;
+    js["size"]   = value.size;
     js["pixels"] = value.pixels;
 }
 template <typename T>
 inline void from_json(const json& js, image<T>& value) {
-    auto size  = js.at("size").get<vec2i>();
+    auto size   = js.at("size").get<vec2i>();
     auto pixels = js.at("pixels").get<vector<T>>();
     value       = image<T>{size, pixels};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
     js           = json::object();
-    js["size"]  = value.size;
+    js["size"]   = value.size;
     js["voxels"] = value.voxels;
 }
 template <typename T>
 inline void from_json(const json& js, volume<T>& value) {
-    auto size  = js.at("size").get<vec3i>();
+    auto size   = js.at("size").get<vec3i>();
     auto voxels = js.at("voxels").get<vector<T>>();
     value       = volume<T>{size, voxels.data()};
 }
@@ -919,10 +919,10 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
         return img;
     }
     auto res_img = make_image<vec4f>(get_image_size(size, get_image_aspect(img)));
-    stbir_resize_float_generic((float*)img.pixels.data(), img.size.x, img.size.y,
-        sizeof(vec4f) * img.size.x, (float*)res_img.pixels.data(), res_img.size.x,
-        res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0, STBIR_EDGE_CLAMP,
-        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    stbir_resize_float_generic((float*)img.pixels.data(), img.size.x,
+        img.size.y, sizeof(vec4f) * img.size.x, (float*)res_img.pixels.data(),
+        res_img.size.x, res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,
+        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return res_img;
 }
 
@@ -1470,7 +1470,7 @@ bool apply_json_procedural(
     auto type = js.value("type", ""s);
     if (type == "") return true;
     auto is_hdr = false;
-    auto size  = js.value("size", vec2i{512, 512});
+    auto size   = js.value("size", vec2i{512, 512});
     if (type == "grid") {
         value.hdr_image = make_grid_image(size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
@@ -1480,17 +1480,15 @@ bool apply_json_procedural(
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        value.hdr_image = make_bumpdimple_image(
-            size, js.value("tile", 8));
+        value.hdr_image = make_bumpdimple_image(size, js.value("tile", 8));
     } else if (type == "uvramp") {
         value.hdr_image = make_uvramp_image(size);
     } else if (type == "uvgrid") {
         value.hdr_image = make_uvgrid_image(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        value.hdr_image = make_sunsky_image(size,
-            js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
-            js.value("has_sun", false),
+        value.hdr_image = make_sunsky_image(size, js.value("sun_angle", pif / 4),
+            js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr          = true;
     } else if (type == "noise") {
@@ -1501,15 +1499,14 @@ bool apply_json_procedural(
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        value.hdr_image = make_ridge_image(size,
-            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
-            js.value("gain", 0.5f), js.value("offset", 1.0f),
-            js.value("octaves", 6), js.value("wrap", true));
-    } else if (type == "turbulence") {
-        value.hdr_image = make_turbulence_image(size,
-            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
-            js.value("gain", 0.5f), js.value("octaves", 6),
+        value.hdr_image = make_ridge_image(size, js.value("scale", 1.0f),
+            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+            js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
+    } else if (type == "turbulence") {
+        value.hdr_image = make_turbulence_image(size, js.value("scale", 1.0f),
+            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+            js.value("octaves", 6), js.value("wrap", true));
     } else {
         log_error("unknown texture type {}", type);
         return false;
@@ -1574,10 +1571,10 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
-    auto size  = js.value("width", vec3i{512, 512, 512});
+    auto size = js.value("width", vec3i{512, 512, 512});
     if (type == "test_volume") {
-        value.volume_data = make_test_volume1f(size,
-            js.value("scale", 10.0f), js.value("exponent", 6.0f));
+        value.volume_data = make_test_volume1f(
+            size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);
         return false;

@@ -194,8 +194,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "inspect")) {
             auto mouse_pos = get_opengl_mouse_pos(win);
-            auto ij        = get_image_coords(mouse_pos, img.image_center,
-                img.image_scale, img.img.size);
+            auto ij        = get_image_coords(
+                mouse_pos, img.image_center, img.image_scale, img.img.size);
             draw_dragger_opengl_widget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.size.x && ij.y >= 0 &&
@@ -232,13 +232,13 @@ void draw(const opengl_window& win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        center_image(img.image_center, img.image_scale,
-            img.display.size, win_size, img.zoom_to_fit);
-        draw_glimage_background(img.display.size,
-            win_size, img.image_center, img.image_scale);
+        center_image(img.image_center, img.image_scale, img.display.size,
+            win_size, img.zoom_to_fit);
+        draw_glimage_background(
+            img.display.size, win_size, img.image_center, img.image_scale);
         set_glblending(true);
-        draw_glimage(img.gl_txt, img.display.size,
-            win_size, img.image_center, img.image_scale);
+        draw_glimage(img.gl_txt, img.display.size, win_size, img.image_center,
+            img.image_scale);
         set_glblending(false);
     }
     draw_opengl_widgets(win);
@@ -267,7 +267,7 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 
 void run_ui(app_state& app) {
     // window
-    auto& img   = app.imgs.at(app.img_id);
+    auto& img = app.imgs.at(app.img_id);
     auto  win = opengl_window();
     init_opengl_window(
         win, {1280, 720}, "yimview | " + app.imgs.front().name, &app, draw);
