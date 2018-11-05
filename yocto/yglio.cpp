@@ -4969,7 +4969,7 @@ WorldEnd
     auto  up     = camera.frame.y;
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
-        evaluate_camera_fovy(camera) * 180 / pif);
+        get_camera_fovy(camera) * 180 / pif);
 
     // save renderer
     print(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
@@ -4978,8 +4978,8 @@ WorldEnd
     print(fs,
         "Film \"image\" \"string filename\" [\"{}\"] "
         "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), evaluate_image_size(camera, 512).x,
-        evaluate_image_size(camera, 512).y);
+        replace_extension(filename, "exr"), get_image_size(camera, 512).x,
+        get_image_size(camera, 512).y);
 
     // start world
     print(fs, "WorldBegin\n");

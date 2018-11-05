@@ -673,9 +673,9 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
 
     auto camera_view = frame_to_mat(inverse(camera.frame));
     // auto camera_proj =
-    //         perspective_mat(evaluate_camera_fovy(camera),
+    //         perspective_mat(get_camera_fovy(camera),
     //             (float)viewport_size.x / (float)viewport_size.y, near_plane);
-    auto camera_proj = perspective_mat(evaluate_camera_fovy(camera),
+    auto camera_proj = perspective_mat(get_camera_fovy(camera),
         (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
     bind_glprogram(state.program);
@@ -832,9 +832,9 @@ draw_glstate init_draw_state(const glwindow& win) {
 void run_ui(app_state& app) {
     // window
     auto& camera = app.scene.cameras.at(app.camid);
-    auto width = clamp(evaluate_image_size(camera, app.resolution).x, 256, 1440),
-         height = clamp(evaluate_image_size(camera, app.resolution).y, 256, 1440);
-    auto win    = glwindow();
+    auto  width  = clamp(get_image_size(camera, app.resolution).x, 256, 1440),
+         height  = clamp(get_image_size(camera, app.resolution).y, 256, 1440);
+    auto win     = glwindow();
     init_glwindow(win, width, height, "yview | " + get_filename(app.filename),
         &app, draw);
 
