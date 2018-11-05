@@ -234,7 +234,7 @@ void draw(const opengl_window& win) {
                 app.gl_txt, app.state.display_image, false, false, false);
         } else {
             update_opengl_texture(
-                app.gl_txt, app.state.display_image, false, false, false);
+                app.gl_txt, app.state.display_image, false);
         }
         set_glblending(true);
         draw_glimage_background(

@@ -249,12 +249,12 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(img.gl_txt, img.display, false, false, true);
+            init_opengl_texture(img.gl_txt, img.display, false, false, false);
         } else {
             auto region = image_region{};
             while (img.display_queue.try_pop(region)) {
                 update_opengl_texture_region(
-                    img.gl_txt, img.display, region, false, false, false);
+                    img.gl_txt, img.display, region, false);
             }
         }
     }
