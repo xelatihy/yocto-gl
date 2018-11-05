@@ -79,12 +79,10 @@ void set_glblending(bool enabled) {
     }
 }
 
-glprogram make_glprogram(const char* vertex, const char* fragment) {
-    auto program = glprogram();
-
+bool init_glprogram(glprogram& program, const char* vertex, const char* fragment) {
     assert(glGetError() == GL_NO_ERROR);
-    glGenVertexArrays(1, &program.vao);
-    glBindVertexArray(program.vao);
+    glGenVertexArrays(1, &program.vertex_array_object_id);
+    glBindVertexArray(program.vertex_array_object_id);
     assert(glGetError() == GL_NO_ERROR);
 
     int  errflags;
@@ -92,62 +90,61 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
 
     // create vertex
     assert(glGetError() == GL_NO_ERROR);
-    program.vid = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(program.vid, 1, &vertex, NULL);
-    glCompileShader(program.vid);
-    glGetShaderiv(program.vid, GL_COMPILE_STATUS, &errflags);
+    program.vertex_shader_id = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(program.vertex_shader_id, 1, &vertex, NULL);
+    glCompileShader(program.vertex_shader_id);
+    glGetShaderiv(program.vertex_shader_id, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(program.vid, 10000, 0, errbuf);
+        glGetShaderInfoLog(program.vertex_shader_id, 10000, 0, errbuf);
         log_error("shader not compiled with error\n{}", errbuf);
-        return {};
+        return false;
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create fragment
     assert(glGetError() == GL_NO_ERROR);
-    program.fid = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(program.fid, 1, &fragment, NULL);
-    glCompileShader(program.fid);
-    glGetShaderiv(program.fid, GL_COMPILE_STATUS, &errflags);
+    program.fragment_shader_id = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(program.fragment_shader_id, 1, &fragment, NULL);
+    glCompileShader(program.fragment_shader_id);
+    glGetShaderiv(program.fragment_shader_id, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(program.fid, 10000, 0, errbuf);
+        glGetShaderInfoLog(program.fragment_shader_id, 10000, 0, errbuf);
         log_error("shader not compiled with error\n{}", errbuf);
-        return {};
+        return false;
     }
     assert(glGetError() == GL_NO_ERROR);
 
     // create program
     assert(glGetError() == GL_NO_ERROR);
-    program.pid = glCreateProgram();
-    glAttachShader(program.pid, program.vid);
-    glAttachShader(program.pid, program.fid);
-    glLinkProgram(program.pid);
-    glValidateProgram(program.pid);
-    glGetProgramiv(program.pid, GL_LINK_STATUS, &errflags);
+    program.program_id = glCreateProgram();
+    glAttachShader(program.program_id, program.vertex_shader_id);
+    glAttachShader(program.program_id, program.fragment_shader_id);
+    glLinkProgram(program.program_id);
+    glValidateProgram(program.program_id);
+    glGetProgramiv(program.program_id, GL_LINK_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(program.pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
         log_error("program not linked with error\n{}", errbuf);
-        return {};
+        return false;
     }
-    glGetProgramiv(program.pid, GL_VALIDATE_STATUS, &errflags);
+    glGetProgramiv(program.program_id, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(program.pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
         log_error("program not linked with error\n{}", errbuf);
-        return {};
+        return false;
     }
     assert(glGetError() == GL_NO_ERROR);
-
-    return program;
+    return true;
 }
 
-gltexture make_gltexture(
-    const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
-    auto texture = gltexture();
+bool init_gltexture(gltexture& texture, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap) {
+    texture = gltexture();
     assert(glGetError() == GL_NO_ERROR);
-    glGenTextures(1, &texture.tid);
+    glGenTextures(1, &texture.texture_id);
     texture.width  = img.width;
     texture.height = img.height;
-    glBindTexture(GL_TEXTURE_2D, texture.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     if (as_float) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, img.width, img.height, 0,
             GL_RGBA, GL_FLOAT, img.pixels.data());
@@ -168,13 +165,13 @@ gltexture make_gltexture(
             (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
-    return texture;
+    return true;
 }
 
 void update_gltexture(gltexture& texture, const image<vec4f>& img,
     bool as_float, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
-    glBindTexture(GL_TEXTURE_2D, texture.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
         GL_FLOAT, img.pixels.data());
     if (mipmap) {
@@ -192,12 +189,12 @@ void update_gltexture(gltexture& texture, const image<vec4f>& img,
     assert(glGetError() == GL_NO_ERROR);
 }
 
-gltexture make_gltexture(
-    const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
-    auto texture = gltexture();
+bool init_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap) {
+    texture = gltexture();
     assert(glGetError() == GL_NO_ERROR);
-    glGenTextures(1, &texture.tid);
-    glBindTexture(GL_TEXTURE_2D, texture.tid);
+    glGenTextures(1, &texture.texture_id);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     texture.width  = img.width;
     texture.height = img.height;
     if (as_srgb) {
@@ -220,13 +217,13 @@ gltexture make_gltexture(
             (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
-    return texture;
+    return true;
 }
 
 void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
-    glBindTexture(GL_TEXTURE_2D, texture.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
         GL_UNSIGNED_BYTE, img.pixels.data());
     if (mipmap) {
@@ -245,61 +242,70 @@ void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
 }
 
 template <typename T>
-glarraybuffer make_glarraybuffer_impl(const vector<T>& data, bool dynamic) {
-    auto buffer      = glarraybuffer{};
+bool init_glarraybuffer_impl(
+    glarraybuffer& buffer, const vector<T>& data, bool dynamic) {
+    buffer           = glarraybuffer{};
     buffer.num       = data.size();
     buffer.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &buffer.bid);
-    glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+    glGenBuffers(1, &buffer.buffer_id);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
     glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return buffer;
+    return true;
 }
 
-glarraybuffer make_glarraybuffer(const vector<float>& data, bool dynamic) {
-    return make_glarraybuffer_impl(data, dynamic);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<float>& data, bool dynamic) {
+    return init_glarraybuffer_impl(buffer, data, dynamic);
 }
-glarraybuffer make_glarraybuffer(const vector<vec2f>& data, bool dynamic) {
-    return make_glarraybuffer_impl(data, dynamic);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<vec2f>& data, bool dynamic) {
+    return init_glarraybuffer_impl(buffer, data, dynamic);
 }
-glarraybuffer make_glarraybuffer(const vector<vec3f>& data, bool dynamic) {
-    return make_glarraybuffer_impl(data, dynamic);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<vec3f>& data, bool dynamic) {
+    return init_glarraybuffer_impl(buffer, data, dynamic);
 }
-glarraybuffer make_glarraybuffer(const vector<vec4f>& data, bool dynamic) {
-    return make_glarraybuffer_impl(data, dynamic);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<vec4f>& data, bool dynamic) {
+    return init_glarraybuffer_impl(buffer, data, dynamic);
 }
 
 template <typename T>
-glelementbuffer make_glelementbuffer_impl(const vector<T>& data, bool dynamic) {
-    auto buffer      = glelementbuffer{};
+bool init_glelementbuffer_impl(
+    glelementbuffer& buffer, const vector<T>& data, bool dynamic) {
+    buffer      = glelementbuffer{};
     buffer.num       = data.size();
     buffer.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &buffer.bid);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
+    glGenBuffers(1, &buffer.buffer_id);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return buffer;
+    return true;
 }
 
-glelementbuffer make_glelementbuffer(const vector<int>& buffer, bool dynamic) {
-    return make_glelementbuffer_impl(buffer, dynamic);
+bool init_glelementbuffer(
+    glelementbuffer& buffer, const vector<int>& data, bool dynamic) {
+    return init_glelementbuffer_impl(buffer, data, dynamic);
 }
-glelementbuffer make_glelementbuffer(const vector<vec2i>& buffer, bool dynamic) {
-    return make_glelementbuffer_impl(buffer, dynamic);
+bool init_glelementbuffer(
+    glelementbuffer& buffer, const vector<vec2i>& data, bool dynamic) {
+    return init_glelementbuffer_impl(buffer, data, dynamic);
 }
-glelementbuffer make_glelementbuffer(const vector<vec3i>& buffer, bool dynamic) {
-    return make_glelementbuffer_impl(buffer, dynamic);
+bool init_glelementbuffer(
+    glelementbuffer& buffer, const vector<vec3i>& data, bool dynamic) {
+    return init_glelementbuffer_impl(buffer, data, dynamic);
 }
 
-void bind_glprogram(glprogram& program) { glUseProgram(program.pid); }
+void bind_glprogram(glprogram& program) { glUseProgram(program.program_id); }
 void unbind_glprogram() { glUseProgram(0); }
 
 int get_gluniform_location(const glprogram& program, const char* name) {
-    return glGetUniformLocation(program.pid, name);
+    return glGetUniformLocation(program.program_id, name);
 }
 
 void set_gluniform(int locatiom, int value) {
@@ -365,7 +371,7 @@ void set_gluniform(int locatiom, const frame3f& value) {
 void set_gluniform_texture(int locatiom, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
     glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, texture.tid);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glUniform1i(locatiom, unit);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -378,9 +384,9 @@ void set_gluniform_texture(
 void set_gluniform_texture(
     int locatiom, int locatiom_on, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
-    if (texture.tid) {
+    if (texture.texture_id) {
         glActiveTexture(GL_TEXTURE0 + unit);
-        glBindTexture(GL_TEXTURE_2D, texture.tid);
+        glBindTexture(GL_TEXTURE_2D, texture.texture_id);
         glUniform1i(locatiom, unit);
         glUniform1i(locatiom_on, 1);
     } else {
@@ -396,13 +402,13 @@ void set_gluniform_texture(glprogram& program, const char* name,
 }
 
 int get_glvertexattrib_location(const glprogram& program, const char* name) {
-    return glGetAttribLocation(program.pid, name);
+    return glGetAttribLocation(program.program_id, name);
 }
 
 void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, float value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buffer.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+    if (buffer.buffer_id) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
         glEnableVertexAttribArray(locatiom);
         glVertexAttribPointer(locatiom, 1, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -414,8 +420,8 @@ void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, float value) 
 void set_glvertexattrib(
     int locatiom, const glarraybuffer& buffer, const vec2f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buffer.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+    if (buffer.buffer_id) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
         glEnableVertexAttribArray(locatiom);
         glVertexAttribPointer(locatiom, 2, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -427,8 +433,8 @@ void set_glvertexattrib(
 void set_glvertexattrib(
     int locatiom, const glarraybuffer& buffer, const vec3f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buffer.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+    if (buffer.buffer_id) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
         glEnableVertexAttribArray(locatiom);
         glVertexAttribPointer(locatiom, 3, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -440,8 +446,8 @@ void set_glvertexattrib(
 void set_glvertexattrib(
     int locatiom, const glarraybuffer& buffer, const vec4f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buffer.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+    if (buffer.buffer_id) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
         glEnableVertexAttribArray(locatiom);
         glVertexAttribPointer(locatiom, 4, GL_FLOAT, false, 0, nullptr);
     } else {
@@ -451,17 +457,17 @@ void set_glvertexattrib(
 }
 
 void draw_glpoints(const glelementbuffer& buffer, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
     glDrawElements(GL_POINTS, num, GL_UNSIGNED_INT, nullptr);
 }
 
 void draw_gllines(const glelementbuffer& buffer, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
     glDrawElements(GL_LINES, num * 2, GL_UNSIGNED_INT, nullptr);
 }
 
 void draw_gltriangles(const glelementbuffer& buffer, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
@@ -495,10 +501,10 @@ void draw_glimage(const gltexture& gl_txt, const vec2i& image_size,
                 frag_color = texture(txt, frag_texcoord);
             }
         )";
-        gl_prog     = make_glprogram(vert, frag);
-        gl_texcoord = make_glarraybuffer(
+        init_glprogram(gl_prog, vert, frag);
+        init_glarraybuffer(gl_texcoord,
             vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-        gl_triangles = make_glelementbuffer(
+        init_glelementbuffer(gl_triangles,
             vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     }
 
@@ -555,10 +561,10 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
                 else frag_color = vec4(0.3,0.3,0.3,1);
             }
         )";
-        gl_prog     = make_glprogram(vert, frag);
-        gl_texcoord = make_glarraybuffer(
+        init_glprogram(gl_prog, vert, frag);
+        init_glarraybuffer(gl_texcoord,
             vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-        gl_triangles = make_glelementbuffer(
+        init_glelementbuffer(gl_triangles,
             vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     }
 
@@ -930,8 +936,6 @@ void end_child_glwidget(const glwindow& win) {
 bool begin_popup_modal(const glwindow& win, const char* lbl) {
     return ImGui::BeginPopupModal(lbl);
 }
-void end_popup_modal(const glwindow& win) {
-    ImGui::EndPopup();
-}
+void end_popup_modal(const glwindow& win) { ImGui::EndPopup(); }
 
 }  // namespace ygl

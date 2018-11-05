@@ -758,15 +758,15 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
 
 void init_draw_glstate(draw_glstate& state, const yocto_scene& scene) {
     // load textures and vbos
-    state.program = make_glprogram(vertex, fragment);
+    init_glprogram(state.program, vertex, fragment);
     state.textures.resize(scene.textures.size());
     for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
         auto texture = scene.textures[texture_id];
         if (!texture.hdr_image.pixels.empty()) {
-            state.textures[texture_id] = make_gltexture(
+            init_gltexture(state.textures[texture_id],
                 texture.hdr_image, true, true, true);
         } else if (!texture.ldr_image.pixels.empty()) {
-            state.textures[texture_id] = make_gltexture(
+            init_gltexture(state.textures[texture_id],
                 texture.ldr_image, !texture.ldr_as_linear, true, true);
         } else {
             printf("bad texture");
@@ -777,25 +777,25 @@ void init_draw_glstate(draw_glstate& state, const yocto_scene& scene) {
         auto& shape = scene.shapes[shape_id];
         auto  vbos  = glshape();
         if (!shape.positions.empty())
-            vbos.positions_buffer = make_glarraybuffer(shape.positions, false);
+            init_glarraybuffer(vbos.positions_buffer, shape.positions, false);
         if (!shape.normals.empty())
-            vbos.normals_buffer = make_glarraybuffer(shape.normals, false);
+            init_glarraybuffer(vbos.normals_buffer, shape.normals, false);
         if (!shape.texturecoords.empty())
-            vbos.texturecoords_buffer = make_glarraybuffer(
+            init_glarraybuffer(vbos.texturecoords_buffer,
                 shape.texturecoords, false);
         if (!shape.colors.empty())
-            vbos.colors_buffer = make_glarraybuffer(shape.colors, false);
+            init_glarraybuffer(vbos.colors_buffer, shape.colors, false);
         if (!shape.tangentspaces.empty())
-            vbos.tangentspaces_buffer = make_glarraybuffer(
+            init_glarraybuffer(vbos.tangentspaces_buffer,
                 shape.tangentspaces, false);
         if (!shape.points.empty())
-            vbos.points_buffer = make_glelementbuffer(shape.points, false);
+            init_glelementbuffer(vbos.points_buffer, shape.points, false);
         if (!shape.lines.empty())
-            vbos.lines_buffer = make_glelementbuffer(shape.lines, false);
+            init_glelementbuffer(vbos.lines_buffer , shape.lines, false);
         if (!shape.triangles.empty())
-            vbos.triangles_buffer = make_glelementbuffer(shape.triangles, false);
+            init_glelementbuffer(vbos.triangles_buffer, shape.triangles, false);
         if (!shape.quads.empty())
-            vbos.quads_buffer = make_glelementbuffer(
+            init_glelementbuffer(vbos.quads_buffer,
                 convert_quads_to_triangles(shape.quads), false);
         state.shapes[shape_id] = vbos;
     }
@@ -818,15 +818,15 @@ void init_draw_glstate(draw_glstate& state, const yocto_scene& scene) {
             split_quads = {quads};
         }
         if (!positions.empty())
-            vbos.positions_buffer = make_glarraybuffer(positions, false);
+            init_glarraybuffer(vbos.positions_buffer, positions, false);
         if (!normals.empty())
-            vbos.normals_buffer = make_glarraybuffer(normals, false);
+            init_glarraybuffer(vbos.normals_buffer, normals, false);
         if (!texturecoords.empty())
-            vbos.texturecoords_buffer = make_glarraybuffer(texturecoords, false);
+            init_glarraybuffer(vbos.texturecoords_buffer, texturecoords, false);
         vbos.split_quads_buffer = {};
         for (auto& quads : split_quads) {
             if (!quads.empty()) vbos.split_quads_buffer.push_back({});
-            vbos.split_quads_buffer.back() = make_glelementbuffer(
+            init_glelementbuffer(vbos.split_quads_buffer.back(),
                 convert_quads_to_triangles(quads), false);
         }
         state.surfaces[surface_id] = vbos;

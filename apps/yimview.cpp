@@ -265,7 +265,7 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.display_done || img.texture_done) continue;
         if (!img.gl_txt) {
-            img.gl_txt = make_gltexture(img.display, false, false, true);
+            init_gltexture(img.gl_txt, img.display, false, false, true);
         } else {
             update_gltexture(img.gl_txt, img.display, false, false, true);
         }

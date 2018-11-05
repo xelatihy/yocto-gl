@@ -238,7 +238,7 @@ void draw(const glwindow& win) {
             {app.state.display_image.width, app.state.display_image.height},
             win_size, app.zoom_to_fit);
         if (!app.gl_txt) {
-            app.gl_txt = make_gltexture(app.state.display_image, false, false, false);
+            init_gltexture(app.gl_txt, app.state.display_image, false, false, false);
         } else {
             update_gltexture(
                 app.gl_txt, app.state.display_image, false, false, false);

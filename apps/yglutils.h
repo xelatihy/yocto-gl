@@ -46,66 +46,68 @@ void set_glwireframe(bool enabled);
 void set_glblending(bool enabled);
 
 struct glprogram {
-    uint pid = 0;
-    uint vid = 0;
-    uint fid = 0;
-    uint vao = 0;
-         operator bool() const { return (bool)pid; }
+    uint program_id = 0;
+    uint vertex_shader_id = 0;
+    uint fragment_shader_id = 0;
+    uint vertex_array_object_id = 0;
+
+         operator bool() const { return (bool)program_id; }
 };
 
-glprogram make_glprogram(const char* vertex, const char* fragment);
-void      bind_glprogram(glprogram& pid);
-void      unbind_glprogram();
+bool init_glprogram(
+    glprogram& program, const char* vertex, const char* fragment);
+void bind_glprogram(glprogram& program);
+void unbind_glprogram();
 
 struct gltexture {
-    uint tid    = 0;
+    uint texture_id    = 0;
     int  width  = 0;
     int  height = 0;
 
-    operator bool() const { return (bool)tid; }
+    operator bool() const { return (bool)texture_id; }
 };
 
-gltexture make_gltexture(
-    const image<vec4f>& img, bool as_float, bool linear, bool mipmap);
+bool init_gltexture(gltexture& texture, const image<vec4f>& img, bool as_float,
+    bool linear, bool mipmap);
 void update_gltexture(gltexture& texture, const image<vec4f>& img,
     bool as_float, bool linear, bool mipmap);
 
-gltexture make_gltexture(
-    const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap);
+bool init_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
+    bool linear, bool mipmap);
 void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap);
 
 struct glarraybuffer {
-    uint bid       = 0;
+    uint buffer_id       = 0;
     int  num       = 0;
     int  elem_size = 0;
 
-    operator bool() const { return (bool)bid; }
+    operator bool() const { return (bool)buffer_id; }
 };
 
 struct glelementbuffer {
-    uint bid       = 0;
+    uint buffer_id       = 0;
     int  num       = 0;
     int  elem_size = 0;
 
-    operator bool() const { return (bool)bid; }
+    operator bool() const { return (bool)buffer_id; }
 };
 
-glarraybuffer make_glarraybuffer(
-    const vector<float>& buffer, bool dynamic = false);
-glarraybuffer make_glarraybuffer(
-    const vector<vec2f>& buffer, bool dynamic = false);
-glarraybuffer make_glarraybuffer(
-    const vector<vec3f>& buffer, bool dynamic = false);
-glarraybuffer make_glarraybuffer(
-    const vector<vec4f>& buffer, bool dynamic = false);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<float>& data, bool dynamic = false);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<vec2f>& data, bool dynamic = false);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<vec3f>& data, bool dynamic = false);
+bool init_glarraybuffer(
+    glarraybuffer& buffer, const vector<vec4f>& data, bool dynamic = false);
 
-glelementbuffer make_glelementbuffer(
-    const vector<int>& buffer, bool dynamic = false);
-glelementbuffer make_glelementbuffer(
-    const vector<vec2i>& buffer, bool dynamic = false);
-glelementbuffer make_glelementbuffer(
-    const vector<vec3i>& buffer, bool dynamic = false);
+bool init_glelementbuffer(
+    glelementbuffer& buffer, const vector<int>& data, bool dynamic = false);
+bool init_glelementbuffer(
+    glelementbuffer& buffer, const vector<vec2i>& data, bool dynamic = false);
+bool init_glelementbuffer(
+    glelementbuffer& buffer, const vector<vec3i>& data, bool dynamic = false);
 
 int get_gluniform_location(const glprogram& program, const char* name);
 
