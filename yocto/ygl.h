@@ -3087,7 +3087,7 @@ inline T evaluate_keyframed_bezier(
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// VOLUME TYPE
+// VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -3116,13 +3116,6 @@ template <typename T>
 const T& at(const volume<T>& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
 }
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// SCENE DATA
-// -----------------------------------------------------------------------------
-namespace ygl {
 
 // make a simple example volume
 volume<float> make_test_volume1f(
