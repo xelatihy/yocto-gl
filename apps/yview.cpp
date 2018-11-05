@@ -41,7 +41,7 @@ struct glshape {
 };
 
 struct draw_glstate {
-    glprogram         prog     = {};
+    glprogram         program  = {};
     vector<glshape>   shapes   = {};
     vector<glshape>   surfaces = {};
     vector<gltexture> textures = {};
@@ -114,7 +114,7 @@ void draw(const glwindow& win) {
     app.update_list.clear();
 
     auto& camera = app.scene.cameras.at(app.camid);
-    clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
+    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
     draw_glscene(app.state, app.scene, camera, framebuffer_size, app.selection,
         app.eyelight, app.wireframe, app.edges, app.exposure, app.gamma,
         app.near_plane, app.far_plane);
@@ -479,73 +479,75 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
 
         auto xform = frame_to_mat(instance.frame);
 
-        set_gluniform(state.prog, "shape_xform", xform);
-        set_gluniform(state.prog, "shape_normal_offset", 0.0f);
+        set_gluniform(state.program, "shape_xform", xform);
+        set_gluniform(state.program, "shape_normal_offset", 0.0f);
 
         auto mtype = 1;
         if (material.base_metallic) mtype = 2;
         if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
-        set_gluniform(state.prog, "mat_type", mtype);
-        set_gluniform(state.prog, "mat_ke", material.emission);
-        set_gluniform(state.prog, "mat_kd", material.diffuse);
-        set_gluniform(state.prog, "mat_ks", material.specular);
-        set_gluniform(state.prog, "mat_rs", material.roughness);
-        set_gluniform(state.prog, "mat_op", material.opacity);
-        set_gluniform(state.prog, "mat_double_sided", (int)material.double_sided);
-        set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
+        set_gluniform(state.program, "mat_type", mtype);
+        set_gluniform(state.program, "mat_ke", material.emission);
+        set_gluniform(state.program, "mat_kd", material.diffuse);
+        set_gluniform(state.program, "mat_ks", material.specular);
+        set_gluniform(state.program, "mat_rs", material.roughness);
+        set_gluniform(state.program, "mat_op", material.opacity);
+        set_gluniform(
+            state.program, "mat_double_sided", (int)material.double_sided);
+        set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
             material.emission_texture >= 0 ?
                 state.textures.at(material.emission_texture) :
                 gltexture{},
             0);
-        set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
+        set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
             material.diffuse_texture >= 0 ?
                 state.textures.at(material.diffuse_texture) :
                 gltexture{},
             1);
-        set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
+        set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
             material.specular_texture >= 0 ?
                 state.textures.at(material.specular_texture) :
                 gltexture{},
             2);
-        set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
+        set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
             material.roughness_texture >= 0 ?
                 state.textures.at(material.roughness_texture) :
                 gltexture{},
             3);
-        set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
+        set_gluniform_texture(state.program, "mat_op_txt", "mat_op_txt_on",
             material.opacity_texture >= 0 ?
                 state.textures.at(material.opacity_texture) :
                 gltexture{},
             4);
-        set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
+        set_gluniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
             material.normal_texture >= 0 ?
                 state.textures.at(material.normal_texture) :
                 gltexture{},
             5);
 
-        set_gluniform(state.prog, "elem_faceted", (int)shape.normals.empty());
-        set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
-        set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
-        set_glvertexattrib(state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+        set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
+        set_glvertexattrib(state.program, "vert_pos", vbos.gl_pos, zero3f);
+        set_glvertexattrib(state.program, "vert_norm", vbos.gl_norm, zero3f);
         set_glvertexattrib(
-            state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+            state.program, "vert_texcoord", vbos.gl_texcoord, zero2f);
         set_glvertexattrib(
-            state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+            state.program, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+        set_glvertexattrib(
+            state.program, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
 
         if (vbos.gl_points) {
-            set_gluniform(state.prog, "elem_type", 1);
+            set_gluniform(state.program, "elem_type", 1);
             draw_glpoints(vbos.gl_points, vbos.gl_points.num);
         }
         if (vbos.gl_lines) {
-            set_gluniform(state.prog, "elem_type", 2);
+            set_gluniform(state.program, "elem_type", 2);
             draw_gllines(vbos.gl_lines, vbos.gl_lines.num);
         }
         if (vbos.gl_triangles) {
-            set_gluniform(state.prog, "elem_type", 3);
+            set_gluniform(state.program, "elem_type", 3);
             draw_gltriangles(vbos.gl_triangles, vbos.gl_triangles.num);
         }
         if (vbos.gl_quads) {
-            set_gluniform(state.prog, "elem_type", 3);
+            set_gluniform(state.program, "elem_type", 3);
             draw_gltriangles(vbos.gl_quads, vbos.gl_quads.num);
         }
 
@@ -553,10 +555,10 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
         check_glerror();
-        set_gluniform(state.prog, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(state.prog, "ke"), 0, 0, 0);
-        set_gluniform(state.prog, "op"), material.op);
-        set_gluniform(state.prog, "shp_normal_offset"), 0.01f);
+        set_gluniform(state.program, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
+        set_gluniform(state.program, "op"), material.op);
+        set_gluniform(state.program, "shp_normal_offset"), 0.01f);
         check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
@@ -576,65 +578,66 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
 
             auto xform = frame_to_mat(instance.frame);
 
-            set_gluniform(state.prog, "shape_xform", xform);
-            set_gluniform(state.prog, "shape_normal_offset", 0.0f);
+            set_gluniform(state.program, "shape_xform", xform);
+            set_gluniform(state.program, "shape_normal_offset", 0.0f);
 
             auto mtype = 1;
             if (material.base_metallic) mtype = 2;
             if (material.gltf_textures)
                 mtype = (material.base_metallic) ? 2 : 3;
-            set_gluniform(state.prog, "mat_type", mtype);
-            set_gluniform(state.prog, "mat_ke", material.emission);
-            set_gluniform(state.prog, "mat_kd", material.diffuse);
-            set_gluniform(state.prog, "mat_ks", material.specular);
-            set_gluniform(state.prog, "mat_rs", material.roughness);
-            set_gluniform(state.prog, "mat_op", material.opacity);
+            set_gluniform(state.program, "mat_type", mtype);
+            set_gluniform(state.program, "mat_ke", material.emission);
+            set_gluniform(state.program, "mat_kd", material.diffuse);
+            set_gluniform(state.program, "mat_ks", material.specular);
+            set_gluniform(state.program, "mat_rs", material.roughness);
+            set_gluniform(state.program, "mat_op", material.opacity);
             set_gluniform(
-                state.prog, "mat_double_sided", (int)material.double_sided);
-            set_gluniform_texture(state.prog, "mat_ke_txt", "mat_ke_txt_on",
+                state.program, "mat_double_sided", (int)material.double_sided);
+            set_gluniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
                 material.emission_texture >= 0 ?
                     state.textures.at(material.emission_texture) :
                     gltexture{},
                 0);
-            set_gluniform_texture(state.prog, "mat_kd_txt", "mat_kd_txt_on",
+            set_gluniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
                 material.diffuse_texture >= 0 ?
                     state.textures.at(material.diffuse_texture) :
                     gltexture{},
                 1);
-            set_gluniform_texture(state.prog, "mat_ks_txt", "mat_ks_txt_on",
+            set_gluniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
                 material.specular_texture >= 0 ?
                     state.textures.at(material.specular_texture) :
                     gltexture{},
                 2);
-            set_gluniform_texture(state.prog, "mat_rs_txt", "mat_rs_txt_on",
+            set_gluniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
                 material.roughness_texture >= 0 ?
                     state.textures.at(material.roughness_texture) :
                     gltexture{},
                 3);
-            set_gluniform_texture(state.prog, "mat_op_txt", "mat_op_txt_on",
+            set_gluniform_texture(state.program, "mat_op_txt", "mat_op_txt_on",
                 material.opacity_texture >= 0 ?
                     state.textures.at(material.opacity_texture) :
                     gltexture{},
                 4);
-            set_gluniform_texture(state.prog, "mat_norm_txt", "mat_norm_txt_on",
+            set_gluniform_texture(state.program, "mat_norm_txt",
+                "mat_norm_txt_on",
                 material.normal_texture >= 0 ?
                     state.textures.at(material.normal_texture) :
                     gltexture{},
                 5);
 
             set_gluniform(
-                state.prog, "elem_faceted", (int)surface.normals.empty());
-            set_glvertexattrib(state.prog, "vert_pos", vbos.gl_pos, zero3f);
-            set_glvertexattrib(state.prog, "vert_norm", vbos.gl_norm, zero3f);
+                state.program, "elem_faceted", (int)surface.normals.empty());
+            set_glvertexattrib(state.program, "vert_pos", vbos.gl_pos, zero3f);
+            set_glvertexattrib(state.program, "vert_norm", vbos.gl_norm, zero3f);
             set_glvertexattrib(
-                state.prog, "vert_texcoord", vbos.gl_texcoord, zero2f);
+                state.program, "vert_texcoord", vbos.gl_texcoord, zero2f);
             set_glvertexattrib(
-                state.prog, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
-            set_glvertexattrib(
-                state.prog, "vert_tangsp", vbos.gl_tangsp, vec4f{0, 0, 1, 1});
+                state.program, "vert_color", vbos.gl_color, vec4f{1, 1, 1, 1});
+            set_glvertexattrib(state.program, "vert_tangsp", vbos.gl_tangsp,
+                vec4f{0, 0, 1, 1});
 
             if (vbos.gl_split_quads[group_id]) {
-                set_gluniform(state.prog, "elem_type", 3);
+                set_gluniform(state.program, "elem_type", 3);
                 draw_gltriangles(vbos.gl_split_quads[group_id],
                     vbos.gl_split_quads[group_id].num);
             }
@@ -644,10 +647,10 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
         check_glerror();
-        set_gluniform(state.prog, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(state.prog, "ke"), 0, 0, 0);
-        set_gluniform(state.prog, "op"), material.op);
-        set_gluniform(state.prog, "shp_normal_offset"), 0.01f);
+        set_gluniform(state.program, "mtype"), 0);
+        glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
+        set_gluniform(state.program, "op"), material.op);
+        set_gluniform(state.program, "shp_normal_offset"), 0.01f);
         check_glerror();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
@@ -675,13 +678,13 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
     auto camera_proj = perspective_mat(evaluate_camera_fovy(camera),
         (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
 
-    bind_glprogram(state.prog);
-    set_gluniform(state.prog, "cam_pos", camera.frame.o);
-    set_gluniform(state.prog, "cam_xform_inv", camera_view);
-    set_gluniform(state.prog, "cam_proj", camera_proj);
-    set_gluniform(state.prog, "eyelight", (int)eyelight);
-    set_gluniform(state.prog, "exposure", exposure);
-    set_gluniform(state.prog, "gamma", gamma);
+    bind_glprogram(state.program);
+    set_gluniform(state.program, "cam_pos", camera.frame.o);
+    set_gluniform(state.program, "cam_xform_inv", camera_view);
+    set_gluniform(state.program, "cam_proj", camera_proj);
+    set_gluniform(state.program, "eyelight", (int)eyelight);
+    set_gluniform(state.program, "exposure", exposure);
+    set_gluniform(state.program, "gamma", gamma);
 
     if (!eyelight) {
         auto lights_pos  = vector<vec3f>();
@@ -717,15 +720,16 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
             lights_type.push_back(0);
         }
         if (lights_pos.empty()) eyelight = false;
-        set_gluniform(state.prog, "lamb", zero3f);
-        set_gluniform(state.prog, "lnum", (int)lights_pos.size());
+        set_gluniform(state.program, "lamb", zero3f);
+        set_gluniform(state.program, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = to_string(i);
             set_gluniform(
-                state.prog, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-            set_gluniform(state.prog, ("lke[" + is + "]").c_str(), lights_ke[i]);
+                state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
             set_gluniform(
-                state.prog, ("ltype[" + is + "]").c_str(), (int)lights_type[i]);
+                state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            set_gluniform(state.program, ("ltype[" + is + "]").c_str(),
+                (int)lights_type[i]);
         }
     }
 
@@ -748,7 +752,7 @@ draw_glstate init_draw_state(const glwindow& win) {
     auto& app   = *(app_state*)get_user_pointer(win);
     auto  state = draw_glstate();
     // load textures and vbos
-    state.prog = make_glprogram(vertex, fragment);
+    state.program = make_glprogram(vertex, fragment);
     state.textures.resize(app.scene.textures.size());
     for (auto texture_id = 0; texture_id < app.scene.textures.size();
          texture_id++) {
@@ -831,7 +835,8 @@ void run_ui(app_state& app) {
     auto width = clamp(evaluate_image_size(camera, app.resolution).x, 256, 1440),
          height = clamp(evaluate_image_size(camera, app.resolution).y, 256, 1440);
     auto win    = glwindow();
-    init_glwindow(win, width, height, "yview", &app, draw);
+    init_glwindow(win, width, height, "yview | " + get_filename(app.filename),
+        &app, draw);
 
     // init widget
     init_glwidgets(win);
@@ -899,9 +904,9 @@ unordered_map<string, unordered_map<string, string>> load_ini(
     auto cur_group = string();
     ret[""]        = {};
 
-    char buf[4096];
-    while (fgets(buf, 4096, f)) {
-        auto line = string(buf);
+    char buffer[4096];
+    while (fgets(buffer, 4096, f)) {
+        auto line = string(buffer);
         if (line.empty()) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
@@ -913,9 +918,9 @@ unordered_map<string, unordered_map<string, string>> load_ini(
             cur_group      = line.substr(1, line.length() - 2);
             ret[cur_group] = {};
         } else if (line.find('=') != line.npos) {
-            auto var            = line.substr(0, line.find('='));
-            auto val            = line.substr(line.find('=') + 1);
-            ret[cur_group][var] = val;
+            auto name            = line.substr(0, line.find('='));
+            auto value           = line.substr(line.find('=') + 1);
+            ret[cur_group][name] = value;
         } else {
             log_error("bad INI format");
             return {};

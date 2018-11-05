@@ -63,9 +63,9 @@ struct app_image {
     string       error_msg = "";
 
     // viewing properties
-    vec2f imcenter    = zero2f;
-    float imscale     = 1;
-    bool  zoom_to_fit = false;
+    vec2f image_center = zero2f;
+    float image_scale  = 1;
+    bool  zoom_to_fit  = false;
 
     // cleanup and stop threads
     ~app_image() {
@@ -198,7 +198,7 @@ void draw_glwidgets(const glwindow& win) {
             draw_label_glwidgets(win, "status", status.c_str());
             draw_label_glwidgets(
                 win, "size", "%d x %d ", img.img.width, img.img.height);
-            draw_slider_glwidget(win, "zoom", img.imscale, 0.1, 10);
+            draw_slider_glwidget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_glwidget(win, "zoom to fit", img.zoom_to_fit);
             end_header_glwidget(win);
         }
@@ -210,8 +210,8 @@ void draw_glwidgets(const glwindow& win) {
         }
         if (begin_header_glwidget(win, "inspect")) {
             auto mouse_pos = get_glmouse_pos(win);
-            auto ij = get_image_coords(mouse_pos, img.imcenter, img.imscale,
-                {img.img.width, img.img.height});
+            auto ij        = get_image_coords(mouse_pos, img.image_center,
+                img.image_scale, {img.img.width, img.img.height});
             draw_dragger_glwidget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
@@ -246,12 +246,16 @@ void draw(const glwindow& win) {
     auto  win_size = get_glwindow_size(win);
     auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
-    clear_glframebuffer(vec4f{0.8f, 0.8f, 0.8f, 1.0f});
+    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        center_image(img.imcenter, img.imscale,
+        center_image(img.image_center, img.image_scale,
             {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
+        draw_glimage_background({img.display.width, img.display.height},
+            win_size, img.image_center, img.image_scale);
+        set_glblending(true);
         draw_glimage(img.gl_txt, {img.display.width, img.display.height},
-            win_size, img.imcenter, img.imscale);
+            win_size, img.image_center, img.image_scale);
+        set_glblending(false);
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
@@ -279,15 +283,17 @@ void run_ui(app_state& app) {
     auto& img   = app.imgs.at(app.img_id);
     auto  width = 720 + 320, height = 720;
     auto  win = glwindow();
-    init_glwindow(win, 720 + 320, 720, "yimview", &app, draw);
-    set_drop_callback(win, drop_callback);
+    init_glwindow(
+        win, 720 + 320, 720, "yimview | " + app.imgs.front().name, &app, draw);
+    set_drop_glcallback(win, drop_callback);
 
     // init widgets
     init_glwidgets(win);
 
     // center image
-    center_image(img.imcenter, img.imscale, {img.img.width, img.img.height},
-        {width, height}, img.img.width > width || img.img.height > height);
+    center_image(img.image_center, img.image_scale,
+        {img.img.width, img.img.height}, {width, height},
+        img.img.width > width || img.img.height > height);
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -299,9 +305,10 @@ void run_ui(app_state& app) {
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse
-        if (mouse_left && !widgets_active) img.imcenter += mouse_pos - last_pos;
+        if (mouse_left && !widgets_active)
+            img.image_center += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
-            img.imscale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+            img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
 
         // update
         update(app);

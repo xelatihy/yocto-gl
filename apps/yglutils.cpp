@@ -43,6 +43,10 @@
 
 namespace ygl {
 
+void check_glerror() {
+    if (glGetError() != GL_NO_ERROR) log_error("gl error");
+}
+
 void clear_glframebuffer(const vec4f& color, bool clear_depth) {
     glClearColor(color.x, color.y, color.z, color.w);
     if (clear_depth) {
@@ -64,12 +68,23 @@ void set_glwireframe(bool enabled) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
+void set_glblending(bool enabled) {
+    if (enabled) {
+        glEnable(GL_BLEND);
+        glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
+        glBlendFuncSeparate(
+            GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ZERO);
+    } else {
+        glDisable(GL_BLEND);
+    }
+}
+
 glprogram make_glprogram(const char* vertex, const char* fragment) {
-    auto prog = glprogram();
+    auto program = glprogram();
 
     assert(glGetError() == GL_NO_ERROR);
-    glGenVertexArrays(1, &prog.vao);
-    glBindVertexArray(prog.vao);
+    glGenVertexArrays(1, &program.vao);
+    glBindVertexArray(program.vao);
     assert(glGetError() == GL_NO_ERROR);
 
     int  errflags;
@@ -77,12 +92,12 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
 
     // create vertex
     assert(glGetError() == GL_NO_ERROR);
-    prog.vid = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(prog.vid, 1, &vertex, NULL);
-    glCompileShader(prog.vid);
-    glGetShaderiv(prog.vid, GL_COMPILE_STATUS, &errflags);
+    program.vid = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(program.vid, 1, &vertex, NULL);
+    glCompileShader(program.vid);
+    glGetShaderiv(program.vid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog.vid, 10000, 0, errbuf);
+        glGetShaderInfoLog(program.vid, 10000, 0, errbuf);
         log_error("shader not compiled with error\n{}", errbuf);
         return {};
     }
@@ -90,12 +105,12 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
 
     // create fragment
     assert(glGetError() == GL_NO_ERROR);
-    prog.fid = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(prog.fid, 1, &fragment, NULL);
-    glCompileShader(prog.fid);
-    glGetShaderiv(prog.fid, GL_COMPILE_STATUS, &errflags);
+    program.fid = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(program.fid, 1, &fragment, NULL);
+    glCompileShader(program.fid);
+    glGetShaderiv(program.fid, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
-        glGetShaderInfoLog(prog.fid, 10000, 0, errbuf);
+        glGetShaderInfoLog(program.fid, 10000, 0, errbuf);
         log_error("shader not compiled with error\n{}", errbuf);
         return {};
     }
@@ -103,26 +118,26 @@ glprogram make_glprogram(const char* vertex, const char* fragment) {
 
     // create program
     assert(glGetError() == GL_NO_ERROR);
-    prog.pid = glCreateProgram();
-    glAttachShader(prog.pid, prog.vid);
-    glAttachShader(prog.pid, prog.fid);
-    glLinkProgram(prog.pid);
-    glValidateProgram(prog.pid);
-    glGetProgramiv(prog.pid, GL_LINK_STATUS, &errflags);
+    program.pid = glCreateProgram();
+    glAttachShader(program.pid, program.vid);
+    glAttachShader(program.pid, program.fid);
+    glLinkProgram(program.pid);
+    glValidateProgram(program.pid);
+    glGetProgramiv(program.pid, GL_LINK_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(program.pid, 10000, 0, errbuf);
         log_error("program not linked with error\n{}", errbuf);
         return {};
     }
-    glGetProgramiv(prog.pid, GL_VALIDATE_STATUS, &errflags);
+    glGetProgramiv(program.pid, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
-        glGetProgramInfoLog(prog.pid, 10000, 0, errbuf);
+        glGetProgramInfoLog(program.pid, 10000, 0, errbuf);
         log_error("program not linked with error\n{}", errbuf);
         return {};
     }
     assert(glGetError() == GL_NO_ERROR);
 
-    return prog;
+    return program;
 }
 
 gltexture make_gltexture(
@@ -231,16 +246,16 @@ void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
 
 template <typename T>
 glarraybuffer make_glarraybuffer_impl(const vector<T>& data, bool dynamic) {
-    auto buf      = glarraybuffer{};
-    buf.num       = data.size();
-    buf.elem_size = sizeof(T);
+    auto buffer      = glarraybuffer{};
+    buffer.num       = data.size();
+    buffer.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &buf.bid);
-    glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
+    glGenBuffers(1, &buffer.bid);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
     glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return buf;
+    return buffer;
 }
 
 glarraybuffer make_glarraybuffer(const vector<float>& data, bool dynamic) {
@@ -258,197 +273,200 @@ glarraybuffer make_glarraybuffer(const vector<vec4f>& data, bool dynamic) {
 
 template <typename T>
 glelementbuffer make_glelementbuffer_impl(const vector<T>& data, bool dynamic) {
-    auto buf      = glelementbuffer{};
-    buf.num       = data.size();
-    buf.elem_size = sizeof(T);
+    auto buffer      = glelementbuffer{};
+    buffer.num       = data.size();
+    buffer.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
-    glGenBuffers(1, &buf.bid);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+    glGenBuffers(1, &buffer.bid);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return buf;
+    return buffer;
 }
 
-glelementbuffer make_glelementbuffer(const vector<int>& buf, bool dynamic) {
-    return make_glelementbuffer_impl(buf, dynamic);
+glelementbuffer make_glelementbuffer(const vector<int>& buffer, bool dynamic) {
+    return make_glelementbuffer_impl(buffer, dynamic);
 }
-glelementbuffer make_glelementbuffer(const vector<vec2i>& buf, bool dynamic) {
-    return make_glelementbuffer_impl(buf, dynamic);
+glelementbuffer make_glelementbuffer(const vector<vec2i>& buffer, bool dynamic) {
+    return make_glelementbuffer_impl(buffer, dynamic);
 }
-glelementbuffer make_glelementbuffer(const vector<vec3i>& buf, bool dynamic) {
-    return make_glelementbuffer_impl(buf, dynamic);
+glelementbuffer make_glelementbuffer(const vector<vec3i>& buffer, bool dynamic) {
+    return make_glelementbuffer_impl(buffer, dynamic);
 }
 
-void bind_glprogram(glprogram& prog) { glUseProgram(prog.pid); }
+void bind_glprogram(glprogram& program) { glUseProgram(program.pid); }
 void unbind_glprogram() { glUseProgram(0); }
 
-int get_gluniform_location(const glprogram& prog, const char* name) {
-    return glGetUniformLocation(prog.pid, name);
+int get_gluniform_location(const glprogram& program, const char* name) {
+    return glGetUniformLocation(program.pid, name);
 }
 
-void set_gluniform(int loc, int val) {
+void set_gluniform(int locatiom, int value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform1i(loc, val);
-    assert(glGetError() == GL_NO_ERROR);
-}
-
-void set_gluniform(int loc, const vec2i& val) {
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform2i(loc, val.x, val.y);
+    glUniform1i(locatiom, value);
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform(int loc, const vec3i& val) {
+void set_gluniform(int locatiom, const vec2i& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform3i(loc, val.x, val.y, val.z);
-    assert(glGetError() == GL_NO_ERROR);
-}
-
-void set_gluniform(int loc, const vec4i& val) {
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform4i(loc, val.x, val.y, val.z, val.w);
+    glUniform2i(locatiom, value.x, value.y);
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform(int loc, float val) {
+void set_gluniform(int locatiom, const vec3i& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform1f(loc, val);
-    assert(glGetError() == GL_NO_ERROR);
-}
-
-void set_gluniform(int loc, const vec2f& val) {
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform2f(loc, val.x, val.y);
+    glUniform3i(locatiom, value.x, value.y, value.z);
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform(int loc, const vec3f& val) {
+void set_gluniform(int locatiom, const vec4i& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform3f(loc, val.x, val.y, val.z);
-    assert(glGetError() == GL_NO_ERROR);
-}
-
-void set_gluniform(int loc, const vec4f& val) {
-    assert(glGetError() == GL_NO_ERROR);
-    glUniform4f(loc, val.x, val.y, val.z, val.w);
+    glUniform4i(locatiom, value.x, value.y, value.z, value.w);
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform(int loc, const mat4f& val) {
+void set_gluniform(int locatiom, float value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniformMatrix4fv(loc, 1, false, &val.x.x);
-    assert(glGetError() == GL_NO_ERROR);
-}
-
-void set_gluniform(int loc, const frame3f& val) {
-    assert(glGetError() == GL_NO_ERROR);
-    glUniformMatrix4x3fv(loc, 1, false, &val.x.x);
+    glUniform1f(locatiom, value);
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(int loc, const gltexture& texture, int unit) {
+void set_gluniform(int locatiom, const vec2f& value) {
+    assert(glGetError() == GL_NO_ERROR);
+    glUniform2f(locatiom, value.x, value.y);
+    assert(glGetError() == GL_NO_ERROR);
+}
+
+void set_gluniform(int locatiom, const vec3f& value) {
+    assert(glGetError() == GL_NO_ERROR);
+    glUniform3f(locatiom, value.x, value.y, value.z);
+    assert(glGetError() == GL_NO_ERROR);
+}
+
+void set_gluniform(int locatiom, const vec4f& value) {
+    assert(glGetError() == GL_NO_ERROR);
+    glUniform4f(locatiom, value.x, value.y, value.z, value.w);
+    assert(glGetError() == GL_NO_ERROR);
+}
+
+void set_gluniform(int locatiom, const mat4f& value) {
+    assert(glGetError() == GL_NO_ERROR);
+    glUniformMatrix4fv(locatiom, 1, false, &value.x.x);
+    assert(glGetError() == GL_NO_ERROR);
+}
+
+void set_gluniform(int locatiom, const frame3f& value) {
+    assert(glGetError() == GL_NO_ERROR);
+    glUniformMatrix4x3fv(locatiom, 1, false, &value.x.x);
+    assert(glGetError() == GL_NO_ERROR);
+}
+
+void set_gluniform_texture(int locatiom, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, texture.tid);
-    glUniform1i(loc, unit);
+    glUniform1i(locatiom, unit);
     assert(glGetError() == GL_NO_ERROR);
 }
 
 void set_gluniform_texture(
-    glprogram& prog, const char* var, const gltexture& texture, int unit) {
-    set_gluniform_texture(get_gluniform_location(prog, var), texture, unit);
+    glprogram& program, const char* name, const gltexture& texture, int unit) {
+    set_gluniform_texture(get_gluniform_location(program, name), texture, unit);
 }
 
 void set_gluniform_texture(
-    int loc, int loc_on, const gltexture& texture, int unit) {
+    int locatiom, int locatiom_on, const gltexture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
     if (texture.tid) {
         glActiveTexture(GL_TEXTURE0 + unit);
         glBindTexture(GL_TEXTURE_2D, texture.tid);
-        glUniform1i(loc, unit);
-        glUniform1i(loc_on, 1);
+        glUniform1i(locatiom, unit);
+        glUniform1i(locatiom_on, 1);
     } else {
-        glUniform1i(loc_on, 0);
+        glUniform1i(locatiom_on, 0);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_gluniform_texture(glprogram& prog, const char* var, const char* var_on,
-    const gltexture& texture, int unit) {
-    set_gluniform_texture(get_gluniform_location(prog, var),
-        get_gluniform_location(prog, var_on), texture, unit);
+void set_gluniform_texture(glprogram& program, const char* name,
+    const char* name_on, const gltexture& texture, int unit) {
+    set_gluniform_texture(get_gluniform_location(program, name),
+        get_gluniform_location(program, name_on), texture, unit);
 }
 
-int get_glvertexattrib_location(const glprogram& prog, const char* name) {
-    return glGetAttribLocation(prog.pid, name);
+int get_glvertexattrib_location(const glprogram& program, const char* name) {
+    return glGetAttribLocation(program.pid, name);
 }
 
-void set_glvertexattrib(int loc, const glarraybuffer& buf, float val) {
+void set_glvertexattrib(int locatiom, const glarraybuffer& buffer, float value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buf.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
-        glEnableVertexAttribArray(loc);
-        glVertexAttribPointer(loc, 1, GL_FLOAT, false, 0, nullptr);
+    if (buffer.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+        glEnableVertexAttribArray(locatiom);
+        glVertexAttribPointer(locatiom, 1, GL_FLOAT, false, 0, nullptr);
     } else {
-        glVertexAttrib1f(loc, val);
+        glVertexAttrib1f(locatiom, value);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec2f& val) {
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec2f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buf.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
-        glEnableVertexAttribArray(loc);
-        glVertexAttribPointer(loc, 2, GL_FLOAT, false, 0, nullptr);
+    if (buffer.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+        glEnableVertexAttribArray(locatiom);
+        glVertexAttribPointer(locatiom, 2, GL_FLOAT, false, 0, nullptr);
     } else {
-        glVertexAttrib2f(loc, val.x, val.y);
+        glVertexAttrib2f(locatiom, value.x, value.y);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec3f& val) {
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec3f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buf.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
-        glEnableVertexAttribArray(loc);
-        glVertexAttribPointer(loc, 3, GL_FLOAT, false, 0, nullptr);
+    if (buffer.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+        glEnableVertexAttribArray(locatiom);
+        glVertexAttribPointer(locatiom, 3, GL_FLOAT, false, 0, nullptr);
     } else {
-        glVertexAttrib3f(loc, val.x, val.y, val.z);
+        glVertexAttrib3f(locatiom, value.x, value.y, value.z);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_glvertexattrib(int loc, const glarraybuffer& buf, const vec4f& val) {
+void set_glvertexattrib(
+    int locatiom, const glarraybuffer& buffer, const vec4f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    if (buf.bid) {
-        glBindBuffer(GL_ARRAY_BUFFER, buf.bid);
-        glEnableVertexAttribArray(loc);
-        glVertexAttribPointer(loc, 4, GL_FLOAT, false, 0, nullptr);
+    if (buffer.bid) {
+        glBindBuffer(GL_ARRAY_BUFFER, buffer.bid);
+        glEnableVertexAttribArray(locatiom);
+        glVertexAttribPointer(locatiom, 4, GL_FLOAT, false, 0, nullptr);
     } else {
-        glVertexAttrib4f(loc, val.x, val.y, val.z, val.w);
+        glVertexAttrib4f(locatiom, value.x, value.y, value.z, value.w);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void draw_glpoints(const glelementbuffer& buf, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+void draw_glpoints(const glelementbuffer& buffer, int num) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
     glDrawElements(GL_POINTS, num, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_gllines(const glelementbuffer& buf, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+void draw_gllines(const glelementbuffer& buffer, int num) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
     glDrawElements(GL_LINES, num * 2, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_gltriangles(const glelementbuffer& buf, int num) {
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buf.bid);
+void draw_gltriangles(const glelementbuffer& buffer, int num) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.bid);
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(const gltexture& gl_txt, vec2i imsize, vec2i winsize,
-    vec2f imcenter, float imscale) {
+void draw_glimage(const gltexture& gl_txt, const vec2i& image_size,
+    const vec2i& window_size, const vec2f& image_center, float image_scale) {
     static glprogram       gl_prog      = {};
     static glarraybuffer   gl_texcoord  = {};
     static glelementbuffer gl_triangles = {};
@@ -459,12 +477,12 @@ void draw_glimage(const gltexture& gl_txt, vec2i imsize, vec2i winsize,
             #version 330
             in vec2 texcoord;
             out vec2 frag_texcoord;
-            uniform vec2 winsize, imsize;
-            uniform vec2 imcenter;
-            uniform float imscale;
+            uniform vec2 window_size, image_size;
+            uniform vec2 image_center;
+            uniform float image_scale;
             void main() {
-                vec2 pos = (texcoord - vec2(0.5,0.5)) * imsize * imscale + imcenter;
-                gl_Position = vec4(2 * pos.x / winsize.x - 1, 1 - 2 * pos.y / winsize.y, 0, 1);
+                vec2 pos = (texcoord - vec2(0.5,0.5)) * image_size * image_scale + image_center;
+                gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0, 1);
                 frag_texcoord = texcoord;
             }
         )";
@@ -485,12 +503,73 @@ void draw_glimage(const gltexture& gl_txt, vec2i imsize, vec2i winsize,
     }
 
     // draw
+    check_glerror();
     bind_glprogram(gl_prog);
     set_gluniform_texture(gl_prog, "txt", gl_txt, 0);
-    set_gluniform(gl_prog, "winsize", vec2f{(float)winsize.x, (float)winsize.y});
-    set_gluniform(gl_prog, "imsize", vec2f{(float)imsize.x, (float)imsize.y});
-    set_gluniform(gl_prog, "imcenter", imcenter);
-    set_gluniform(gl_prog, "imscale", imscale);
+    set_gluniform(gl_prog, "window_size",
+        vec2f{(float)window_size.x, (float)window_size.y});
+    set_gluniform(
+        gl_prog, "image_size", vec2f{(float)image_size.x, (float)image_size.y});
+    set_gluniform(gl_prog, "image_center", image_center);
+    set_gluniform(gl_prog, "image_scale", image_scale);
+    set_glvertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
+    draw_gltriangles(gl_triangles, 2);
+    unbind_glprogram();
+    check_glerror();
+}
+
+void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
+    const vec2f& image_center, float image_scale, float border_size) {
+    static glprogram       gl_prog      = {};
+    static glarraybuffer   gl_texcoord  = {};
+    static glelementbuffer gl_triangles = {};
+
+    // initialization
+    if (!gl_prog) {
+        auto vert   = R"(
+            #version 330
+            in vec2 texcoord;
+            out vec2 frag_texcoord;
+            uniform vec2 window_size, image_size, border_size;
+            uniform vec2 image_center;
+            uniform float image_scale;
+            void main() {
+                vec2 pos = (texcoord - vec2(0.5,0.5)) * (image_size + border_size*2) * image_scale + image_center;
+                gl_Position = vec4(2 * pos.x / window_size.x - 1, 1 - 2 * pos.y / window_size.y, 0.1, 1);
+                frag_texcoord = texcoord;
+            }
+        )";
+        auto frag   = R"(
+            #version 330
+            in vec2 frag_texcoord;
+            out vec4 frag_color;
+            uniform vec2 image_size, border_size;
+            void main() {
+                ivec2 imcoord = ivec2(frag_texcoord * (image_size + border_size*2) - border_size);
+                ivec2 tile = imcoord / 32;
+                if(imcoord.x <= 0 || imcoord.y <= 0 || 
+                    imcoord.x >= image_size.x || imcoord.y >= image_size.y) frag_color = vec4(0,0,0,1);
+                else if((tile.x + tile.y) % 2 == 0) frag_color = vec4(0.1,0.1,0.1,1);
+                else frag_color = vec4(0.3,0.3,0.3,1);
+            }
+        )";
+        gl_prog     = make_glprogram(vert, frag);
+        gl_texcoord = make_glarraybuffer(
+            vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+        gl_triangles = make_glelementbuffer(
+            vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+    }
+
+    // draw
+    bind_glprogram(gl_prog);
+    set_gluniform(gl_prog, "window_size",
+        vec2f{(float)window_size.x, (float)window_size.y});
+    set_gluniform(
+        gl_prog, "image_size", vec2f{(float)image_size.x, (float)image_size.y});
+    set_gluniform(
+        gl_prog, "border_size", vec2f{(float)border_size, (float)border_size});
+    set_gluniform(gl_prog, "image_center", image_center);
+    set_gluniform(gl_prog, "image_scale", image_scale);
     set_glvertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
     draw_gltriangles(gl_triangles, 2);
     unbind_glprogram();
@@ -510,8 +589,8 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     }
 }
 
-bool init_glwindow(glwindow& win, int width, int height, const char* title,
-    void* user_pointer, std::function<void(const glwindow&)> refresh_cb) {
+bool init_glwindow(glwindow& win, int width, int height, const string& title,
+    void* user_pointer, refresh_glcallback refresh_cb) {
     // init glfw
     if (!glfwInit()) log_fatal("cannot initialize windowing system");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -523,7 +602,7 @@ bool init_glwindow(glwindow& win, int width, int height, const char* title,
 
     // create window
     win     = glwindow();
-    win.win = glfwCreateWindow(width, height, title, nullptr, nullptr);
+    win.win = glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
     if (!win.win) return false;
     glfwMakeContextCurrent(win.win);
     glfwSwapInterval(1);  // Enable vsync
@@ -548,8 +627,7 @@ void delete_glwindow(glwindow& win) {
 
 void* get_user_pointer(const glwindow& win) { return win.user_ptr; }
 
-void set_drop_callback(glwindow&                                     win,
-    function<void(const glwindow& win, const vector<string>& paths)> drop_cb) {
+void set_drop_glcallback(glwindow& win, drop_glcallback drop_cb) {
     win.drop_cb = drop_cb;
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
@@ -605,7 +683,8 @@ void swap_glbuffers(const glwindow& win) { glfwSwapBuffers(win.win); }
 void init_glwidgets(const glwindow& win) {
     // init widgets
     ImGui::CreateContext();
-    ImGui::GetIO().IniFilename = nullptr;
+    ImGui::GetIO().IniFilename       = nullptr;
+    ImGui::GetStyle().WindowRounding = 0;
     ImGui_ImplGlfw_InitForOpenGL(win.win, true);
 #ifndef __APPLE__
     ImGui_ImplOpenGL3_Init();
@@ -671,94 +750,94 @@ void draw_separator_glwidget(const glwindow& win) { ImGui::Separator(); }
 
 void continue_glwidgets_line(const glwindow& win) { ImGui::SameLine(); }
 
-bool draw_textinput_glwidget(const glwindow& win, const char* lbl, string& val) {
-    char buf[4096];
+bool draw_textinput_glwidget(const glwindow& win, const char* lbl, string& value) {
+    char buffer[4096];
     auto num = 0;
-    for (auto c : val) buf[num++] = c;
-    buf[num]    = 0;
-    auto edited = ImGui::InputText(lbl, buf, sizeof(buf));
-    if (edited) val = buf;
+    for (auto c : value) buffer[num++] = c;
+    buffer[num] = 0;
+    auto edited = ImGui::InputText(lbl, buffer, sizeof(buffer));
+    if (edited) value = buffer;
     return edited;
 }
 
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, float& val, float min, float max) {
-    return ImGui::SliderFloat(lbl, &val, min, max);
+    const glwindow& win, const char* lbl, float& value, float min, float max) {
+    return ImGui::SliderFloat(lbl, &value, min, max);
 }
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, vec2f& val, float min, float max) {
-    return ImGui::SliderFloat2(lbl, &val.x, min, max);
+    const glwindow& win, const char* lbl, vec2f& value, float min, float max) {
+    return ImGui::SliderFloat2(lbl, &value.x, min, max);
 }
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, vec3f& val, float min, float max) {
-    return ImGui::SliderFloat3(lbl, &val.x, min, max);
+    const glwindow& win, const char* lbl, vec3f& value, float min, float max) {
+    return ImGui::SliderFloat3(lbl, &value.x, min, max);
 }
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, vec4f& val, float min, float max) {
-    return ImGui::SliderFloat4(lbl, &val.x, min, max);
+    const glwindow& win, const char* lbl, vec4f& value, float min, float max) {
+    return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, int& val, int min, int max) {
-    return ImGui::SliderInt(lbl, &val, min, max);
+    const glwindow& win, const char* lbl, int& value, int min, int max) {
+    return ImGui::SliderInt(lbl, &value, min, max);
 }
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, vec2i& val, int min, int max) {
-    return ImGui::SliderInt2(lbl, &val.x, min, max);
+    const glwindow& win, const char* lbl, vec2i& value, int min, int max) {
+    return ImGui::SliderInt2(lbl, &value.x, min, max);
 }
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, vec3i& val, int min, int max) {
-    return ImGui::SliderInt3(lbl, &val.x, min, max);
+    const glwindow& win, const char* lbl, vec3i& value, int min, int max) {
+    return ImGui::SliderInt3(lbl, &value.x, min, max);
 }
 bool draw_slider_glwidget(
-    const glwindow& win, const char* lbl, vec4i& val, int min, int max) {
-    return ImGui::SliderInt4(lbl, &val.x, min, max);
+    const glwindow& win, const char* lbl, vec4i& value, int min, int max) {
+    return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, float& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, float& value,
     float speed, float min, float max) {
-    return ImGui::DragFloat(lbl, &val, speed, min, max);
+    return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec2f& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec2f& value,
     float speed, float min, float max) {
-    return ImGui::DragFloat2(lbl, &val.x, speed, min, max);
+    return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec3f& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec3f& value,
     float speed, float min, float max) {
-    return ImGui::DragFloat3(lbl, &val.x, speed, min, max);
+    return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec4f& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec4f& value,
     float speed, float min, float max) {
-    return ImGui::DragFloat4(lbl, &val.x, speed, min, max);
+    return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, int& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, int& value,
     float speed, int min, int max) {
-    return ImGui::DragInt(lbl, &val, speed, min, max);
+    return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec2i& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec2i& value,
     float speed, int min, int max) {
-    return ImGui::DragInt2(lbl, &val.x, speed, min, max);
+    return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec3i& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec3i& value,
     float speed, int min, int max) {
-    return ImGui::DragInt3(lbl, &val.x, speed, min, max);
+    return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec4i& val,
+bool draw_dragger_glwidget(const glwindow& win, const char* lbl, vec4i& value,
     float speed, int min, int max) {
-    return ImGui::DragInt4(lbl, &val.x, speed, min, max);
+    return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_checkbox_glwidget(const glwindow& win, const char* lbl, bool& val) {
-    return ImGui::Checkbox(lbl, &val);
+bool draw_checkbox_glwidget(const glwindow& win, const char* lbl, bool& value) {
+    return ImGui::Checkbox(lbl, &value);
 }
 
-bool draw_coloredit_glwidget(const glwindow& win, const char* lbl, vec3f& val) {
-    return ImGui::ColorEdit3(lbl, &val.x);
+bool draw_coloredit_glwidget(const glwindow& win, const char* lbl, vec3f& value) {
+    return ImGui::ColorEdit3(lbl, &value.x);
 }
 
-bool draw_coloredit_glwidget(const glwindow& win, const char* lbl, vec4f& val) {
-    return ImGui::ColorEdit4(lbl, &val.x);
+bool draw_coloredit_glwidget(const glwindow& win, const char* lbl, vec4f& value) {
+    return ImGui::ColorEdit4(lbl, &value.x);
 }
 
 bool begin_treenode_glwidget(const glwindow& win, const char* lbl) {
@@ -786,33 +865,33 @@ void begin_selectabletreeleaf_glwidget(
     if (ImGui::IsItemClicked()) selected = true;
 }
 
-bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& val,
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& value,
     const vector<string>& labels) {
-    if (!ImGui::BeginCombo(lbl, labels[val].c_str())) return false;
-    auto old_val = val;
+    if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
+    auto old_val = value;
     for (auto i = 0; i < labels.size(); i++) {
         ImGui::PushID(i);
-        if (ImGui::Selectable(labels[i].c_str(), val == i)) val = i;
-        if (val == i) ImGui::SetItemDefaultFocus();
+        if (ImGui::Selectable(labels[i].c_str(), value == i)) value = i;
+        if (value == i) ImGui::SetItemDefaultFocus();
         ImGui::PopID();
     }
     ImGui::EndCombo();
-    return val != old_val;
+    return value != old_val;
 }
 
-bool draw_combobox_glwidget(const glwindow& win, const char* lbl, string& val,
+bool draw_combobox_glwidget(const glwindow& win, const char* lbl, string& value,
     const vector<string>& labels) {
-    if (!ImGui::BeginCombo(lbl, val.c_str())) return false;
-    auto old_val = val;
+    if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
+    auto old_val = value;
     for (auto i = 0; i < labels.size(); i++) {
         ImGui::PushID(i);
-        if (ImGui::Selectable(labels[i].c_str(), val == labels[i]))
-            val = labels[i];
-        if (val == labels[i]) ImGui::SetItemDefaultFocus();
+        if (ImGui::Selectable(labels[i].c_str(), value == labels[i]))
+            value = labels[i];
+        if (value == labels[i]) ImGui::SetItemDefaultFocus();
         ImGui::PopID();
     }
     ImGui::EndCombo();
-    return val != old_val;
+    return value != old_val;
 }
 
 bool draw_combobox_glwidget(const glwindow& win, const char* lbl, int& idx,
