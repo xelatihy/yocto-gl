@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) img = tonemap_filmic(img, exposure, filmic, srgb);
+    if (tonemap) img = tonemap_image(img, exposure, filmic, srgb);
 
     // save
     if (!save_image(output, img)) log_fatal("cannot save image {}", output);

@@ -45,7 +45,7 @@ struct app_image {
     bool         is_hdr = false;
 
     // diplay image
-    image<vec4f>   display;
+    image<vec4f>   display = {};
     opengl_texture gl_txt = {};
 
     // image stats
@@ -115,12 +115,9 @@ void update_display_async(app_image& img) {
         }
         for (auto& t : threads) t.join();
     } else {
-        for (auto j = 0; j < img.img.height; j++) {
+        for (auto& region : make_image_regions(img.img.width, img.img.height)) {
             if (img.display_stop) break;
-            for (auto i = 0; i < img.img.width; i++) {
-                at(img.display, i, j) = tonemap_filmic(
-                    at(img.img, i, j), img.exposure, img.filmic, img.srgb);
-            }
+            tonemap_image_region(img.display, region, img.img, img.exposure, img.filmic, img.srgb);
         }
     }
     img.display_done = true;

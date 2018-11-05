@@ -3393,13 +3393,23 @@ image<vec4b> float_to_byte(const image<vec4f>& fl) {
 }
 
 // Tonemap image
-image<vec4f> tonemap_filmic(
+image<vec4f> tonemap_image(
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
     auto ldr = image<vec4f>{hdr.width, hdr.height};
     for (auto idx = 0; idx < hdr.width * hdr.height; idx++) {
         ldr.pixels[idx] = tonemap_filmic(hdr.pixels[idx], exposure, filmic, srgb);
     }
     return ldr;
+}
+
+// Tonemap image
+void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+    for (auto j = region.y; j < region.y + region.height; j++) {
+        for (auto i = region.x; i < region.x + region.width; i++) {
+            at(ldr, i, j) = tonemap_filmic(at(hdr, i, j), exposure, filmic, srgb);
+        }
+    }
 }
 
 }  // namespace ygl
@@ -7343,7 +7353,7 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
                                       params.preview_ratio;
         pparams.num_samples = 1;
         auto pimg           = trace_image(scene, bvh, lights, pparams);
-        auto pdisplay       = tonemap_filmic(pimg, params.display_exposure,
+        auto pdisplay       = tonemap_image(pimg, params.display_exposure,
             params.display_filmic, params.display_srgb);
         auto pwidth = pimg.width, pheight = pimg.height;
         for (auto j = 0; j < state.rendered_image.height; j++) {

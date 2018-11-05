@@ -913,7 +913,7 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     if (is_hdr_filename(filename)) {
         return save_image(filename, hdr);
     } else {
-        auto ldr = float_to_byte(tonemap_filmic(hdr, exposure, filmic, srgb));
+        auto ldr = float_to_byte(tonemap_image(hdr, exposure, filmic, srgb));
         return save_image(filename, ldr);
     }
 }

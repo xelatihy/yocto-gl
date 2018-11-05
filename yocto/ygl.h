@@ -2952,7 +2952,7 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(int width, int height, int region_size);
+vector<image_region> make_image_regions(int width, int height, int region_size = 32);
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -2967,7 +2967,9 @@ image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
 image<vec4f> linear_to_srgb(const image<vec4f>& lin);
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_filmic(
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image_region(image<vec4f>& ldr, const image_region& region, 
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
