@@ -265,7 +265,8 @@ void update(app_state& app) {
         if (!img.gl_txt) {
             init_opengl_texture(img.gl_txt, img.display, false, false, true);
         } else {
-            update_opengl_texture(img.gl_txt, img.display, false, false, true);
+            // update_opengl_texture(img.gl_txt, img.display, false, false, true);
+            update_opengl_texture_region(img.gl_txt, img.display, {0,0,img.display.width,img.display.height}, false, false, true);
         }
         img.texture_done = true;
     }

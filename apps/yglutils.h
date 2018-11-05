@@ -74,10 +74,14 @@ bool init_opengl_texture(opengl_texture& texture, const image<vec4f>& img,
     bool as_float, bool linear, bool mipmap);
 void update_opengl_texture(opengl_texture& texture, const image<vec4f>& img,
     bool as_float, bool linear, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture, const image<vec4f>& img, const image_region& region,
+    bool as_float, bool linear, bool mipmap);
 
 bool init_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
     bool as_srgb, bool linear, bool mipmap);
 void update_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
+    bool as_srgb, bool linear, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture, const image<vec4b>& img, const image_region& region,
     bool as_srgb, bool linear, bool mipmap);
 
 void delete_opengl_texture(opengl_texture& texture);

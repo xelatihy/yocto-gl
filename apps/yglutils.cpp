@@ -198,6 +198,27 @@ void update_opengl_texture(opengl_texture& texture, const image<vec4f>& img,
     assert(glGetError() == GL_NO_ERROR);
 }
 
+void update_opengl_texture_region(opengl_texture& texture, const image<vec4f>& img, const image_region& region,
+    bool as_float, bool linear, bool mipmap) {
+    assert(glGetError() == GL_NO_ERROR);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, region.x, region.y, region.width, region.height, GL_RGBA,
+        GL_FLOAT, img.pixels.data());
+    if (mipmap) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+    }
+    assert(glGetError() == GL_NO_ERROR);
+}
+
 bool init_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
     bool as_srgb, bool linear, bool mipmap) {
     texture = opengl_texture();
@@ -234,6 +255,27 @@ void update_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
+        GL_UNSIGNED_BYTE, img.pixels.data());
+    if (mipmap) {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        if (!img.pixels.empty()) glGenerateMipmap(GL_TEXTURE_2D);
+    } else {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER,
+            (linear) ? GL_LINEAR : GL_NEAREST);
+    }
+    assert(glGetError() == GL_NO_ERROR);
+}
+
+void update_opengl_texture_region(opengl_texture& texture, const image<vec4b>& img, const image_region& region,
+    bool as_srgb, bool linear, bool mipmap) {
+    assert(glGetError() == GL_NO_ERROR);
+    glBindTexture(GL_TEXTURE_2D, texture.texture_id);
+    glTexSubImage2D(GL_TEXTURE_2D, 0, region.x, region.y, region.width, region.height, GL_RGBA,
         GL_UNSIGNED_BYTE, img.pixels.data());
     if (mipmap) {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
