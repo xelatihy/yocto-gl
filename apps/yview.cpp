@@ -31,7 +31,7 @@
 #include "yglutils.h"
 #include "ysceneui.h"
 
-struct draw_glshape {
+struct drawgl_shape {
     glarraybuffer           positions_buffer     = {};
     glarraybuffer           normals_buffer       = {};
     glarraybuffer           texturecoords_buffer = {};
@@ -46,8 +46,8 @@ struct draw_glshape {
 
 struct drawgl_state {
     glprogram         program  = {};
-    vector<draw_glshape>   shapes   = {};
-    vector<draw_glshape>   surfaces = {};
+    vector<drawgl_shape>   shapes   = {};
+    vector<drawgl_shape>   surfaces = {};
     vector<gltexture> textures = {};
 };
 
@@ -781,7 +781,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     if (params.wireframe) set_glwireframe(false);
 }
 
-void init_draw_glstate(drawgl_state& state, const yocto_scene& scene) {
+void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     // load textures and vbos
     init_glprogram(state.program, vertex, fragment);
     state.textures.resize(scene.textures.size());
@@ -800,7 +800,7 @@ void init_draw_glstate(drawgl_state& state, const yocto_scene& scene) {
     state.shapes.resize(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
         auto& shape = scene.shapes[shape_id];
-        auto  vbos  = draw_glshape();
+        auto  vbos  = drawgl_shape();
         if (!shape.positions.empty())
             init_glarraybuffer(vbos.positions_buffer, shape.positions, false);
         if (!shape.normals.empty())
@@ -827,7 +827,7 @@ void init_draw_glstate(drawgl_state& state, const yocto_scene& scene) {
     state.surfaces.resize(scene.surfaces.size());
     for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
         auto& surface       = scene.surfaces[surface_id];
-        auto  vbos          = draw_glshape();
+        auto  vbos          = drawgl_shape();
         auto  quads         = vector<vec4i>();
         auto  positions     = vector<vec3f>();
         auto  normals       = vector<vec3f>();
@@ -858,6 +858,31 @@ void init_draw_glstate(drawgl_state& state, const yocto_scene& scene) {
     }
 }
 
+void delete_drawgl_shape(drawgl_shape& glshape) {
+    delete_glarraybuffer(glshape.positions_buffer);
+    delete_glarraybuffer(glshape.normals_buffer);
+    delete_glarraybuffer(glshape.texturecoords_buffer);
+    delete_glarraybuffer(glshape.colors_buffer);
+    delete_glarraybuffer(glshape.tangentspaces_buffer);
+    delete_glelementbuffer(glshape.points_buffer);
+    delete_glelementbuffer(glshape.lines_buffer);
+    delete_glelementbuffer(glshape.triangles_buffer);
+    delete_glelementbuffer(glshape.quads_buffer);
+    for(auto& quads_buffer : glshape.split_quads_buffer) delete_glelementbuffer(quads_buffer);
+}
+
+// delete state
+void delete_drawgl_state(drawgl_state& state) {
+    if(!state.program) return;
+    delete_glprogram(state.program);
+    for(auto& texture : state.textures) delete_gltexture(texture);
+    for(auto& shape : state.shapes) delete_drawgl_shape(shape);
+    for(auto& surface : state.surfaces) delete_drawgl_shape(surface);
+    state.textures.clear();
+    state.shapes.clear();
+    state.surfaces.clear();
+}
+
 // draw with shading
 void draw_widgets(const glwindow& win) {
     auto& app              = *(app_state*)get_user_pointer(win);
@@ -865,7 +890,13 @@ void draw_widgets(const glwindow& win) {
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yview")) {
         if (begin_header_glwidget(win, "scene")) {
-            draw_label_glwidgets(win, "scene", "%s", app.filename.c_str());
+            draw_label_glwidgets(win, "scene", get_filename(app.filename));
+            if(draw_button_glwidget(win, "load")) {
+                delete_drawgl_state(app.state);
+                load_scene_async(app);
+            }
+            draw_label_glwidgets(win, "filename", app.filename);
+            draw_label_glwidgets(win, "status", app.status);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "view")) {
@@ -919,7 +950,7 @@ void draw(const glwindow& win) {
 // update
 void update(app_state& app) {
     // initialize gl state if needed
-    if (!app.state.program) init_draw_glstate(app.state, app.scene);
+    if (!app.state.program) init_drawgl_state(app.state, app.scene);
 
     static auto last_time = 0.0f;
     for (auto& sel : app.update_list) {
@@ -942,6 +973,13 @@ void update(app_state& app) {
         }
     }
     app.update_list.clear();
+}
+
+void drop_callback(const glwindow& win, const vector<string>& paths) {
+    auto& app = *(app_state*)get_user_pointer(win);
+    delete_drawgl_state(app.state);
+    app.filename = paths.front();
+    load_scene_async(app);
 }
 
 // run ui loop
