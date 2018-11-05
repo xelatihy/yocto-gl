@@ -832,9 +832,9 @@ draw_glstate init_draw_state(const glwindow& win) {
 void run_ui(app_state& app) {
     // window
     auto& camera = app.scene.cameras.at(app.camid);
-    auto width = clamp(get_image_size(camera, app.resolution).x, 256, 1440),
-         height = clamp(get_image_size(camera, app.resolution).y, 256, 1440);
-    auto win    = glwindow();
+    auto  width  = clamp(get_image_size(camera, app.resolution).x, 256, 1440),
+         height  = clamp(get_image_size(camera, app.resolution).y, 256, 1440);
+    auto win     = glwindow();
     init_glwindow(win, width, height, "yview | " + get_filename(app.filename),
         &app, draw);
 

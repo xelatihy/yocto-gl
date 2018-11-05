@@ -3486,8 +3486,11 @@ float set_camera_aspect(const yocto_camera& camera);
 void  set_camera_fovy(
      yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
 vec2i get_image_size(const yocto_camera& camera, int yresolution);
-void  set_camera_view(yocto_camera& camera, const bbox3f& bbox,
-     const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
+// Sets camera field of view to enclose all the bbox. Camera view direction
+// fiom size and forcal lemgth can be overridden if we pass non zero values.
+void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
+    const vec3f& view_direction = zero3f, const vec2f& film = zero2f,
+    float focal = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
 ray3f evaluate_camera_ray(
@@ -3564,14 +3567,14 @@ vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
     const vec3f& o);
 
 // Material values
-int             get_instance_material_id(const yocto_scene& scene,
-                const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f           evaluate_instance_emission(const yocto_scene& scene,
-              const yocto_instance& instance, int element_id, const vec2f& element_uv);
-float           evaluate_instance_opacity(const yocto_scene& scene,
-              const yocto_instance& instance, int element_id, const vec2f& element_uv);
-bool            is_instance_emissive(
-               const yocto_scene& scene, const yocto_instance& instance);
+int   get_instance_material_id(const yocto_scene& scene,
+      const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_emission(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+float evaluate_instance_opacity(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+bool  is_instance_emissive(
+     const yocto_scene& scene, const yocto_instance& instance);
 
 // <aterial brdf
 microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
