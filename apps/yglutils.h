@@ -296,6 +296,9 @@ void begin_child_glwidget(
     const glwindow& win, const char* lbl, const vec2i& size);
 void end_child_glwidget(const glwindow& win);
 
+bool begin_popup_modal(const glwindow& win, const char* lbl);
+void end_popup_modal(const glwindow& win);
+
 }  // namespace ygl
 
 #endif

@@ -927,4 +927,11 @@ void end_child_glwidget(const glwindow& win) {
     ImGui::PopID();
 }
 
+bool begin_popup_modal(const glwindow& win, const char* lbl) {
+    return ImGui::BeginPopupModal(lbl);
+}
+void end_popup_modal(const glwindow& win) {
+    ImGui::EndPopup();
+}
+
 }  // namespace ygl

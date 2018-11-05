@@ -42,6 +42,11 @@ struct app_state {
     string       imfilename = "out.obj";
     trace_params params     = {};
 
+    // loading params
+    bool use_embree_bvh = false;
+    bool double_sided = false;
+    bool add_skyenv = false;
+
     // rendering state
     trace_state  state  = {};
     trace_lights lights = {};
@@ -57,6 +62,9 @@ struct app_state {
     bool                       quiet          = false;
     int64_t                    trace_start    = 0;
     gltexture                  gl_txt         = {};
+
+    // async scene loading
+    bool load_done = false, load_running = false;
 };
 
 void draw_glwidgets(const glwindow& win) {
@@ -65,6 +73,13 @@ void draw_glwidgets(const glwindow& win) {
     if (begin_glwidgets_window(win, "yitrace")) {
         if (begin_header_glwidget(win, "scene")) {
             draw_label_glwidgets(win, "scene", app.filename);
+            auto status = ""s;
+            if(app.load_running) {
+                status = "loading";
+            } else {
+                status = "rendering";
+            }
+            draw_label_glwidgets(win, "status", status);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "trace")) {
@@ -129,6 +144,11 @@ void draw_glwidgets(const glwindow& win) {
             end_header_glwidget(win);
         }
     }
+    if(app.load_running) {
+        if(begin_popup_modal(win, "loading scene")) {
+            end_popup_modal(win);
+        }
+    }
     end_glwidgets_frame(win);
 }
 
@@ -138,28 +158,94 @@ void draw(const glwindow& win) {
     auto  fb_size  = get_glframebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-    center_image(app.image_center, app.image_scale,
-        {app.state.display_image.width, app.state.display_image.height},
-        win_size, app.zoom_to_fit);
-    if (!app.gl_txt) {
-        app.gl_txt = make_gltexture(app.state.display_image, false, false, false);
-    } else {
-        update_gltexture(
-            app.gl_txt, app.state.display_image, false, false, false);
+    if(app.load_done) {
+        center_image(app.image_center, app.image_scale,
+            {app.state.display_image.width, app.state.display_image.height},
+            win_size, app.zoom_to_fit);
+        if (!app.gl_txt) {
+            app.gl_txt = make_gltexture(app.state.display_image, false, false, false);
+        } else {
+            update_gltexture(
+                app.gl_txt, app.state.display_image, false, false, false);
+        }
+        set_glblending(true);
+        draw_glimage_background(
+            {app.state.display_image.width, app.state.display_image.height},
+            win_size, app.image_center, app.image_scale);
+        draw_glimage(app.gl_txt,
+            {app.state.display_image.width, app.state.display_image.height},
+            win_size, app.image_center, app.image_scale);
+        set_glblending(false);
     }
-    set_glblending(true);
-    draw_glimage_background(
-        {app.state.display_image.width, app.state.display_image.height},
-        win_size, app.image_center, app.image_scale);
-    draw_glimage(app.gl_txt,
-        {app.state.display_image.width, app.state.display_image.height},
-        win_size, app.image_center, app.image_scale);
-    set_glblending(false);
     draw_glwidgets(win);
     swap_glbuffers(win);
 }
 
+bool load_scene_sync(app_state& app) {
+    // scene loading
+    if (!load_scene(app.filename, app.scene)) {
+        log_fatal("cannot load scene " + app.filename);
+        return false;
+    }
+
+    // tesselate
+    tesselate_shapes_and_surfaces(app.scene);
+
+    // add components
+    if (app.add_skyenv && app.scene.environments.empty())
+        add_sky_environment(app.scene);
+    if (app.double_sided)
+        for (auto& material : app.scene.materials) material.double_sided = true;
+    add_missing_cameras(app.scene);
+    add_missing_names(app.scene);
+    log_validation_errors(app.scene);
+
+    // build bvh
+    app.bvh = make_scene_bvh(app.scene, true, app.use_embree_bvh);
+
+    // init renderer
+    app.lights = make_trace_lights(app.scene, app.params);
+
+    // fix renderer type if no lights
+    if (empty(app.lights) && app.params.sample_tracer != trace_type::eyelight) {
+        log_info("no lights presents, switching to eyelight shader\n");
+        app.params.sample_tracer = trace_type::eyelight;
+    }
+
+    // prepare renderer
+    app.state = make_trace_state(app.scene, app.params);
+
+    // initialize rendering objects
+    app.trace_start = get_time();
+    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
+
+    // set flags
+    app.load_done = true;
+    app.load_running = false;
+
+    // done
+    return false;
+}
+
+void load_scene_async(app_state& app) {
+    if(app.load_running) {
+        log_error("already loading");
+        return;
+    }
+    app.load_done = false;
+    app.load_running = true;
+    app.scene = {};
+    app.bvh = {};
+    app.lights = {};
+    app.state = {};
+    auto load_thread = thread([&app](){load_scene_sync(app);});
+    load_thread.detach();
+}
+
 bool update(app_state& app) {
+    // exit if no scene
+    if (!app.load_done) return false;
+
     // exit if no updated
     if (app.update_list.empty()) return false;
 
@@ -195,10 +281,8 @@ bool update(app_state& app) {
 // run ui loop
 void run_ui(app_state& app) {
     // window
-    auto width  = clamp(app.state.rendered_image.width, 256, 1440);
-    auto height = clamp(app.state.rendered_image.height, 256, 1440);
     auto win    = glwindow();
-    init_glwindow(win, width, height, "yitrace | " + get_filename(app.filename),
+    init_glwindow(win, 1280, 720, "yitrace | " + get_filename(app.filename),
         &app, draw);
 
     // init widgets
@@ -216,7 +300,7 @@ void run_ui(app_state& app) {
         auto widgets_active = get_glwidgets_active(win);
 
         // handle mouse and keyboard for navigation
-        if ((mouse_left || mouse_right) && !alt_down && !widgets_active) {
+        if (app.load_done && (mouse_left || mouse_right) && !alt_down && !widgets_active) {
             auto dolly  = 0.0f;
             auto pan    = zero2f;
             auto rotate = zero2f;
@@ -231,7 +315,7 @@ void run_ui(app_state& app) {
         }
 
         // selection
-        if ((mouse_left || mouse_right) && alt_down && !widgets_active) {
+        if (app.load_done && (mouse_left || mouse_right) && alt_down && !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale,
                 {app.state.rendered_image.width, app.state.rendered_image.height});
@@ -284,54 +368,19 @@ int main(int argc, char* argv[]) {
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.params.random_seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");
-    auto embree = parse_arg(parser, "--embree", false, "Use Embree ratracer");
-    auto double_sided = parse_arg(
+    app.use_embree_bvh = parse_arg(parser, "--embree", false, "Use Embree ratracer");
+    app.double_sided = parse_arg(
         parser, "--double-sided", false, "Double-sided rendering.");
-    auto add_skyenv = parse_arg(
+    app.add_skyenv = parse_arg(
         parser, "--add-skyenv", false, "Add missing environment map");
-    auto quiet = parse_arg(
-        parser, "--quiet", false, "Print only errors messages");
     app.imfilename = parse_arg(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     app.filename = parse_arg(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
-    // scene loading
-    if (!load_scene(app.filename, app.scene))
-        log_fatal("cannot load scene " + app.filename);
-
-    // tesselate
-    tesselate_shapes_and_surfaces(app.scene);
-
-    // add components
-    if (add_skyenv && app.scene.environments.empty())
-        add_sky_environment(app.scene);
-    if (double_sided)
-        for (auto& material : app.scene.materials) material.double_sided = true;
-    add_missing_cameras(app.scene);
-    add_missing_names(app.scene);
-    log_validation_errors(app.scene);
-
-    // build bvh
-    app.bvh = make_scene_bvh(app.scene, true, embree);
-
-    // init renderer
-    app.lights = make_trace_lights(app.scene, app.params);
-
-    // fix renderer type if no lights
-    if (empty(app.lights) && app.params.sample_tracer != trace_type::eyelight) {
-        if (!quiet)
-            log_info("no lights presents, switching to eyelight shader\n");
-        app.params.sample_tracer = trace_type::eyelight;
-    }
-
-    // prepare renderer
-    app.state = make_trace_state(app.scene, app.params);
-
-    // initialize rendering objects
-    app.trace_start = get_time();
-    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
+    // load scene
+    load_scene_async(app);
 
     // run interactive
     run_ui(app);
