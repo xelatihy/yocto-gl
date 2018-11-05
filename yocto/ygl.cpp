@@ -4505,17 +4505,18 @@ void log_validation_errors(const yocto_scene& scene, bool skip_textures) {
 // add missing camera
 void set_camera_view(
     yocto_camera& camera, const bbox3f& bbox, const vec2f& film, float focal) {
-    auto bbox_center    = (bbox.max + bbox.min) / 2.0f;
-    auto bbox_size      = bbox.max - bbox.min;
-    auto bbox_msize     = max(bbox_size.x, max(bbox_size.y, bbox_size.z));
-    auto camera_dir     = vec3f{1, 0.4f, 1};
-    auto from           = camera_dir * bbox_msize + bbox_center;
-    auto to             = bbox_center;
-    auto up             = vec3f{0, 1, 0};
-    camera.frame        = lookat_frame(from, to, up);
     camera.orthographic = false;
     if (film != zero2f) camera.film_size = film;
     if (focal != 0) camera.focal_length = focal;
+    auto bbox_center    = (bbox.max + bbox.min) / 2.0f;
+    auto bbox_radius    = length(bbox.max - bbox.min) / 2;
+    auto camera_dir     = vec3f{1, 0.4f, 1};
+    auto camera_fov     = min(get_camera_fovx(camera), get_camera_fovy(camera));
+    auto camera_dist    = bbox_radius / std::sin(camera_fov);
+    auto from           = camera_dir * camera_dist + bbox_center;
+    auto to             = bbox_center;
+    auto up             = vec3f{0, 1, 0};
+    camera.frame        = lookat_frame(from, to, up);
     camera.focus_distance = length(from - to);
     camera.lens_aperture  = 0;
 }
@@ -5111,7 +5112,10 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float evaluate_camera_fovy(const yocto_camera& camera) {
+float get_camera_fovx(const yocto_camera& camera) {
+    return 2 * std::atan(camera.film_size.x / (2 * camera.focal_length));
+}
+float get_camera_fovy(const yocto_camera& camera) {
     return 2 * std::atan(camera.film_size.y / (2 * camera.focal_length));
 }
 void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
@@ -5139,7 +5143,7 @@ ray3f evaluate_camera_ray(
     return ray;
 }
 
-vec2i evaluate_image_size(const yocto_camera& camera, int yresolution) {
+vec2i get_image_size(const yocto_camera& camera, int yresolution) {
     return {(int)round(yresolution * camera.film_size.x / camera.film_size.y),
         yresolution};
 }
@@ -7162,7 +7166,7 @@ trace_state make_trace_state(
     auto  scope  = log_trace_scoped("making trace state");
     auto  state  = trace_state();
     auto& camera = scene.cameras[params.camera_id];
-    auto  size   = evaluate_image_size(camera, params.vertical_resolution);
+    auto  size   = get_image_size(camera, params.vertical_resolution);
     state.rendered_image           = image<vec4f>{size.x, size.y, zero4f};
     state.display_image            = image<vec4f>{size.x, size.y, zero4f};
     state.accumulation_buffer      = image<vec4f>{size.x, size.y, zero4f};

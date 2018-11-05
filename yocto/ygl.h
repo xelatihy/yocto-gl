@@ -3480,11 +3480,12 @@ vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
 float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float evaluate_camera_fovy(const yocto_camera& camera);
-float evaluate_camera_aspect(const yocto_camera& camera);
+float get_camera_fovx(const yocto_camera& camera);
+float get_camera_fovy(const yocto_camera& camera);
+float set_camera_aspect(const yocto_camera& camera);
 void  set_camera_fovy(
      yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
-vec2i evaluate_image_size(const yocto_camera& camera, int yresolution);
+vec2i get_image_size(const yocto_camera& camera, int yresolution);
 void  set_camera_view(yocto_camera& camera, const bbox3f& bbox,
      const vec2f& film = {0.036f, 0.024f}, float focal = 0.050f);
 
