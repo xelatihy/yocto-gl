@@ -211,7 +211,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             if (ij.x >= 0 && ij.x < app.rendered_image.size.x && ij.y >= 0 &&
                 ij.y < app.rendered_image.size.y) {
                 draw_coloredit_opengl_widget(
-                    win, "pixel", at(app.rendered_image, ij.x, ij.y));
+                    win, "pixel", at(app.rendered_image, ij));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);

@@ -2980,12 +2980,12 @@ struct image {
 
 // Element access.
 template <typename T>
-inline T& at(image<T>& img, int i, int j) {
-    return img.pixels[j * img.size.x + i];
+inline T& at(image<T>& img, const vec2i& ij) {
+    return img.pixels[ij.y * img.size.x + ij.x];
 }
 template <typename T>
-inline const T& at(const image<T>& img, int i, int j) {
-    return img.pixels[j * img.size.x + i];
+inline const T& at(const image<T>& img, const vec2i& ij) {
+    return img.pixels[ij.y * img.size.x + ij.x];
 }
 
 // Size
@@ -3166,12 +3166,12 @@ struct volume {
 
 // Element access
 template <typename T>
-T& at(volume<T>& vol, int i, int j, int k) {
-    return vol.voxels[k * vol.size.x * vol.size.y + j * vol.size.x + i];
+T& at(volume<T>& vol, const vec3i& ijk) {
+    return vol.voxels[ijk.z * vol.size.x * vol.size.y + ijk.y * vol.size.x + ijk.x];
 }
 template <typename T>
-const T& at(const volume<T>& vol, int i, int j, int k) {
-    return vol.voxels[k * vol.size.x * vol.size.y + j * vol.size.x + i];
+const T& at(const volume<T>& vol, const vec3i& ijk) {
+    return vol.voxels[ijk.z * vol.size.x * vol.size.y + ijk.y * vol.size.x + ijk.x];
 }
 
 // make a simple example volume
@@ -3527,8 +3527,9 @@ float             sample_surface_element_pdf(const yocto_surface& surface,
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
-vec4f lookup_texture(const yocto_texture& texture, int i, int j);
+vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij);
 vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
+float lookup_voltexture(const yocto_voltexture& texture, const vec3i& ijk);
 float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -4040,7 +4041,7 @@ inline image<T> get_image_region(const image<T>& img, const image_region& region
     auto clipped = image<T>{region.size};
     for (auto j = 0; j < region.size.y; j++) {
         for (auto i = 0; i < region.size.x; i++) {
-            at(clipped, i, j) = at(img, i + region.offset.x, j + region.offset.y);
+            at(clipped, {i, j}) = at(img, {i + region.offset.x, j + region.offset.y});
         }
     }
     return clipped;

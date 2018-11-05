@@ -3419,7 +3419,7 @@ void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
-            at(ldr, i, j) = tonemap_filmic(at(hdr, i, j), exposure, filmic, srgb);
+            at(ldr, {i, j}) = tonemap_filmic(at(hdr, {i, j}), exposure, filmic, srgb);
         }
     }
 }
@@ -3439,7 +3439,7 @@ image<vec4f> make_grid_image(const vec2i& size, int tiles, const vec4f& c0, cons
         for (int i = 0; i < img.size.x; i++) {
             auto c = i % tile == 0 || i % tile == tile - 1 || j % tile == 0 ||
                      j % tile == tile - 1;
-            at(img, i, j) = (c) ? c0 : c1;
+            at(img, {i, j}) = (c) ? c0 : c1;
         }
     }
     return img;
@@ -3453,7 +3453,7 @@ image<vec4f> make_checker_image(
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
             auto c        = (i / tile + j / tile) % 2 == 0;
-            at(img, i, j) = (c) ? c0 : c1;
+            at(img, {i, j}) = (c) ? c0 : c1;
         }
     }
     return img;
@@ -3473,7 +3473,7 @@ image<vec4f> make_bumpdimple_image(const vec2i& size, int tiles) {
             if (r < 0.5f) {
                 h += (c) ? (0.5f - r) : -(0.5f - r);
             }
-            at(img, i, j) = {h, h, h, 1};
+            at(img, {i, j}) = {h, h, h, 1};
         }
     }
     return img;
@@ -3486,7 +3486,7 @@ image<vec4f> make_ramp_image(
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
             auto u        = (float)i / (float)img.size.x;
-            at(img, i, j) = c0 * (1 - u) + c1 * u;
+            at(img, {i, j}) = c0 * (1 - u) + c1 * u;
         }
     }
     return img;
@@ -3500,7 +3500,7 @@ image<vec4f> make_gammaramp_imagef(const vec2i& size) {
             auto u = j / float(img.size.y - 1);
             if (i < img.size.x / 3) u = pow(u, 2.2f);
             if (i > (img.size.x * 2) / 3) u = pow(u, 1 / 2.2f);
-            at(img, i, j) = {u, u, u, 1};
+            at(img, {i, j}) = {u, u, u, 1};
         }
     }
     return img;
@@ -3512,7 +3512,7 @@ image<vec4f> make_uvramp_image(const vec2i& size) {
     auto img = image<vec4f>{size};
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
-            at(img, i, j) = {
+            at(img, {i, j}) = {
                 i / (float)(img.size.x - 1), j / (float)(img.size.y - 1), 0, 1};
         }
     }
@@ -3541,7 +3541,7 @@ image<vec4f> make_uvgrid_image(const vec2i& size, int tiles, bool colored) {
                 ps = 0.2f;
             }
             auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
-            at(img, i, img.size.y - j - 1) = {rgb.x, rgb.y, rgb.z, 1};
+            at(img, {i, img.size.y - j - 1}) = {rgb.x, rgb.y, rgb.z, 1};
         }
     }
     return img;
@@ -3554,7 +3554,7 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
             auto i1 = (i + 1) % img.size.x, j1 = (j + 1) % img.size.y;
-            auto p00 = at(img, i, j), p10 = at(img, i1, j), p01 = at(img, i, j1);
+            auto p00 = at(img, {i, j}), p10 = at(img, {i1, j}), p01 = at(img, {i, j1});
             auto g00    = (p00.x + p00.y + p00.z) / 3;
             auto g01    = (p01.x + p01.y + p01.z) / 3;
             auto g10    = (p10.x + p10.y + p10.z) / 3;
@@ -3563,7 +3563,7 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
             normal.y = -normal.y;  // make green pointing up, even if y axis
                                    // points down
             normal         = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            at(norm, i, j) = {normal.x, normal.y, normal.z, 1};
+            at(norm, {i, j}) = {normal.x, normal.y, normal.z, 1};
         }
     }
     return norm;
@@ -3664,7 +3664,7 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma    = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
             auto col      = sky(theta, gamma) + sun(theta, gamma);
-            at(img, i, j) = {col.x, col.y, col.z, 1};
+            at(img, {i, j}) = {col.x, col.y, col.z, 1};
         }
     }
 
@@ -3673,7 +3673,7 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
         for (auto j = 0; j < img.size.y / 2; j++) {
             auto theta = pif * ((j + 0.5f) / img.size.y);
             for (int i = 0; i < img.size.x; i++) {
-                auto pxl   = at(img, i, j);
+                auto pxl   = at(img, {i, j});
                 auto le    = vec3f{pxl.x, pxl.y, pxl.z};
                 auto angle = sin(theta) * 4 * pif / (img.size.x * img.size.y);
                 ground += le * (ground_albedo / pif) * cos(theta) * angle;
@@ -3681,7 +3681,7 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
         }
         for (auto j = img.size.y / 2; j < img.size.y; j++) {
             for (int i = 0; i < img.size.x; i++) {
-                at(img, i, j) = {ground.x, ground.y, ground.z, 1};
+                at(img, {i, j}) = {ground.x, ground.y, ground.z, 1};
             }
         }
     }
@@ -3704,7 +3704,7 @@ image<vec4f> make_lights_image(const vec2i& size, const vec3f& le,
                 auto lphi = 2 * pif * (l + 0.5f) / nlights;
                 inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
             }
-            at(img, i, j) = {le.x, le.y, le.z, 1};
+            at(img, {i, j}) = {le.x, le.y, le.z, 1};
         }
     }
     return img;
@@ -3720,7 +3720,7 @@ image<vec4f> make_noise_image(const vec2i& size, float scale, bool wrap) {
                      scale;
             auto g        = perlin_noise(p, wrap3i);
             g             = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            at(img, i, j) = {g, g, g, 1};
+            at(img, {i, j}) = {g, g, g, 1};
         }
     }
     return img;
@@ -3737,7 +3737,7 @@ image<vec4f> make_fbm_image(const vec2i& size, float scale,
                      scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
-            at(img, i, j) = {g, g, g, 1};
+            at(img, {i, j}) = {g, g, g, 1};
         }
     }
     return img;
@@ -3755,7 +3755,7 @@ image<vec4f> make_ridge_image(const vec2i& size, float scale,
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g             = clamp(g, 0.0f, 1.0f);
-            at(img, i, j) = {g, g, g, 1};
+            at(img, {i, j}) = {g, g, g, 1};
         }
     }
     return img;
@@ -3773,7 +3773,7 @@ image<vec4f> make_turbulence_image(const vec2i& size, float scale,
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
             g             = clamp(g, 0.0f, 1.0f);
-            at(img, i, j) = {g, g, g, 1};
+            at(img, {i, j}) = {g, g, g, 1};
         }
     }
     return img;
@@ -3796,7 +3796,7 @@ volume<float> make_test_volume1f(const vec3i& size, float scale, float exponent)
                     i / (float)size.x, j / (float)size.y, k / (float)size.z};
                 float value = pow(
                     max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
-                at(vol, i, j, k) = clamp(value, 0.0f, 1.0f);
+                at(vol, {i, j, k}) = clamp(value, 0.0f, 1.0f);
             }
         }
     }
@@ -4260,7 +4260,7 @@ vector<float> compute_environment_texels_cdf(
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
-            auto value  = lookup_texture(texture, ij.x, ij.y);
+            auto value  = lookup_texture(texture, ij);
             elem_cdf[i] = max(xyz(value)) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
@@ -5027,13 +5027,13 @@ vec2i evaluate_texture_size(const yocto_texture& texture) {
 }
 
 // Lookup a texture value
-vec4f lookup_texture(const yocto_texture& texture, int i, int j) {
+vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij) {
     if (!texture.hdr_image.pixels.empty()) {
-        return at(texture.hdr_image, i, j);
+        return at(texture.hdr_image, ij);
     } else if (!texture.ldr_image.pixels.empty() && !texture.ldr_as_linear) {
-        return srgb_to_linear(byte_to_float(at(texture.ldr_image, i, j)));
+        return srgb_to_linear(byte_to_float(at(texture.ldr_image, ij)));
     } else if (!texture.ldr_image.pixels.empty() && texture.ldr_as_linear) {
-        return byte_to_float(at(texture.ldr_image, i, j));
+        return byte_to_float(at(texture.ldr_image, ij));
     } else {
         return zero4f;
     }
@@ -5069,20 +5069,20 @@ vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord) {
     if (texture.no_interpolation) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
-        return lookup_texture(texture, i, j);
+        return lookup_texture(texture, {i, j});
     }
 
     // handle interpolation
-    return lookup_texture(texture, i, j) * (1 - u) * (1 - v) +
-           lookup_texture(texture, i, jj) * (1 - u) * v +
-           lookup_texture(texture, ii, j) * u * (1 - v) +
-           lookup_texture(texture, ii, jj) * u * v;
+    return lookup_texture(texture, {i, j}) * (1 - u) * (1 - v) +
+           lookup_texture(texture, {i, jj}) * (1 - u) * v +
+           lookup_texture(texture, {ii, j}) * u * (1 - v) +
+           lookup_texture(texture, {ii, jj}) * u * v;
 }
 
 // Lookup a texture value
-float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k) {
+float lookup_voltexture(const yocto_voltexture& texture, const vec3i& ijk) {
     if (texture.volume_data.voxels.empty()) {
-        return at(texture.volume_data, i, j, k);
+        return at(texture.volume_data, ijk);
     } else {
         return 0;
     }
@@ -5114,18 +5114,18 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         k = w < 0.5 ? k : min(k + 1, depth - 1);
-        return lookup_voltexture(texture, i, j, k);
+        return lookup_voltexture(texture, {i, j, k});
     }
 
     // trilinear interpolation
-    return lookup_voltexture(texture, i, j, k) * (1 - u) * (1 - v) * (1 - w) +
-           lookup_voltexture(texture, ii, j, k) * u * (1 - v) * (1 - w) +
-           lookup_voltexture(texture, i, jj, k) * (1 - u) * v * (1 - w) +
-           lookup_voltexture(texture, i, j, kk) * (1 - u) * (1 - v) * w +
-           lookup_voltexture(texture, i, jj, kk) * (1 - u) * v * w +
-           lookup_voltexture(texture, ii, j, kk) * u * (1 - v) * w +
-           lookup_voltexture(texture, ii, jj, k) * u * v * (1 - w) +
-           lookup_voltexture(texture, ii, jj, kk) * u * v * w;
+    return lookup_voltexture(texture, {i, j, k}) * (1 - u) * (1 - v) * (1 - w) +
+           lookup_voltexture(texture, {ii, j, k}) * u * (1 - v) * (1 - w) +
+           lookup_voltexture(texture, {i, jj, k}) * (1 - u) * v * (1 - w) +
+           lookup_voltexture(texture, {i, j, kk}) * (1 - u) * (1 - v) * w +
+           lookup_voltexture(texture, {i, jj, kk}) * (1 - u) * v * w +
+           lookup_voltexture(texture, {ii, j, kk}) * u * (1 - v) * w +
+           lookup_voltexture(texture, {ii, jj, k}) * u * v * (1 - w) +
+           lookup_voltexture(texture, {ii, jj, kk}) * u * v * w;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -7171,7 +7171,7 @@ vec4f trace_sample(const yocto_scene& scene, const bvh_scene& bvh,
     image<rng_state>& rngs, const trace_params& params) {
     _trace_npaths += 1;
     auto& camera       = scene.cameras.at(params.camera_id);
-    auto& rng          = at(rngs, ij.x, ij.y);
+    auto& rng          = at(rngs, ij);
     auto  ray          = sample_camera_ray(camera, ij, image_size, rng);
     auto  radiance     = zero3f;
     auto  hit          = false;
@@ -7194,13 +7194,13 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
     image<rng_state>& rngs, const trace_params& params) {
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
-            at(rendered_image, i, j) *= current_sample;
+            at(rendered_image, {i, j}) *= current_sample;
             for (auto s = 0; s < num_samples; s++) {
-                at(rendered_image, i, j) += trace_sample(scene, bvh, lights,
+                at(rendered_image, {i, j}) += trace_sample(scene, bvh, lights,
                     {i, j}, {rendered_image.size.x, rendered_image.size.y}, rngs,
                     params);
             }
-            at(rendered_image, i, j) /= current_sample + num_samples;
+            at(rendered_image, {i, j}) /= current_sample + num_samples;
         }
     }
 }
@@ -7211,7 +7211,7 @@ image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t seed) {
     auto rng  = make_rng(1301081);
     for (auto j = 0; j < rngs.size.y; j++) {
         for (auto i = 0; i < rngs.size.x; i++) {
-            at(rngs, i, j) = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
+            at(rngs, {i, j}) = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
     return rngs;
@@ -7348,8 +7348,8 @@ void trace_async_start(image<vec4f>& rendered_image,
             for (auto i = 0; i < rendered_image.size.x; i++) {
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
-                at(rendered_image, i, j) = at(pimg, pi, pj);
-                at(display_image, i, j)  = at(pdisplay, pi, pj);
+                at(rendered_image, {i, j}) = at(pimg, {pi, pj});
+                at(display_image, {i, j})  = at(pdisplay, {pi, pj});
             }
         }
         queue.push({zero2i, rendered_image.size});
