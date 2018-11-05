@@ -50,7 +50,7 @@ int main(int argc, char* argv[]) {
         parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
     params.no_parallel = parse_arg(
         parser, "--noparallel", false, "Disable parallel execution.");
-    params.random_seed = parse_arg(
+    auto random_seed = parse_arg(
         parser, "--seed", 13, "Seed for the random number generators.");
     params.samples_per_batch = parse_arg(
         parser, "--nbatch,-b", 16, "Samples per batch.");
@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
     auto image_size = get_camera_image_size(
         scene.cameras[params.camera_id], params.image_size);
     auto rendered_image = make_image<vec4f>(image_size);
-    auto trace_rngs     = make_trace_rngs(image_size, params.random_seed);
+    auto trace_rngs     = make_trace_rngs(image_size, random_seed);
 
     // render
     auto scope = log_trace_begin("rendering image");

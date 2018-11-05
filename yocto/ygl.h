@@ -3671,7 +3671,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 namespace ygl {
 
 // Default trace seed
-const auto trace_default_seed = 961748941;
+const auto trace_default_seed = 961748941ull;
 
 // Type of tracing algorithm to use
 enum struct trace_type {
@@ -3706,7 +3706,6 @@ struct trace_params {
     float      pixel_clamp       = 100;
     int        samples_per_batch = 16;
     bool       no_parallel       = false;
-    int        random_seed       = trace_default_seed;
 };
 
 // Trace lights used during rendering.
@@ -3725,7 +3724,7 @@ inline bool  empty(const trace_lights& lights) {
 }
 
 // Initialize state of the renderer.
-image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed);
+image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,

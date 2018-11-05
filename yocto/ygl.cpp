@@ -7273,7 +7273,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto image_size = get_camera_image_size(
         scene.cameras[params.camera_id], params.image_size);
     auto rendered_image = make_image<vec4f>(image_size);
-    auto rngs           = make_trace_rngs(image_size, params.random_seed);
+    auto rngs           = make_trace_rngs(image_size);
 
     if (params.no_parallel) {
         for (auto& region : make_image_regions(image_size)) {

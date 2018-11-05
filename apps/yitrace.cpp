@@ -49,6 +49,7 @@ struct app_state {
     bool       display_filmic    = false;
     bool       display_srgb      = true;
     int                        preview_ratio = 8;
+    uint64_t   random_seed = 7;
 
     // rendering state
     trace_params                   params         = {};
@@ -93,7 +94,7 @@ void start_rendering_async(app_state& app) {
     app.rendered_image = make_image<vec4f>(image_size);
     app.display_image  = make_image<vec4f>(image_size);
     app.preview_image  = make_image<vec4f>(image_size / app.preview_ratio);
-    app.trace_rngs     = make_trace_rngs(image_size, app.params.random_seed);
+    app.trace_rngs     = make_trace_rngs(image_size, app.random_seed);
 
     auto preview_params = app.params;
     preview_params.image_size /= app.preview_ratio;
@@ -204,7 +205,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             edited += draw_slider_opengl_widget(
                 win, "nbounces", app.params.max_bounces, 1, 10);
             edited += draw_slider_opengl_widget(
-                win, "seed", (int&)app.params.random_seed, 0, 1000);
+                win, "seed", (int&)app.random_seed, 0, 1000000);
             edited += draw_slider_opengl_widget(
                 win, "pratio", app.preview_ratio, 1, 64);
             if (edited) app.update_list.push_back({"app", -1});
@@ -423,7 +424,7 @@ int main(int argc, char* argv[]) {
         parser, "--nbounces", 4, "Maximum number of bounces.");
     app.params.pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    app.params.random_seed = parse_arg(
+    app.random_seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");
     app.use_embree_bvh = parse_arg(
         parser, "--embree", false, "Use Embree ratracer");
