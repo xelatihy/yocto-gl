@@ -3699,10 +3699,8 @@ const auto trace_type_names = vector<string>{"path", "direct", "environment",
 // Trace options
 struct trace_params {
     trace_type sample_tracer     = trace_type::path;
-    int        num_samples       = 256;
     int        max_bounces       = 8;
     float      pixel_clamp       = 100;
-    int        samples_per_batch = 16;
 };
 
 // Trace lights used during rendering.
@@ -3725,7 +3723,7 @@ image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed =
 
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
-    const trace_lights& lights, const trace_params& params, bool no_parallel = false);
+    const trace_lights& lights, int num_samples, const trace_params& params, bool no_parallel = false);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
@@ -3738,7 +3736,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
 // params.
 void trace_async_start(image<vec4f>& rendered_image, 
     const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
-    const trace_lights& lights, image<rng_state>& rngs, vector<thread>& threads,
+    const trace_lights& lights, int num_samples, image<rng_state>& rngs, vector<thread>& threads,
     bool& stop_flag, int& current_sample, concurrent_queue<image_region>& queue,
     const trace_params& params);
 // Stop the asynchronous renderer.

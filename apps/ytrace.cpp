@@ -40,7 +40,7 @@ int main(int argc, char* argv[]) {
     auto camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
     auto image_size  = vec2i{0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    params.num_samples = parse_arg(
+    auto num_samples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
     params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,
         "Trace type.", trace_type_names);
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
         parser, "--noparallel", false, "Disable parallel execution.");
     auto random_seed = parse_arg(
         parser, "--seed", 13, "Seed for the random number generators.");
-    params.samples_per_batch = parse_arg(
+    auto samples_per_batch = parse_arg(
         parser, "--nbatch,-b", 16, "Samples per batch.");
     auto save_batch = parse_arg(
         parser, "--save-batch", false, "Save images progressively");
@@ -104,13 +104,14 @@ int main(int argc, char* argv[]) {
 
     // render
     auto scope = log_trace_begin("rendering image");
-    for (auto sample = 0; sample < params.num_samples;
-         sample += params.samples_per_batch) {
+    for (auto sample = 0; sample < num_samples;
+         sample += samples_per_batch) {
+        auto nsamples = min(samples_per_batch, num_samples - sample);
         trace_samples(rendered_image, scene,  camera, bvh, lights, sample,
-            params.samples_per_batch, trace_rngs, params, no_parallel);
+            nsamples, trace_rngs, params, no_parallel);
         if (save_batch) {
             auto filename = replace_extension(
-                imfilename, to_string(sample + params.samples_per_batch) + "." +
+                imfilename, to_string(sample + nsamples) + "." +
                                 get_extension(imfilename));
             if (!save_tonemapped_image(
                     filename, rendered_image, exposure, filmic, srgb))

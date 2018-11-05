@@ -47,6 +47,7 @@ struct app_state {
     // rendering params
     int        camera_id         = 0;
     vec2i      image_size        = {1280, 720};
+    int        num_samples       = 256;
     float      display_exposure  = 0;
     bool       display_filmic    = false;
     bool       display_srgb      = true;
@@ -99,13 +100,12 @@ void start_rendering_async(app_state& app) {
     app.trace_rngs     = make_trace_rngs(image_size, app.random_seed);
 
     auto preview_params = app.params;
-    preview_params.num_samples = 1;
     trace_image(app.preview_image,
-        app.scene, camera, app.bvh, app.lights, preview_params);
+        app.scene, camera, app.bvh, app.lights, 1, preview_params);
     app.trace_queue.push({zero2i, zero2i});
 
     trace_async_start(app.rendered_image, app.scene, camera, app.bvh, app.lights,
-        app.trace_rngs, app.trace_threads, app.trace_stop, app.trace_sample,
+        app.num_samples, app.trace_rngs, app.trace_threads, app.trace_stop, app.trace_sample,
         app.trace_queue, app.params);
 }
 
@@ -200,7 +200,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             edited += draw_slider_opengl_widget(
                 win, "size", app.image_size, 256, 4096);
             edited += draw_slider_opengl_widget(
-                win, "nsamples", app.params.num_samples, 16, 4096);
+                win, "nsamples", app.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
                 (int&)app.params.sample_tracer, trace_type_names);
             edited += draw_slider_opengl_widget(
@@ -417,7 +417,7 @@ int main(int argc, char* argv[]) {
     app.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
     app.image_size  = {0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    app.params.num_samples = parse_arg(
+    app.num_samples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.params.sample_tracer = parse_arge(parser, "--tracer,-t",
         trace_type::path, "Tracer type.", trace_type_names);
