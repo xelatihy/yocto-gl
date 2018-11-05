@@ -44,30 +44,33 @@ inline const unordered_map<int, string>& animation_type_names() {
 }
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, int index, const vector<T>& vals,
+inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
     tuple<string, int>& sel, const string& sel_type);
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, int index, const vector<T*>& vals,
+inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
     tuple<string, int>& sel, const string& sel_type);
 
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, const yocto_camera& value, tuple<string, int>& sel) {}
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, const yocto_texture& value, tuple<string, int>& sel) {}
+inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, const yocto_camera& value,
+    tuple<string, int>& sel) {}
+inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, const yocto_texture& value,
+    tuple<string, int>& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_voltexture& value,
     tuple<string, int>& sel) {}
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, const yocto_material& value, tuple<string, int>& sel) {
-    draw_opengl_widgets_scene_tree(win, "emission", scene, value.emission_texture,
-        scene.textures, sel, "texture");
+inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, const yocto_material& value,
+    tuple<string, int>& sel) {
+    draw_opengl_widgets_scene_tree(win, "emission", scene,
+        value.emission_texture, scene.textures, sel, "texture");
     draw_opengl_widgets_scene_tree(win, "diffuse", scene, value.diffuse_texture,
         scene.textures, sel, "texture");
-    draw_opengl_widgets_scene_tree(win, "specular", scene, value.specular_texture,
-        scene.textures, sel, "texture");
+    draw_opengl_widgets_scene_tree(win, "specular", scene,
+        value.specular_texture, scene.textures, sel, "texture");
     draw_opengl_widgets_scene_tree(
         win, "bump", scene, value.bump_texture, scene.textures, sel, "texture");
     draw_opengl_widgets_scene_tree(win, "displament", scene,
@@ -75,25 +78,28 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const s
     draw_opengl_widgets_scene_tree(win, "normal", scene, value.normal_texture,
         scene.textures, sel, "texture");
 }
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, const yocto_shape& value, tuple<string, int>& sel) {
+inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, const yocto_shape& value,
+    tuple<string, int>& sel) {
     draw_opengl_widgets_scene_tree(win, "material", scene, value.material,
         scene.materials, sel, "material");
 }
 
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, const yocto_instance& value, tuple<string, int>& sel) {
+inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, const yocto_instance& value,
+    tuple<string, int>& sel) {
     draw_opengl_widgets_scene_tree(
         win, "shape", scene, value.shape, scene.shapes, sel, "shape");
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_environment& value,
     tuple<string, int>& sel) {
-    draw_opengl_widgets_scene_tree(win, "emission", scene, value.emission_texture,
-        scene.textures, sel, "texture");
+    draw_opengl_widgets_scene_tree(win, "emission", scene,
+        value.emission_texture, scene.textures, sel, "texture");
 }
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, const yocto_scene_node& value, tuple<string, int>& sel) {
+inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, const yocto_scene_node& value,
+    tuple<string, int>& sel) {
     draw_opengl_widgets_scene_tree(win, "instance", scene, value.instance,
         scene.instances, sel, "instance");
     draw_opengl_widgets_scene_tree(
@@ -104,22 +110,23 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const s
         win, "parent", scene, value.parent, scene.nodes, sel, "node");
     auto cid = 0;
     for (auto ch : value.children) {
-        draw_opengl_widgets_scene_tree(win, "child" + to_string(cid++), scene, ch,
-            scene.nodes, sel, "node");
+        draw_opengl_widgets_scene_tree(win, "child" + to_string(cid++), scene,
+            ch, scene.nodes, sel, "node");
     }
 }
-inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, const yocto_animation& value, tuple<string, int>& sel) {
+inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, const yocto_animation& value,
+    tuple<string, int>& sel) {
     auto tid = 0;
     for (auto tg : value.node_targets) {
-        draw_opengl_widgets_scene_tree(win, "target" + to_string(tid++), scene, tg,
-            scene.nodes, sel, "node");
+        draw_opengl_widgets_scene_tree(win, "target" + to_string(tid++), scene,
+            tg, scene.nodes, sel, "node");
     }
 }
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, int index, const vector<T>& vals,
+inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
     tuple<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
     auto lbl = vals[index].name;
@@ -133,8 +140,8 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win, const strin
 }
 
 template <typename T>
-inline void draw_opengl_widgets_scene_tree(const opengl_window& win, const string& lbl_,
-    yocto_scene& scene, int index, const vector<T*>& vals,
+inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
+    const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
     tuple<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
     auto lbl = vals[index]->name;
@@ -161,13 +168,15 @@ inline void draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.shapes, sel, "shape");
         end_treenode_opengl_widget(win);
     }
-    if (!scene.instances.empty() && begin_treenode_opengl_widget(win, "instances")) {
+    if (!scene.instances.empty() &&
+        begin_treenode_opengl_widget(win, "instances")) {
         for (auto v = 0; v < scene.instances.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.instances, sel, "instance");
         end_treenode_opengl_widget(win);
     }
-    if (!scene.materials.empty() && begin_treenode_opengl_widget(win, "materials")) {
+    if (!scene.materials.empty() &&
+        begin_treenode_opengl_widget(win, "materials")) {
         for (auto v = 0; v < scene.materials.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.materials, sel, "material");
@@ -192,7 +201,8 @@ inline void draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.nodes, sel, "node");
         end_treenode_opengl_widget(win);
     }
-    if (!scene.animations.empty() && begin_treenode_opengl_widget(win, "animations")) {
+    if (!scene.animations.empty() &&
+        begin_treenode_opengl_widget(win, "animations")) {
         for (auto v = 0; v < scene.animations.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.animations, sel, "animation");
@@ -211,10 +221,12 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_slider_opengl_widget(win, "frame.o", value.frame.o.x, -10, 10);
     edited += draw_checkbox_opengl_widget(win, "ortho", value.orthographic);
     edited += draw_slider_opengl_widget(win, "film", value.film_size, 0.01f, 1);
-    edited += draw_slider_opengl_widget(win, "focal", value.focal_length, 0.01f, 1);
+    edited += draw_slider_opengl_widget(
+        win, "focal", value.focal_length, 0.01f, 1);
     edited += draw_slider_opengl_widget(
         win, "focus", value.focus_distance, 0.01f, 1000);
-    edited += draw_slider_opengl_widget(win, "aperture", value.lens_aperture, 0, 5);
+    edited += draw_slider_opengl_widget(
+        win, "aperture", value.lens_aperture, 0, 5);
     return edited;
 }
 
@@ -224,9 +236,11 @@ inline bool draw_opengl_widgets_scene_inspector(
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
     edited += draw_textinput_opengl_widget(win, "path", value.filename);
-    edited += draw_checkbox_opengl_widget(win, "clamp_to_edge", value.clamp_to_edge);
+    edited += draw_checkbox_opengl_widget(
+        win, "clamp_to_edge", value.clamp_to_edge);
     edited += draw_slider_opengl_widget(win, "scale", value.height_scale, 0, 1);
-    edited += draw_checkbox_opengl_widget(win, "ldr_as_linear", value.ldr_as_linear);
+    edited += draw_checkbox_opengl_widget(
+        win, "ldr_as_linear", value.ldr_as_linear);
     draw_label_opengl_widget(win, "hdr_image", "%d x %d", value.hdr_image.width,
         value.hdr_image.height);
     draw_label_opengl_widget(win, "ldr_image", "%d x %d", value.ldr_image.width,
@@ -238,11 +252,13 @@ inline bool draw_opengl_widgets_scene_inspector(
     const opengl_window& win, yocto_material& value, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
-    edited += draw_coloredit_opengl_widget(win, "emission", value.emission);  // TODO:
-                                                                         // HDR
+    edited += draw_coloredit_opengl_widget(
+        win, "emission", value.emission);  // TODO:
+                                           // HDR
     edited += draw_coloredit_opengl_widget(win, "diffuse", value.diffuse);
     edited += draw_coloredit_opengl_widget(win, "specular", value.specular);
-    edited += draw_coloredit_opengl_widget(win, "transmission", value.transmission);
+    edited += draw_coloredit_opengl_widget(
+        win, "transmission", value.transmission);
     edited += draw_slider_opengl_widget(win, "roughness", value.roughness, 0, 1);
     edited += draw_slider_opengl_widget(win, "opacity", value.opacity, 0, 1);
     edited += draw_checkbox_opengl_widget(win, "fresnel", value.fresnel);
@@ -272,8 +288,10 @@ inline bool draw_opengl_widgets_scene_inspector(
         value.displacement_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(
         win, "normal_texture", value.normal_texture, scene.textures, true);
-    edited += draw_checkbox_opengl_widget(win, "base metallic", value.base_metallic);
-    edited += draw_checkbox_opengl_widget(win, "glTF textures", value.gltf_textures);
+    edited += draw_checkbox_opengl_widget(
+        win, "base metallic", value.base_metallic);
+    edited += draw_checkbox_opengl_widget(
+        win, "glTF textures", value.gltf_textures);
     return edited;
 }
 
@@ -317,7 +335,8 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_slider_opengl_widget(win, "frame.y", value.frame.y, -1, 1);
     edited += draw_slider_opengl_widget(win, "frame.z", value.frame.z, -1, 1);
     edited += draw_slider_opengl_widget(win, "frame.o", value.frame.o, -10, 10);
-    edited += draw_coloredit_opengl_widget(win, "ke", value.emission);  // TODO: HDR
+    edited += draw_coloredit_opengl_widget(win, "ke", value.emission);  // TODO:
+                                                                        // HDR
     edited += draw_combobox_opengl_widget(
         win, "ke texture", value.emission_texture, scene.textures, true);
     return edited;
@@ -357,7 +376,8 @@ inline bool draw_opengl_widgets_scene_inspector(
     draw_label_opengl_widget(win, "times", "%ld", value.keyframes_times.size());
     draw_label_opengl_widget(
         win, "translation", "%ld", value.translation_keyframes.size());
-    draw_label_opengl_widget(win, "rotation", "%ld", value.rotation_keyframes.size());
+    draw_label_opengl_widget(
+        win, "rotation", "%ld", value.rotation_keyframes.size());
     draw_label_opengl_widget(win, "scale", "%ld", value.scale_keyframes.size());
     draw_label_opengl_widget(
         win, "weights", "%ld", value.morph_weights_keyframes.size());
@@ -365,8 +385,8 @@ inline bool draw_opengl_widgets_scene_inspector(
     return edited;
 }
 
-inline bool draw_opengl_widgets_scene_tree(const opengl_window& win, const string& lbl,
-    yocto_scene& scene, tuple<string, int>& sel,
+inline bool draw_opengl_widgets_scene_tree(const opengl_window& win,
+    const string& lbl, yocto_scene& scene, tuple<string, int>& sel,
     vector<tuple<string, int>>& update_list, int height) {
     draw_opengl_widgets_scene_tree(win, scene, sel);
     auto update_len = update_list.size();
@@ -402,10 +422,12 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     auto update_len = update_list.size();
 
     if (get<0>(sel) == "camera")
-        if (draw_opengl_widgets_scene_inspector(win, scene.cameras[get<1>(sel)], scene))
+        if (draw_opengl_widgets_scene_inspector(
+                win, scene.cameras[get<1>(sel)], scene))
             update_list.push_back({"camera", get<1>(sel)});
     if (get<0>(sel) == "shape")
-        if (draw_opengl_widgets_scene_inspector(win, scene.shapes[get<1>(sel)], scene))
+        if (draw_opengl_widgets_scene_inspector(
+                win, scene.shapes[get<1>(sel)], scene))
             update_list.push_back({"shape", get<1>(sel)});
     if (get<0>(sel) == "texture")
         if (draw_opengl_widgets_scene_inspector(
@@ -424,7 +446,8 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
                 win, scene.instances[get<1>(sel)], scene))
             update_list.push_back({"instance", get<1>(sel)});
     if (get<0>(sel) == "node")
-        if (draw_opengl_widgets_scene_inspector(win, scene.nodes[get<1>(sel)], scene))
+        if (draw_opengl_widgets_scene_inspector(
+                win, scene.nodes[get<1>(sel)], scene))
             update_list.push_back({"node", get<1>(sel)});
     if (get<0>(sel) == "animation")
         if (draw_opengl_widgets_scene_inspector(

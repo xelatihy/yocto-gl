@@ -34,18 +34,18 @@
 // Application state
 struct app_state {
     // loading params
-    string       filename   = "scene.json";
-    string       imfilename = "out.obj";
-    bool use_embree_bvh = false;
-    bool double_sided = false;
-    bool add_skyenv = false;
+    string filename       = "scene.json";
+    string imfilename     = "out.obj";
+    bool   use_embree_bvh = false;
+    bool   double_sided   = false;
+    bool   add_skyenv     = false;
 
     // scene
     yocto_scene scene = {};
     bvh_scene   bvh   = {};
 
     // rendering state
-    trace_params params     = {};
+    trace_params params = {};
     trace_state  state  = {};
     trace_lights lights = {};
 
@@ -59,24 +59,22 @@ struct app_state {
     bool                       navigation_fps = false;
     bool                       quiet          = false;
     int64_t                    trace_start    = 0;
-    opengl_texture                  gl_txt         = {};
+    opengl_texture             gl_txt         = {};
 
     // app status
-    bool load_done = false, load_running = false;
+    bool   load_done = false, load_running = false;
     string status = "";
 };
 
 void start_rendering_async(app_state& app) {
     trace_async_stop(app.state);
-    app.status = "rendering image";
+    app.status      = "rendering image";
     app.trace_start = get_time();
     app.state       = make_trace_state(app.scene, app.params);
     trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
 }
 
-void stop_rendering_async(app_state& app) {
-    trace_async_stop(app.state);
-}
+void stop_rendering_async(app_state& app) { trace_async_stop(app.state); }
 
 bool load_scene_sync(app_state& app) {
     // scene loading
@@ -101,7 +99,7 @@ bool load_scene_sync(app_state& app) {
 
     // build bvh
     app.status = "computing bvh";
-    app.bvh = make_scene_bvh(app.scene, true, app.use_embree_bvh);
+    app.bvh    = make_scene_bvh(app.scene, true, app.use_embree_bvh);
 
     // init renderer
     app.status = "initializing lights";
@@ -114,9 +112,9 @@ bool load_scene_sync(app_state& app) {
     }
 
     // set flags
-    app.load_done = true;
+    app.load_done    = true;
     app.load_running = false;
-    app.status = "loading done";
+    app.status       = "loading done";
 
     // start rendering
     start_rendering_async(app);
@@ -126,18 +124,18 @@ bool load_scene_sync(app_state& app) {
 }
 
 void load_scene_async(app_state& app) {
-    if(app.load_running) {
+    if (app.load_running) {
         log_error("already loading");
         return;
     }
-    app.load_done = false;
+    app.load_done    = false;
     app.load_running = true;
-    app.status = "uninitialized";
-    app.scene = {};
-    app.bvh = {};
-    app.lights = {};
-    app.state = {};
-    auto load_thread = thread([&app](){load_scene_sync(app);});
+    app.status       = "uninitialized";
+    app.scene        = {};
+    app.bvh          = {};
+    app.lights       = {};
+    app.state        = {};
+    auto load_thread = thread([&app]() { load_scene_sync(app); });
     load_thread.detach();
 }
 
@@ -147,7 +145,7 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (begin_opengl_widgets_window(win, "yitrace")) {
         if (begin_header_opengl_widget(win, "scene")) {
             draw_label_opengl_widget(win, "scene", get_filename(app.filename));
-            if(draw_button_opengl_widget(win, "load")) {
+            if (draw_button_opengl_widget(win, "load")) {
                 stop_rendering_async(app);
                 load_scene_async(app);
             }
@@ -163,8 +161,10 @@ void draw_opengl_widgets(const opengl_window& win) {
             for (auto& camera : app.scene.cameras)
                 cam_names.push_back(camera.name);
             auto edited = 0;
-            edited += draw_combobox_opengl_widget(
-                win, "camera", app.params.camera_id, cam_names);
+            if (app.load_done) {
+                edited += draw_combobox_opengl_widget(
+                    win, "camera", app.params.camera_id, cam_names);
+            }
             edited += draw_slider_opengl_widget(
                 win, "resolution", app.params.vertical_resolution, 256, 4096);
             edited += draw_slider_opengl_widget(
@@ -206,12 +206,12 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             end_header_opengl_widget(win);
         }
-        if (begin_header_opengl_widget(win, "navigate")) {
+        if (app.load_done && begin_header_opengl_widget(win, "navigate")) {
             draw_opengl_widgets_scene_tree(
                 win, "", app.scene, app.selection, app.update_list, 200);
             end_header_opengl_widget(win);
         }
-        if (begin_header_opengl_widget(win, "inspec")) {
+        if (app.load_done && begin_header_opengl_widget(win, "inspec")) {
             draw_opengl_widgets_scene_inspector(
                 win, "", app.scene, app.selection, app.update_list, 200);
             end_header_opengl_widget(win);
@@ -225,12 +225,13 @@ void draw(const opengl_window& win) {
     auto  win_size = get_opengl_window_size(win);
     set_glviewport(get_opengl_framebuffer_size(win));
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
-    if(app.load_done) {
+    if (app.load_done) {
         center_image(app.image_center, app.image_scale,
             {app.state.display_image.width, app.state.display_image.height},
             win_size, app.zoom_to_fit);
         if (!app.gl_txt) {
-            init_opengl_texture(app.gl_txt, app.state.display_image, false, false, false);
+            init_opengl_texture(
+                app.gl_txt, app.state.display_image, false, false, false);
         } else {
             update_opengl_texture(
                 app.gl_txt, app.state.display_image, false, false, false);
@@ -289,9 +290,9 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 // run ui loop
 void run_ui(app_state& app) {
     // window
-    auto win    = opengl_window();
-    init_opengl_window(win, 1280, 720, "yitrace | " + get_filename(app.filename),
-        &app, draw);
+    auto win = opengl_window();
+    init_opengl_window(
+        win, 1280, 720, "yitrace | " + get_filename(app.filename), &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
@@ -309,7 +310,8 @@ void run_ui(app_state& app) {
         auto widgets_active = get_opengl_widgets_active(win);
 
         // handle mouse and keyboard for navigation
-        if (app.load_done && (mouse_left || mouse_right) && !alt_down && !widgets_active) {
+        if (app.load_done && (mouse_left || mouse_right) && !alt_down &&
+            !widgets_active) {
             auto dolly  = 0.0f;
             auto pan    = zero2f;
             auto rotate = zero2f;
@@ -324,7 +326,8 @@ void run_ui(app_state& app) {
         }
 
         // selection
-        if (app.load_done && (mouse_left || mouse_right) && alt_down && !widgets_active) {
+        if (app.load_done && (mouse_left || mouse_right) && alt_down &&
+            !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale,
                 {app.state.rendered_image.width, app.state.rendered_image.height});
@@ -377,7 +380,8 @@ int main(int argc, char* argv[]) {
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.params.random_seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");
-    app.use_embree_bvh = parse_arg(parser, "--embree", false, "Use Embree ratracer");
+    app.use_embree_bvh = parse_arg(
+        parser, "--embree", false, "Use Embree ratracer");
     app.double_sided = parse_arg(
         parser, "--double-sided", false, "Double-sided rendering.");
     app.add_skyenv = parse_arg(

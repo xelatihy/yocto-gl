@@ -79,7 +79,8 @@ void set_glblending(bool enabled) {
     }
 }
 
-bool init_opengl_program(opengl_program& program, const char* vertex, const char* fragment) {
+bool init_opengl_program(
+    opengl_program& program, const char* vertex, const char* fragment) {
     assert(glGetError() == GL_NO_ERROR);
     glGenVertexArrays(1, &program.vertex_array_object_id);
     glBindVertexArray(program.vertex_array_object_id);
@@ -138,15 +139,15 @@ bool init_opengl_program(opengl_program& program, const char* vertex, const char
 }
 
 void delete_opengl_program(opengl_program& program) {
-    if(!program) return;
+    if (!program) return;
     glDeleteProgram(program.program_id);
     glDeleteShader(program.vertex_shader_id);
     glDeleteShader(program.fragment_shader_id);
     program = {};
 }
 
-bool init_opengl_texture(opengl_texture& texture, const image<vec4f>& img, bool as_float,
-    bool linear, bool mipmap) {
+bool init_opengl_texture(opengl_texture& texture, const image<vec4f>& img,
+    bool as_float, bool linear, bool mipmap) {
     texture = opengl_texture();
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.texture_id);
@@ -197,8 +198,8 @@ void update_opengl_texture(opengl_texture& texture, const image<vec4f>& img,
     assert(glGetError() == GL_NO_ERROR);
 }
 
-bool init_opengl_texture(opengl_texture& texture, const image<vec4b>& img, bool as_srgb,
-    bool linear, bool mipmap) {
+bool init_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
+    bool as_srgb, bool linear, bool mipmap) {
     texture = opengl_texture();
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.texture_id);
@@ -228,8 +229,8 @@ bool init_opengl_texture(opengl_texture& texture, const image<vec4b>& img, bool 
     return true;
 }
 
-void update_opengl_texture(opengl_texture& texture, const image<vec4b>& img, bool as_srgb,
-    bool linear, bool mipmap) {
+void update_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
+    bool as_srgb, bool linear, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
@@ -250,7 +251,7 @@ void update_opengl_texture(opengl_texture& texture, const image<vec4b>& img, boo
 }
 
 void delete_opengl_texture(opengl_texture& texture) {
-    if(!texture) return;
+    if (!texture) return;
     glDeleteTextures(1, &texture.texture_id);
     texture = {};
 }
@@ -288,7 +289,7 @@ bool init_opengl_array_buffer(
 }
 
 void delete_opengl_array_buffer(opengl_array_buffer& buffer) {
-    if(!buffer) return;
+    if (!buffer) return;
     glDeleteBuffers(1, &buffer.buffer_id);
     buffer = {};
 }
@@ -296,7 +297,7 @@ void delete_opengl_array_buffer(opengl_array_buffer& buffer) {
 template <typename T>
 bool init_opengl_elementbuffer_impl(
     opengl_elementbuffer& buffer, const vector<T>& data, bool dynamic) {
-    buffer      = opengl_elementbuffer{};
+    buffer           = opengl_elementbuffer{};
     buffer.num       = data.size();
     buffer.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
@@ -322,12 +323,14 @@ bool init_opengl_elementbuffer(
 }
 
 void delete_opengl_elementbuffer(opengl_elementbuffer& buffer) {
-    if(!buffer) return;
+    if (!buffer) return;
     glDeleteBuffers(1, &buffer.buffer_id);
     buffer = {};
 }
 
-void bind_opengl_program(opengl_program& program) { glUseProgram(program.program_id); }
+void bind_opengl_program(opengl_program& program) {
+    glUseProgram(program.program_id);
+}
 void unbind_opengl_program() { glUseProgram(0); }
 
 int get_opengl_uniform_location(const opengl_program& program, const char* name) {
@@ -394,7 +397,8 @@ void set_opengl_uniform(int locatiom, const frame3f& value) {
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_opengl_uniform_texture(int locatiom, const opengl_texture& texture, int unit) {
+void set_opengl_uniform_texture(
+    int locatiom, const opengl_texture& texture, int unit) {
     assert(glGetError() == GL_NO_ERROR);
     glActiveTexture(GL_TEXTURE0 + unit);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
@@ -402,9 +406,10 @@ void set_opengl_uniform_texture(int locatiom, const opengl_texture& texture, int
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void set_opengl_uniform_texture(
-    opengl_program& program, const char* name, const opengl_texture& texture, int unit) {
-    set_opengl_uniform_texture(get_opengl_uniform_location(program, name), texture, unit);
+void set_opengl_uniform_texture(opengl_program& program, const char* name,
+    const opengl_texture& texture, int unit) {
+    set_opengl_uniform_texture(
+        get_opengl_uniform_location(program, name), texture, unit);
 }
 
 void set_opengl_uniform_texture(
@@ -427,11 +432,13 @@ void set_opengl_uniform_texture(opengl_program& program, const char* name,
         get_opengl_uniform_location(program, name_on), texture, unit);
 }
 
-int get_opengl_vertexattrib_location(const opengl_program& program, const char* name) {
+int get_opengl_vertexattrib_location(
+    const opengl_program& program, const char* name) {
     return glGetAttribLocation(program.program_id, name);
 }
 
-void set_opengl_vertexattrib(int locatiom, const opengl_array_buffer& buffer, float value) {
+void set_opengl_vertexattrib(
+    int locatiom, const opengl_array_buffer& buffer, float value) {
     assert(glGetError() == GL_NO_ERROR);
     if (buffer.buffer_id) {
         glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
@@ -500,12 +507,12 @@ void draw_opengl_triangles(const opengl_elementbuffer& buffer, int num) {
 void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
     const vec2i& window_size, const vec2f& image_center, float image_scale) {
     static opengl_program       gl_prog      = {};
-    static opengl_array_buffer   gl_texcoord  = {};
+    static opengl_array_buffer  gl_texcoord  = {};
     static opengl_elementbuffer gl_triangles = {};
 
     // initialization
     if (!gl_prog) {
-        auto vert   = R"(
+        auto vert = R"(
             #version 330
             in vec2 texcoord;
             out vec2 frag_texcoord;
@@ -518,7 +525,7 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
                 frag_texcoord = texcoord;
             }
         )";
-        auto frag   = R"(
+        auto frag = R"(
             #version 330
             in vec2 frag_texcoord;
             out vec4 frag_color;
@@ -528,10 +535,10 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
             }
         )";
         init_opengl_program(gl_prog, vert, frag);
-        init_opengl_array_buffer(gl_texcoord,
-            vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-        init_opengl_elementbuffer(gl_triangles,
-            vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+        init_opengl_array_buffer(
+            gl_texcoord, vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+        init_opengl_elementbuffer(
+            gl_triangles, vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     }
 
     // draw
@@ -553,12 +560,12 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
 void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
     const vec2f& image_center, float image_scale, float border_size) {
     static opengl_program       gl_prog      = {};
-    static opengl_array_buffer   gl_texcoord  = {};
+    static opengl_array_buffer  gl_texcoord  = {};
     static opengl_elementbuffer gl_triangles = {};
 
     // initialization
     if (!gl_prog) {
-        auto vert   = R"(
+        auto vert = R"(
             #version 330
             in vec2 texcoord;
             out vec2 frag_texcoord;
@@ -571,7 +578,7 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
                 frag_texcoord = texcoord;
             }
         )";
-        auto frag   = R"(
+        auto frag = R"(
             #version 330
             in vec2 frag_texcoord;
             out vec4 frag_color;
@@ -588,10 +595,10 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
             }
         )";
         init_opengl_program(gl_prog, vert, frag);
-        init_opengl_array_buffer(gl_texcoord,
-            vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
-        init_opengl_elementbuffer(gl_triangles,
-            vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
+        init_opengl_array_buffer(
+            gl_texcoord, vector<vec2f>{{0, 0}, {0, 1}, {1, 1}, {1, 0}}, false);
+        init_opengl_elementbuffer(
+            gl_triangles, vector<vec3i>{{0, 1, 2}, {0, 2, 3}}, false);
     }
 
     // draw
@@ -623,8 +630,8 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     }
 }
 
-bool init_opengl_window(opengl_window& win, int width, int height, const string& title,
-    void* user_pointer, refresh_opengl_callback refresh_cb) {
+bool init_opengl_window(opengl_window& win, int width, int height,
+    const string& title, void* user_pointer, refresh_opengl_callback refresh_cb) {
     // init glfw
     if (!glfwInit()) log_fatal("cannot initialize windowing system");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -780,11 +787,16 @@ void draw_label_opengl_widget(
     va_end(args);
 }
 
-void draw_separator_opengl_widget(const opengl_window& win) { ImGui::Separator(); }
+void draw_separator_opengl_widget(const opengl_window& win) {
+    ImGui::Separator();
+}
 
-void continue_opengl_widget_line(const opengl_window& win) { ImGui::SameLine(); }
+void continue_opengl_widget_line(const opengl_window& win) {
+    ImGui::SameLine();
+}
 
-bool draw_textinput_opengl_widget(const opengl_window& win, const char* lbl, string& value) {
+bool draw_textinput_opengl_widget(
+    const opengl_window& win, const char* lbl, string& value) {
     char buffer[4096];
     auto num = 0;
     for (auto c : value) buffer[num++] = c;
@@ -794,20 +806,20 @@ bool draw_textinput_opengl_widget(const opengl_window& win, const char* lbl, str
     return edited;
 }
 
-bool draw_slider_opengl_widget(
-    const opengl_window& win, const char* lbl, float& value, float min, float max) {
+bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
+    float& value, float min, float max) {
     return ImGui::SliderFloat(lbl, &value, min, max);
 }
-bool draw_slider_opengl_widget(
-    const opengl_window& win, const char* lbl, vec2f& value, float min, float max) {
+bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
+    vec2f& value, float min, float max) {
     return ImGui::SliderFloat2(lbl, &value.x, min, max);
 }
-bool draw_slider_opengl_widget(
-    const opengl_window& win, const char* lbl, vec3f& value, float min, float max) {
+bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
+    vec3f& value, float min, float max) {
     return ImGui::SliderFloat3(lbl, &value.x, min, max);
 }
-bool draw_slider_opengl_widget(
-    const opengl_window& win, const char* lbl, vec4f& value, float min, float max) {
+bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
+    vec4f& value, float min, float max) {
     return ImGui::SliderFloat4(lbl, &value.x, min, max);
 }
 
@@ -828,49 +840,52 @@ bool draw_slider_opengl_widget(
     return ImGui::SliderInt4(lbl, &value.x, min, max);
 }
 
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, float& value,
-    float speed, float min, float max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    float& value, float speed, float min, float max) {
     return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, vec2f& value,
-    float speed, float min, float max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec2f& value, float speed, float min, float max) {
     return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, vec3f& value,
-    float speed, float min, float max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec3f& value, float speed, float min, float max) {
     return ImGui::DragFloat3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, vec4f& value,
-    float speed, float min, float max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec4f& value, float speed, float min, float max) {
     return ImGui::DragFloat4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, int& value,
-    float speed, int min, int max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    int& value, float speed, int min, int max) {
     return ImGui::DragInt(lbl, &value, speed, min, max);
 }
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, vec2i& value,
-    float speed, int min, int max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec2i& value, float speed, int min, int max) {
     return ImGui::DragInt2(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, vec3i& value,
-    float speed, int min, int max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec3i& value, float speed, int min, int max) {
     return ImGui::DragInt3(lbl, &value.x, speed, min, max);
 }
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl, vec4i& value,
-    float speed, int min, int max) {
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec4i& value, float speed, int min, int max) {
     return ImGui::DragInt4(lbl, &value.x, speed, min, max);
 }
 
-bool draw_checkbox_opengl_widget(const opengl_window& win, const char* lbl, bool& value) {
+bool draw_checkbox_opengl_widget(
+    const opengl_window& win, const char* lbl, bool& value) {
     return ImGui::Checkbox(lbl, &value);
 }
 
-bool draw_coloredit_opengl_widget(const opengl_window& win, const char* lbl, vec3f& value) {
+bool draw_coloredit_opengl_widget(
+    const opengl_window& win, const char* lbl, vec3f& value) {
     return ImGui::ColorEdit3(lbl, &value.x);
 }
 
-bool draw_coloredit_opengl_widget(const opengl_window& win, const char* lbl, vec4f& value) {
+bool draw_coloredit_opengl_widget(
+    const opengl_window& win, const char* lbl, vec4f& value) {
     return ImGui::ColorEdit4(lbl, &value.x);
 }
 
@@ -899,8 +914,8 @@ void begin_selectabletreeleaf_opengl_widget(
     if (ImGui::IsItemClicked()) selected = true;
 }
 
-bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl, int& value,
-    const vector<string>& labels) {
+bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl,
+    int& value, const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, labels[value].c_str())) return false;
     auto old_val = value;
     for (auto i = 0; i < labels.size(); i++) {
@@ -913,8 +928,8 @@ bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl, int&
     return value != old_val;
 }
 
-bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl, string& value,
-    const vector<string>& labels) {
+bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl,
+    string& value, const vector<string>& labels) {
     if (!ImGui::BeginCombo(lbl, value.c_str())) return false;
     auto old_val = value;
     for (auto i = 0; i < labels.size(); i++) {
@@ -928,8 +943,9 @@ bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl, stri
     return value != old_val;
 }
 
-bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl, int& idx,
-    int num, const function<const char*(int)>& labels, bool include_null) {
+bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl,
+    int& idx, int num, const function<const char*(int)>& labels,
+    bool include_null) {
     if (!ImGui::BeginCombo(lbl, idx >= 0 ? labels(idx) : "<none>"))
         return false;
     auto old_idx = idx;

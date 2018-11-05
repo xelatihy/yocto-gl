@@ -45,8 +45,8 @@ struct app_image {
     bool         is_hdr = false;
 
     // diplay image
-    image<vec4f> display;
-    opengl_texture    gl_txt = {};
+    image<vec4f>   display;
+    opengl_texture gl_txt = {};
 
     // image stats
     image_stats stats;
@@ -178,7 +178,8 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (begin_opengl_widgets_window(win, "yimview")) {
         auto& img = app.imgs.at(app.img_id);
         if (begin_header_opengl_widget(win, "image")) {
-            draw_combobox_opengl_widget(win, "image", app.img_id, app.imgs, false);
+            draw_combobox_opengl_widget(
+                win, "image", app.img_id, app.imgs, false);
             draw_label_opengl_widget(win, "filename", "%s", img.filename.c_str());
             draw_textinput_opengl_widget(win, "outname", img.outname);
             if (draw_button_opengl_widget(win, "save display")) {
@@ -203,7 +204,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             end_header_opengl_widget(win);
         }
         if (begin_header_opengl_widget(win, "adjust")) {
-            edited += draw_slider_opengl_widget(win, "exposure", img.exposure, -5, 5);
+            edited += draw_slider_opengl_widget(
+                win, "exposure", img.exposure, -5, 5);
             edited += draw_checkbox_opengl_widget(win, "filmic", img.filmic);
             edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
             end_header_opengl_widget(win);
