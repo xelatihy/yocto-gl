@@ -3326,6 +3326,22 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Splits an image into an array of regions
+vector<image_region> make_image_regions(int width, int height, int region_size) {
+    if(width == 0 || height == 0) return {};
+    auto regions = vector<image_region>{};
+    for(auto y = 0; y < height; y += region_size) {
+        for(auto x = 0; x < width; x += region_size) {
+            regions.push_back({
+                x, y,
+                min(region_size, width - x),
+                min(region_size, height - y)
+            });
+        }
+    }
+    return regions;
+}
+
 // Conversion between linear and gamma-encoded images.
 image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma) {
     if (gamma == 1) return srgb;

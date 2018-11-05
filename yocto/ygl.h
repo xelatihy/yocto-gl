@@ -2807,38 +2807,6 @@ make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMAGE TYPE
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Image container.
-template <typename T>
-struct image {
-    int       width  = 0;
-    int       height = 0;
-    vector<T> pixels = {};
-
-    // constructors
-    image() : width{0}, height{0}, pixels() {}
-    image(int w, int h, const T& v = T{})
-        : width{w}, height{h}, pixels(w * h, v) {}
-    image(int w, int h, const T* v)
-        : width{w}, height{h}, pixels(v, v + w * h) {}
-};
-
-// Element access.
-template <typename T>
-inline T& at(image<T>& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
-template <typename T>
-inline const T& at(const image<T>& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2946,9 +2914,45 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMAGE UTILITIES
+// IMAGE TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
+
+// Image container.
+template <typename T>
+struct image {
+    int       width  = 0;
+    int       height = 0;
+    vector<T> pixels = {};
+
+    // constructors
+    image() : width{0}, height{0}, pixels() {}
+    image(int w, int h, const T& v = T{})
+        : width{w}, height{h}, pixels(w * h, v) {}
+    image(int w, int h, const T* v)
+        : width{w}, height{h}, pixels(v, v + w * h) {}
+};
+
+// Element access.
+template <typename T>
+inline T& at(image<T>& img, int i, int j) {
+    return img.pixels[j * img.width + i];
+}
+template <typename T>
+inline const T& at(const image<T>& img, int i, int j) {
+    return img.pixels[j * img.width + i];
+}
+
+// Image region defined by its corner at x,y and with size width x height
+struct image_region {
+    int x = 0;
+    int y = 0;
+    int width = 0;
+    int height = 0;
+};
+
+// Splits an image into an array of regions
+vector<image_region> make_image_regions(int width, int height, int region_size);
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
