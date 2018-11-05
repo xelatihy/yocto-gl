@@ -137,6 +137,14 @@ bool init_glprogram(glprogram& program, const char* vertex, const char* fragment
     return true;
 }
 
+void delete_glprogram(glprogram& program) {
+    if(!program) return;
+    glDeleteProgram(program.program_id);
+    glDeleteShader(program.vertex_shader_id);
+    glDeleteShader(program.fragment_shader_id);
+    program = {};
+}
+
 bool init_gltexture(gltexture& texture, const image<vec4f>& img, bool as_float,
     bool linear, bool mipmap) {
     texture = gltexture();
@@ -241,6 +249,12 @@ void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
     assert(glGetError() == GL_NO_ERROR);
 }
 
+void delete_gltexture(gltexture& texture) {
+    if(!texture) return;
+    glDeleteTextures(1, &texture.texture_id);
+    texture = {};
+}
+
 template <typename T>
 bool init_glarraybuffer_impl(
     glarraybuffer& buffer, const vector<T>& data, bool dynamic) {
@@ -273,6 +287,12 @@ bool init_glarraybuffer(
     return init_glarraybuffer_impl(buffer, data, dynamic);
 }
 
+void delete_glarraybuffer(glarraybuffer& buffer) {
+    if(!buffer) return;
+    glDeleteBuffers(1, &buffer.buffer_id);
+    buffer = {};
+}
+
 template <typename T>
 bool init_glelementbuffer_impl(
     glelementbuffer& buffer, const vector<T>& data, bool dynamic) {
@@ -299,6 +319,12 @@ bool init_glelementbuffer(
 bool init_glelementbuffer(
     glelementbuffer& buffer, const vector<vec3i>& data, bool dynamic) {
     return init_glelementbuffer_impl(buffer, data, dynamic);
+}
+
+void delete_glelementbuffer(glelementbuffer& buffer) {
+    if(!buffer) return;
+    glDeleteBuffers(1, &buffer.buffer_id);
+    buffer = {};
 }
 
 void bind_glprogram(glprogram& program) { glUseProgram(program.program_id); }

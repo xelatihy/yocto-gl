@@ -56,6 +56,9 @@ struct glprogram {
 
 bool init_glprogram(
     glprogram& program, const char* vertex, const char* fragment);
+
+void delete_glprogram(glprogram& program);
+
 void bind_glprogram(glprogram& program);
 void unbind_glprogram();
 
@@ -76,6 +79,8 @@ bool init_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap);
 void update_gltexture(gltexture& texture, const image<vec4b>& img, bool as_srgb,
     bool linear, bool mipmap);
+
+void delete_gltexture(gltexture& texture);
 
 struct glarraybuffer {
     uint buffer_id       = 0;
@@ -102,12 +107,16 @@ bool init_glarraybuffer(
 bool init_glarraybuffer(
     glarraybuffer& buffer, const vector<vec4f>& data, bool dynamic = false);
 
+void delete_glarraybuffer(glarraybuffer& buffer);
+
 bool init_glelementbuffer(
     glelementbuffer& buffer, const vector<int>& data, bool dynamic = false);
 bool init_glelementbuffer(
     glelementbuffer& buffer, const vector<vec2i>& data, bool dynamic = false);
 bool init_glelementbuffer(
     glelementbuffer& buffer, const vector<vec3i>& data, bool dynamic = false);
+
+void delete_glelementbuffer(glelementbuffer& buffer);
 
 int get_gluniform_location(const glprogram& program, const char* name);
 
