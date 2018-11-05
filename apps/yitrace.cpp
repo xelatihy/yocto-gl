@@ -78,8 +78,8 @@ void start_rendering_async(app_state& app) {
     app.trace_start = get_time();
     auto image_size = get_camera_image_size(
         app.scene.cameras[app.params.camera_id], app.params.image_size);
-    app.rendered_image = image<vec4f>{image_size};
-    app.display_image  = image<vec4f>{image_size};
+    app.rendered_image = make_image<vec4f>(image_size);
+    app.display_image  = make_image<vec4f>(image_size);
     app.trace_rngs     = make_trace_rngs(image_size, app.params.random_seed);
     trace_async_start(app.rendered_image, app.display_image, app.scene, app.bvh,
         app.lights, app.trace_rngs, app.trace_threads, app.trace_stop,

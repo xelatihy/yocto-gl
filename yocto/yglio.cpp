@@ -426,7 +426,7 @@ template <typename T>
 inline void from_json(const json& js, image<T>& value) {
     auto size  = js.at("size").get<vec2i>();
     auto pixels = js.at("pixels").get<vector<T>>();
-    value       = image<T>{size, pixels.data()};
+    value       = image<T>{size, pixels};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
@@ -612,7 +612,7 @@ bool load_pfm_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = image<vec4f>{{width, height}, (vec4f*)pixels.data()};
+    img = make_image<vec4f>({width, height}, (vec4f*)pixels.data());
     return true;
 }
 bool save_pfm_image(const string& filename, const image<vec4f>& img) {
@@ -637,7 +637,7 @@ bool load_exr_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = image<vec4f>{{width, height}, pixels};
+    img = make_image<vec4f>({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -658,7 +658,7 @@ bool load_stb_image(const string& filename, image<vec4b>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = image<vec4b>{{width, height}, pixels};
+    img = make_image<vec4b>({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -670,7 +670,7 @@ bool load_stb_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = image<vec4f>{{width, height}, pixels};
+    img = make_image<vec4f>({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -727,7 +727,7 @@ bool load_stb_image_from_memory(
         log_io_error("error loading in-memory image");
         return false;
     }
-    img = image<vec4b>{{width, height}, pixels};
+    img = make_image<vec4b>({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -740,7 +740,7 @@ bool load_stbi_image_from_memory(
         log_io_error("error loading in-memory image {}");
         return false;
     }
-    img = image<vec4f>{{width, height}, pixels};
+    img = make_image<vec4f>({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -918,7 +918,7 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
         log_error("bad image size in resize_image");
         return img;
     }
-    auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
+    auto res_img = make_image<vec4f>(get_image_size(size, get_image_aspect(img)));
     stbir_resize_float_generic((float*)img.pixels.data(), img.size.x, img.size.y,
         sizeof(vec4f) * img.size.x, (float*)res_img.pixels.data(), res_img.size.x,
         res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0, STBIR_EDGE_CLAMP,
@@ -939,7 +939,7 @@ bool load_volume1f_nolog(const string& filename, volume<float>& vol) {
     if (!fs) return false;
     auto size = zero3i;
     if (!read_value(fs, size)) return false;
-    vol = volume<float>{size};
+    vol = make_volume<float>(size);
     if (!read_values(fs, vol.voxels)) return false;
     return true;
 }
@@ -5127,10 +5127,9 @@ bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
         if (!write_values(fs, img.pixels)) return false;
         return true;
     } else {
-        auto width = 0, height = 0;
-        if (!read_value(fs, width)) return false;
-        if (!read_value(fs, height)) return false;
-        img = image<T>{{width, height}};
+        auto size = zero2i;
+        if (!read_value(fs, size)) return false;
+        img = make_image<T>(size);
         if (!read_values(fs, img.pixels)) return false;
         return true;
     }
@@ -5144,11 +5143,9 @@ bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
         if (!write_values(fs, vol.voxels)) return false;
         return true;
     } else {
-        auto width = 0, height = 0, depth = 0;
-        if (!read_value(fs, width)) return false;
-        if (!read_value(fs, height)) return false;
-        if (!read_value(fs, depth)) return false;
-        vol = volume<T>{{width, height, depth}};
+        auto size = zero3i;
+        if (!read_value(fs, size)) return false;
+        vol = make_volume<T>(size);
         if (!read_values(fs, vol.voxels)) return false;
         return true;
     }

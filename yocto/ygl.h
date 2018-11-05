@@ -365,6 +365,7 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
+using std::mutex;
 using namespace std::string_literals;
 
 using byte = unsigned char;
@@ -2969,14 +2970,17 @@ template <typename T>
 struct image {
     vec2i     size  = {0, 0};
     vector<T> pixels = {};
-
-    // constructors
-    image() : size{0, 0}, pixels{} {}
-    image(const vec2i& wh, const T& v = T{})
-        : size{wh}, pixels(wh.x * wh.y, v) {}
-    image(const vec2i& wh, const T* v)
-        : size{wh}, pixels(v, v + wh.x * wh.y) {}
 };
+
+// Image onstructors
+template<typename T>
+inline image<T> make_image(const vec2i& size, const T& v = T{}) {
+    return image<T>{size, vector<T>((size_t)(size.x * size.y), v)};
+}
+template<typename T>
+inline image<T> make_image(const vec2i& size, const T* v) {
+    return image<T>{size, vector<T>(v, v + size.x * size.y)};    
+}
 
 // Element access.
 template <typename T>
@@ -3155,14 +3159,17 @@ template <typename T>
 struct volume {
     vec3i     size  = {0, 0, 0};
     vector<T> voxels = {};
-
-    // constructors
-    volume() : size{0, 0, 0}, voxels() {}
-    volume(const vec3i& whd, const T& v = T{})
-        : size{whd}, voxels(whd.x * whd.y * whd.z, v) {}
-    volume(const vec3i& whd, const T* v)
-        : size{whd}, voxels(v, v + whd.x * whd.y * whd.z) {}
 };
+
+// Volume onstructors
+template<typename T>
+inline volume<T> make_volume(const vec3i& size, const T& v = T{}) {
+    return volume<T>{size, vector<T>((size_t)(size.x * size.y * size.z), v)};
+}
+template<typename T>
+inline volume<T> make_volume(const vec3i& size, const T* v) {
+    return volume<T>{size, vector<T>(v, v + size.x * size.y * size.z)};
+}
 
 // Element access
 template <typename T>
@@ -4038,7 +4045,7 @@ namespace ygl {
 // Gets pixels in an image region
 template <typename T>
 inline image<T> get_image_region(const image<T>& img, const image_region& region) {
-    auto clipped = image<T>{region.size};
+    auto clipped = make_image<T>(region.size);
     for (auto j = 0; j < region.size.y; j++) {
         for (auto i = 0; i < region.size.x; i++) {
             at(clipped, {i, j}) = at(img, {i + region.offset.x, j + region.offset.y});
