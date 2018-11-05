@@ -67,12 +67,78 @@ struct app_state {
     bool load_done = false, load_running = false;
 };
 
+bool load_scene_sync(app_state& app) {
+    // scene loading
+    if (!load_scene(app.filename, app.scene)) {
+        log_fatal("cannot load scene " + app.filename);
+        return false;
+    }
+
+    // tesselate
+    tesselate_shapes_and_surfaces(app.scene);
+
+    // add components
+    if (app.add_skyenv && app.scene.environments.empty())
+        add_sky_environment(app.scene);
+    if (app.double_sided)
+        for (auto& material : app.scene.materials) material.double_sided = true;
+    add_missing_cameras(app.scene);
+    add_missing_names(app.scene);
+    log_validation_errors(app.scene);
+
+    // build bvh
+    app.bvh = make_scene_bvh(app.scene, true, app.use_embree_bvh);
+
+    // init renderer
+    app.lights = make_trace_lights(app.scene, app.params);
+
+    // fix renderer type if no lights
+    if (empty(app.lights) && app.params.sample_tracer != trace_type::eyelight) {
+        log_info("no lights presents, switching to eyelight shader\n");
+        app.params.sample_tracer = trace_type::eyelight;
+    }
+
+    // prepare renderer
+    app.state = make_trace_state(app.scene, app.params);
+
+    // initialize rendering objects
+    app.trace_start = get_time();
+    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
+
+    // set flags
+    app.load_done = true;
+    app.load_running = false;
+
+    // done
+    return false;
+}
+
+void load_scene_async(app_state& app) {
+    if(app.load_running) {
+        log_error("already loading");
+        return;
+    }
+    app.load_done = false;
+    app.load_running = true;
+    app.scene = {};
+    app.bvh = {};
+    app.lights = {};
+    app.state = {};
+    auto load_thread = thread([&app](){load_scene_sync(app);});
+    load_thread.detach();
+}
+
 void draw_glwidgets(const glwindow& win) {
     auto& app = *(app_state*)get_user_pointer(win);
     begin_glwidgets_frame(win);
     if (begin_glwidgets_window(win, "yitrace")) {
         if (begin_header_glwidget(win, "scene")) {
-            draw_label_glwidgets(win, "scene", app.filename);
+            draw_label_glwidgets(win, "scene", get_filename(app.filename));
+            if(draw_button_glwidget(win, "load")) {
+                trace_async_stop(app.state);
+                load_scene_async(app);
+            }
+            draw_label_glwidgets(win, "filename", app.filename);
             auto status = ""s;
             if(app.load_running) {
                 status = "loading";
@@ -179,67 +245,6 @@ void draw(const glwindow& win) {
     }
     draw_glwidgets(win);
     swap_glbuffers(win);
-}
-
-bool load_scene_sync(app_state& app) {
-    // scene loading
-    if (!load_scene(app.filename, app.scene)) {
-        log_fatal("cannot load scene " + app.filename);
-        return false;
-    }
-
-    // tesselate
-    tesselate_shapes_and_surfaces(app.scene);
-
-    // add components
-    if (app.add_skyenv && app.scene.environments.empty())
-        add_sky_environment(app.scene);
-    if (app.double_sided)
-        for (auto& material : app.scene.materials) material.double_sided = true;
-    add_missing_cameras(app.scene);
-    add_missing_names(app.scene);
-    log_validation_errors(app.scene);
-
-    // build bvh
-    app.bvh = make_scene_bvh(app.scene, true, app.use_embree_bvh);
-
-    // init renderer
-    app.lights = make_trace_lights(app.scene, app.params);
-
-    // fix renderer type if no lights
-    if (empty(app.lights) && app.params.sample_tracer != trace_type::eyelight) {
-        log_info("no lights presents, switching to eyelight shader\n");
-        app.params.sample_tracer = trace_type::eyelight;
-    }
-
-    // prepare renderer
-    app.state = make_trace_state(app.scene, app.params);
-
-    // initialize rendering objects
-    app.trace_start = get_time();
-    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
-
-    // set flags
-    app.load_done = true;
-    app.load_running = false;
-
-    // done
-    return false;
-}
-
-void load_scene_async(app_state& app) {
-    if(app.load_running) {
-        log_error("already loading");
-        return;
-    }
-    app.load_done = false;
-    app.load_running = true;
-    app.scene = {};
-    app.bvh = {};
-    app.lights = {};
-    app.state = {};
-    auto load_thread = thread([&app](){load_scene_sync(app);});
-    load_thread.detach();
 }
 
 bool update(app_state& app) {
