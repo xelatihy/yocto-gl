@@ -45,8 +45,8 @@ struct app_image {
     bool         is_hdr = false;
 
     // diplay image
-    image<vec4f> display;
-    gltexture    gl_txt = {};
+    image<vec4f>   display;
+    opengl_texture gl_txt = {};
 
     // image stats
     image_stats stats;
@@ -171,17 +171,18 @@ void add_new_image(app_state& app, const string& filename, const string& outname
     app.img_id      = (int)app.imgs.size() - 1;
 }
 
-void draw_glwidgets(const glwindow& win) {
-    auto& app    = *(app_state*)get_user_pointer(win);
+void draw_opengl_widgets(const opengl_window& win) {
+    auto& app    = *(app_state*)get_opengl_user_pointer(win);
     auto  edited = false;
-    begin_glwidgets_frame(win);
-    if (begin_glwidgets_window(win, "yimview")) {
+    begin_opengl_widgets_frame(win);
+    if (begin_opengl_widgets_window(win, "yimview")) {
         auto& img = app.imgs.at(app.img_id);
-        if (begin_header_glwidget(win, "image")) {
-            draw_combobox_glwidget(win, "image", app.img_id, app.imgs, false);
-            draw_label_glwidgets(win, "filename", "%s", img.filename.c_str());
-            draw_textinput_glwidget(win, "outname", img.outname);
-            if (draw_button_glwidget(win, "save display")) {
+        if (begin_header_opengl_widget(win, "image")) {
+            draw_combobox_opengl_widget(
+                win, "image", app.img_id, app.imgs, false);
+            draw_label_opengl_widget(win, "filename", "%s", img.filename.c_str());
+            draw_textinput_opengl_widget(win, "outname", img.outname);
+            if (draw_button_opengl_widget(win, "save display")) {
                 if (img.display_done) {
                     img.save_thread = thread([&img]() { save_image_async(img); });
                 }
@@ -195,39 +196,40 @@ void draw_glwidgets(const glwindow& win) {
                 status = "displaying...";
             else
                 status = "done";
-            draw_label_glwidgets(win, "status", status.c_str());
-            draw_label_glwidgets(
+            draw_label_opengl_widget(win, "status", status.c_str());
+            draw_label_opengl_widget(
                 win, "size", "%d x %d ", img.img.width, img.img.height);
-            draw_slider_glwidget(win, "zoom", img.image_scale, 0.1, 10);
-            draw_checkbox_glwidget(win, "zoom to fit", img.zoom_to_fit);
-            end_header_glwidget(win);
+            draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
+            draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
+            end_header_opengl_widget(win);
         }
-        if (begin_header_glwidget(win, "adjust")) {
-            edited += draw_slider_glwidget(win, "exposure", img.exposure, -5, 5);
-            edited += draw_checkbox_glwidget(win, "filmic", img.filmic);
-            edited += draw_checkbox_glwidget(win, "srgb", img.srgb);
-            end_header_glwidget(win);
+        if (begin_header_opengl_widget(win, "adjust")) {
+            edited += draw_slider_opengl_widget(
+                win, "exposure", img.exposure, -5, 5);
+            edited += draw_checkbox_opengl_widget(win, "filmic", img.filmic);
+            edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
+            end_header_opengl_widget(win);
         }
-        if (begin_header_glwidget(win, "inspect")) {
-            auto mouse_pos = get_glmouse_pos(win);
+        if (begin_header_opengl_widget(win, "inspect")) {
+            auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, img.image_center,
                 img.image_scale, {img.img.width, img.img.height});
-            draw_dragger_glwidget(win, "mouse", ij);
+            draw_dragger_opengl_widget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
                 ij.y < img.img.height) {
                 pixel = at(img.img, ij.x, ij.y);
             }
-            draw_coloredit_glwidget(win, "pixel", pixel);
+            draw_coloredit_opengl_widget(win, "pixel", pixel);
             auto stats = (img.stats_done) ? img.stats : image_stats{};
-            draw_dragger_glwidget(win, "pxl min", stats.pxl_bounds.min);
-            draw_dragger_glwidget(win, "pxl max", stats.pxl_bounds.max);
-            draw_dragger_glwidget(win, "lum min", stats.lum_bounds.min);
-            draw_dragger_glwidget(win, "lum max", stats.lum_bounds.max);
-            end_header_glwidget(win);
+            draw_dragger_opengl_widget(win, "pxl min", stats.pxl_bounds.min);
+            draw_dragger_opengl_widget(win, "pxl max", stats.pxl_bounds.max);
+            draw_dragger_opengl_widget(win, "lum min", stats.lum_bounds.min);
+            draw_dragger_opengl_widget(win, "lum max", stats.lum_bounds.max);
+            end_header_opengl_widget(win);
         }
     }
-    end_glwidgets_frame(win);
+    end_opengl_widgets_frame(win);
     if (edited) {
         auto& img = app.imgs.at(app.img_id);
         if (img.display_thread.joinable()) {
@@ -240,11 +242,11 @@ void draw_glwidgets(const glwindow& win) {
     }
 }
 
-void draw(const glwindow& win) {
-    auto& app      = *(app_state*)get_user_pointer(win);
+void draw(const opengl_window& win) {
+    auto& app      = *(app_state*)get_opengl_user_pointer(win);
     auto& img      = app.imgs.at(app.img_id);
-    auto  win_size = get_glwindow_size(win);
-    auto  fb_size  = get_glframebuffer_size(win);
+    auto  win_size = get_opengl_window_size(win);
+    auto  fb_size  = get_opengl_framebuffer_size(win);
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
@@ -257,24 +259,24 @@ void draw(const glwindow& win) {
             win_size, img.image_center, img.image_scale);
         set_glblending(false);
     }
-    draw_glwidgets(win);
-    swap_glbuffers(win);
+    draw_opengl_widgets(win);
+    swap_opengl_buffers(win);
 }
 
 void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.display_done || img.texture_done) continue;
         if (!img.gl_txt) {
-            img.gl_txt = make_gltexture(img.display, false, false, true);
+            init_opengl_texture(img.gl_txt, img.display, false, false, true);
         } else {
-            update_gltexture(img.gl_txt, img.display, false, false, true);
+            update_opengl_texture(img.gl_txt, img.display, false, false, true);
         }
         img.texture_done = true;
     }
 }
 
-void drop_callback(const glwindow& win, const vector<string>& paths) {
-    auto& app = *(app_state*)get_user_pointer(win);
+void drop_callback(const opengl_window& win, const vector<string>& paths) {
+    auto& app = *(app_state*)get_opengl_user_pointer(win);
     for (auto path : paths) add_new_image(app, path, "");
 }
 
@@ -282,13 +284,13 @@ void run_ui(app_state& app) {
     // window
     auto& img   = app.imgs.at(app.img_id);
     auto  width = 720 + 320, height = 720;
-    auto  win = glwindow();
-    init_glwindow(
+    auto  win = opengl_window();
+    init_opengl_window(
         win, 720 + 320, 720, "yimview | " + app.imgs.front().name, &app, draw);
-    set_drop_glcallback(win, drop_callback);
+    set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
-    init_glwidgets(win);
+    init_opengl_widgets(win);
 
     // center image
     center_image(img.image_center, img.image_scale,
@@ -297,12 +299,12 @@ void run_ui(app_state& app) {
 
     // window values
     auto mouse_pos = zero2f, last_pos = zero2f;
-    while (!should_glwindow_close(win)) {
+    while (!should_opengl_window_close(win)) {
         last_pos            = mouse_pos;
-        mouse_pos           = get_glmouse_pos(win);
-        auto mouse_left     = get_glmouse_left(win);
-        auto mouse_right    = get_glmouse_right(win);
-        auto widgets_active = get_glwidgets_active(win);
+        mouse_pos           = get_opengl_mouse_pos(win);
+        auto mouse_left     = get_opengl_mouse_left(win);
+        auto mouse_right    = get_opengl_mouse_right(win);
+        auto widgets_active = get_opengl_widgets_active(win);
 
         // handle mouse
         if (mouse_left && !widgets_active)
@@ -318,11 +320,11 @@ void run_ui(app_state& app) {
 
         // event hadling
         // could also wait if (mouse_left || mouse_right || widgets_active)
-        process_glevents(win);
+        process_opengl_events(win);
     }
 
     // cleanup
-    delete_glwindow(win);
+    delete_opengl_window(win);
 }
 
 int main(int argc, char* argv[]) {
