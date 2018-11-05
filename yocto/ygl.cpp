@@ -3326,6 +3326,21 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Gets an image size from a suggested size and an aspect ratio. The suggested
+// size may have zeros in either components. In which case, we use the aspect
+// ration to compute the other.
+vec2i get_image_size(const vec2i& suggested_size, float aspect) {
+    if(suggested_size == zero2i) {
+        return {(int)round(720 * aspect), 720};
+    } else if(suggested_size.y == 0) {
+        return {suggested_size.x, (int)round(suggested_size.x / aspect)};
+    } else if(suggested_size.x == 0) {
+        return {(int)round(suggested_size.y * aspect), suggested_size.y};
+    } else {
+        return suggested_size;
+    }
+}
+
 // Splits an image into an array of regions
 vector<image_region> make_image_regions(const vec2i& image_size, int region_size) {
     if(image_size == zero2i) return {};
@@ -5125,6 +5140,9 @@ float get_camera_fovx(const yocto_camera& camera) {
 float get_camera_fovy(const yocto_camera& camera) {
     return 2 * atan(camera.film_size.y / (2 * camera.focal_length));
 }
+float get_camera_aspect(const yocto_camera& camera) {
+    return camera.film_size.x / camera.film_size.y;
+}
 void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
     camera.film_size    = {width, width / aspect};
     camera.focal_length = camera.film_size.y / (2 * tan(fovy / 2));
@@ -5168,11 +5186,6 @@ ray3f evaluate_camera_ray(
     auto ray = make_ray(transform_point(camera.frame, e),
         transform_direction(camera.frame, normalize(e - q)));
     return ray;
-}
-
-vec2i get_image_size(const yocto_camera& camera, int yresolution) {
-    return {(int)round(yresolution * camera.film_size.x / camera.film_size.y),
-        yresolution};
 }
 
 // Generates a ray from a camera.
@@ -7194,12 +7207,11 @@ trace_state make_trace_state(
     const yocto_scene& scene, const trace_params& params) {
     auto  scope          = log_trace_scoped("making trace state");
     auto  state          = trace_state();
-    auto& camera         = scene.cameras[params.camera_id];
-    auto  size           = get_image_size(camera, params.vertical_resolution);
-    state.rendered_image = image<vec4f>{size.x, size.y, zero4f};
-    state.display_image  = image<vec4f>{size.x, size.y, zero4f};
-    state.accumulation_buffer      = image<vec4f>{size.x, size.y, zero4f};
-    state.samples_per_pixel        = image<int>{size.x, size.y, 0};
+    auto  size           = get_image_size(params.image_size, get_camera_aspect(scene.cameras[params.camera_id]));
+    state.rendered_image = image<vec4f>{size, zero4f};
+    state.display_image  = image<vec4f>{size, zero4f};
+    state.accumulation_buffer      = image<vec4f>{size, zero4f};
+    state.samples_per_pixel        = image<int>{size, 0};
     state.random_number_generators = make_trace_rngs(
         size.x, size.y, params.random_seed);
     return state;
@@ -7349,8 +7361,7 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
     // render preview image
     if (params.preview_ratio) {
         auto pparams                = params;
-        pparams.vertical_resolution = state.rendered_image.height /
-                                      params.preview_ratio;
+        pparams.image_size = params.image_size / params.preview_ratio;
         pparams.num_samples = 1;
         auto pimg           = trace_image(scene, bvh, lights, pparams);
         auto pdisplay       = tonemap_image(pimg, params.display_exposure,

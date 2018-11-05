@@ -38,8 +38,8 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
     params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
-    params.vertical_resolution = parse_arg(
-        parser, "--resolution,-r", 512, "Image vertical resolution.");
+    params.image_size = {0, parse_arg(
+        parser, "--resolution,-r", 512, "Image vertical resolution.")};
     params.num_samples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
     params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,

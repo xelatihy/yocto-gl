@@ -166,7 +166,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "camera", app.params.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
-                win, "resolution", app.params.vertical_resolution, 256, 4096);
+                win, "size", app.params.image_size, 256, 4096);
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.params.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
@@ -368,8 +368,8 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
     app.params.camera_id = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.params.vertical_resolution = parse_arg(
-        parser, "--resolution,-r", 512, "Image vertical resolution.");
+    app.params.image_size = {0, parse_arg(
+        parser, "--resolution,-r", 512, "Image vertical resolution.")};
     app.params.num_samples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.params.sample_tracer = parse_arge(parser, "--tracer,-t",

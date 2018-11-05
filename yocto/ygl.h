@@ -2975,6 +2975,12 @@ inline const T& at(const image<T>& img, int i, int j) {
     return img.pixels[j * img.width + i];
 }
 
+// Size
+template<typename T>
+inline float get_image_aspect(const image<T>& img) {
+    return (float)img.width / (float)img.height;
+}
+
 // Image region defined by its corner at x,y and with size width x height
 struct image_region {
     vec2i offset = {0, 0};
@@ -2987,6 +2993,11 @@ vector<image_region> make_image_regions(const vec2i& image_size, int region_size
 // Gets pixels in an image region
 template<typename T>
 inline image<T> get_image_region(const image<T>& img, const image_region& region);
+
+// Gets an image size from a suggested size and an aspect ratio. The suggested
+// size may have zeros in either components. In which case, we use the aspect
+// ration to compute the other.
+vec2i get_image_size(const vec2i& suggested_size, float aspect);
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -3512,10 +3523,9 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float get_camera_fovx(const yocto_camera& camera);
 float get_camera_fovy(const yocto_camera& camera);
-float set_camera_aspect(const yocto_camera& camera);
+float get_camera_aspect(const yocto_camera& camera);
 void  set_camera_fovy(
      yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
-vec2i get_image_size(const yocto_camera& camera, int yresolution);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
@@ -3669,7 +3679,7 @@ const auto trace_type_names = vector<string>{"path", "direct", "environment",
 // Trace options
 struct trace_params {
     int        camera_id           = 0;
-    int        vertical_resolution = 256;
+    vec2i      image_size          = {1280, 720};
     trace_type sample_tracer       = trace_type::path;
     int        num_samples         = 256;
     int        max_bounces         = 8;
