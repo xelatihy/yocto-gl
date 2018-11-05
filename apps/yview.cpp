@@ -594,8 +594,6 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
     const yocto_camera& camera, const vec2i& viewport_size,
     const tuple<string, int>& highlighted, bool eyelight, bool wireframe,
     bool edges, float exposure, float gamma, float near_plane, float far_plane) {
-    set_glviewport(viewport_size);
-
     auto camera_view = frame_to_mat(inverse(camera.frame));
     // auto camera_proj =
     //         perspective_mat(get_camera_fovy(camera),
