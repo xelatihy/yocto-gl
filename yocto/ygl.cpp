@@ -3329,15 +3329,15 @@ namespace ygl {
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
 // ration to compute the other.
-vec2i get_image_size(const vec2i& suggested_size, float aspect) {
-    if(suggested_size == zero2i) {
+vec2i get_image_size(const vec2i& size, float aspect) {
+    if(size == zero2i) {
         return {(int)round(720 * aspect), 720};
-    } else if(suggested_size.y == 0) {
-        return {suggested_size.x, (int)round(suggested_size.x / aspect)};
-    } else if(suggested_size.x == 0) {
-        return {(int)round(suggested_size.y * aspect), suggested_size.y};
+    } else if(size.y == 0) {
+        return {size.x, (int)round(size.x / aspect)};
+    } else if(size.x == 0) {
+        return {(int)round(size.y * aspect), size.y};
     } else {
-        return suggested_size;
+        return size;
     }
 }
 
@@ -5142,6 +5142,9 @@ float get_camera_fovy(const yocto_camera& camera) {
 }
 float get_camera_aspect(const yocto_camera& camera) {
     return camera.film_size.x / camera.film_size.y;
+}
+vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size) {
+    return get_image_size(size, camera.film_size.x / camera.film_size.y);
 }
 void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
     camera.film_size    = {width, width / aspect};
@@ -7169,13 +7172,12 @@ tuple<vec3f, bool> trace_func(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Trace a single sample
 vec4f trace_sample(trace_state& state, const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, int i, int j,
+    const bvh_scene& bvh, const trace_lights& lights, const vec2i& ij, const vec2i& image_size,
     const trace_params& params) {
     _trace_npaths += 1;
     auto& camera       = scene.cameras.at(params.camera_id);
-    auto& rng          = at(state.random_number_generators, i, j);
-    auto  ray          = sample_camera_ray(camera, {i, j},
-        {state.rendered_image.width, state.rendered_image.height}, rng);
+    auto& rng          = at(state.random_number_generators, ij.x, ij.y);
+    auto  ray          = sample_camera_ray(camera, ij, image_size, rng);
     auto  radiance     = zero3f;
     auto  hit          = false;
     tie(radiance, hit) = trace_func(scene, bvh, lights, params.sample_tracer,
@@ -7191,8 +7193,8 @@ vec4f trace_sample(trace_state& state, const yocto_scene& scene,
 }
 
 // Init a sequence of random number generators.
-image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
-    auto rngs = image<rng_state>{width, height};
+image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t seed) {
+    auto rngs = image<rng_state>{image_size};
     auto rng  = make_rng(1301081);
     for (auto j = 0; j < rngs.height; j++) {
         for (auto i = 0; i < rngs.width; i++) {
@@ -7203,23 +7205,17 @@ image<rng_state> make_trace_rngs(int width, int height, uint64_t seed) {
 }
 
 // Init trace state
-trace_state make_trace_state(
-    const yocto_scene& scene, const trace_params& params) {
+trace_state make_trace_state(const vec2i& image_size, int random_seed) {
     auto  scope          = log_trace_scoped("making trace state");
     auto  state          = trace_state();
-    auto  size           = get_image_size(params.image_size, get_camera_aspect(scene.cameras[params.camera_id]));
-    state.rendered_image = image<vec4f>{size, zero4f};
-    state.display_image  = image<vec4f>{size, zero4f};
-    state.accumulation_buffer      = image<vec4f>{size, zero4f};
-    state.samples_per_pixel        = image<int>{size, 0};
-    state.random_number_generators = make_trace_rngs(
-        size.x, size.y, params.random_seed);
+    state.accumulation_buffer      = image<vec4f>{image_size, zero4f};
+    state.samples_per_pixel        = image<int>{image_size, 0};
+    state.random_number_generators = make_trace_rngs(image_size, random_seed);
     return state;
 }
 
 // Init trace lights
-trace_lights make_trace_lights(
-    const yocto_scene& scene, const trace_params& params) {
+trace_lights make_trace_lights(const yocto_scene& scene) {
     auto scope  = log_trace_scoped("making trace lights");
     auto lights = trace_lights{};
 
@@ -7267,15 +7263,17 @@ trace_lights make_trace_lights(
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params) {
     auto scope = log_trace_scoped("tracing image");
-    auto state = make_trace_state(scene, params);
+    auto image_size = get_camera_image_size(scene.cameras[params.camera_id], params.image_size);
+    auto rendered_image = image<vec4f>{image_size};
+    auto state = make_trace_state(image_size, params.random_seed);
 
     if (params.no_parallel) {
-        for (auto j = 0; j < state.rendered_image.height; j++) {
-            for (auto i = 0; i < state.rendered_image.width; i++) {
+        for (auto j = 0; j < rendered_image.height; j++) {
+            for (auto i = 0; i < rendered_image.width; i++) {
                 for (auto s = 0; s < params.num_samples; s++)
-                    at(state.rendered_image, i, j) += trace_sample(
-                        state, scene, bvh, lights, i, j, params);
-                at(state.rendered_image, i, j) /= params.num_samples;
+                    at(rendered_image, i, j) += trace_sample(
+                        state, scene, bvh, lights, {i, j}, {rendered_image.width, rendered_image.height}, params);
+                at(rendered_image, i, j) /= params.num_samples;
             }
         }
     } else {
@@ -7283,67 +7281,60 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(
-                thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
-                    for (auto j = tid; j < state.rendered_image.height;
+                thread([tid, nthreads, &scene, &state, &rendered_image, &bvh, &lights, &params]() {
+                    for (auto j = tid; j < rendered_image.height;
                          j += nthreads) {
-                        for (auto i = 0; i < state.rendered_image.width; i++) {
+                        for (auto i = 0; i < rendered_image.width; i++) {
                             for (auto s = 0; s < params.num_samples; s++)
-                                at(state.rendered_image, i, j) += trace_sample(
-                                    state, scene, bvh, lights, i, j, params);
-                            at(state.rendered_image, i, j) /= params.num_samples;
+                                at(rendered_image, i, j) += trace_sample(
+                                    state, scene, bvh, lights, {i, j}, {rendered_image.width, rendered_image.height}, params);
+                            at(rendered_image, i, j) /= params.num_samples;
                         }
                     }
                 }));
         }
         for (auto& t : threads) t.join();
     }
-    return state.rendered_image;
+    return rendered_image;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-bool trace_samples(trace_state& state, const yocto_scene& scene,
+bool trace_samples(trace_state& state, image<vec4f>& rendered_image, const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const trace_params& params) {
     auto scope = log_trace_scoped(
         "tracing samples {}/{}", state.current_sample, params.num_samples);
     auto nbatch = min(
         params.samples_per_batch, params.num_samples - state.current_sample);
     if (params.no_parallel) {
-        for (auto j = 0; j < state.rendered_image.height; j++) {
-            for (auto i = 0; i < state.rendered_image.width; i++) {
+        for (auto j = 0; j < rendered_image.height; j++) {
+            for (auto i = 0; i < rendered_image.width; i++) {
                 for (auto s = 0; s < nbatch; s++) {
                     at(state.accumulation_buffer, i, j) += trace_sample(
-                        state, scene, bvh, lights, i, j, params);
+                        state, scene, bvh, lights, {i, j}, {rendered_image.width, rendered_image.height}, params);
                     at(state.samples_per_pixel, i, j) += 1;
                 }
-                at(state.rendered_image, i,
+                at(rendered_image, i,
                     j) = at(state.accumulation_buffer, i, j) /
                          at(state.samples_per_pixel, i, j);
-                at(state.display_image, i, j) = tonemap_filmic(
-                    at(state.rendered_image, i, j), params.display_exposure,
-                    params.display_filmic, params.display_srgb);
             }
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([tid, nthreads, nbatch, &scene, &state,
+            threads.push_back(thread([tid, nthreads, nbatch, &scene, &state, &rendered_image,
                                          &bvh, &lights, &params]() {
-                for (auto j = tid; j < state.rendered_image.height;
+                for (auto j = tid; j < rendered_image.height;
                      j += nthreads) {
-                    for (auto i = 0; i < state.rendered_image.width; i++) {
+                    for (auto i = 0; i < rendered_image.width; i++) {
                         for (auto s = 0; s < nbatch; s++) {
                             at(state.accumulation_buffer, i, j) += trace_sample(
-                                state, scene, bvh, lights, i, j, params);
+                                state, scene, bvh, lights, {i, j}, {rendered_image.width, rendered_image.height}, params);
                             at(state.samples_per_pixel, i, j) += 1;
                         }
-                        at(state.rendered_image, i,
+                        at(rendered_image, i,
                             j) = at(state.accumulation_buffer, i, j) /
                                  at(state.samples_per_pixel, i, j);
-                        at(state.display_image, i, j) = tonemap_filmic(
-                            at(state.rendered_image, i, j),
-                            params.display_exposure, params.display_filmic,
-                            params.display_srgb);
                     }
                 }
             }));
@@ -7355,7 +7346,7 @@ bool trace_samples(trace_state& state, const yocto_scene& scene,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(trace_state& state, const yocto_scene& scene,
+void trace_async_start(trace_state& state, image<vec4f>& rendered_image, image<vec4f>& display_image, const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const trace_params& params) {
     log_trace("start tracing async");
     // render preview image
@@ -7367,12 +7358,12 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
         auto pdisplay       = tonemap_image(pimg, params.display_exposure,
             params.display_filmic, params.display_srgb);
         auto pwidth = pimg.width, pheight = pimg.height;
-        for (auto j = 0; j < state.rendered_image.height; j++) {
-            for (auto i = 0; i < state.rendered_image.width; i++) {
+        for (auto j = 0; j < rendered_image.height; j++) {
+            for (auto i = 0; i < rendered_image.width; i++) {
                 auto pi = clamp(i / params.preview_ratio, 0, pwidth - 1),
                      pj = clamp(j / params.preview_ratio, 0, pheight - 1);
-                at(state.rendered_image, i, j) = at(pimg, pi, pj);
-                at(state.display_image, i, j)  = at(pdisplay, pi, pj);
+                at(rendered_image, i, j) = at(pimg, pi, pj);
+                at(display_image, i, j)  = at(pdisplay, pi, pj);
             }
         }
     }
@@ -7382,21 +7373,21 @@ void trace_async_start(trace_state& state, const yocto_scene& scene,
     state.async_stop_flag = false;
     for (auto tid = 0; tid < nthreads; tid++) {
         state.async_threads.push_back(
-            thread([tid, nthreads, &scene, &state, &bvh, &lights, &params]() {
+            thread([tid, nthreads, &scene, &state, &rendered_image, &display_image, &bvh, &lights, &params]() {
                 for (auto s = 0; s < params.num_samples; s++) {
                     if (!tid) state.current_sample = s;
-                    for (auto j = tid; j < state.rendered_image.height;
+                    for (auto j = tid; j < rendered_image.height;
                          j += nthreads) {
-                        for (auto i = 0; i < state.rendered_image.width; i++) {
+                        for (auto i = 0; i < rendered_image.width; i++) {
                             if (state.async_stop_flag) return;
                             at(state.accumulation_buffer, i, j) += trace_sample(
-                                state, scene, bvh, lights, i, j, params);
+                                state, scene, bvh, lights, {i, j},  {rendered_image.width, rendered_image.height}, params);
                             at(state.samples_per_pixel, i, j) += 1;
-                            at(state.rendered_image, i,
+                            at(rendered_image, i,
                                 j) = at(state.accumulation_buffer, i, j) /
                                      at(state.samples_per_pixel, i, j);
-                            at(state.display_image, i, j) = tonemap_filmic(
-                                at(state.rendered_image, i, j),
+                            at(display_image, i, j) = tonemap_filmic(
+                                at(rendered_image, i, j),
                                 params.display_exposure, params.display_filmic,
                                 params.display_srgb);
                         }

@@ -88,7 +88,7 @@ int main(int argc, char* argv[]) {
     auto bvh = make_scene_bvh(scene, true, embree);
 
     // init renderer
-    auto lights = make_trace_lights(scene, params);
+    auto lights = make_trace_lights(scene);
 
     // fix renderer type if no lights
     if (empty(lights) && params.sample_tracer != trace_type::eyelight) {
@@ -97,18 +97,20 @@ int main(int argc, char* argv[]) {
     }
 
     // initialize rendering objects
-    auto state = make_trace_state(scene, params);
+    auto image_size = get_camera_image_size(scene.cameras[params.camera_id], params.image_size);
+    auto state = make_trace_state(image_size, params.random_seed);
+    auto rendered_image = image<vec4f>{image_size};
 
     // render
     auto done  = false;
     auto scope = log_trace_begin("rendering image");
     while (!done) {
-        done = trace_samples(state, scene, bvh, lights, params);
+        done = trace_samples(state, rendered_image, scene, bvh, lights, params);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(state.current_sample) + "." + get_extension(imfilename));
             if (!save_tonemapped_image(
-                    filename, state.rendered_image, exposure, filmic, srgb))
+                    filename, rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);
         }
     }
@@ -116,7 +118,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     if (!save_tonemapped_image(
-            imfilename, state.rendered_image, exposure, filmic, srgb))
+            imfilename, rendered_image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);
 
     // done

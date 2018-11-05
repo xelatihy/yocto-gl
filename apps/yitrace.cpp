@@ -48,6 +48,8 @@ struct app_state {
     trace_params params = {};
     trace_state  state  = {};
     trace_lights lights = {};
+    image<vec4f> rendered_image = {};
+    image<vec4f> display_image = {};
 
     // view image
     vec2f                      image_center = zero2f;
@@ -70,8 +72,11 @@ void start_rendering_async(app_state& app) {
     trace_async_stop(app.state);
     app.status      = "rendering image";
     app.trace_start = get_time();
-    app.state       = make_trace_state(app.scene, app.params);
-    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
+    auto image_size = get_camera_image_size(app.scene.cameras[app.params.camera_id], app.params.image_size);
+    app.rendered_image = image<vec4f>{image_size};
+    app.display_image = image<vec4f>{image_size};
+    app.state       = make_trace_state(image_size, app.params.random_seed);
+    trace_async_start(app.state, app.rendered_image, app.display_image, app.scene, app.bvh, app.lights, app.params);
 }
 
 void stop_rendering_async(app_state& app) { trace_async_stop(app.state); }
@@ -103,7 +108,7 @@ bool load_scene_sync(app_state& app) {
 
     // init renderer
     app.status = "initializing lights";
-    app.lights = make_trace_lights(app.scene, app.params);
+    app.lights = make_trace_lights(app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights) && app.params.sample_tracer != trace_type::eyelight) {
@@ -155,7 +160,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                app.state.rendered_image.width, app.state.rendered_image.height,
+                app.rendered_image.width, app.rendered_image.height,
                 app.state.current_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
@@ -194,12 +199,12 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale,
-                {app.state.rendered_image.width, app.state.rendered_image.height});
+                {app.rendered_image.width, app.rendered_image.height});
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app.state.rendered_image.width &&
-                ij.y >= 0 && ij.y < app.state.rendered_image.height) {
+            if (ij.x >= 0 && ij.x < app.rendered_image.width &&
+                ij.y >= 0 && ij.y < app.rendered_image.height) {
                 draw_coloredit_opengl_widget(
-                    win, "pixel", at(app.state.rendered_image, ij.x, ij.y));
+                    win, "pixel", at(app.rendered_image, ij.x, ij.y));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);
@@ -227,21 +232,21 @@ void draw(const opengl_window& win) {
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
         center_image(app.image_center, app.image_scale,
-            {app.state.display_image.width, app.state.display_image.height},
+            {app.display_image.width, app.display_image.height},
             win_size, app.zoom_to_fit);
         if (!app.gl_txt) {
             init_opengl_texture(
-                app.gl_txt, app.state.display_image, false, false, false);
+                app.gl_txt, app.display_image, false, false, false);
         } else {
             update_opengl_texture(
-                app.gl_txt, app.state.display_image, false);
+                app.gl_txt, app.display_image, false);
         }
         set_glblending(true);
         draw_glimage_background(
-            {app.state.display_image.width, app.state.display_image.height},
+            {app.display_image.width, app.display_image.height},
             win_size, app.image_center, app.image_scale);
         draw_glimage(app.gl_txt,
-            {app.state.display_image.width, app.state.display_image.height},
+            {app.display_image.width, app.display_image.height},
             win_size, app.image_center, app.image_scale);
         set_glblending(false);
     }
@@ -330,13 +335,13 @@ void run_ui(app_state& app) {
             !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale,
-                {app.state.rendered_image.width, app.state.rendered_image.height});
-            if (ij.x < 0 || ij.x >= app.state.rendered_image.width ||
-                ij.y < 0 || ij.y >= app.state.rendered_image.height) {
+                {app.rendered_image.width, app.rendered_image.height});
+            if (ij.x < 0 || ij.x >= app.rendered_image.width ||
+                ij.y < 0 || ij.y >= app.rendered_image.height) {
                 auto& camera = app.scene.cameras.at(app.params.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
-                    {app.state.rendered_image.width,
-                        app.state.rendered_image.height},
+                    {app.rendered_image.width,
+                        app.rendered_image.height},
                     {0.5f, 0.5f}, zero2f);
                 auto  isec   = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)

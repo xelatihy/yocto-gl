@@ -2997,7 +2997,7 @@ inline image<T> get_image_region(const image<T>& img, const image_region& region
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
 // ration to compute the other.
-vec2i get_image_size(const vec2i& suggested_size, float aspect);
+vec2i get_image_size(const vec2i& size, float aspect);
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -3018,7 +3018,7 @@ void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& suggested_size);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 
 }  // namespace ygl
 
@@ -3524,6 +3524,7 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 float get_camera_fovx(const yocto_camera& camera);
 float get_camera_fovy(const yocto_camera& camera);
 float get_camera_aspect(const yocto_camera& camera);
+vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size);
 void  set_camera_fovy(
      yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
@@ -3704,10 +3705,6 @@ struct trace_lights {
 
 // Trace data used during rendering. Initialize with `make_trace_state()`
 struct trace_state {
-    image<vec4f> rendered_image = {};
-    image<vec4f> display_image  = {};
-
-    // internal data used during rendering
     image<vec4f>     accumulation_buffer      = {};
     image<int>       samples_per_pixel        = {};
     image<rng_state> random_number_generators = {};
@@ -3717,15 +3714,13 @@ struct trace_state {
 };
 
 // Initialize lights.
-trace_lights make_trace_lights(
-    const yocto_scene& scene, const trace_params& params);
+trace_lights make_trace_lights(const yocto_scene& scene);
 inline bool empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
 // Initialize state of the renderer.
-trace_state make_trace_state(
-    const yocto_scene& scene, const trace_params& params);
+trace_state make_trace_state(const vec2i& image_size, int random_seed);
 
 // Progressively compute an image by calling trace_samples multiple times.
 image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
@@ -3734,12 +3729,12 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-bool trace_samples(trace_state& state, const yocto_scene& scene,
+bool trace_samples(trace_state& state, image<vec4f>& rendered_image, const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(trace_state& state, const yocto_scene& scene,
+void trace_async_start(trace_state& state, image<vec4f>& rendered_image, image<vec4f>& display_image, const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const trace_params& params);
 // Stop the asynchronous renderer.
 void trace_async_stop(trace_state& state);
