@@ -32,16 +32,16 @@
 #include "ysceneui.h"
 
 struct glshape {
-    glarraybuffer positions_buffer = {};
-    glarraybuffer normals_buffer = {};
-    glarraybuffer texturecoords_buffer = {};
-    glarraybuffer colors_buffer = {};
-    glarraybuffer tangentspaces_buffer   = {};
-    glelementbuffer points_buffer = {};
-    glelementbuffer lines_buffer = {};
-    glelementbuffer triangles_buffer = {};
-    glelementbuffer quads_buffer                      = {};
-    vector<glelementbuffer> split_quads_buffer        = {};
+    glarraybuffer           positions_buffer     = {};
+    glarraybuffer           normals_buffer       = {};
+    glarraybuffer           texturecoords_buffer = {};
+    glarraybuffer           colors_buffer        = {};
+    glarraybuffer           tangentspaces_buffer = {};
+    glelementbuffer         points_buffer        = {};
+    glelementbuffer         lines_buffer         = {};
+    glelementbuffer         triangles_buffer     = {};
+    glelementbuffer         quads_buffer         = {};
+    vector<glelementbuffer> split_quads_buffer   = {};
 };
 
 struct draw_glstate {
@@ -529,14 +529,16 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
             5);
 
         set_gluniform(state.program, "elem_faceted", (int)shape.normals.empty());
-        set_glvertexattrib(state.program, "vert_pos", vbos.positions_buffer, zero3f);
-        set_glvertexattrib(state.program, "vert_norm", vbos.normals_buffer, zero3f);
+        set_glvertexattrib(
+            state.program, "vert_pos", vbos.positions_buffer, zero3f);
+        set_glvertexattrib(
+            state.program, "vert_norm", vbos.normals_buffer, zero3f);
         set_glvertexattrib(
             state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
         set_glvertexattrib(
             state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
-        set_glvertexattrib(
-            state.program, "vert_tangsp", vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
+        set_glvertexattrib(state.program, "vert_tangsp",
+            vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
 
         if (vbos.points_buffer) {
             set_gluniform(state.program, "elem_type", 1);
@@ -631,14 +633,16 @@ void draw_glinstance(draw_glstate& state, const yocto_scene& scene,
 
             set_gluniform(
                 state.program, "elem_faceted", (int)surface.normals.empty());
-            set_glvertexattrib(state.program, "vert_pos", vbos.positions_buffer, zero3f);
-            set_glvertexattrib(state.program, "vert_norm", vbos.normals_buffer, zero3f);
             set_glvertexattrib(
-                state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
+                state.program, "vert_pos", vbos.positions_buffer, zero3f);
             set_glvertexattrib(
-                state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
-            set_glvertexattrib(state.program, "vert_tangsp", vbos.tangentspaces_buffer,
-                vec4f{0, 0, 1, 1});
+                state.program, "vert_norm", vbos.normals_buffer, zero3f);
+            set_glvertexattrib(state.program, "vert_texcoord",
+                vbos.texturecoords_buffer, zero2f);
+            set_glvertexattrib(state.program, "vert_color", vbos.colors_buffer,
+                vec4f{1, 1, 1, 1});
+            set_glvertexattrib(state.program, "vert_tangsp",
+                vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
 
             if (vbos.split_quads_buffer[group_id]) {
                 set_gluniform(state.program, "elem_type", 3);
@@ -752,15 +756,12 @@ void draw_glscene(draw_glstate& state, const yocto_scene& scene,
     if (wireframe) set_glwireframe(false);
 }
 
-draw_glstate init_draw_state(const glwindow& win) {
-    auto& app   = *(app_state*)get_user_pointer(win);
-    auto  state = draw_glstate();
+void init_draw_glstate(draw_glstate& state, const yocto_scene& scene) {
     // load textures and vbos
     state.program = make_glprogram(vertex, fragment);
-    state.textures.resize(app.scene.textures.size());
-    for (auto texture_id = 0; texture_id < app.scene.textures.size();
-         texture_id++) {
-        auto texture = app.scene.textures[texture_id];
+    state.textures.resize(scene.textures.size());
+    for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
+        auto texture = scene.textures[texture_id];
         if (!texture.hdr_image.pixels.empty()) {
             state.textures[texture_id] = make_gltexture(
                 texture.hdr_image, true, true, true);
@@ -771,20 +772,22 @@ draw_glstate init_draw_state(const glwindow& win) {
             printf("bad texture");
         }
     }
-    state.shapes.resize(app.scene.shapes.size());
-    for (auto shape_id = 0; shape_id < app.scene.shapes.size(); shape_id++) {
-        auto& shape = app.scene.shapes[shape_id];
+    state.shapes.resize(scene.shapes.size());
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+        auto& shape = scene.shapes[shape_id];
         auto  vbos  = glshape();
         if (!shape.positions.empty())
             vbos.positions_buffer = make_glarraybuffer(shape.positions, false);
         if (!shape.normals.empty())
             vbos.normals_buffer = make_glarraybuffer(shape.normals, false);
         if (!shape.texturecoords.empty())
-            vbos.texturecoords_buffer = make_glarraybuffer(shape.texturecoords, false);
+            vbos.texturecoords_buffer = make_glarraybuffer(
+                shape.texturecoords, false);
         if (!shape.colors.empty())
             vbos.colors_buffer = make_glarraybuffer(shape.colors, false);
         if (!shape.tangentspaces.empty())
-            vbos.tangentspaces_buffer = make_glarraybuffer(shape.tangentspaces, false);
+            vbos.tangentspaces_buffer = make_glarraybuffer(
+                shape.tangentspaces, false);
         if (!shape.points.empty())
             vbos.points_buffer = make_glelementbuffer(shape.points, false);
         if (!shape.lines.empty())
@@ -796,10 +799,9 @@ draw_glstate init_draw_state(const glwindow& win) {
                 convert_quads_to_triangles(shape.quads), false);
         state.shapes[shape_id] = vbos;
     }
-    state.surfaces.resize(app.scene.surfaces.size());
-    for (auto surface_id = 0; surface_id < app.scene.surfaces.size();
-         surface_id++) {
-        auto& surface       = app.scene.surfaces[surface_id];
+    state.surfaces.resize(scene.surfaces.size());
+    for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
+        auto& surface       = scene.surfaces[surface_id];
         auto  vbos          = glshape();
         auto  quads         = vector<vec4i>();
         auto  positions     = vector<vec3f>();
@@ -817,7 +819,8 @@ draw_glstate init_draw_state(const glwindow& win) {
         }
         if (!positions.empty())
             vbos.positions_buffer = make_glarraybuffer(positions, false);
-        if (!normals.empty()) vbos.normals_buffer = make_glarraybuffer(normals, false);
+        if (!normals.empty())
+            vbos.normals_buffer = make_glarraybuffer(normals, false);
         if (!texturecoords.empty())
             vbos.texturecoords_buffer = make_glarraybuffer(texturecoords, false);
         vbos.split_quads_buffer = {};
@@ -828,7 +831,12 @@ draw_glstate init_draw_state(const glwindow& win) {
         }
         state.surfaces[surface_id] = vbos;
     }
-    return state;
+}
+
+// update
+void update(app_state& app) {
+    // initialize gl state if needed
+    if (!app.state.program) init_draw_glstate(app.state, app.scene);
 }
 
 // run ui loop
@@ -846,9 +854,6 @@ void run_ui(app_state& app) {
 
     // load textures and vbos
     update_transforms(app.scene, app.time);
-
-    // init gl data
-    app.state = init_draw_state(win);
 
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
@@ -883,6 +888,9 @@ void run_ui(app_state& app) {
                 app.time = app.time_range.x;
             update_transforms(app.scene, app.time);
         }
+
+        // update
+        update(app);
 
         // draw
         draw(win);
