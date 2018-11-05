@@ -363,6 +363,8 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
+using std::mutex;
+using std::lock_guard;
 using namespace std::string_literals;
 
 using byte = unsigned char;
@@ -2021,6 +2023,32 @@ inline bool contains(const unordered_map<K, V>& container, const K& value) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// CONCURRENCY UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// a simple concurrent queue that locks at every call
+template<typename T>
+struct concurrent_queue {
+    void push(const T& value) {
+        lock_guard<mutex> lock(_mutex);
+        _queue.push_back(value);
+    }
+    bool try_pop(T& value) {
+        lock_guard<mutex> lock(_mutex);
+        if(_queue.empty()) return false;
+        value = _queue.front();
+        _queue.pop_front();
+        return true;
+    }
+
+    mutex _mutex;
+    deque<T> _queue;
+};
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -2914,7 +2942,7 @@ vec3f rgb_to_xyz(const vec3f& rgb);
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// IMAGE TYPE AND UTILITIES
+// IMAGE UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
 
@@ -2953,6 +2981,10 @@ struct image_region {
 
 // Splits an image into an array of regions
 vector<image_region> make_image_regions(int width, int height, int region_size = 32);
+
+// Gets pixels in an image region
+template<typename T>
+inline image<T> get_image_region(const image<T>& img, const image_region& region);
 
 // Conversion from/to floats.
 image<vec4f> byte_to_float(const image<vec4b>& bt);
@@ -3985,6 +4017,25 @@ inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Gets pixels in an image region
+template<typename T>
+inline image<T> get_image_region(const image<T>& img, const image_region& region) {
+    auto clipped = image<T>{region.width, region.height};
+    for(auto j = 0; j < region.height; j ++) {
+        for(auto i = 0; i < region.width; i ++) {
+            at(clipped, i, j) = at(img, i + region.x, j + region.y);
+        }
+    }
+    return clipped;
+}
+
+}
+
+// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -4047,6 +4098,9 @@ inline bool print_value(string& str, const bbox<T, N>& v) {
 template <typename T, int N>
 inline bool print_value(string& str, const ray<T, N>& v) {
     return print_value(str, (const array<T, N * 2 + 2>&)v);
+}
+inline bool print_value(string& str, const image_region& v) {
+    return print_value(str, (const array<int, 4>&)v);
 }
 
 // Prints a string.
@@ -4156,6 +4210,9 @@ inline bool parse_value(parse_string_view& str, bbox<T, N>& v) {
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, ray<T, N>& v) {
     return parse_value(str, (array<T, N * 2 + 2>&)v);
+}
+inline bool parse_value(parse_string_view& str, image_region& v) {
+    return parse_value(str, (array<int, 4>&)v);
 }
 
 // Prints a string.
