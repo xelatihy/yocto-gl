@@ -63,18 +63,33 @@ struct app_state {
     int64_t                    trace_start    = 0;
     gltexture                  gl_txt         = {};
 
-    // async scene loading
+    // app status
     bool load_done = false, load_running = false;
+    string status = "";
 };
+
+void start_rendering_async(app_state& app) {
+    trace_async_stop(app.state);
+    app.status = "rendering image";
+    app.trace_start = get_time();
+    app.state       = make_trace_state(app.scene, app.params);
+    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
+}
+
+void stop_rendering_async(app_state& app) {
+    trace_async_stop(app.state);
+}
 
 bool load_scene_sync(app_state& app) {
     // scene loading
+    app.status = "loading scene";
     if (!load_scene(app.filename, app.scene)) {
         log_fatal("cannot load scene " + app.filename);
         return false;
     }
 
     // tesselate
+    app.status = "tesselating surfaces";
     tesselate_shapes_and_surfaces(app.scene);
 
     // add components
@@ -87,9 +102,11 @@ bool load_scene_sync(app_state& app) {
     log_validation_errors(app.scene);
 
     // build bvh
+    app.status = "computing bvh";
     app.bvh = make_scene_bvh(app.scene, true, app.use_embree_bvh);
 
     // init renderer
+    app.status = "initializing lights";
     app.lights = make_trace_lights(app.scene, app.params);
 
     // fix renderer type if no lights
@@ -98,16 +115,13 @@ bool load_scene_sync(app_state& app) {
         app.params.sample_tracer = trace_type::eyelight;
     }
 
-    // prepare renderer
-    app.state = make_trace_state(app.scene, app.params);
-
-    // initialize rendering objects
-    app.trace_start = get_time();
-    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
-
     // set flags
     app.load_done = true;
     app.load_running = false;
+    app.status = "loading done";
+
+    // start rendering
+    start_rendering_async(app);
 
     // done
     return false;
@@ -120,6 +134,7 @@ void load_scene_async(app_state& app) {
     }
     app.load_done = false;
     app.load_running = true;
+    app.status = "uninitialized";
     app.scene = {};
     app.bvh = {};
     app.lights = {};
@@ -135,17 +150,11 @@ void draw_glwidgets(const glwindow& win) {
         if (begin_header_glwidget(win, "scene")) {
             draw_label_glwidgets(win, "scene", get_filename(app.filename));
             if(draw_button_glwidget(win, "load")) {
-                trace_async_stop(app.state);
+                stop_rendering_async(app);
                 load_scene_async(app);
             }
             draw_label_glwidgets(win, "filename", app.filename);
-            auto status = ""s;
-            if(app.load_running) {
-                status = "loading";
-            } else {
-                status = "rendering";
-            }
-            draw_label_glwidgets(win, "status", status);
+            draw_label_glwidgets(win, "status", app.status);
             end_header_glwidget(win);
         }
         if (begin_header_glwidget(win, "trace")) {
@@ -248,14 +257,11 @@ void draw(const glwindow& win) {
 }
 
 bool update(app_state& app) {
-    // exit if no scene
-    if (!app.load_done) return false;
-
     // exit if no updated
-    if (app.update_list.empty()) return false;
+    if (!app.load_done || app.update_list.empty()) return false;
 
     // stop renderer
-    trace_async_stop(app.state);
+    stop_rendering_async(app);
 
     // update BVH
     for (auto& sel : app.update_list) {
@@ -274,10 +280,8 @@ bool update(app_state& app) {
     }
     app.update_list.clear();
 
-    app.state       = {};
-    app.trace_start = get_time();
-    app.state       = make_trace_state(app.scene, app.params);
-    trace_async_start(app.state, app.scene, app.bvh, app.lights, app.params);
+    // start rendering
+    start_rendering_async(app);
 
     // updated
     return true;
