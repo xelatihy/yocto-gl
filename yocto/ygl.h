@@ -3018,7 +3018,7 @@ void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image<vec4f> resize_image(const image<vec4f>& img, int width, int height);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& suggested_size);
 
 }  // namespace ygl
 
