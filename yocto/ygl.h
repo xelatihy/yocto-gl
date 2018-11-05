@@ -2967,36 +2967,31 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
-    int       width  = 0;
-    int       height = 0;
+    vec2i     size  = {0, 0};
     vector<T> pixels = {};
 
     // constructors
-    image() : width{0}, height{0}, pixels() {}
-    image(int w, int h, const T& v = T{})
-        : width{w}, height{h}, pixels(w * h, v) {}
-    image(int w, int h, const T* v)
-        : width{w}, height{h}, pixels(v, v + w * h) {}
-    image(const vec2i& size, const T& v = T{})
-        : width{size.x}, height{size.y}, pixels(size.x * size.y, v) {}
-    image(const vec2i& size, const T* v)
-        : width{size.x}, height{size.y}, pixels(v, v + size.x * size.y) {}
+    image() : size{0, 0}, pixels{} {}
+    image(const vec2i& wh, const T& v = T{})
+        : size{wh}, pixels(wh.x * wh.y, v) {}
+    image(const vec2i& wh, const T* v)
+        : size{wh}, pixels(v, v + wh.x * wh.y) {}
 };
 
 // Element access.
 template <typename T>
 inline T& at(image<T>& img, int i, int j) {
-    return img.pixels[j * img.width + i];
+    return img.pixels[j * img.size.x + i];
 }
 template <typename T>
 inline const T& at(const image<T>& img, int i, int j) {
-    return img.pixels[j * img.width + i];
+    return img.pixels[j * img.size.x + i];
 }
 
 // Size
 template <typename T>
 inline float get_image_aspect(const image<T>& img) {
-    return (float)img.width / (float)img.height;
+    return (float)img.size.x / (float)img.size.y;
 }
 
 // Image region defined by its corner at x,y and with size width x height
@@ -3047,42 +3042,42 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 namespace ygl {
 
 // Make example images.
-image<vec4f> make_grid_image(int width, int height, int tile = 8,
+image<vec4f> make_grid_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_checker_image(int width, int height, int tile = 8,
+image<vec4f> make_checker_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_bumpdimple_image(int width, int height, int tile = 8);
-image<vec4f> make_ramp_image(int width, int height, const vec4f& c0,
+image<vec4f> make_bumpdimple_image(const vec2i& size, int tile = 8);
+image<vec4f> make_ramp_image(const vec2i& size, const vec4f& c0,
     const vec4f& c1, float srgb = false);
-image<vec4f> make_gammaramp_image(int width, int height);
-image<vec4f> make_uvramp_image(int width, int height);
+image<vec4f> make_gammaramp_image(const vec2i& size);
+image<vec4f> make_uvramp_image(const vec2i& size);
 image<vec4f> make_uvgrid_image(
-    int width, int height, int tile = 8, bool colored = true);
+    const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-image<vec4f> make_sunsky_image(int width, int height, float thetaSun,
+image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image(int width, int height,
+image<vec4f> make_lights_image(const vec2i& size,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
     float lwidth = pif / 16, float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 image<vec4f> make_noise_image(
-    int width, int height, float scale = 1, bool wrap = true);
-image<vec4f> make_fbm_image(int width, int height, float scale = 1,
+    const vec2i& size, float scale = 1, bool wrap = true);
+image<vec4f> make_fbm_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image<vec4f> make_ridge_image(int width, int height, float scale = 1,
+image<vec4f> make_ridge_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image<vec4f> make_turbulence_image(int width, int height, float scale = 1,
+image<vec4f> make_turbulence_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -3158,32 +3153,29 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
-    int       width  = 0;
-    int       height = 0;
-    int       depth  = 0;
+    vec3i     size  = {0, 0, 0};
     vector<T> voxels = {};
 
     // constructors
-    volume() : width{0}, height{0}, depth{0}, voxels() {}
-    volume(int w, int h, int d, const T& v = T{})
-        : width{w}, height{h}, depth{d}, voxels(w * h * d, v) {}
-    volume(int w, int h, int d, const T* v)
-        : width{w}, height{h}, depth{d}, voxels(v, v + w * h * d) {}
+    volume() : size{0, 0, 0}, voxels() {}
+    volume(const vec3i& whd, const T& v = T{})
+        : size{whd}, voxels(whd.x * whd.y * whd.z, v) {}
+    volume(const vec3i& whd, const T* v)
+        : size{whd}, voxels(v, v + whd.x * whd.y * whd.z) {}
 };
 
 // Element access
 template <typename T>
 T& at(volume<T>& vol, int i, int j, int k) {
-    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
+    return vol.voxels[k * vol.size.x * vol.size.y + j * vol.size.x + i];
 }
 template <typename T>
 const T& at(const volume<T>& vol, int i, int j, int k) {
-    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
+    return vol.voxels[k * vol.size.x * vol.size.y + j * vol.size.x + i];
 }
 
 // make a simple example volume
-volume<float> make_test_volume1f(
-    int width, int height, int depth, float scale = 10, float exponent = 6);
+volume<float> make_test_volume1f(const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
