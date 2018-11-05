@@ -50,6 +50,7 @@ struct app_state {
     image<rng_state>               trace_rngs     = {};
     image<vec4f>                   rendered_image = {};
     image<vec4f>                   display_image  = {};
+    image<vec4f>                   preview_image  = {};
     bool                           trace_stop     = false;
     int                            trace_sample   = 0;
     vector<thread>                 trace_threads  = {};
@@ -58,6 +59,7 @@ struct app_state {
     // view image
     vec2f                      image_center = zero2f;
     float                      image_scale  = 1;
+    int                        preview_ratio = 8;
     bool                       zoom_to_fit  = true;
     bool                       widgets_open = false;
     tuple<string, int>         selection    = {"", -1};
@@ -65,29 +67,39 @@ struct app_state {
     bool                       navigation_fps = false;
     bool                       quiet          = false;
     int64_t                    trace_start    = 0;
-    opengl_texture             gl_txt         = {};
+    opengl_texture             display_texture         = {};
+    opengl_texture             preview_texture         = {};
 
     // app status
     bool   load_done = false, load_running = false;
     string status = "";
 };
 
-void start_rendering_async(app_state& app) {
+void stop_rendering_async(app_state& app) {
     trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
+}
+
+void start_rendering_async(app_state& app) {
+    stop_rendering_async(app);
     app.status      = "rendering image";
     app.trace_start = get_time();
+    
     auto image_size = get_camera_image_size(
         app.scene.cameras[app.params.camera_id], app.params.image_size);
     app.rendered_image = make_image<vec4f>(image_size);
     app.display_image  = make_image<vec4f>(image_size);
+    app.preview_image  = make_image<vec4f>(image_size / app.preview_ratio);
     app.trace_rngs     = make_trace_rngs(image_size, app.params.random_seed);
+
+    auto preview_params = app.params;
+    preview_params.image_size /= app.preview_ratio;
+    preview_params.num_samples = 1;
+    app.preview_image = trace_image(app.scene, app.bvh, app.lights, preview_params);
+    app.preview_image = tonemap_image(app.preview_image, app.params.display_exposure, app.params.display_filmic, app.params.display_srgb);
+
     trace_async_start(app.rendered_image, app.display_image, app.scene, app.bvh,
         app.lights, app.trace_rngs, app.trace_threads, app.trace_stop,
         app.trace_sample, app.trace_queue, app.params);
-}
-
-void stop_rendering_async(app_state& app) {
-    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -239,19 +251,22 @@ void draw(const opengl_window& win) {
     if (app.load_done) {
         center_image(app.image_center, app.image_scale, app.display_image.size,
             win_size, app.zoom_to_fit);
-        if (!app.gl_txt) {
+        if (!app.display_texture) {
             init_opengl_texture(
-                app.gl_txt, app.display_image.size, false, false, false, false);
+                app.preview_texture, app.preview_image.size, false, false, false, false);
+            init_opengl_texture(
+                app.display_texture, app.display_image.size, false, false, false, false);
         } else {
             auto region = image_region{};
-            while (app.trace_queue.try_pop(region))
+            while (app.trace_queue.try_pop(region)) {
                 update_opengl_texture_region(
-                    app.gl_txt, app.display_image, region, false);
+                    app.display_texture, app.display_image, region, false);
+            }
         }
         set_glblending(true);
         draw_glimage_background(app.display_image.size, win_size,
             app.image_center, app.image_scale);
-        draw_glimage(app.gl_txt, app.display_image.size, win_size,
+        draw_glimage(app.display_texture, app.display_image.size, win_size,
             app.image_center, app.image_scale);
         set_glblending(false);
     }
