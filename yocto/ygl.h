@@ -3725,7 +3725,7 @@ inline bool  empty(const trace_lights& lights) {
 image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
+void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params, bool no_parallel = false);
 
 // Progressively compute an image by calling trace_samples multiple times.

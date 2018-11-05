@@ -7266,15 +7266,13 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
+void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene, const yocto_camera& camera,const bvh_scene& bvh,
     const trace_lights& lights, const trace_params& params, bool no_parallel) {
     auto scope      = log_trace_scoped("tracing image");
-    auto image_size = get_camera_image_size(camera, params.image_size);
-    auto rendered_image = make_image<vec4f>(image_size);
-    auto rngs           = make_trace_rngs(image_size);
+    auto rngs           = make_trace_rngs(rendered_image.size);
 
     if (no_parallel) {
-        for (auto& region : make_image_regions(image_size)) {
+        for (auto& region : make_image_regions(rendered_image.size)) {
             trace_image_region(rendered_image, scene, camera, bvh, lights, region, 0,
                 params.num_samples, rngs, params);
         }
@@ -7295,7 +7293,6 @@ image<vec4f> trace_image(const yocto_scene& scene, const yocto_camera& camera,co
         }
         for (auto& t : threads) t.join();
     }
-    return rendered_image;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.

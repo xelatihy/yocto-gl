@@ -101,7 +101,7 @@ void start_rendering_async(app_state& app) {
     auto preview_params = app.params;
     preview_params.image_size /= app.preview_ratio;
     preview_params.num_samples = 1;
-    app.preview_image          = trace_image(
+    trace_image(app.preview_image,
         app.scene, camera, app.bvh, app.lights, preview_params);
     app.trace_queue.push({zero2i, zero2i});
 
