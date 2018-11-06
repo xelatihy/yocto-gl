@@ -358,12 +358,12 @@ using std::ignore;
 using std::lock_guard;
 using std::make_unique;
 using std::mutex;
+using std::pair;
 using std::runtime_error;
 using std::string;
 using std::thread;
 using std::tie;
 using std::tuple;
-using std::pair;
 using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
@@ -2379,12 +2379,12 @@ inline T interpolate_bezier_derivative(
 namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-void compute_vertex_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& positions, vector<vec3f>& tangents);
-void compute_vertex_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, vector<vec3f>& normals);
-void compute_vertex_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& positions, vector<vec3f>& normals);
+void compute_vertex_tangents(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, vector<vec3f>& tangents);
+void compute_vertex_normals(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, vector<vec3f>& normals);
+void compute_vertex_normals(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, vector<vec3f>& normals);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
@@ -2396,15 +2396,15 @@ void compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec2f>& texturecoords, vector<vec4f>& tangentspaces);
 
 // Apply skinning to vertex position and normals.
-void compute_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms, vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
+void compute_skinning(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms,
+    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
 // Apply skinning as specified in Khronos glTF.
-void compute_matrix_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms, vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
+void compute_matrix_skinning(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms,
+    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
 
 // Dictionary to store edge information.
 using edge_map = unordered_map<vec2i, vec2i>;
@@ -2434,13 +2434,15 @@ inline void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges) {
 }
 
 // Convert quads to triangles
-void convert_quads_to_triangles(const vector<vec4i>& quads, vector<vec3i>& triangles);
+void convert_quads_to_triangles(
+    const vector<vec4i>& quads, vector<vec3i>& triangles);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
 void convert_quads_to_triangles(
     const vector<vec4i>& quads, vector<vec3i>& triangles, int row_length);
 // Convert triangles to quads by creating degenerate quads
-void convert_triangles_to_quads(const vector<vec3i>& triangles, vector<vec4i>& quads);
+void convert_triangles_to_quads(
+    const vector<vec3i>& triangles, vector<vec4i>& quads);
 
 // Convert beziers to lines using 3 lines for each bezier.
 void convert_bezier_to_lines(const vector<vec4i>& beziers, vector<vec2i>& lines);
@@ -2448,20 +2450,20 @@ void convert_bezier_to_lines(const vector<vec4i>& beziers, vector<vec2i>& lines)
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
 // with ids, it also plits the faces per id.
-void convert_face_varying(
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
+void convert_face_varying(const vector<vec4i>& quads_positions,
+    const vector<vec4i>&                       quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    vector<vec4i>& split_quads, vector<vec3f>& split_positions, vector<vec3f>& split_normals, 
-    vector<vec2f>& split_texturecoords);
+    vector<vec4i>& split_quads, vector<vec3f>& split_positions,
+    vector<vec3f>& split_normals, vector<vec2f>& split_texturecoords);
 
 // Split primitives per id
-void ungroup_lines(
-    const vector<vec2i>& lines, const vector<int>& ids, vector<vector<vec2i>>& split_lines);
-void ungroup_triangles(
-    const vector<vec3i>& triangles, const vector<int>& ids, vector<vector<vec3i>>& split_triangles);
-void ungroup_quads(
-    const vector<vec4i>& quads, const vector<int>& ids, vector<vector<vec4i>>& split_quads);
+void ungroup_lines(const vector<vec2i>& lines, const vector<int>& ids,
+    vector<vector<vec2i>>& split_lines);
+void ungroup_triangles(const vector<vec3i>& triangles, const vector<int>& ids,
+    vector<vector<vec3i>>& split_triangles);
+void ungroup_quads(const vector<vec4i>& quads, const vector<int>& ids,
+    vector<vector<vec4i>>& split_quads);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
@@ -2479,13 +2481,37 @@ template <typename T>
 void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-void subdivide_catmullclark(vector<vec4i>& quads,
-    vector<T>& vert, int level, bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& quads, vector<T>& vert, int level,
+    bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-void weld_vertices(vector<vec3f>& positions, float threshold, vector<int>& welded_indices);
-void weld_triangles(vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
+void weld_vertices(
+    vector<vec3f>& positions, float threshold, vector<int>& welded_indices);
+void weld_triangles(
+    vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
 void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
+
+// Merge shape elements
+void merge_lines(
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int merge_verts);
+void merge_triangles(vector<vec3i>& triangles,
+    const vector<vec2i>& merge_triangles, int merge_verts);
+void merge_quads(
+    vector<vec4i>& quads, const vector<vec2i>& merge_quads, int merge_verts);
+void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
+void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
+void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    const vector<vec2i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
 
 // Pick a point in a point set uniformly.
 inline int sample_points_element(int npoints, float re) {
@@ -2500,8 +2526,8 @@ inline int sample_points_element(const vector<float>& cdf, float re) {
 }
 
 // Pick a point on lines uniformly.
-inline void sample_lines_element_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& positions, vector<float>& cdf) {
+inline void sample_lines_element_cdf(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, vector<float>& cdf) {
     cdf = vector<float>(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
@@ -2515,8 +2541,8 @@ inline pair<int, float> sample_lines_element(
 }
 
 // Pick a point on a triangle mesh uniformly.
-inline void sample_triangles_element_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, vector<float>& cdf) {
+inline void sample_triangles_element_cdf(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, vector<float>& cdf) {
     cdf = vector<float>(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
@@ -2531,8 +2557,8 @@ inline pair<int, vec2f> sample_triangles_element(
 }
 
 // Pick a point on a quad mesh uniformly.
-inline void sample_quads_element_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& positions, vector<float>& cdf) {
+inline void sample_quads_element_cdf(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, vector<float>& cdf) {
     cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
@@ -2557,14 +2583,16 @@ inline pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
-void sample_triangles_points(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    int npoints, vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords, int seed = 7);
-void sample_quads_points(
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    int npoints, vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords, int seed = 7);
+void sample_triangles_points(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, int npoints,
+    vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals,
+    vector<vec2f>& sampled_texturecoords, int seed = 7);
+void sample_quads_points(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, int npoints,
+    vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals,
+    vector<vec2f>& sampled_texturecoords, int seed = 7);
 
 }  // namespace ygl
 
@@ -2771,41 +2799,38 @@ struct make_shape_data {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-make_shape_data make_quad_shape(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_quad_stack_shape(const vec3i& steps, const vec3f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_floor_shape(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cube_shape(const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize, float radius, bool as_triangles);
+make_shape_data make_quad_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+make_shape_data make_quad_stack_shape(
+    const vec3i& steps, const vec3f& size, const vec2f& uvsize);
+make_shape_data make_floor_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+make_shape_data make_cube_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+make_shape_data make_cube_rounded_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius);
 make_shape_data make_sphere_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_sphere_cube_shape(
-    int steps, float size, float uvsize, bool as_triangles);
-make_shape_data make_sphere_flipcap_shape(const vec2i& steps, float size,
-    const vec2f& uvsize, const vec2f& zflip, bool as_triangles);
+    const vec2i& steps, float size, const vec2f& uvsize);
+make_shape_data make_sphere_cube_shape(int steps, float size, float uvsize);
+make_shape_data make_sphere_flipcap_shape(
+    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip);
 make_shape_data make_disk_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, bool as_triangles);
-make_shape_data make_disk_quad_shape(
-    int steps, float size, float uvsize, bool as_triangles);
+    const vec2i& steps, float size, const vec2f& uvsize);
+make_shape_data make_disk_quad_shape(int steps, float size, float uvsize);
 make_shape_data make_disk_bulged_shape(
-    int steps, float size, float uvsize, float height, bool as_triangles);
-make_shape_data make_cylinder_side_shape(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, bool as_triangles);
-make_shape_data make_cylinder_shape(const vec3i& steps, const vec2f& size,
-    const vec3f& uvsize, bool as_triangles);
-make_shape_data make_cylinder_rounded_shape(const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius, bool as_triangles);
-make_shape_data make_geodesic_sphere_shape(
-    int tesselation, float size, bool as_triangles);
+    int steps, float size, float uvsize, float height);
+make_shape_data make_cylinder_side_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+make_shape_data make_cylinder_shape(
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize);
+make_shape_data make_cylinder_rounded_shape(
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius);
+make_shape_data make_geodesic_sphere_shape(int tesselation, float size);
 
 // Make examples shapes with are watertight (good for subdivs).
 // Returns (triangles, quads, pos)
-make_shape_data make_suzanne_shape(float size, bool as_triangles);
-make_shape_data make_cube_shape(const vec3f& size, bool as_triangles);
+make_shape_data make_suzanne_shape(float size);
+make_shape_data make_cube_shape(const vec3f& size);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
 make_shape_data make_cube_facevarying_shape(
@@ -3411,7 +3436,7 @@ void print_stats(const yocto_scene& scene);
 
 // Merge scene into one another. Note that the objects are _moved_ from
 // merge_from to merged_into, so merge_from will be empty after this function.
-void merge_scene(yocto_scene& merge_into, yocto_scene& merge_from);
+void merge_scene(yocto_scene& merge_into, const yocto_scene& merge_from);
 
 }  // namespace ygl
 
@@ -3503,11 +3528,11 @@ vec4f evaluate_shape_element_tangentspace(
     const yocto_shape& shape, int element_id);
 
 // Sample a shape element based on area/length.
-void     compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf);
+void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float             sample_shape_element_pdf(const yocto_shape& shape,
-                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
+float            sample_shape_element_pdf(const yocto_shape& shape,
+               const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Surface values interpolated using barycentric coordinates.
 vec3f evaluate_surface_position(
@@ -3522,11 +3547,12 @@ vec3f evaluate_surface_element_normal(const yocto_surface& shape, int element_id
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
-void     compute_surface_elements_cdf(const yocto_surface& surface, vector<float>& cdf);
+void compute_surface_elements_cdf(
+    const yocto_surface& surface, vector<float>& cdf);
 pair<int, vec2f> sample_surface_element(const yocto_surface& surface,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
-float             sample_surface_element_pdf(const yocto_surface& surface,
-                const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
+float            sample_surface_element_pdf(const yocto_surface& surface,
+               const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
@@ -3747,7 +3773,7 @@ void trace_async_stop(vector<thread>& threads, bool& stop_flag,
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
 pair<uint64_t, uint64_t> get_trace_stats();
-void                      reset_trace_stats();
+void                     reset_trace_stats();
 
 }  // namespace ygl
 
