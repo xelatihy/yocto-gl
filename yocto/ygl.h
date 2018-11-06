@@ -3727,7 +3727,8 @@ inline bool empty(const trace_lights& lights) {
 
 // State of a pixel during tracing
 struct trace_pixel {
-    vec4f radiance = zero4f;
+    vec3f radiance = zero3f;
+    int hits = 0;
     int samples = 0;
     rng_state rng = {};
 };
@@ -3760,7 +3761,7 @@ const auto trace_sampler_type_names = vector<string>{"path", "direct",
     "debug_diffuse", "debug_specular", "debug_roughness"};
 
 // Tracer function
-using trace_sampler_func = function<vec4f(const yocto_scene& scene,
+using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
