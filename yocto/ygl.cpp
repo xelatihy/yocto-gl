@@ -7211,10 +7211,9 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
     int max_bounces, image<trace_pixel>& pixels, float pixel_clamp) {
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
-            at(rendered_image, {i, j}) *= current_sample;
+            auto& pixel = at(pixels, {i, j});
             for (auto s = 0; s < num_samples; s++) {
                 _trace_npaths += 1;
-                auto& pixel = at(pixels, {i, j});
                 auto  ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size, pixel.rng);
                 auto radiance_hit = sampler(
@@ -7227,12 +7226,10 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
                 if (max(xyz(radiance_hit)) > pixel_clamp)
                     xyz(radiance_hit) = xyz(radiance_hit) *
                                         (pixel_clamp / max(xyz(radiance_hit)));
-                at(rendered_image, {i, j}) += {radiance_hit.x, radiance_hit.y,
-                    radiance_hit.z,
-                    (radiance_hit.w > 0 || !scene.environments.empty()) ? 1.0f :
-                                                                          0.0f};
+                pixel.radiance += radiance_hit;
+                pixel.samples += 1;
             }
-            at(rendered_image, {i, j}) /= current_sample + num_samples;
+            at(rendered_image, {i, j}) = pixel.radiance / pixel.samples;
         }
     }
 }

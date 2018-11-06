@@ -3727,6 +3727,8 @@ inline bool empty(const trace_lights& lights) {
 
 // State of a pixel during tracing
 struct trace_pixel {
+    vec4f radiance = zero4f;
+    int samples = 0;
     rng_state rng = {};
 };
 
