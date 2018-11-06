@@ -1787,13 +1787,20 @@ bool apply_json_procedural(
         for (auto& n : shape.normals) n = {n.x, n.z, n.y};
     }
     if (!shape.quads_positions.empty()) {
-        tie(shape.quads, shape.positions, shape.normals,
-            shape.texturecoords)  = convert_face_varying(shape.quads_positions,
+        auto quads = vector<vec4i>();
+        auto positions = vector<vec3f>();
+        auto normals = vector<vec3f>();
+        auto texturecoords = vector<vec2f>();
+        convert_face_varying(shape.quads_positions,
             shape.quads_normals, shape.quads_texturecoords, shape.positions,
-            shape.normals, shape.texturecoords);
+            shape.normals, shape.texturecoords, quads, positions, normals, texturecoords);
         shape.quads_positions     = {};
         shape.quads_normals       = {};
         shape.quads_texturecoords = {};
+        shape.quads = quads;
+        shape.positions = positions;
+        shape.normals = normals;
+        shape.texturecoords = texturecoords;
     }
     value.points        = shape.points;
     value.lines         = shape.lines;

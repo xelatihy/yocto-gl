@@ -371,7 +371,7 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
 }
 
 // Apply skinning
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms) {
@@ -398,7 +398,7 @@ tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
 }
 
 // Apply skinning as specified in Khronos glTF
-tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms) {
@@ -534,17 +534,15 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
+void convert_face_varying(
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords) {
-    vector<vec4i> qquads;
-    vector<vec3f> qpos;
-    vector<vec3f> qnorm;
-    vector<vec2f> qtexcoord;
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    vector<vec4i>& split_quads, vector<vec3f>& split_positions, vector<vec3f>& split_normals, 
+    vector<vec2f>& split_texcturecoords) {
     // make faces unique
     unordered_map<vec3i, int> vert_map;
-    qquads = vector<vec4i>(quads_positions.size());
+    split_quads = vector<vec4i>(quads_positions.size());
     for (auto fid = 0; fid < quads_positions.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
             auto v = vec3i{
@@ -557,37 +555,35 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_v
             if (it == vert_map.end()) {
                 auto s = (int)vert_map.size();
                 vert_map.insert(it, {v, s});
-                (&qquads[fid].x)[c] = s;
+                (&split_quads[fid].x)[c] = s;
             } else {
-                (&qquads[fid].x)[c] = it->second;
+                (&split_quads[fid].x)[c] = it->second;
             }
         }
     }
 
     // fill vert data
-    qpos.clear();
+    split_positions.clear();
     if (!positions.empty()) {
-        qpos.resize(vert_map.size());
+        split_positions.resize(vert_map.size());
         for (auto kv : vert_map) {
-            qpos[kv.second] = positions[kv.first.x];
+            split_positions[kv.second] = positions[kv.first.x];
         }
     }
-    qnorm.clear();
+    split_normals.clear();
     if (!normals.empty()) {
-        qnorm.resize(vert_map.size());
+        split_normals.resize(vert_map.size());
         for (auto kv : vert_map) {
-            qnorm[kv.second] = normals[kv.first.y];
+            split_normals[kv.second] = normals[kv.first.y];
         }
     }
-    qtexcoord.clear();
+    split_texcturecoords.clear();
     if (!texturecoords.empty()) {
-        qtexcoord.resize(vert_map.size());
+        split_texcturecoords.resize(vert_map.size());
         for (auto kv : vert_map) {
-            qtexcoord[kv.second] = texturecoords[kv.first.z];
+            split_texcturecoords[kv.second] = texturecoords[kv.first.z];
         }
     }
-
-    return {qquads, qpos, qnorm, qtexcoord};
 }
 
 // Split primitives per id
@@ -615,7 +611,7 @@ vector<vector<vec4i>> ungroup_quads(
 
 // Subdivide lines.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines(
+pair<vector<vec2i>, vector<T>> subdivide_lines(
     const vector<vec2i>& lines, const vector<T>& vert) {
     // early exit
     if (lines.empty() || vert.empty()) return {lines, vert};
@@ -639,18 +635,18 @@ tuple<vector<vec2i>, vector<T>> subdivide_lines(
     return {tlines, tvert};
 }
 
-template tuple<vector<vec2i>, vector<float>> subdivide_lines(
+template pair<vector<vec2i>, vector<float>> subdivide_lines(
     const vector<vec2i>&, const vector<float>&);
-template tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
+template pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
     const vector<vec2i>&, const vector<vec2f>&);
-template tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
+template pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
     const vector<vec2i>&, const vector<vec3f>&);
-template tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
+template pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
     const vector<vec2i>&, const vector<vec4f>&);
 
 // Subdivide triangle.
 template <typename T>
-tuple<vector<vec3i>, vector<T>> subdivide_triangles(
+pair<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vert) {
     // early exit
     if (triangles.empty() || vert.empty()) return {triangles, vert};
@@ -686,18 +682,18 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles(
     return {ttriangles, tvert};
 }
 
-template tuple<vector<vec3i>, vector<float>> subdivide_triangles(
+template pair<vector<vec3i>, vector<float>> subdivide_triangles(
     const vector<vec3i>&, const vector<float>&);
-template tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+template pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
     const vector<vec3i>&, const vector<vec2f>&);
-template tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+template pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
     const vector<vec3i>&, const vector<vec3f>&);
-template tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+template pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
     const vector<vec3i>&, const vector<vec4f>&);
 
 // Subdivide quads.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(
+pair<vector<vec4i>, vector<T>> subdivide_quads(
     const vector<vec4i>& quads, const vector<T>& vert) {
     // early exit
     if (quads.empty() || vert.empty()) return {quads, vert};
@@ -753,18 +749,18 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads(
     return {tquads, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_quads(
+template pair<vector<vec4i>, vector<float>> subdivide_quads(
     const vector<vec4i>&, const vector<float>&);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
+template pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
     const vector<vec4i>&, const vector<vec2f>&);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
+template pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
     const vector<vec4i>&, const vector<vec3f>&);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
+template pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
     const vector<vec4i>&, const vector<vec4f>&);
 
 // Subdivide beziers.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_beziers(
+pair<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vert) {
     auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
@@ -792,18 +788,18 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     return {tbeziers, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_beziers(
+template pair<vector<vec4i>, vector<float>> subdivide_beziers(
     const vector<vec4i>&, const vector<float>&);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+template pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
     const vector<vec4i>&, const vector<vec2f>&);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+template pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
     const vector<vec4i>&, const vector<vec3f>&);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+template pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>&, const vector<vec4f>&);
 
 // Subdivide catmullclark.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
+pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
     // early exit
     if (quads.empty() || vert.empty()) return {quads, vert};
@@ -924,17 +920,17 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     return {tquads, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
+template pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<float>&, bool);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+template pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<vec2f>&, bool);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+template pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<vec3f>&, bool);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+template pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>&, const vector<vec4f>&, bool);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-tuple<vector<vec3f>, vector<int>> weld_vertices(
+pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold) {
     auto vid              = vector<int>(positions.size());
     auto welded_positions = vector<vec3f>();
@@ -951,7 +947,7 @@ tuple<vector<vec3f>, vector<int>> weld_vertices(
     }
     return {welded_positions, vid};
 }
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+pair<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, float threshold) {
     auto vid        = vector<int>();
     auto wpos       = vector<vec3f>();
@@ -965,7 +961,7 @@ tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangle
     }
     return {wtriangles, wpos};
 }
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold) {
     auto vid       = vector<int>();
     auto wpos      = vector<vec3f>();
@@ -4199,7 +4195,7 @@ vector<float> compute_shape_elements_cdf(const yocto_shape& shape) {
 }
 
 // Sample a shape based on a distribution.
-tuple<int, vec2f> sample_shape_element(const yocto_shape& shape,
+pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     const vector<float>& elements_cdf, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elements_cdf.empty()) return {};
@@ -4234,7 +4230,7 @@ vector<float> compute_surface_elements_cdf(const yocto_surface& surface) {
 }
 
 // Sample a shape based on a distribution.
-tuple<int, vec2f> sample_surface_element(const yocto_surface& surface,
+pair<int, vec2f> sample_surface_element(const yocto_surface& surface,
     const vector<float>& elements_cdf, float re, const vec2f& ruv) {
     // TODO: implement sampling without cdf
     if (elements_cdf.empty()) return {};
@@ -4606,7 +4602,7 @@ vec4f evaluate_shape_element_tangentspace(
         auto t    = shape.triangles[element_id];
         auto norm = triangle_normal(
             shape.positions[t.x], shape.positions[t.y], shape.positions[t.z]);
-        auto txty = tuple<vec3f, vec3f>();
+        auto txty = pair<vec3f, vec3f>();
         if (shape.texturecoords.empty()) {
             txty = triangle_tangents_fromuv(shape.positions[t.x],
                 shape.positions[t.y], shape.positions[t.z], {0, 0}, {1, 0},
@@ -6163,7 +6159,7 @@ vec3f sample_instance_direction(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const vec3f& p, float rel,
     const vec2f& ruv) {
     auto& instance = scene.instances[instance_id];
-    auto  sample   = tuple<int, vec2f>();
+    auto  sample   = pair<int, vec2f>();
     if (instance.shape >= 0) {
         auto& shape        = scene.shapes[instance.shape];
         auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
@@ -7350,7 +7346,7 @@ void trace_async_stop(vector<thread>& threads, bool& stop_flag,
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
-tuple<uint64_t, uint64_t> get_trace_stats() {
+pair<uint64_t, uint64_t> get_trace_stats() {
     return {_trace_nrays, _trace_npaths};
 }
 void reset_trace_stats() {

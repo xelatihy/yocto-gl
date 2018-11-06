@@ -363,6 +363,7 @@ using std::string;
 using std::thread;
 using std::tie;
 using std::tuple;
+using std::pair;
 using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
@@ -1962,7 +1963,7 @@ constexpr inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-constexpr inline tuple<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
+constexpr inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
     return {normalize(vec3f{quat.x, quat.y, quat.z}), 2 * acos(quat.w)};
 }
 template <typename T>
@@ -2301,7 +2302,7 @@ inline float quad_area(
 }
 
 // Triangle tangent and bitangent from uv
-inline tuple<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
     const vec2f& uv2) {
     // Follows the definition in http://www.terathon.com/code/tangent.html and
@@ -2395,12 +2396,12 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
@@ -2443,10 +2444,12 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
 // with ids, it also plits the faces per id.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
+void convert_face_varying(
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    vector<vec4i>& split_quads, vector<vec3f>& split_positions, vector<vec3f>& split_normals, 
+    vector<vec2f>& split_texturecoords);
 
 // Split primitives per id
 vector<vector<vec2i>> ungroup_lines(
@@ -2458,33 +2461,33 @@ vector<vector<vec4i>> ungroup_quads(
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines(
+pair<vector<vec2i>, vector<T>> subdivide_lines(
     const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-tuple<vector<vec3i>, vector<T>> subdivide_triangles(
+pair<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(
+pair<vector<vec4i>, vector<T>> subdivide_quads(
     const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_beziers(
+pair<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
+pair<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
     const vector<T>& vert, bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-tuple<vector<vec3f>, vector<int>> weld_vertices(
+pair<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold);
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+pair<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, float threshold);
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold);
 
 // Pick a point in a point set uniformly.
@@ -2511,7 +2514,7 @@ inline vector<float> sample_lines_element_cdf(
     }
     return cdf;
 }
-inline tuple<int, float> sample_lines_element(
+inline pair<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru) {
     return {sample_discrete_distribution(cdf, re), ru};
 }
@@ -2527,7 +2530,7 @@ inline vector<float> sample_triangles_element_cdf(
     }
     return cdf;
 }
-inline tuple<int, vec2f> sample_triangles_element(
+inline pair<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete_distribution(cdf, re),
         sample_triangle_coordinates(ruv)};
@@ -2545,11 +2548,11 @@ inline vector<float> sample_quads_element_cdf(
     }
     return cdf;
 }
-inline tuple<int, vec2f> sample_quads_element(
+inline pair<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
     return {sample_discrete_distribution(cdf, re), ruv};
 }
-inline tuple<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
+inline pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
     const vector<float>& cdf, float re, const vec2f& ruv) {
     auto element_id = sample_discrete_distribution(cdf, re);
     if (quads[element_id].z == quads[element_id].w) {
@@ -3508,7 +3511,7 @@ vec4f evaluate_shape_element_tangentspace(
 
 // Sample a shape element based on area/length.
 vector<float>     compute_shape_elements_cdf(const yocto_shape& shape);
-tuple<int, vec2f> sample_shape_element(const yocto_shape& shape,
+pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float             sample_shape_element_pdf(const yocto_shape& shape,
                 const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
@@ -3527,7 +3530,7 @@ int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
 vector<float>     compute_surface_elements_cdf(const yocto_surface& surface);
-tuple<int, vec2f> sample_surface_element(const yocto_surface& surface,
+pair<int, vec2f> sample_surface_element(const yocto_surface& surface,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float             sample_surface_element_pdf(const yocto_surface& surface,
                 const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
@@ -3750,7 +3753,7 @@ void trace_async_stop(vector<thread>& threads, bool& stop_flag,
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
-tuple<uint64_t, uint64_t> get_trace_stats();
+pair<uint64_t, uint64_t> get_trace_stats();
 void                      reset_trace_stats();
 
 }  // namespace ygl
