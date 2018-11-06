@@ -844,7 +844,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             surface.texturecoords, quads, positions, normals, texturecoords);
         auto split_quads = vector<vector<vec4i>>();
         if (surface.materials.size() > 1 && !surface.quads_materials.empty()) {
-            split_quads = ungroup_quads(quads, surface.quads_materials);
+            ungroup_quads(quads, surface.quads_materials, split_quads);
         } else {
             split_quads = {quads};
         }

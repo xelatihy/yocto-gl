@@ -2456,12 +2456,12 @@ void convert_face_varying(
     vector<vec2f>& split_texturecoords);
 
 // Split primitives per id
-vector<vector<vec2i>> ungroup_lines(
-    const vector<vec2i>& lines, const vector<int>& ids);
-vector<vector<vec3i>> ungroup_triangles(
-    const vector<vec3i>& triangles, const vector<int>& ids);
-vector<vector<vec4i>> ungroup_quads(
-    const vector<vec4i>& quads, const vector<int>& ids);
+void ungroup_lines(
+    const vector<vec2i>& lines, const vector<int>& ids, vector<vector<vec2i>>& split_lines);
+void ungroup_triangles(
+    const vector<vec3i>& triangles, const vector<int>& ids, vector<vector<vec3i>>& split_triangles);
+void ungroup_quads(
+    const vector<vec4i>& quads, const vector<int>& ids, vector<vector<vec4i>>& split_quads);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>

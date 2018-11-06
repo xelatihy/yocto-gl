@@ -571,25 +571,24 @@ void convert_face_varying(
 
 // Split primitives per id
 template <typename T>
-vector<vector<T>> ungroup_elems(const vector<T>& elems, const vector<int>& ids) {
+void ungroup_elems(const vector<T>& elems, const vector<int>& ids, vector<vector<T>>& split_elems) {
     auto max_id      = *std::max_element(ids.begin(), ids.end());
-    auto split_elems = vector<vector<T>>(max_id + 1);
+    split_elems = vector<vector<T>>(max_id + 1);
     for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
         split_elems[ids[elem_id]].push_back(elems[elem_id]);
     }
-    return split_elems;
 }
-vector<vector<vec2i>> ungroup_lines(
-    const vector<vec2i>& lines, const vector<int>& ids) {
-    return ungroup_elems(lines, ids);
+void ungroup_lines(
+    const vector<vec2i>& lines, const vector<int>& ids, vector<vector<vec2i>>& split_lines) {
+    ungroup_elems(lines, ids, split_lines);
 }
-vector<vector<vec3i>> ungroup_triangles(
-    const vector<vec3i>& triangles, const vector<int>& ids) {
-    return ungroup_elems(triangles, ids);
+void ungroup_triangles(
+    const vector<vec3i>& triangles, const vector<int>& ids, vector<vector<vec3i>>& split_triangles) {
+    ungroup_elems(triangles, ids, split_triangles);
 }
-vector<vector<vec4i>> ungroup_quads(
-    const vector<vec4i>& quads, const vector<int>& ids) {
-    return ungroup_elems(quads, ids);
+void ungroup_quads(
+    const vector<vec4i>& quads, const vector<int>& ids, vector<vector<vec4i>>& split_quads) {
+    ungroup_elems(quads, ids, split_quads);
 }
 
 // Subdivide lines.
