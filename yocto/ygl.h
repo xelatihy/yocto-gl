@@ -1714,15 +1714,18 @@ struct ray<T, 3> {
 using ray2f = ray<float, 2>;
 using ray3f = ray<float, 3>;
 
+// Default ray epsilon
+const auto default_ray_epsf = 1e-4f;
+
 // Construct a ray from direction or segments using a default epsilon.
 template <typename T, int N>
 constexpr inline ray<T, N> make_ray(
-    const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
+    const vec<T, N>& o, const vec<T, N>& d, T eps = default_ray_epsf) {
     return {o, d, eps, maxt<T>()};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> make_segment(
-    const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
+    const vec<T, N>& p1, const vec<T, N>& p2, T eps = default_ray_epsf) {
     return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
@@ -4199,37 +4202,54 @@ struct parse_string_view {
 
 // Prints basic types to string
 inline bool parse_value(parse_string_view& str, string& value) {
-    auto n = 0;
+    while(*str.str && std::isspace((unsigned char)*str.str)) str.str++;
+    if(!*str.str) return false;
+    auto pos = 0;
     char buffer[4096];
-    if (sscanf(str.str, "%4095s%n", buffer, &n) != 1) return false;
+    while(*str.str && !std::isspace((unsigned char)*str.str) && pos < sizeof(buffer)) {
+        buffer[pos] = *str.str;
+        str.str++;
+        pos++;
+    }
+    if(pos >= sizeof(buffer)) return false;
+    buffer[pos] = 0;
     value = buffer;
-    str.str += n;
-    return true;
-}
-inline bool parse_value(parse_string_view& str, bool& value) {
-    auto n = 0;
-    auto v = 0;
-    if (sscanf(str.str, "%d%n", &v, &n) != 1) return false;
-    str.str += n;
-    value = (bool)v;
     return true;
 }
 inline bool parse_value(parse_string_view& str, int& value) {
-    auto n = 0;
-    if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
-    str.str += n;
+    char* end = nullptr;
+    value = (int)strtol(str.str, &end, 10);
+    if(str.str == end) return false;
+    str.str = end;
+    // auto n = 0;
+    // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
+    // str.str += n;
     return true;
 }
 inline bool parse_value(parse_string_view& str, float& value) {
-    auto n = 0;
-    if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
-    str.str += n;
+    char* end = nullptr;
+    value = strtof(str.str, &end);
+    if(str.str == end) return false;
+    str.str = end;
+    // auto n = 0;
+    // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
+    // str.str += n;
     return true;
 }
 inline bool parse_value(parse_string_view& str, double& value) {
-    auto n = 0;
-    if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
-    str.str += n;
+    char* end = nullptr;
+    value = strtod(str.str, &end);
+    if(str.str == end) return false;
+    str.str = end;
+    // auto n = 0;
+    // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
+    // str.str += n;
+    return true;
+}
+inline bool parse_value(parse_string_view& str, bool& value) {
+    auto ivalue = 0;
+    if(!parse_value(str, ivalue)) return false;
+    value = (bool)ivalue;
     return true;
 }
 

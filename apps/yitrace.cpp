@@ -225,6 +225,14 @@ void draw_opengl_widgets(const opengl_window& win) {
             draw_checkbox_opengl_widget(win, "zoom to fit", app.zoom_to_fit);
             continue_opengl_widget_line(win);
             draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
+            continue_opengl_widget_line(win);
+            if (draw_button_opengl_widget(win, "print cams")) {
+                for(auto& camera : app.scene.cameras) {
+                    print("c {} {} {} {} {} {} {}\n", camera.name,
+                        (int)camera.orthographic, camera.film_size, camera.focal_length,
+                        camera.focus_distance, camera.lens_aperture, camera.frame);
+                }
+            }
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale, app.rendered_image.size);

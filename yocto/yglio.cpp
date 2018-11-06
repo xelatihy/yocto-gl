@@ -1054,7 +1054,7 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
 
     // assign opacity texture if needed
     if (assign_opacity) {
-        auto has_opacity = vector<bool>();
+        auto has_opacity = vector<bool>(scene.textures.size());
         for (auto texture_id = 0; texture_id < scene.textures.size();
              texture_id++) {
             auto& texture           = scene.textures[texture_id];
@@ -2350,7 +2350,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
 
     // skip textures
     if (load_textures) {
-        if (!load_scene_textures(scene, dirname, skip_missing, false))
+        if (!load_scene_textures(scene, dirname, skip_missing, true))
             return false;
     }
 
@@ -2496,7 +2496,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(line.find('#') + 1);
+        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -2591,7 +2591,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(line.find('#') + 1);
+        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -2641,7 +2641,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(line.find('#') + 1);
+        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -3081,7 +3081,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
-        if (!load_scene_textures(scene, dirname, skip_missing, false))
+        if (!load_scene_textures(scene, dirname, skip_missing, true))
             return false;
     }
 
@@ -3964,7 +3964,7 @@ bool load_gltf_scene(const string& filename, yocto_scene& scene,
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
-        if (!load_scene_textures(scene, dirname, skip_missing, false))
+        if (!load_scene_textures(scene, dirname, skip_missing, true))
             return false;
     }
 
@@ -4918,7 +4918,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
     // load textures
     auto dirname = get_dirname(filename);
     if (load_textures) {
-        if (!load_scene_textures(scene, dirname, skip_missing, false))
+        if (!load_scene_textures(scene, dirname, skip_missing, true))
             return false;
     }
 
