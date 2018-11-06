@@ -101,7 +101,7 @@ void start_rendering_async(app_state& app) {
     init_image<vec4f>(app.rendered_image, image_size);
     init_image<vec4f>(app.display_image, image_size);
     init_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
-    make_trace_rngs(app.trace_rngs, image_size, app.random_seed);
+    init_trace_rngs(app.trace_rngs, image_size, app.random_seed);
 
     trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,
         sampler_func, 1, app.max_bounces);
@@ -139,7 +139,7 @@ bool load_scene_sync(app_state& app) {
 
     // init renderer
     app.status = "initializing lights";
-    make_trace_lights(app.lights, app.scene);
+    init_trace_lights(app.lights, app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights) && app.sampler_type != trace_sampler_type::eyelight) {

@@ -242,8 +242,8 @@
 // environment is used.
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
-// 2. prepare lights for rendering with `make_trace_lights()`
-// 3. create the random number generators with `make_trace_rngs()`
+// 2. prepare lights for rendering with `init_trace_lights()`
+// 3. create the random number generators with `init_trace_rngs()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -3689,13 +3689,13 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void make_trace_lights(trace_lights& lights, const yocto_scene& scene);
+void init_trace_lights(trace_lights& lights, const yocto_scene& scene);
 inline bool  empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
 // Initialize state of the renderer.
-void make_trace_rngs(image<rng_state>& rngs,
+void init_trace_rngs(image<rng_state>& rngs,
     const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use

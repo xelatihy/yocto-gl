@@ -87,7 +87,7 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     auto lights = trace_lights{};
-    make_trace_lights(lights, scene);
+    init_trace_lights(lights, scene);
 
     // fix renderer type if no lights
     if (empty(lights) && sampler_type != trace_sampler_type::eyelight) {
@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
     auto rendered_image = image<vec4f>{};
     init_image<vec4f>(rendered_image, image_size);
     auto trace_rngs = image<rng_state>{};
-    make_trace_rngs(trace_rngs, image_size, random_seed);
+    init_trace_rngs(trace_rngs, image_size, random_seed);
     auto sampler_func   = get_trace_sampler_func(sampler_type);
 
     // render

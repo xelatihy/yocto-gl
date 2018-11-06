@@ -7188,7 +7188,7 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
 }
 
 // Init a sequence of random number generators.
-void make_trace_rngs(image<rng_state>& rngs, const vec2i& image_size, uint64_t seed) {
+void init_trace_rngs(image<rng_state>& rngs, const vec2i& image_size, uint64_t seed) {
     init_image(rngs, image_size);
     auto rng  = make_rng(1301081);
     for (auto j = 0; j < rngs.size.y; j++) {
@@ -7200,7 +7200,7 @@ void make_trace_rngs(image<rng_state>& rngs, const vec2i& image_size, uint64_t s
 }
 
 // Init trace lights
-void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
+void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     auto scope  = log_trace_scoped("making trace lights");
     lights = trace_lights{};
 
@@ -7250,7 +7250,7 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
     int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
     auto scope = log_trace_scoped("tracing image");
     auto rngs  = image<rng_state>{};
-    make_trace_rngs(rngs, rendered_image.size);
+    init_trace_rngs(rngs, rendered_image.size);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
 
