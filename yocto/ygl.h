@@ -2491,25 +2491,23 @@ void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold)
 inline int sample_points_element(int npoints, float re) {
     return sample_uniform_index(npoints, re);
 }
-inline vector<float> sample_points_element_cdf(int npoints) {
-    auto cdf = vector<float>(npoints);
+inline void sample_points_element_cdf(int npoints, vector<float>& cdf) {
+    cdf = vector<float>(npoints);
     for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
-    return cdf;
 }
 inline int sample_points_element(const vector<float>& cdf, float re) {
     return sample_discrete_distribution(cdf, re);
 }
 
 // Pick a point on lines uniformly.
-inline vector<float> sample_lines_element_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(lines.size());
+inline void sample_lines_element_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& positions, vector<float>& cdf) {
+    cdf = vector<float>(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
         auto w = line_length(positions[l.x], positions[l.y]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 inline pair<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru) {
@@ -2517,15 +2515,14 @@ inline pair<int, float> sample_lines_element(
 }
 
 // Pick a point on a triangle mesh uniformly.
-inline vector<float> sample_triangles_element_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(triangles.size());
+inline void sample_triangles_element_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, vector<float>& cdf) {
+    cdf = vector<float>(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
         auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 inline pair<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -2534,16 +2531,15 @@ inline pair<int, vec2f> sample_triangles_element(
 }
 
 // Pick a point on a quad mesh uniformly.
-inline vector<float> sample_quads_element_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(quads.size());
+inline void sample_quads_element_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions, vector<float>& cdf) {
+    cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
         auto w = quad_area(
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 inline pair<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -3507,7 +3503,7 @@ vec4f evaluate_shape_element_tangentspace(
     const yocto_shape& shape, int element_id);
 
 // Sample a shape element based on area/length.
-vector<float>     compute_shape_elements_cdf(const yocto_shape& shape);
+void     compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float             sample_shape_element_pdf(const yocto_shape& shape,
@@ -3526,7 +3522,7 @@ vec3f evaluate_surface_element_normal(const yocto_surface& shape, int element_id
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
-vector<float>     compute_surface_elements_cdf(const yocto_surface& surface);
+void     compute_surface_elements_cdf(const yocto_surface& surface, vector<float>& cdf);
 pair<int, vec2f> sample_surface_element(const yocto_surface& surface,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float             sample_surface_element_pdf(const yocto_surface& surface,

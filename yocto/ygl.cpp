@@ -987,7 +987,8 @@ void sample_triangles_points(
     sampled_positions     = vector<vec3f>(npoints);
     sampled_normals       = vector<vec3f>(npoints);
     sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf = sample_triangles_element_cdf(triangles, positions);
+    auto cdf = vector<float>{};
+    sample_triangles_element_cdf(triangles, positions, cdf);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto sample = sample_triangles_element(cdf, get_random_float(rng),
@@ -1021,7 +1022,8 @@ void sample_quads_points(
     sampled_positions     = vector<vec3f>(npoints);
     sampled_normals       = vector<vec3f>(npoints);
     sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf                   = sample_quads_element_cdf(quads, positions);
+    auto cdf                   = vector<float>{};
+    sample_quads_element_cdf(quads, positions, cdf);
     auto rng                   = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto sample  = sample_quads_element(cdf, get_random_float(rng),
@@ -4166,18 +4168,19 @@ vec2f compute_animation_range(const yocto_scene& scene, const string& anim_group
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-vector<float> compute_shape_elements_cdf(const yocto_shape& shape) {
+void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf) {
     if (!shape.triangles.empty()) {
-        return sample_triangles_element_cdf(shape.triangles, shape.positions);
+        return sample_triangles_element_cdf(shape.triangles, shape.positions, cdf);
     } else if (!shape.quads.empty()) {
-        return sample_quads_element_cdf(shape.quads, shape.positions);
+        return sample_quads_element_cdf(shape.quads, shape.positions, cdf);
     } else if (!shape.lines.empty()) {
-        return sample_lines_element_cdf(shape.lines, shape.positions);
+        return sample_lines_element_cdf(shape.lines, shape.positions, cdf);
     } else if (!shape.points.empty()) {
-        return sample_points_element_cdf(shape.points.size());
+        return sample_points_element_cdf(shape.points.size(), cdf);
     } else {
         log_error("empty shape not supported");
-        return {};
+        cdf = {};
+        return;
     }
 }
 
@@ -4206,13 +4209,14 @@ float sample_shape_element_pdf(const yocto_shape& shape,
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-vector<float> compute_surface_elements_cdf(const yocto_surface& surface) {
+void compute_surface_elements_cdf(const yocto_surface& surface, vector<float>& cdf) {
     if (!surface.quads_positions.empty()) {
         return sample_quads_element_cdf(
-            surface.quads_positions, surface.positions);
+            surface.quads_positions, surface.positions, cdf);
     } else {
         log_error("empty shape not supported");
-        return {};
+        cdf = {};
+        return;
     }
 }
 
@@ -7194,14 +7198,14 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
             auto& shape = scene.shapes[instance.shape];
             if (shape.triangles.empty() && shape.quads.empty()) continue;
             lights.instances.push_back(instance_id);
-            lights.shape_elements_cdf[instance.shape] = compute_shape_elements_cdf(
-                shape);
+            compute_shape_elements_cdf(
+                shape, lights.shape_elements_cdf[instance.shape]);
         } else if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
             if (surface.quads_positions.empty()) continue;
             lights.instances.push_back(instance_id);
-            lights.surface_elements_cdf[instance.surface] = compute_surface_elements_cdf(
-                surface);
+            compute_surface_elements_cdf(
+                surface, lights.surface_elements_cdf[instance.surface]);
         } else {
             continue;
         }
