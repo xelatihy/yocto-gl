@@ -2410,23 +2410,27 @@ void compute_matrix_skinning(
 using edge_map = unordered_map<vec2i, vec2i>;
 
 // Initialize an edge map with elements.
-edge_map make_edge_map(const vector<vec3i>& triangles);
-edge_map make_edge_map(const vector<vec4i>& quads);
+void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
+void insert_edges(edge_map& emap, const vector<vec4i>& quads);
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& edge);
 // Get the edge index / insertion count
 int get_edge_index(const edge_map& emap, const vec2i& edge);
 int get_edge_count(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
-vector<vec2i> get_edges(const edge_map& emap);
-vector<vec2i> get_boundary(const edge_map& emap);
+void get_edges(const edge_map& emap, vector<vec2i>& edges);
+void get_boundary(const edge_map& emap, vector<vec2i>& boundary);
 
 // Create an array of edges.
-inline vector<vec2i> get_edges(const vector<vec3i>& triangles) {
-    return get_edges(make_edge_map(triangles));
+inline void get_edges(const vector<vec3i>& triangles, vector<vec2i>& edges) {
+    auto emap = edge_map();
+    insert_edges(emap, triangles);
+    get_edges(emap, edges);
 }
-inline vector<vec2i> get_edges(const vector<vec4i>& quads) {
-    return get_edges(make_edge_map(quads));
+inline void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges) {
+    auto emap = edge_map();
+    insert_edges(emap, quads);
+    get_edges(emap, edges);
 }
 
 // Convert quads to triangles
