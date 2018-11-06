@@ -1588,7 +1588,7 @@ bool apply_json_procedural(
     if (type == "") return true;
     auto size = js.value("width", vec3i{512, 512, 512});
     if (type == "test_volume") {
-        value.volume_data = make_test_volume1f(
+        make_test_volume1f(value.volume_data,
             size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);

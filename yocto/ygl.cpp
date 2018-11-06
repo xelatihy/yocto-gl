@@ -3784,8 +3784,8 @@ void make_turbulence_image(image<vec4f>& img, const vec2i& size, float scale,
 namespace ygl {
 
 // make a simple example volume
-volume<float> make_test_volume1f(const vec3i& size, float scale, float exponent) {
-    auto vol = make_volume<float>(size);
+void make_test_volume1f(volume<float>& vol, const vec3i& size, float scale, float exponent) {
+    vol = make_volume<float>(size);
     for (auto k = 0; k < vol.size.z; k++) {
         for (auto j = 0; j < vol.size.y; j++) {
             for (auto i = 0; i < vol.size.x; i++) {
@@ -3797,7 +3797,6 @@ volume<float> make_test_volume1f(const vec3i& size, float scale, float exponent)
             }
         }
     }
-    return vol;
 }
 
 }  // namespace ygl
@@ -4322,10 +4321,10 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a shape BVH
-bvh_shape make_shape_bvh(
-    const yocto_shape& shape, bool high_quality, bool embree) {
+void build_shape_bvh(
+    const yocto_shape& shape, bvh_shape& bvh, bool high_quality, bool embree) {
     // create bvh
-    auto bvh = bvh_shape{};
+    bvh = bvh_shape{};
 
     // set data
     bvh.positions = shape.positions;
@@ -4337,16 +4336,13 @@ bvh_shape make_shape_bvh(
 
     // build bvh
     build_shape_bvh_embree(bvh, high_quality, embree);
-
-    // done
-    return bvh;
 }
 
 // Build a shape BVH
-bvh_shape make_surface_bvh(
-    const yocto_surface& surface, bool high_quality, bool embree) {
+void build_surface_bvh(
+    const yocto_surface& surface, bvh_shape& bvh, bool high_quality, bool embree) {
     // create bvh
-    auto bvh = bvh_shape{};
+    bvh = bvh_shape{};
 
     // set data
     bvh.positions = surface.positions;
@@ -4354,39 +4350,37 @@ bvh_shape make_surface_bvh(
 
     // build bvh
     build_shape_bvh_embree(bvh, high_quality, embree);
-
-    // done
-    return bvh;
 }
 
 // Build a scene BVH
-bvh_scene make_scene_bvh(
-    const yocto_scene& scene, bool high_quality, bool embree) {
+void build_scene_bvh(
+    const yocto_scene& scene, bvh_scene& bvh, bool high_quality, bool embree) {
     auto scope = log_trace_scoped("building scene bvh");
     // create bvh
-    auto bvh = bvh_scene{};
+    bvh = bvh_scene{};
 
     // shapes
-    for (auto& shape : scene.shapes) {
-        bvh.shape_bvhs.push_back(make_shape_bvh(shape, high_quality, embree));
+    bvh.shape_bvhs.resize(scene.shapes.size());
+    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
+        build_shape_bvh(scene.shapes[shape_id], bvh.shape_bvhs[shape_id], high_quality, embree);
     }
 
     // surfaces
-    for (auto& surface : scene.surfaces) {
-        bvh.surface_bvhs.push_back(
-            make_surface_bvh(surface, high_quality, embree));
+    bvh.surface_bvhs.resize(scene.surfaces.size());
+    for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
+        build_surface_bvh(scene.surfaces[surface_id], bvh.surface_bvhs[surface_id], high_quality, embree);
     }
+
     // instances
-    for (auto& instance : scene.instances) {
-        bvh.instances.push_back({instance.frame, inverse(instance.frame, false),
-            instance.shape, instance.surface});
+    bvh.instances.resize(scene.instances.size());
+    for (auto instance_id = 0; instance_id < scene.instances.size(); instance_id++) {
+        auto& instance = scene.instances[instance_id];
+        bvh.instances[instance_id] = {instance.frame, inverse(instance.frame, false),
+            instance.shape, instance.surface};
     }
 
     // build bvh
     build_scene_bvh_embree(bvh, high_quality, embree);
-
-    // done
-    return bvh;
 }
 
 // Refits a shape BVH
@@ -7194,8 +7188,8 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
 }
 
 // Init a sequence of random number generators.
-image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t seed) {
-    auto rngs = make_image<rng_state>(image_size);
+void make_trace_rngs(image<rng_state>& rngs, const vec2i& image_size, uint64_t seed) {
+    rngs = make_image<rng_state>(image_size);
     auto rng  = make_rng(1301081);
     for (auto j = 0; j < rngs.size.y; j++) {
         for (auto i = 0; i < rngs.size.x; i++) {
@@ -7203,13 +7197,12 @@ image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t seed) {
                 seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
-    return rngs;
 }
 
 // Init trace lights
-trace_lights make_trace_lights(const yocto_scene& scene) {
+void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     auto scope  = log_trace_scoped("making trace lights");
-    auto lights = trace_lights{};
+    lights = trace_lights{};
 
     lights.shape_elements_cdf.resize(scene.shapes.size());
     lights.surface_elements_cdf.resize(scene.surfaces.size());
@@ -7247,8 +7240,7 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
         }
     }
 
-    if (lights.instances.empty() && lights.environments.empty()) return {};
-    return lights;
+    if (lights.instances.empty() && lights.environments.empty()) lights = {};
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
@@ -7257,7 +7249,8 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
     const trace_lights& lights, const trace_sampler_func& sampler,
     int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
     auto scope = log_trace_scoped("tracing image");
-    auto rngs  = make_trace_rngs(rendered_image.size);
+    auto rngs  = image<rng_state>{};
+    make_trace_rngs(rngs, rendered_image.size);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
 

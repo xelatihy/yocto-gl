@@ -218,7 +218,7 @@
 // 3. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 4. can merge scene together with `merge_scene()`
 // 6. for ray-intersection and closest point queries, a BVH can be created with
-//    `make_shape_bvh()/make_scene_bvh()` and refit with
+//    `build_shape_bvh()/build_scene_bvh()` and refit with
 //    `refit_shape_bvh()/refit_scene_bvh()`
 // 7. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
@@ -243,7 +243,7 @@
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
 // 2. prepare lights for rendering with `make_trace_lights()`
-// 3. create the image buffer and random number generators `make_trace_state()`
+// 3. create the random number generators with `make_trace_rngs()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -3446,12 +3446,12 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Updates/refits bvh.
-void make_shape_bvh(
+void build_shape_bvh(
     const yocto_shape& shape, bvh_shape& bvh, bool high_quality, bool embree = false);
-void make_surface_bvh(
+void build_surface_bvh(
     const yocto_surface& surface, bvh_shape& bvh, bool high_quality, bool embree = false);
-void make_scene_bvh(
-    const yocto_scene& scene, bvh_shape& bvh, bool high_quality, bool embree = false);
+void build_scene_bvh(
+    const yocto_scene& scene, bvh_scene& bvh, bool high_quality, bool embree = false);
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
 void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh);
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
@@ -3689,13 +3689,13 @@ struct trace_lights {
 };
 
 // Initialize lights.
-trace_lights make_trace_lights(const yocto_scene& scene);
+void make_trace_lights(trace_lights& lights, const yocto_scene& scene);
 inline bool  empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
 // Initialize state of the renderer.
-image<rng_state> make_trace_rngs(
+void make_trace_rngs(image<rng_state>& rngs,
     const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
