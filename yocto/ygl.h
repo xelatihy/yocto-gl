@@ -3051,42 +3051,42 @@ void resize_image(const image<vec4f>& img, image<vec4f>& res, const vec2i& size)
 namespace ygl {
 
 // Make example images.
-image<vec4f> make_grid_image(const vec2i& size, int tile = 8,
+void make_grid_image(image<vec4f>& img, const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_checker_image(const vec2i& size, int tile = 8,
+void make_checker_image(image<vec4f>& img, const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_bumpdimple_image(const vec2i& size, int tile = 8);
-image<vec4f> make_ramp_image(
+void make_bumpdimple_image(image<vec4f>& img, const vec2i& size, int tile = 8);
+void make_ramp_image(image<vec4f>& img, 
     const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
-image<vec4f> make_gammaramp_image(const vec2i& size);
-image<vec4f> make_uvramp_image(const vec2i& size);
-image<vec4f> make_uvgrid_image(
+void make_gammaramp_image(image<vec4f>& img, const vec2i& size);
+void make_uvramp_image(image<vec4f>& img, const vec2i& size);
+void make_uvgrid_image(image<vec4f>& img, 
     const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
+void bump_to_normal_map(const image<vec4f>& img, image<vec4f>& normal,  float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
+void make_sunsky_image(image<vec4f>& img, const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-image<vec4f> make_lights_image(const vec2i& size, const vec3f& le = {1, 1, 1},
+void make_lights_image(image<vec4f>& img, const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image<vec4f> make_noise_image(
+void make_noise_image(image<vec4f>& img, 
     const vec2i& size, float scale = 1, bool wrap = true);
-image<vec4f> make_fbm_image(const vec2i& size, float scale = 1,
+void make_fbm_image(image<vec4f>& img, const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image<vec4f> make_ridge_image(const vec2i& size, float scale = 1,
+void make_ridge_image(image<vec4f>& img, const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image<vec4f> make_turbulence_image(const vec2i& size, float scale = 1,
+void make_turbulence_image(image<vec4f>& img, const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -3187,7 +3187,7 @@ const T& at(const volume<T>& vol, const vec3i& ijk) {
 }
 
 // make a simple example volume
-volume<float> make_test_volume1f(
+void make_test_volume1f(volume<float>& vol,
     const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
@@ -3446,13 +3446,14 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Updates/refits bvh.
-bvh_shape make_shape_bvh(
-    const yocto_shape& shape, bool high_quality, bool embree = false);
-bvh_shape make_surface_bvh(
-    const yocto_surface& surface, bool high_quality, bool embree = false);
-bvh_scene make_scene_bvh(
-    const yocto_scene& scene, bool high_quality, bool embree = false);
+void make_shape_bvh(
+    const yocto_shape& shape, bvh_shape& bvh, bool high_quality, bool embree = false);
+void make_surface_bvh(
+    const yocto_surface& surface, bvh_shape& bvh, bool high_quality, bool embree = false);
+void make_scene_bvh(
+    const yocto_scene& scene, bvh_shape& bvh, bool high_quality, bool embree = false);
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
+void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh);
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
 
 // Apply subdivision and displacement rules.
@@ -3469,8 +3470,6 @@ void add_missing_cameras(yocto_scene& scene);
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
 
 // Checks for validity of the scene.
-vector<string> validate_scene(
-    const yocto_scene& scene, bool skip_textures = false);
 void log_validation_errors(const yocto_scene& scene, bool skip_textures = false);
 
 // Queries on objects

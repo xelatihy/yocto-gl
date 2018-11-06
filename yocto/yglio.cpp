@@ -1487,39 +1487,39 @@ bool apply_json_procedural(
     auto is_hdr = false;
     auto size   = js.value("size", vec2i{512, 512});
     if (type == "grid") {
-        value.hdr_image = make_grid_image(size, js.value("tile", 8),
+        make_grid_image(value.hdr_image, size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        value.hdr_image = make_checker_image(size, js.value("tile", 8),
+        make_checker_image(value.hdr_image, size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        value.hdr_image = make_bumpdimple_image(size, js.value("tile", 8));
+        make_bumpdimple_image(value.hdr_image, size, js.value("tile", 8));
     } else if (type == "uvramp") {
-        value.hdr_image = make_uvramp_image(size);
+        make_uvramp_image(value.hdr_image, size);
     } else if (type == "uvgrid") {
-        value.hdr_image = make_uvgrid_image(size);
+        make_uvgrid_image(value.hdr_image, size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        value.hdr_image = make_sunsky_image(size, js.value("sun_angle", pif / 4),
+        make_sunsky_image(value.hdr_image, size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr          = true;
     } else if (type == "noise") {
-        value.hdr_image = make_noise_image(
+        make_noise_image(value.hdr_image, 
             size, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        value.hdr_image = make_fbm_image(size, js.value("scale", 1.0f),
+        make_fbm_image(value.hdr_image, size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        value.hdr_image = make_ridge_image(size, js.value("scale", 1.0f),
+        make_ridge_image(value.hdr_image, size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        value.hdr_image = make_turbulence_image(size, js.value("scale", 1.0f),
+        make_turbulence_image(value.hdr_image, size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
@@ -1527,7 +1527,7 @@ bool apply_json_procedural(
         return false;
     }
     if (js.value("bump_to_normal", false)) {
-        value.hdr_image = bump_to_normal_map(
+        bump_to_normal_map(value.hdr_image, 
             value.hdr_image, js.value("bump_scale", 1.0f));
         value.ldr_as_linear = true;
     }
