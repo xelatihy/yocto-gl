@@ -2564,14 +2564,14 @@ inline pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+void sample_triangles_points(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    int npoints, int seed = 7);
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+    int npoints, vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords, int seed = 7);
+void sample_quads_points(
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    int npoints, int seed = 7);
+    int npoints, vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords, int seed = 7);
 
 }  // namespace ygl
 

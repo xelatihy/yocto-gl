@@ -980,13 +980,13 @@ pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+void sample_triangles_points(
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    int npoints, int seed) {
-    auto sampled_positions     = vector<vec3f>(npoints);
-    auto sampled_normals       = vector<vec3f>(npoints);
-    auto sampled_texturecoords = vector<vec2f>(npoints);
+    int npoints, vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords, int seed) {
+    sampled_positions     = vector<vec3f>(npoints);
+    sampled_normals       = vector<vec3f>(npoints);
+    sampled_texturecoords = vector<vec2f>(npoints);
     auto cdf = sample_triangles_element_cdf(triangles, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
@@ -1011,20 +1011,18 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
             sampled_texturecoords[i] = zero2f;
         }
     }
-
-    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+void sample_quads_points(
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    int npoints, int seed) {
-    auto sampled_positions     = vector<vec3f>(npoints);
-    auto sampled_normals       = vector<vec3f>(npoints);
-    auto sampled_texturecoords = vector<vec2f>(npoints);
+    int npoints, vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords, int seed) {
+    sampled_positions     = vector<vec3f>(npoints);
+    sampled_normals       = vector<vec3f>(npoints);
+    sampled_texturecoords = vector<vec2f>(npoints);
     auto cdf                   = sample_quads_element_cdf(quads, positions);
     auto rng                   = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
@@ -1049,8 +1047,6 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
             sampled_texturecoords[i] = zero2f;
         }
     }
-
-    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 }  // namespace ygl
@@ -3161,8 +3157,8 @@ make_shape_data make_hair_shape(const vec2i& steps,
     auto          quads_triangles = convert_quads_to_triangles(squads);
     alltriangles.insert(
         alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
-    tie(bpos, bnorm, btexcoord) = sample_triangles_points(
-        alltriangles, spos, snorm, stexcoord, steps.y, seed);
+    sample_triangles_points(
+        alltriangles, spos, snorm, stexcoord, steps.y, bpos, bnorm, btexcoord, seed);
 
     auto rng  = make_rng(seed, 3);
     auto blen = vector<float>(bpos.size());
