@@ -1714,15 +1714,18 @@ struct ray<T, 3> {
 using ray2f = ray<float, 2>;
 using ray3f = ray<float, 3>;
 
+// Default ray epsilon
+const auto default_ray_epsf = 1e-4f;
+
 // Construct a ray from direction or segments using a default epsilon.
 template <typename T, int N>
 constexpr inline ray<T, N> make_ray(
-    const vec<T, N>& o, const vec<T, N>& d, T eps = 1e-4f) {
+    const vec<T, N>& o, const vec<T, N>& d, T eps = default_ray_epsf) {
     return {o, d, eps, maxt<T>()};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> make_segment(
-    const vec<T, N>& p1, const vec<T, N>& p2, T eps = 1e-4f) {
+    const vec<T, N>& p1, const vec<T, N>& p2, T eps = default_ray_epsf) {
     return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 

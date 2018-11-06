@@ -5752,12 +5752,12 @@ trace_point trace_ray_with_opacity(const yocto_scene& scene,
     const bvh_scene& bvh, const vec3f& position_, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     auto position = position_;
-    for (auto b = 0; b < max_bounces; b++) {
+    for (auto b = 0; b < max_bounces * 10; b++) {
         auto point = trace_ray(scene, bvh, position, direction);
         if (point.instance_id < 0) return point;
         if (point.opacity > 0.999f) return point;
         if (get_random_float(rng) < point.opacity) return point;
-        position = point.position;
+        position = point.position + direction * default_ray_epsf;
     }
     return {};
 }
