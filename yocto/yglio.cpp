@@ -2496,7 +2496,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(0, line.find('#') - 1);
+        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -2591,7 +2591,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(0, line.find('#') - 1);
+        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = parse_string_view{line.c_str()};
 
         // get command
@@ -2641,7 +2641,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
     auto line = ""s;
     while (read_line(fs, line)) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(0, line.find('#') - 1);
+        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = parse_string_view{line.c_str()};
 
         // get command
