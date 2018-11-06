@@ -3671,47 +3671,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 namespace ygl {
 
 // Default trace seed
-const auto trace_default_seed = 961748941;
-
-// Type of tracing algorithm to use
-enum struct trace_type {
-    path,               // path tracing
-    direct,             // direct illumination
-    environment,        // environment illumination only
-    eyelight,           // eyelight rendering
-    path_nomis,         // path tracer without mis
-    path_naive,         // naive path tracing
-    direct_nomis,       // direct illumition without mis
-    debug_normal,       // debug - normal
-    debug_albedo,       // debug - albedo
-    debug_texcoord,     // debug - texcoord
-    debug_frontfacing,  // debug - faceforward
-    debug_diffuse,      // debug - diffuse
-    debug_specular,     // debug - specular
-    debug_roughness,    // debug - roughness
-};
-
-const auto trace_type_names = vector<string>{"path", "direct", "environment",
-    "eyelight", "path_nomis", "path_naive", "direct_nomis", "debug_normal",
-    "debug_albedo", "debug_texcoord", "debug_frontfacing", "debug_diffuse",
-    "debug_specular", "debug_roughness"};
-
-// Trace options
-struct trace_params {
-    int        camera_id         = 0;
-    vec2i      image_size        = {1280, 720};
-    trace_type sample_tracer     = trace_type::path;
-    int        num_samples       = 256;
-    int        max_bounces       = 8;
-    float      pixel_clamp       = 100;
-    int        samples_per_batch = 16;
-    bool       no_parallel       = false;
-    int        preview_ratio     = 8;
-    float      display_exposure  = 0;
-    bool       display_filmic    = false;
-    bool       display_srgb      = true;
-    int        random_seed       = trace_default_seed;
-};
+const auto trace_default_seed = 961748941ull;
 
 // Trace lights used during rendering.
 struct trace_lights {
@@ -3729,26 +3689,61 @@ inline bool  empty(const trace_lights& lights) {
 }
 
 // Initialize state of the renderer.
-image<rng_state> make_trace_rngs(const vec2i& image_size, uint64_t random_seed);
+image<rng_state> make_trace_rngs(
+    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
+
+// Type of tracing algorithm to use
+enum struct trace_sampler_type {
+    path,               // path tracing
+    direct,             // direct illumination
+    environment,        // environment illumination only
+    eyelight,           // eyelight rendering
+    path_nomis,         // path tracer without mis
+    path_naive,         // naive path tracing
+    direct_nomis,       // direct illumition without mis
+    debug_normal,       // debug - normal
+    debug_albedo,       // debug - albedo
+    debug_texcoord,     // debug - texcoord
+    debug_frontfacing,  // debug - faceforward
+    debug_diffuse,      // debug - diffuse
+    debug_specular,     // debug - specular
+    debug_roughness,    // debug - roughness
+};
+
+const auto trace_sampler_type_names = vector<string>{"path", "direct",
+    "environment", "eyelight", "path_nomis", "path_naive", "direct_nomis",
+    "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
+    "debug_diffuse", "debug_specular", "debug_roughness"};
+
+// Tracer function
+using trace_sampler_func = function<vec4f(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces)>;
+trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_params& params);
+void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
+    const yocto_camera& camera, const bvh_scene& bvh, const trace_lights& lights,
+    const trace_sampler_func& trace_sampler, int num_samples, int max_bounces,
+    float pixel_clamp = 100, bool no_parallel = false);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, int current_sample,
-    int num_samples, image<rng_state>& rngs, const trace_params& params);
+    const yocto_camera& camera, const bvh_scene& bvh,
+    const trace_lights& lights, const trace_sampler_func& trace_sampler,
+    int current_sample, int num_samples, int max_bounces,
+    image<rng_state>& rngs, float pixel_clamp = 100, bool no_parallel = false);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
-void trace_async_start(image<vec4f>& rendered_image,
-    image<vec4f>& display_image, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, image<rng_state>& rngs, vector<thread>& threads,
-    bool& stop_flag, int& current_sample, concurrent_queue<image_region>& queue,
-    const trace_params& params);
+void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
+    const yocto_camera& camera, const bvh_scene& bvh,
+    const trace_lights& lights, const trace_sampler_func& trace_sampler,
+    int num_samples, int max_bounces, image<rng_state>& rngs,
+    vector<thread>& threads, bool& stop_flag, int& current_sample,
+    concurrent_queue<image_region>& queue, float pixel_clamp = 100);
 // Stop the asynchronous renderer.
 void trace_async_stop(vector<thread>& threads, bool& stop_flag,
     concurrent_queue<image_region>& queue);

@@ -31,28 +31,25 @@
 using namespace ygl;
 
 int main(int argc, char* argv[]) {
-    // trace options
-    auto params = trace_params();
-
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
-    params.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
-    params.image_size  = {0,
+    auto camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
+    auto image_size  = vec2i{0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    params.num_samples = parse_arg(
+    auto num_samples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,
-        "Trace type.", trace_type_names);
-    params.max_bounces   = parse_arg(
+    auto sampler_type = parse_arge(parser, "--tracer,-t",
+        trace_sampler_type::path, "Trace type.", trace_sampler_type_names);
+    auto max_bounces  = parse_arg(
         parser, "--nbounces", 8, "Maximum number of bounces.");
-    params.pixel_clamp = parse_arg(
+    auto pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
-    params.no_parallel = parse_arg(
+    auto no_parallel = parse_arg(
         parser, "--noparallel", false, "Disable parallel execution.");
-    params.random_seed = parse_arg(
+    auto random_seed = parse_arg(
         parser, "--seed", 13, "Seed for the random number generators.");
-    params.samples_per_batch = parse_arg(
+    auto samples_per_batch = parse_arg(
         parser, "--nbatch,-b", 16, "Samples per batch.");
     auto save_batch = parse_arg(
         parser, "--save-batch", false, "Save images progressively");
@@ -91,27 +88,27 @@ int main(int argc, char* argv[]) {
     auto lights = make_trace_lights(scene);
 
     // fix renderer type if no lights
-    if (empty(lights) && params.sample_tracer != trace_type::eyelight) {
+    if (empty(lights) && sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader");
-        params.sample_tracer = trace_type::eyelight;
+        sampler_type = trace_sampler_type::eyelight;
     }
 
     // initialize rendering objects
-    auto image_size = get_camera_image_size(
-        scene.cameras[params.camera_id], params.image_size);
+    auto& camera        = scene.cameras[camera_id];
+    image_size          = get_camera_image_size(camera, image_size);
     auto rendered_image = make_image<vec4f>(image_size);
-    auto trace_rngs     = make_trace_rngs(image_size, params.random_seed);
+    auto trace_rngs     = make_trace_rngs(image_size, random_seed);
+    auto sampler_func   = get_trace_sampler_func(sampler_type);
 
     // render
     auto scope = log_trace_begin("rendering image");
-    for (auto sample = 0; sample < params.num_samples;
-         sample += params.samples_per_batch) {
-        trace_samples(rendered_image, scene, bvh, lights, sample,
-            params.samples_per_batch, trace_rngs, params);
+    for (auto sample = 0; sample < num_samples; sample += samples_per_batch) {
+        auto nsamples = min(samples_per_batch, num_samples - sample);
+        trace_samples(rendered_image, scene, camera, bvh, lights, sampler_func,
+            sample, nsamples, max_bounces, trace_rngs, pixel_clamp, no_parallel);
         if (save_batch) {
-            auto filename = replace_extension(
-                imfilename, to_string(sample + params.samples_per_batch) + "." +
-                                get_extension(imfilename));
+            auto filename = replace_extension(imfilename,
+                to_string(sample + nsamples) + "." + get_extension(imfilename));
             if (!save_tonemapped_image(
                     filename, rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);
