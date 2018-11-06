@@ -6244,8 +6244,9 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     // check all intersection
     auto pdf  = 0.0f;
     auto ray  = make_ray(position, direction);
-    auto isec = intersect_scene(scene, instance_id, bvh, ray);
-    while (isec.instance_id >= 0) {
+    for(auto bounce = 0; bounce < 10; bounce ++) {
+        auto isec = intersect_scene(scene, instance_id, bvh, ray);
+        if(isec.instance_id < 0) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance_id];
         auto  light_position = evaluate_instance_position(
