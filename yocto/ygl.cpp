@@ -460,27 +460,25 @@ void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
 }
 
 // Convert quads to triangles
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
-    auto triangles = vector<vec3i>();
+void convert_quads_to_triangles(const vector<vec4i>& quads, vector<vec3i>& triangles) {
+    triangles = vector<vec3i>();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
         if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
     }
-    return triangles;
 }
 
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length) {
-    auto triangles = vector<vec3i>();
+void convert_quads_to_triangles(
+    const vector<vec4i>& quads, vector<vec3i>& triangles, int row_length) {
+    triangles = vector<vec3i>();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
         if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
     }
-    return triangles;
 #if 0
         triangles.resize(usteps * vsteps * 2);
         for (auto j = 0; j < vsteps; j++) {
@@ -497,27 +495,24 @@ vector<vec3i> convert_quads_to_triangles(
             }
         }
 #endif
-    return triangles;
 }
 
 // Convert triangles to quads by creating degenerate quads
-vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles) {
-    auto quads = vector<vec4i>();
+void convert_triangles_to_quads(const vector<vec3i>& triangles, vector<vec4i>& quads) {
+    quads = vector<vec4i>();
     quads.reserve(triangles.size());
     for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
-    return quads;
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
-vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
-    auto lines = vector<vec2i>();
+void convert_bezier_to_lines(const vector<vec4i>& beziers, vector<vec2i>& lines) {
+    lines = vector<vec2i>();
     lines.reserve(beziers.size() * 3);
     for (auto b : beziers) {
         lines.push_back({b.x, b.y});
         lines.push_back({b.y, b.z});
         lines.push_back({b.z, b.w});
     }
-    return lines;
 }
 
 // Convert face varying data to single primitives. Returns the quads indices
@@ -3023,7 +3018,7 @@ make_shape_data make_suzanne_shape(float size, bool as_triangles) {
             shape.quads.push_back({t.x, t.y, t.z, t.z});
         }
     } else {
-        shape.triangles = convert_quads_to_triangles(suzanne_quads);
+        convert_quads_to_triangles(suzanne_quads, shape.triangles);
         for (auto& t : suzanne_triangles) {
             shape.triangles.push_back(t);
         }
@@ -3044,7 +3039,7 @@ make_shape_data make_cube_shape(const vec3f& size, bool as_triangles) {
     if (!as_triangles) {
         shape.quads = cube_quads;
     } else {
-        shape.triangles = convert_quads_to_triangles(cube_quads);
+        convert_quads_to_triangles(cube_quads, shape.triangles);
     }
     return shape;
 }
@@ -3154,7 +3149,8 @@ make_shape_data make_hair_shape(const vec2i& steps,
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
     auto          alltriangles    = striangles;
-    auto          quads_triangles = convert_quads_to_triangles(squads);
+    auto          quads_triangles = vector<vec3i>{};
+    convert_quads_to_triangles(squads, quads_triangles);
     alltriangles.insert(
         alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
     sample_triangles_points(

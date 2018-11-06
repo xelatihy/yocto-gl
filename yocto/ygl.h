@@ -2434,16 +2434,16 @@ inline void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges) {
 }
 
 // Convert quads to triangles
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
+void convert_quads_to_triangles(const vector<vec4i>& quads, vector<vec3i>& triangles);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length);
+void convert_quads_to_triangles(
+    const vector<vec4i>& quads, vector<vec3i>& triangles, int row_length);
 // Convert triangles to quads by creating degenerate quads
-vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles);
+void convert_triangles_to_quads(const vector<vec3i>& triangles, vector<vec4i>& quads);
 
 // Convert beziers to lines using 3 lines for each bezier.
-vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
+void convert_bezier_to_lines(const vector<vec4i>& beziers, vector<vec2i>& lines);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
