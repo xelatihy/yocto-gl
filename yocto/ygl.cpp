@@ -951,7 +951,7 @@ pair<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles
     const vector<vec3f>& positions, float threshold) {
     auto vid        = vector<int>();
     auto wpos       = vector<vec3f>();
-    tie(wpos, vid)  = weld_vertices(positions, threshold);
+    auto welded  = weld_vertices(positions, threshold);
     auto wtriangles = vector<vec3i>();
     for (auto t : triangles) {
         t.x = vid[t.x];
@@ -963,18 +963,16 @@ pair<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles
 }
 pair<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold) {
-    auto vid       = vector<int>();
-    auto wpos      = vector<vec3f>();
-    tie(wpos, vid) = weld_vertices(positions, threshold);
+    auto welded = weld_vertices(positions, threshold);
     auto wquads    = vector<vec4i>();
     for (auto q : quads) {
-        q.x = vid[q.x];
-        q.y = vid[q.y];
-        q.z = vid[q.z];
-        q.w = vid[q.w];
+        q.x = welded.second[q.x];
+        q.y = welded.second[q.y];
+        q.z = welded.second[q.z];
+        q.w = welded.second[q.w];
         wquads.push_back(q);
     }
-    return {wquads, wpos};
+    return {wquads, welded.first};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
@@ -990,23 +988,21 @@ void sample_triangles_points(
     auto cdf = sample_triangles_element_cdf(triangles, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto element_id     = 0;
-        auto uv             = zero2f;
-        tie(element_id, uv) = sample_triangles_element(cdf, get_random_float(rng),
+        auto sample = sample_triangles_element(cdf, get_random_float(rng),
             {get_random_float(rng), get_random_float(rng)});
-        auto t              = triangles[element_id];
+        auto t              = triangles[sample.first];
         sampled_positions[i] = interpolate_triangle(
-            positions[t.x], positions[t.y], positions[t.z], uv);
+            positions[t.x], positions[t.y], positions[t.z], sample.second);
         if (!sampled_normals.empty()) {
             sampled_normals[i] = normalize(interpolate_triangle(
-                normals[t.x], normals[t.y], normals[t.z], uv));
+                normals[t.x], normals[t.y], normals[t.z], sample.second));
         } else {
             sampled_normals[i] = triangle_normal(
                 positions[t.x], positions[t.y], positions[t.z]);
         }
         if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_triangle(
-                texturecoords[t.x], texturecoords[t.y], texturecoords[t.z], uv);
+                texturecoords[t.x], texturecoords[t.y], texturecoords[t.z], sample.second);
         } else {
             sampled_texturecoords[i] = zero2f;
         }
@@ -1026,23 +1022,21 @@ void sample_quads_points(
     auto cdf                   = sample_quads_element_cdf(quads, positions);
     auto rng                   = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto element_id      = 0;
-        auto uv              = zero2f;
-        tie(element_id, uv)  = sample_quads_element(cdf, get_random_float(rng),
+        auto sample  = sample_quads_element(cdf, get_random_float(rng),
             {get_random_float(rng), get_random_float(rng)});
-        auto q               = quads[element_id];
+        auto q               = quads[sample.first];
         sampled_positions[i] = interpolate_quad(
-            positions[q.x], positions[q.y], positions[q.z], positions[q.w], uv);
+            positions[q.x], positions[q.y], positions[q.z], positions[q.w], sample.second);
         if (!sampled_normals.empty()) {
             sampled_normals[i] = normalize(interpolate_quad(
-                normals[q.x], normals[q.y], normals[q.z], normals[q.w], uv));
+                normals[q.x], normals[q.y], normals[q.z], normals[q.w], sample.second));
         } else {
             sampled_normals[i] = quad_normal(
                 positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         }
         if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_quad(texturecoords[q.x],
-                texturecoords[q.y], texturecoords[q.z], texturecoords[q.w], uv);
+                texturecoords[q.y], texturecoords[q.z], texturecoords[q.w], sample.second);
         } else {
             sampled_texturecoords[i] = zero2f;
         }
@@ -2552,8 +2546,9 @@ make_shape_data make_geodesic_sphere_shape(
     shape.positions       = pos;
     shape.triangles       = triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        tie(shape.triangles, shape.positions) = subdivide_triangles(
-            shape.triangles, shape.positions);
+        auto subdivided = subdivide_triangles(shape.triangles, shape.positions);
+        shape.triangles = subdivided.first;
+        shape.positions = subdivided.second;
     }
     for (auto& p : shape.positions) p = normalize(p) * size / 2;
     shape.normals = shape.positions;
@@ -2565,10 +2560,12 @@ make_shape_data make_geodesic_sphere_shape(
 make_shape_data make_cube_facevarying_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
-    auto fvshp = make_shape_data{};
-    tie(fvshp.quads_positions, fvshp.positions) = weld_quads(qshp.quads,
+    auto welded = weld_quads(qshp.quads,
         qshp.positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
+    auto fvshp = make_shape_data{};
+    fvshp.quads_positions = welded.first;
+    fvshp.positions = welded.second;
     fvshp.quads_normals                         = qshp.quads;
     fvshp.normals                               = qshp.normals;
     fvshp.quads_texturecoords                   = qshp.quads;
@@ -6033,21 +6030,20 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 trace_point sample_instance_point(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, float rel, const vec2f& ruv) {
     auto& instance   = scene.instances[instance_id];
-    auto  element_id = 0;
-    auto  element_uv = zero2f;
+    auto  sample = pair<int, vec2f>();
     if (instance.shape >= 0) {
         auto& shape                 = scene.shapes[instance.shape];
         auto& elements_cdf          = lights.shape_elements_cdf[instance.shape];
-        tie(element_id, element_uv) = sample_shape_element(
+        sample = sample_shape_element(
             shape, elements_cdf, rel, ruv);
     } else if (instance.surface >= 0) {
         auto& surface      = scene.surfaces[instance.surface];
         auto& elements_cdf = lights.surface_elements_cdf[instance.shape];
-        tie(element_id, element_uv) = sample_surface_element(
+        sample = sample_surface_element(
             surface, elements_cdf, rel, ruv);
     } else {
     }
-    return make_trace_point(scene, instance_id, element_id, element_uv);
+    return make_trace_point(scene, instance_id, sample.first, sample.second);
 }
 
 // Sample pdf for a light point.
