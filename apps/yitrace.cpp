@@ -44,12 +44,25 @@ struct app_state {
     yocto_scene scene = {};
     bvh_scene   bvh   = {};
 
+    // rendering params
+    int                camera_id        = 0;
+    vec2i              image_size       = {1280, 720};
+    int                num_samples      = 256;
+    trace_sampler_type sampler_type     = trace_sampler_type::path;
+    int                max_bounces      = 8;
+    float              display_exposure = 0;
+    bool               display_filmic   = false;
+    bool               display_srgb     = true;
+    int                preview_ratio    = 8;
+    uint64_t           random_seed      = 7;
+    float              pixel_clamp      = 100;
+
     // rendering state
-    trace_params                   params         = {};
     trace_lights                   lights         = {};
     image<rng_state>               trace_rngs     = {};
     image<vec4f>                   rendered_image = {};
     image<vec4f>                   display_image  = {};
+    image<vec4f>                   preview_image  = {};
     bool                           trace_stop     = false;
     int                            trace_sample   = 0;
     vector<thread>                 trace_threads  = {};
@@ -62,32 +75,41 @@ struct app_state {
     bool                       widgets_open = false;
     tuple<string, int>         selection    = {"", -1};
     vector<tuple<string, int>> update_list;
-    bool                       navigation_fps = false;
-    bool                       quiet          = false;
-    int64_t                    trace_start    = 0;
-    opengl_texture             gl_txt         = {};
+    bool                       navigation_fps  = false;
+    bool                       quiet           = false;
+    int64_t                    trace_start     = 0;
+    opengl_texture             display_texture = {};
 
     // app status
     bool   load_done = false, load_running = false;
     string status = "";
 };
 
-void start_rendering_async(app_state& app) {
-    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
-    app.status      = "rendering image";
-    app.trace_start = get_time();
-    auto image_size = get_camera_image_size(
-        app.scene.cameras[app.params.camera_id], app.params.image_size);
-    app.rendered_image = make_image<vec4f>(image_size);
-    app.display_image  = make_image<vec4f>(image_size);
-    app.trace_rngs     = make_trace_rngs(image_size, app.params.random_seed);
-    trace_async_start(app.rendered_image, app.display_image, app.scene, app.bvh,
-        app.lights, app.trace_rngs, app.trace_threads, app.trace_stop,
-        app.trace_sample, app.trace_queue, app.params);
-}
-
 void stop_rendering_async(app_state& app) {
     trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
+}
+
+void start_rendering_async(app_state& app) {
+    stop_rendering_async(app);
+    app.status      = "rendering image";
+    app.trace_start = get_time();
+
+    auto& camera       = app.scene.cameras[app.camera_id];
+    auto  image_size   = get_camera_image_size(camera, app.image_size);
+    auto  sampler_func = get_trace_sampler_func(app.sampler_type);
+
+    app.rendered_image = make_image<vec4f>(image_size);
+    app.display_image  = make_image<vec4f>(image_size);
+    app.preview_image  = make_image<vec4f>(image_size / app.preview_ratio);
+    app.trace_rngs     = make_trace_rngs(image_size, app.random_seed);
+
+    trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,
+        sampler_func, 1, app.max_bounces);
+    app.trace_queue.push({zero2i, zero2i});
+
+    trace_async_start(app.rendered_image, app.scene, camera, app.bvh, app.lights,
+        sampler_func, app.num_samples, app.max_bounces, app.trace_rngs,
+        app.trace_threads, app.trace_stop, app.trace_sample, app.trace_queue);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -120,9 +142,9 @@ bool load_scene_sync(app_state& app) {
     app.lights = make_trace_lights(app.scene);
 
     // fix renderer type if no lights
-    if (empty(app.lights) && app.params.sample_tracer != trace_type::eyelight) {
+    if (empty(app.lights) && app.sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader\n");
-        app.params.sample_tracer = trace_type::eyelight;
+        app.sampler_type = trace_sampler_type::eyelight;
     }
 
     // set flags
@@ -176,29 +198,29 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto edited = 0;
             if (app.load_done) {
                 edited += draw_combobox_opengl_widget(
-                    win, "camera", app.params.camera_id, cam_names);
+                    win, "camera", app.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
-                win, "size", app.params.image_size, 256, 4096);
+                win, "size", app.image_size, 256, 4096);
             edited += draw_slider_opengl_widget(
-                win, "nsamples", app.params.num_samples, 16, 4096);
+                win, "nsamples", app.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
-                (int&)app.params.sample_tracer, trace_type_names);
+                (int&)app.sampler_type, trace_sampler_type_names);
             edited += draw_slider_opengl_widget(
-                win, "nbounces", app.params.max_bounces, 1, 10);
+                win, "nbounces", app.max_bounces, 1, 10);
             edited += draw_slider_opengl_widget(
-                win, "seed", (int&)app.params.random_seed, 0, 1000);
+                win, "seed", (int&)app.random_seed, 0, 1000000);
             edited += draw_slider_opengl_widget(
-                win, "pratio", app.params.preview_ratio, 1, 64);
+                win, "pratio", app.preview_ratio, 1, 64);
             if (edited) app.update_list.push_back({"app", -1});
             draw_label_opengl_widget(win, "time/sample", "%0.3lf",
                 (app.trace_sample) ? (get_time() - app.trace_start) /
                                          (1000000000.0 * app.trace_sample) :
                                      0.0);
             draw_slider_opengl_widget(
-                win, "exposure", app.params.display_exposure, -5, 5);
-            draw_checkbox_opengl_widget(win, "filmic", app.params.display_filmic);
-            draw_checkbox_opengl_widget(win, "srgb", app.params.display_srgb);
+                win, "exposure", app.display_exposure, -5, 5);
+            draw_checkbox_opengl_widget(win, "filmic", app.display_filmic);
+            draw_checkbox_opengl_widget(win, "srgb", app.display_srgb);
             draw_slider_opengl_widget(win, "zoom", app.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", app.zoom_to_fit);
             continue_opengl_widget_line(win);
@@ -239,19 +261,41 @@ void draw(const opengl_window& win) {
     if (app.load_done) {
         center_image(app.image_center, app.image_scale, app.display_image.size,
             win_size, app.zoom_to_fit);
-        if (!app.gl_txt) {
-            init_opengl_texture(
-                app.gl_txt, app.display_image.size, false, false, false, false);
+        if (!app.display_texture) {
+            init_opengl_texture(app.display_texture, app.display_image.size,
+                false, false, false, false);
         } else {
             auto region = image_region{};
-            while (app.trace_queue.try_pop(region))
-                update_opengl_texture_region(
-                    app.gl_txt, app.display_image, region, false);
+            while (app.trace_queue.try_pop(region)) {
+                if (region.size == zero2i) {
+                    auto display_preview = tonemap_image(app.preview_image,
+                        app.display_exposure, app.display_filmic,
+                        app.display_srgb);
+                    for (auto j = 0; j < app.rendered_image.size.y; j++) {
+                        for (auto i = 0; i < app.rendered_image.size.x; i++) {
+                            auto pi = clamp(i / app.preview_ratio, 0,
+                                     display_preview.size.x - 1),
+                                 pj = clamp(j / app.preview_ratio, 0,
+                                     display_preview.size.y - 1);
+                            at(app.display_image, {i, j}) = at(
+                                display_preview, {pi, pj});
+                        }
+                    }
+                    update_opengl_texture(
+                        app.display_texture, app.display_image, false);
+                } else {
+                    tonemap_image_region(app.display_image, region,
+                        app.rendered_image, app.display_exposure,
+                        app.display_filmic, app.display_srgb);
+                    update_opengl_texture_region(
+                        app.display_texture, app.display_image, region, false);
+                }
+            }
         }
         set_glblending(true);
         draw_glimage_background(app.display_image.size, win_size,
             app.image_center, app.image_scale);
-        draw_glimage(app.gl_txt, app.display_image.size, win_size,
+        draw_glimage(app.display_texture, app.display_image.size, win_size,
             app.image_center, app.image_scale);
         set_glblending(false);
     }
@@ -329,10 +373,10 @@ void run_ui(app_state& app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto& camera = app.scene.cameras.at(app.params.camera_id);
+            auto& camera = app.scene.cameras.at(app.camera_id);
             camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({"camera", app.params.camera_id});
+            app.update_list.push_back({"camera", app.camera_id});
         }
 
         // selection
@@ -342,7 +386,7 @@ void run_ui(app_state& app) {
                 app.image_scale, app.rendered_image.size);
             if (ij.x < 0 || ij.x >= app.rendered_image.size.x || ij.y < 0 ||
                 ij.y >= app.rendered_image.size.y) {
-                auto& camera = app.scene.cameras.at(app.params.camera_id);
+                auto& camera = app.scene.cameras.at(app.camera_id);
                 auto  ray    = evaluate_camera_ray(
                     camera, ij, app.rendered_image.size, {0.5f, 0.5f}, zero2f);
                 auto isec = intersect_scene(app.scene, app.bvh, ray);
@@ -374,18 +418,18 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
-    app.params.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.params.image_size  = {0,
+    app.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
+    app.image_size  = {0,
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    app.params.num_samples = parse_arg(
+    app.num_samples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.params.sample_tracer = parse_arge(parser, "--tracer,-t",
-        trace_type::path, "Tracer type.", trace_type_names);
-    app.params.max_bounces   = parse_arg(
+    app.sampler_type = parse_arge(parser, "--tracer,-t",
+        trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
+    app.max_bounces  = parse_arg(
         parser, "--nbounces", 4, "Maximum number of bounces.");
-    app.params.pixel_clamp = parse_arg(
+    app.pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    app.params.random_seed = parse_arg(
+    app.random_seed = parse_arg(
         parser, "--seed", 7, "Seed for the random number generators.");
     app.use_embree_bvh = parse_arg(
         parser, "--embree", false, "Use Embree ratracer");
