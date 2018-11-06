@@ -4202,11 +4202,18 @@ struct parse_string_view {
 
 // Prints basic types to string
 inline bool parse_value(parse_string_view& str, string& value) {
-    auto n = 0;
+    while(*str.str && std::isspace((unsigned char)*str.str)) str.str++;
+    if(!*str.str) return false;
+    auto pos = 0;
     char buffer[4096];
-    if (sscanf(str.str, "%4095s%n", buffer, &n) != 1) return false;
+    while(*str.str && !std::isspace((unsigned char)*str.str) && pos < sizeof(buffer)) {
+        buffer[pos] = *str.str;
+        str.str++;
+        pos++;
+    }
+    if(pos >= sizeof(buffer)) return false;
+    buffer[pos] = 0;
     value = buffer;
-    str.str += n;
     return true;
 }
 inline bool parse_value(parse_string_view& str, int& value) {
