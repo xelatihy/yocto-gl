@@ -103,7 +103,7 @@ void update_display_async(app_image& img) {
     make_image_regions(regions, img.img.size);
     for (auto region_id = 0; region_id < regions.size(); region_id++) {
         if (img.display_stop) break;
-        tonemap_image_region(img.img, img.display, regions[region_id], 
+        tonemap_image_region(img.img, img.display, regions[region_id],
             img.exposure, img.filmic, img.srgb);
         img.display_queue.push(regions[region_id]);
     }
@@ -317,13 +317,15 @@ int main(int argc, char* argv[]) {
 
     // command line params
     auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
-    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "display exposure");
-    auto filmic   = parse_arg(parser, "--filmic", false, "display filmic");
-    auto srgb     = parse_arg(parser, "--no-srgb", true, "display as sRGB");
+    auto exposure = parse_argument(
+        parser, "--exposure,-e", 0.0f, "display exposure");
+    auto filmic = parse_argument(parser, "--filmic", false, "display filmic");
+    auto srgb   = parse_argument(parser, "--no-srgb", true, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
-    auto outfilename = parse_arg(parser, "--out,-o", ""s, "image out filename");
-    auto filenames   = parse_args(
+    auto outfilename = parse_argument(
+        parser, "--out,-o", ""s, "image out filename");
+    auto filenames = parse_arguments(
         parser, "images", vector<string>{}, "image filenames", true);
     check_cmdline(parser);
 

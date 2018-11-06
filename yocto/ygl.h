@@ -242,8 +242,8 @@
 // environment is used.
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
-// 2. prepare lights for rendering with `make_trace_lights()`
-// 3. create the random number generators with `make_trace_rngs()`
+// 2. prepare lights for rendering with `init_trace_lights()`
+// 3. create the random number generators with `init_trace_rngs()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -2499,9 +2499,9 @@ void merge_triangles(vector<vec3i>& triangles,
 void merge_quads(
     vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
 void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& tangents, vector<vec2f>& texturecoords, vector<float>& radius,
-    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_tangents,
+    vector<vec3f>& tangents, vector<vec2f>& texturecoords,
+    vector<float>& radius, const vector<vec2i>& merge_lines,
+    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
     const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
 void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
@@ -2510,8 +2510,7 @@ void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
 void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords);
+    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
 
 // Pick a point in a point set uniformly.
 inline int sample_points_element(int npoints, float re) {
@@ -2777,67 +2776,94 @@ namespace ygl {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-void make_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
-void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec3i& steps, const vec3f& size, const vec2f& uvsize);
-void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
-void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius);
-void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec2i& steps, float size, const vec2f& uvsize);
-void make_sphere_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,int steps, float size, float uvsize);
-void make_sphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip);
-void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec2i& steps, float size, const vec2f& uvsize);
-void make_disk_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,int steps, float size, float uvsize);
-void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    int steps, float size, float uvsize, float height);
-void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
-void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize);
-void make_cylinder_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius);
-void make_geodesic_sphere_shape(vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,int tesselation, float size);
+void make_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize);
+void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec3f& size, const vec2f& uvsize);
+void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize);
+void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize);
+void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, float radius);
+void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    float size, const vec2f& uvsize);
+void make_sphere_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
+    float uvsize);
+void make_sphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    float size, const vec2f& uvsize, const vec2f& zflip);
+void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    float size, const vec2f& uvsize);
+void make_disk_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
+    float uvsize);
+void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
+    float uvsize, float height);
+void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize);
+void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize);
+void make_cylinder_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius);
+void make_geodesic_sphere_shape(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, int tesselation,
+    float size);
 
 // Make examples shapes with are watertight (good for subdivs).
 // Returns (triangles, quads, pos)
-void make_suzanne_shape(vector<vec4i>& quads, vector<vec3f>& positions, float size);
-void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, const vec3f& size);
+void make_suzanne_shape(
+    vector<vec4i>& quads, vector<vec3f>& positions, float size);
+void make_cube_shape(
+    vector<vec4i>& quads, vector<vec3f>& positions, const vec3f& size);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
 void make_cube_facevarying_shape(vector<vec4i>& quads_positions,
-    vector<vec4i>&                       quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-void make_cube_posonly_shape(vector<vec4i>& quads,
-    vector<vec3f>& positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize);
+void make_cube_posonly_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 void make_cube_multiplematerials_shape(vector<vec4i>& quads_positions,
-    vector<vec4i>&                       quads_normals,
-    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<int>& quads_materials,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<int>& quads_materials,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-void make_lines_shape(vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
+void make_lines_shape(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize,
+    const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-void make_point_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, float point_radius = 0.001f);
-void make_points_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, 
+void make_point_shape(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    float point_radius = 0.001f);
+void make_points_shape(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
     int num, float uvsize, float point_radius = 0.001f);
-void make_random_points_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, int num, const vec3f& size,
-    float uvsize, float point_radius = 0.001f, uint64_t seed = 0);
+void make_random_points_shape(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    int num, const vec3f& size, float uvsize, float point_radius = 0.001f,
+    uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-void make_bezier_circle_shape(vector<vec4i>& beziers, vector<vec3f>& positions, float size);
+void make_bezier_circle_shape(
+    vector<vec4i>& beziers, vector<vec3f>& positions, float size);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -2845,12 +2871,14 @@ void make_bezier_circle_shape(vector<vec4i>& beziers, vector<vec3f>& positions, 
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, const vec2i& steps,
-    const vector<vec3i>& striangles, const vector<vec4i>& squads,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
-    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
-    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
+void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
+    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
+    const vec2f& rotation = zero2f, int seed = 7);
 
 }  // namespace ygl
 
@@ -3006,12 +3034,13 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions,
-    const vec2i& image_size, int region_size = 32);
+void make_image_regions(vector<image_region>& regions, const vec2i& image_size,
+    int region_size = 32);
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(const image<T>& img, image<T>& clipped, const image_region& region);
+inline void get_image_region(
+    const image<T>& img, image<T>& clipped, const image_region& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -3033,12 +3062,12 @@ void srgb_to_linear(const image<vec4b>& srgb, image<vec4f>& lin);
 void linear_to_srgb(const image<vec4f>& lin, image<vec4b>& srgb);
 
 // Apply exposure and filmic tone mapping
-void tonemap_image(
-    const image<vec4f>& hdr, image<vec4f>& ldr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(const image<vec4f>& hdr, image<vec4f>& ldr, const image_region& region,
-    float exposure, bool filmic, bool srgb);
-void tonemap_image(
-    const image<vec4f>& hdr, image<vec4b>& ldr, float exposure, bool filmic, bool srgb);
+void tonemap_image(const image<vec4f>& hdr, image<vec4f>& ldr, float exposure,
+    bool filmic, bool srgb);
+void tonemap_image_region(const image<vec4f>& hdr, image<vec4f>& ldr,
+    const image_region& region, float exposure, bool filmic, bool srgb);
+void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr, float exposure,
+    bool filmic, bool srgb);
 
 // Resize an image.
 void resize_image(const image<vec4f>& img, image<vec4f>& res, const vec2i& size);
@@ -3058,15 +3087,16 @@ void make_checker_image(image<vec4f>& img, const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
 void make_bumpdimple_image(image<vec4f>& img, const vec2i& size, int tile = 8);
-void make_ramp_image(image<vec4f>& img, 
-    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
+void make_ramp_image(image<vec4f>& img, const vec2i& size, const vec4f& c0,
+    const vec4f& c1, float srgb = false);
 void make_gammaramp_image(image<vec4f>& img, const vec2i& size);
 void make_uvramp_image(image<vec4f>& img, const vec2i& size);
-void make_uvgrid_image(image<vec4f>& img, 
-    const vec2i& size, int tile = 8, bool colored = true);
+void make_uvgrid_image(
+    image<vec4f>& img, const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-void bump_to_normal_map(const image<vec4f>& img, image<vec4f>& normal,  float scale = 1);
+void bump_to_normal_map(
+    const image<vec4f>& img, image<vec4f>& normal, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
@@ -3074,13 +3104,13 @@ void make_sunsky_image(image<vec4f>& img, const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-void make_lights_image(image<vec4f>& img, const vec2i& size, const vec3f& le = {1, 1, 1},
-    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
-    float lheight = pif / 16);
+void make_lights_image(image<vec4f>& img, const vec2i& size,
+    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
+    float lwidth = pif / 16, float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-void make_noise_image(image<vec4f>& img, 
-    const vec2i& size, float scale = 1, bool wrap = true);
+void make_noise_image(
+    image<vec4f>& img, const vec2i& size, float scale = 1, bool wrap = true);
 void make_fbm_image(image<vec4f>& img, const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 void make_ridge_image(image<vec4f>& img, const vec2i& size, float scale = 1,
@@ -3187,8 +3217,8 @@ const T& at(const volume<T>& vol, const vec3i& ijk) {
 }
 
 // make a simple example volume
-void make_test_volume1f(volume<float>& vol,
-    const vec3i& size, float scale = 10, float exponent = 6);
+void make_test_volume1f(volume<float>& vol, const vec3i& size, float scale = 10,
+    float exponent = 6);
 
 }  // namespace ygl
 
@@ -3446,12 +3476,12 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Updates/refits bvh.
-void build_shape_bvh(
-    const yocto_shape& shape, bvh_shape& bvh, bool high_quality, bool embree = false);
-void build_surface_bvh(
-    const yocto_surface& surface, bvh_shape& bvh, bool high_quality, bool embree = false);
-void build_scene_bvh(
-    const yocto_scene& scene, bvh_scene& bvh, bool high_quality, bool embree = false);
+void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
+    bool high_quality, bool embree = false);
+void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
+    bool high_quality, bool embree = false);
+void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+    bool high_quality, bool embree = false);
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
 void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh);
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
@@ -3689,14 +3719,14 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void make_trace_lights(trace_lights& lights, const yocto_scene& scene);
-inline bool  empty(const trace_lights& lights) {
+void        init_trace_lights(trace_lights& lights, const yocto_scene& scene);
+inline bool empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
 // Initialize state of the renderer.
-void make_trace_rngs(image<rng_state>& rngs,
-    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
+void init_trace_rngs(image<rng_state>& rngs, const vec2i& image_size,
+    uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
@@ -4045,7 +4075,8 @@ namespace ygl {
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(const image<T>& img, image<T>& clipped, const image_region& region) {
+inline void get_image_region(
+    const image<T>& img, image<T>& clipped, const image_region& region) {
     init_image(clipped, region.size);
     for (auto j = 0; j < region.size.y; j++) {
         for (auto i = 0; i < region.size.x; i++) {

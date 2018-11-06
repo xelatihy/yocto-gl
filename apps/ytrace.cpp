@@ -34,36 +34,37 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
-    auto camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
-    auto image_size  = vec2i{0,
-        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    auto num_samples = parse_arg(
+    auto camera_id   = parse_argument(parser, "--camera", 0, "Camera index.");
+    auto image_size  = vec2i{0, parse_argument(parser, "--resolution,-r", 512,
+                                   "Image vertical resolution.")};
+    auto num_samples = parse_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    auto sampler_type = parse_arge(parser, "--tracer,-t",
+    auto sampler_type = parse_argument(parser, "--tracer,-t",
         trace_sampler_type::path, "Trace type.", trace_sampler_type_names);
-    auto max_bounces  = parse_arg(
+    auto max_bounces  = parse_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
-    auto pixel_clamp = parse_arg(
+    auto pixel_clamp = parse_argument(
         parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
-    auto no_parallel = parse_arg(
+    auto no_parallel = parse_argument(
         parser, "--noparallel", false, "Disable parallel execution.");
-    auto random_seed = parse_arg(
+    auto random_seed = parse_argument(
         parser, "--seed", 13, "Seed for the random number generators.");
-    auto samples_per_batch = parse_arg(
+    auto samples_per_batch = parse_argument(
         parser, "--nbatch,-b", 16, "Samples per batch.");
-    auto save_batch = parse_arg(
+    auto save_batch = parse_argument(
         parser, "--save-batch", false, "Save images progressively");
-    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto filmic   = parse_arg(parser, "--filmic", false, "Hdr filmic");
-    auto srgb     = parse_arg(parser, "--no-srgb", true, "No srgb");
-    auto embree   = parse_arg(parser, "--embree", false, "Use Embree ratracer");
-    auto double_sided = parse_arg(
+    auto exposure = parse_argument(parser, "--exposure,-e", 0.0f, "Hdr exposure");
+    auto filmic   = parse_argument(parser, "--filmic", false, "Hdr filmic");
+    auto srgb     = parse_argument(parser, "--no-srgb", true, "No srgb");
+    auto embree   = parse_argument(
+        parser, "--embree", false, "Use Embree ratracer");
+    auto double_sided = parse_argument(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto add_skyenv = parse_arg(
+    auto add_skyenv = parse_argument(
         parser, "--add-skyenv,-E", false, "add missing environment map");
-    auto imfilename = parse_arg(
+    auto imfilename = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    auto filename = parse_arg(
+    auto filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
@@ -87,7 +88,7 @@ int main(int argc, char* argv[]) {
 
     // init renderer
     auto lights = trace_lights{};
-    make_trace_lights(lights, scene);
+    init_trace_lights(lights, scene);
 
     // fix renderer type if no lights
     if (empty(lights) && sampler_type != trace_sampler_type::eyelight) {
@@ -101,8 +102,8 @@ int main(int argc, char* argv[]) {
     auto rendered_image = image<vec4f>{};
     init_image<vec4f>(rendered_image, image_size);
     auto trace_rngs = image<rng_state>{};
-    make_trace_rngs(trace_rngs, image_size, random_seed);
-    auto sampler_func   = get_trace_sampler_func(sampler_type);
+    init_trace_rngs(trace_rngs, image_size, random_seed);
+    auto sampler_func = get_trace_sampler_func(sampler_type);
 
     // render
     auto scope = log_trace_begin("rendering image");
