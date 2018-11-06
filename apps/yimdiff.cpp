@@ -35,8 +35,8 @@
 using namespace ygl;
 
 template <typename T>
-void compute_diff_image(image<vec<T, 4>>& diff,
-    const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
+void compute_diff_image(image<vec<T, 4>>& diff, const image<vec<T, 4>>& a,
+    const image<vec<T, 4>>& b) {
     init_image(diff, a.size);
     for (auto i = 0; i < a.size.x * a.size.y; i++) {
         diff.pixels[i] = {(T)abs(a.pixels[i].x - b.pixels[i].x),
@@ -57,7 +57,8 @@ vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
 }
 
 template <typename T>
-void display_diff(image<vec<T, 4>>& display, const image<vec<T, 4>>& diff, T alpha) {
+void display_diff(
+    image<vec<T, 4>>& display, const image<vec<T, 4>>& diff, T alpha) {
     init_image(display, diff.size);
     for (auto i = 0; i < diff.pixels.size(); i++) {
         auto diff_value   = max(diff.pixels[i]);
@@ -69,12 +70,13 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Compares two images", "yimdiff");
-    auto threshold = parse_arg(parser, "--threshold,-t", 0.1f, "Thhhreshold");
-    auto output    = parse_arg(
+    auto threshold = parse_argument(
+        parser, "--threshold,-t", 0.1f, "Thhhreshold");
+    auto output = parse_argument(
         parser, "--output,-o", ""s, "output image filename", false);
-    auto filename1 = parse_arg(
+    auto filename1 = parse_argument(
         parser, "filename1", "in1.png"s, "input image filename", true);
-    auto filename2 = parse_arg(
+    auto filename2 = parse_argument(
         parser, "filename2", "in2.png"s, "input image filename", true);
     check_cmdline(parser);
 
@@ -86,8 +88,8 @@ int main(int argc, char* argv[]) {
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
         if (img1.size != img2.size) log_fatal("image size differs");
-        auto diff     = image<vec4f>{};
-        auto display     = image<vec4f>{};
+        auto diff    = image<vec4f>{};
+        auto display = image<vec4f>{};
         compute_diff_image(diff, img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
@@ -106,8 +108,8 @@ int main(int argc, char* argv[]) {
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
         if (img1.size != img2.size) log_fatal("image size differs");
-        auto diff     = image<vec4b>{};
-        auto display     = image<vec4b>{};
+        auto diff    = image<vec4b>{};
+        auto display = image<vec4b>{};
         compute_diff_image(diff, img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {

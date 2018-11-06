@@ -101,7 +101,7 @@ void start_rendering_async(app_state& app) {
     init_image<vec4f>(app.rendered_image, image_size);
     init_image<vec4f>(app.display_image, image_size);
     init_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
-    make_trace_rngs(app.trace_rngs, image_size, app.random_seed);
+    init_trace_rngs(app.trace_rngs, image_size, app.random_seed);
 
     trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,
         sampler_func, 1, app.max_bounces);
@@ -139,7 +139,7 @@ bool load_scene_sync(app_state& app) {
 
     // init renderer
     app.status = "initializing lights";
-    make_trace_lights(app.lights, app.scene);
+    init_trace_lights(app.lights, app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights) && app.sampler_type != trace_sampler_type::eyelight) {
@@ -285,9 +285,9 @@ void draw(const opengl_window& win) {
                     update_opengl_texture(
                         app.display_texture, app.display_image, false);
                 } else {
-                    tonemap_image_region(
-                        app.rendered_image, app.display_image, region, app.display_exposure,
-                        app.display_filmic, app.display_srgb);
+                    tonemap_image_region(app.rendered_image, app.display_image,
+                        region, app.display_exposure, app.display_filmic,
+                        app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
                 }
@@ -419,28 +419,28 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
-    app.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.image_size  = {0,
-        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    app.num_samples = parse_arg(
+    app.camera_id   = parse_argument(parser, "--camera", 0, "Camera index.");
+    app.image_size  = {0, parse_argument(parser, "--resolution,-r", 512,
+                             "Image vertical resolution.")};
+    app.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.sampler_type = parse_arge(parser, "--tracer,-t",
+    app.sampler_type = parse_argument(parser, "--tracer,-t",
         trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
-    app.max_bounces  = parse_arg(
+    app.max_bounces  = parse_argument(
         parser, "--nbounces", 4, "Maximum number of bounces.");
-    app.pixel_clamp = parse_arg(
+    app.pixel_clamp = parse_argument(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    app.random_seed = parse_arg(
+    app.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
-    app.use_embree_bvh = parse_arg(
+    app.use_embree_bvh = parse_argument(
         parser, "--embree", false, "Use Embree ratracer");
-    app.double_sided = parse_arg(
+    app.double_sided = parse_argument(
         parser, "--double-sided", false, "Double-sided rendering.");
-    app.add_skyenv = parse_arg(
+    app.add_skyenv = parse_argument(
         parser, "--add-skyenv", false, "Add missing environment map");
-    app.imfilename = parse_arg(
+    app.imfilename = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    app.filename = parse_arg(
+    app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 

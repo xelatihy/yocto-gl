@@ -65,7 +65,7 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
-    auto filtered     = image<vec4f>{};
+    auto filtered = image<vec4f>{};
     init_image(filtered, img.size);
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
@@ -105,9 +105,9 @@ image<vec4f> filter_bilateral(
     const image<vec4f>& img, float spatial_sigma, float range_sigma) {
     auto filtered = image<vec4f>{};
     init_image(filtered, img.size);
-    auto fwidth   = (int)ceil(2.57f * spatial_sigma);
-    auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
-    auto rw       = 1 / (2.0f * range_sigma * range_sigma);
+    auto fwidth = (int)ceil(2.57f * spatial_sigma);
+    auto sw     = 1 / (2.0f * spatial_sigma * spatial_sigma);
+    auto rw     = 1 / (2.0f * range_sigma * range_sigma);
     for (auto j = 0; j < img.size.y; j++) {
         for (auto i = 0; i < img.size.x; i++) {
             auto av = zero4f;
@@ -132,25 +132,26 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser  = make_cmdline_parser(argc, argv, "Process images", "yimproc");
-    auto tonemap = parse_arg(parser, "--tonemap,-t", false, "Tonemap image");
-    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto srgb     = parse_arg(parser, "--srgb", true, "Tonemap to sRGB.");
-    auto filmic   = parse_arg(
+    auto parser = make_cmdline_parser(argc, argv, "Process images", "yimproc");
+    auto tonemap = parse_argument(parser, "--tonemap,-t", false, "Tonemap image");
+    auto exposure = parse_argument(
+        parser, "--exposure,-e", 0.0f, "Tonemap exposure");
+    auto srgb   = parse_argument(parser, "--srgb", true, "Tonemap to sRGB.");
+    auto filmic = parse_argument(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto resize_size = parse_arg(
+    auto resize_size = parse_argument(
         parser, "--resize", zero2i, "resize size (0 to maintain aspect)");
-    auto spatial_sigma = parse_arg(
+    auto spatial_sigma = parse_argument(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
-    auto range_sigma = parse_arg(
+    auto range_sigma = parse_argument(
         parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
-    auto alpha_filename = parse_arg(
+    auto alpha_filename = parse_argument(
         parser, "--set-alpha", ""s, "set alpha as this image alpha");
-    auto coloralpha_filename = parse_arg(
+    auto coloralpha_filename = parse_argument(
         parser, "--set-color-as-alpha", ""s, "set alpha as this image color");
-    auto output = parse_arg(
+    auto output = parse_argument(
         parser, "--output,-o", "out.png"s, "output image filename", true);
-    auto filename = parse_arg(
+    auto filename = parse_argument(
         parser, "filename", "img.hdr"s, "input image filename", true);
     check_cmdline(parser);
 
