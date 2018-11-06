@@ -31,9 +31,6 @@
 using namespace ygl;
 
 int main(int argc, char* argv[]) {
-    // trace options
-    auto params = trace_params();
-
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Offline path tracing", "ytrace");
@@ -42,9 +39,9 @@ int main(int argc, char* argv[]) {
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     auto num_samples = parse_arg(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    params.sample_tracer = parse_arge(parser, "--tracer,-t", trace_type::path,
-        "Trace type.", trace_type_names);
-    auto max_bounces   = parse_arg(
+    auto sampler_type = parse_arge(parser, "--tracer,-t",
+        trace_sampler_type::path, "Trace type.", trace_sampler_type_names);
+    auto max_bounces  = parse_arg(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     auto pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
@@ -91,28 +88,27 @@ int main(int argc, char* argv[]) {
     auto lights = make_trace_lights(scene);
 
     // fix renderer type if no lights
-    if (empty(lights) && params.sample_tracer != trace_type::eyelight) {
+    if (empty(lights) && sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader");
-        params.sample_tracer = trace_type::eyelight;
+        sampler_type = trace_sampler_type::eyelight;
     }
 
     // initialize rendering objects
-    auto& camera = scene.cameras[camera_id];
-    image_size = get_camera_image_size(camera, image_size);
+    auto& camera        = scene.cameras[camera_id];
+    image_size          = get_camera_image_size(camera, image_size);
     auto rendered_image = make_image<vec4f>(image_size);
     auto trace_rngs     = make_trace_rngs(image_size, random_seed);
+    auto sampler_func   = get_trace_sampler_func(sampler_type);
 
     // render
     auto scope = log_trace_begin("rendering image");
-    for (auto sample = 0; sample < num_samples;
-         sample += samples_per_batch) {
+    for (auto sample = 0; sample < num_samples; sample += samples_per_batch) {
         auto nsamples = min(samples_per_batch, num_samples - sample);
-        trace_samples(rendered_image, scene,  camera, bvh, lights, sample,
-            nsamples, max_bounces, trace_rngs, params, pixel_clamp, no_parallel);
+        trace_samples(rendered_image, scene, camera, bvh, lights, sampler_func,
+            sample, nsamples, max_bounces, trace_rngs, pixel_clamp, no_parallel);
         if (save_batch) {
-            auto filename = replace_extension(
-                imfilename, to_string(sample + nsamples) + "." +
-                                get_extension(imfilename));
+            auto filename = replace_extension(imfilename,
+                to_string(sample + nsamples) + "." + get_extension(imfilename));
             if (!save_tonemapped_image(
                     filename, rendered_image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);

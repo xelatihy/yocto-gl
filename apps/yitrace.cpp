@@ -45,19 +45,19 @@ struct app_state {
     bvh_scene   bvh   = {};
 
     // rendering params
-    int        camera_id         = 0;
-    vec2i      image_size        = {1280, 720};
-    int        num_samples       = 256;
-    int        max_bounces       = 8;
-    float      display_exposure  = 0;
-    bool       display_filmic    = false;
-    bool       display_srgb      = true;
-    int                        preview_ratio = 8;
-    uint64_t   random_seed = 7;
-    float pixel_clamp = 100;
+    int                camera_id        = 0;
+    vec2i              image_size       = {1280, 720};
+    int                num_samples      = 256;
+    trace_sampler_type sampler_type     = trace_sampler_type::path;
+    int                max_bounces      = 8;
+    float              display_exposure = 0;
+    bool               display_filmic   = false;
+    bool               display_srgb     = true;
+    int                preview_ratio    = 8;
+    uint64_t           random_seed      = 7;
+    float              pixel_clamp      = 100;
 
     // rendering state
-    trace_params                   params         = {};
     trace_lights                   lights         = {};
     image<rng_state>               trace_rngs     = {};
     image<vec4f>                   rendered_image = {};
@@ -69,11 +69,11 @@ struct app_state {
     concurrent_queue<image_region> trace_queue    = {};
 
     // view image
-    vec2f                      image_center  = zero2f;
-    float                      image_scale   = 1;
-    bool                       zoom_to_fit   = true;
-    bool                       widgets_open  = false;
-    tuple<string, int>         selection     = {"", -1};
+    vec2f                      image_center = zero2f;
+    float                      image_scale  = 1;
+    bool                       zoom_to_fit  = true;
+    bool                       widgets_open = false;
+    tuple<string, int>         selection    = {"", -1};
     vector<tuple<string, int>> update_list;
     bool                       navigation_fps  = false;
     bool                       quiet           = false;
@@ -94,21 +94,22 @@ void start_rendering_async(app_state& app) {
     app.status      = "rendering image";
     app.trace_start = get_time();
 
-    auto& camera = app.scene.cameras[app.camera_id];
-    auto image_size = get_camera_image_size(camera, app.image_size);
+    auto& camera       = app.scene.cameras[app.camera_id];
+    auto  image_size   = get_camera_image_size(camera, app.image_size);
+    auto  sampler_func = get_trace_sampler_func(app.sampler_type);
+
     app.rendered_image = make_image<vec4f>(image_size);
     app.display_image  = make_image<vec4f>(image_size);
     app.preview_image  = make_image<vec4f>(image_size / app.preview_ratio);
     app.trace_rngs     = make_trace_rngs(image_size, app.random_seed);
 
-    auto preview_params = app.params;
-    trace_image(app.preview_image,
-        app.scene, camera, app.bvh, app.lights, 1, app.max_bounces, preview_params);
+    trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,
+        sampler_func, 1, app.max_bounces);
     app.trace_queue.push({zero2i, zero2i});
 
     trace_async_start(app.rendered_image, app.scene, camera, app.bvh, app.lights,
-        app.num_samples, app.max_bounces, app.trace_rngs, app.trace_threads, app.trace_stop, app.trace_sample,
-        app.trace_queue, app.params);
+        sampler_func, app.num_samples, app.max_bounces, app.trace_rngs,
+        app.trace_threads, app.trace_stop, app.trace_sample, app.trace_queue);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -141,9 +142,9 @@ bool load_scene_sync(app_state& app) {
     app.lights = make_trace_lights(app.scene);
 
     // fix renderer type if no lights
-    if (empty(app.lights) && app.params.sample_tracer != trace_type::eyelight) {
+    if (empty(app.lights) && app.sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader\n");
-        app.params.sample_tracer = trace_type::eyelight;
+        app.sampler_type = trace_sampler_type::eyelight;
     }
 
     // set flags
@@ -204,7 +205,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
-                (int&)app.params.sample_tracer, trace_type_names);
+                (int&)app.sampler_type, trace_sampler_type_names);
             edited += draw_slider_opengl_widget(
                 win, "nbounces", app.max_bounces, 1, 10);
             edited += draw_slider_opengl_widget(
@@ -272,11 +273,12 @@ void draw(const opengl_window& win) {
                         app.display_srgb);
                     for (auto j = 0; j < app.rendered_image.size.y; j++) {
                         for (auto i = 0; i < app.rendered_image.size.x; i++) {
-                            auto pi = clamp(
-                                     i / app.preview_ratio, 0, display_preview.size.x - 1),
-                                 pj = clamp(
-                                     j / app.preview_ratio, 0, display_preview.size.y - 1);
-                            at(app.display_image, {i, j})  = at(display_preview, {pi, pj});
+                            auto pi = clamp(i / app.preview_ratio, 0,
+                                     display_preview.size.x - 1),
+                                 pj = clamp(j / app.preview_ratio, 0,
+                                     display_preview.size.y - 1);
+                            at(app.display_image, {i, j}) = at(
+                                display_preview, {pi, pj});
                         }
                     }
                     update_opengl_texture(
@@ -421,9 +423,9 @@ int main(int argc, char* argv[]) {
         parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
     app.num_samples = parse_arg(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.params.sample_tracer = parse_arge(parser, "--tracer,-t",
-        trace_type::path, "Tracer type.", trace_type_names);
-    app.max_bounces   = parse_arg(
+    app.sampler_type = parse_arge(parser, "--tracer,-t",
+        trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
+    app.max_bounces  = parse_arg(
         parser, "--nbounces", 4, "Maximum number of bounces.");
     app.pixel_clamp = parse_arg(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
