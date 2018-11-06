@@ -2493,25 +2493,25 @@ void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold)
 
 // Merge shape elements
 void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int merge_verts);
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts);
 void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec2i>& merge_triangles, int merge_verts);
+    const vector<vec2i>& merge_triangles, int num_verts);
 void merge_quads(
-    vector<vec4i>& quads, const vector<vec2i>& merge_quads, int merge_verts);
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
 void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    vector<vec3f>& tangents, vector<vec2f>& texturecoords, vector<float>& radius,
     const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
+    const vector<vec3f>& merge_tangents,
     const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
 void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
 void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
-    const vector<vec2i>& merge_quads, const vector<vec3f>& merge_positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
+    const vector<vec2f>& merge_texturecoords);
 
 // Pick a point in a point set uniformly.
 inline int sample_points_element(int npoints, float re) {

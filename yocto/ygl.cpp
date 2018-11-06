@@ -1053,58 +1053,64 @@ void sample_quads_points(const vector<vec4i>& quads,
 
 // Merge shape elements
 void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int merge_verts) {
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts) {
     for (auto& l : merge_lines)
-        lines.push_back({l.x + merge_verts, l.y + merge_verts});
+        lines.push_back({l.x + num_verts, l.y + num_verts});
 }
 void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec3i>& merge_triangles, int merge_verts) {
+    const vector<vec3i>& merge_triangles, int num_verts) {
     for (auto& t : merge_triangles)
         triangles.push_back(
-            {t.x + merge_verts, t.y + merge_verts, t.z + merge_verts});
+            {t.x + num_verts, t.y + num_verts, t.z + num_verts});
 }
 void merge_quads(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int merge_verts) {
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
     for (auto& q : merge_quads)
-        quads.push_back({q.x + merge_verts, q.y + merge_verts,
-            q.z + merge_verts, q.w + merge_verts});
+        quads.push_back({q.x + num_verts, q.y + num_verts,
+            q.z + num_verts, q.w + num_verts});
 }
 void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
-    const vector<vec2i>& merge_lines, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius) {
-        auto merge_verts = (int)merge_positions.size();
+    vector<vec3f>& tangents, vector<vec2f>& texturecoords,
+    vector<float>& radius, const vector<vec2i>& merge_lines,
+    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
+    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius) {
+    auto merge_verts = (int)positions.size();
     for (auto& l : merge_lines)
         lines.push_back({l.x + merge_verts, l.y + merge_verts});
-    positions.insert(positions.end(), merge_positions.begin(), merge_positions.end());
-    normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+    positions.insert(
+        positions.end(), merge_positions.begin(), merge_positions.end());
+    tangents.insert(tangents.end(), merge_tangents.begin(), merge_tangents.end());
+    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
+        merge_texturecoords.end());
     radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
 }
 void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vector<vec3i>& merge_triangles, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords) {
-        auto merge_verts = (int)merge_positions.size();
+    auto merge_verts = (int)positions.size();
     for (auto& t : merge_triangles)
         triangles.push_back(
             {t.x + merge_verts, t.y + merge_verts, t.z + merge_verts});
-    positions.insert(positions.end(), merge_positions.begin(), merge_positions.end());
+    positions.insert(
+        positions.end(), merge_positions.begin(), merge_positions.end());
     normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
+        merge_texturecoords.end());
 }
 void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords,
-    const vector<float>& merge_radius) {
-        auto merge_verts = (int)merge_positions.size();
+    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords) {
+    auto merge_verts = (int)positions.size();
     for (auto& q : merge_quads)
         quads.push_back({q.x + merge_verts, q.y + merge_verts,
             q.z + merge_verts, q.w + merge_verts});
-    positions.insert(positions.end(), merge_positions.begin(), merge_positions.end());
+    positions.insert(
+        positions.end(), merge_positions.begin(), merge_positions.end());
     normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(), merge_texturecoords.end());
+    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
+        merge_texturecoords.end());
 }
 
 }  // namespace ygl
@@ -3251,22 +3257,21 @@ make_shape_data make_hair_shape(const vec2i& steps,
 make_shape_data merge_shape_data(const vector<make_shape_data>& shapes) {
     auto shape = make_shape_data();
     for (auto& sshp : shapes) {
-        auto nverts = (int)shape.positions.size();
-        for (auto& v : sshp.points) shape.points.push_back(v + nverts);
-        for (auto& v : sshp.lines)
-            shape.lines.push_back({v.x + nverts, v.y + nverts});
-        for (auto& v : sshp.triangles)
-            shape.triangles.push_back({v.x + nverts, v.y + nverts, v.z + nverts});
-        for (auto& v : sshp.quads)
-            shape.quads.push_back(
-                {v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
-        for (auto& v : sshp.beziers)
-            shape.beziers.push_back(
-                {v.x + nverts, v.y + nverts, v.z + nverts, v.w + nverts});
-        for (auto& v : sshp.positions) shape.positions.push_back(v);
-        for (auto& v : sshp.normals) shape.normals.push_back(v);
-        for (auto& v : sshp.texturecoords) shape.texturecoords.push_back(v);
-        for (auto& v : sshp.radius) shape.radius.push_back(v);
+        if (!sshp.lines.empty()) {
+            merge_lines(shape.lines, shape.positions, shape.normals,
+                shape.texturecoords, shape.radius, sshp.lines, sshp.positions,
+                sshp.normals, sshp.texturecoords, sshp.radius);
+        } else if (!sshp.triangles.empty()) {
+            merge_triangles(shape.triangles, shape.positions, shape.normals,
+                shape.texturecoords, sshp.triangles, sshp.positions,
+                sshp.normals, sshp.texturecoords);
+        } else if (!sshp.quads.empty()) {
+            merge_quads(shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, sshp.quads, sshp.positions, sshp.normals,
+                sshp.texturecoords);
+        } else {
+            log_error("not supported");
+        }
     }
     return shape;
 }
