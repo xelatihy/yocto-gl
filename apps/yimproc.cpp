@@ -36,7 +36,7 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto width = imgs[0].size().x * tilex;
     auto height = imgs[0].size().y * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
-    auto ret = make_image(width, height, (bool)imgs[0].hdr);
+    auto ret = init_image(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (extents(img) != extents(imgs[0])) {
@@ -65,7 +65,8 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
-    auto filtered     = make_image<vec4f>(img.size);
+    auto filtered     = image<vec4f>{};
+    init_image(filtered, img.size);
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -102,7 +103,8 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
 
 image<vec4f> filter_bilateral(
     const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-    auto filtered = make_image<vec4f>(img.size);
+    auto filtered = image<vec4f>{};
+    init_image(filtered, img.size);
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw       = 1 / (2.0f * range_sigma * range_sigma);
@@ -186,7 +188,9 @@ int main(int argc, char* argv[]) {
 
     // resize
     if (resize_size != zero2i) {
-        img = resize_image(img, resize_size);
+        auto res_img = image<vec4f>{};
+        resize_image(img, res_img, resize_size);
+        img = res_img;
     }
 
     // bilateral
@@ -195,7 +199,7 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) img = tonemap_image(img, exposure, filmic, srgb);
+    if (tonemap) tonemap_image(img, img, exposure, filmic, srgb);
 
     // save
     if (!save_image(output, img)) log_fatal("cannot save image {}", output);

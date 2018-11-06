@@ -82,10 +82,12 @@ int main(int argc, char* argv[]) {
     log_validation_errors(scene);
 
     // build bvh
-    auto bvh = make_scene_bvh(scene, true, embree);
+    auto bvh = bvh_scene{};
+    build_scene_bvh(scene, bvh, true, embree);
 
     // init renderer
-    auto lights = make_trace_lights(scene);
+    auto lights = trace_lights{};
+    make_trace_lights(lights, scene);
 
     // fix renderer type if no lights
     if (empty(lights) && sampler_type != trace_sampler_type::eyelight) {
@@ -96,8 +98,10 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     auto& camera        = scene.cameras[camera_id];
     image_size          = get_camera_image_size(camera, image_size);
-    auto rendered_image = make_image<vec4f>(image_size);
-    auto trace_rngs     = make_trace_rngs(image_size, random_seed);
+    auto rendered_image = image<vec4f>{};
+    init_image<vec4f>(rendered_image, image_size);
+    auto trace_rngs = image<rng_state>{};
+    make_trace_rngs(trace_rngs, image_size, random_seed);
     auto sampler_func   = get_trace_sampler_func(sampler_type);
 
     // render

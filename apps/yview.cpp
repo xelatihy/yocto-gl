@@ -823,9 +823,11 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         if (!shape.triangles.empty())
             init_opengl_elementbuffer(
                 vbos.triangles_buffer, shape.triangles, false);
-        if (!shape.quads.empty())
-            init_opengl_elementbuffer(vbos.quads_buffer,
-                convert_quads_to_triangles(shape.quads), false);
+        if (!shape.quads.empty()) {
+            auto triangles = vector<vec3i>{};
+            convert_quads_to_triangles(shape.quads, triangles);
+            init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
+        }
         state.shapes[shape_id] = vbos;
     }
     state.surfaces.resize(scene.surfaces.size());
@@ -836,13 +838,13 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         auto  positions     = vector<vec3f>();
         auto  normals       = vector<vec3f>();
         auto  texturecoords = vector<vec2f>();
-        tie(quads, positions, normals, texturecoords) = convert_face_varying(
+        convert_face_varying(
             surface.quads_positions, surface.quads_normals,
             surface.quads_texturecoords, surface.positions, surface.normals,
-            surface.texturecoords);
+            surface.texturecoords, quads, positions, normals, texturecoords);
         auto split_quads = vector<vector<vec4i>>();
         if (surface.materials.size() > 1 && !surface.quads_materials.empty()) {
-            split_quads = ungroup_quads(quads, surface.quads_materials);
+            ungroup_quads(quads, surface.quads_materials, split_quads);
         } else {
             split_quads = {quads};
         }
@@ -856,8 +858,10 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         vbos.split_quads_buffer = {};
         for (auto& quads : split_quads) {
             if (!quads.empty()) vbos.split_quads_buffer.push_back({});
+            auto triangles = vector<vec3i>{};
+            convert_quads_to_triangles(quads, triangles);
             init_opengl_elementbuffer(vbos.split_quads_buffer.back(),
-                convert_quads_to_triangles(quads), false);
+                triangles, false);
         }
         state.surfaces[surface_id] = vbos;
     }

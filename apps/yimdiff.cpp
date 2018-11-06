@@ -35,16 +35,15 @@
 using namespace ygl;
 
 template <typename T>
-image<vec<T, 4>> compute_diff_image(
+void compute_diff_image(image<vec<T, 4>>& diff,
     const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
-    auto diff = make_image<vec<T, 4>>(a.size);
+    init_image(diff, a.size);
     for (auto i = 0; i < a.size.x * a.size.y; i++) {
         diff.pixels[i] = {(T)abs(a.pixels[i].x - b.pixels[i].x),
             (T)abs(a.pixels[i].y - b.pixels[i].y),
             (T)abs(a.pixels[i].z - b.pixels[i].z),
             (T)abs(a.pixels[i].w - b.pixels[i].w)};
     }
-    return diff;
 }
 
 template <typename T>
@@ -58,13 +57,12 @@ vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
 }
 
 template <typename T>
-image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
-    auto display = make_image<vec<T, 4>>(diff.size);
+void display_diff(image<vec<T, 4>>& display, const image<vec<T, 4>>& diff, T alpha) {
+    init_image(display, diff.size);
     for (auto i = 0; i < diff.pixels.size(); i++) {
         auto diff_value   = max(diff.pixels[i]);
         display.pixels[i] = {diff_value, diff_value, diff_value, alpha};
     }
-    return display;
 }
 
 int main(int argc, char* argv[]) {
@@ -88,10 +86,13 @@ int main(int argc, char* argv[]) {
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
         if (img1.size != img2.size) log_fatal("image size differs");
-        auto diff     = compute_diff_image(img1, img2);
+        auto diff     = image<vec4f>{};
+        auto display     = image<vec4f>{};
+        compute_diff_image(diff, img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
-            if (!save_image(output, display_diff(diff, 1.0f)))
+            display_diff(display, diff, 1.0f);
+            if (!save_image(output, display))
                 log_fatal("cannot save image {}", output);
         }
         if (max(max_diff) > threshold) {
@@ -105,10 +106,13 @@ int main(int argc, char* argv[]) {
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
         if (img1.size != img2.size) log_fatal("image size differs");
-        auto diff     = compute_diff_image(img1, img2);
+        auto diff     = image<vec4b>{};
+        auto display     = image<vec4b>{};
+        compute_diff_image(diff, img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
-            if (!save_image(output, display_diff(diff, (byte)255)))
+            display_diff(display, diff, (byte)255);
+            if (!save_image(output, display))
                 log_fatal("cannot save image {}", output);
         }
         if (max(max_diff) > threshold) {

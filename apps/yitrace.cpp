@@ -98,10 +98,10 @@ void start_rendering_async(app_state& app) {
     auto  image_size   = get_camera_image_size(camera, app.image_size);
     auto  sampler_func = get_trace_sampler_func(app.sampler_type);
 
-    app.rendered_image = make_image<vec4f>(image_size);
-    app.display_image  = make_image<vec4f>(image_size);
-    app.preview_image  = make_image<vec4f>(image_size / app.preview_ratio);
-    app.trace_rngs     = make_trace_rngs(image_size, app.random_seed);
+    init_image<vec4f>(app.rendered_image, image_size);
+    init_image<vec4f>(app.display_image, image_size);
+    init_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
+    make_trace_rngs(app.trace_rngs, image_size, app.random_seed);
 
     trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,
         sampler_func, 1, app.max_bounces);
@@ -135,11 +135,11 @@ bool load_scene_sync(app_state& app) {
 
     // build bvh
     app.status = "computing bvh";
-    app.bvh    = make_scene_bvh(app.scene, true, app.use_embree_bvh);
+    build_scene_bvh(app.scene, app.bvh, true, app.use_embree_bvh);
 
     // init renderer
     app.status = "initializing lights";
-    app.lights = make_trace_lights(app.scene);
+    make_trace_lights(app.lights, app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights) && app.sampler_type != trace_sampler_type::eyelight) {
@@ -268,7 +268,8 @@ void draw(const opengl_window& win) {
             auto region = image_region{};
             while (app.trace_queue.try_pop(region)) {
                 if (region.size == zero2i) {
-                    auto display_preview = tonemap_image(app.preview_image,
+                    auto display_preview = image<vec4f>{};
+                    tonemap_image(app.preview_image, display_preview,
                         app.display_exposure, app.display_filmic,
                         app.display_srgb);
                     for (auto j = 0; j < app.rendered_image.size.y; j++) {
@@ -284,8 +285,8 @@ void draw(const opengl_window& win) {
                     update_opengl_texture(
                         app.display_texture, app.display_image, false);
                 } else {
-                    tonemap_image_region(app.display_image, region,
-                        app.rendered_image, app.display_exposure,
+                    tonemap_image_region(
+                        app.rendered_image, app.display_image, region, app.display_exposure,
                         app.display_filmic, app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
