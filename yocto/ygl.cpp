@@ -294,9 +294,9 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gain,
 namespace ygl {
 
 // Compute per-vertex tangents for lines.
-vector<vec3f> compute_vertex_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& positions) {
-    auto tangents = vector<vec3f>(positions.size(), zero3f);
+void compute_vertex_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions, vector<vec3f>& tangents) {
+    tangents = vector<vec3f>(positions.size(), zero3f);
     for (auto& l : lines) {
         auto tangent = line_tangent(positions[l.x], positions[l.y]);
         auto length  = line_length(positions[l.x], positions[l.y]);
@@ -304,13 +304,12 @@ vector<vec3f> compute_vertex_tangents(
         tangents[l.y] += tangent * length;
     }
     for (auto& tangent : tangents) tangent = normalize(tangent);
-    return tangents;
 }
 
 // Compute per-vertex normals for triangles.
-vector<vec3f> compute_vertex_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto normals = vector<vec3f>(positions.size(), zero3f);
+void compute_vertex_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, vector<vec3f>& normals) {
+    normals = vector<vec3f>(positions.size(), zero3f);
     for (auto& t : triangles) {
         auto normal = triangle_normal(
             positions[t.x], positions[t.y], positions[t.z]);
@@ -320,13 +319,12 @@ vector<vec3f> compute_vertex_normals(
         normals[t.z] += normal * area;
     }
     for (auto& normal : normals) normal = normalize(normal);
-    return normals;
 }
 
 // Compute per-vertex normals for quads.
-vector<vec3f> compute_vertex_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
-    auto normals = vector<vec3f>(positions.size(), zero3f);
+void compute_vertex_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions, vector<vec3f>& normals) {
+    normals = vector<vec3f>(positions.size(), zero3f);
     for (auto q : quads) {
         auto normal = quad_normal(
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -338,7 +336,6 @@ vector<vec3f> compute_vertex_normals(
         if (q.z != q.w) normals[q.w] += normal * area;
     }
     for (auto& normal : normals) normal = normalize(normal);
-    return normals;
 }
 
 // Compute per-vertex tangent frame for triangle meshes.
@@ -346,9 +343,9 @@ vector<vec3f> compute_vertex_normals(
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+void compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords) {
+    const vector<vec2f>& texturecoords, vector<vec4f>& tangentspaces) {
     auto tangu = vector<vec3f>(positions.size(), zero3f);
     auto tangv = vector<vec3f>(positions.size(), zero3f);
     for (auto t : triangles) {
@@ -361,24 +358,23 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
-    auto tangsp = vector<vec4f>(positions.size(), zero4f);
+    tangentspaces = vector<vec4f>(positions.size(), zero4f);
     for (auto i = 0; i < positions.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], normals[i]);
         auto s = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
-        tangsp[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
+        tangentspaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
-    return tangsp;
 }
 
 // Apply skinning
-pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+void compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms) {
-    auto skinned_pos  = vector<vec3f>(positions.size());
-    auto skinned_norm = vector<vec3f>(normals.size());
+    const vector<frame3f>& xforms, vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals) {
+    skinned_positions  = vector<vec3f>(positions.size());
+    skinned_normals = vector<vec3f>(normals.size());
     for (auto i = 0; i < positions.size(); i++) {
-        skinned_pos[i] = transform_point(xforms[joints[i].x], positions[i]) *
+        skinned_positions[i] = transform_point(xforms[joints[i].x], positions[i]) *
                              weights[i].x +
                          transform_point(xforms[joints[i].y], positions[i]) *
                              weights[i].y +
@@ -388,31 +384,29 @@ pair<vector<vec3f>, vector<vec3f>> compute_skinning(
                              weights[i].w;
     }
     for (auto i = 0; i < positions.size(); i++) {
-        skinned_norm[i] = normalize(
+        skinned_normals[i] = normalize(
             transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
             transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
             transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
             transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
     }
-    return {skinned_pos, skinned_norm};
 }
 
 // Apply skinning as specified in Khronos glTF
-pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+void compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms) {
-    auto skinned_pos  = vector<vec3f>(positions.size());
-    auto skinned_norm = vector<vec3f>(normals.size());
+    const vector<mat4f>& xforms, vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals) {
+    skinned_positions  = vector<vec3f>(positions.size());
+    skinned_normals = vector<vec3f>(normals.size());
     for (auto i = 0; i < positions.size(); i++) {
         auto xform = xforms[joints[i].x] * weights[i].x +
                      xforms[joints[i].y] * weights[i].y +
                      xforms[joints[i].z] * weights[i].z +
                      xforms[joints[i].w] * weights[i].w;
-        skinned_pos[i]  = transform_point(xform, positions[i]);
-        skinned_norm[i] = normalize(transform_direction(xform, normals[i]));
+        skinned_positions[i]  = transform_point(xform, positions[i]);
+        skinned_normals[i] = normalize(transform_direction(xform, normals[i]));
     }
-    return {skinned_pos, skinned_norm};
 }
 
 // Initialize an edge map with elements.
@@ -3211,7 +3205,7 @@ make_shape_data make_hair_shape(const vec2i& steps,
     }
 
     if (clump.x > 0 || noise.x > 0 || rotation.x > 0)
-        shape.normals = compute_vertex_tangents(shape.lines, shape.positions);
+        compute_vertex_tangents(shape.lines, shape.positions, shape.normals);
     return shape;
 }
 
@@ -3844,24 +3838,26 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
 }
 
 // Compute vertex normals
-vector<vec3f> compute_shape_normals(const yocto_shape& shape) {
+void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
     if (!shape.points.empty()) {
-        return vector<vec3f>(shape.positions.size(), {0, 0, 1});
+        normals = vector<vec3f>(shape.positions.size(), {0, 0, 1});
     } else if (!shape.lines.empty()) {
-        return compute_vertex_tangents(shape.lines, shape.positions);
+        return compute_vertex_tangents(shape.lines, shape.positions, normals);
     } else if (!shape.triangles.empty()) {
-        return compute_vertex_normals(shape.triangles, shape.positions);
+        return compute_vertex_normals(shape.triangles, shape.positions, normals);
     } else {
-        return {};
+        normals = {};
+        return;
     }
 }
 
 // Compute vertex normals
-vector<vec3f> compute_surface_normals(const yocto_surface& shape) {
+void compute_surface_normals(const yocto_surface& shape, vector<vec3f>& normals) {
     if (!shape.quads_positions.empty()) {
-        return compute_vertex_normals(shape.quads_positions, shape.positions);
+        return compute_vertex_normals(shape.quads_positions, shape.positions, normals);
     } else {
-        return {};
+        normals = {};
+        return;
     }
 }
 
@@ -3917,7 +3913,7 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
     }
 
     if (compute_normals) {
-        subdivided.normals = compute_shape_normals(subdivided);
+        compute_shape_normals(subdivided, subdivided.normals);
     }
 
     return subdivided;
@@ -3962,7 +3958,7 @@ yocto_surface subdivide_surface(const yocto_surface& surface,
     if (compute_normals) {
         if (!subdivided.quads_positions.empty())
             subdivided.quads_normals = subdivided.quads_positions;
-        subdivided.normals = compute_surface_normals(subdivided);
+        compute_surface_normals(subdivided, subdivided.normals);
     }
 
     return subdivided;
@@ -3974,8 +3970,9 @@ yocto_shape displace_shape(const yocto_shape& shape,
         return shape;
     }
     auto displaced_shape = shape;
-    auto normals = (shape.normals.empty()) ? compute_shape_normals(shape) :
-                                             shape.normals;
+    auto normals = vector<vec3f>();
+    if(shape.normals.empty()) compute_shape_normals(shape, normals);
+    else normals = shape.normals;
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
         displaced_shape.positions[vid] += normals[vid] *
                                           displacement.height_scale *
@@ -3983,9 +3980,7 @@ yocto_shape displace_shape(const yocto_shape& shape,
                                               shape.texturecoords[vid])));
     }
 
-    if (compute_normals) {
-        displaced_shape.normals = compute_shape_normals(displaced_shape);
-    }
+    if (compute_normals) compute_shape_normals(displaced_shape, displaced_shape.normals);
 
     return displaced_shape;
 }
@@ -4008,8 +4003,9 @@ yocto_surface displace_surface(const yocto_surface& surface,
             count[(&qpos.x)[i]] += 1;
         }
     }
-    auto normals = compute_vertex_normals(
-        surface.quads_positions, surface.positions);
+    auto normals = vector<vec3f>();
+    compute_vertex_normals(
+        surface.quads_positions, surface.positions, normals);
     for (auto vid = 0; vid < surface.positions.size(); vid++) {
         displaced_surface.positions[vid] += normals[vid] * offset[vid] /
                                             count[vid];
@@ -4017,7 +4013,7 @@ yocto_surface displace_surface(const yocto_surface& surface,
 
     if (compute_normals) {
         displaced_surface.quads_normals = displaced_surface.quads_positions;
-        displaced_surface.normals = compute_surface_normals(displaced_surface);
+        compute_surface_normals(displaced_surface, displaced_surface.normals);
     }
 
     return displaced_surface;
@@ -4426,10 +4422,9 @@ void add_missing_tangent_space(yocto_scene& scene) {
         if (material.normal_texture < 0 && material.bump_texture < 0) continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty())
-                shape.normals = compute_vertex_normals(
-                    shape.triangles, shape.positions);
-            shape.tangentspaces = compute_tangent_spaces(shape.triangles,
-                shape.positions, shape.normals, shape.texturecoords);
+                compute_vertex_normals(shape.triangles, shape.positions, shape.normals);
+            compute_tangent_spaces(shape.triangles,
+                shape.positions, shape.normals, shape.texturecoords, shape.tangentspaces);
         } else {
             log_error("type not supported");
         }

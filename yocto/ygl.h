@@ -2379,32 +2379,32 @@ inline T interpolate_bezier_derivative(
 namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_vertex_tangents(
-    const vector<vec2i>& lines, const vector<vec3f>& positions);
-vector<vec3f> compute_vertex_normals(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-vector<vec3f> compute_vertex_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
+void compute_vertex_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions, vector<vec3f>& tangents);
+void compute_vertex_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, vector<vec3f>& normals);
+void compute_vertex_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions, vector<vec3f>& normals);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
+void compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords);
+    const vector<vec2f>& texturecoords, vector<vec4f>& tangentspaces);
 
 // Apply skinning to vertex position and normals.
-pair<vector<vec3f>, vector<vec3f>> compute_skinning(
+void compute_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms);
+    const vector<frame3f>& xforms, vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
 // Apply skinning as specified in Khronos glTF.
-pair<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+void compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms);
+    const vector<mat4f>& xforms, vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
 
 // Dictionary to store edge information.
 using edge_map = unordered_map<vec2i, vec2i>;
@@ -3433,7 +3433,7 @@ bbox3f compute_shape_bounds(const yocto_shape& shape);
 bbox3f compute_scene_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-vector<vec3f> compute_shape_normals(const yocto_shape& shape);
+void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Updates/refits bvh.
 bvh_shape make_shape_bvh(
