@@ -763,22 +763,22 @@ bool load_image_nolog(const string& filename, image<vec4f>& img) {
     } else if (ext == "png" || ext == "PNG") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
+        srgb_to_linear(img8, img);
         return true;
     } else if (ext == "jpg" || ext == "JPG") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
+        srgb_to_linear(img8, img);
         return true;
     } else if (ext == "tga" || ext == "TGA") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
+        srgb_to_linear(img8, img);
         return true;
     } else if (ext == "bmp" || ext == "BMP") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
+        srgb_to_linear(img8, img);
         return true;
     } else {
         log_io_error("unsupported image format {}", ext);
@@ -794,13 +794,21 @@ bool load_image(const string& filename, image<vec4f>& img) {
 bool save_image_nolog(const string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
-        return save_png_image(filename, float_to_byte(linear_to_srgb(img)));
+        auto imgb = image<vec4b>{};
+        linear_to_srgb(img, imgb);
+        return save_png_image(filename, imgb);
     } else if (ext == "jpg" || ext == "JPG") {
-        return save_jpg_image(filename, float_to_byte(linear_to_srgb(img)));
+        auto imgb = image<vec4b>{};
+        linear_to_srgb(img, imgb);
+        return save_jpg_image(filename, imgb);
     } else if (ext == "tga" || ext == "TGA") {
-        return save_tga_image(filename, float_to_byte(linear_to_srgb(img)));
+        auto imgb = image<vec4b>{};
+        linear_to_srgb(img, imgb);
+        return save_tga_image(filename, imgb);
     } else if (ext == "bmp" || ext == "BMP") {
-        return save_bmp_image(filename, float_to_byte(linear_to_srgb(img)));
+        auto imgb = image<vec4b>{};
+        linear_to_srgb(img, imgb);
+        return save_bmp_image(filename, imgb);
     } else if (ext == "hdr" || ext == "HDR") {
         return save_hdr_image(filename, img);
     } else if (ext == "pfm" || ext == "PFM") {
@@ -833,17 +841,17 @@ bool load_image_nolog(const string& filename, image<vec4b>& img) {
     if (ext == "exr" || ext == "EXR") {
         auto imgf = image<vec4f>{};
         if (!load_exr_image(filename, imgf)) return false;
-        img = float_to_byte(linear_to_srgb(imgf));
+        linear_to_srgb(imgf, img);
         return true;
     } else if (ext == "pfm" || ext == "PFM") {
         auto imgf = image<vec4f>{};
         if (!load_pfm_image(filename, imgf)) return false;
-        img = float_to_byte(linear_to_srgb(imgf));
+        linear_to_srgb(imgf, img);
         return true;
     } else if (ext == "hdr" || ext == "HDR") {
         auto imgf = image<vec4f>{};
         if (!load_stb_image(filename, imgf)) return false;
-        img = float_to_byte(linear_to_srgb(imgf));
+        linear_to_srgb(imgf, img);
         return true;
     } else if (ext == "png" || ext == "PNG") {
         return load_stb_image(filename, img);
@@ -875,11 +883,17 @@ bool save_image_nolog(const string& filename, const image<vec4b>& img) {
     } else if (ext == "bmp" || ext == "BMP") {
         return save_bmp_image(filename, img);
     } else if (ext == "hdr" || ext == "HDR") {
-        return save_hdr_image(filename, srgb_to_linear(byte_to_float(img)));
+        auto imgf = image<vec4f>{};
+        srgb_to_linear(img, imgf);
+        return save_hdr_image(filename, imgf);
     } else if (ext == "pfm" || ext == "PFM") {
-        return save_pfm_image(filename, srgb_to_linear(byte_to_float(img)));
+        auto imgf = image<vec4f>{};
+        srgb_to_linear(img, imgf);
+        return save_pfm_image(filename, imgf);
     } else if (ext == "exr" || ext == "EXR") {
-        return save_exr_image(filename, srgb_to_linear(byte_to_float(img)));
+        auto imgf = image<vec4f>{};
+        srgb_to_linear(img, imgf);
+        return save_exr_image(filename, imgf);
     } else {
         log_io_error("unsupported image format {}", ext);
         return false;
@@ -907,23 +921,22 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     if (is_hdr_filename(filename)) {
         return save_image(filename, hdr);
     } else {
-        auto ldr = float_to_byte(tonemap_image(hdr, exposure, filmic, srgb));
+        auto ldr = image<vec4b>{};
+        tonemap_image(hdr, ldr, exposure, filmic, srgb);
         return save_image(filename, ldr);
     }
 }
 
 // Resize image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
+void resize_image(const image<vec4f>& img, image<vec4f>& res_img, const vec2i& size) {
     if (size == zero2i) {
         log_error("bad image size in resize_image");
-        return img;
     }
-    auto res_img = make_image<vec4f>(get_image_size(size, get_image_aspect(img)));
+    res_img = make_image<vec4f>(get_image_size(size, get_image_aspect(img)));
     stbir_resize_float_generic((float*)img.pixels.data(), img.size.x,
         img.size.y, sizeof(vec4f) * img.size.x, (float*)res_img.pixels.data(),
         res_img.size.x, res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-    return res_img;
 }
 
 }  // namespace ygl
@@ -1520,9 +1533,9 @@ bool apply_json_procedural(
     }
     if (!is_hdr) {
         if (!value.ldr_as_linear) {
-            value.ldr_image = float_to_byte(linear_to_srgb(value.hdr_image));
+            linear_to_srgb(value.hdr_image, value.ldr_image);
         } else {
-            value.ldr_image = float_to_byte(value.hdr_image);
+            float_to_byte(value.hdr_image, value.ldr_image);
         }
         value.hdr_image = {};
     }

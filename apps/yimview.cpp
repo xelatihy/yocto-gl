@@ -99,10 +99,11 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = make_image_regions(img.img.size);
+    auto regions     = vector<image_region>{};
+    make_image_regions(regions, img.img.size);
     for (auto region_id = 0; region_id < regions.size(); region_id++) {
         if (img.display_stop) break;
-        tonemap_image_region(img.display, regions[region_id], img.img,
+        tonemap_image_region(img.img, img.display, regions[region_id], 
             img.exposure, img.filmic, img.srgb);
         img.display_queue.push(regions[region_id]);
     }
@@ -127,11 +128,15 @@ void load_image_async(app_image& img) {
 // save an image
 void save_image_async(app_image& img) {
     if (!is_hdr_filename(img.outname)) {
-        if (!save_image(img.outname, float_to_byte(img.display))) {
+        auto img8 = image<vec4b>{};
+        float_to_byte(img.display, img8);
+        if (!save_image(img.outname, img8)) {
             img.error_msg = "error saving image";
         }
     } else {
-        if (!save_image(img.outname, srgb_to_linear(img.display))) {
+        auto linear = image<vec4f>{};
+        srgb_to_linear(img.display, linear);
+        if (!save_image(img.outname, linear)) {
             img.error_msg = "error saving image";
         }
     }

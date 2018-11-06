@@ -3006,12 +3006,12 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(
+void make_image_regions(vector<image_region>& regions,
     const vec2i& image_size, int region_size = 32);
 
 // Gets pixels in an image region
 template <typename T>
-inline image<T> get_image_region(const image<T>& img, const image_region& region);
+inline void get_image_region(const image<T>& img, image<T>& clipped, const image_region& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -3019,25 +3019,29 @@ inline image<T> get_image_region(const image<T>& img, const image_region& region
 vec2i get_image_size(const vec2i& size, float aspect);
 
 // Conversion from/to floats.
-image<vec4f> byte_to_float(const image<vec4b>& bt);
-image<vec4b> float_to_byte(const image<vec4f>& fl);
+void byte_to_float(const image<vec4b>& bt, image<vec4f>& fl);
+void float_to_byte(const image<vec4f>& fl, image<vec4b>& bt);
 
 // Conversion between linear and gamma-encoded images.
-image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma);
-image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma);
+void gamma_to_linear(const image<vec4f>& srgb, image<vec4f>& lin, float gamma);
+void linear_to_gamma(const image<vec4f>& lin, image<vec4f>& srgb, float gamma);
 
 // Conversion between linear and sRGB images.
-image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
-image<vec4f> linear_to_srgb(const image<vec4f>& lin);
+void srgb_to_linear(const image<vec4f>& srgb, image<vec4f>& lin);
+void linear_to_srgb(const image<vec4f>& lin, image<vec4f>& srgb);
+void srgb_to_linear(const image<vec4b>& srgb, image<vec4f>& lin);
+void linear_to_srgb(const image<vec4f>& lin, image<vec4b>& srgb);
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_image(
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image(
+    const image<vec4f>& hdr, image<vec4f>& ldr, float exposure, bool filmic, bool srgb);
+void tonemap_image_region(const image<vec4f>& hdr, image<vec4f>& ldr, const image_region& region,
+    float exposure, bool filmic, bool srgb);
+void tonemap_image(
+    const image<vec4f>& hdr, image<vec4b>& ldr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
+void resize_image(const image<vec4f>& img, image<vec4f>& res, const vec2i& size);
 
 }  // namespace ygl
 

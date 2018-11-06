@@ -3344,81 +3344,89 @@ vec2i get_image_size(const vec2i& size, float aspect) {
 }
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(const vec2i& image_size, int region_size) {
-    if (image_size == zero2i) return {};
-    auto regions = vector<image_region>{};
+void make_image_regions(vector<image_region>& regions, const vec2i& image_size, int region_size) {
+    regions = vector<image_region>{};
     for (auto y = 0; y < image_size.y; y += region_size) {
         for (auto x = 0; x < image_size.x; x += region_size) {
             regions.push_back({{x, y}, {min(region_size, image_size.x - x),
                                            min(region_size, image_size.y - y)}});
         }
     }
-    return regions;
 }
 
 // Conversion between linear and gamma-encoded images.
-image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma) {
-    if (gamma == 1) return srgb;
-    auto lin = make_image<vec4f>(srgb.size);
+void gamma_to_linear(const image<vec4f>& srgb, image<vec4f>& lin, float gamma) {
+    lin = make_image<vec4f>(srgb.size);
     for (auto idx = 0; idx < srgb.size.x * srgb.size.y; idx++) {
         lin.pixels[idx] = gamma_to_linear(srgb.pixels[idx], gamma);
     }
-    return lin;
 }
-image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma) {
-    if (gamma == 1) return lin;
-    auto srgb = make_image<vec4f>(lin.size);
+void linear_to_gamma(const image<vec4f>& lin, image<vec4f>& srgb, float gamma) {
+    srgb = make_image<vec4f>(lin.size);
     for (auto idx = 0; idx < srgb.size.x * srgb.size.y; idx++) {
         srgb.pixels[idx] = linear_to_gamma(lin.pixels[idx], gamma);
     }
-    return srgb;
 }
 
 // Conversion between linear and gamma-encoded images.
-image<vec4f> srgb_to_linear(const image<vec4f>& srgb) {
-    auto lin = make_image<vec4f>(srgb.size);
+void srgb_to_linear(const image<vec4f>& srgb,image<vec4f>& lin) {
+    lin = make_image<vec4f>(srgb.size);
     for (auto idx = 0; idx < srgb.size.x * srgb.size.y; idx++) {
         lin.pixels[idx] = srgb_to_linear(srgb.pixels[idx]);
     }
-    return lin;
 }
-image<vec4f> linear_to_srgb(const image<vec4f>& lin) {
-    auto srgb = make_image<vec4f>(lin.size);
+void linear_to_srgb(const image<vec4f>& lin, image<vec4f>& srgb) {
+    srgb = make_image<vec4f>(lin.size);
     for (auto idx = 0; idx < srgb.size.x * srgb.size.y; idx++) {
         srgb.pixels[idx] = linear_to_srgb(lin.pixels[idx]);
     }
-    return srgb;
+}
+void srgb_to_linear(const image<vec4b>& srgb,image<vec4f>& lin) {
+    lin = make_image<vec4f>(srgb.size);
+    for (auto idx = 0; idx < srgb.size.x * srgb.size.y; idx++) {
+        lin.pixels[idx] = srgb_to_linear(byte_to_float(srgb.pixels[idx]));
+    }
+}
+void linear_to_srgb(const image<vec4f>& lin, image<vec4b>& srgb) {
+    srgb = make_image<vec4b>(lin.size);
+    for (auto idx = 0; idx < srgb.size.x * srgb.size.y; idx++) {
+        srgb.pixels[idx] = float_to_byte(linear_to_srgb(lin.pixels[idx]));
+    }
 }
 
 // Conversion from/to floats.
-image<vec4f> byte_to_float(const image<vec4b>& bt) {
-    auto fl = make_image<vec4f>(bt.size);
+void byte_to_float(const image<vec4b>& bt, image<vec4f>& fl) {
+    fl = make_image<vec4f>(bt.size);
     for (auto idx = 0; idx < fl.size.x * fl.size.y; idx++) {
         fl.pixels[idx] = byte_to_float(bt.pixels[idx]);
     }
-    return fl;
 }
-image<vec4b> float_to_byte(const image<vec4f>& fl) {
-    auto bt = make_image<vec4b>(fl.size);
+void float_to_byte(const image<vec4f>& fl, image<vec4b>& bt) {
+    bt = make_image<vec4b>(fl.size);
     for (auto idx = 0; idx < fl.size.x * fl.size.y; idx++) {
         bt.pixels[idx] = float_to_byte(fl.pixels[idx]);
     }
-    return bt;
 }
 
 // Tonemap image
-image<vec4f> tonemap_image(
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
-    auto ldr = make_image<vec4f>(hdr.size);
+void tonemap_image(
+    const image<vec4f>& hdr, image<vec4f>& ldr, float exposure, bool filmic, bool srgb) {
+    ldr = make_image<vec4f>(hdr.size);
     for (auto idx = 0; idx < hdr.size.x * hdr.size.y; idx++) {
         ldr.pixels[idx] = tonemap_filmic(hdr.pixels[idx], exposure, filmic, srgb);
     }
-    return ldr;
+}
+void tonemap_image(
+    const image<vec4f>& hdr, image<vec4b>& ldr, float exposure, bool filmic, bool srgb) {
+    ldr = make_image<vec4b>(hdr.size);
+    for (auto idx = 0; idx < hdr.size.x * hdr.size.y; idx++) {
+        ldr.pixels[idx] = float_to_byte(tonemap_filmic(hdr.pixels[idx], exposure, filmic, srgb));
+    }
 }
 
 // Tonemap image
-void tonemap_image_region(image<vec4f>& ldr, const image_region& region,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
+void tonemap_image_region(
+    const image<vec4f>& hdr, image<vec4f>& ldr, const image_region& region, float exposure, bool filmic, bool srgb) {
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
             at(ldr, {i, j}) = tonemap_filmic(
@@ -7265,9 +7273,11 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
     int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
     auto scope = log_trace_scoped("tracing image");
     auto rngs  = make_trace_rngs(rendered_image.size);
+    auto regions = vector<image_region>{};
+    make_image_regions(regions, rendered_image.size);
 
     if (no_parallel) {
-        for (auto& region : make_image_regions(rendered_image.size)) {
+        for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
                 sampler, region, 0, num_samples, max_bounces, rngs, pixel_clamp);
         }
@@ -7276,8 +7286,6 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(thread([&, tid]() {
-                auto regions = make_image_regions(
-                    {rendered_image.size.x, rendered_image.size.y});
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
                     auto& region = regions[region_id];
@@ -7297,10 +7305,12 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     const trace_lights& lights, const trace_sampler_func& sampler,
     int current_sample, int num_samples, int max_bounces,
     image<rng_state>& rngs, float pixel_clamp, bool no_parallel) {
+    auto regions = vector<image_region>{};
+    make_image_regions(regions, rendered_image.size);
     auto scope = log_trace_scoped(
         "tracing samples {}-{}", current_sample, current_sample + num_samples);
     if (no_parallel) {
-        for (auto& region : make_image_regions(rendered_image.size)) {
+        for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
                 sampler, region, current_sample, num_samples, max_bounces, rngs,
                 pixel_clamp);
@@ -7310,7 +7320,6 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
         auto threads  = vector<thread>();
         for (auto tid = 0; tid < nthreads; tid++) {
             threads.push_back(thread([&, tid]() {
-                auto regions = make_image_regions(rendered_image.size);
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
                     auto& region = regions[region_id];
@@ -7335,11 +7344,11 @@ void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
     auto nthreads = thread::hardware_concurrency();
     threads.clear();
     stop_flag = false;
+    auto regions = vector<image_region>{};
+    make_image_regions(regions, rendered_image.size);
     for (auto tid = 0; tid < nthreads; tid++) {
         threads.push_back(thread([&, tid, nthreads, num_samples, pixel_clamp,
-                                     max_bounces, sampler]() {
-            auto regions = make_image_regions(
-                {rendered_image.size.x, rendered_image.size.y});
+                                     max_bounces, sampler, regions]() {
             for (auto s = 0; s < num_samples; s++) {
                 if (!tid) current_sample = s;
                 for (auto region_id = tid; region_id < regions.size();

@@ -268,7 +268,8 @@ void draw(const opengl_window& win) {
             auto region = image_region{};
             while (app.trace_queue.try_pop(region)) {
                 if (region.size == zero2i) {
-                    auto display_preview = tonemap_image(app.preview_image,
+                    auto display_preview = image<vec4f>{};
+                    tonemap_image(app.preview_image, display_preview,
                         app.display_exposure, app.display_filmic,
                         app.display_srgb);
                     for (auto j = 0; j < app.rendered_image.size.y; j++) {
@@ -284,8 +285,8 @@ void draw(const opengl_window& win) {
                     update_opengl_texture(
                         app.display_texture, app.display_image, false);
                 } else {
-                    tonemap_image_region(app.display_image, region,
-                        app.rendered_image, app.display_exposure,
+                    tonemap_image_region(
+                        app.rendered_image, app.display_image, region, app.display_exposure,
                         app.display_filmic, app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
