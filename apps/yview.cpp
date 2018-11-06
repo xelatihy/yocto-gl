@@ -838,8 +838,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         auto  positions     = vector<vec3f>();
         auto  normals       = vector<vec3f>();
         auto  texturecoords = vector<vec2f>();
-        convert_face_varying(
-            surface.quads_positions, surface.quads_normals,
+        convert_face_varying(surface.quads_positions, surface.quads_normals,
             surface.quads_texturecoords, surface.positions, surface.normals,
             surface.texturecoords, quads, positions, normals, texturecoords);
         auto split_quads = vector<vector<vec4i>>();
@@ -860,8 +859,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             if (!quads.empty()) vbos.split_quads_buffer.push_back({});
             auto triangles = vector<vec3i>{};
             convert_quads_to_triangles(quads, triangles);
-            init_opengl_elementbuffer(vbos.split_quads_buffer.back(),
-                triangles, false);
+            init_opengl_elementbuffer(
+                vbos.split_quads_buffer.back(), triangles, false);
         }
         state.surfaces[surface_id] = vbos;
     }
@@ -1114,18 +1113,18 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "views scenes inteactively", "yview");
-    app.camera_id  = parse_arg(parser, "--camera", 0, "Camera index.");
-    app.image_size = {0,
-        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    app.eyelight   = parse_arg(
+    app.camera_id  = parse_argument(parser, "--camera", 0, "Camera index.");
+    app.image_size = {0, parse_argument(parser, "--resolution,-r", 512,
+                             "Image vertical resolution.")};
+    app.eyelight   = parse_argument(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
-    app.double_sided = parse_arg(
+    app.double_sided = parse_argument(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto highlight_filename = parse_arg(
+    auto highlight_filename = parse_argument(
         parser, "--highlights", ""s, "Highlight filename");
-    app.imfilename = parse_arg(
+    app.imfilename = parse_argument(
         parser, "--output-image,-o", "out.png"s, "Image filename");
-    app.filename = parse_arg(
+    app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
