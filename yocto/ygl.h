@@ -4209,30 +4209,40 @@ inline bool parse_value(parse_string_view& str, string& value) {
     str.str += n;
     return true;
 }
-inline bool parse_value(parse_string_view& str, bool& value) {
-    auto n = 0;
-    auto v = 0;
-    if (sscanf(str.str, "%d%n", &v, &n) != 1) return false;
-    str.str += n;
-    value = (bool)v;
-    return true;
-}
 inline bool parse_value(parse_string_view& str, int& value) {
-    auto n = 0;
-    if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
-    str.str += n;
+    char* end = nullptr;
+    value = (int)strtol(str.str, &end, 10);
+    if(str.str == end) return false;
+    str.str = end;
+    // auto n = 0;
+    // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
+    // str.str += n;
     return true;
 }
 inline bool parse_value(parse_string_view& str, float& value) {
-    auto n = 0;
-    if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
-    str.str += n;
+    char* end = nullptr;
+    value = strtof(str.str, &end);
+    if(str.str == end) return false;
+    str.str = end;
+    // auto n = 0;
+    // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
+    // str.str += n;
     return true;
 }
 inline bool parse_value(parse_string_view& str, double& value) {
-    auto n = 0;
-    if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
-    str.str += n;
+    char* end = nullptr;
+    value = strtod(str.str, &end);
+    if(str.str == end) return false;
+    str.str = end;
+    // auto n = 0;
+    // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
+    // str.str += n;
+    return true;
+}
+inline bool parse_value(parse_string_view& str, bool& value) {
+    auto ivalue = 0;
+    if(!parse_value(str, ivalue)) return false;
+    value = (bool)ivalue;
     return true;
 }
 
