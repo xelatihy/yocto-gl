@@ -6487,14 +6487,14 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0)
-        return {point.emission.x, point.emission.y, point.emission.z, 0};
+        return {point.emission, !scene.environments.empty()};
 
     // initialize
     auto radiance = point.emission;
@@ -6547,7 +6547,7 @@ vec4f trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         outgoing = -next_direction;
     }
 
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Evaluates the weight after sampling distance in a medium.
@@ -6568,10 +6568,10 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 }
 
 // Iterative volume path tracing.
-vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
-    if (empty(lights)) return zero4f;
+    if (empty(lights)) return {zero3f, false};
 
     // initialize
     auto radiance = zero3f;
@@ -6647,7 +6647,7 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
                     radiance += weight * evaluate_environment_emission(
                                              scene, environment, ray.d);
             }
-            return {radiance.x, radiance.y, radiance.z, 0};
+            return {radiance, false};
         }
 
         // surface intersection
@@ -6789,18 +6789,18 @@ vec4f trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         }
     }
 
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Recursive path tracing.
-vec4f trace_path_naive(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_path_naive(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0)
-        return {point.emission.x, point.emission.y, point.emission.z, 0};
+        return {point.emission, !scene.environments.empty()};
 
     // initialize
     auto radiance = point.emission;
@@ -6837,18 +6837,18 @@ vec4f trace_path_naive(const yocto_scene& scene, const bvh_scene& bvh,
         outgoing = -next_direction;
     }
 
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Recursive path tracing.
-vec4f trace_path_nomis(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0)
-        return {point.emission.x, point.emission.y, point.emission.z, 0};
+        return {point.emission, !scene.environments.empty()};
 
     // initialize
     auto radiance = point.emission;
@@ -6909,18 +6909,18 @@ vec4f trace_path_nomis(const yocto_scene& scene, const bvh_scene& bvh,
         outgoing = -next_direction;
     }
 
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Direct illumination.
-vec4f trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0)
-        return {point.emission.x, point.emission.y, point.emission.z, 0};
+        return {point.emission, !scene.environments.empty()};
 
     // initialize
     auto radiance = point.emission;
@@ -6948,24 +6948,24 @@ vec4f trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
             point.brdf, point.normal, outgoing, next_direction);
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
-        auto incoming_radiance = xyz(trace_direct(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1));
+        auto incoming_radiance = trace_direct(scene, bvh, lights,
+            point.position, next_direction, rng, max_bounces - 1).first;
         radiance += brdf_cosine * incoming_radiance / next_pdf;
     }
 
     // done
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Direct illumination.
-vec4f trace_direct_nomis(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0)
-        return {point.emission.x, point.emission.y, point.emission.z, 0};
+        return {point.emission, !scene.environments.empty()};
 
     // initialize
     auto radiance = point.emission;
@@ -7016,24 +7016,24 @@ vec4f trace_direct_nomis(const yocto_scene& scene, const bvh_scene& bvh,
             point.brdf, point.normal, outgoing, next_direction);
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
-        auto incoming_radiance = xyz(trace_direct_nomis(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1));
+        auto incoming_radiance = trace_direct_nomis(scene, bvh, lights,
+            point.position, next_direction, rng, max_bounces - 1).first;
         radiance += brdf_cosine * incoming_radiance * next_pdf;
     }
 
     // done
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Environment illumination only with no shadows.
-vec4f trace_environment(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_environment(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0)
-        return {point.emission.x, point.emission.y, point.emission.z, 0};
+        return {point.emission, !scene.environments.empty()};
 
     // initialize
     auto radiance = point.emission;
@@ -7054,18 +7054,18 @@ vec4f trace_environment(const yocto_scene& scene, const bvh_scene& bvh,
                     next_pdf;
 
     // done
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Eyelight for quick previewing.
-vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0)
-        return {point.emission.x, point.emission.y, point.emission.z, 0};
+        return {point.emission, !scene.environments.empty()};
 
     // initialize
     auto radiance = point.emission;
@@ -7077,105 +7077,104 @@ vec4f trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
                 pif;
 
     // done
-    return {radiance.x, radiance.y, radiance.z, 1};
+    return {radiance, true};
 }
 
 // Debug previewing.
-vec4f trace_debug_normal(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0) return zero4f;
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
-    auto normal = point.normal * 0.5f + 0.5f;
-    return {normal.x, normal.y, normal.z, 1};
+    return {point.normal * 0.5f + 0.5f, true};
 }
 
 // Debug frontfacing.
-vec4f trace_debug_frontfacing(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0) return zero4f;
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     auto outgoing    = -direction;
     auto frontfacing = dot(point.normal, outgoing) > 0 ? vec3f{0, 1, 0} :
                                                          vec3f{1, 0, 0};
-    return {frontfacing.x, frontfacing.y, frontfacing.z, 1};
+    return {frontfacing, true};
 }
 
 // Debug previewing.
-vec4f trace_debug_albedo(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0) return zero4f;
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     auto albedo = point.brdf.diffuse + point.brdf.specular +
                   point.brdf.transmission;
-    return {albedo.x, albedo.y, albedo.z, 1};
+    return {albedo, true};
 }
 
 // Debug previewing.
-vec4f trace_debug_diffuse(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0) return zero4f;
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
-    return {point.brdf.diffuse.x, point.brdf.diffuse.y, point.brdf.diffuse.z, 1};
+    return {point.brdf.diffuse, true};
 }
 
 // Debug previewing.
-vec4f trace_debug_specular(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0) return zero4f;
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
     return {
-        point.brdf.specular.x, point.brdf.specular.y, point.brdf.specular.z, 1};
+        point.brdf.specular, true};
 }
 
 // Debug previewing.
-vec4f trace_debug_roughness(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_debug_roughness(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0) return zero4f;
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
-    return {point.brdf.roughness, point.brdf.roughness, point.brdf.roughness, 1};
+    return {{point.brdf.roughness, point.brdf.roughness, point.brdf.roughness}, true};
 }
 
 // Debug previewing.
-vec4f trace_debug_texcoord(const yocto_scene& scene, const bvh_scene& bvh,
+pair<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0) return zero4f;
+    if (point.instance_id < 0) return {zero3f, false};
 
     // shade
-    return {point.texturecoord.x, point.texturecoord.y, 0, 1};
+    return {{point.texturecoord.x, point.texturecoord.y, 0}, true};
 }
 
 // Trace a single ray from the camera using the given algorithm.
@@ -7208,43 +7207,46 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& sampler,
     const image_region& region, int current_sample, int num_samples,
-    int max_bounces, image<rng_state>& rngs, float pixel_clamp) {
+    int max_bounces, image<trace_pixel>& pixels, float pixel_clamp) {
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
-            at(rendered_image, {i, j}) *= current_sample;
+            auto& pixel = at(pixels, {i, j});
             for (auto s = 0; s < num_samples; s++) {
                 _trace_npaths += 1;
-                auto& rng = at(rngs, {i, j});
                 auto  ray = sample_camera_ray(
-                    camera, {i, j}, rendered_image.size, rng);
+                    camera, {i, j}, rendered_image.size, pixel.rng);
                 auto radiance_hit = sampler(
-                    scene, bvh, lights, ray.o, ray.d, rng, max_bounces);
-                if (!isfinite(radiance_hit.x) || !isfinite(radiance_hit.y) ||
-                    !isfinite(radiance_hit.z)) {
+                    scene, bvh, lights, ray.o, ray.d, pixel.rng, max_bounces);
+                auto radiance = radiance_hit.first;
+                auto hit = radiance_hit.second;
+                if (!isfinite(radiance.x) || !isfinite(radiance.y) ||
+                    !isfinite(radiance.z)) {
                     log_error("NaN detected");
-                    radiance_hit = zero4f;
+                    radiance = zero3f;
                 }
-                if (max(xyz(radiance_hit)) > pixel_clamp)
-                    xyz(radiance_hit) = xyz(radiance_hit) *
-                                        (pixel_clamp / max(xyz(radiance_hit)));
-                at(rendered_image, {i, j}) += {radiance_hit.x, radiance_hit.y,
-                    radiance_hit.z,
-                    (radiance_hit.w > 0 || !scene.environments.empty()) ? 1.0f :
-                                                                          0.0f};
+                if (max(radiance) > pixel_clamp)
+                    radiance = radiance *
+                                        (pixel_clamp / max(radiance));
+                pixel.radiance += radiance;
+                pixel.hits += hit ? 1 : 0;
+                pixel.samples += 1;
             }
-            at(rendered_image, {i, j}) /= current_sample + num_samples;
+            auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
+            auto coverage = (float)pixel.hits / (float)pixel.samples;
+            at(rendered_image, {i, j}) = {radiance.x, radiance.y, radiance.z, coverage};
         }
     }
 }
 
 // Init a sequence of random number generators.
-void init_trace_rngs(
-    image<rng_state>& rngs, const vec2i& image_size, uint64_t seed) {
-    init_image(rngs, image_size);
+void init_trace_pixels(
+    image<trace_pixel>& pixels, const vec2i& image_size, uint64_t seed) {
+    init_image(pixels, image_size);
     auto rng = make_rng(1301081);
-    for (auto j = 0; j < rngs.size.y; j++) {
-        for (auto i = 0; i < rngs.size.x; i++) {
-            at(rngs, {i, j}) = make_rng(
+    for (auto j = 0; j < pixels.size.y; j++) {
+        for (auto i = 0; i < pixels.size.x; i++) {
+            auto& pixel = at(pixels, {i, j});
+            pixel.rng = make_rng(
                 seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
@@ -7300,15 +7302,15 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
     const trace_lights& lights, const trace_sampler_func& sampler,
     int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
     auto scope = log_trace_scoped("tracing image");
-    auto rngs  = image<rng_state>{};
-    init_trace_rngs(rngs, rendered_image.size);
+    auto pixels  = image<trace_pixel>{};
+    init_trace_pixels(pixels, rendered_image.size);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
 
     if (no_parallel) {
         for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, 0, num_samples, max_bounces, rngs, pixel_clamp);
+                sampler, region, 0, num_samples, max_bounces, pixels, pixel_clamp);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -7320,7 +7322,7 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
                     auto& region = regions[region_id];
                     trace_image_region(rendered_image, scene, camera, bvh,
                         lights, sampler, region, 0, num_samples, max_bounces,
-                        rngs, pixel_clamp);
+                        pixels, pixel_clamp);
                 }
             }));
         }
@@ -7333,7 +7335,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& sampler,
     int current_sample, int num_samples, int max_bounces,
-    image<rng_state>& rngs, float pixel_clamp, bool no_parallel) {
+    image<trace_pixel>& pixels, float pixel_clamp, bool no_parallel) {
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
     auto scope = log_trace_scoped(
@@ -7341,7 +7343,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     if (no_parallel) {
         for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, current_sample, num_samples, max_bounces, rngs,
+                sampler, region, current_sample, num_samples, max_bounces, pixels,
                 pixel_clamp);
         }
     } else {
@@ -7354,7 +7356,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
                     auto& region = regions[region_id];
                     trace_image_region(rendered_image, scene, camera, bvh,
                         lights, sampler, region, current_sample, num_samples,
-                        max_bounces, rngs, pixel_clamp);
+                        max_bounces, pixels, pixel_clamp);
                 }
             }));
         }
@@ -7366,7 +7368,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
 void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& sampler,
-    int num_samples, int max_bounces, image<rng_state>& rngs,
+    int num_samples, int max_bounces, image<trace_pixel>& pixels,
     vector<thread>& threads, bool& stop_flag, int& current_sample,
     concurrent_queue<image_region>& queue, float pixel_clamp) {
     log_trace("start tracing async");
@@ -7385,7 +7387,7 @@ void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
                     if (stop_flag) return;
                     auto& region = regions[region_id];
                     trace_image_region(rendered_image, scene, camera, bvh, lights,
-                        sampler, region, s, 1, max_bounces, rngs, pixel_clamp);
+                        sampler, region, s, 1, max_bounces, pixels, pixel_clamp);
                     queue.push(region);
                 }
             }
