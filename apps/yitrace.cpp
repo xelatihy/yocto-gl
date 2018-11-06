@@ -184,6 +184,13 @@ void draw_opengl_widgets(const opengl_window& win) {
                 stop_rendering_async(app);
                 load_scene_async(app);
             }
+            if (draw_button_opengl_widget(win, "print cams")) {
+                for(auto& camera : app.scene.cameras) {
+                    print("c {} {} {} {} {} {} {}\n", camera.name,
+                        (int)camera.orthographic, camera.film_size, camera.focal_length,
+                        camera.focus_distance, camera.lens_aperture, camera.frame);
+                }
+            }
             draw_label_opengl_widget(win, "filename", app.filename);
             draw_label_opengl_widget(win, "status", app.status);
             end_header_opengl_widget(win);
