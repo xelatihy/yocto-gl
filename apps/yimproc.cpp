@@ -133,24 +133,24 @@ image<vec4f> filter_bilateral(
 int main(int argc, char* argv[]) {
     // parse command line
     auto parser  = make_cmdline_parser(argc, argv, "Process images", "yimproc");
-    auto tonemap = parse_argument(parser, "--tonemap,-t", false, "Tonemap image");
-    auto exposure = parse_argument(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto srgb     = parse_argument(parser, "--srgb", true, "Tonemap to sRGB.");
-    auto filmic   = parse_argument(
+    auto tonemap = parse_arg(parser, "--tonemap,-t", false, "Tonemap image");
+    auto exposure = parse_arg(parser, "--exposure,-e", 0.0f, "Tonemap exposure");
+    auto srgb     = parse_arg(parser, "--srgb", true, "Tonemap to sRGB.");
+    auto filmic   = parse_arg(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
-    auto resize_size = parse_argument(
+    auto resize_size = parse_arg(
         parser, "--resize", zero2i, "resize size (0 to maintain aspect)");
-    auto spatial_sigma = parse_argument(
+    auto spatial_sigma = parse_arg(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
-    auto range_sigma = parse_argument(
+    auto range_sigma = parse_arg(
         parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
-    auto alpha_filename = parse_argument(
+    auto alpha_filename = parse_arg(
         parser, "--set-alpha", ""s, "set alpha as this image alpha");
-    auto coloralpha_filename = parse_argument(
+    auto coloralpha_filename = parse_arg(
         parser, "--set-color-as-alpha", ""s, "set alpha as this image color");
-    auto output = parse_argument(
+    auto output = parse_arg(
         parser, "--output,-o", "out.png"s, "output image filename", true);
-    auto filename = parse_argument(
+    auto filename = parse_arg(
         parser, "filename", "img.hdr"s, "input image filename", true);
     check_cmdline(parser);
 

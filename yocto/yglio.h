@@ -38,7 +38,7 @@
 // error checking.
 //
 // 1. initialize the parser with `make_cmdline_parser(argc, argv, help)`
-// 2. read a value with `value = parse_argument(parser, name, default, help)`
+// 2. read a value with `value = parse_arg(parser, name, default, help)`
 //    - is name starts with '--' or '-' then it is an option
 //    - otherwise it is a positional arguments
 //    - options and arguments may be intermixed
@@ -125,17 +125,17 @@ void check_cmdline(cmdline_parser& parser);
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
 template <typename T>
-inline T      parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T      parse_arg(cmdline_parser& parser, const string& name, T def,
          const string& usage, bool req = false);
-inline string parse_argument(cmdline_parser& parser, const string& name,
+inline string parse_arg(cmdline_parser& parser, const string& name,
     const char* def, const string& usage, bool req = false);
 // Parse all arguments left on the command line.
 template <typename T>
-inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
+inline vector<T> parse_args(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
-inline T parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T parse_arge(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req = false);
 
 }  // namespace ygl
@@ -538,7 +538,7 @@ inline void check_cmdline(cmdline_parser& parser) {
 
 // Parse an option string. Name should start with "--" or "-".
 template <typename T>
-inline T parse_option_argument(cmdline_parser& parser, const string& name, T def,
+inline T parse_option(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req, const vector<string>& choices) {
     parser.usage_opt += get_option_usage(name, usage, to_string(def), choices);
     if (parser.error != "") return def;
@@ -573,7 +573,7 @@ inline T parse_option_argument(cmdline_parser& parser, const string& name, T def
 
 // Parse an argument string. Name should not start with "--" or "-".
 template <typename T>
-inline T parse_positional_argument(cmdline_parser& parser, const string& name, const T def,
+inline T parse_argument(cmdline_parser& parser, const string& name, const T def,
     const string& usage, bool req, const vector<string>& choices) {
     parser.usage_arg += get_option_usage(name, usage, to_string(def), choices);
     if (parser.error != "") return def;
@@ -600,7 +600,7 @@ inline T parse_positional_argument(cmdline_parser& parser, const string& name, c
 
 // Parse all left argument strings. Name should not start with "--" or "-".
 template <typename T>
-inline vector<T> parse_positional_arguments(cmdline_parser& parser, const string& name,
+inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req) {
     auto defs = string();
     for (auto& d : def) defs += " " + d;
@@ -635,38 +635,38 @@ inline bool parse_flag(
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
 template <typename T>
-inline T parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T parse_arg(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
-    return is_option(name) ? parse_option_argument(parser, name, def, usage, req, {}) :
-                             parse_positional_argument(parser, name, def, usage, req, {});
+    return is_option(name) ? parse_option(parser, name, def, usage, req, {}) :
+                             parse_argument(parser, name, def, usage, req, {});
 }
 template <>
-inline bool parse_argument<bool>(cmdline_parser& parser, const string& name,
+inline bool parse_arg<bool>(cmdline_parser& parser, const string& name,
     bool def, const string& usage, bool req) {
     return parse_flag(parser, name, def, usage);
 }
 
 template <typename T>
-inline T parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T parse_arge(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req) {
-    auto value = is_option(name) ? parse_option_argument(parser, name,
+    auto value = is_option(name) ? parse_option(parser, name,
                                        labels.at((int)def), usage, req, labels) :
-                                   parse_positional_argument(parser, name,
+                                   parse_argument(parser, name,
                                        labels.at((int)def), usage, req, labels);
     return (T)(std::find(labels.begin(), labels.end(), value) - labels.begin());
 }
 
 // Parser an argument
 template <typename T>
-inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
+inline vector<T> parse_args(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req) {
-    return parse_positional_arguments(parser, name, def, usage, req);
+    return parse_arguments(parser, name, def, usage, req);
 }
 
 // Override to avoid issues with const char
-inline string parse_argument(cmdline_parser& parser, const string& name,
+inline string parse_arg(cmdline_parser& parser, const string& name,
     const char* def, const string& usage, bool req) {
-    return parse_argument(parser, name, std::string(def), usage, req);
+    return parse_arg(parser, name, std::string(def), usage, req);
 }
 
 }  // namespace ygl

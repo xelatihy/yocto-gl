@@ -1114,18 +1114,18 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "views scenes inteactively", "yview");
-    app.camera_id  = parse_argument(parser, "--camera", 0, "Camera index.");
+    app.camera_id  = parse_arg(parser, "--camera", 0, "Camera index.");
     app.image_size = {0,
-        parse_argument(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    app.eyelight   = parse_argument(
+        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
+    app.eyelight   = parse_arg(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
-    app.double_sided = parse_argument(
+    app.double_sided = parse_arg(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto highlight_filename = parse_argument(
+    auto highlight_filename = parse_arg(
         parser, "--highlights", ""s, "Highlight filename");
-    app.imfilename = parse_argument(
+    app.imfilename = parse_arg(
         parser, "--output-image,-o", "out.png"s, "Image filename");
-    app.filename = parse_argument(
+    app.filename = parse_arg(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
