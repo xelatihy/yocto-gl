@@ -904,13 +904,6 @@ void draw_widgets(const opengl_window& win) {
                 delete_drawgl_state(app.state);
                 load_scene_async(app);
             }
-            if (draw_button_opengl_widget(win, "print cams")) {
-                for(auto& camera : app.scene.cameras) {
-                    print("c {} {} {} {} {} {} {}\n", camera.name,
-                        (int)camera.orthographic, camera.film_size, camera.focal_length,
-                        camera.focus_distance, camera.lens_aperture, camera.frame);
-                }
-            }
             draw_label_opengl_widget(win, "filename", app.filename);
             draw_label_opengl_widget(win, "status", app.status);
             end_header_opengl_widget(win);
@@ -939,6 +932,13 @@ void draw_widgets(const opengl_window& win) {
             draw_slider_opengl_widget(
                 win, "far", app.far_plane, 1000.0f, 10000.0f);
             draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
+            if (draw_button_opengl_widget(win, "print cams")) {
+                for(auto& camera : app.scene.cameras) {
+                    print("c {} {} {} {} {} {} {}\n", camera.name,
+                        (int)camera.orthographic, camera.film_size, camera.focal_length,
+                        camera.focus_distance, camera.lens_aperture, camera.frame);
+                }
+            }
             end_header_opengl_widget(win);
         }
         if (app.load_done && begin_header_opengl_widget(win, "navigate")) {
