@@ -98,9 +98,9 @@ void start_rendering_async(app_state& app) {
     auto  image_size   = get_camera_image_size(camera, app.image_size);
     auto  sampler_func = get_trace_sampler_func(app.sampler_type);
 
-    make_image<vec4f>(app.rendered_image, image_size);
-    make_image<vec4f>(app.display_image, image_size);
-    make_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
+    init_image<vec4f>(app.rendered_image, image_size);
+    init_image<vec4f>(app.display_image, image_size);
+    init_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
     make_trace_rngs(app.trace_rngs, image_size, app.random_seed);
 
     trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,

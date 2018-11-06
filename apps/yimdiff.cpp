@@ -37,7 +37,7 @@ using namespace ygl;
 template <typename T>
 void compute_diff_image(image<vec<T, 4>>& diff,
     const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
-    make_image(diff, a.size);
+    init_image(diff, a.size);
     for (auto i = 0; i < a.size.x * a.size.y; i++) {
         diff.pixels[i] = {(T)abs(a.pixels[i].x - b.pixels[i].x),
             (T)abs(a.pixels[i].y - b.pixels[i].y),
@@ -58,7 +58,7 @@ vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
 
 template <typename T>
 void display_diff(image<vec<T, 4>>& display, const image<vec<T, 4>>& diff, T alpha) {
-    make_image(display, diff.size);
+    init_image(display, diff.size);
     for (auto i = 0; i < diff.pixels.size(); i++) {
         auto diff_value   = max(diff.pixels[i]);
         display.pixels[i] = {diff_value, diff_value, diff_value, alpha};

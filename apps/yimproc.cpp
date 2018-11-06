@@ -36,7 +36,7 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
     auto width = imgs[0].size().x * tilex;
     auto height = imgs[0].size().y * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
-    auto ret = make_image(width, height, (bool)imgs[0].hdr);
+    auto ret = init_image(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (extents(img) != extents(imgs[0])) {
@@ -66,7 +66,7 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
     auto filtered     = image<vec4f>{};
-    make_image(filtered, img.size);
+    init_image(filtered, img.size);
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -104,7 +104,7 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
 image<vec4f> filter_bilateral(
     const image<vec4f>& img, float spatial_sigma, float range_sigma) {
     auto filtered = image<vec4f>{};
-    make_image(filtered, img.size);
+    init_image(filtered, img.size);
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw       = 1 / (2.0f * range_sigma * range_sigma);

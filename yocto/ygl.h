@@ -2975,11 +2975,11 @@ struct image {
 
 // Image onstructors
 template <typename T>
-inline void make_image(image<T>& img, const vec2i& size, const T& v = T{}) {
+inline void init_image(image<T>& img, const vec2i& size, const T& v = T{}) {
     img = image<T>{size, vector<T>((size_t)(size.x * size.y), v)};
 }
 template <typename T>
-inline void make_image(image<T>& img, const vec2i& size, const T* v) {
+inline void init_image(image<T>& img, const vec2i& size, const T* v) {
     img = image<T>{size, vector<T>(v, v + size.x * size.y)};
 }
 
@@ -3168,11 +3168,11 @@ struct volume {
 
 // Volume onstructors
 template <typename T>
-inline void make_volume(volume<T>& vol, const vec3i& size, const T& v = T{}) {
+inline void init_volume(volume<T>& vol, const vec3i& size, const T& v = T{}) {
     vol = volume<T>{size, vector<T>((size_t)(size.x * size.y * size.z), v)};
 }
 template <typename T>
-inline void make_volume(volume<T>& vol, const vec3i& size, const T* v) {
+inline void init_volume(volume<T>& vol, const vec3i& size, const T* v) {
     vol = volume<T>{size, vector<T>(v, v + size.x * size.y * size.z)};
 }
 
@@ -4046,7 +4046,7 @@ namespace ygl {
 // Gets pixels in an image region
 template <typename T>
 inline void get_image_region(const image<T>& img, image<T>& clipped, const image_region& region) {
-    make_image(clipped, region.size);
+    init_image(clipped, region.size);
     for (auto j = 0; j < region.size.y; j++) {
         for (auto i = 0; i < region.size.x; i++) {
             at(clipped, {i, j}) = at(
