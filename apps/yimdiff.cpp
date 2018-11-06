@@ -69,12 +69,12 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "Compares two images", "yimdiff");
-    auto threshold = parse_arg(parser, "--threshold,-t", 0.1f, "Thhhreshold");
-    auto output    = parse_arg(
+    auto threshold = parse_argument(parser, "--threshold,-t", 0.1f, "Thhhreshold");
+    auto output    = parse_argument(
         parser, "--output,-o", ""s, "output image filename", false);
-    auto filename1 = parse_arg(
+    auto filename1 = parse_argument(
         parser, "filename1", "in1.png"s, "input image filename", true);
-    auto filename2 = parse_arg(
+    auto filename2 = parse_argument(
         parser, "filename2", "in2.png"s, "input image filename", true);
     check_cmdline(parser);
 

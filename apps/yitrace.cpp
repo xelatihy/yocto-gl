@@ -419,28 +419,28 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = make_cmdline_parser(
         argc, argv, "progressive path tracing", "yitrace");
-    app.camera_id   = parse_arg(parser, "--camera", 0, "Camera index.");
+    app.camera_id   = parse_argument(parser, "--camera", 0, "Camera index.");
     app.image_size  = {0,
-        parse_arg(parser, "--resolution,-r", 512, "Image vertical resolution.")};
-    app.num_samples = parse_arg(
+        parse_argument(parser, "--resolution,-r", 512, "Image vertical resolution.")};
+    app.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.sampler_type = parse_arge(parser, "--tracer,-t",
+    app.sampler_type = parse_argument(parser, "--tracer,-t",
         trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
-    app.max_bounces  = parse_arg(
+    app.max_bounces  = parse_argument(
         parser, "--nbounces", 4, "Maximum number of bounces.");
-    app.pixel_clamp = parse_arg(
+    app.pixel_clamp = parse_argument(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    app.random_seed = parse_arg(
+    app.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
-    app.use_embree_bvh = parse_arg(
+    app.use_embree_bvh = parse_argument(
         parser, "--embree", false, "Use Embree ratracer");
-    app.double_sided = parse_arg(
+    app.double_sided = parse_argument(
         parser, "--double-sided", false, "Double-sided rendering.");
-    app.add_skyenv = parse_arg(
+    app.add_skyenv = parse_argument(
         parser, "--add-skyenv", false, "Add missing environment map");
-    app.imfilename = parse_arg(
+    app.imfilename = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    app.filename = parse_arg(
+    app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
