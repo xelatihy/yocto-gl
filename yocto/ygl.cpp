@@ -611,10 +611,11 @@ vector<vector<vec4i>> ungroup_quads(
 
 // Subdivide lines.
 template <typename T>
-pair<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<T>& vert, int level) {
     // early exit
-    if (lines.empty() || vert.empty()) return {lines, vert};
+    if (lines.empty() || vert.empty()) return;
+    // iterate over levels
+    for(auto l = 0; l < level; l ++) {
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
     // create vertices
@@ -632,24 +633,28 @@ pair<vector<vec2i>, vector<T>> subdivide_lines(
         tlines[i * 2 + 0] = {nverts + i, l.y};
     }
     // done
-    return {tlines, tvert};
+    swap(lines,tlines);
+    swap(vert, tvert);
+    }
 }
 
-template pair<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>&, const vector<float>&);
-template pair<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>&, const vector<vec2f>&);
-template pair<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>&, const vector<vec3f>&);
-template pair<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>&, const vector<vec4f>&);
+template void subdivide_lines(
+    vector<vec2i>&, vector<float>&, int);
+template void subdivide_lines(
+    vector<vec2i>&, vector<vec2f>&, int);
+template void subdivide_lines(
+    vector<vec2i>&, vector<vec3f>&, int);
+template void subdivide_lines(
+    vector<vec2i>&, vector<vec4f>&, int);
 
 // Subdivide triangle.
 template <typename T>
-pair<vector<vec3i>, vector<T>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<T>& vert) {
+void subdivide_triangles(
+    vector<vec3i>& triangles, vector<T>& vert, int level) {
     // early exit
-    if (triangles.empty() || vert.empty()) return {triangles, vert};
+    if (triangles.empty() || vert.empty()) return;
+    // iterate over levels
+    for(auto l = 0; l < level; l ++) {
     // get edges
     auto emap  = make_edge_map(triangles);
     auto edges = get_edges(emap);
@@ -679,24 +684,28 @@ pair<vector<vec3i>, vector<T>> subdivide_triangles(
             nverts + get_edge_index(emap, {t.z, t.x})};
     }
     // done
-    return {ttriangles, tvert};
+    swap(triangles, ttriangles);
+    swap(vert, tvert);
+    }
 }
 
-template pair<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>&, const vector<float>&);
-template pair<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>&, const vector<vec2f>&);
-template pair<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>&, const vector<vec3f>&);
-template pair<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>&, const vector<vec4f>&);
+template void subdivide_triangles(
+    vector<vec3i>&, vector<float>&, int);
+template void subdivide_triangles(
+    vector<vec3i>&, vector<vec2f>&, int);
+template void subdivide_triangles(
+    vector<vec3i>&, vector<vec3f>&, int);
+template void subdivide_triangles(
+    vector<vec3i>&, vector<vec4f>&, int);
 
 // Subdivide quads.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vert) {
+void subdivide_quads(
+    vector<vec4i>& quads, vector<T>& vert, int level) {
     // early exit
-    if (quads.empty() || vert.empty()) return {quads, vert};
+    if (quads.empty() || vert.empty()) return;
+    // iterate over levels
+    for(auto l = 0; l < level; l ++) {
     // get edges
     auto emap  = make_edge_map(quads);
     auto edges = get_edges(emap);
@@ -746,22 +755,28 @@ pair<vector<vec4i>, vector<T>> subdivide_quads(
     }
     tquads.resize(qi);
     // done
-    return {tquads, tvert};
+    swap(quads, tquads);
+    swap(vert, tvert);
+    }
 }
 
-template pair<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>&, const vector<float>&);
-template pair<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>&, const vector<vec2f>&);
-template pair<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>&, const vector<vec3f>&);
-template pair<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>&, const vector<vec4f>&);
+template void subdivide_quads(
+    vector<vec4i>&, vector<float>&, int);
+template void subdivide_quads(
+    vector<vec4i>&, vector<vec2f>&, int);
+template void subdivide_quads(
+    vector<vec4i>&, vector<vec3f>&, int);
+template void subdivide_quads(
+    vector<vec4i>&, vector<vec4f>&, int);
 
 // Subdivide beziers.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<T>& vert) {
+void subdivide_beziers(
+    vector<vec4i>& beziers, vector<T>& vert, int level) {
+    // early exit
+    if (beziers.empty() || vert.empty()) return;
+    // iterate over levels
+    for(auto l = 0; l < level; l ++) {
     auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
     auto tbeziers = vector<vec4i>();
@@ -785,24 +800,28 @@ pair<vector<vec4i>, vector<T>> subdivide_beziers(
         tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
     }
 
-    return {tbeziers, tvert};
+    swap(beziers, tbeziers);
+    swap(vert, tvert);
+    }
 }
 
-template pair<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>&, const vector<float>&);
-template pair<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>&, const vector<vec2f>&);
-template pair<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>&, const vector<vec3f>&);
-template pair<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>&, const vector<vec4f>&);
+template void subdivide_beziers(
+    vector<vec4i>&, vector<float>&, int);
+template void subdivide_beziers(
+    vector<vec4i>&, vector<vec2f>&, int);
+template void subdivide_beziers(
+    vector<vec4i>&, vector<vec3f>&, int);
+template void subdivide_beziers(
+    vector<vec4i>&, vector<vec4f>&, int);
 
 // Subdivide catmullclark.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<T>& vert, int level, bool lock_boundary) {
     // early exit
-    if (quads.empty() || vert.empty()) return {quads, vert};
+    if (quads.empty() || vert.empty()) return;
+    // iterate over levels
+    for(auto l = 0; l < level; l ++) {
     // get edges
     auto emap     = make_edge_map(quads);
     auto edges    = get_edges(emap);
@@ -917,17 +936,19 @@ pair<vector<vec4i>, vector<T>> subdivide_catmullclark(
     }
     tvert = avert;
 
-    return {tquads, tvert};
+    swap(quads, tquads);
+    swap(vert, tvert);
+    }
 }
 
-template pair<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<float>&, bool);
-template pair<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<vec2f>&, bool);
-template pair<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<vec3f>&, bool);
-template pair<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<vec4f>&, bool);
+template void subdivide_catmullclark(
+    vector<vec4i>&, vector<float>&, int, bool);
+template void subdivide_catmullclark(
+    vector<vec4i>&, vector<vec2f>&, int, bool);
+template void subdivide_catmullclark(
+    vector<vec4i>&, vector<vec3f>&, int, bool);
+template void subdivide_catmullclark(
+    vector<vec4i>&, vector<vec4f>&, int, bool);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 void weld_vertices(
@@ -2542,11 +2563,7 @@ make_shape_data make_geodesic_sphere_shape(
     auto        shape     = make_shape_data();
     shape.positions       = pos;
     shape.triangles       = triangles;
-    for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        auto subdivided = subdivide_triangles(shape.triangles, shape.positions);
-        shape.triangles = subdivided.first;
-        shape.positions = subdivided.second;
-    }
+    subdivide_triangles(shape.triangles, shape.positions, max(0, tesselation - 2));
     for (auto& p : shape.positions) p = normalize(p) * size / 2;
     shape.normals = shape.positions;
     return shape;
@@ -3861,53 +3878,47 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
     if (!subdivided.points.empty()) {
         log_error("point subdivision not supported");
     } else if (!subdivided.lines.empty()) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_lines                       = subdivided.lines;
-            tie(subdivided.lines, subdivided.positions) = subdivide_lines(
-                tesselated_lines, subdivided.positions);
-            tie(ignore, subdivided.normals) = subdivide_lines(
-                tesselated_lines, subdivided.normals);
-            tie(ignore, subdivided.texturecoords) = subdivide_lines(
-                tesselated_lines, subdivided.texturecoords);
-            tie(ignore, subdivided.colors) = subdivide_lines(
-                tesselated_lines, subdivided.colors);
-        }
+        auto lines_positions  = subdivided.lines;
+        subdivide_lines(lines_positions, subdivided.positions, subdivision_level);
+        auto lines_normals  = subdivided.lines;
+        subdivide_lines(lines_normals, subdivided.normals, subdivision_level);
+        auto lines_texturecoords  = subdivided.lines;
+        subdivide_lines(lines_texturecoords, subdivided.texturecoords, subdivision_level);
+        auto lines_colors  = subdivided.lines;
+        subdivide_lines(lines_colors, subdivided.colors, subdivision_level);
+        auto lines_radius  = subdivided.lines;
+        subdivide_lines(lines_radius, subdivided.colors, subdivision_level);
+        subdivided.lines = lines_positions;
     } else if (!subdivided.triangles.empty()) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_triangles = subdivided.triangles;
-            tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
-                tesselated_triangles, subdivided.positions);
-            tie(ignore, subdivided.normals) = subdivide_triangles(
-                tesselated_triangles, subdivided.normals);
-            tie(ignore, subdivided.texturecoords) = subdivide_triangles(
-                tesselated_triangles, subdivided.texturecoords);
-            tie(ignore, subdivided.colors) = subdivide_triangles(
-                tesselated_triangles, subdivided.colors);
-        }
+        auto triangles_positions  = subdivided.triangles;
+            subdivide_triangles(triangles_positions, subdivided.positions, subdivision_level);
+        auto triangles_normals  = subdivided.triangles;
+            subdivide_triangles(triangles_normals, subdivided.normals, subdivision_level);
+        auto triangles_texturecoords  = subdivided.triangles;
+            subdivide_triangles(triangles_texturecoords, subdivided.texturecoords, subdivision_level);
+        auto triangles_colors  = subdivided.triangles;
+            subdivide_triangles(triangles_colors, subdivided.colors, subdivision_level);
+        subdivided.triangles = triangles_positions;
     } else if (!subdivided.quads.empty() && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_quads                       = subdivided.quads;
-            tie(subdivided.quads, subdivided.positions) = subdivide_quads(
-                tesselated_quads, subdivided.positions);
-            tie(ignore, subdivided.normals) = subdivide_quads(
-                tesselated_quads, subdivided.normals);
-            tie(ignore, subdivided.texturecoords) = subdivide_quads(
-                tesselated_quads, subdivided.texturecoords);
-            tie(ignore, subdivided.colors) = subdivide_quads(
-                tesselated_quads, subdivided.colors);
-        }
+        auto quads_positions  = subdivided.quads;
+        subdivide_quads(quads_positions, subdivided.positions, subdivision_level);
+        auto quads_normals  = subdivided.quads;
+        subdivide_quads(quads_normals, subdivided.normals, subdivision_level);
+        auto quads_texturecoords  = subdivided.quads;
+        subdivide_quads(quads_texturecoords, subdivided.texturecoords, subdivision_level);
+        auto quads_colors  = subdivided.quads;
+        subdivide_quads(quads_colors, subdivided.colors, subdivision_level);
+        subdivided.quads = quads_positions;
     } else if (!subdivided.quads.empty() && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            auto tesselated_quads                       = subdivided.quads;
-            tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
-                tesselated_quads, subdivided.positions);
-            tie(ignore, subdivided.normals) = subdivide_catmullclark(
-                tesselated_quads, subdivided.normals);
-            tie(ignore, subdivided.texturecoords) = subdivide_catmullclark(
-                tesselated_quads, subdivided.texturecoords);
-            tie(ignore, subdivided.colors) = subdivide_catmullclark(
-                tesselated_quads, subdivided.colors);
-        }
+        auto quads_positions  = subdivided.quads;
+        subdivide_catmullclark(quads_positions, subdivided.positions, subdivision_level);
+        auto quads_normals  = subdivided.quads;
+        subdivide_catmullclark(quads_normals, subdivided.normals, subdivision_level);
+        auto quads_texturecoords  = subdivided.quads;
+        subdivide_catmullclark(quads_texturecoords, subdivided.texturecoords, subdivision_level);
+        auto quads_colors  = subdivided.quads;
+        subdivide_catmullclark(quads_colors, subdivided.colors, subdivision_level);
+        subdivided.quads = quads_positions;
     }
 
     if (compute_normals) {
@@ -3921,36 +3932,36 @@ yocto_surface subdivide_surface(const yocto_surface& surface,
     int subdivision_level, bool catmull_clark, bool compute_normals) {
     if (!subdivision_level) return surface;
     auto subdivided    = surface;
-    auto subdivide_ids = [](const vector<vec4i>& quads, const vector<int> ids) {
-        if (ids.empty()) return vector<int>();
+    auto subdivide_ids = [](const vector<vec4i>& quads, vector<int>& ids, int level) {
+        if (ids.empty() || level <= 0) return;
         auto new_ids = vector<int>();
         for (int quad_id = 0; quad_id < quads.size(); quad_id++) {
             auto quad = quads[quad_id];
             for (auto i = 0; i < (quad.z == quad.w ? 3 : 4); i++)
                 new_ids.push_back(ids[quad_id]);
         }
-        return new_ids;
+        swap(new_ids, ids);
+        for(auto l = 1; l < level; l ++) {
+            new_ids = vector<int>();
+            for (auto id : ids) {
+                for (auto i = 0; i < 4; i++) new_ids.push_back(id);
+            }
+            swap(new_ids, ids);
+        }
     };
     if (!subdivided.quads_positions.empty() && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivided.quads_materials = subdivide_ids(
-                subdivided.quads_positions, subdivided.quads_materials);
-            tie(subdivided.quads_positions, subdivided.positions) = subdivide_quads(
-                subdivided.quads_positions, subdivided.positions);
-            tie(subdivided.quads_normals, subdivided.normals) = subdivide_quads(
-                subdivided.quads_normals, subdivided.normals);
-            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_quads(
-                subdivided.quads_texturecoords, subdivided.texturecoords);
-        }
+        subdivide_ids(
+            subdivided.quads_positions, subdivided.quads_materials, subdivision_level);
+        subdivide_quads(subdivided.quads_positions, subdivided.positions, subdivision_level);
+        subdivide_quads(subdivided.quads_normals, subdivided.normals, subdivision_level);
+        subdivide_quads(subdivided.quads_texturecoords, subdivided.texturecoords, subdivision_level);
     } else if (!subdivided.quads_positions.empty() && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivided.quads_materials = subdivide_ids(
-                subdivided.quads_positions, subdivided.quads_materials);
-            tie(subdivided.quads_positions, subdivided.positions) = subdivide_catmullclark(
-                subdivided.quads_positions, subdivided.positions);
-            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_catmullclark(
-                subdivided.quads_texturecoords, subdivided.texturecoords, true);
-        }
+        subdivide_ids(
+            subdivided.quads_positions, subdivided.quads_materials, subdivision_level);
+        subdivide_catmullclark(
+            subdivided.quads_positions, subdivided.positions, subdivision_level);
+        subdivide_catmullclark(
+            subdivided.quads_texturecoords, subdivided.texturecoords, subdivision_level, true);
     }
 
     if (compute_normals) {

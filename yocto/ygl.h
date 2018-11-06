@@ -2461,26 +2461,22 @@ vector<vector<vec4i>> ungroup_quads(
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-pair<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vert);
+void subdivide_lines(vector<vec2i>& lines, vector<T>& vert, int level);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-pair<vector<vec3i>, vector<T>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<T>& vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert, int level);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vert);
+void subdivide_quads(vector<vec4i>& quads, vector<T>& vert, int level);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<T>& vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert, int level);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-pair<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
-    const vector<T>& vert, bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& quads,
+    vector<T>& vert, int level, bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 void weld_vertices(
