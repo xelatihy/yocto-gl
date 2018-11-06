@@ -2289,26 +2289,25 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
 namespace ygl {
 
 // Make a quad.
-make_shape_data make_quad_shape(
+void make_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
-    auto shape = make_shape_data();
-    shape.positions.resize((steps.x + 1) * (steps.y + 1));
-    shape.normals.resize((steps.x + 1) * (steps.y + 1));
-    shape.texturecoords.resize((steps.x + 1) * (steps.y + 1));
+    positions.resize((steps.x + 1) * (steps.y + 1));
+    normals.resize((steps.x + 1) * (steps.y + 1));
+    texturecoords.resize((steps.x + 1) * (steps.y + 1));
     for (auto j = 0; j <= steps.y; j++) {
         for (auto i = 0; i <= steps.x; i++) {
             auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
-            shape.positions[j * (steps.x + 1) + i] = {
+            positions[j * (steps.x + 1) + i] = {
                 (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-            shape.normals[j * (steps.x + 1) + i]       = {0, 0, 1};
-            shape.texturecoords[j * (steps.x + 1) + i] = uv * uvsize;
+            normals[j * (steps.x + 1) + i]       = {0, 0, 1};
+            texturecoords[j * (steps.x + 1) + i] = uv * uvsize;
         }
     }
 
-    shape.quads.resize(steps.x * steps.y);
+    quads.resize(steps.x * steps.y);
     for (auto j = 0; j < steps.y; j++) {
         for (auto i = 0; i < steps.x; i++) {
-            shape.quads[j * steps.x + i] = {j * (steps.x + 1) + i,
+            quads[j * steps.x + i] = {j * (steps.x + 1) + i,
                 j * (steps.x + 1) + i + 1, (j + 1) * (steps.x + 1) + i + 1,
                 (j + 1) * (steps.x + 1) + i};
         }
@@ -2324,331 +2323,336 @@ make_shape_data make_quad_shape(
     //             (j + 1) * (steps.x + 1) + i};
     //     }
     // }
-
-    return shape;
 }
 
-make_shape_data make_floor_shape(
+void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
-    auto shape = make_quad_shape(steps, size, uvsize);
-    for (auto& p : shape.positions) p = {p.x, p.z, p.y};
-    for (auto& normal : shape.normals) normal = {normal.x, normal.z, normal.y};
-    return shape;
+    make_quad_shape(quads, positions, normals, texturecoords, steps, size, uvsize);
+    for (auto& p : positions) p = {p.x, p.z, p.y};
+    for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
 }
 
 // Make a stack of quads
-make_shape_data make_quad_stack_shape(
+void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec2f& uvsize) {
-    auto qshps = vector<make_shape_data>(steps.z + 1);
+    auto qquads = vector<vec4i>{};
+    auto qpositions = vector<vec3f>{};
+    auto qnormals = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
     for (auto i = 0; i <= steps.z; i++) {
-        qshps[i] = make_quad_shape({steps.x, steps.y}, {size.x, size.y}, uvsize);
-        for (auto& p : qshps[i].positions)
+        make_quad_shape(qquads, qpositions, qnormals, qtexturecoords, {steps.x, steps.y}, {size.x, size.y}, uvsize);
+        for (auto& p : qpositions)
             p.z = (-0.5f + (float)i / steps.z) * size.z;
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     }
-    return merge_shape_data(qshps);
 }
 
 // Make a cube.
-make_shape_data make_cube_shape(
+void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshps = vector<make_shape_data>(6);
+    auto qquads = vector<vec4i>{};
+    auto qpositions = vector<vec3f>{};
+    auto qnormals = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
     // + z
-    qshps[0] = make_quad_shape(
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords, 
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
-    for (auto i = 0; i < qshps[0].positions.size(); i++) {
-        qshps[0].positions[i] = {
-            qshps[0].positions[i].x, qshps[0].positions[i].y, size.z / 2};
-        qshps[0].normals[i] = {0, 0, 1};
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {
+            qpositions[i].x, qpositions[i].y, size.z / 2};
+        qnormals[i] = {0, 0, 1};
     }
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     // - z
-    qshps[1] = make_quad_shape(
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords, 
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
-    for (auto i = 0; i < qshps[1].positions.size(); i++) {
-        qshps[1].positions[i] = {
-            -qshps[1].positions[i].x, qshps[1].positions[i].y, -size.z / 2};
-        qshps[1].normals[i] = {0, 0, -1};
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {
+            -qpositions[i].x, qpositions[i].y, -size.z / 2};
+        qnormals[i] = {0, 0, -1};
     }
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     // + x
-    qshps[2] = make_quad_shape(
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords, 
         {steps.y, steps.z}, {size.y, size.z}, {uvsize.y, uvsize.z});
-    for (auto i = 0; i < qshps[2].positions.size(); i++) {
-        qshps[2].positions[i] = {
-            size.x / 2, qshps[2].positions[i].y, -qshps[2].positions[i].x};
-        qshps[2].normals[i] = {1, 0, 0};
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {
+            size.x / 2, qpositions[i].y, -qpositions[i].x};
+        qnormals[i] = {1, 0, 0};
     }
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     // - x
-    qshps[3] = make_quad_shape(
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords, 
         {steps.y, steps.z}, {size.y, size.z}, {uvsize.y, uvsize.z});
-    for (auto i = 0; i < qshps[3].positions.size(); i++) {
-        qshps[3].positions[i] = {
-            -size.x / 2, qshps[3].positions[i].y, qshps[3].positions[i].x};
-        qshps[3].normals[i] = {-1, 0, 0};
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {
+            -size.x / 2, qpositions[i].y, qpositions[i].x};
+        qnormals[i] = {-1, 0, 0};
     }
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     // + y
-    qshps[4] = make_quad_shape(
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords, 
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
-    for (auto i = 0; i < qshps[4].positions.size(); i++) {
-        qshps[4].positions[i] = {
-            qshps[4].positions[i].x, size.y / 2, -qshps[4].positions[i].y};
-        qshps[4].normals[i] = {0, 1, 0};
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {
+            qpositions[i].x, size.y / 2, -qpositions[i].y};
+        qnormals[i] = {0, 1, 0};
     }
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     // - y
-    qshps[5] = make_quad_shape(
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords, 
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
-    for (auto i = 0; i < qshps[5].positions.size(); i++) {
-        qshps[5].positions[i] = {
-            qshps[5].positions[i].x, -size.y / 2, qshps[5].positions[i].y};
-        qshps[5].normals[i] = {0, -1, 0};
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {
+            qpositions[i].x, -size.y / 2, qpositions[i].y};
+        qnormals[i] = {0, -1, 0};
     }
-    return merge_shape_data(qshps);
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
 }
 
 // Make a rounded cube.
-make_shape_data make_cube_rounded_shape(
+void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius) {
-    auto shape = make_cube_shape(steps, size, uvsize);
+    make_cube_shape(quads, positions, normals, texturecoords, steps, size, uvsize);
     auto c     = size / 2 - vec3f{radius, radius, radius};
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto pc = vec3f{fabs(shape.positions[i].x), fabs(shape.positions[i].y),
-            fabs(shape.positions[i].z)};
-        auto ps = vec3f{shape.positions[i].x < 0 ? -1.0f : 1.0f,
-            shape.positions[i].y < 0 ? -1.0f : 1.0f,
-            shape.positions[i].z < 0 ? -1.0f : 1.0f};
+    for (auto i = 0; i < positions.size(); i++) {
+        auto pc = vec3f{fabs(positions[i].x), fabs(positions[i].y),
+            fabs(positions[i].z)};
+        auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
+            positions[i].y < 0 ? -1.0f : 1.0f,
+            positions[i].z < 0 ? -1.0f : 1.0f};
         if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
             auto pn            = normalize(pc - c);
-            shape.positions[i] = c + radius * pn;
-            shape.normals[i]   = pn;
+            positions[i] = c + radius * pn;
+            normals[i]   = pn;
         } else if (pc.x >= c.x && pc.y >= c.y) {
             auto pn            = normalize((pc - c) * vec3f{1, 1, 0});
-            shape.positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
-            shape.normals[i]   = pn;
+            positions[i] = {c.x + radius * pn.x, c.y + radius * pn.y, pc.z};
+            normals[i]   = pn;
         } else if (pc.x >= c.x && pc.z >= c.z) {
             auto pn            = normalize((pc - c) * vec3f{1, 0, 1});
-            shape.positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
-            shape.normals[i]   = pn;
+            positions[i] = {c.x + radius * pn.x, pc.y, c.z + radius * pn.z};
+            normals[i]   = pn;
         } else if (pc.y >= c.y && pc.z >= c.z) {
             auto pn            = normalize((pc - c) * vec3f{0, 1, 1});
-            shape.positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
-            shape.normals[i]   = pn;
+            positions[i] = {pc.x, c.y + radius * pn.y, c.z + radius * pn.z};
+            normals[i]   = pn;
         } else {
             continue;
         }
-        shape.positions[i] *= ps;
-        shape.normals[i] *= ps;
+        positions[i] *= ps;
+        normals[i] *= ps;
     }
-    return shape;
 }
 
 // Make a sphere.
-make_shape_data make_sphere_shape(
+void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, float size, const vec2f& uvsize) {
-    auto shape = make_quad_shape(steps, {1, 1}, {1, 1});
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto uv = shape.texturecoords[i];
+    make_quad_shape(quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < positions.size(); i++) {
+        auto uv = texturecoords[i];
         auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
         auto p  = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
-        shape.positions[i]     = p * (size / 2);
-        shape.normals[i]       = normalize(p);
-        shape.texturecoords[i] = uv * uvsize;
+        positions[i]     = p * (size / 2);
+        normals[i]       = normalize(p);
+        texturecoords[i] = uv * uvsize;
     }
-    return shape;
 }
 
 // Make a spherecube.
-make_shape_data make_sphere_cube_shape(int steps, float size, float uvsize) {
-    auto shape = make_cube_shape(
+void make_sphere_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,int steps, float size, float uvsize) {
+    make_cube_shape(quads, positions, normals, texturecoords, 
         {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize});
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto p             = shape.positions[i];
-        shape.positions[i] = normalize(p) * (size / 2);
-        shape.normals[i]   = normalize(p);
+    for (auto i = 0; i < positions.size(); i++) {
+        auto p             = positions[i];
+        positions[i] = normalize(p) * (size / 2);
+        normals[i]   = normalize(p);
     }
-    return shape;
 }
 
 // Make a flipped sphere. This is not watertight.
-make_shape_data make_sphere_flipcap_shape(
+void make_sphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip) {
-    auto shape = make_sphere_shape(steps, size, uvsize);
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        if (shape.positions[i].z > zflip.y) {
-            shape.positions[i].z = 2 * zflip.y - shape.positions[i].z;
-            shape.normals[i].x   = -shape.normals[i].x;
-            shape.normals[i].y   = -shape.normals[i].y;
-        } else if (shape.positions[i].z < zflip.x) {
-            shape.positions[i].z = 2 * zflip.x - shape.positions[i].z;
-            shape.normals[i].x   = -shape.normals[i].x;
-            shape.normals[i].y   = -shape.normals[i].y;
+    make_sphere_shape(quads, positions, normals, texturecoords, steps, size, uvsize);
+    for (auto i = 0; i < positions.size(); i++) {
+        if (positions[i].z > zflip.y) {
+            positions[i].z = 2 * zflip.y - positions[i].z;
+            normals[i].x   = -normals[i].x;
+            normals[i].y   = -normals[i].y;
+        } else if (positions[i].z < zflip.x) {
+            positions[i].z = 2 * zflip.x - positions[i].z;
+            normals[i].x   = -normals[i].x;
+            normals[i].y   = -normals[i].y;
         }
     }
-    return shape;
 }
 
 // Make a disk.
-make_shape_data make_disk_shape(
+void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, float size, const vec2f& uvsize) {
-    auto shape = make_quad_shape(steps, {1, 1}, {1, 1});
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto uv            = shape.texturecoords[i];
+    make_quad_shape(quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < positions.size(); i++) {
+        auto uv            = texturecoords[i];
         auto phi           = 2 * pif * uv.x;
-        shape.positions[i] = {
+        positions[i] = {
             cos(phi) * uv.y * size / 2, sin(phi) * uv.y * size / 2, 0};
-        shape.normals[i]       = {0, 0, 1};
-        shape.texturecoords[i] = uv * uvsize;
+        normals[i]       = {0, 0, 1};
+        texturecoords[i] = uv * uvsize;
     }
-    return shape;
 }
 
 // Make a disk from a quad.
-make_shape_data make_disk_quad_shape(int steps, float size, float uvsize) {
-    auto shape = make_quad_shape({steps, steps}, {2, 2}, {uvsize, uvsize});
-    for (auto i = 0; i < shape.positions.size(); i++) {
+void make_disk_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,int steps, float size, float uvsize) {
+    make_quad_shape(quads, positions, normals, texturecoords, {steps, steps}, {2, 2}, {uvsize, uvsize});
+    for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
-        auto xy = vec2f{shape.positions[i].x, shape.positions[i].y};
+        auto xy = vec2f{positions[i].x, positions[i].y};
         auto uv = vec2f{
             xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
-        shape.positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
+        positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
-    return shape;
 }
 
 // Make a bulged disk from a quad.
-make_shape_data make_disk_bulged_shape(
+void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     int steps, float size, float uvsize, float height) {
-    auto shape = make_disk_quad_shape(steps, size, uvsize);
-    if (height == 0) return shape;
+    make_disk_quad_shape(quads, positions, normals, texturecoords, steps, size, uvsize);
+    if (height == 0) return;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto pn            = normalize(shape.positions[i] - center);
-        shape.positions[i] = center + pn * radius;
-        shape.normals[i]   = pn;
+    for (auto i = 0; i < positions.size(); i++) {
+        auto pn            = normalize(positions[i] - center);
+        positions[i] = center + pn * radius;
+        normals[i]   = pn;
     }
-    return shape;
 }
 
 // Make a cylinder (side-only).
-make_shape_data make_cylinder_side_shape(
+void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
-    auto shape = make_quad_shape(steps, {1, 1}, {1, 1});
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto uv                = shape.texturecoords[i];
+    make_quad_shape(quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < positions.size(); i++) {
+        auto uv                = texturecoords[i];
         auto phi               = 2 * pif * uv.x;
-        shape.positions[i]     = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
+        positions[i]     = {cos(phi) * size.x / 2, sin(phi) * size.x / 2,
             (uv.y - 0.5f) * size.y};
-        shape.normals[i]       = {cos(phi), sin(phi), 0};
-        shape.texturecoords[i] = uv * uvsize;
+        normals[i]       = {cos(phi), sin(phi), 0};
+        texturecoords[i] = uv * uvsize;
     }
-    return shape;
 }
 
 // Make a cylinder.
-make_shape_data make_cylinder_shape(
+void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec2f& size, const vec3f& uvsize) {
-    auto qshps = vector<make_shape_data>(3);
+    auto qquads = vector<vec4i>{};
+    auto qpositions = vector<vec3f>{};
+    auto qnormals = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
     // side
-    qshps[0] = make_cylinder_side_shape(
+    make_cylinder_side_shape(qquads, qpositions, qnormals, qtexturecoords,
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     // top
-    qshps[1] = make_disk_shape({steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
-    for (auto i = 0; i < qshps[1].positions.size(); i++) {
-        qshps[1].positions[i].z = size.y / 2;
+    make_disk_shape(qquads, qpositions, qnormals, qtexturecoords,{steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i].z = size.y / 2;
     }
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
     // bottom
-    qshps[2] = make_disk_shape({steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
-    for (auto i = 0; i < qshps[2].positions.size(); i++) {
-        qshps[2].positions[i].z = -size.y / 2;
-        qshps[2].normals[i]     = -qshps[2].normals[i];
+    make_disk_shape(qquads, qpositions, qnormals, qtexturecoords,{steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i].z = -size.y / 2;
+        qnormals[i]     = -qnormals[i];
     }
-    for (auto i = 0; i < qshps[2].quads.size(); i++)
-        swap(qshps[2].quads[i].x, qshps[2].quads[i].z);
-
-    return merge_shape_data(qshps);
+    for (auto i = 0; i < qquads.size(); i++)
+        swap(qquads[i].x, qquads[i].z);
+        merge_quads(quads, positions, normals, texturecoords, qquads, qpositions, qnormals, qtexturecoords);
 }
 
 // Make a rounded cylinder.
-make_shape_data make_cylinder_rounded_shape(
+void make_cylinder_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius) {
-    auto shape = make_cylinder_shape(steps, size, uvsize);
+    make_cylinder_shape(quads, positions, normals, texturecoords, steps, size, uvsize);
     auto c     = size / 2 - vec2f{radius, radius};
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto phi = atan2(shape.positions[i].y, shape.positions[i].x);
-        auto r   = length(vec2f{shape.positions[i].x, shape.positions[i].y});
-        auto z   = shape.positions[i].z;
+    for (auto i = 0; i < positions.size(); i++) {
+        auto phi = atan2(positions[i].y, positions[i].x);
+        auto r   = length(vec2f{positions[i].x, positions[i].y});
+        auto z   = positions[i].z;
         auto pc  = vec2f{r, fabs(z)};
         auto ps  = (z < 0) ? -1.0f : 1.0f;
         if (pc.x >= c.x && pc.y >= c.y) {
             auto pn            = normalize(pc - c);
-            shape.positions[i] = {cos(phi) * c.x + radius * pn.x,
+            positions[i] = {cos(phi) * c.x + radius * pn.x,
                 sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
-            shape.normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
+            normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
         } else {
             continue;
         }
     }
-    return shape;
 }
 
 // Make a geodesic sphere.
-make_shape_data make_geodesic_sphere_shape(int tesselation, float size) {
+void make_geodesic_sphere_shape(vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals, int tesselation, float size) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X   = 0.525731112119133606f;
     const float Z   = 0.850650808352039932f;
-    static auto pos = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
+    static auto sphere_pos = vector<vec3f>{{-X, 0.0, Z}, {X, 0.0, Z}, {-X, 0.0, -Z},
         {X, 0.0, -Z}, {0.0, Z, X}, {0.0, Z, -X}, {0.0, -Z, X}, {0.0, -Z, -X},
         {Z, X, 0.0}, {-Z, X, 0.0}, {Z, -X, 0.0}, {-Z, -X, 0.0}};
-    static auto triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5},
+    static auto sphere_triangles = vector<vec3i>{{0, 1, 4}, {0, 4, 9}, {9, 4, 5},
         {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3}, {5, 3, 2},
         {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0}, {0, 6, 1},
         {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    auto        shape     = make_shape_data();
-    shape.positions       = pos;
-    shape.triangles       = triangles;
+    positions       = sphere_pos;
+    triangles       = sphere_triangles;
     subdivide_triangles(
-        shape.triangles, shape.positions, max(0, tesselation - 2));
-    for (auto& p : shape.positions) p = normalize(p) * size / 2;
-    shape.normals = shape.positions;
-    return shape;
+        triangles, positions, max(0, tesselation - 2));
+    for (auto& p : positions) p = normalize(p) * size / 2;
+    normals = positions;
 }
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-make_shape_data make_cube_facevarying_shape(
+void make_cube_facevarying_shape(vector<vec4i>& quads_positions,
+    vector<vec4i>&                       quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshp                = make_cube_shape(steps, size, uvsize);
-    qshp.quads_positions     = qshp.quads;
-    qshp.quads_normals       = qshp.quads;
-    qshp.quads_texturecoords = qshp.quads;
-    qshp.quads               = {};
-    weld_quads(qshp.quads_positions, qshp.positions,
+    auto quads = vector<vec4i>{};
+    make_cube_shape(quads, positions, normals, texturecoords, steps, size, uvsize);
+    quads_positions     = quads;
+    quads_normals       = quads;
+    quads_texturecoords = quads;
+    weld_quads(quads_positions, positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    return qshp;
 }
-make_shape_data make_cube_multiplematerials_shape(
+void make_cube_multiplematerials_shape(vector<vec4i>& quads_positions,
+    vector<vec4i>&                       quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<int>& quads_materials,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto shp            = make_cube_facevarying_shape(steps, size, uvsize);
-    shp.quads_materials = vector<int>(shp.quads_positions.size());
-    auto quads_per_face = (int)shp.quads_positions.size() / 6;
-    for (auto i = 0; i < shp.quads_positions.size(); i++) {
-        shp.quads_materials[i] = i / quads_per_face;
+    make_cube_facevarying_shape(quads_positions, quads_normals, quads_texturecoords, positions, normals, texturecoords, steps, size, uvsize);
+    quads_materials = vector<int>(quads_positions.size());
+    auto quads_per_face = (int)quads_positions.size() / 6;
+    for (auto i = 0; i < quads_positions.size(); i++) {
+        quads_materials[i] = i / quads_per_face;
     }
-    return shp;
 }
-make_shape_data make_cube_posonly_shape(
+void make_cube_posonly_shape(vector<vec4i>& quads,
+vector<vec3f>& positions,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto qshp       = make_cube_shape(steps, size, uvsize);
-    auto fvshp      = make_shape_data{};
-    fvshp.quads     = qshp.quads;
-    fvshp.positions = qshp.positions;
-    weld_quads(fvshp.quads, fvshp.positions,
+        auto normals = vector<vec3f>{};
+        auto texturecoords = vector<vec2f>{};
+    make_cube_shape(quads, positions, normals, texturecoords, steps, size, uvsize);
+    weld_quads(quads, positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    return fvshp;
 }
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.
-make_shape_data make_suzanne_shape(float size) {
+void make_suzanne_shape(vector<vec4i>& quads,
+vector<vec3f>& positions, float size) {
     static auto suzanne_pos       = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
         {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
         {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
@@ -3066,112 +3070,102 @@ make_shape_data make_suzanne_shape(float size) {
         {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
         {319, 321, 503, 389}, {504, 322, 320, 390}};
 
-    auto shape      = make_shape_data();
-    shape.positions = suzanne_pos;
-    for (auto& p : shape.positions) p *= size / 2;
-    shape.quads = suzanne_quads;
+    positions = suzanne_pos;
+    for (auto& p : positions) p *= size / 2;
+    quads = suzanne_quads;
     for (auto& t : suzanne_triangles) {
-        shape.quads.push_back({t.x, t.y, t.z, t.z});
+        quads.push_back({t.x, t.y, t.z, t.z});
     }
-    return shape;
 }
 
 // Watertight cube
-make_shape_data make_cube_shape(const vec3f& size) {
+void make_cube_shape(vector<vec4i>& quads,
+vector<vec3f>& positions, const vec3f& size) {
     static auto cube_pos = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1}, {+1, +1, -1},
         {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1}, {+1, -1, +1}};
     static auto cube_quads   = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
         {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
     static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-    auto        shape        = make_shape_data();
-    shape.positions          = cube_pos;
-    for (auto& p : shape.positions) p *= size / 2;
-    shape.quads = cube_quads;
-    return shape;
+    positions          = cube_pos;
+    for (auto& p : positions) p *= size / 2;
+    quads = cube_quads;
 }
 
 // Generate lines set along a quad.
-make_shape_data make_lines_shape(const vec2i& steps, const vec2f& size,
+void make_lines_shape(vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, const vec2f& line_radius) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
     auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
     auto fid    = [steps](int i, int j) { return j * steps.x + i; };
 
-    auto shape = make_shape_data();
-    shape.positions.resize(nverts);
-    shape.normals.resize(nverts);
-    shape.texturecoords.resize(nverts);
-    shape.radius.resize(nverts);
+    positions.resize(nverts);
+    normals.resize(nverts);
+    texturecoords.resize(nverts);
+    radius.resize(nverts);
     if (steps.y > 1) {
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i <= steps.x; i++) {
                 auto uv                    = vec2f{i / (float)steps.x,
                     j / (float)(steps.y > 1 ? steps.y - 1 : 1)};
-                shape.positions[vid(i, j)] = {
+                positions[vid(i, j)] = {
                     (uv.x - 0.5f) * size.x, (uv.y - 0.5f) * size.y, 0};
-                shape.normals[vid(i, j)]       = {1, 0, 0};
-                shape.texturecoords[vid(i, j)] = uv * uvsize;
+                normals[vid(i, j)]       = {1, 0, 0};
+                texturecoords[vid(i, j)] = uv * uvsize;
             }
         }
     } else {
         for (auto i = 0; i <= steps.x; i++) {
             auto uv                        = vec2f{i / (float)steps.x, 0};
-            shape.positions[vid(i, 0)]     = {(uv.x - 0.5f) * size.x, 0, 0};
-            shape.normals[vid(i, 0)]       = {1, 0, 0};
-            shape.texturecoords[vid(i, 0)] = uv * uvsize;
+            positions[vid(i, 0)]     = {(uv.x - 0.5f) * size.x, 0, 0};
+            normals[vid(i, 0)]       = {1, 0, 0};
+            texturecoords[vid(i, 0)] = uv * uvsize;
         }
     }
 
-    shape.lines.resize(nlines);
+    lines.resize(nlines);
     for (int j = 0; j < steps.y; j++) {
         for (int i = 0; i < steps.x; i++) {
-            shape.lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
+            lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
         }
     }
-    return shape;
 }
 
 // Generate a point set with points placed at the origin with texcoords
 // varying along u.
-make_shape_data make_points_shape(int num, float uvsize, float point_radius) {
-    auto shape = make_shape_data();
-    shape.points.resize(num);
-    for (auto i = 0; i < num; i++) shape.points[i] = i;
-    shape.positions.assign(num, {0, 0, 0});
-    shape.normals.assign(num, {0, 0, 1});
-    shape.texturecoords.assign(num, {0, 0});
-    shape.radius.assign(num, point_radius);
-    for (auto i = 0; i < shape.texturecoords.size(); i++)
-        shape.texturecoords[i] = {(float)i / (float)num, 0};
-    return shape;
+void make_points_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, int num, float uvsize, float point_radius) {
+    points.resize(num);
+    for (auto i = 0; i < num; i++) points[i] = i;
+    positions.assign(num, {0, 0, 0});
+    normals.assign(num, {0, 0, 1});
+    texturecoords.assign(num, {0, 0});
+    radius.assign(num, point_radius);
+    for (auto i = 0; i < texturecoords.size(); i++)
+        texturecoords[i] = {(float)i / (float)num, 0};
 }
 
 // Generate a point set.
-make_shape_data make_random_points_shape(int num, const vec3f& size,
+void make_random_points_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, int num, const vec3f& size,
     float uvsize, float point_radius, uint64_t seed) {
-    auto shape = make_points_shape(num, uvsize, point_radius);
+    make_points_shape(points, positions, normals, texturecoords, radius, num, uvsize, point_radius);
     auto rng   = make_rng(seed);
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        shape.positions[i] = (get_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) *
+    for (auto i = 0; i < positions.size(); i++) {
+        positions[i] = (get_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) *
                              size;
     }
-    return shape;
 }
 
 // Make a point.
-make_shape_data make_point_shape(float point_radius) {
-    auto shape          = make_shape_data();
-    shape.points        = {0};
-    shape.positions     = {{0, 0, 0}};
-    shape.normals       = {{0, 0, 1}};
-    shape.texturecoords = {{0, 0}};
-    shape.radius        = {point_radius};
-    return shape;
+void make_point_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, float point_radius) {
+    points        = {0};
+    positions     = {{0, 0, 0}};
+    normals       = {{0, 0, 1}};
+    texturecoords = {{0, 0}};
+    radius        = {point_radius};
 }
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle_shape(float size) {
+void make_bezier_circle_shape(vector<vec4i>& beziers, vector<vec3f>& positions, float size) {
     // constant from http://spencermortensen.com/articles/bezier-circle/
     const auto  c              = 0.551915024494f;
     static auto circle_pos     = vector<vec3f>{{1, 0, 0}, {1, c, 0}, {c, 1, 0},
@@ -3179,14 +3173,13 @@ make_shape_data make_bezier_circle_shape(float size) {
         {0, -1, 0}, {c, -1, 0}, {1, -c, 0}};
     static auto circle_beziers = vector<vec4i>{
         {0, 1, 2, 3}, {3, 4, 5, 6}, {6, 7, 8, 9}, {9, 10, 11, 0}};
-    auto shape      = make_shape_data();
-    shape.positions = circle_pos;
-    shape.beziers   = circle_beziers;
-    return shape;
+    positions = circle_pos;
+    beziers   = circle_beziers;
+    for(auto& p : positions) p *= size;
 }
 
 // Make a hair ball around a shape
-make_shape_data make_hair_shape(const vec2i& steps,
+void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, const vec2i& steps,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
@@ -3221,59 +3214,35 @@ make_shape_data make_hair_shape(const vec2i& steps,
         }
     }
 
-    auto shape = make_lines_shape(steps, {1, 1}, {1, 1});
-    for (auto i = 0; i < shape.positions.size(); i++) {
-        auto u             = shape.texturecoords[i].x;
+    make_lines_shape(lines, positions, normals, texturecoords, radius, steps, {1, 1}, {1, 1});
+    for (auto i = 0; i < positions.size(); i++) {
+        auto u             = texturecoords[i].x;
         auto bidx          = i / (steps.x + 1);
-        shape.positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
-        shape.normals[i]   = bnorm[bidx];
-        shape.radius[i]    = lerp(rad.x, rad.y, u);
+        positions[i] = bpos[bidx] + bnorm[bidx] * u * blen[bidx];
+        normals[i]   = bnorm[bidx];
+        radius[i]    = lerp(rad.x, rad.y, u);
         if (clump.x > 0) {
-            shape.positions[i] = shape.positions[i] +
-                                 (shape.positions[i + (cidx[bidx] - bidx) *
+            positions[i] = positions[i] +
+                                 (positions[i + (cidx[bidx] - bidx) *
                                                           (steps.x + 1)] -
-                                     shape.positions[i]) *
+                                     positions[i]) *
                                      u * clump.x;
         }
         if (noise.x > 0) {
-            auto nx = perlin_noise(shape.positions[i] * noise.y + vec3f{0, 0, 0}) *
+            auto nx = perlin_noise(positions[i] * noise.y + vec3f{0, 0, 0}) *
                       noise.x;
             auto ny = perlin_noise(
-                          shape.positions[i] * noise.y + vec3f{3, 7, 11}) *
+                          positions[i] * noise.y + vec3f{3, 7, 11}) *
                       noise.x;
             auto nz = perlin_noise(
-                          shape.positions[i] * noise.y + vec3f{13, 17, 19}) *
+                          positions[i] * noise.y + vec3f{13, 17, 19}) *
                       noise.x;
-            shape.positions[i] += {nx, ny, nz};
+            positions[i] += {nx, ny, nz};
         }
     }
 
     if (clump.x > 0 || noise.x > 0 || rotation.x > 0)
-        compute_vertex_tangents(shape.lines, shape.positions, shape.normals);
-    return shape;
-}
-
-// Helper to concatenated shape data for non-facevarying shapes.
-make_shape_data merge_shape_data(const vector<make_shape_data>& shapes) {
-    auto shape = make_shape_data();
-    for (auto& sshp : shapes) {
-        if (!sshp.lines.empty()) {
-            merge_lines(shape.lines, shape.positions, shape.normals,
-                shape.texturecoords, shape.radius, sshp.lines, sshp.positions,
-                sshp.normals, sshp.texturecoords, sshp.radius);
-        } else if (!sshp.triangles.empty()) {
-            merge_triangles(shape.triangles, shape.positions, shape.normals,
-                shape.texturecoords, sshp.triangles, sshp.positions,
-                sshp.normals, sshp.texturecoords);
-        } else if (!sshp.quads.empty()) {
-            merge_quads(shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, sshp.quads, sshp.positions, sshp.normals,
-                sshp.texturecoords);
-        } else {
-            log_error("not supported");
-        }
-    }
-    return shape;
+        compute_vertex_tangents(lines, positions, normals);
 }
 
 }  // namespace ygl

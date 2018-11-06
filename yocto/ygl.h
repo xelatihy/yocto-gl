@@ -2775,85 +2775,69 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Shape data returned by make_<shape> functions.
-struct make_shape_data {
-    // vertex data
-    vector<vec3f> positions;
-    vector<vec3f> normals;
-    vector<vec2f> texturecoords;
-    vector<float> radius;
-
-    // elements data
-    vector<int>   points;
-    vector<vec2i> lines;
-    vector<vec3i> triangles;
-    vector<vec4i> quads;
-    vector<vec4i> beziers;
-
-    // face-varying elements data
-    vector<vec4i> quads_positions;
-    vector<vec4i> quads_normals;
-    vector<vec4i> quads_texturecoords;
-    vector<int>   quads_materials;
-};
-
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-make_shape_data make_quad_shape(
+void make_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, const vec2f& size, const vec2f& uvsize);
-make_shape_data make_quad_stack_shape(
+void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec2f& uvsize);
-make_shape_data make_floor_shape(
+void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, const vec2f& size, const vec2f& uvsize);
-make_shape_data make_cube_shape(
+void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-make_shape_data make_cube_rounded_shape(
+void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius);
-make_shape_data make_sphere_shape(
+void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, float size, const vec2f& uvsize);
-make_shape_data make_sphere_cube_shape(int steps, float size, float uvsize);
-make_shape_data make_sphere_flipcap_shape(
+void make_sphere_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,int steps, float size, float uvsize);
+void make_sphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip);
-make_shape_data make_disk_shape(
+void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, float size, const vec2f& uvsize);
-make_shape_data make_disk_quad_shape(int steps, float size, float uvsize);
-make_shape_data make_disk_bulged_shape(
+void make_disk_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,int steps, float size, float uvsize);
+void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     int steps, float size, float uvsize, float height);
-make_shape_data make_cylinder_side_shape(
+void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec2i& steps, const vec2f& size, const vec2f& uvsize);
-make_shape_data make_cylinder_shape(
+void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec2f& size, const vec3f& uvsize);
-make_shape_data make_cylinder_rounded_shape(
+void make_cylinder_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords,
     const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius);
-make_shape_data make_geodesic_sphere_shape(int tesselation, float size);
+void make_geodesic_sphere_shape(vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,int tesselation, float size);
 
 // Make examples shapes with are watertight (good for subdivs).
 // Returns (triangles, quads, pos)
-make_shape_data make_suzanne_shape(float size);
-make_shape_data make_cube_shape(const vec3f& size);
+void make_suzanne_shape(vector<vec4i>& quads, vector<vec3f>& positions, float size);
+void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions, const vec3f& size);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_shape_data make_cube_facevarying_shape(
+void make_cube_facevarying_shape(vector<vec4i>& quads_positions,
+    vector<vec4i>&                       quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-make_shape_data make_cube_posonly_shape(
+void make_cube_posonly_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-make_shape_data make_cube_multiplematerials_shape(
+void make_cube_multiplematerials_shape(vector<vec4i>& quads_positions,
+    vector<vec4i>&                       quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<int>& quads_materials,
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-make_shape_data make_lines_shape(const vec2i& steps, const vec2f& size,
+void make_lines_shape(vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-make_shape_data make_point_shape(float point_radius = 0.001f);
-make_shape_data make_points_shape(
+void make_point_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, float point_radius = 0.001f);
+void make_points_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, 
     int num, float uvsize, float point_radius = 0.001f);
-make_shape_data make_random_points_shape(int num, const vec3f& size,
+void make_random_points_shape(vector<int>& points, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, int num, const vec3f& size,
     float uvsize, float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-make_shape_data make_bezier_circle_shape(
-    vector<vec4i>& beziers, vector<vec3f>& pos);
+void make_bezier_circle_shape(vector<vec4i>& beziers, vector<vec3f>& positions, float size);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -2861,15 +2845,12 @@ make_shape_data make_bezier_circle_shape(
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_data make_hair_shape(const vec2i& steps,
+void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions, vector<vec3f>& normals,vector<vec2f>& texturecoords, vector<float>& radius, const vec2i& steps,
     const vector<vec3i>& striangles, const vector<vec4i>& squads,
     const vector<vec3f>& spos, const vector<vec3f>& snorm,
     const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
     const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
     const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
-
-// Helper to concatenated shape data for non-facevarying shapes.
-make_shape_data merge_shape_data(const vector<make_shape_data>& shapes);
 
 }  // namespace ygl
 
