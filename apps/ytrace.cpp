@@ -98,7 +98,8 @@ int main(int argc, char* argv[]) {
     // initialize rendering objects
     auto& camera        = scene.cameras[camera_id];
     image_size          = get_camera_image_size(camera, image_size);
-    auto rendered_image = make_image<vec4f>(image_size);
+    auto rendered_image = image<vec4f>{};
+    make_image<vec4f>(rendered_image, image_size);
     auto trace_rngs = image<rng_state>{};
     make_trace_rngs(trace_rngs, image_size, random_seed);
     auto sampler_func   = get_trace_sampler_func(sampler_type);
