@@ -5,3 +5,4 @@ cmake-build-debug
 cmake-build-release
 .idea
 .vscode/.cmaketools.json
+out.hdr
