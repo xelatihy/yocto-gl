@@ -59,7 +59,7 @@ struct app_state {
 
     // rendering state
     trace_lights                   lights         = {};
-    image<rng_state>               trace_rngs     = {};
+    image<trace_pixel>               trace_pixels     = {};
     image<vec4f>                   rendered_image = {};
     image<vec4f>                   display_image  = {};
     image<vec4f>                   preview_image  = {};
@@ -101,14 +101,14 @@ void start_rendering_async(app_state& app) {
     init_image<vec4f>(app.rendered_image, image_size);
     init_image<vec4f>(app.display_image, image_size);
     init_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
-    init_trace_rngs(app.trace_rngs, image_size, app.random_seed);
+    init_trace_pixels(app.trace_pixels, image_size, app.random_seed);
 
     trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,
         sampler_func, 1, app.max_bounces);
     app.trace_queue.push({zero2i, zero2i});
 
     trace_async_start(app.rendered_image, app.scene, camera, app.bvh, app.lights,
-        sampler_func, app.num_samples, app.max_bounces, app.trace_rngs,
+        sampler_func, app.num_samples, app.max_bounces, app.trace_pixels,
         app.trace_threads, app.trace_stop, app.trace_sample, app.trace_queue);
 }
 

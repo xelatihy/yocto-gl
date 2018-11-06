@@ -101,8 +101,8 @@ int main(int argc, char* argv[]) {
     image_size          = get_camera_image_size(camera, image_size);
     auto rendered_image = image<vec4f>{};
     init_image<vec4f>(rendered_image, image_size);
-    auto trace_rngs = image<rng_state>{};
-    init_trace_rngs(trace_rngs, image_size, random_seed);
+    auto trace_pixels = image<trace_pixel>{};
+    init_trace_pixels(trace_pixels, image_size, random_seed);
     auto sampler_func = get_trace_sampler_func(sampler_type);
 
     // render
@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
     for (auto sample = 0; sample < num_samples; sample += samples_per_batch) {
         auto nsamples = min(samples_per_batch, num_samples - sample);
         trace_samples(rendered_image, scene, camera, bvh, lights, sampler_func,
-            sample, nsamples, max_bounces, trace_rngs, pixel_clamp, no_parallel);
+            sample, nsamples, max_bounces, trace_pixels, pixel_clamp, no_parallel);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(sample + nsamples) + "." + get_extension(imfilename));

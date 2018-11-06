@@ -7208,17 +7208,17 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& sampler,
     const image_region& region, int current_sample, int num_samples,
-    int max_bounces, image<rng_state>& rngs, float pixel_clamp) {
+    int max_bounces, image<trace_pixel>& pixels, float pixel_clamp) {
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
             at(rendered_image, {i, j}) *= current_sample;
             for (auto s = 0; s < num_samples; s++) {
                 _trace_npaths += 1;
-                auto& rng = at(rngs, {i, j});
+                auto& pixel = at(pixels, {i, j});
                 auto  ray = sample_camera_ray(
-                    camera, {i, j}, rendered_image.size, rng);
+                    camera, {i, j}, rendered_image.size, pixel.rng);
                 auto radiance_hit = sampler(
-                    scene, bvh, lights, ray.o, ray.d, rng, max_bounces);
+                    scene, bvh, lights, ray.o, ray.d, pixel.rng, max_bounces);
                 if (!isfinite(radiance_hit.x) || !isfinite(radiance_hit.y) ||
                     !isfinite(radiance_hit.z)) {
                     log_error("NaN detected");
@@ -7238,13 +7238,14 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
 }
 
 // Init a sequence of random number generators.
-void init_trace_rngs(
-    image<rng_state>& rngs, const vec2i& image_size, uint64_t seed) {
-    init_image(rngs, image_size);
+void init_trace_pixels(
+    image<trace_pixel>& pixels, const vec2i& image_size, uint64_t seed) {
+    init_image(pixels, image_size);
     auto rng = make_rng(1301081);
-    for (auto j = 0; j < rngs.size.y; j++) {
-        for (auto i = 0; i < rngs.size.x; i++) {
-            at(rngs, {i, j}) = make_rng(
+    for (auto j = 0; j < pixels.size.y; j++) {
+        for (auto i = 0; i < pixels.size.x; i++) {
+            auto& pixel = at(pixels, {i, j});
+            pixel.rng = make_rng(
                 seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
@@ -7300,15 +7301,15 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
     const trace_lights& lights, const trace_sampler_func& sampler,
     int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
     auto scope = log_trace_scoped("tracing image");
-    auto rngs  = image<rng_state>{};
-    init_trace_rngs(rngs, rendered_image.size);
+    auto pixels  = image<trace_pixel>{};
+    init_trace_pixels(pixels, rendered_image.size);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
 
     if (no_parallel) {
         for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, 0, num_samples, max_bounces, rngs, pixel_clamp);
+                sampler, region, 0, num_samples, max_bounces, pixels, pixel_clamp);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -7320,7 +7321,7 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
                     auto& region = regions[region_id];
                     trace_image_region(rendered_image, scene, camera, bvh,
                         lights, sampler, region, 0, num_samples, max_bounces,
-                        rngs, pixel_clamp);
+                        pixels, pixel_clamp);
                 }
             }));
         }
@@ -7333,7 +7334,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& sampler,
     int current_sample, int num_samples, int max_bounces,
-    image<rng_state>& rngs, float pixel_clamp, bool no_parallel) {
+    image<trace_pixel>& pixels, float pixel_clamp, bool no_parallel) {
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
     auto scope = log_trace_scoped(
@@ -7341,7 +7342,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     if (no_parallel) {
         for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, current_sample, num_samples, max_bounces, rngs,
+                sampler, region, current_sample, num_samples, max_bounces, pixels,
                 pixel_clamp);
         }
     } else {
@@ -7354,7 +7355,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
                     auto& region = regions[region_id];
                     trace_image_region(rendered_image, scene, camera, bvh,
                         lights, sampler, region, current_sample, num_samples,
-                        max_bounces, rngs, pixel_clamp);
+                        max_bounces, pixels, pixel_clamp);
                 }
             }));
         }
@@ -7366,7 +7367,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
 void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& sampler,
-    int num_samples, int max_bounces, image<rng_state>& rngs,
+    int num_samples, int max_bounces, image<trace_pixel>& pixels,
     vector<thread>& threads, bool& stop_flag, int& current_sample,
     concurrent_queue<image_region>& queue, float pixel_clamp) {
     log_trace("start tracing async");
@@ -7385,7 +7386,7 @@ void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
                     if (stop_flag) return;
                     auto& region = regions[region_id];
                     trace_image_region(rendered_image, scene, camera, bvh, lights,
-                        sampler, region, s, 1, max_bounces, rngs, pixel_clamp);
+                        sampler, region, s, 1, max_bounces, pixels, pixel_clamp);
                     queue.push(region);
                 }
             }
