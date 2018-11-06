@@ -4506,9 +4506,14 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
     };
 
     auto get_scaled_texture = [&txt_map, &get_vec3f](
-                                  const json& js) -> tuple<vec3f, int> {
-        if (js.is_string()) return {{1, 1, 1}, txt_map.at(js.get<string>())};
-        return {get_vec3f(js), -1};
+                                  const json& js, vec3f& col, int& txt) {
+        if (js.is_string()) {
+            col = {1,1,1};
+            txt = txt_map.at(js.get<string>());
+        } else {
+            col = get_vec3f(js);
+            txt = -1;
+        }
     };
 
     auto use_hierarchy = false;
@@ -4619,18 +4624,15 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 if (jcmd.count("type")) type = jcmd.at("type").get<string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
-                        tie(material.diffuse, material.diffuse_texture) = get_scaled_texture(
-                            jcmd.at("Kd"));
+                        get_scaled_texture(jcmd.at("Kd"), material.diffuse, material.diffuse_texture);
                     if (jcmd.count("Ks"))
-                        tie(material.specular, material.specular_texture) = get_scaled_texture(
-                            jcmd.at("Ks"));
+                        get_scaled_texture(jcmd.at("Ks"), material.specular, material.specular_texture);
                     if (jcmd.count("Kt"))
-                        tie(material.transmission, material.transmission_texture) = get_scaled_texture(
-                            jcmd.at("Kt"));
+                        get_scaled_texture(jcmd.at("Kt"), material.transmission, material.transmission_texture);
                     if (jcmd.count("opacity")) {
                         auto op         = vec3f{0, 0, 0};
                         auto op_txt     = -1;
-                        tie(op, op_txt) = get_scaled_texture(jcmd.at("opacity"));
+                        get_scaled_texture(jcmd.at("opacity"), op, op_txt);
                         material.opacity         = (op.x + op.y + op.z) / 3;
                         material.opacity_texture = op_txt;
                     }
@@ -4638,8 +4640,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 } else if (type == "matte") {
                     material.diffuse = {1, 1, 1};
                     if (jcmd.count("Kd"))
-                        tie(material.diffuse, material.diffuse_texture) = get_scaled_texture(
-                            jcmd.at("Kd"));
+                        get_scaled_texture(
+                            jcmd.at("Kd"), material.diffuse, material.diffuse_texture);
                     material.roughness = 1;
                 } else if (type == "mirror") {
                     material.diffuse   = {0, 0, 0};
@@ -4652,22 +4654,21 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.roughness = 0;
                 } else if (type == "substrate") {
                     if (jcmd.count("Kd"))
-                        tie(material.diffuse, material.diffuse_texture) = get_scaled_texture(
-                            jcmd.at("Kd"));
+                        get_scaled_texture(
+                            jcmd.at("Kd"), material.diffuse, material.diffuse_texture);
                     material.specular = {0.04f, 0.04f, 0.04f};
                     if (jcmd.count("Ks"))
-                        tie(material.specular, material.specular_texture) = get_scaled_texture(
-                            jcmd.at("Ks"));
+                        get_scaled_texture(
+                            jcmd.at("Ks"), material.specular, material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "glass") {
                     material.specular     = {0.04f, 0.04f, 0.04f};
                     material.transmission = {1, 1, 1};
                     if (jcmd.count("Ks"))
-                        tie(material.specular, material.specular_texture) = get_scaled_texture(
-                            jcmd.at("Ks"));
+                        get_scaled_texture(
+                            jcmd.at("Ks"), material.specular, material.specular_texture);
                     if (jcmd.count("Kt"))
-                        tie(material.transmission, material.transmission_texture) = get_scaled_texture(
-                            jcmd.at("Kt"));
+                        get_scaled_texture(jcmd.at("Kt"), material.transmission, material.transmission_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
                     printf("mix material not properly supported\n");
