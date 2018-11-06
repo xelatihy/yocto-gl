@@ -951,10 +951,9 @@ template void subdivide_catmullclark(
     vector<vec4i>&, vector<vec4f>&, int, bool);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-void weld_vertices(
-    const vector<vec3f>& positions, float threshold, vector<int>& welded_indices, vector<vec3f>& welded_positions) {
+void weld_vertices(vector<vec3f>& positions, float threshold, vector<int>& welded_indices) {
     welded_indices              = vector<int>(positions.size());
-    welded_positions = vector<vec3f>();
+    auto welded_positions = vector<vec3f>();
     for (auto i = 0; i < positions.size(); i++) {
         welded_indices[i] = (int)welded_positions.size();
         for (auto j = 0; j < welded_positions.size(); j++) {
@@ -966,30 +965,25 @@ void weld_vertices(
         if (welded_indices[i] == (int)welded_positions.size())
             welded_positions.push_back(positions[i]);
     }
+    swap(positions, welded_positions);
 }
-void weld_triangles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold, vector<vec3i>& welded_triangles, vector<vec3f>& welded_positions) {
+void weld_triangles(vector<vec3i>& triangles, vector<vec3f>& positions, float threshold) {
     auto welded_indices        = vector<int>();
-    weld_vertices(positions, threshold, welded_indices, welded_positions);
-    welded_triangles = vector<vec3i>();
-    for (auto t : triangles) {
+    weld_vertices(positions, threshold, welded_indices);
+    for (auto& t : triangles) {
         t.x = welded_indices[t.x];
         t.y = welded_indices[t.y];
         t.z = welded_indices[t.z];
-        welded_triangles.push_back(t);
     }
 }
-void weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold, vector<vec4i>& welded_quads, vector<vec3f>& welded_positions) {
+void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold) {
     auto welded_indices        = vector<int>();
-    weld_vertices(positions, threshold, welded_indices, welded_positions);
-    welded_quads    = vector<vec4i>();
-    for (auto q : quads) {
+    weld_vertices(positions, threshold, welded_indices);
+    for (auto& q : quads) {
         q.x = welded_indices[q.x];
         q.y = welded_indices[q.y];
         q.z = welded_indices[q.z];
         q.w = welded_indices[q.w];
-        welded_quads.push_back(q);
     }
 }
 
@@ -2574,15 +2568,14 @@ make_shape_data make_geodesic_sphere_shape(
 make_shape_data make_cube_facevarying_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
-    auto fvshp = make_shape_data{};
-    weld_quads(qshp.quads,
+    qshp.quads_positions = qshp.quads;
+    qshp.quads_normals = qshp.quads;
+    qshp.quads_texturecoords = qshp.quads;
+    qshp.quads = {};
+    weld_quads(qshp.quads_positions,
         qshp.positions,
-        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}), fvshp.quads_positions, fvshp.positions);
-    fvshp.quads_normals                         = qshp.quads;
-    fvshp.normals                               = qshp.normals;
-    fvshp.quads_texturecoords                   = qshp.quads;
-    fvshp.texturecoords                         = qshp.texturecoords;
-    return fvshp;
+        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
+    return qshp;
 }
 make_shape_data make_cube_multiplematerials_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
@@ -2598,8 +2591,10 @@ make_shape_data make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto qshp  = make_cube_shape(steps, size, uvsize, false);
     auto fvshp = make_shape_data{};
-    weld_quads(qshp.quads, qshp.positions,
-        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}), fvshp.quads, fvshp.positions);
+    fvshp.quads = qshp.quads;
+    fvshp.positions = qshp.positions;
+    weld_quads(fvshp.quads, fvshp.positions,
+        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     return fvshp;
 }
 

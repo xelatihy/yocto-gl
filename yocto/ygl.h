@@ -2479,12 +2479,9 @@ void subdivide_catmullclark(vector<vec4i>& quads,
     vector<T>& vert, int level, bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-void weld_vertices(
-    const vector<vec3f>& positions, float threshold, vector<int>& welded_indices, vector<vec3f>& welded_positions);
-void weld_triangles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold, vector<vec3i>& welded_triangles, vector<vec3f>& welded_positions);
-void weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold, vector<vec4i>& welded_quads, vector<vec3f>& welded_positions);
+void weld_vertices(vector<vec3f>& positions, float threshold, vector<int>& welded_indices);
+void weld_triangles(vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
+void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
 
 // Pick a point in a point set uniformly.
 inline int sample_points_element(int npoints, float re) {
