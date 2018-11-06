@@ -46,25 +46,25 @@ inline const unordered_map<int, string>& animation_type_names() {
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
-    tuple<string, int>& sel, const string& sel_type);
+    pair<string, int>& sel, const string& sel_type);
 
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
-    tuple<string, int>& sel, const string& sel_type);
+    pair<string, int>& sel, const string& sel_type);
 
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_camera& value,
-    tuple<string, int>& sel) {}
+    pair<string, int>& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_texture& value,
-    tuple<string, int>& sel) {}
+    pair<string, int>& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_voltexture& value,
-    tuple<string, int>& sel) {}
+    pair<string, int>& sel) {}
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_material& value,
-    tuple<string, int>& sel) {
+    pair<string, int>& sel) {
     draw_opengl_widgets_scene_tree(win, "emission", scene,
         value.emission_texture, scene.textures, sel, "texture");
     draw_opengl_widgets_scene_tree(win, "diffuse", scene, value.diffuse_texture,
@@ -80,26 +80,26 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_shape& value,
-    tuple<string, int>& sel) {
+    pair<string, int>& sel) {
     draw_opengl_widgets_scene_tree(win, "material", scene, value.material,
         scene.materials, sel, "material");
 }
 
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_instance& value,
-    tuple<string, int>& sel) {
+    pair<string, int>& sel) {
     draw_opengl_widgets_scene_tree(
         win, "shape", scene, value.shape, scene.shapes, sel, "shape");
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_environment& value,
-    tuple<string, int>& sel) {
+    pair<string, int>& sel) {
     draw_opengl_widgets_scene_tree(win, "emission", scene,
         value.emission_texture, scene.textures, sel, "texture");
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_scene_node& value,
-    tuple<string, int>& sel) {
+    pair<string, int>& sel) {
     draw_opengl_widgets_scene_tree(win, "instance", scene, value.instance,
         scene.instances, sel, "instance");
     draw_opengl_widgets_scene_tree(
@@ -116,7 +116,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, const yocto_animation& value,
-    tuple<string, int>& sel) {
+    pair<string, int>& sel) {
     auto tid = 0;
     for (auto tg : value.node_targets) {
         draw_opengl_widgets_scene_tree(win, "target" + to_string(tid++), scene,
@@ -127,11 +127,11 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T>& vals,
-    tuple<string, int>& sel, const string& sel_type) {
+    pair<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
     auto lbl = vals[index].name;
     if (!lbl_.empty()) lbl = lbl_ + ": " + vals[index].name;
-    auto selected = sel == tuple<string, int>{sel_type, index};
+    auto selected = sel == pair<string, int>{sel_type, index};
     if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
         draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
         end_treenode_opengl_widget(win);
@@ -142,11 +142,11 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
 template <typename T>
 inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     const string& lbl_, yocto_scene& scene, int index, const vector<T*>& vals,
-    tuple<string, int>& sel, const string& sel_type) {
+    pair<string, int>& sel, const string& sel_type) {
     if (index < 0) return;
     auto lbl = vals[index]->name;
     if (!lbl_.empty()) lbl = lbl_ + ": " + vals[index]->name;
-    auto selected = sel == tuple<string, int>{sel_type, index};
+    auto selected = sel == pair<string, int>{sel_type, index};
     if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
         draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
         end_treenode_opengl_widget(win);
@@ -155,7 +155,7 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
 }
 
 inline void draw_opengl_widgets_scene_tree(
-    const opengl_window& win, yocto_scene& scene, tuple<string, int>& sel) {
+    const opengl_window& win, yocto_scene& scene, pair<string, int>& sel) {
     if (!scene.cameras.empty() && begin_treenode_opengl_widget(win, "cameras")) {
         for (auto v = 0; v < scene.cameras.size(); v++)
             draw_opengl_widgets_scene_tree(
@@ -386,8 +386,8 @@ inline bool draw_opengl_widgets_scene_inspector(
 }
 
 inline bool draw_opengl_widgets_scene_tree(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, tuple<string, int>& sel,
-    vector<tuple<string, int>>& update_list, int height) {
+    const string& lbl, yocto_scene& scene, pair<string, int>& sel,
+    vector<pair<string, int>>& update_list, int height) {
     draw_opengl_widgets_scene_tree(win, scene, sel);
     auto update_len = update_list.size();
 #if 0
@@ -414,45 +414,45 @@ inline bool draw_opengl_widgets_scene_tree(const opengl_window& win,
 }
 
 inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
-    const string& lbl, yocto_scene& scene, tuple<string, int>& sel,
-    vector<tuple<string, int>>& update_list, int height) {
-    if (get<0>(sel) == "") return false;
+    const string& lbl, yocto_scene& scene, pair<string, int>& sel,
+    vector<pair<string, int>>& update_list, int height) {
+    if (sel.first == "") return false;
     begin_child_opengl_widget(win, "scrolling scene inspector", {0, height});
 
     auto update_len = update_list.size();
 
-    if (get<0>(sel) == "camera")
+    if (sel.first == "camera")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.cameras[get<1>(sel)], scene))
-            update_list.push_back({"camera", get<1>(sel)});
-    if (get<0>(sel) == "shape")
+                win, scene.cameras[sel.second], scene))
+            update_list.push_back({"camera", sel.second});
+    if (sel.first == "shape")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.shapes[get<1>(sel)], scene))
-            update_list.push_back({"shape", get<1>(sel)});
-    if (get<0>(sel) == "texture")
+                win, scene.shapes[sel.second], scene))
+            update_list.push_back({"shape", sel.second});
+    if (sel.first == "texture")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.textures[get<1>(sel)], scene))
-            update_list.push_back({"texture", get<1>(sel)});
-    if (get<0>(sel) == "material")
+                win, scene.textures[sel.second], scene))
+            update_list.push_back({"texture", sel.second});
+    if (sel.first == "material")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.materials[get<1>(sel)], scene))
-            update_list.push_back({"material", get<1>(sel)});
-    if (get<0>(sel) == "environment")
+                win, scene.materials[sel.second], scene))
+            update_list.push_back({"material", sel.second});
+    if (sel.first == "environment")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.environments[get<1>(sel)], scene))
-            update_list.push_back({"environment", get<1>(sel)});
-    if (get<0>(sel) == "instance")
+                win, scene.environments[sel.second], scene))
+            update_list.push_back({"environment", sel.second});
+    if (sel.first == "instance")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.instances[get<1>(sel)], scene))
-            update_list.push_back({"instance", get<1>(sel)});
-    if (get<0>(sel) == "node")
+                win, scene.instances[sel.second], scene))
+            update_list.push_back({"instance", sel.second});
+    if (sel.first == "node")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.nodes[get<1>(sel)], scene))
-            update_list.push_back({"node", get<1>(sel)});
-    if (get<0>(sel) == "animation")
+                win, scene.nodes[sel.second], scene))
+            update_list.push_back({"node", sel.second});
+    if (sel.first == "animation")
         if (draw_opengl_widgets_scene_inspector(
-                win, scene.animations[get<1>(sel)], scene))
-            update_list.push_back({"animation", get<1>(sel)});
+                win, scene.animations[sel.second], scene))
+            update_list.push_back({"animation", sel.second});
 
     end_child_opengl_widget(win);
     return update_list.size() != update_len;

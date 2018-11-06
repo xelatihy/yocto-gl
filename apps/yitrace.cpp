@@ -69,16 +69,16 @@ struct app_state {
     concurrent_queue<image_region> trace_queue    = {};
 
     // view image
-    vec2f                      image_center = zero2f;
-    float                      image_scale  = 1;
-    bool                       zoom_to_fit  = true;
-    bool                       widgets_open = false;
-    tuple<string, int>         selection    = {"", -1};
-    vector<tuple<string, int>> update_list;
-    bool                       navigation_fps  = false;
-    bool                       quiet           = false;
-    int64_t                    trace_start     = 0;
-    opengl_texture             display_texture = {};
+    vec2f                     image_center = zero2f;
+    float                     image_scale  = 1;
+    bool                      zoom_to_fit  = true;
+    bool                      widgets_open = false;
+    pair<string, int>         selection    = {"", -1};
+    vector<pair<string, int>> update_list;
+    bool                      navigation_fps  = false;
+    bool                      quiet           = false;
+    int64_t                   trace_start     = 0;
+    opengl_texture            display_texture = {};
 
     // app status
     bool   load_done = false, load_running = false;
@@ -313,15 +313,15 @@ bool update(app_state& app) {
 
     // update BVH
     for (auto& sel : app.update_list) {
-        if (get<0>(sel) == "shape") {
+        if (sel.first == "shape") {
             refit_shape_bvh(
-                app.scene.shapes[get<1>(sel)], app.bvh.shape_bvhs[get<1>(sel)]);
+                app.scene.shapes[sel.second], app.bvh.shape_bvhs[sel.second]);
             refit_scene_bvh(app.scene, app.bvh);
         }
-        if (get<0>(sel) == "instance") {
+        if (sel.first == "instance") {
             refit_scene_bvh(app.scene, app.bvh);
         }
-        if (get<0>(sel) == "node") {
+        if (sel.first == "node") {
             update_transforms(app.scene, 0);
             refit_scene_bvh(app.scene, app.bvh);
         }
