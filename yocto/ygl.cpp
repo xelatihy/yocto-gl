@@ -352,9 +352,9 @@ void compute_tangent_spaces(const vector<vec3i>& triangles,
         auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
             positions[t.z], texturecoords[t.x], texturecoords[t.y],
             texturecoords[t.z]);
-        tutv      = {normalize(get<0>(tutv)), normalize(get<1>(tutv))};
-        for (auto vid : {t.x, t.y, t.z}) tangu[vid] += get<0>(tutv);
-        for (auto vid : {t.x, t.y, t.z}) tangv[vid] += get<1>(tutv);
+        tutv      = {normalize(tutv.first), normalize(tutv.second)};
+        for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tutv.first;
+        for (auto vid : {t.x, t.y, t.z}) tangv[vid] += tutv.second;
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
@@ -4672,7 +4672,7 @@ vec4f evaluate_shape_element_tangentspace(
                 shape.texturecoords[t.x], shape.texturecoords[t.y],
                 shape.texturecoords[t.z]);
         }
-        auto tx = get<0>(txty), ty = get<1>(txty);
+        auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
         auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
         tangsp = {tx.x, tx.y, tx.z, s};
@@ -6227,9 +6227,9 @@ vec3f sample_instance_direction(const yocto_scene& scene,
         sample = sample_surface_element(surface, elements_cdf, rel, ruv);
     } else {
     }
-    return normalize(evaluate_instance_position(
-                         scene, instance, get<0>(sample), get<1>(sample)) -
-                     p);
+    return normalize(
+        evaluate_instance_position(scene, instance, sample.first, sample.second) -
+        p);
 }
 
 // Sample pdf for a light point.

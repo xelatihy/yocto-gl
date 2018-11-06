@@ -121,14 +121,14 @@ struct app_state {
     drawgl_lights lights = {};
 
     // view image
-    bool                       widgets_open   = false;
-    bool                       navigation_fps = false;
-    tuple<string, int>         selection      = {"", -1};
-    vector<tuple<string, int>> update_list;
-    float                      time       = 0;
-    string                     anim_group = "";
-    vec2f                      time_range = zero2f;
-    bool                       animate    = false;
+    bool                      widgets_open   = false;
+    bool                      navigation_fps = false;
+    pair<string, int>         selection      = {"", -1};
+    vector<pair<string, int>> update_list;
+    float                     time       = 0;
+    string                    anim_group = "";
+    vec2f                     time_range = zero2f;
+    bool                      animate    = false;
 
     // app status
     bool   load_done = false, load_running = false;
@@ -708,7 +708,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     const yocto_camera& camera, const vec2i& viewport_size,
-    const tuple<string, int>& highlighted, bool eyelight, bool wireframe,
+    const pair<string, int>& highlighted, bool eyelight, bool wireframe,
     bool edges, float exposure, float gamma, float near_plane, float far_plane) {
     auto camera_view = frame_to_mat(inverse(camera.frame));
     auto camera_proj = perspective_mat(get_camera_fovy(camera),
@@ -775,7 +775,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         // auto& shape     = scene.shapes[instance.shape];
         // auto& material  = scene.materials[shape.material];
         auto highlight = highlighted ==
-                         tuple<string, int>{"instance", instance_id};
+                         pair<string, int>{"instance", instance_id};
         draw_glinstance(state, scene, instance, highlight, edges);
     }
 
@@ -975,19 +975,19 @@ void update(app_state& app) {
 
     static auto last_time = 0.0f;
     for (auto& sel : app.update_list) {
-        if (get<0>(sel) == "texture") {
+        if (sel.first == "texture") {
             // TODO: update texture
             printf("texture update not supported\n");
         }
-        if (get<0>(sel) == "subdiv") {
+        if (sel.first == "subdiv") {
             // TODO: update subdiv
             printf("subdiv update not supported\n");
         }
-        if (get<0>(sel) == "shape") {
+        if (sel.first == "shape") {
             // TODO: update shape
             printf("shape update not supported\n");
         }
-        if (get<0>(sel) == "node" || get<0>(sel) == "animation" ||
+        if (sel.first == "node" || sel.first == "animation" ||
             app.time != last_time) {
             update_transforms(app.scene, app.time, app.anim_group);
             last_time = app.time;

@@ -318,6 +318,7 @@
 #include <deque>
 #include <functional>
 #include <limits>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -340,7 +341,6 @@ using std::exp2;
 using std::fabs;
 using std::floor;
 using std::fmod;
-using std::get;
 using std::isfinite;
 using std::log;
 using std::pow;
@@ -362,8 +362,6 @@ using std::pair;
 using std::runtime_error;
 using std::string;
 using std::thread;
-using std::tie;
-using std::tuple;
 using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
