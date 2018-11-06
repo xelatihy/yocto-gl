@@ -536,11 +536,12 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
 
 // Parse a flag. Name should start with either "--" or "-".
 inline bool parse_flag_argument(
-    cmdline_parser& parser, const string& name, bool def, const string& usage);
+    cmdline_parser& parser, const string& name, bool& value, const string& usage);
 
 // check if any error occurred and exit appropriately
 inline void check_cmdline(cmdline_parser& parser) {
-    if (parse_flag_argument(parser, "--help,-?", false, "print help")) {
+    auto help = false;
+    if (parse_flag_argument(parser, "--help,-?", help, "print help")) {
         print_cmdline_usage(parser);
         exit(0);
     }
@@ -554,10 +555,10 @@ inline void check_cmdline(cmdline_parser& parser) {
 
 // Parse an option string. Name should start with "--" or "-".
 template <typename T>
-inline T parse_option_argument(cmdline_parser& parser, const string& name, T def,
+inline bool parse_option_argument(cmdline_parser& parser, const string& name, T& value,
     const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_opt += get_option_usage(name, usage, to_string(def), choices);
-    if (parser.error != "") return def;
+    parser.usage_opt += get_option_usage(name, usage, to_string(value), choices);
+    if (parser.error != "") return false;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
     for (auto& name : names) {
@@ -566,86 +567,134 @@ inline T parse_option_argument(cmdline_parser& parser, const string& name, T def
     }
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name;
-        return def;
+        return false;
     }
     if (pos == parser.args.end() - 1) {
         parser.error += "missing value for " + name;
-        return def;
+        return false;
     }
     auto vals = *(pos + 1);
     parser.args.erase(pos, pos + 2);
     if (!choices.empty() &&
         std::find(choices.begin(), choices.end(), vals) == choices.end()) {
         parser.error += "bad value for " + name;
-        return def;
+        return false;
     }
-    auto value = def;
-    if (!parse(vals, value)) {
+    auto new_value = value;
+    if (!parse(vals, new_value)) {
         parser.error += "bad value for " + name;
-        return def;
+        return false;
     }
-    return value;
+    value = new_value;
+    return true;
 }
 
 // Parse an argument string. Name should not start with "--" or "-".
 template <typename T>
-inline T parse_positional_argument(cmdline_parser& parser, const string& name, const T def,
+inline bool parse_positional_argument(cmdline_parser& parser, const string& name, T& value,
     const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_arg += get_option_usage(name, usage, to_string(def), choices);
-    if (parser.error != "") return def;
+    parser.usage_arg += get_option_usage(name, usage, to_string(value), choices);
+    if (parser.error != "") return false;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name;
-        return def;
+        return false;
     }
     auto vals = *pos;
     parser.args.erase(pos);
     if (!choices.empty() &&
         std::find(choices.begin(), choices.end(), vals) == choices.end()) {
         parser.error += "bad value for " + name;
-        return def;
+        return false;
     }
-    auto value = def;
-    if (!parse(vals, value)) {
+    auto new_value = value;
+    if (!parse(vals, new_value)) {
         parser.error += "bad value for " + name;
-        return def;
+        return false;
     }
-    return value;
+    value = new_value;
+    return true;
 }
 
 // Parse all left argument strings. Name should not start with "--" or "-".
 template <typename T>
-inline vector<T> parse_positional_arguments(cmdline_parser& parser, const string& name,
-    const vector<T>& def, const string& usage, bool req) {
+inline bool parse_positional_arguments(cmdline_parser& parser, const string& name,
+    vector<T>& values, const string& usage, bool req) {
     auto defs = string();
-    for (auto& d : def) defs += " " + d;
+    for (auto& d : values) defs += " " + d;
     parser.usage_arg += get_option_usage(name, usage, defs, {});
-    if (parser.error != "") return {};
+    if (parser.error != "") return false;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name;
-        return {};
+        return false;
     }
-    auto value = vector<string>{pos, parser.args.end()};
+    auto vals = vector<string>{pos, parser.args.end()};
     parser.args.erase(pos, parser.args.end());
-    return value;
+    auto new_values = values;
+    new_values.resize(vals.size());
+    for(auto i = 0; i < vals.size(); i++) {
+        if (!parse(vals[i], new_values[i])) {
+            parser.error += "bad value for " + name;
+            return false;
+        }
+    }
+    values = new_values;
+    return true;
 }
 
 // Parse a flag. Name should start with either "--" or "-".
 inline bool parse_flag_argument(
-    cmdline_parser& parser, const string& name, bool def, const string& usage) {
+    cmdline_parser& parser, const string& name, bool& value, const string& usage) {
     parser.usage_opt += get_option_usage(name, usage, "", {});
-    if (parser.error != "") return def;
+    if (parser.error != "") return false;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
     for (auto& name : names)
         pos = std::min(
             pos, std::find(parser.args.begin(), parser.args.end(), name));
-    if (pos == parser.args.end()) return def;
+    if (pos == parser.args.end()) return false;
     parser.args.erase(pos);
-    return !def;
+    value = !value;
+    return true;
+}
+
+// Parse an integer, float, string. If name starts with "--" or "-", then it is
+// an option, otherwise it is a position argument.
+template <typename T>
+inline bool parse_argument(cmdline_parser& parser, const string& name, T& value,
+    const string& usage, bool req) {
+    return is_option(name) ? parse_option_argument(parser, name, value, usage, req, {}) :
+                             parse_positional_argument(parser, name, value, usage, req, {});
+}
+template <>
+inline bool parse_argument<bool>(cmdline_parser& parser, const string& name,
+    bool& value, const string& usage, bool req) {
+    return parse_flag_argument(parser, name, value, usage);
+}
+
+template <typename T>
+inline bool parse_argument(cmdline_parser& parser, const string& name, T& value,
+    const string& usage, const vector<string>& labels, bool req) {
+    auto values = labels.at((int)value);
+    auto parsed = is_option(name) ? parse_option_argument(parser, name,
+                                       values, usage, req, labels) :
+                                   parse_positional_argument(parser, name,
+                                       values, usage, req, labels);
+    if(!parsed) return false;
+    auto pos = std::find(labels.begin(), labels.end(), values);
+    if(pos == labels.end()) return false;
+    value = (T)(pos - labels.begin());
+    return true;
+}
+
+// Parser an argument
+template <typename T>
+inline bool parse_arguments(cmdline_parser& parser, const string& name,
+    vector<T>& values, const string& usage, bool req) {
+    return parse_positional_arguments(parser, name, values, usage, req);
 }
 
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
@@ -653,30 +702,33 @@ inline bool parse_flag_argument(
 template <typename T>
 inline T parse_arg(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
-    return is_option(name) ? parse_option_argument(parser, name, def, usage, req, {}) :
-                             parse_positional_argument(parser, name, def, usage, req, {});
+    auto value = def;
+    if(!parse_argument(parser, name, value, usage, req)) return def;
+    return value;
 }
 template <>
 inline bool parse_arg<bool>(cmdline_parser& parser, const string& name,
     bool def, const string& usage, bool req) {
-    return parse_flag_argument(parser, name, def, usage);
+    auto value = def;
+    if(!parse_flag_argument(parser, name,  value, usage)) return def;
+    return value;
 }
 
 template <typename T>
 inline T parse_arge(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req) {
-    auto value = is_option(name) ? parse_option_argument(parser, name,
-                                       labels.at((int)def), usage, req, labels) :
-                                   parse_positional_argument(parser, name,
-                                       labels.at((int)def), usage, req, labels);
-    return (T)(std::find(labels.begin(), labels.end(), value) - labels.begin());
+    auto value = def;
+    if(!parse_argument(parser, name, value, usage, labels, req)) return def;
+    return value;
 }
 
 // Parser an argument
 template <typename T>
 inline vector<T> parse_args(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req) {
-    return parse_positional_arguments(parser, name, def, usage, req);
+    auto values = vector<T>{};
+    if(!parse_positional_arguments(parser, name, values, usage, req)) return def;
+    return values;
 }
 
 // Override to avoid issues with const char
