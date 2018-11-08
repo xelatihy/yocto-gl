@@ -1470,26 +1470,8 @@ struct bvh_prim {
     int    primid = 0;
 };
 
-// Initializes the BVH node node that contains the primitives sorted_prims
-// from start to end, by either splitting it into two other nodes,
-// or initializing it as a leaf. When splitting, the heuristic heuristic is
-// used and nodes added sequentially in the preallocated nodes array and
-// the number of nodes nnodes is updated.
-void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i>& queue, bool high_quality) {
-    // grab node to work on
-    auto next = queue.front();
-    queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
-
-    // grab node
-    auto& node = nodes[nodeid];
-
-    // compute bounds
-    node.bbox = invalid_bbox3f;
-    for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
-
-    // split into two children
-    if (end - start > bvh_max_prims) {
+// Splits a BVH node.
+pair<int, int> split_bvh_node(vector<bvh_prim>& prims, int start, int end, bool high_quality) {
         // initialize split axis and position
         auto split_axis = 0;
         auto mid        = (start + end) / 2;
@@ -1590,6 +1572,33 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i
                 mid        = (start + end) / 2;
             }
         }
+
+        return {mid, split_axis};
+}
+
+// Initializes the BVH node node that contains the primitives sorted_prims
+// from start to end, by either splitting it into two other nodes,
+// or initializing it as a leaf. When splitting, the heuristic heuristic is
+// used and nodes added sequentially in the preallocated nodes array and
+// the number of nodes nnodes is updated.
+void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i>& queue, bool high_quality) {
+    // grab node to work on
+    auto next = queue.front();
+    queue.pop_front();
+    auto nodeid = next.x, start = next.y, end = next.z;
+
+    // grab node
+    auto& node = nodes[nodeid];
+
+    // compute bounds
+    node.bbox = invalid_bbox3f;
+    for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
+
+    // split into two children
+    if (end - start > bvh_max_prims) {
+        // get split
+        auto split = split_bvh_node(prims, start, end, high_quality);
+        auto mid = split.first, split_axis = split.second;
 
         // make an internal node
         node.is_internal      = true;
