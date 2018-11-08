@@ -2408,13 +2408,16 @@ void compute_matrix_skinning(const vector<vec3f>& positions,
     vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
 
 // Dictionary to store edge information.
-using edge_map = unordered_map<vec2i, vec2i>;
+// key: edge, value: (edge index, adjacent face, other adjacent face)
+using edge_map = unordered_map<vec2i, vec3i>;
 
+// Create key entry for edge_map
+vec2i make_edge(const vec2i& e);
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
 void insert_edges(edge_map& emap, const vector<vec4i>& quads);
 // Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& edge);
+int insert_edge(edge_map& emap, const vec2i& edge, int face);
 // Get the edge index / insertion count
 int get_edge_index(const edge_map& emap, const vec2i& edge);
 int get_edge_count(const edge_map& emap, const vec2i& edge);
