@@ -59,7 +59,7 @@ struct app_state {
 
     // rendering state
     trace_lights                   lights         = {};
-    image<trace_pixel>               trace_pixels     = {};
+    image<trace_pixel>             trace_pixels   = {};
     image<vec4f>                   rendered_image = {};
     image<vec4f>                   display_image  = {};
     image<vec4f>                   preview_image  = {};
@@ -227,10 +227,11 @@ void draw_opengl_widgets(const opengl_window& win) {
             draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
             continue_opengl_widget_line(win);
             if (draw_button_opengl_widget(win, "print cams")) {
-                for(auto& camera : app.scene.cameras) {
+                for (auto& camera : app.scene.cameras) {
                     print("c {} {} {} {} {} {} {}\n", camera.name,
-                        (int)camera.orthographic, camera.film_size, camera.focal_length,
-                        camera.focus_distance, camera.lens_aperture, camera.frame);
+                        (int)camera.orthographic, camera.film_size,
+                        camera.focal_length, camera.focus_distance,
+                        camera.lens_aperture, camera.frame);
                 }
             }
             auto mouse_pos = get_opengl_mouse_pos(win);
