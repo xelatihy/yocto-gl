@@ -410,9 +410,7 @@ void compute_matrix_skinning(const vector<vec3f>& positions,
 }
 
 // Create key entry for edge_map
-vec2i make_edge(const vec2i& e) {
-    return e.x < e.y? e : vec2i{e.y, e.x};
-}
+vec2i make_edge(const vec2i& e) { return e.x < e.y ? e : vec2i{e.y, e.x}; }
 
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
@@ -453,7 +451,7 @@ int get_edge_index(const edge_map& emap, const vec2i& e) {
 // Get the edge count
 int get_edge_count(const edge_map& emap, const vec2i& e) {
     auto es = make_edge(e);
-    return emap.at(es).z == -1? 1 : 2;
+    return emap.at(es).z == -1 ? 1 : 2;
 }
 // Get a list of edges, boundary edges, boundary vertices
 void get_edges(const edge_map& emap, vector<vec2i>& edges) {
@@ -1472,150 +1470,143 @@ struct bvh_prim {
 
 // Splits a BVH node using the SAH heuristic. Returns split position and axis.
 pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
-        // initialize split axis and position
-        auto split_axis = 0;
-        auto mid        = (start + end) / 2;
+    // initialize split axis and position
+    auto split_axis = 0;
+    auto mid        = (start + end) / 2;
 
-        // compute primintive bounds and size
-        auto cbbox = invalid_bbox3f;
-        for (auto i = start; i < end; i++) cbbox += prims[i].center;
-        auto csize = cbbox.max - cbbox.min;
-        if (csize == zero3f) return {mid, split_axis};
+    // compute primintive bounds and size
+    auto cbbox = invalid_bbox3f;
+    for (auto i = start; i < end; i++) cbbox += prims[i].center;
+    auto csize = cbbox.max - cbbox.min;
+    if (csize == zero3f) return {mid, split_axis};
 
-                // consider N bins, compute their cost and keep the minimum
-                const int nbins     = 16;
-                auto      middle    = 0.0f;
-                auto      min_cost  = maxf;
-                auto      bbox_area = [](auto& b) {
-                    auto size = b.max - b.min;
-                    return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
-                           2 * size.y * size.z;
-                };
-                auto min_left = 0, min_right = 0;
-                for (auto axis = 0; axis < 3; axis++) {
-                    for (auto b = 1; b < nbins; b++) {
-                        auto split = (&cbbox.min.x)[axis] +
-                                     b * (&csize.x)[axis] / nbins;
-                        auto left_bbox   = invalid_bbox3f,
-                             right_bbox  = invalid_bbox3f;
-                        auto left_nprims = 0, right_nprims = 0;
-                        for (auto i = start; i < end; i++) {
-                            if ((&prims[i].center.x)[axis] < split) {
-                                left_bbox += prims[i].bbox;
-                                left_nprims += 1;
-                            } else {
-                                right_bbox += prims[i].bbox;
-                                right_nprims += 1;
-                            }
-                        }
-                        auto cost = 1 +
-                                    left_nprims * bbox_area(left_bbox) /
-                                        bbox_area(cbbox) +
-                                    right_nprims * bbox_area(right_bbox) /
-                                        bbox_area(cbbox);
-                        if (cost < min_cost) {
-                            min_cost   = cost;
-                            middle     = split;
-                            split_axis = axis;
-                            min_left   = left_nprims;
-                            min_right  = right_nprims;
-                        }
-                    }
+    // consider N bins, compute their cost and keep the minimum
+    const int nbins     = 16;
+    auto      middle    = 0.0f;
+    auto      min_cost  = maxf;
+    auto      bbox_area = [](auto& b) {
+        auto size = b.max - b.min;
+        return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
+               2 * size.y * size.z;
+    };
+    auto min_left = 0, min_right = 0;
+    for (auto axis = 0; axis < 3; axis++) {
+        for (auto b = 1; b < nbins; b++) {
+            auto split = (&cbbox.min.x)[axis] + b * (&csize.x)[axis] / nbins;
+            auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
+            auto left_nprims = 0, right_nprims = 0;
+            for (auto i = start; i < end; i++) {
+                if ((&prims[i].center.x)[axis] < split) {
+                    left_bbox += prims[i].bbox;
+                    left_nprims += 1;
+                } else {
+                    right_bbox += prims[i].bbox;
+                    right_nprims += 1;
                 }
-                // split
-                mid = (int)(std::partition(prims.data() + start,
-                                prims.data() + end,
-                                [split_axis, middle](auto& a) {
-                                    return (&a.center.x)[split_axis] < middle;
-                                }) -
-                            prims.data());
-
-            // if we were not able to split, just break the primitives in half
-            if (mid == start || mid == end) {
-                log_error("bad bvh split");
-                split_axis = 0;
-                mid        = (start + end) / 2;
             }
+            auto cost = 1 +
+                        left_nprims * bbox_area(left_bbox) / bbox_area(cbbox) +
+                        right_nprims * bbox_area(right_bbox) / bbox_area(cbbox);
+            if (cost < min_cost) {
+                min_cost   = cost;
+                middle     = split;
+                split_axis = axis;
+                min_left   = left_nprims;
+                min_right  = right_nprims;
+            }
+        }
+    }
+    // split
+    mid = (int)(std::partition(prims.data() + start, prims.data() + end,
+                    [split_axis, middle](auto& a) {
+                        return (&a.center.x)[split_axis] < middle;
+                    }) -
+                prims.data());
 
-        return {mid, split_axis };
+    // if we were not able to split, just break the primitives in half
+    if (mid == start || mid == end) {
+        log_error("bad bvh split");
+        split_axis = 0;
+        mid        = (start + end) / 2;
+    }
+
+    return {mid, split_axis};
 }
 
 // Splits a BVH node using the balance heuristic. Returns split position and axis.
-pair<int, int> split_bvh_node_balanced(vector<bvh_prim>& prims, int start, int end) {
-        // initialize split axis and position
-        auto split_axis = 0;
-        auto mid        = (start + end) / 2;
+pair<int, int> split_bvh_node_balanced(
+    vector<bvh_prim>& prims, int start, int end) {
+    // initialize split axis and position
+    auto split_axis = 0;
+    auto mid        = (start + end) / 2;
 
-        // compute primintive bounds and size
-        auto cbbox = invalid_bbox3f;
-        for (auto i = start; i < end; i++) cbbox += prims[i].center;
-        auto csize = cbbox.max - cbbox.min;
-        if (csize == zero3f) return {mid, split_axis};
+    // compute primintive bounds and size
+    auto cbbox = invalid_bbox3f;
+    for (auto i = start; i < end; i++) cbbox += prims[i].center;
+    auto csize = cbbox.max - cbbox.min;
+    if (csize == zero3f) return {mid, split_axis};
 
-                // split along largest
-                auto largest_axis = 0;
-                if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
-                if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
-                if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+    // split along largest
+    auto largest_axis = 0;
+    if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
+    if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
+    if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
 
-                    // balanced tree split: find the largest axis of the
-                    // bounding box and split along this one right in the middle
-                split_axis = largest_axis;
-                mid        = (start + end) / 2;
-                std::nth_element(prims.data() + start, prims.data() + mid,
-                    prims.data() + end, [split_axis](auto& a, auto& b) {
-                        return (&a.center.x)[split_axis] <
-                               (&b.center.x)[split_axis];
-                    });
-            
+    // balanced tree split: find the largest axis of the
+    // bounding box and split along this one right in the middle
+    split_axis = largest_axis;
+    mid        = (start + end) / 2;
+    std::nth_element(prims.data() + start, prims.data() + mid,
+        prims.data() + end, [split_axis](auto& a, auto& b) {
+            return (&a.center.x)[split_axis] < (&b.center.x)[split_axis];
+        });
 
-            // if we were not able to split, just break the primitives in half
-            if (mid == start || mid == end) {
-                log_error("bad bvh split");
-                split_axis = 0;
-                mid        = (start + end) / 2;
-            }
+    // if we were not able to split, just break the primitives in half
+    if (mid == start || mid == end) {
+        log_error("bad bvh split");
+        split_axis = 0;
+        mid        = (start + end) / 2;
+    }
 
-        return {mid, split_axis };
+    return {mid, split_axis};
 }
 
 // Splits a BVH node using the middle heutirtic. Returns split position and axis.
 pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end) {
-        // initialize split axis and position
-        auto split_axis = 0;
-        auto mid        = (start + end) / 2;
+    // initialize split axis and position
+    auto split_axis = 0;
+    auto mid        = (start + end) / 2;
 
-        // compute primintive bounds and size
-        auto cbbox = invalid_bbox3f;
-        for (auto i = start; i < end; i++) cbbox += prims[i].center;
-        auto csize = cbbox.max - cbbox.min;
-        if (csize == zero3f) return {mid, split_axis};
+    // compute primintive bounds and size
+    auto cbbox = invalid_bbox3f;
+    for (auto i = start; i < end; i++) cbbox += prims[i].center;
+    auto csize = cbbox.max - cbbox.min;
+    if (csize == zero3f) return {mid, split_axis};
 
-                // split along largest
-                auto largest_axis = 0;
-                if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
-                if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
-                if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+    // split along largest
+    auto largest_axis = 0;
+    if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
+    if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
+    if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
 
-                // split the space in the middle along the largest axis
-                split_axis = largest_axis;
-                auto cmiddle = (cbbox.max + cbbox.min) / 2;
-                auto middle = (&cmiddle.x)[largest_axis];
-                mid = (int)(std::partition(prims.data() + start,
-                                prims.data() + end,
-                                [split_axis, middle](auto& a) {
-                                    return (&a.center.x)[split_axis] < middle;
-                                }) -
-                            prims.data());
+    // split the space in the middle along the largest axis
+    split_axis   = largest_axis;
+    auto cmiddle = (cbbox.max + cbbox.min) / 2;
+    auto middle  = (&cmiddle.x)[largest_axis];
+    mid = (int)(std::partition(prims.data() + start, prims.data() + end,
+                    [split_axis, middle](auto& a) {
+                        return (&a.center.x)[split_axis] < middle;
+                    }) -
+                prims.data());
 
-            // if we were not able to split, just break the primitives in half
-            if (mid == start || mid == end) {
-                log_error("bad bvh split");
-                split_axis = 0;
-                mid        = (start + end) / 2;
-            }
+    // if we were not able to split, just break the primitives in half
+    if (mid == start || mid == end) {
+        log_error("bad bvh split");
+        split_axis = 0;
+        mid        = (start + end) / 2;
+    }
 
-        return {mid, split_axis };
+    return {mid, split_axis};
 }
 
 // Initializes the BVH node node that contains the primitives sorted_prims
@@ -1623,7 +1614,8 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i>& queue, bool high_quality) {
+void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+    deque<vec3i>& queue, bool high_quality) {
     // grab node to work on
     auto next = queue.front();
     queue.pop_front();
@@ -1639,7 +1631,8 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i
     // split into two children
     if (end - start > bvh_max_prims) {
         // get split
-        auto split = (high_quality) ? split_bvh_node_sah(prims, start, end) : split_bvh_node_balanced(prims, start, end);
+        auto split = (high_quality) ? split_bvh_node_sah(prims, start, end) :
+                                      split_bvh_node_balanced(prims, start, end);
         auto mid = split.first, split_axis = split.second;
 
         // make an internal node
@@ -1662,17 +1655,18 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i
 }
 
 // Build BVH nodes
-void build_bvh_nodes(vector<bvh_node>& nodes, vector<bvh_prim>& prims, bool high_quality) {
+void build_bvh_nodes(
+    vector<bvh_node>& nodes, vector<bvh_prim>& prims, bool high_quality) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
 
     // queue up first node
-    auto queue = deque<vec3i>{{0,0,(int)prims.size()}};
+    auto queue = deque<vec3i>{{0, 0, (int)prims.size()}};
     nodes.emplace_back();
 
     // create nodes until the queue is empty
-    while(!queue.empty()) {
+    while (!queue.empty()) {
         make_bvh_node(nodes, prims, queue, high_quality);
     }
 
@@ -6314,11 +6308,11 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
                              lights.shape_elements_cdf[instance.shape] :
                              lights.surface_elements_cdf[instance.surface];
     // check all intersection
-    auto pdf  = 0.0f;
-    auto ray  = make_ray(position, direction);
-    for(auto bounce = 0; bounce < 10; bounce ++) {
+    auto pdf = 0.0f;
+    auto ray = make_ray(position, direction);
+    for (auto bounce = 0; bounce < 10; bounce++) {
         auto isec = intersect_scene(scene, instance_id, bvh, ray);
-        if(isec.instance_id < 0) break;
+        if (isec.instance_id < 0) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance_id];
         auto  light_position = evaluate_instance_position(
@@ -6865,9 +6859,9 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_path_naive(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_path_naive(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -6913,9 +6907,9 @@ pair<vec3f, bool> trace_path_naive(const yocto_scene& scene, const bvh_scene& bv
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7021,7 +7015,8 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
         auto incoming_radiance = trace_direct(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1).first;
+            point.position, next_direction, rng, max_bounces - 1)
+                                     .first;
         radiance += brdf_cosine * incoming_radiance / next_pdf;
     }
 
@@ -7030,9 +7025,9 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Direct illumination.
-pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7089,7 +7084,8 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene, const bvh_scene& 
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
         auto incoming_radiance = trace_direct_nomis(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1).first;
+            point.position, next_direction, rng, max_bounces - 1)
+                                     .first;
         radiance += brdf_cosine * incoming_radiance * next_pdf;
     }
 
@@ -7098,9 +7094,9 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene, const bvh_scene& 
 }
 
 // Environment illumination only with no shadows.
-pair<vec3f, bool> trace_environment(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_environment(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7153,9 +7149,9 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7166,9 +7162,9 @@ pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene, const bvh_scene& 
 }
 
 // Debug frontfacing.
-pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7182,9 +7178,9 @@ pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene, const bvh_sc
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7197,9 +7193,9 @@ pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene, const bvh_scene& 
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7210,36 +7206,36 @@ pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene, const bvh_scene&
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) return {zero3f, false};
 
     // shade
-    return {
-        point.brdf.specular, true};
+    return {point.brdf.specular, true};
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_roughness(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_debug_roughness(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) return {zero3f, false};
 
     // shade
-    return {{point.brdf.roughness, point.brdf.roughness, point.brdf.roughness}, true};
+    return {{point.brdf.roughness, point.brdf.roughness, point.brdf.roughness},
+        true};
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -7285,27 +7281,27 @@ void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
             auto& pixel = at(pixels, {i, j});
             for (auto s = 0; s < num_samples; s++) {
                 _trace_npaths += 1;
-                auto  ray = sample_camera_ray(
+                auto ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size, pixel.rng);
                 auto radiance_hit = sampler(
                     scene, bvh, lights, ray.o, ray.d, pixel.rng, max_bounces);
                 auto radiance = radiance_hit.first;
-                auto hit = radiance_hit.second;
+                auto hit      = radiance_hit.second;
                 if (!isfinite(radiance.x) || !isfinite(radiance.y) ||
                     !isfinite(radiance.z)) {
                     log_error("NaN detected");
                     radiance = zero3f;
                 }
                 if (max(radiance) > pixel_clamp)
-                    radiance = radiance *
-                                        (pixel_clamp / max(radiance));
+                    radiance = radiance * (pixel_clamp / max(radiance));
                 pixel.radiance += radiance;
                 pixel.hits += hit ? 1 : 0;
                 pixel.samples += 1;
             }
             auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
             auto coverage = (float)pixel.hits / (float)pixel.samples;
-            at(rendered_image, {i, j}) = {radiance.x, radiance.y, radiance.z, coverage};
+            at(rendered_image, {i, j}) = {
+                radiance.x, radiance.y, radiance.z, coverage};
         }
     }
 }
@@ -7318,8 +7314,7 @@ void init_trace_pixels(
     for (auto j = 0; j < pixels.size.y; j++) {
         for (auto i = 0; i < pixels.size.x; i++) {
             auto& pixel = at(pixels, {i, j});
-            pixel.rng = make_rng(
-                seed, get_random_int(rng, 1 << 31) / 2 + 1);
+            pixel.rng   = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
 }
@@ -7373,8 +7368,8 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& sampler,
     int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
-    auto scope = log_trace_scoped("tracing image");
-    auto pixels  = image<trace_pixel>{};
+    auto scope  = log_trace_scoped("tracing image");
+    auto pixels = image<trace_pixel>{};
     init_trace_pixels(pixels, rendered_image.size);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
@@ -7382,7 +7377,8 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
     if (no_parallel) {
         for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, 0, num_samples, max_bounces, pixels, pixel_clamp);
+                sampler, region, 0, num_samples, max_bounces, pixels,
+                pixel_clamp);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -7415,8 +7411,8 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     if (no_parallel) {
         for (auto& region : regions) {
             trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, current_sample, num_samples, max_bounces, pixels,
-                pixel_clamp);
+                sampler, region, current_sample, num_samples, max_bounces,
+                pixels, pixel_clamp);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
