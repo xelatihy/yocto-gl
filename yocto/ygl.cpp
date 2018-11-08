@@ -1475,12 +1475,14 @@ struct bvh_prim {
 // or initializing it as a leaf. When splitting, the heuristic heuristic is
 // used and nodes added sequentially in the preallocated nodes array and
 // the number of nodes nnodes is updated.
-int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
-    int end, bool high_quality) {
-    // add a new node
-    auto nodeid = (int)nodes.size();
-    nodes.push_back({});
-    auto& node = nodes.back();
+void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i>& queue, bool high_quality) {
+    // grab node to work on
+    auto next = queue.front();
+    queue.pop_front();
+    auto nodeid = next.x, start = next.y, end = next.z;
+
+    // grab node
+    auto& node = nodes[nodeid];
 
     // compute bounds
     node.bbox = invalid_bbox3f;
@@ -1593,10 +1595,12 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
         node.is_internal      = true;
         node.split_axis       = split_axis;
         node.num_primitives   = 2;
-        node.primitive_ids[0] = make_bvh_node(
-            nodes, prims, start, mid, high_quality);
-        node.primitive_ids[1] = make_bvh_node(
-            nodes, prims, mid, end, high_quality);
+        node.primitive_ids[0] = (int)nodes.size() + 0;
+        node.primitive_ids[1] = (int)nodes.size() + 1;
+        nodes.emplace_back();
+        nodes.emplace_back();
+        queue.push_back({node.primitive_ids[0], start, mid});
+        queue.push_back({node.primitive_ids[1], mid, end});
     } else {
         // Make a leaf node
         node.is_internal    = false;
@@ -1604,9 +1608,25 @@ int make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, int start,
         for (auto i = 0; i < node.num_primitives; i++)
             node.primitive_ids[i] = prims[start + i].primid;
     }
+}
 
-    // return nodeid
-    return nodeid;
+// Build BVH nodes
+void build_bvh_nodes(vector<bvh_node>& nodes, vector<bvh_prim>& prims, bool high_quality) {
+    // prepare to build nodes
+    nodes.clear();
+    nodes.reserve(prims.size() * 2);
+
+    // queue up first node
+    auto queue = deque<vec3i>{{0,0,(int)prims.size()}};
+    nodes.emplace_back();
+
+    // create nodes until the queue is empty
+    while(!queue.empty()) {
+        make_bvh_node(nodes, prims, queue, high_quality);
+    }
+
+    // cleanup
+    nodes.shrink_to_fit();
 }
 
 // Build a BVH from a set of primitives.
@@ -1641,10 +1661,7 @@ void build_shape_bvh(bvh_shape& bvh, bool high_quality) {
     }
 
     // build nodes
-    bvh.nodes.clear();
-    bvh.nodes.reserve(prims.size() * 2);
-    make_bvh_node(bvh.nodes, prims, 0, (int)prims.size(), high_quality);
-    bvh.nodes.shrink_to_fit();
+    build_bvh_nodes(bvh.nodes, prims, high_quality);
 }
 
 // Build a BVH from a set of primitives.
@@ -1674,10 +1691,7 @@ void build_scene_bvh(bvh_scene& bvh, bool high_quality) {
     }
 
     // build nodes
-    bvh.nodes.clear();
-    bvh.nodes.reserve(prims.size() * 2);
-    make_bvh_node(bvh.nodes, prims, 0, (int)prims.size(), high_quality);
-    bvh.nodes.shrink_to_fit();
+    build_bvh_nodes(bvh.nodes, prims, high_quality);
 }
 
 // Recursively recomputes the node bounds for a shape bvh

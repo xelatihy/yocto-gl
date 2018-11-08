@@ -2684,10 +2684,10 @@ const int bvh_max_prims = 4;
 // nodes. See bvh_scene for more details.
 struct bvh_node {
     bbox3f   bbox;
-    uint16_t num_primitives;
+    short num_primitives;
     bool     is_internal;
-    uint8_t  split_axis;
-    uint32_t primitive_ids[bvh_max_prims];
+    byte  split_axis;
+    int primitive_ids[bvh_max_prims];
 };
 
 // BVH for shapes made of points, lines, triangles or quads. Only one primitive
