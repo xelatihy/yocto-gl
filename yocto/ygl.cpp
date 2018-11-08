@@ -1470,8 +1470,8 @@ struct bvh_prim {
     int    primid = 0;
 };
 
-// Splits a BVH node.
-pair<int, int> split_bvh_node(vector<bvh_prim>& prims, int start, int end, bool high_quality) {
+// Splits a BVH node using the SAH heuristic. Returns split position and axis.
+pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
         // initialize split axis and position
         auto split_axis = 0;
         auto mid        = (start + end) / 2;
@@ -1480,11 +1480,8 @@ pair<int, int> split_bvh_node(vector<bvh_prim>& prims, int start, int end, bool 
         auto cbbox = invalid_bbox3f;
         for (auto i = start; i < end; i++) cbbox += prims[i].center;
         auto csize = cbbox.max - cbbox.min;
+        if (csize == zero3f) return {mid, split_axis};
 
-        // choose the split axis and position
-        if (csize != zero3f) {
-            // check heuristic
-            if (high_quality) {
                 // consider N bins, compute their cost and keep the minimum
                 const int nbins     = 16;
                 auto      middle    = 0.0f;
@@ -1532,18 +1529,37 @@ pair<int, int> split_bvh_node(vector<bvh_prim>& prims, int start, int end, bool 
                                     return (&a.center.x)[split_axis] < middle;
                                 }) -
                             prims.data());
-                if (mid == start || mid == end) {
-                    log_error("bad BVH build");
-                }
-            } else {
+
+            // if we were not able to split, just break the primitives in half
+            if (mid == start || mid == end) {
+                log_error("bad bvh split");
+                split_axis = 0;
+                mid        = (start + end) / 2;
+            }
+
+        return {mid, split_axis };
+}
+
+// Splits a BVH node using the balance heuristic. Returns split position and axis.
+pair<int, int> split_bvh_node_balanced(vector<bvh_prim>& prims, int start, int end) {
+        // initialize split axis and position
+        auto split_axis = 0;
+        auto mid        = (start + end) / 2;
+
+        // compute primintive bounds and size
+        auto cbbox = invalid_bbox3f;
+        for (auto i = start; i < end; i++) cbbox += prims[i].center;
+        auto csize = cbbox.max - cbbox.min;
+        if (csize == zero3f) return {mid, split_axis};
+
                 // split along largest
                 auto largest_axis = 0;
                 if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
                 if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
                 if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+
                     // balanced tree split: find the largest axis of the
                     // bounding box and split along this one right in the middle
-#if 1
                 split_axis = largest_axis;
                 mid        = (start + end) / 2;
                 std::nth_element(prims.data() + start, prims.data() + mid,
@@ -1551,29 +1567,55 @@ pair<int, int> split_bvh_node(vector<bvh_prim>& prims, int start, int end, bool 
                         return (&a.center.x)[split_axis] <
                                (&b.center.x)[split_axis];
                     });
-#endif
-#if 0
+            
+
+            // if we were not able to split, just break the primitives in half
+            if (mid == start || mid == end) {
+                log_error("bad bvh split");
+                split_axis = 0;
+                mid        = (start + end) / 2;
+            }
+
+        return {mid, split_axis };
+}
+
+// Splits a BVH node using the middle heutirtic. Returns split position and axis.
+pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end) {
+        // initialize split axis and position
+        auto split_axis = 0;
+        auto mid        = (start + end) / 2;
+
+        // compute primintive bounds and size
+        auto cbbox = invalid_bbox3f;
+        for (auto i = start; i < end; i++) cbbox += prims[i].center;
+        auto csize = cbbox.max - cbbox.min;
+        if (csize == zero3f) return {mid, split_axis};
+
+                // split along largest
+                auto largest_axis = 0;
+                if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
+                if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
+                if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+
                 // split the space in the middle along the largest axis
                 split_axis = largest_axis;
-                auto csize = (cbbox.max + cbbox.min) / 2;
-                auto middle = (&csize.x)[largest_axis];
+                auto cmiddle = (cbbox.max + cbbox.min) / 2;
+                auto middle = (&cmiddle.x)[largest_axis];
                 mid = (int)(std::partition(prims.data() + start,
                                 prims.data() + end,
                                 [split_axis, middle](auto& a) {
                                     return (&a.center.x)[split_axis] < middle;
                                 }) -
                             prims.data());
-#endif
-            }
 
             // if we were not able to split, just break the primitives in half
             if (mid == start || mid == end) {
+                log_error("bad bvh split");
                 split_axis = 0;
                 mid        = (start + end) / 2;
             }
-        }
 
-        return {mid, split_axis};
+        return {mid, split_axis };
 }
 
 // Initializes the BVH node node that contains the primitives sorted_prims
@@ -1597,7 +1639,7 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims, deque<vec3i
     // split into two children
     if (end - start > bvh_max_prims) {
         // get split
-        auto split = split_bvh_node(prims, start, end, high_quality);
+        auto split = (high_quality) ? split_bvh_node_sah(prims, start, end) : split_bvh_node_balanced(prims, start, end);
         auto mid = split.first, split_axis = split.second;
 
         // make an internal node
