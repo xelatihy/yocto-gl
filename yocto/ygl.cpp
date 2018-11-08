@@ -1667,42 +1667,43 @@ void build_bvh_nodes(
 
     // create nodes until the queue is empty
     while (!queue.empty()) {
-    // grab node to work on
-    auto next = queue.front();
-    queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
+        // grab node to work on
+        auto next = queue.front();
+        queue.pop_front();
+        auto nodeid = next.x, start = next.y, end = next.z;
 
-    // grab node
-    auto& node = nodes[nodeid];
+        // grab node
+        auto& node = nodes[nodeid];
 
-    // compute bounds
-    node.bbox = invalid_bbox3f;
-    for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
+        // compute bounds
+        node.bbox = invalid_bbox3f;
+        for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
 
-    // split into two children
-    if (end - start > bvh_max_prims) {
-        // get split
-        auto split = (high_quality) ? split_bvh_node_sah(prims, start, end) :
-                                      split_bvh_node_balanced(prims, start, end);
-        auto mid = split.first, split_axis = split.second;
+        // split into two children
+        if (end - start > bvh_max_prims) {
+            // get split
+            auto split = (high_quality) ?
+                             split_bvh_node_sah(prims, start, end) :
+                             split_bvh_node_balanced(prims, start, end);
+            auto mid = split.first, split_axis = split.second;
 
-        // make an internal node
-        node.is_internal      = true;
-        node.split_axis       = split_axis;
-        node.num_primitives   = 2;
-        node.primitive_ids[0] = (int)nodes.size() + 0;
-        node.primitive_ids[1] = (int)nodes.size() + 1;
-        nodes.emplace_back();
-        nodes.emplace_back();
-        queue.push_back({node.primitive_ids[0], start, mid});
-        queue.push_back({node.primitive_ids[1], mid, end});
-    } else {
-        // Make a leaf node
-        node.is_internal    = false;
-        node.num_primitives = end - start;
-        for (auto i = 0; i < node.num_primitives; i++)
-            node.primitive_ids[i] = prims[start + i].primid;
-    }
+            // make an internal node
+            node.is_internal      = true;
+            node.split_axis       = split_axis;
+            node.num_primitives   = 2;
+            node.primitive_ids[0] = (int)nodes.size() + 0;
+            node.primitive_ids[1] = (int)nodes.size() + 1;
+            nodes.emplace_back();
+            nodes.emplace_back();
+            queue.push_back({node.primitive_ids[0], start, mid});
+            queue.push_back({node.primitive_ids[1], mid, end});
+        } else {
+            // Make a leaf node
+            node.is_internal    = false;
+            node.num_primitives = end - start;
+            for (auto i = 0; i < node.num_primitives; i++)
+                node.primitive_ids[i] = prims[start + i].primid;
+        }
     }
 
     // cleanup
