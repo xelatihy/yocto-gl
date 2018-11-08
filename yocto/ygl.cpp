@@ -409,44 +409,51 @@ void compute_matrix_skinning(const vector<vec3f>& positions,
     }
 }
 
+// Create key entry for edge_map
+vec2i make_edge(const vec2i& e) {
+    return e.x < e.y? e : vec2i{e.y, e.x};
+}
+
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
-    for (auto& t : triangles) {
-        insert_edge(emap, {t.x, t.y});
-        insert_edge(emap, {t.y, t.z});
-        insert_edge(emap, {t.z, t.x});
+    for (int i = 0; i < triangles.size(); i++) {
+        auto& t = triangles[i];
+        insert_edge(emap, {t.x, t.y}, i);
+        insert_edge(emap, {t.y, t.z}, i);
+        insert_edge(emap, {t.z, t.x}, i);
     }
 }
 void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
-    for (auto& q : quads) {
-        insert_edge(emap, {q.x, q.y});
-        insert_edge(emap, {q.y, q.z});
-        if (q.z != q.w) insert_edge(emap, {q.z, q.w});
-        insert_edge(emap, {q.w, q.x});
+    for (int i = 0; i < quads.size(); i++) {
+        auto& q = quads[i];
+        insert_edge(emap, {q.x, q.y}, i);
+        insert_edge(emap, {q.y, q.z}, i);
+        if (q.z != q.w) insert_edge(emap, {q.z, q.w}, i);
+        insert_edge(emap, {q.w, q.x}, i);
     }
 }
 // Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& e) {
-    auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
+int insert_edge(edge_map& emap, const vec2i& e, int face) {
+    auto es = make_edge(e);
     auto it = emap.find(es);
     if (it == emap.end()) {
         auto idx = (int)emap.size();
-        emap.insert(it, {es, {idx, 1}});
+        emap.insert(it, {es, {idx, face, -1}});
         return idx;
     } else {
-        it->second.y += 1;
+        it->second.z = face;
         return it->second.x;
     }
 }
 // Get the edge index
 int get_edge_index(const edge_map& emap, const vec2i& e) {
-    auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
+    auto es = make_edge(e);
     return emap.at(es).x;
 }
-// Get the edge index
+// Get the edge count
 int get_edge_count(const edge_map& emap, const vec2i& e) {
-    auto es = vec2i{min(e.x, e.y), max(e.x, e.y)};
-    return emap.at(es).y;
+    auto es = make_edge(e);
+    return emap.at(es).z == -1? 1 : 2;
 }
 // Get a list of edges, boundary edges, boundary vertices
 void get_edges(const edge_map& emap, vector<vec2i>& edges) {
@@ -456,7 +463,7 @@ void get_edges(const edge_map& emap, vector<vec2i>& edges) {
 void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
     boundary = vector<vec2i>();
     for (auto& kv : emap)
-        if (kv.second.y < 2) boundary.push_back(kv.first);
+        if (kv.second.z == -1) boundary.push_back(kv.first);
 }
 
 // Convert quads to triangles
