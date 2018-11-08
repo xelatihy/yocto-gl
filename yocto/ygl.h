@@ -2408,6 +2408,7 @@ void compute_matrix_skinning(const vector<vec3f>& positions,
     vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
 
 // Dictionary to store edge information.
+// key: edge, value: (edge index, adjacent face, other adjacent face)
 using edge_map = unordered_map<vec2i, vec3i>;
 
 // Create key entry for edge_map
