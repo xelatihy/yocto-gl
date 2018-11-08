@@ -110,7 +110,8 @@ int main(int argc, char* argv[]) {
     for (auto sample = 0; sample < num_samples; sample += samples_per_batch) {
         auto nsamples = min(samples_per_batch, num_samples - sample);
         trace_samples(rendered_image, scene, camera, bvh, lights, sampler_func,
-            sample, nsamples, max_bounces, trace_pixels, pixel_clamp, no_parallel);
+            sample, nsamples, max_bounces, trace_pixels, pixel_clamp,
+            no_parallel);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(sample + nsamples) + "." + get_extension(imfilename));

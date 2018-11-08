@@ -2683,11 +2683,11 @@ const int bvh_max_prims = 4;
 // indices refer to primitives for leaf nodes or other nodes for internal
 // nodes. See bvh_scene for more details.
 struct bvh_node {
-    bbox3f   bbox;
-    uint16_t num_primitives;
-    bool     is_internal;
-    uint8_t  split_axis;
-    uint32_t primitive_ids[bvh_max_prims];
+    bbox3f bbox;
+    short  num_primitives;
+    bool   is_internal;
+    byte   split_axis;
+    int    primitive_ids[bvh_max_prims];
 };
 
 // BVH for shapes made of points, lines, triangles or quads. Only one primitive
@@ -3730,10 +3730,10 @@ inline bool empty(const trace_lights& lights) {
 
 // State of a pixel during tracing
 struct trace_pixel {
-    vec3f radiance = zero3f;
-    int hits = 0;
-    int samples = 0;
-    rng_state rng = {};
+    vec3f     radiance = zero3f;
+    int       hits     = 0;
+    int       samples  = 0;
+    rng_state rng      = {};
 };
 
 // Initialize state of the renderer.
@@ -3779,10 +3779,10 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& trace_sampler,
-    int current_sample, int num_samples, int max_bounces,
-    image<trace_pixel>& pixels, float pixel_clamp = 100, bool no_parallel = false);
+    const yocto_camera& camera, const bvh_scene& bvh, const trace_lights& lights,
+    const trace_sampler_func& trace_sampler, int current_sample,
+    int num_samples, int max_bounces, image<trace_pixel>& pixels,
+    float pixel_clamp = 100, bool no_parallel = false);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // params.
@@ -4213,24 +4213,25 @@ struct parse_string_view {
 
 // Prints basic types to string
 inline bool parse_value(parse_string_view& str, string& value) {
-    while(*str.str && std::isspace((unsigned char)*str.str)) str.str++;
-    if(!*str.str) return false;
+    while (*str.str && std::isspace((unsigned char)*str.str)) str.str++;
+    if (!*str.str) return false;
     auto pos = 0;
     char buffer[4096];
-    while(*str.str && !std::isspace((unsigned char)*str.str) && pos < sizeof(buffer)) {
+    while (*str.str && !std::isspace((unsigned char)*str.str) &&
+           pos < sizeof(buffer)) {
         buffer[pos] = *str.str;
         str.str++;
         pos++;
     }
-    if(pos >= sizeof(buffer)) return false;
+    if (pos >= sizeof(buffer)) return false;
     buffer[pos] = 0;
-    value = buffer;
+    value       = buffer;
     return true;
 }
 inline bool parse_value(parse_string_view& str, int& value) {
     char* end = nullptr;
-    value = (int)strtol(str.str, &end, 10);
-    if(str.str == end) return false;
+    value     = (int)strtol(str.str, &end, 10);
+    if (str.str == end) return false;
     str.str = end;
     // auto n = 0;
     // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
@@ -4239,8 +4240,8 @@ inline bool parse_value(parse_string_view& str, int& value) {
 }
 inline bool parse_value(parse_string_view& str, float& value) {
     char* end = nullptr;
-    value = strtof(str.str, &end);
-    if(str.str == end) return false;
+    value     = strtof(str.str, &end);
+    if (str.str == end) return false;
     str.str = end;
     // auto n = 0;
     // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
@@ -4249,8 +4250,8 @@ inline bool parse_value(parse_string_view& str, float& value) {
 }
 inline bool parse_value(parse_string_view& str, double& value) {
     char* end = nullptr;
-    value = strtod(str.str, &end);
-    if(str.str == end) return false;
+    value     = strtod(str.str, &end);
+    if (str.str == end) return false;
     str.str = end;
     // auto n = 0;
     // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
@@ -4259,7 +4260,7 @@ inline bool parse_value(parse_string_view& str, double& value) {
 }
 inline bool parse_value(parse_string_view& str, bool& value) {
     auto ivalue = 0;
-    if(!parse_value(str, ivalue)) return false;
+    if (!parse_value(str, ivalue)) return false;
     value = (bool)ivalue;
     return true;
 }
