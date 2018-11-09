@@ -55,9 +55,15 @@ int main(int argc, char** argv) {
         parser, "scene", "scene.json"s, "input scene", true);
     check_cmdline(parser);
 
+    // fix params
+    auto load_params = load_scene_params();
+    auto save_params = save_scene_params();
+    load_params.load_textures = !notextures;
+    save_params.save_textures = !notextures;
+
     // load scene
     auto scene = yocto_scene{};
-    if (!load_scene(filename, scene, !notextures))
+    if (!load_scene(filename, scene, load_params))
         log_fatal("cannot load scene {}", filename);
 
     // change texture names
@@ -85,7 +91,7 @@ int main(int argc, char** argv) {
         log_fatal("cannot create directory {}", get_dirname(output));
 
     // save scene
-    if (!save_scene(output, scene, !notextures))
+    if (!save_scene(output, scene, save_params))
         log_fatal("cannot save scene {}", output);
 
     // done

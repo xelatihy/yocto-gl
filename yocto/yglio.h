@@ -211,45 +211,58 @@ bool save_volume1f(const string& filename, const volume<float>& vol);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Scene load options
+struct load_scene_params {
+    bool load_textures = true;
+    bool skip_missing = true;
+    bool obj_split_shapes = true;
+    bool obj_preserve_face_varying = false;
+    bool assign_texture_opacity = true;
+};
+// Scene save options
+struct save_scene_params {
+    bool save_textures = true;
+    bool skip_missing = true;
+};
+
 // Load/save a scene in the supported formats.
-bool load_scene(const string& filename, yocto_scene& scene,
-    bool load_textures = true, bool skip_missing = true);
-bool save_scene(const string& filename, const yocto_scene& scene,
-    bool save_textures = true, bool skip_missing = true);
+bool load_scene(const string& filename, yocto_scene& scene, 
+    const load_scene_params& params = {});
+bool save_scene(const string& filename, const yocto_scene& scene, 
+    const save_scene_params& params = {});
 
 // Load/save a scene in the builtin JSON format.
-bool load_json_scene(const string& filename, yocto_scene& scene,
-    bool load_textures = true, bool skip_missing = true);
-bool save_json_scene(const string& filename, const yocto_scene& scene,
-    bool save_textures = true, bool skip_missing = true);
+bool load_json_scene(const string& filename, yocto_scene& scene, 
+    const load_scene_params& params = {});
+bool save_json_scene(const string& filename, const yocto_scene& scene, 
+    const save_scene_params& params = {});
 
 // Load/save a scene from/to OBJ.
-bool load_obj_scene(const string& filename, yocto_scene& scene,
-    bool load_textures = true, bool skip_missing = true,
-    bool split_shapes = true, bool preserve_face_varying = false);
-bool save_obj_scene(const string& filename, const yocto_scene& scene,
-    bool save_textures = true, bool skip_missing = true);
+bool load_obj_scene(const string& filename, yocto_scene& scene, 
+    const load_scene_params& params = {});
+bool save_obj_scene(const string& filename, const yocto_scene& scene, 
+    const save_scene_params& params = {});
 
 // Load/save a scene from/to glTF.
-bool load_gltf_scene(const string& filename, yocto_scene& scene,
-    bool load_textures = true, bool skip_missing = true);
-bool save_gltf_scene(const string& filename, const yocto_scene& scene,
-    bool save_textures = true, bool skip_missing = true);
+bool load_gltf_scene(const string& filename, yocto_scene& scene, 
+    const load_scene_params& params = {});
+bool save_gltf_scene(const string& filename, const yocto_scene& scene, 
+    const save_scene_params& params = {});
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
-bool load_pbrt_scene(const string& filename, yocto_scene& scene,
-    bool load_textures = true, bool skip_missing = true);
-bool save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    bool save_textures = true, bool skip_missing = true);
+bool load_pbrt_scene(const string& filename, yocto_scene& scene, 
+    const load_scene_params& params = {});
+bool save_pbrt_scene(const string& filename, const yocto_scene& scene, 
+    const save_scene_params& params = {});
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
-bool load_ybin_scene(const string& filename, yocto_scene& scene,
-    bool load_textures = true, bool skip_missing = true);
-bool save_ybin_scene(const string& filename, const yocto_scene& scene,
-    bool save_textures = true, bool skip_missing = true);
+bool load_ybin_scene(const string& filename, yocto_scene& scene, 
+    const load_scene_params& params = {});
+bool save_ybin_scene(const string& filename, const yocto_scene& scene, 
+    const save_scene_params& params = {});
 
 }  // namespace ygl
 
