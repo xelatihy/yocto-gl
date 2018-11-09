@@ -104,18 +104,11 @@ bool exists_file(const string& filename);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Command line parser data. All data should be considered private.
-struct cmdline_parser {
-    vector<string> args      = {};  // command line arguments
-    string         usage_cmd = "";  // program name
-    string         usage_hlp = "";  // program help
-    string         usage_opt = "";  // params help
-    string         usage_arg = "";  // arguments help
-    string         error     = "";  // current parse error
-};
+// Forward declaration
+struct cmdline_parser;
 
 // Initialize a command line parser.
-cmdline_parser make_cmdline_parser(
+void init_cmdline_parser(cmdline_parser& parser,
     int argc, char** argv, const string& usage, const string& cmd = "");
 // check if any error occurred and exit appropriately
 void check_cmdline(cmdline_parser& parser);
@@ -489,14 +482,23 @@ bool load_ply(const string& filename, ply_data& ply);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
+// Command line parser data. All data should be considered private.
+struct cmdline_parser {
+    vector<string> args      = {};  // command line arguments
+    string         usage_cmd = "";  // program name
+    string         usage_hlp = "";  // program help
+    string         usage_opt = "";  // params help
+    string         usage_arg = "";  // arguments help
+    string         error     = "";  // current parse error
+};
+
 // initialize a command line parser
-inline cmdline_parser make_cmdline_parser(
+inline void init_cmdline_parser(cmdline_parser& parser,
     int argc, char** argv, const string& usage, const string& cmd) {
-    auto parser      = cmdline_parser();
+    parser      = cmdline_parser{};
     parser.args      = {argv + 1, argv + argc};
     parser.usage_cmd = (cmd.empty()) ? argv[0] : cmd;
     parser.usage_hlp = usage;
-    return parser;
 }
 
 // check if option or argument

@@ -68,7 +68,8 @@ void display_diff(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser,
         argc, argv, "Compares two images", "yimdiff");
     auto threshold = parse_argument(
         parser, "--threshold,-t", 0.1f, "Thhhreshold");

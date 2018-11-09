@@ -43,7 +43,8 @@ string to_string(const obj_vertex& v) {
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(
+        auto parser = cmdline_parser{};
+    init_cmdline_parser(parser,
         argc, argv, "Process obj files directly", "yobjproc");
     auto translation = parse_argument(
         parser, "--translation,-t", zero3f, "translation");

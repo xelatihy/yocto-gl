@@ -315,7 +315,9 @@ int main(int argc, char* argv[]) {
     auto app = app_state();
 
     // command line params
-    auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
+        auto parser = cmdline_parser{};
+    init_cmdline_parser(parser,
+argc, argv, "view images", "yimview");
     auto exposure = parse_argument(
         parser, "--exposure,-e", 0.0f, "display exposure");
     auto filmic = parse_argument(parser, "--filmic", false, "display filmic");

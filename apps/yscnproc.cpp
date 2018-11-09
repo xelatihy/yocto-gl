@@ -44,7 +44,9 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
+        auto parser = cmdline_parser{};
+    init_cmdline_parser(parser,
+argc, argv, "Process scene", "yscnproc");
     auto skip_textures = parse_argument(
         parser, "--skip-textures", false, "Disable textures.");
     auto uniform_txt = parse_argument(

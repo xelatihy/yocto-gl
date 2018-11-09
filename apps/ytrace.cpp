@@ -32,7 +32,8 @@ using namespace ygl;
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(
+        auto parser = cmdline_parser{};
+    init_cmdline_parser(parser,
         argc, argv, "Offline path tracing", "ytrace");
     auto camera_id   = parse_argument(parser, "--camera", 0, "Camera index.");
     auto image_size  = vec2i{0, parse_argument(parser, "--resolution,-r", 512,
