@@ -111,8 +111,8 @@ int main(int argc, char* argv[]) {
 
     // allocate buffers
     auto rendered_image = image<vec4f>{};
-    auto trace_pixels = image<trace_pixel>{};
-    
+    auto trace_pixels   = image<trace_pixel>{};
+
     // render
     auto scope = log_trace_begin("rendering image");
     for (auto sample = 0; sample < trace_options.num_samples;
