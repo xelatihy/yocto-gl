@@ -59,8 +59,8 @@ struct drawgl_lights {
 
 bool empty(const drawgl_lights& lights) { return lights.positions.empty(); }
 
-drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
-    auto lights = drawgl_lights{};
+void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
+    lights = drawgl_lights{};
     for (auto& instance : scene.instances) {
         if (instance.shape < 0) continue;
         auto& shape    = scene.shapes[instance.shape];
@@ -89,18 +89,10 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
         lights.emission.push_back(ke);
         lights.types.push_back(0);
     }
-    return lights;
 }
 
-// Application state
-struct app_state {
-    // loading parameters
-    string filename     = "scene.json";
-    string imfilename   = "out.png";
-    string outfilename  = "scene.json";
-    bool   double_sided = false;
-
-    // rendering params
+// Draw options
+struct drawgl_options {
     int   camera_id   = 0;
     vec2i image_size  = {1280, 720};
     bool  wireframe   = false;
@@ -112,6 +104,20 @@ struct app_state {
     vec3f ambient     = {0, 0, 0};
     float near_plane  = 0.01f;
     float far_plane   = 10000.0f;
+};
+
+// Application state
+struct app_state {
+    // loading parameters
+    string filename     = "scene.json";
+    string imfilename   = "out.png";
+    string outfilename  = "scene.json";
+    bool   double_sided = false;
+
+    // options
+    load_scene_options load_options = {};
+    build_bvh_options  bvh_options  = {};
+    drawgl_options     draw_options = {};
 
     // scene
     yocto_scene scene = {};
@@ -138,7 +144,7 @@ struct app_state {
 bool load_scene_sync(app_state& app) {
     // scene loading
     app.status = "loading scene";
-    if (!load_scene(app.filename, app.scene)) {
+    if (!load_scene(app.filename, app.scene, app.load_options)) {
         log_fatal("cannot load scene " + app.filename);
         return false;
     }
@@ -156,12 +162,12 @@ bool load_scene_sync(app_state& app) {
 
     // init renderer
     app.status = "initializing lights";
-    app.lights = make_drawgl_lights(app.scene);
+    init_drawgl_lights(app.lights, app.scene);
 
     // fix renderer type if no lights
-    if (empty(app.lights) && !app.eyelight) {
+    if (empty(app.lights) && !app.draw_options.eyelight) {
         log_info("no lights presents, switching to eyelight shader\n");
-        app.eyelight = true;
+        app.draw_options.eyelight = true;
     }
 
     // animation
@@ -500,7 +506,8 @@ static const char* fragment =
 
 // Draw a shape
 void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
-    const yocto_instance& instance, bool highlighted, bool edges) {
+    const yocto_instance& instance, bool highlighted,
+    const drawgl_options& options) {
     if (instance.shape >= 0) {
         auto& shape    = scene.shapes[instance.shape];
         auto& vbos     = state.shapes.at(instance.shape);
@@ -600,7 +607,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         check_glerror();
     }
 #endif
-        if (edges) log_error("edges are momentarily disabled");
+        if (options.edges) log_error("edges are momentarily disabled");
 
         // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
     } else if (instance.surface >= 0) {
@@ -699,7 +706,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         check_glerror();
     }
 #endif
-        if (edges) log_error("edges are momentarily disabled");
+        if (options.edges) log_error("edges are momentarily disabled");
 
         // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
     }
@@ -707,22 +714,23 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const yocto_camera& camera, const vec2i& viewport_size,
-    const pair<string, int>& highlighted, bool eyelight, bool wireframe,
-    bool edges, float exposure, float gamma, float near_plane, float far_plane) {
-    auto camera_view = frame_to_mat(inverse(camera.frame));
-    auto camera_proj = perspective_mat(get_camera_fovy(camera),
-        (float)viewport_size.x / (float)viewport_size.y, near_plane, far_plane);
+    const vec2i& viewport_size, const pair<string, int>& highlighted,
+    const drawgl_options& options) {
+    auto& camera      = scene.cameras.at(options.camera_id);
+    auto  camera_view = frame_to_mat(inverse(camera.frame));
+    auto  camera_proj = perspective_mat(get_camera_fovy(camera),
+        (float)viewport_size.x / (float)viewport_size.y, options.near_plane,
+        options.far_plane);
 
     bind_opengl_program(state.program);
     set_opengl_uniform(state.program, "cam_pos", camera.frame.o);
     set_opengl_uniform(state.program, "cam_xform_inv", camera_view);
     set_opengl_uniform(state.program, "cam_proj", camera_proj);
-    set_opengl_uniform(state.program, "eyelight", (int)eyelight);
-    set_opengl_uniform(state.program, "exposure", exposure);
-    set_opengl_uniform(state.program, "gamma", gamma);
+    set_opengl_uniform(state.program, "eyelight", (int)options.eyelight);
+    set_opengl_uniform(state.program, "exposure", options.exposure);
+    set_opengl_uniform(state.program, "gamma", options.gamma);
 
-    if (!eyelight) {
+    if (!options.eyelight) {
         auto lights_pos  = vector<vec3f>();
         auto lights_ke   = vector<vec3f>();
         auto lights_type = vector<int>();
@@ -768,7 +776,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         }
     }
 
-    if (wireframe) set_glwireframe(true);
+    if (options.wireframe) set_glwireframe(true);
     for (auto instance_id = 0; instance_id < scene.instances.size();
          instance_id++) {
         auto& instance = scene.instances[instance_id];
@@ -776,11 +784,11 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         // auto& material  = scene.materials[shape.material];
         auto highlight = highlighted ==
                          pair<string, int>{"instance", instance_id};
-        draw_glinstance(state, scene, instance, highlight, edges);
+        draw_glinstance(state, scene, instance, highlight, options);
     }
 
     unbind_opengl_program();
-    if (wireframe) set_glwireframe(false);
+    if (options.wireframe) set_glwireframe(false);
 }
 
 void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
@@ -910,27 +918,32 @@ void draw_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "view")) {
             if (app.load_done) {
-                draw_combobox_opengl_widget(
-                    win, "camera", app.camera_id, app.scene.cameras, false);
+                draw_combobox_opengl_widget(win, "camera",
+                    app.draw_options.camera_id, app.scene.cameras, false);
             }
             draw_slider_opengl_widget(
-                win, "resolution", app.image_size, 256, 4096);
-            draw_checkbox_opengl_widget(win, "eyelight", app.eyelight);
+                win, "resolution", app.draw_options.image_size, 256, 4096);
+            draw_checkbox_opengl_widget(
+                win, "eyelight", app.draw_options.eyelight);
             continue_opengl_widget_line(win);
-            draw_checkbox_opengl_widget(win, "wireframe", app.wireframe);
+            draw_checkbox_opengl_widget(
+                win, "wireframe", app.draw_options.wireframe);
             continue_opengl_widget_line(win);
-            draw_checkbox_opengl_widget(win, "edges", app.edges);
+            draw_checkbox_opengl_widget(win, "edges", app.draw_options.edges);
             if (app.time_range != zero2f) {
                 draw_slider_opengl_widget(
                     win, "time", app.time, app.time_range.x, app.time_range.y);
                 draw_textinput_opengl_widget(win, "anim group", app.anim_group);
                 draw_checkbox_opengl_widget(win, "animate", app.animate);
             }
-            draw_slider_opengl_widget(win, "exposure", app.exposure, -10, 10);
-            draw_slider_opengl_widget(win, "gamma", app.gamma, 0.1f, 4);
-            draw_slider_opengl_widget(win, "near", app.near_plane, 0.01f, 1.0f);
             draw_slider_opengl_widget(
-                win, "far", app.far_plane, 1000.0f, 10000.0f);
+                win, "exposure", app.draw_options.exposure, -10, 10);
+            draw_slider_opengl_widget(
+                win, "gamma", app.draw_options.gamma, 0.1f, 4);
+            draw_slider_opengl_widget(
+                win, "near", app.draw_options.near_plane, 0.01f, 1.0f);
+            draw_slider_opengl_widget(
+                win, "far", app.draw_options.far_plane, 1000.0f, 10000.0f);
             draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
             if (draw_button_opengl_widget(win, "print cams")) {
                 for (auto& camera : app.scene.cameras) {
@@ -963,11 +976,9 @@ void draw(const opengl_window& win) {
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
     set_glviewport(get_opengl_framebuffer_size(win));
     if (app.load_done) {
-        app.image_size = {0, get_opengl_framebuffer_size(win).y};
-        draw_glscene(app.state, app.scene, app.scene.cameras[app.camera_id],
-            get_opengl_framebuffer_size(win), app.selection, app.eyelight,
-            app.wireframe, app.edges, app.exposure, app.gamma, app.near_plane,
-            app.far_plane);
+        app.draw_options.image_size = {0, get_opengl_framebuffer_size(win).y};
+        draw_glscene(app.state, app.scene, get_opengl_framebuffer_size(win),
+            app.selection, app.draw_options);
     }
     draw_widgets(win);
     swap_opengl_buffers(win);
@@ -1045,10 +1056,10 @@ void run_ui(app_state& app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto& camera = app.scene.cameras.at(app.camera_id);
+            auto& camera = app.scene.cameras.at(app.draw_options.camera_id);
             camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({"camera", app.camera_id});
+            app.update_list.push_back({"camera", app.draw_options.camera_id});
         }
 
         // animation
@@ -1116,25 +1127,33 @@ unordered_map<string, unordered_map<string, string>> load_ini(
 
 int main(int argc, char* argv[]) {
     // initialize app
-    auto app = app_state();
+    app_state app{};
 
     // parse command line
-    auto parser = make_cmdline_parser(
-        argc, argv, "views scenes inteactively", "yview");
-    app.camera_id  = parse_argument(parser, "--camera", 0, "Camera index.");
-    app.image_size = {0, parse_argument(parser, "--resolution,-r", 512,
-                             "Image vertical resolution.")};
-    app.eyelight   = parse_argument(
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "views scenes inteactively", "yview");
+    app.draw_options.camera_id = parse_argument(
+        parser, "--camera", 0, "Camera index.");
+    app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r",
+                                          512, "Image vertical resolution.")};
+    app.draw_options.eyelight   = parse_argument(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
     app.double_sided = parse_argument(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
     auto highlight_filename = parse_argument(
         parser, "--highlights", ""s, "Highlight filename");
+    auto no_parallel = parse_argument(
+        parser, "--noparallel", false, "Disable parallel execution.");
     app.imfilename = parse_argument(
         parser, "--output-image,-o", "out.png"s, "Image filename");
     app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
+
+    // fix parallel code
+    if (no_parallel) {
+        app.load_options.run_serially = true;
+    }
 
     // load
     load_scene_async(app);

@@ -317,6 +317,7 @@
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <future>
 #include <limits>
 #include <mutex>
 #include <string>
@@ -358,13 +359,16 @@ using std::ignore;
 using std::lock_guard;
 using std::make_unique;
 using std::mutex;
+using std::packaged_task;
 using std::pair;
 using std::runtime_error;
+using std::shared_future;
 using std::string;
 using std::thread;
 using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
+using namespace std::chrono_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;
@@ -2066,6 +2070,128 @@ struct concurrent_queue {
     deque<T> _queue;
 };
 
+// Simpler thread pool inpired by ...
+struct thread_pool {
+    // construct a pool
+    thread_pool() : thread_pool(thread::hardware_concurrency()) {}
+    thread_pool(int nthreads) { _init(nthreads); }
+    ~thread_pool() { stop(); }
+
+    // add a task
+    template <typename Func, typename... Args>
+    shared_future<void> enqueue(Func&& func, Args&&... args) {
+        auto task = std::bind(std::forward(func), std::forward(args)...);
+        return _enqueue(std::move(task));
+    }
+    template <typename Func>
+    shared_future<void> enqueue(Func&& func) {
+        return _enqueue(std::forward(func));
+    }
+
+    // clear
+    void clear() {
+        std::unique_lock<std::mutex> lock(_tasks_mutex);
+        _tasks.clear();
+    }
+
+    // stop
+    void stop() {
+        clear();
+        {
+            std::unique_lock<std::mutex> lock(_tasks_mutex);
+            _stop = true;
+        }
+        _tasks_condition.notify_all();
+        for (auto& t : _threads) t.join();
+    }
+
+    // wait for current tasks to end
+    void wait() {
+        std::unique_lock<std::mutex> lock(_completion_mutex);
+        _completion_condition.wait(
+            lock, [&] { return !_active_threads && _tasks.empty(); });
+    }
+
+   private:
+    vector<thread>               _threads;
+    deque<packaged_task<void()>> _tasks;
+    std::mutex                   _tasks_mutex;
+    std::condition_variable      _tasks_condition;
+    std::mutex                   _completion_mutex;
+    std::condition_variable      _completion_condition;
+    std::atomic<int>             _active_threads;
+    bool                         _stop = false;
+
+    void _init(int nthreads) {
+        for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+            _threads.emplace_back([&] {
+                while (true) {
+                    packaged_task<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock(_tasks_mutex);
+                        _tasks_condition.wait(
+                            lock, [&] { return !_stop || !_tasks.empty(); });
+                        if (!_stop && _tasks.empty()) return;
+
+                        {
+                            std::unique_lock<std::mutex> lock(_completion_mutex);
+                            ++_active_threads;
+                        }
+                        task = std::move(_tasks.front());
+                        _tasks.pop_front();
+                    }
+
+                    task();
+
+                    {
+                        std::unique_lock<std::mutex> lock(_completion_mutex);
+                        --_active_threads;
+                    }
+
+                    _completion_condition.notify_all();
+                }
+            });
+        }
+    }
+
+    shared_future<void> _enqueue(std::function<void()> task) {
+        packaged_task<void()> task_packaged(std::move(task));
+        auto                  task_future = task_packaged.get_future();
+        {
+            std::unique_lock<std::mutex> lock(_tasks_mutex);
+            _tasks.push_back(std::move(task_packaged));
+        }
+        _tasks_condition.notify_one();
+        return task_future.share();
+    }
+};
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(int begin, int end, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false);
+template <typename Func>
+inline void parallel_for(int num, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
+    parallel_for(0, num, func, cancel, serial);
+}
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
+    parallel_for(0, (int)values.size(),
+        [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+}
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
+    parallel_for(0, (int)values.size(),
+        [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+}
+
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
@@ -2739,19 +2865,20 @@ struct bvh_scene {
     void* embree_bvh = nullptr;
 };
 
+// Options for build bvh
+struct build_bvh_options {
+    bool          high_quality = true;
+    bool          use_embree   = false;
+    bool          run_serially = false;
+    atomic<bool>* cancel_flag  = nullptr;
+};
+
 // Build a BVH from the given set of primitives.
-void build_shape_bvh(bvh_shape& bvh, bool high_quality = false);
-void build_scene_bvh(bvh_scene& bvh, bool high_quality = false);
+void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
+void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
 // Update the node bounds for a shape bvh.
 void refit_shape_bvh(bvh_shape& bvh);
 void refit_scene_bvh(bvh_scene& bvh);
-
-// Build a BVH from the given set of primitives.
-// Uses Embree if available and requested, otherwise the standard build.
-void build_shape_bvh_embree(bvh_shape& bvh, bool high_quality = false);
-void clear_shape_bvh_embree(bvh_shape& bvh);
-void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality = false);
-void clear_scene_bvh_embree(bvh_scene& bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
@@ -3481,11 +3608,11 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Updates/refits bvh.
 void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
-    bool high_quality, bool embree = false);
+    const build_bvh_options& options = {});
 void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
-    bool high_quality, bool embree = false);
+    const build_bvh_options& options = {});
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    bool high_quality, bool embree = false);
+    const build_bvh_options& options = {});
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
 void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh);
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
@@ -3769,32 +3896,43 @@ using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
     const vec3f& direction, rng_state& rng, int max_bounces)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
+// Options for trace functions
+struct trace_image_options {
+    int                camera_id         = 0;
+    vec2i              image_size        = {0, 512};
+    trace_sampler_type sampler_type      = trace_sampler_type::path;
+    trace_sampler_func custom_sampler    = {};
+    int                num_samples       = 512;
+    int                max_bounces       = 8;
+    int                samples_per_batch = 16;
+    float              pixel_clamp       = 100;
+    uint64_t           random_seed       = 7;
+    std::atomic<bool>* cancel_flag       = nullptr;
+    bool               run_serially      = false;
+};
+
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_sampler_func& trace_sampler, int num_samples, int max_bounces,
-    float pixel_clamp = 100, bool no_parallel = false);
+    const bvh_scene& bvh, const trace_lights& lights,
+    const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_sampler_func& trace_sampler, int current_sample,
-    int num_samples, int max_bounces, image<trace_pixel>& pixels,
-    float pixel_clamp = 100, bool no_parallel = false);
+int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int current_sample, const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
-// params.
-void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& trace_sampler,
-    int num_samples, int max_bounces, image<trace_pixel>& pixels,
-    vector<thread>& threads, bool& stop_flag, int& current_sample,
-    concurrent_queue<image_region>& queue, float pixel_clamp = 100);
+// options.
+void trace_image_async_start(image<vec4f>& rendered_image,
+    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, vector<thread>& threads,
+    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    const trace_image_options& options);
 // Stop the asynchronous renderer.
-void trace_async_stop(vector<thread>& threads, bool& stop_flag,
-    concurrent_queue<image_region>& queue);
+void trace_image_async_stop(vector<thread>& threads,
+    concurrent_queue<image_region>& queue, const trace_image_options& options);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
@@ -4437,6 +4575,41 @@ inline string format_num(uint64_t num) {
     auto div = num / 1000;
     if (div > 0) return format_num(div) + "," + std::to_string(rem);
     return std::to_string(rem);
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR CONCURRENCY UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms.
+template <typename Func>
+inline void parallel_for(
+    int begin, int end, const Func& func, atomic<bool>* cancel, bool serial) {
+    if (serial) {
+        for (auto idx = begin; idx < end; idx++) {
+            if (cancel && *cancel) break;
+            func(idx);
+        }
+    } else {
+        auto        threads  = vector<thread>{};
+        auto        nthreads = thread::hardware_concurrency();
+        atomic<int> next_idx(begin);
+        for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+            threads.emplace_back([&func, &next_idx, cancel, end]() {
+                while (true) {
+                    if (cancel && *cancel) break;
+                    auto idx = next_idx.fetch_add(1);
+                    if (idx >= end) break;
+                    func(idx);
+                }
+            });
+        }
+        for (auto& t : threads) t.join();
+    }
 }
 
 }  // namespace ygl

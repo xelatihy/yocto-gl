@@ -1139,7 +1139,7 @@ bool intersect_point(
     auto prp = p - rp;
     if (dot(prp, prp) > r * r) return false;
 
-    // intersection occurred: set params and exit
+    // intersection occurred: set options and exit
     distance = t;
     uv       = {0, 0};
 
@@ -1149,7 +1149,7 @@ bool intersect_point(
 // Intersect a ray with a line
 bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, float& distance, vec2f& uv) {
-    // setup intersection params
+    // setup intersection options
     auto u = ray.d;
     auto v = p1 - p0;
     auto w = ray.o - p0;
@@ -1186,7 +1186,7 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto r  = r0 * (1 - s) + r1 * s;
     if (d2 > r * r) return false;
 
-    // intersection occurred: set params and exit
+    // intersection occurred: set options and exit
     distance = t;
     uv       = {s, sqrt(d2) / r};
 
@@ -1223,7 +1223,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto t = dot(edge2, qvec) * inv_det;
     if (t < ray.tmin || t > ray.tmax) return false;
 
-    // intersection occurred: set params and exit
+    // intersection occurred: set options and exit
     distance = t;
     uv       = {u, v};
 
@@ -1461,6 +1461,153 @@ void clear_scene_bvh_embree(bvh_scene& bvh) {
 #endif
 }
 
+#if YGL_EMBREE
+void embree_error(void* ctx, RTCError code, const char* str) {
+    switch (code) {
+        case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
+        case RTC_ERROR_INVALID_ARGUMENT:
+            printf("RTC_ERROR_INVALID_ARGUMENT");
+            break;
+        case RTC_ERROR_INVALID_OPERATION:
+            printf("RTC_ERROR_INVALID_OPERATION");
+            break;
+        case RTC_ERROR_OUT_OF_MEMORY: printf("RTC_ERROR_OUT_OF_MEMORY"); break;
+        case RTC_ERROR_UNSUPPORTED_CPU:
+            printf("RTC_ERROR_UNSUPPORTED_CPU");
+            break;
+        case RTC_ERROR_CANCELLED: printf("RTC_ERROR_CANCELLED"); break;
+        default: printf("invalid error code"); break;
+    }
+    printf(": %s\n", str);
+}
+
+// Get Embree device
+RTCDevice get_embree_device() {
+    static RTCDevice device = nullptr;
+    if (!device) {
+        device = rtcNewDevice("");
+        rtcSetDeviceErrorFunction(device, embree_error, nullptr);
+    }
+    return device;
+}
+
+// Build a BVH using Embree. Calls `build_scene_bvh()` if Embree is not available.
+void build_embree_bvh(bvh_shape& bvh) {
+    auto embree_device = get_embree_device();
+    auto embree_scene  = rtcNewScene(embree_device);
+    if (!bvh.points.empty()) {
+        log_error("embree does not support points");
+    } else if (!bvh.lines.empty()) {
+        log_error("not yet implemented");
+    } else if (!bvh.triangles.empty()) {
+        auto embree_geom = rtcNewGeometry(
+            embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
+            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
+        auto triangles = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
+            bvh.triangles.size());
+        memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
+        memcpy(triangles, bvh.triangles.data(), bvh.triangles.size() * 12);
+        rtcCommitGeometry(embree_geom);
+        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
+    } else if (!bvh.quads.empty()) {
+        auto embree_geom = rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_QUAD);
+        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
+            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
+        auto quads = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX,
+            0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
+        memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
+        memcpy(quads, bvh.quads.data(), bvh.quads.size() * 16);
+        rtcCommitGeometry(embree_geom);
+        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
+    } else {
+        log_error("empty bvh");
+    }
+    rtcCommitScene(embree_scene);
+    bvh.embree_bvh = embree_scene;
+}
+void build_embree_bvh(bvh_scene& bvh) {
+    auto embree_device = get_embree_device();
+    auto embree_scene  = rtcNewScene(embree_device);
+    if (!bvh.instances.empty()) {
+        for (auto instance_id = 0; instance_id < bvh.instances.size();
+             instance_id++) {
+            auto& instance    = bvh.instances[instance_id];
+            auto  embree_geom = rtcNewGeometry(
+                embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+            if (instance.shape_id >= 0) {
+                rtcSetGeometryInstancedScene(embree_geom,
+                    (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
+            } else if (instance.surface_id >= 0) {
+                rtcSetGeometryInstancedScene(embree_geom,
+                    (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
+            } else {
+                log_error("empty instance");
+            }
+            rtcSetGeometryTransform(embree_geom, 0,
+                RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+            rtcCommitGeometry(embree_geom);
+            rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
+        }
+    }
+    rtcCommitScene(embree_scene);
+    bvh.embree_bvh = embree_scene;
+}
+// Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
+void refit_embree_bvh(bvh_shape& bvh) { log_error("not yet implemented"); }
+void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
+bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
+    float& distance, int& element_id, vec2f& uv) {
+    RTCRayHit embree_ray;
+    embree_ray.ray.org_x     = ray.o.x;
+    embree_ray.ray.org_y     = ray.o.y;
+    embree_ray.ray.org_z     = ray.o.z;
+    embree_ray.ray.dir_x     = ray.d.x;
+    embree_ray.ray.dir_y     = ray.d.y;
+    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.tnear     = ray.tmin;
+    embree_ray.ray.tfar      = ray.tmax;
+    embree_ray.ray.flags     = 0;
+    embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+    RTCIntersectContext embree_ctx;
+    rtcInitIntersectContext(&embree_ctx);
+    rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
+    distance   = embree_ray.ray.tfar;
+    uv         = {embree_ray.hit.u, embree_ray.hit.v};
+    element_id = embree_ray.hit.primID;
+    return true;
+}
+bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
+    float& distance, int& instance_id, int& element_id, vec2f& uv) {
+    RTCRayHit embree_ray;
+    embree_ray.ray.org_x     = ray.o.x;
+    embree_ray.ray.org_y     = ray.o.y;
+    embree_ray.ray.org_z     = ray.o.z;
+    embree_ray.ray.dir_x     = ray.d.x;
+    embree_ray.ray.dir_y     = ray.d.y;
+    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.tnear     = ray.tmin;
+    embree_ray.ray.tfar      = ray.tmax;
+    embree_ray.ray.flags     = 0;
+    embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
+    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
+    RTCIntersectContext embree_ctx;
+    rtcInitIntersectContext(&embree_ctx);
+    rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
+    distance    = embree_ray.ray.tfar;
+    uv          = {embree_ray.hit.u, embree_ray.hit.v};
+    element_id  = embree_ray.hit.primID;
+    instance_id = embree_ray.hit.instID[0];
+    return true;
+}
+#endif
+
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {
     bbox3f bbox   = invalid_bbox3f;
@@ -1655,8 +1802,8 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-void build_bvh_nodes(
-    vector<bvh_node>& nodes, vector<bvh_prim>& prims, bool high_quality) {
+void build_bvh_nodes_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+    const build_bvh_options& options) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -1667,6 +1814,9 @@ void build_bvh_nodes(
 
     // create nodes until the queue is empty
     while (!queue.empty()) {
+        // exit if needed
+        if (options.cancel_flag && *options.cancel_flag) return;
+
         // grab node to work on
         auto next = queue.front();
         queue.pop_front();
@@ -1682,7 +1832,7 @@ void build_bvh_nodes(
         // split into two children
         if (end - start > bvh_max_prims) {
             // get split
-            auto split = (high_quality) ?
+            auto split = (options.high_quality) ?
                              split_bvh_node_sah(prims, start, end) :
                              split_bvh_node_balanced(prims, start, end);
             auto mid = split.first, split_axis = split.second;
@@ -1710,8 +1860,100 @@ void build_bvh_nodes(
     nodes.shrink_to_fit();
 }
 
+// Build BVH nodes
+void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+    const build_bvh_options& options) {
+    // prepare to build nodes
+    nodes.clear();
+    nodes.reserve(prims.size() * 2);
+
+    // queue up first node
+    auto queue = deque<vec3i>{{0, 0, (int)prims.size()}};
+    nodes.emplace_back();
+
+    // synchronization
+    atomic<int>    num_processed_prims(0);
+    mutex          queue_mutex;
+    vector<thread> threads;
+    auto           nthreads = thread::hardware_concurrency();
+
+    // create nodes until the queue is empty
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+        threads.emplace_back([&nodes, &prims, &options, &num_processed_prims,
+                                 &queue_mutex, &queue] {
+            while (true) {
+                // exit if needed
+                if (num_processed_prims >= prims.size()) return;
+                if (options.cancel_flag && *options.cancel_flag) return;
+
+                // grab node to work on
+                auto next = zero3i;
+                {
+                    lock_guard<mutex> lock{queue_mutex};
+                    if (!queue.empty()) {
+                        next = queue.front();
+                        queue.pop_front();
+                    }
+                }
+
+                // wait a bit if needed
+                if (next == zero3i) {
+                    std::this_thread::sleep_for(10us);
+                    continue;
+                }
+
+                // grab node
+                auto  nodeid = next.x, start = next.y, end = next.z;
+                auto& node = nodes[nodeid];
+
+                // compute bounds
+                node.bbox = invalid_bbox3f;
+                for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
+
+                // split into two children
+                if (end - start > bvh_max_prims) {
+                    // get split
+                    auto split = (options.high_quality) ?
+                                     split_bvh_node_sah(prims, start, end) :
+                                     split_bvh_node_balanced(prims, start, end);
+                    auto mid = split.first, split_axis = split.second;
+
+                    // make an internal node
+                    {
+                        lock_guard<mutex> lock{queue_mutex};
+                        node.is_internal      = true;
+                        node.split_axis       = split_axis;
+                        node.num_primitives   = 2;
+                        node.primitive_ids[0] = (int)nodes.size() + 0;
+                        node.primitive_ids[1] = (int)nodes.size() + 1;
+                        nodes.emplace_back();
+                        nodes.emplace_back();
+                        queue.push_back({node.primitive_ids[0], start, mid});
+                        queue.push_back({node.primitive_ids[1], mid, end});
+                    }
+                } else {
+                    // Make a leaf node
+                    node.is_internal    = false;
+                    node.num_primitives = end - start;
+                    for (auto i = 0; i < node.num_primitives; i++)
+                        node.primitive_ids[i] = prims[start + i].primid;
+                    num_processed_prims += node.num_primitives;
+                }
+            }
+        });
+    }
+    for (auto& t : threads) t.join();
+
+    // cleanup
+    nodes.shrink_to_fit();
+}
+
 // Build a BVH from a set of primitives.
-void build_shape_bvh(bvh_shape& bvh, bool high_quality) {
+void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
+#if YGL_EMBREE
+    if (options.use_embree) return build_embree_bvh(bvh);
+#endif
+
     // get the number of primitives and the primitive type
     auto prims = vector<bvh_prim>();
     if (!bvh.points.empty()) {
@@ -1742,11 +1984,19 @@ void build_shape_bvh(bvh_shape& bvh, bool high_quality) {
     }
 
     // build nodes
-    build_bvh_nodes(bvh.nodes, prims, high_quality);
+    if (options.run_serially) {
+        build_bvh_nodes_serial(bvh.nodes, prims, options);
+    } else {
+        build_bvh_nodes_parallel(bvh.nodes, prims, options);
+    }
 }
 
 // Build a BVH from a set of primitives.
-void build_scene_bvh(bvh_scene& bvh, bool high_quality) {
+void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
+#if YGL_EMBREE
+    if (options.use_embree) return build_embree_bvh(bvh);
+#endif
+
     // get the number of primitives and the primitive type
     auto prims = vector<bvh_prim>();
     if (!bvh.instances.empty()) {
@@ -1772,7 +2022,13 @@ void build_scene_bvh(bvh_scene& bvh, bool high_quality) {
     }
 
     // build nodes
-    build_bvh_nodes(bvh.nodes, prims, high_quality);
+    if (options.run_serially) {
+        log_info("scene serial");
+        build_bvh_nodes_serial(bvh.nodes, prims, options);
+    } else {
+        log_info("scene parallel");
+        build_bvh_nodes_parallel(bvh.nodes, prims, options);
+    }
 }
 
 // Recursively recomputes the node bounds for a shape bvh
@@ -1838,192 +2094,15 @@ void refit_scene_bvh(bvh_scene& bvh, int nodeid) {
 void refit_shape_bvh(bvh_shape& bvh) { refit_shape_bvh(bvh, 0); }
 void refit_scene_bvh(bvh_scene& bvh) { refit_scene_bvh(bvh, 0); }
 
-#if YGL_EMBREE
-void embree_error(void* ctx, RTCError code, const char* str) {
-    switch (code) {
-        case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
-        case RTC_ERROR_INVALID_ARGUMENT:
-            printf("RTC_ERROR_INVALID_ARGUMENT");
-            break;
-        case RTC_ERROR_INVALID_OPERATION:
-            printf("RTC_ERROR_INVALID_OPERATION");
-            break;
-        case RTC_ERROR_OUT_OF_MEMORY: printf("RTC_ERROR_OUT_OF_MEMORY"); break;
-        case RTC_ERROR_UNSUPPORTED_CPU:
-            printf("RTC_ERROR_UNSUPPORTED_CPU");
-            break;
-        case RTC_ERROR_CANCELLED: printf("RTC_ERROR_CANCELLED"); break;
-        default: printf("invalid error code"); break;
-    }
-    printf(": %s\n", str);
-}
-
-// Get Embree device
-RTCDevice get_embree_device() {
-    static RTCDevice device = nullptr;
-    if (!device) {
-        device = rtcNewDevice("");
-        rtcSetDeviceErrorFunction(device, embree_error, nullptr);
-    }
-    return device;
-}
-
-// Build a BVH using Embree. Calls `build_scene_bvh()` if Embree is not available.
-void build_embree_bvh(bvh_shape& bvh) {
-    auto embree_device = get_embree_device();
-    auto embree_scene  = rtcNewScene(embree_device);
-    if (!bvh.points.empty()) {
-        log_error("embree does not support points");
-    } else if (!bvh.lines.empty()) {
-        log_error("not yet implemented");
-    } else if (!bvh.triangles.empty()) {
-        auto embree_geom = rtcNewGeometry(
-            embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
-        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
-            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
-        auto triangles = rtcSetNewGeometryBuffer(embree_geom,
-            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
-            bvh.triangles.size());
-        memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
-        memcpy(triangles, bvh.triangles.data(), bvh.triangles.size() * 12);
-        rtcCommitGeometry(embree_geom);
-        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
-    } else if (!bvh.quads.empty()) {
-        auto embree_geom = rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_QUAD);
-        rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
-            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
-        auto quads = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX,
-            0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
-        memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
-        memcpy(quads, bvh.quads.data(), bvh.quads.size() * 16);
-        rtcCommitGeometry(embree_geom);
-        rtcAttachGeometryByID(embree_scene, embree_geom, 0);
-    } else {
-        log_error("empty bvh");
-    }
-    rtcCommitScene(embree_scene);
-    bvh.embree_bvh = embree_scene;
-}
-void build_embree_bvh(bvh_scene& bvh) {
-    auto embree_device = get_embree_device();
-    auto embree_scene  = rtcNewScene(embree_device);
-    if (!bvh.instances.empty()) {
-        for (auto instance_id = 0; instance_id < bvh.instances.size();
-             instance_id++) {
-            auto& instance    = bvh.instances[instance_id];
-            auto  embree_geom = rtcNewGeometry(
-                embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
-            if (instance.shape_id >= 0) {
-                rtcSetGeometryInstancedScene(embree_geom,
-                    (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
-            } else if (instance.surface_id >= 0) {
-                rtcSetGeometryInstancedScene(embree_geom,
-                    (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
-            } else {
-                log_error("empty instance");
-            }
-            rtcSetGeometryTransform(embree_geom, 0,
-                RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
-            rtcCommitGeometry(embree_geom);
-            rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
-        }
-    }
-    rtcCommitScene(embree_scene);
-    bvh.embree_bvh = embree_scene;
-}
-// Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
-void refit_embree_bvh(bvh_shape& bvh) { log_error("not yet implemented"); }
-void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
-bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
-    float& distance, int& element_id, vec2f& uv) {
-    RTCRayHit embree_ray;
-    embree_ray.ray.org_x     = ray.o.x;
-    embree_ray.ray.org_y     = ray.o.y;
-    embree_ray.ray.org_z     = ray.o.z;
-    embree_ray.ray.dir_x     = ray.d.x;
-    embree_ray.ray.dir_y     = ray.d.y;
-    embree_ray.ray.dir_z     = ray.d.z;
-    embree_ray.ray.tnear     = ray.tmin;
-    embree_ray.ray.tfar      = ray.tmax;
-    embree_ray.ray.flags     = 0;
-    embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-    RTCIntersectContext embree_ctx;
-    rtcInitIntersectContext(&embree_ctx);
-    rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
-    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-    distance   = embree_ray.ray.tfar;
-    uv         = {embree_ray.hit.u, embree_ray.hit.v};
-    element_id = embree_ray.hit.primID;
-    return true;
-}
-bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
-    float& distance, int& instance_id, int& element_id, vec2f& uv) {
-    RTCRayHit embree_ray;
-    embree_ray.ray.org_x     = ray.o.x;
-    embree_ray.ray.org_y     = ray.o.y;
-    embree_ray.ray.org_z     = ray.o.z;
-    embree_ray.ray.dir_x     = ray.d.x;
-    embree_ray.ray.dir_y     = ray.d.y;
-    embree_ray.ray.dir_z     = ray.d.z;
-    embree_ray.ray.tnear     = ray.tmin;
-    embree_ray.ray.tfar      = ray.tmax;
-    embree_ray.ray.flags     = 0;
-    embree_ray.hit.geomID    = RTC_INVALID_GEOMETRY_ID;
-    embree_ray.hit.instID[0] = RTC_INVALID_GEOMETRY_ID;
-    RTCIntersectContext embree_ctx;
-    rtcInitIntersectContext(&embree_ctx);
-    rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
-    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-    distance    = embree_ray.ray.tfar;
-    uv          = {embree_ray.hit.u, embree_ray.hit.v};
-    element_id  = embree_ray.hit.primID;
-    instance_id = embree_ray.hit.instID[0];
-    return true;
-}
-#else
-// Build a BVH using Embree. Calls `build_scene_bvh()` if Embree is not available.
-void build_embree_bvh(bvh_shape& bvh) { return build_shape_bvh(bvh, true); }
-void build_embree_bvh(bvh_scene& bvh) { return build_scene_bvh(bvh, true); }
-// Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
-void refit_embree_bvh(bvh_shape& bvh) { return refit_shape_bvh(bvh); }
-void refit_embree_bvh(bvh_scene& bvh) { return refit_scene_bvh(bvh); }
-// Intersect BVH using Embree
-bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray_,
-    bool find_any, float& distance, int& element_id, vec2f& element_uv) {
-    log_error("this should not have been called");
-    return false;
-}
-bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
-    float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
-    log_error("this should not have been called");
-    return false;
-}
-#endif
-
-// Build a BVH from a set of primitives.
-void build_shape_bvh_embree(bvh_shape& bvh, bool high_quality, bool embree) {
-#if YGL_EMBREE
-    if (embree) return build_embree_bvh(bvh);
-#endif
-    build_shape_bvh(bvh, high_quality);
-}
-void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality, bool embree) {
-#if YGL_EMBREE
-    if (embree) return build_embree_bvh(bvh);
-#endif
-    build_scene_bvh(bvh, high_quality);
-}
-
 // Intersect ray with a bvh.
 bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     float& distance, int& element_id, vec2f& element_uv) {
+#if YGL_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(
             bvh, ray_, find_any, distance, element_id, element_uv);
+#endif
 
     // node stack
     int  node_stack[128];
@@ -2116,10 +2195,12 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
 // Intersect ray with a bvh.
 bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
+#if YGL_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(
             bvh, ray_, find_any, distance, instance_id, element_id, element_uv);
+#endif
 
     // node stack
     int  node_stack[128];
@@ -4469,8 +4550,8 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a shape BVH
-void build_shape_bvh(
-    const yocto_shape& shape, bvh_shape& bvh, bool high_quality, bool embree) {
+void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
+    const build_bvh_options& options) {
     // create bvh
     bvh = bvh_shape{};
 
@@ -4483,12 +4564,12 @@ void build_shape_bvh(
     bvh.quads     = shape.quads;
 
     // build bvh
-    build_shape_bvh_embree(bvh, high_quality, embree);
+    build_shape_bvh(bvh, options);
 }
 
 // Build a shape BVH
 void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
-    bool high_quality, bool embree) {
+    const build_bvh_options& options) {
     // create bvh
     bvh = bvh_shape{};
 
@@ -4497,12 +4578,12 @@ void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
     bvh.quads     = surface.quads_positions;
 
     // build bvh
-    build_shape_bvh_embree(bvh, high_quality, embree);
+    build_shape_bvh(bvh, options);
 }
 
 // Build a scene BVH
-void build_scene_bvh(
-    const yocto_scene& scene, bvh_scene& bvh, bool high_quality, bool embree) {
+void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+    const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
     // create bvh
     bvh = bvh_scene{};
@@ -4510,15 +4591,15 @@ void build_scene_bvh(
     // shapes
     bvh.shape_bvhs.resize(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-        build_shape_bvh(scene.shapes[shape_id], bvh.shape_bvhs[shape_id],
-            high_quality, embree);
+        build_shape_bvh(
+            scene.shapes[shape_id], bvh.shape_bvhs[shape_id], options);
     }
 
     // surfaces
     bvh.surface_bvhs.resize(scene.surfaces.size());
     for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
-        build_surface_bvh(scene.surfaces[surface_id],
-            bvh.surface_bvhs[surface_id], high_quality, embree);
+        build_surface_bvh(
+            scene.surfaces[surface_id], bvh.surface_bvhs[surface_id], options);
     }
 
     // instances
@@ -4531,7 +4612,7 @@ void build_scene_bvh(
     }
 
     // build bvh
-    build_scene_bvh_embree(bvh, high_quality, embree);
+    build_scene_bvh(bvh, options);
 }
 
 // Refits a shape BVH
@@ -7307,29 +7388,31 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
 }
 
 // Trace a block of samples
-void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    const image_region& region, int current_sample, int num_samples,
-    int max_bounces, image<trace_pixel>& pixels, float pixel_clamp) {
+void trace_image_region(image<vec4f>& rendered_image,
+    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const image_region& region, int num_samples,
+    const trace_image_options& options) {
+    auto& camera  = scene.cameras.at(options.camera_id);
+    auto  sampler = get_trace_sampler_func(options.sampler_type);
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
             auto& pixel = at(pixels, {i, j});
             for (auto s = 0; s < num_samples; s++) {
+                if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size, pixel.rng);
-                auto radiance_hit = sampler(
-                    scene, bvh, lights, ray.o, ray.d, pixel.rng, max_bounces);
-                auto radiance = radiance_hit.first;
-                auto hit      = radiance_hit.second;
+                auto radiance_hit = sampler(scene, bvh, lights, ray.o, ray.d,
+                    pixel.rng, options.max_bounces);
+                auto radiance     = radiance_hit.first;
+                auto hit          = radiance_hit.second;
                 if (!isfinite(radiance.x) || !isfinite(radiance.y) ||
                     !isfinite(radiance.z)) {
                     log_error("NaN detected");
                     radiance = zero3f;
                 }
-                if (max(radiance) > pixel_clamp)
-                    radiance = radiance * (pixel_clamp / max(radiance));
+                if (max(radiance) > options.pixel_clamp)
+                    radiance = radiance * (options.pixel_clamp / max(radiance));
                 pixel.radiance += radiance;
                 pixel.hits += hit ? 1 : 0;
                 pixel.samples += 1;
@@ -7401,20 +7484,22 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
-    auto scope  = log_trace_scoped("tracing image");
+    const bvh_scene& bvh, const trace_lights& lights,
+    const trace_image_options& options) {
+    auto  scope      = log_trace_scoped("tracing image");
+    auto& camera     = scene.cameras.at(options.camera_id);
+    auto  image_size = get_camera_image_size(camera, options.image_size);
+    init_image(rendered_image, image_size, zero4f);
     auto pixels = image<trace_pixel>{};
     init_trace_pixels(pixels, rendered_image.size);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
 
-    if (no_parallel) {
+    if (options.run_serially) {
         for (auto& region : regions) {
-            trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, 0, num_samples, max_bounces, pixels,
-                pixel_clamp);
+            if (options.cancel_flag && *options.cancel_flag) break;
+            trace_image_region(rendered_image, pixels, scene, bvh, lights,
+                region, options.num_samples, options);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -7423,10 +7508,10 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
             threads.push_back(thread([&, tid]() {
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
+                    if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, scene, camera, bvh,
-                        lights, sampler, region, 0, num_samples, max_bounces,
-                        pixels, pixel_clamp);
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, options.num_samples, options);
                 }
             }));
         }
@@ -7435,20 +7520,26 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    int current_sample, int num_samples, int max_bounces,
-    image<trace_pixel>& pixels, float pixel_clamp, bool no_parallel) {
+int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int current_sample, const trace_image_options& options) {
+    if (current_sample == 0) {
+        auto& camera     = scene.cameras.at(options.camera_id);
+        auto  image_size = get_camera_image_size(camera, options.image_size);
+        init_image(rendered_image, image_size, zero4f);
+        init_trace_pixels(pixels, image_size, options.random_seed);
+    }
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
     auto scope = log_trace_scoped(
-        "tracing samples {}-{}", current_sample, current_sample + num_samples);
-    if (no_parallel) {
+        "tracing samples {}-{}", current_sample, options.num_samples);
+    auto num_samples = min(
+        options.samples_per_batch, options.num_samples - current_sample);
+    if (options.run_serially) {
         for (auto& region : regions) {
-            trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, current_sample, num_samples, max_bounces,
-                pixels, pixel_clamp);
+            if (options.cancel_flag && *options.cancel_flag) break;
+            trace_image_region(rendered_image, pixels, scene, bvh, lights,
+                region, num_samples, options);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -7457,53 +7548,83 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
             threads.push_back(thread([&, tid]() {
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
+                    if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, scene, camera, bvh,
-                        lights, sampler, region, current_sample, num_samples,
-                        max_bounces, pixels, pixel_clamp);
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, num_samples, options);
                 }
             }));
         }
         for (auto& t : threads) t.join();
     }
+    return current_sample + num_samples;
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    int num_samples, int max_bounces, image<trace_pixel>& pixels,
-    vector<thread>& threads, bool& stop_flag, int& current_sample,
-    concurrent_queue<image_region>& queue, float pixel_clamp) {
+void trace_image_async_start(image<vec4f>& rendered_image,
+    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, vector<thread>& threads,
+    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    const trace_image_options& options) {
     log_trace("start tracing async");
-    auto nthreads = thread::hardware_concurrency();
-    threads.clear();
-    stop_flag    = false;
+    auto& camera     = scene.cameras.at(options.camera_id);
+    auto  image_size = get_camera_image_size(camera, options.image_size);
+    init_image(rendered_image, image_size, zero4f);
+    init_trace_pixels(pixels, image_size, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
+    if (options.cancel_flag) *options.cancel_flag = false;
+
+#if 0
+    auto nthreads = thread::hardware_concurrency();
+    threads.clear();
     for (auto tid = 0; tid < nthreads; tid++) {
-        threads.push_back(thread([&, tid, nthreads, num_samples, pixel_clamp,
-                                     max_bounces, sampler, regions]() {
-            for (auto s = 0; s < num_samples; s++) {
+        threads.push_back(thread([options, tid, nthreads, regions, &current_sample, &queue, &lights, &scene, &rendered_image, &pixels, &bvh]() {
+            for (auto s = 0; s < options.num_samples;
+                 s += options.samples_per_batch) {
                 if (!tid) current_sample = s;
+                auto num_samples = min(options.samples_per_batch,
+                    options.num_samples - current_sample);
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
-                    if (stop_flag) return;
+                    if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, scene, camera, bvh, lights,
-                        sampler, region, s, 1, max_bounces, pixels, pixel_clamp);
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, num_samples, options);
                     queue.push(region);
                 }
             }
-            if (!tid) current_sample = num_samples;
+            if (!tid) current_sample = options.num_samples;
         }));
     }
+#else
+    threads.clear();
+    threads.emplace_back([options, regions, &current_sample, &rendered_image,
+                             &scene, &lights, &bvh, &pixels, &queue]() {
+        for (auto sample = 0; sample < options.num_samples;
+             sample += options.samples_per_batch) {
+            if (options.cancel_flag && *options.cancel_flag) return;
+            current_sample   = sample;
+            auto num_samples = min(options.samples_per_batch,
+                options.num_samples - current_sample);
+            parallel_foreach(regions,
+                [num_samples, &options, &rendered_image, &scene, &lights, &bvh,
+                    &pixels, &queue](const image_region& region) {
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, num_samples, options);
+                    queue.push(region);
+                },
+                options.cancel_flag);
+        }
+        current_sample = options.num_samples;
+    });
+#endif
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(vector<thread>& threads, bool& stop_flag,
-    concurrent_queue<image_region>& queue) {
-    stop_flag = true;
+void trace_image_async_stop(vector<thread>& threads,
+    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    if (options.cancel_flag) *options.cancel_flag = true;
     for (auto& t : threads) t.join();
     threads.clear();
     queue.clear();
