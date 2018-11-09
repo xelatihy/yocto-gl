@@ -101,12 +101,13 @@ void update_display_async(app_image& img) {
     img.texture_done = false;
     auto regions     = vector<image_region>{};
     make_image_regions(regions, img.img.size);
-    for (auto region_id = 0; region_id < regions.size(); region_id++) {
-        if (img.display_stop) break;
-        tonemap_image_region(img.img, img.display, regions[region_id],
-            img.exposure, img.filmic, img.srgb);
-        img.display_queue.push(regions[region_id]);
-    }
+    parallel_foreach(regions,
+        [&img](const image_region& region) {
+            tonemap_image_region(img.img, img.display, region, img.exposure,
+                img.filmic, img.srgb);
+            img.display_queue.push(region);
+        },
+        &img.display_stop);
     img.display_done = true;
 }
 
@@ -118,7 +119,10 @@ void load_image_async(app_image& img) {
     img.texture_done = false;
     img.error_msg    = "";
     img.img          = {};
-    if (!load_image(img.filename, img.img)) img.error_msg = "cannot load image";
+    if (!load_image(img.filename, img.img)) {
+        img.error_msg = "cannot load image";
+        return;
+    }
     img.load_done      = true;
     img.display        = img.img;
     img.display_thread = thread([&img]() { update_display_async(img); });
@@ -154,6 +158,9 @@ void add_new_image(app_state& app, const string& filename, const string& outname
     img.exposure    = exposure;
     img.filmic      = filmic;
     img.srgb        = srgb;
+    img.load_done   = false;
+    img.display_done= false;
+    img.stats_done  = false;
     img.load_thread = thread([&img]() { load_image_async(img); });
     app.img_id      = (int)app.imgs.size() - 1;
 }
@@ -254,7 +261,7 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(img.gl_txt, img.display, false, false, false);
+            init_opengl_texture(img.gl_txt, img.display.size, false, false, false, false);
         } else {
             auto region = image_region{};
             while (img.display_queue.try_pop(region)) {
@@ -315,8 +322,9 @@ int main(int argc, char* argv[]) {
     // prepare application
     auto app = app_state();
 
-    // command line params
-    auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
+    // command line options
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "view images", "yimview");
     auto exposure = parse_argument(
         parser, "--exposure,-e", 0.0f, "display exposure");
     auto filmic = parse_argument(parser, "--filmic", false, "display filmic");

@@ -132,7 +132,8 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "Process images", "yimproc");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Process images", "yimproc");
     auto tonemap = parse_argument(parser, "--tonemap,-t", false, "Tonemap image");
     auto exposure = parse_argument(
         parser, "--exposure,-e", 0.0f, "Tonemap exposure");
