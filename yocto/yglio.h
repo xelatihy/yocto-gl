@@ -211,11 +211,15 @@ struct load_scene_params {
     bool obj_split_shapes = true;
     bool obj_preserve_face_varying = false;
     bool assign_texture_opacity = true;
+    atomic<bool>* cancel_flag = nullptr;
+    bool run_serially = false;
 };
 // Scene save params
 struct save_scene_params {
     bool skip_textures = false;
     bool exit_on_error = false;
+    atomic<bool>* cancel_flag = nullptr;
+    bool run_serially = false;
 };
 
 // Load/save a scene in the supported formats.

@@ -1028,37 +1028,41 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     if(params.skip_textures) return true;
     
     // load images
-    for (auto& texture : scene.textures) {
+    atomic<bool> exit_error(false);
+    parallel_foreach(scene.textures, [&exit_error, &params, &dirname](yocto_texture& texture) {
+        if(exit_error) return;
         if (texture.filename == "" || !texture.hdr_image.pixels.empty() ||
             !texture.ldr_image.pixels.empty())
-            continue;
+            return;
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (is_hdr_filename(filename)) {
             if (!load_image_nolog(filename, texture.hdr_image)) {
-                if (params.exit_on_error) return false;
+                if (params.exit_on_error) { exit_error = true; return; }
             }
         } else {
             if (!load_image_nolog(filename, texture.ldr_image)) {
-                if (params.exit_on_error) return false;
+                if (params.exit_on_error) { exit_error = true; return; }
             }
         }
-    }
+    }, params.cancel_flag, params.run_serially);
+    if(exit_error) return false;
 
     // load volumes
-    for (auto& texture : scene.voltextures) {
+    parallel_foreach(scene.voltextures, [&exit_error, &params, &dirname](yocto_voltexture& texture) {
+        if(exit_error) return;
         if (texture.filename == "" || !texture.volume_data.voxels.empty())
-            continue;
+            return;
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (!load_volume1f_nolog(filename, texture.volume_data)) {
-            if (params.exit_on_error) return false;
+            if (params.exit_on_error) { exit_error = true; return; }
         }
-    }
+    }, params.cancel_flag, params.run_serially);
+    if(exit_error) return false;
 
     // assign opacity texture if needed
     if (params.assign_texture_opacity) {
         auto has_opacity = vector<bool>(scene.textures.size());
-        for (auto texture_id = 0; texture_id < scene.textures.size();
-             texture_id++) {
+        parallel_for((int)scene.textures.size(), [&scene, &has_opacity](int texture_id) {
             auto& texture           = scene.textures[texture_id];
             has_opacity[texture_id] = false;
             for (auto& p : texture.hdr_image.pixels) {
@@ -1073,7 +1077,7 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
                     break;
                 }
             }
-        }
+        }, params.cancel_flag, params.run_serially);
         for (auto& material : scene.materials) {
             if (material.diffuse_texture >= 0 && material.opacity_texture < 0 &&
                 has_opacity[material.diffuse_texture])
@@ -1092,29 +1096,34 @@ bool save_scene_textures(
     if(params.skip_textures) return true;
 
     // save images
-    for (auto& texture : scene.textures) {
+    atomic<bool> exit_error(false);
+    parallel_foreach(scene.textures, [&exit_error, &params, &dirname](const yocto_texture& texture) {
+        if(exit_error) return;
         if (texture.hdr_image.pixels.empty() && texture.ldr_image.pixels.empty())
-            continue;
+            return;
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (is_hdr_filename(filename)) {
             if (!save_image_nolog(filename, texture.hdr_image)) {
-                if (params.exit_on_error) return false;
+                if (params.exit_on_error) { exit_error = true; return; }
             }
         } else {
             if (!save_image_nolog(filename, texture.ldr_image)) {
-                if (params.exit_on_error) return false;
+                if (params.exit_on_error) { exit_error = true; return; }
             }
         }
-    }
+    }, params.cancel_flag, params.run_serially);
+    if(exit_error) return false;
 
     // save volumes
-    for (auto& texture : scene.voltextures) {
-        if (texture.volume_data.voxels.empty()) continue;
+    parallel_foreach(scene.voltextures, [&exit_error, &params, &dirname](const yocto_voltexture& texture) {
+        if(exit_error) return;
+        if (texture.volume_data.voxels.empty()) return;
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (!save_volume1f_nolog(filename, texture.volume_data)) {
-            if (params.exit_on_error) return false;
+            if (params.exit_on_error) { exit_error = true; return; }
         }
-    }
+    }, params.cancel_flag, params.run_serially);
+    if(exit_error) return false;
 
     // done
     return true;

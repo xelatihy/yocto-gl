@@ -105,7 +105,7 @@ void update_display_async(app_image& img) {
         tonemap_image_region(img.img, img.display, region,
             img.exposure, img.filmic, img.srgb);
         img.display_queue.push(region);
-    }, img.display_stop);
+    }, &img.display_stop);
     img.display_done = true;
 }
 

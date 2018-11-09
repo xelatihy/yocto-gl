@@ -2169,16 +2169,24 @@ struct thread_pool {
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(int begin, int end, const Func& func,
-    atomic<bool>& cancel, bool serial = false);
+    atomic<bool>* cancel = nullptr, bool serial = false);
 template <typename Func>
 inline void parallel_for(int num, const Func& func,
-    atomic<bool>& cancel, bool serial = false);
+    atomic<bool>* cancel = nullptr, bool serial = false) {
+    parallel_for(0, num, func, cancel, serial);
+}
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 inline void parallel_foreach(vector<T>& values, const Func& func,
-    atomic<bool>& cancel, bool serial = false) {
+    atomic<bool>* cancel = nullptr, bool serial = false) {
+    parallel_for(0, (int)values.size(),
+        [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+}
+template <typename T, typename Func>
+inline void parallel_foreach(const vector<T>& values, const Func& func,
+    atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(0, (int)values.size(),
         [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
 }
@@ -4567,10 +4575,10 @@ namespace ygl {
 // parallel algorithms.
 template<typename Func>
 inline void parallel_for(int begin, int end, const Func& func,
-    atomic<bool>& cancel, bool serial) {
+    atomic<bool>* cancel, bool serial) {
     if(serial) {
         for(auto idx = begin; idx < end; idx++) {
-            if(cancel) break;
+            if(cancel && *cancel) break;
             func(idx);
         }
     } else {
@@ -4578,9 +4586,9 @@ inline void parallel_for(int begin, int end, const Func& func,
         auto nthreads = thread::hardware_concurrency();
         atomic<int> next_idx(begin);
         for(auto thread_id = 0; thread_id < nthreads; thread_id++) {
-            threads.emplace_back([&func,&next_idx,&cancel,end]() {
+            threads.emplace_back([&func,&next_idx,cancel,end]() {
                 while(true) {
-                    if(cancel) break;
+                    if(cancel && *cancel) break;
                     auto idx = next_idx.fetch_add(1);
                     if(idx >= end) break;
                     func(idx);
@@ -4589,12 +4597,6 @@ inline void parallel_for(int begin, int end, const Func& func,
         }
         for(auto& t : threads) t.join();
     }
-}
-
-template<typename Func>
-inline void parallel_for(int num, const Func& func,
-    atomic<bool>& cancel, bool serial) {
-    return parallel_for(0, num, func, cancel, serial);
 }
 
 }
