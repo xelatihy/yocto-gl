@@ -34,29 +34,23 @@
 // Application state
 struct app_state {
     // loading options
-    string filename       = "scene.json";
-    string imfilename     = "out.obj";
-    bool   double_sided   = false;
-    bool   add_skyenv     = false;
-    load_scene_options    load_options = {};
-    build_bvh_options     bvh_options = {};
+    string filename     = "scene.json";
+    string imfilename   = "out.obj";
+    bool   double_sided = false;
+    bool   add_skyenv   = false;
+
+    // options
+    load_scene_options  load_options     = {};
+    build_bvh_options   bvh_options      = {};
+    trace_image_options trace_options    = {};
+    float               display_exposure = 0;
+    bool                display_filmic   = false;
+    bool                display_srgb     = true;
+    int                 preview_ratio    = 8;
 
     // scene
     yocto_scene scene = {};
     bvh_scene   bvh   = {};
-
-    // rendering options
-    int                camera_id        = 0;
-    vec2i              image_size       = {1280, 720};
-    int                num_samples      = 256;
-    trace_sampler_type sampler_type     = trace_sampler_type::path;
-    int                max_bounces      = 8;
-    float              display_exposure = 0;
-    bool               display_filmic   = false;
-    bool               display_srgb     = true;
-    int                preview_ratio    = 8;
-    uint64_t           random_seed      = 7;
-    float              pixel_clamp      = 100;
 
     // rendering state
     trace_lights                   lights         = {};
@@ -64,10 +58,10 @@ struct app_state {
     image<vec4f>                   rendered_image = {};
     image<vec4f>                   display_image  = {};
     image<vec4f>                   preview_image  = {};
-    bool                           trace_stop     = false;
-    int                            trace_sample   = 0;
-    vector<thread>                 trace_threads  = {};
-    concurrent_queue<image_region> trace_queue    = {};
+    atomic<bool>                   trace_stop;
+    int                            trace_sample  = 0;
+    vector<thread>                 trace_threads = {};
+    concurrent_queue<image_region> trace_queue   = {};
 
     // view image
     vec2f                     image_center = zero2f;
@@ -87,7 +81,7 @@ struct app_state {
 };
 
 void stop_rendering_async(app_state& app) {
-    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
+    trace_image_async_stop(app.trace_threads, app.trace_queue, app.trace_options);
 }
 
 void start_rendering_async(app_state& app) {
@@ -95,22 +89,26 @@ void start_rendering_async(app_state& app) {
     app.status      = "rendering image";
     app.trace_start = get_time();
 
-    auto& camera       = app.scene.cameras[app.camera_id];
-    auto  image_size   = get_camera_image_size(camera, app.image_size);
-    auto  sampler_func = get_trace_sampler_func(app.sampler_type);
+    auto& camera    = app.scene.cameras[app.trace_options.camera_id];
+    auto image_size = get_camera_image_size(camera, app.trace_options.image_size);
 
     init_image<vec4f>(app.rendered_image, image_size);
     init_image<vec4f>(app.display_image, image_size);
     init_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
-    init_trace_pixels(app.trace_pixels, image_size, app.random_seed);
+    init_trace_pixels(
+        app.trace_pixels, image_size, app.trace_options.random_seed);
 
-    trace_image(app.preview_image, app.scene, camera, app.bvh, app.lights,
-        sampler_func, 1, app.max_bounces);
+    auto preview_options = app.trace_options;
+    preview_options.image_size /= app.preview_ratio;
+    preview_options.num_samples = 1;
+    trace_image(
+        app.preview_image, app.scene, app.bvh, app.lights, preview_options);
     app.trace_queue.push({zero2i, zero2i});
 
-    trace_async_start(app.rendered_image, app.scene, camera, app.bvh, app.lights,
-        sampler_func, app.num_samples, app.max_bounces, app.trace_pixels,
-        app.trace_threads, app.trace_stop, app.trace_sample, app.trace_queue);
+    app.trace_options.cancel_flag = &app.trace_stop;
+    trace_image_async_start(app.rendered_image, app.trace_pixels, app.scene,
+        app.bvh, app.lights, app.trace_threads, app.trace_sample,
+        app.trace_queue, app.trace_options);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -143,9 +141,10 @@ bool load_scene_sync(app_state& app) {
     init_trace_lights(app.lights, app.scene);
 
     // fix renderer type if no lights
-    if (empty(app.lights) && app.sampler_type != trace_sampler_type::eyelight) {
+    if (empty(app.lights) &&
+        app.trace_options.sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader\n");
-        app.sampler_type = trace_sampler_type::eyelight;
+        app.trace_options.sampler_type = trace_sampler_type::eyelight;
     }
 
     // set flags
@@ -199,18 +198,18 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto edited = 0;
             if (app.load_done) {
                 edited += draw_combobox_opengl_widget(
-                    win, "camera", app.camera_id, cam_names);
+                    win, "camera", app.trace_options.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
-                win, "size", app.image_size, 256, 4096);
+                win, "size", app.trace_options.image_size, 256, 4096);
             edited += draw_slider_opengl_widget(
-                win, "nsamples", app.num_samples, 16, 4096);
+                win, "nsamples", app.trace_options.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
-                (int&)app.sampler_type, trace_sampler_type_names);
+                (int&)app.trace_options.sampler_type, trace_sampler_type_names);
             edited += draw_slider_opengl_widget(
-                win, "nbounces", app.max_bounces, 1, 10);
+                win, "nbounces", app.trace_options.max_bounces, 1, 10);
             edited += draw_slider_opengl_widget(
-                win, "seed", (int&)app.random_seed, 0, 1000000);
+                win, "seed", (int&)app.trace_options.random_seed, 0, 1000000);
             edited += draw_slider_opengl_widget(
                 win, "pratio", app.preview_ratio, 1, 64);
             if (edited) app.update_list.push_back({"app", -1});
@@ -347,7 +346,7 @@ bool update(app_state& app) {
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
-    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
+    trace_image_async_stop(app.trace_threads, app.trace_queue, app.trace_options);
     app.filename = paths.front();
     load_scene_async(app);
 }
@@ -384,10 +383,10 @@ void run_ui(app_state& app) {
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto& camera = app.scene.cameras.at(app.camera_id);
+            auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
             camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({"camera", app.camera_id});
+            app.update_list.push_back({"camera", app.trace_options.camera_id});
         }
 
         // selection
@@ -397,7 +396,7 @@ void run_ui(app_state& app) {
                 app.image_scale, app.rendered_image.size);
             if (ij.x < 0 || ij.x >= app.rendered_image.size.x || ij.y < 0 ||
                 ij.y >= app.rendered_image.size.y) {
-                auto& camera = app.scene.cameras.at(app.camera_id);
+                auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
                 auto  ray    = evaluate_camera_ray(
                     camera, ij, app.rendered_image.size, {0.5f, 0.5f}, zero2f);
                 auto isec = intersect_scene(app.scene, app.bvh, ray);
@@ -424,25 +423,25 @@ void run_ui(app_state& app) {
 
 int main(int argc, char* argv[]) {
     // application
-    auto app = app_state();
+    app_state app{};
 
     // parse command line
     auto parser = cmdline_parser{};
-    init_cmdline_parser(parser,
-
-        argc, argv, "progressive path tracing", "yitrace");
-    app.camera_id   = parse_argument(parser, "--camera", 0, "Camera index.");
-    app.image_size  = {0, parse_argument(parser, "--resolution,-r", 512,
-                             "Image vertical resolution.")};
-    app.num_samples = parse_argument(
+    init_cmdline_parser(
+        parser, argc, argv, "progressive path tracing", "yitrace");
+    app.trace_options.camera_id = parse_argument(
+        parser, "--camera", 0, "Camera index.");
+    app.trace_options.image_size = {0, parse_argument(parser, "--resolution,-r",
+                                           512, "Image vertical resolution.")};
+    app.trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.sampler_type = parse_argument(parser, "--tracer,-t",
+    app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
         trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
-    app.max_bounces  = parse_argument(
+    app.trace_options.max_bounces  = parse_argument(
         parser, "--nbounces", 4, "Maximum number of bounces.");
-    app.pixel_clamp = parse_argument(
+    app.trace_options.pixel_clamp = parse_argument(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
-    app.random_seed = parse_argument(
+    app.trace_options.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
     auto no_parallel = parse_argument(
         parser, "--noparallel", false, "Disable parallel execution.");
@@ -459,8 +458,8 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // fix parallel code
-    if(no_parallel) {
-        app.bvh_options.run_serially = true;
+    if (no_parallel) {
+        app.bvh_options.run_serially  = true;
         app.load_options.run_serially = true;
     }
 
@@ -471,7 +470,7 @@ int main(int argc, char* argv[]) {
     run_ui(app);
 
     // cleanup
-    trace_async_stop(app.trace_threads, app.trace_stop, app.trace_queue);
+    trace_image_async_stop(app.trace_threads, app.trace_queue, app.trace_options);
 
     // done
     return 0;

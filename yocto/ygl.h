@@ -2867,10 +2867,10 @@ struct bvh_scene {
 
 // Options for build bvh
 struct build_bvh_options {
-    bool high_quality = true;
-    bool use_embree = false;
-    bool run_serially = false;
-    atomic<bool>* cancel_flag = nullptr;
+    bool          high_quality = true;
+    bool          use_embree   = false;
+    bool          run_serially = false;
+    atomic<bool>* cancel_flag  = nullptr;
 };
 
 // Build a BVH from the given set of primitives.
@@ -3896,32 +3896,42 @@ using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
     const vec3f& direction, rng_state& rng, int max_bounces)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
+// Options for trace functions
+struct trace_image_options {
+    int                camera_id         = 0;
+    vec2i              image_size        = {0, 512};
+    trace_sampler_type sampler_type      = trace_sampler_type::path;
+    trace_sampler_func custom_sampler    = {};
+    int                num_samples       = 512;
+    int                max_bounces       = 8;
+    int                samples_per_batch = 16;
+    float              pixel_clamp       = 100;
+    uint64_t           random_seed       = 7;
+    std::atomic<bool>* cancel_flag       = nullptr;
+    bool               run_serially      = false;
+};
+
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_sampler_func& trace_sampler, int num_samples, int max_bounces,
-    float pixel_clamp = 100, bool no_parallel = false);
+    const bvh_scene& bvh, const trace_lights& lights,
+    const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh, const trace_lights& lights,
-    const trace_sampler_func& trace_sampler, int current_sample,
-    int num_samples, int max_bounces, image<trace_pixel>& pixels,
-    float pixel_clamp = 100, bool no_parallel = false);
+int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int current_sample, int num_samples, const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
-void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& trace_sampler,
-    int num_samples, int max_bounces, image<trace_pixel>& pixels,
-    vector<thread>& threads, bool& stop_flag, int& current_sample,
-    concurrent_queue<image_region>& queue, float pixel_clamp = 100);
+void trace_image_async_start(image<vec4f>& rendered_image,
+    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, vector<thread>& threads, int& current_sample,
+    concurrent_queue<image_region>& queue, const trace_image_options& options);
 // Stop the asynchronous renderer.
-void trace_async_stop(vector<thread>& threads, bool& stop_flag,
-    concurrent_queue<image_region>& queue);
+void trace_image_async_stop(vector<thread>& threads,
+    concurrent_queue<image_region>& queue, const trace_image_options& options);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.

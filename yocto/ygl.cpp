@@ -1802,8 +1802,8 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-void build_bvh_nodes_serial(
-    vector<bvh_node>& nodes, vector<bvh_prim>& prims, const build_bvh_options& options) {
+void build_bvh_nodes_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+    const build_bvh_options& options) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -1815,7 +1815,7 @@ void build_bvh_nodes_serial(
     // create nodes until the queue is empty
     while (!queue.empty()) {
         // exit if needed
-        if(options.cancel_flag && *options.cancel_flag) return;
+        if (options.cancel_flag && *options.cancel_flag) return;
 
         // grab node to work on
         auto next = queue.front();
@@ -1861,8 +1861,8 @@ void build_bvh_nodes_serial(
 }
 
 // Build BVH nodes
-void build_bvh_nodes_parallel(
-    vector<bvh_node>& nodes, vector<bvh_prim>& prims, const build_bvh_options& options) {
+void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
+    const build_bvh_options& options) {
     // prepare to build nodes
     nodes.clear();
     nodes.reserve(prims.size() * 2);
@@ -1872,76 +1872,77 @@ void build_bvh_nodes_parallel(
     nodes.emplace_back();
 
     // synchronization
-    atomic<int> num_processed_prims(0);
-    mutex queue_mutex;
+    atomic<int>    num_processed_prims(0);
+    mutex          queue_mutex;
     vector<thread> threads;
-    auto nthreads = thread::hardware_concurrency();
+    auto           nthreads = thread::hardware_concurrency();
 
     // create nodes until the queue is empty
-    for(auto thread_id = 0; thread_id < nthreads; thread_id++) {
-        threads.emplace_back([&nodes, &prims, &options, &num_processed_prims, &queue_mutex, &queue]{
-    while (true) {
-        // exit if needed
-        if(num_processed_prims >= prims.size()) return;
-        if(options.cancel_flag && *options.cancel_flag) return;
-        
-        // grab node to work on
-        auto next = zero3i;
-        {
-            lock_guard<mutex> lock{queue_mutex};
-            if(!queue.empty()) {
-                next = queue.front();
-                queue.pop_front();
+    for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+        threads.emplace_back([&nodes, &prims, &options, &num_processed_prims,
+                                 &queue_mutex, &queue] {
+            while (true) {
+                // exit if needed
+                if (num_processed_prims >= prims.size()) return;
+                if (options.cancel_flag && *options.cancel_flag) return;
+
+                // grab node to work on
+                auto next = zero3i;
+                {
+                    lock_guard<mutex> lock{queue_mutex};
+                    if (!queue.empty()) {
+                        next = queue.front();
+                        queue.pop_front();
+                    }
+                }
+
+                // wait a bit if needed
+                if (next == zero3i) {
+                    std::this_thread::sleep_for(10us);
+                    continue;
+                }
+
+                // grab node
+                auto  nodeid = next.x, start = next.y, end = next.z;
+                auto& node = nodes[nodeid];
+
+                // compute bounds
+                node.bbox = invalid_bbox3f;
+                for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
+
+                // split into two children
+                if (end - start > bvh_max_prims) {
+                    // get split
+                    auto split = (options.high_quality) ?
+                                     split_bvh_node_sah(prims, start, end) :
+                                     split_bvh_node_balanced(prims, start, end);
+                    auto mid = split.first, split_axis = split.second;
+
+                    // make an internal node
+                    {
+                        lock_guard<mutex> lock{queue_mutex};
+                        node.is_internal      = true;
+                        node.split_axis       = split_axis;
+                        node.num_primitives   = 2;
+                        node.primitive_ids[0] = (int)nodes.size() + 0;
+                        node.primitive_ids[1] = (int)nodes.size() + 1;
+                        nodes.emplace_back();
+                        nodes.emplace_back();
+                        queue.push_back({node.primitive_ids[0], start, mid});
+                        queue.push_back({node.primitive_ids[1], mid, end});
+                    }
+                } else {
+                    // Make a leaf node
+                    node.is_internal    = false;
+                    node.num_primitives = end - start;
+                    for (auto i = 0; i < node.num_primitives; i++)
+                        node.primitive_ids[i] = prims[start + i].primid;
+                    num_processed_prims += node.num_primitives;
+                }
             }
-        }
-
-        // wait a bit if needed
-        if(next == zero3i) {
-            std::this_thread::sleep_for(10us);
-            continue;
-        }
-
-        // grab node
-        auto nodeid = next.x, start = next.y, end = next.z;
-        auto& node = nodes[nodeid];
-
-        // compute bounds
-        node.bbox = invalid_bbox3f;
-        for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
-
-        // split into two children
-        if (end - start > bvh_max_prims) {
-            // get split
-            auto split = (options.high_quality) ?
-                             split_bvh_node_sah(prims, start, end) :
-                             split_bvh_node_balanced(prims, start, end);
-            auto mid = split.first, split_axis = split.second;
-
-            // make an internal node
-            {
-                lock_guard<mutex> lock{queue_mutex};
-                node.is_internal      = true;
-                node.split_axis       = split_axis;
-                node.num_primitives   = 2;
-                node.primitive_ids[0] = (int)nodes.size() + 0;
-                node.primitive_ids[1] = (int)nodes.size() + 1;
-                nodes.emplace_back();
-                nodes.emplace_back();
-                queue.push_back({node.primitive_ids[0], start, mid});
-                queue.push_back({node.primitive_ids[1], mid, end});
-            }
-        } else {
-            // Make a leaf node
-            node.is_internal    = false;
-            node.num_primitives = end - start;
-            for (auto i = 0; i < node.num_primitives; i++)
-                node.primitive_ids[i] = prims[start + i].primid;
-            num_processed_prims += node.num_primitives;
-        }
-    }
         });
     }
-    for(auto& t : threads) t.join();
+    for (auto& t : threads) t.join();
 
     // cleanup
     nodes.shrink_to_fit();
@@ -1983,7 +1984,7 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     }
 
     // build nodes
-    if(options.run_serially) {
+    if (options.run_serially) {
         build_bvh_nodes_serial(bvh.nodes, prims, options);
     } else {
         build_bvh_nodes_parallel(bvh.nodes, prims, options);
@@ -2021,7 +2022,7 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
     }
 
     // build nodes
-    if(options.run_serially) {
+    if (options.run_serially) {
         log_info("scene serial");
         build_bvh_nodes_serial(bvh.nodes, prims, options);
     } else {
@@ -4545,8 +4546,8 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a shape BVH
-void build_shape_bvh(
-    const yocto_shape& shape, bvh_shape& bvh, const build_bvh_options& options) {
+void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
+    const build_bvh_options& options) {
     // create bvh
     bvh = bvh_shape{};
 
@@ -4577,8 +4578,8 @@ void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
 }
 
 // Build a scene BVH
-void build_scene_bvh(
-    const yocto_scene& scene, bvh_scene& bvh, const build_bvh_options& options) {
+void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+    const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
     // create bvh
     bvh = bvh_scene{};
@@ -4586,15 +4587,15 @@ void build_scene_bvh(
     // shapes
     bvh.shape_bvhs.resize(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-        build_shape_bvh(scene.shapes[shape_id], bvh.shape_bvhs[shape_id],
-            options);
+        build_shape_bvh(
+            scene.shapes[shape_id], bvh.shape_bvhs[shape_id], options);
     }
 
     // surfaces
     bvh.surface_bvhs.resize(scene.surfaces.size());
     for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
-        build_surface_bvh(scene.surfaces[surface_id],
-            bvh.surface_bvhs[surface_id], options);
+        build_surface_bvh(
+            scene.surfaces[surface_id], bvh.surface_bvhs[surface_id], options);
     }
 
     // instances
@@ -7383,29 +7384,32 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
 }
 
 // Trace a block of samples
-void trace_image_region(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    const image_region& region, int current_sample, int num_samples,
-    int max_bounces, image<trace_pixel>& pixels, float pixel_clamp) {
+void trace_image_region(image<vec4f>& rendered_image,
+    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const image_region& region, int current_sample,
+    int num_samples, const trace_image_options& options) {
+    auto& camera  = scene.cameras.at(options.camera_id);
+    auto  sampler = get_trace_sampler_func(options.sampler_type);
+    num_samples   = min(num_samples, options.num_samples - current_sample);
     for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
         for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
             auto& pixel = at(pixels, {i, j});
             for (auto s = 0; s < num_samples; s++) {
+                if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size, pixel.rng);
-                auto radiance_hit = sampler(
-                    scene, bvh, lights, ray.o, ray.d, pixel.rng, max_bounces);
-                auto radiance = radiance_hit.first;
-                auto hit      = radiance_hit.second;
+                auto radiance_hit = sampler(scene, bvh, lights, ray.o, ray.d,
+                    pixel.rng, options.max_bounces);
+                auto radiance     = radiance_hit.first;
+                auto hit          = radiance_hit.second;
                 if (!isfinite(radiance.x) || !isfinite(radiance.y) ||
                     !isfinite(radiance.z)) {
                     log_error("NaN detected");
                     radiance = zero3f;
                 }
-                if (max(radiance) > pixel_clamp)
-                    radiance = radiance * (pixel_clamp / max(radiance));
+                if (max(radiance) > options.pixel_clamp)
+                    radiance = radiance * (options.pixel_clamp / max(radiance));
                 pixel.radiance += radiance;
                 pixel.hits += hit ? 1 : 0;
                 pixel.samples += 1;
@@ -7477,20 +7481,22 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    int num_samples, int max_bounces, float pixel_clamp, bool no_parallel) {
-    auto scope  = log_trace_scoped("tracing image");
+    const bvh_scene& bvh, const trace_lights& lights,
+    const trace_image_options& options) {
+    auto  scope      = log_trace_scoped("tracing image");
+    auto& camera     = scene.cameras.at(options.camera_id);
+    auto  image_size = get_camera_image_size(camera, options.image_size);
+    init_image(rendered_image, image_size, zero4f);
     auto pixels = image<trace_pixel>{};
     init_trace_pixels(pixels, rendered_image.size);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
 
-    if (no_parallel) {
+    if (options.run_serially) {
         for (auto& region : regions) {
-            trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, 0, num_samples, max_bounces, pixels,
-                pixel_clamp);
+            if (options.cancel_flag && *options.cancel_flag) break;
+            trace_image_region(rendered_image, pixels, scene, bvh, lights,
+                region, 0, options.num_samples, options);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -7499,10 +7505,10 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
             threads.push_back(thread([&, tid]() {
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
+                    if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, scene, camera, bvh,
-                        lights, sampler, region, 0, num_samples, max_bounces,
-                        pixels, pixel_clamp);
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, 0, options.num_samples, options);
                 }
             }));
         }
@@ -7511,20 +7517,24 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    int current_sample, int num_samples, int max_bounces,
-    image<trace_pixel>& pixels, float pixel_clamp, bool no_parallel) {
+int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int current_sample, int num_samples, const trace_image_options& options) {
+    if (current_sample == 0) {
+        auto& camera     = scene.cameras.at(options.camera_id);
+        auto  image_size = get_camera_image_size(camera, options.image_size);
+        init_image(rendered_image, image_size, zero4f);
+        init_trace_pixels(pixels, image_size, options.random_seed);
+    }
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
     auto scope = log_trace_scoped(
-        "tracing samples {}-{}", current_sample, current_sample + num_samples);
-    if (no_parallel) {
+        "tracing samples {}-{}", current_sample, options.num_samples);
+    if (options.run_serially) {
         for (auto& region : regions) {
-            trace_image_region(rendered_image, scene, camera, bvh, lights,
-                sampler, region, current_sample, num_samples, max_bounces,
-                pixels, pixel_clamp);
+            if (options.cancel_flag && *options.cancel_flag) break;
+            trace_image_region(rendered_image, pixels, scene, bvh, lights,
+                region, current_sample, num_samples, options);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -7533,53 +7543,51 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
             threads.push_back(thread([&, tid]() {
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
+                    if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, scene, camera, bvh,
-                        lights, sampler, region, current_sample, num_samples,
-                        max_bounces, pixels, pixel_clamp);
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, current_sample, num_samples, options);
                 }
             }));
         }
         for (auto& t : threads) t.join();
     }
+    return current_sample;
 }
 
 // Starts an anyncrhounous renderer.
-void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const yocto_camera& camera, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_sampler_func& sampler,
-    int num_samples, int max_bounces, image<trace_pixel>& pixels,
-    vector<thread>& threads, bool& stop_flag, int& current_sample,
-    concurrent_queue<image_region>& queue, float pixel_clamp) {
+void trace_image_async_start(image<vec4f>& rendered_image,
+    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, vector<thread>& threads, int& current_sample,
+    concurrent_queue<image_region>& queue, const trace_image_options& options) {
     log_trace("start tracing async");
     auto nthreads = thread::hardware_concurrency();
     threads.clear();
-    stop_flag    = false;
+    if (options.cancel_flag) *options.cancel_flag = false;
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
     for (auto tid = 0; tid < nthreads; tid++) {
-        threads.push_back(thread([&, tid, nthreads, num_samples, pixel_clamp,
-                                     max_bounces, sampler, regions]() {
-            for (auto s = 0; s < num_samples; s++) {
+        threads.push_back(thread([&, tid, nthreads, regions]() {
+            for (auto s = 0; s < options.num_samples; s++) {
                 if (!tid) current_sample = s;
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
-                    if (stop_flag) return;
+                    if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, scene, camera, bvh, lights,
-                        sampler, region, s, 1, max_bounces, pixels, pixel_clamp);
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, s, 1, options);
                     queue.push(region);
                 }
             }
-            if (!tid) current_sample = num_samples;
+            if (!tid) current_sample = options.num_samples;
         }));
     }
 }
 
 // Stop the asynchronous renderer.
-void trace_async_stop(vector<thread>& threads, bool& stop_flag,
-    concurrent_queue<image_region>& queue) {
-    stop_flag = true;
+void trace_image_async_stop(vector<thread>& threads,
+    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    if (options.cancel_flag) *options.cancel_flag = true;
     for (auto& t : threads) t.join();
     threads.clear();
     queue.clear();
