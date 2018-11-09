@@ -78,7 +78,7 @@ struct app_state {
 
     // app status
     atomic<bool> load_done, load_running;
-    string status = "";
+    string       status = "";
 };
 
 void stop_rendering_async(app_state& app) {
@@ -87,12 +87,12 @@ void stop_rendering_async(app_state& app) {
 
 void start_rendering_async(app_state& app) {
     stop_rendering_async(app);
-    app.status      = "rendering image";
-    app.trace_start = get_time();
-    app.trace_stop  = false;
+    app.status       = "rendering image";
+    app.trace_start  = get_time();
+    app.trace_stop   = false;
     app.trace_sample = 0;
 
-    auto& camera    = app.scene.cameras[app.trace_options.camera_id];
+    auto& camera   = app.scene.cameras[app.trace_options.camera_id];
     app.image_size = get_camera_image_size(camera, app.trace_options.image_size);
     init_image(app.display_image, app.image_size);
 
@@ -102,19 +102,15 @@ void start_rendering_async(app_state& app) {
     trace_image(
         app.preview_image, app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = image<vec4f>{};
-    tonemap_image(app.preview_image, display_preview,
-                  app.display_exposure, app.display_filmic,
-                  app.display_srgb);
+    tonemap_image(app.preview_image, display_preview, app.display_exposure,
+        app.display_filmic, app.display_srgb);
     auto large_preview = image<vec4f>{};
     init_image(large_preview, app.image_size);
     for (auto j = 0; j < app.image_size.y; j++) {
         for (auto i = 0; i < app.image_size.x; i++) {
-            auto pi = clamp(i / app.preview_ratio, 0,
-                            display_preview.size.x - 1),
-            pj = clamp(j / app.preview_ratio, 0,
-                       display_preview.size.y - 1);
-            at(large_preview, {i, j}) = at(
-                                           display_preview, {pi, pj});
+            auto pi = clamp(i / app.preview_ratio, 0, display_preview.size.x - 1),
+                 pj = clamp(j / app.preview_ratio, 0, display_preview.size.y - 1);
+            at(large_preview, {i, j}) = at(display_preview, {pi, pj});
         }
     }
     app.preview_image = large_preview;
@@ -286,22 +282,28 @@ void draw(const opengl_window& win) {
         center_image(app.image_center, app.image_scale, app.display_image.size,
             win_size, app.zoom_to_fit);
         if (!app.display_texture) {
-            if(app.image_size != zero2i) {
-                init_opengl_texture(app.display_texture, app.image_size,
-                    false, false, false, false);
+            if (app.image_size != zero2i) {
+                init_opengl_texture(app.display_texture, app.image_size, false,
+                    false, false, false);
             }
         } else {
             auto region = image_region{};
+            auto size   = 0;
             while (app.trace_queue.try_pop(region)) {
                 if (region.size == zero2i) {
                     update_opengl_texture(
                         app.display_texture, app.preview_image, false);
+                    break;
                 } else {
                     tonemap_image_region(app.rendered_image, app.display_image,
                         region, app.display_exposure, app.display_filmic,
                         app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
+                    size += region.size.x * region.size.y;
+                    if (size >=
+                        app.rendered_image.size.x * app.rendered_image.size.y)
+                        break;
                 }
             }
         }
@@ -415,8 +417,6 @@ void run_ui(app_state& app) {
         draw(win);
 
         // event hadling
-        if (!(mouse_left || mouse_right) && !widgets_active)
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
         process_opengl_events(win);
     }
 
@@ -469,7 +469,7 @@ int main(int argc, char* argv[]) {
     }
 
     // init app
-    app.load_done = false;
+    app.load_done    = false;
     app.load_running = false;
 
     // load scene

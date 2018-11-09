@@ -7559,8 +7559,9 @@ int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 // Starts an anyncrhounous renderer.
 void trace_image_async_start(image<vec4f>& rendered_image,
     image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, vector<thread>& threads, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    const trace_lights& lights, vector<thread>& threads,
+    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    const trace_image_options& options) {
     log_trace("start tracing async");
     auto& camera     = scene.cameras.at(options.camera_id);
     auto  image_size = get_camera_image_size(camera, options.image_size);
@@ -7570,6 +7571,7 @@ void trace_image_async_start(image<vec4f>& rendered_image,
     make_image_regions(regions, rendered_image.size);
     if (options.cancel_flag) *options.cancel_flag = false;
 
+#if 0
     auto nthreads = thread::hardware_concurrency();
     threads.clear();
     for (auto tid = 0; tid < nthreads; tid++) {
@@ -7591,6 +7593,28 @@ void trace_image_async_start(image<vec4f>& rendered_image,
             if (!tid) current_sample = options.num_samples;
         }));
     }
+#else
+    threads.clear();
+    threads.emplace_back([options, regions, &current_sample, &rendered_image,
+                             &scene, &lights, &bvh, &pixels, &queue]() {
+        for (auto sample = 0; sample < options.num_samples;
+             sample += options.samples_per_batch) {
+            if (options.cancel_flag && *options.cancel_flag) return;
+            current_sample   = sample;
+            auto num_samples = min(options.samples_per_batch,
+                options.num_samples - current_sample);
+            parallel_foreach(regions,
+                [num_samples, &options, &rendered_image, &scene, &lights, &bvh,
+                    &pixels, &queue](const image_region& region) {
+                    trace_image_region(rendered_image, pixels, scene, bvh,
+                        lights, region, num_samples, options);
+                    queue.push(region);
+                },
+                options.cancel_flag);
+        }
+        current_sample = options.num_samples;
+    });
+#endif
 }
 
 // Stop the asynchronous renderer.

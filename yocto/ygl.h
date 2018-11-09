@@ -3927,8 +3927,9 @@ int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 // options.
 void trace_image_async_start(image<vec4f>& rendered_image,
     image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, vector<thread>& threads, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_image_options& options);
+    const trace_lights& lights, vector<thread>& threads,
+    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    const trace_image_options& options);
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
     concurrent_queue<image_region>& queue, const trace_image_options& options);
