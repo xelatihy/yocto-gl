@@ -1871,17 +1871,38 @@ void build_bvh_nodes_parallel(
     auto queue = deque<vec3i>{{0, 0, (int)prims.size()}};
     nodes.emplace_back();
 
+    // synchronization
+    atomic<int> num_processed_prims(0);
+    mutex queue_mutex;
+    vector<thread> threads;
+    auto nthreads = thread::hardware_concurrency();
+
     // create nodes until the queue is empty
-    while (!queue.empty()) {
+    for(auto thread_id = 0; thread_id < nthreads; thread_id++) {
+        threads.emplace_back([&nodes, &prims, &options, &num_processed_prims, &queue_mutex, &queue]{
+    while (true) {
         // exit if needed
+        if(num_processed_prims >= prims.size()) return;
         if(options.cancel_flag && *options.cancel_flag) return;
         
         // grab node to work on
-        auto next = queue.front();
-        queue.pop_front();
-        auto nodeid = next.x, start = next.y, end = next.z;
+        auto next = zero3i;
+        {
+            lock_guard<mutex> lock{queue_mutex};
+            if(!queue.empty()) {
+                next = queue.front();
+                queue.pop_front();
+            }
+        }
+
+        // wait a bit if needed
+        if(next == zero3i) {
+            std::this_thread::sleep_for(10us);
+            continue;
+        }
 
         // grab node
+        auto nodeid = next.x, start = next.y, end = next.z;
         auto& node = nodes[nodeid];
 
         // compute bounds
@@ -1897,23 +1918,30 @@ void build_bvh_nodes_parallel(
             auto mid = split.first, split_axis = split.second;
 
             // make an internal node
-            node.is_internal      = true;
-            node.split_axis       = split_axis;
-            node.num_primitives   = 2;
-            node.primitive_ids[0] = (int)nodes.size() + 0;
-            node.primitive_ids[1] = (int)nodes.size() + 1;
-            nodes.emplace_back();
-            nodes.emplace_back();
-            queue.push_back({node.primitive_ids[0], start, mid});
-            queue.push_back({node.primitive_ids[1], mid, end});
+            {
+                lock_guard<mutex> lock{queue_mutex};
+                node.is_internal      = true;
+                node.split_axis       = split_axis;
+                node.num_primitives   = 2;
+                node.primitive_ids[0] = (int)nodes.size() + 0;
+                node.primitive_ids[1] = (int)nodes.size() + 1;
+                nodes.emplace_back();
+                nodes.emplace_back();
+                queue.push_back({node.primitive_ids[0], start, mid});
+                queue.push_back({node.primitive_ids[1], mid, end});
+            }
         } else {
             // Make a leaf node
             node.is_internal    = false;
             node.num_primitives = end - start;
             for (auto i = 0; i < node.num_primitives; i++)
                 node.primitive_ids[i] = prims[start + i].primid;
+            num_processed_prims += node.num_primitives;
         }
     }
+        });
+    }
+    for(auto& t : threads) t.join();
 
     // cleanup
     nodes.shrink_to_fit();
@@ -1994,8 +2022,10 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
     // build nodes
     if(options.run_serially) {
+        log_info("scene serial");
         build_bvh_nodes_serial(bvh.nodes, prims, options);
     } else {
+        log_info("scene parallel");
         build_bvh_nodes_parallel(bvh.nodes, prims, options);
     }
 }
