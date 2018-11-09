@@ -984,7 +984,7 @@ namespace ygl {
 
 // Load a scene
 bool load_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params) {
+    const load_scene_options& options) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return load_json_scene(filename, scene, params);
@@ -1005,7 +1005,7 @@ bool load_scene(const string& filename, yocto_scene& scene,
 
 // Save a scene
 bool save_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params) {
+    const save_scene_options& options) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return save_json_scene(filename, scene, params);
@@ -1024,8 +1024,8 @@ bool save_scene(const string& filename, const yocto_scene& scene,
 }
 
 bool load_scene_textures(yocto_scene& scene, const string& dirname, 
-    const load_scene_params& params) {
-    if(!params.load_textures) return true;
+    const load_scene_options& options) {
+    if(params.skip_textures) return true;
     
     // load images
     for (auto& texture : scene.textures) {
@@ -1035,11 +1035,11 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (is_hdr_filename(filename)) {
             if (!load_image_nolog(filename, texture.hdr_image)) {
-                if (!params.skip_missing) return false;
+                if (params.exit_on_error) return false;
             }
         } else {
             if (!load_image_nolog(filename, texture.ldr_image)) {
-                if (!params.skip_missing) return false;
+                if (params.exit_on_error) return false;
             }
         }
     }
@@ -1050,7 +1050,7 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
             continue;
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (!load_volume1f_nolog(filename, texture.volume_data)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
 
@@ -1088,8 +1088,8 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
 // helper to save textures
 bool save_scene_textures(
     const yocto_scene& scene, const string& dirname, 
-    const save_scene_params& params) {
-    if(!params.save_textures) return true;
+    const save_scene_options& options) {
+    if(params.skip_textures) return true;
 
     // save images
     for (auto& texture : scene.textures) {
@@ -1098,11 +1098,11 @@ bool save_scene_textures(
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (is_hdr_filename(filename)) {
             if (!save_image_nolog(filename, texture.hdr_image)) {
-                if (!params.skip_missing) return false;
+                if (params.exit_on_error) return false;
             }
         } else {
             if (!save_image_nolog(filename, texture.ldr_image)) {
-                if (!params.skip_missing) return false;
+                if (params.exit_on_error) return false;
             }
         }
     }
@@ -1112,7 +1112,7 @@ bool save_scene_textures(
         if (texture.volume_data.voxels.empty()) continue;
         auto filename = normalize_path(dirname + "/" + texture.filename);
         if (!save_volume1f_nolog(filename, texture.volume_data)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
 
@@ -2311,7 +2311,7 @@ bool serialize_json_object(json& js, yocto_scene& value, bool save) {
 
 // Load a scene in the builtin JSON format.
 bool load_json_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params) {
+    const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     // initialize
     scene = {};
@@ -2339,7 +2339,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
         if (!load_mesh(filename, shape.points, shape.lines, shape.triangles,
                 shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius, false)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
     for (auto& surface : scene.surfaces) {
@@ -2349,7 +2349,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
                 surface.quads_normals, surface.quads_texturecoords,
                 surface.positions, surface.normals, surface.texturecoords,
                 surface.quads_materials)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
 
@@ -2370,7 +2370,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
 
 // Save a scene in the builtin JSON format.
 bool save_json_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params) {
+    const save_scene_options& options) {
     auto scope = log_trace_scoped("saving scene {}", filename);
     // save json
     auto js = json();
@@ -2393,7 +2393,7 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
         if (!save_mesh(filename, shape.points, shape.lines, shape.triangles,
                 shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
     for (auto& surface : scene.surfaces) {
@@ -2403,7 +2403,7 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
                 surface.quads_normals, surface.quads_texturecoords,
                 surface.positions, surface.normals, surface.texturecoords,
                 surface.quads_materials)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
 
@@ -2484,7 +2484,7 @@ inline bool parse_value(parse_string_view& view, obj_texture_info& info) {
 }
 
 // Load obj materials
-bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
+bool load_mtl(const string& filename, const obj_callbacks& cb, const load_obj_params& options) {
     // open file
     auto fs = open(filename, "rt");
     if (!fs) return false;
@@ -2526,13 +2526,13 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
             parse_value(view, material.kt);
             if (material.kt.y < 0)
                 material.kt = {material.kt.x, material.kt.x, material.kt.x};
-            if (flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
+            if (params.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
             auto tr = vec3f{-1, -1, -1};
             parse_value(view, tr);
             if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
             material.op = (tr.x + tr.y + tr.z) / 3;
-            if (flip_tr) material.op = 1 - material.op;
+            if (params.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
             parse_value(view, material.ns);
             material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
@@ -2583,7 +2583,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, bool flip_tr) {
 }
 
 // Load obj extensions
-bool load_objx(const string& filename, const obj_callbacks& cb) {
+bool load_objx(const string& filename, const obj_callbacks& cb, const load_obj_params& options) {
     // open file
     auto fs = open(filename, "rt");
     if (!fs) return false;
@@ -2628,8 +2628,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb) {
 }
 
 // Load obj scene
-bool load_obj(const string& filename, const obj_callbacks& cb,
-    bool geometry_only, bool skip_missing, bool flip_texcoord, bool flip_tr) {
+bool load_obj(const string& filename, const obj_callbacks& cb, const load_obj_params& options) {
     // open file
     auto fs = open(filename, "rt");
     if (!fs) return false;
@@ -2664,7 +2663,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
         } else if (cmd == "vt") {
             auto vert = zero2f;
             parse_value(view, vert);
-            if (flip_texcoord) vert.y = 1 - vert.y;
+            if (params.flip_texcoord) vert.y = 1 - vert.y;
             if (cb.texcoord) cb.texcoord(vert);
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -2702,13 +2701,13 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
             parse_value(view, name);
             if (cb.smoothing) cb.smoothing(name);
         } else if (cmd == "mtllib") {
-            if (geometry_only) continue;
+            if (params.geometry_only) continue;
             auto mtlname = ""s;
             parse_value(view, mtlname);
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + "/" + mtlname;
-            if (!load_mtl(mtlpath, cb, flip_tr)) {
-                if (!skip_missing) return false;
+            if (!load_mtl(mtlpath, cb, params)) {
+                if (params.exit_on_error) return false;
             }
         } else {
             // unused
@@ -2716,11 +2715,11 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
     }
 
     // parse extensions if presents
-    if (!geometry_only) {
+    if (!params.geometry_only) {
         auto extname    = replace_extension(filename, "objx");
         auto ext_exists = exists_file(extname);
         if (ext_exists) {
-            if (!load_objx(extname, cb)) return false;
+            if (!load_objx(extname, cb, params)) return false;
         }
     }
 
@@ -2730,7 +2729,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
 
 // Loads an OBJ
 bool load_obj_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = {};
 
@@ -3063,7 +3062,10 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     };
 
     // Parse obj
-    if (!load_obj(filename, cb, false, params.skip_missing)) return false;
+    auto obj_params = load_obj_params();
+    obj_params.exit_on_error = params.exit_on_error;
+    obj_params.geometry_only = false;
+    if (!load_obj(filename, cb, obj_params)) return false;
 
     // cleanup empty
     for (auto idx = 0; idx < scene.instances.size(); idx++) {
@@ -3387,7 +3389,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
 }
 
 bool save_obj_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params) {
+    const save_scene_options& options) {
     auto scope = log_trace_scoped("saving scene {}", filename);
     if (!save_obj(filename, scene, true)) return false;
     if (!scene.materials.empty()) {
@@ -3944,7 +3946,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
 
 // Load a scene
 bool load_gltf_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params) {
+    const load_scene_options& options) {
     // initialization
     scene = {};
 
@@ -4207,7 +4209,7 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
 
 // Save gltf json
 bool save_gltf_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params) {
+    const save_scene_options& options) {
     // save json
     auto js = json();
     try {
@@ -4224,7 +4226,7 @@ bool save_gltf_scene(const string& filename, const yocto_scene& scene,
         auto filename = normalize_path(dirname + "/" + shape.filename);
         filename      = replace_extension(filename, ".bin");
         if (!save_gltf_mesh(filename, shape)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
 
@@ -4400,7 +4402,7 @@ bool pbrt_to_json(const string& filename, json& js) {
 
 // load pbrt scenes
 bool load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const load_scene_params& params) {
+    const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = yocto_scene{};
     // convert to json
@@ -5032,7 +5034,7 @@ WorldEnd
 
 // Save a pbrt scene
 bool save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_params& params) {
+    const save_scene_options& options) {
     // save json
     if (!save_pbrt(filename, scene)) return false;
 
@@ -5044,7 +5046,7 @@ bool save_pbrt_scene(const string& filename, const yocto_scene& scene,
         if (!save_mesh(filename, shape.points, shape.lines, shape.triangles,
                 shape.quads, shape.positions, shape.normals,
                 shape.texturecoords, shape.colors, shape.radius)) {
-            if (!params.skip_missing) return false;
+            if (params.exit_on_error) return false;
         }
     }
 
@@ -5391,7 +5393,7 @@ bool serialize_scene(yocto_scene& scene, file_stream& fs, bool save) {
 
 // Load/save a binary dump useful for very fast scene IO.
 bool load_ybin_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params) {
+    const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     auto fs    = open(filename, "rb");
     if (!fs) return false;
@@ -5402,7 +5404,7 @@ bool load_ybin_scene(const string& filename, yocto_scene& scene,
 
 // Load/save a binary dump useful for very fast scene IO.
 bool save_ybin_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params) {
+    const save_scene_options& options) {
     auto fs = open(filename, "wb");
     if (!fs) return false;
     if (!serialize_scene((yocto_scene&)scene, fs, true)) return false;
@@ -5715,7 +5717,11 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
     };
 
     // load obj
-    if (!load_obj(filename, cb, true, true, flip_texcoord)) return false;
+    auto obj_params = load_obj_params();
+    obj_params.exit_on_error = false;
+    obj_params.geometry_only = true;
+    obj_params.flip_texcoord = flip_texcoord;
+    if (!load_obj(filename, cb, obj_params)) return false;
 
     // merging quads and triangles
     merge_triangles_and_quads(triangles, quads, force_triangles);
@@ -5936,7 +5942,11 @@ bool load_obj_facevarying_mesh(const string& filename,
     };
 
     // load obj
-    if (!load_obj(filename, cb, true, true, flip_texcoord)) return false;
+    auto obj_params = load_obj_params();
+    obj_params.exit_on_error = false;
+    obj_params.geometry_only = true;
+    obj_params.flip_texcoord = flip_texcoord;
+    if (!load_obj(filename, cb, obj_params)) return false;
 
     // cleanup materials ids
     if (std::all_of(quads_materials.begin(), quads_materials.end(),

@@ -212,57 +212,57 @@ bool save_volume1f(const string& filename, const volume<float>& vol);
 namespace ygl {
 
 // Scene load options
-struct load_scene_params {
-    bool load_textures = true;
-    bool skip_missing = true;
+struct load_scene_options {
+    bool skip_textures = false;
+    bool exit_on_error = false;
     bool obj_split_shapes = true;
     bool obj_preserve_face_varying = false;
     bool assign_texture_opacity = true;
 };
 // Scene save options
-struct save_scene_params {
-    bool save_textures = true;
-    bool skip_missing = true;
+struct save_scene_options {
+    bool skip_textures = false;
+    bool exit_on_error = false;
 };
 
 // Load/save a scene in the supported formats.
 bool load_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params = {});
+    const load_scene_options& options = {});
 bool save_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params = {});
+    const save_scene_options& options = {});
 
 // Load/save a scene in the builtin JSON format.
 bool load_json_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params = {});
+    const load_scene_options& options = {});
 bool save_json_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params = {});
+    const save_scene_options& options = {});
 
 // Load/save a scene from/to OBJ.
 bool load_obj_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params = {});
+    const load_scene_options& options = {});
 bool save_obj_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params = {});
+    const save_scene_options& options = {});
 
 // Load/save a scene from/to glTF.
 bool load_gltf_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params = {});
+    const load_scene_options& options = {});
 bool save_gltf_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params = {});
+    const save_scene_options& options = {});
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 bool load_pbrt_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params = {});
+    const load_scene_options& options = {});
 bool save_pbrt_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params = {});
+    const save_scene_options& options = {});
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
 bool load_ybin_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_params& params = {});
+    const load_scene_options& options = {});
 bool save_ybin_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_params& params = {});
+    const save_scene_options& options = {});
 
 }  // namespace ygl
 
@@ -438,10 +438,16 @@ struct obj_callbacks {
     function<void(const obj_environment&)>    environmnet = {};
 };
 
+// Load obj options
+struct load_obj_params {
+    bool exit_on_error = false;
+    bool geometry_only = false;
+    bool flip_texcoord = true;
+    bool flip_tr = true;
+};
+
 // Load obj scene
-bool load_obj(const string& filename, const obj_callbacks& cb,
-    bool geometry_only = false, bool skip_missing = true,
-    bool flip_texcoord = true, bool flip_tr = true);
+bool load_obj(const string& filename, const obj_callbacks& cb, const load_obj_params& options = {});
 
 }  // namespace ygl
 
