@@ -101,11 +101,13 @@ void update_display_async(app_image& img) {
     img.texture_done = false;
     auto regions     = vector<image_region>{};
     make_image_regions(regions, img.img.size);
-    parallel_foreach(regions, [&img](const image_region& region){
-        tonemap_image_region(img.img, img.display, region,
-            img.exposure, img.filmic, img.srgb);
-        img.display_queue.push(region);
-    }, &img.display_stop);
+    parallel_foreach(regions,
+        [&img](const image_region& region) {
+            tonemap_image_region(img.img, img.display, region, img.exposure,
+                img.filmic, img.srgb);
+            img.display_queue.push(region);
+        },
+        &img.display_stop);
     img.display_done = true;
 }
 
@@ -314,10 +316,9 @@ int main(int argc, char* argv[]) {
     // prepare application
     auto app = app_state();
 
-    // command line params
-        auto parser = cmdline_parser{};
-    init_cmdline_parser(parser,
-argc, argv, "view images", "yimview");
+    // command line options
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "view images", "yimview");
     auto exposure = parse_argument(
         parser, "--exposure,-e", 0.0f, "display exposure");
     auto filmic = parse_argument(parser, "--filmic", false, "display filmic");

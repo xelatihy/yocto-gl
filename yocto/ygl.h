@@ -3910,7 +3910,7 @@ void trace_samples(image<vec4f>& rendered_image, const yocto_scene& scene,
     float pixel_clamp = 100, bool no_parallel = false);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
-// params.
+// options.
 void trace_async_start(image<vec4f>& rendered_image, const yocto_scene& scene,
     const yocto_camera& camera, const bvh_scene& bvh,
     const trace_lights& lights, const trace_sampler_func& trace_sampler,
@@ -4573,32 +4573,32 @@ namespace ygl {
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms.
-template<typename Func>
-inline void parallel_for(int begin, int end, const Func& func,
-    atomic<bool>* cancel, bool serial) {
-    if(serial) {
-        for(auto idx = begin; idx < end; idx++) {
-            if(cancel && *cancel) break;
+template <typename Func>
+inline void parallel_for(
+    int begin, int end, const Func& func, atomic<bool>* cancel, bool serial) {
+    if (serial) {
+        for (auto idx = begin; idx < end; idx++) {
+            if (cancel && *cancel) break;
             func(idx);
         }
     } else {
-        auto threads = vector<thread>{};
-        auto nthreads = thread::hardware_concurrency();
+        auto        threads  = vector<thread>{};
+        auto        nthreads = thread::hardware_concurrency();
         atomic<int> next_idx(begin);
-        for(auto thread_id = 0; thread_id < nthreads; thread_id++) {
-            threads.emplace_back([&func,&next_idx,cancel,end]() {
-                while(true) {
-                    if(cancel && *cancel) break;
+        for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+            threads.emplace_back([&func, &next_idx, cancel, end]() {
+                while (true) {
+                    if (cancel && *cancel) break;
                     auto idx = next_idx.fetch_add(1);
-                    if(idx >= end) break;
+                    if (idx >= end) break;
                     func(idx);
                 }
             });
         }
-        for(auto& t : threads) t.join();
+        for (auto& t : threads) t.join();
     }
 }
 
-}
+}  // namespace ygl
 
 #endif

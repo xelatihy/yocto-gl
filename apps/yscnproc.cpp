@@ -44,9 +44,8 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // parse command line
-        auto parser = cmdline_parser{};
-    init_cmdline_parser(parser,
-argc, argv, "Process scene", "yscnproc");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
     auto skip_textures = parse_argument(
         parser, "--skip-textures", false, "Disable textures.");
     auto uniform_txt = parse_argument(
@@ -57,15 +56,15 @@ argc, argv, "Process scene", "yscnproc");
         parser, "scene", "scene.json"s, "input scene", true);
     check_cmdline(parser);
 
-    // fix params
-    auto load_params = load_scene_params();
-    auto save_params = save_scene_params();
-    load_params.skip_textures = skip_textures;
-    save_params.skip_textures = skip_textures;
+    // fix options
+    auto load_options          = load_scene_options();
+    auto save_options          = save_scene_options();
+    load_options.skip_textures = skip_textures;
+    save_options.skip_textures = skip_textures;
 
     // load scene
     auto scene = yocto_scene{};
-    if (!load_scene(filename, scene, load_params))
+    if (!load_scene(filename, scene, load_options))
         log_fatal("cannot load scene {}", filename);
 
     // change texture names
@@ -93,7 +92,7 @@ argc, argv, "Process scene", "yscnproc");
         log_fatal("cannot create directory {}", get_dirname(output));
 
     // save scene
-    if (!save_scene(output, scene, save_params))
+    if (!save_scene(output, scene, save_options))
         log_fatal("cannot save scene {}", output);
 
     // done

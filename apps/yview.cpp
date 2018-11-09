@@ -100,7 +100,7 @@ struct app_state {
     string outfilename  = "scene.json";
     bool   double_sided = false;
 
-    // rendering params
+    // rendering options
     int   camera_id   = 0;
     vec2i image_size  = {1280, 720};
     bool  wireframe   = false;
@@ -1119,9 +1119,8 @@ int main(int argc, char* argv[]) {
     auto app = app_state();
 
     // parse command line
-        auto parser = cmdline_parser{};
-    init_cmdline_parser(parser,
-        argc, argv, "views scenes inteactively", "yview");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "views scenes inteactively", "yview");
     app.camera_id  = parse_argument(parser, "--camera", 0, "Camera index.");
     app.image_size = {0, parse_argument(parser, "--resolution,-r", 512,
                              "Image vertical resolution.")};

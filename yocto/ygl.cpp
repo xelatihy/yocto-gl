@@ -1139,7 +1139,7 @@ bool intersect_point(
     auto prp = p - rp;
     if (dot(prp, prp) > r * r) return false;
 
-    // intersection occurred: set params and exit
+    // intersection occurred: set options and exit
     distance = t;
     uv       = {0, 0};
 
@@ -1149,7 +1149,7 @@ bool intersect_point(
 // Intersect a ray with a line
 bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, float& distance, vec2f& uv) {
-    // setup intersection params
+    // setup intersection options
     auto u = ray.d;
     auto v = p1 - p0;
     auto w = ray.o - p0;
@@ -1186,7 +1186,7 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto r  = r0 * (1 - s) + r1 * s;
     if (d2 > r * r) return false;
 
-    // intersection occurred: set params and exit
+    // intersection occurred: set options and exit
     distance = t;
     uv       = {s, sqrt(d2) / r};
 
@@ -1223,7 +1223,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto t = dot(edge2, qvec) * inv_det;
     if (t < ray.tmin || t > ray.tmax) return false;
 
-    // intersection occurred: set params and exit
+    // intersection occurred: set options and exit
     distance = t;
     uv       = {u, v};
 

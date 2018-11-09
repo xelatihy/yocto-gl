@@ -33,7 +33,7 @@
 
 // Application state
 struct app_state {
-    // loading params
+    // loading options
     string filename       = "scene.json";
     string imfilename     = "out.obj";
     bool   use_embree_bvh = false;
@@ -44,7 +44,7 @@ struct app_state {
     yocto_scene scene = {};
     bvh_scene   bvh   = {};
 
-    // rendering params
+    // rendering options
     int                camera_id        = 0;
     vec2i              image_size       = {1280, 720};
     int                num_samples      = 256;
@@ -426,7 +426,7 @@ int main(int argc, char* argv[]) {
     auto app = app_state();
 
     // parse command line
-        auto parser = cmdline_parser{};
+    auto parser = cmdline_parser{};
     init_cmdline_parser(parser,
 
         argc, argv, "progressive path tracing", "yitrace");
