@@ -458,8 +458,8 @@ int main(int argc, char* argv[]) {
 
     // fix parallel code
     if (no_parallel) {
-        app.bvh_options.run_serially  = true;
-        app.load_options.run_serially = true;
+        app.bvh_options.run_serially   = true;
+        app.load_options.run_serially  = true;
         app.trace_options.run_serially = true;
     }
 

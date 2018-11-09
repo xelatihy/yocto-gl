@@ -115,9 +115,9 @@ struct app_state {
     bool   double_sided = false;
 
     // options
-    load_scene_options  load_options     = {};
-    build_bvh_options   bvh_options      = {};
-    drawgl_options      draw_options    = {};
+    load_scene_options load_options = {};
+    build_bvh_options  bvh_options  = {};
+    drawgl_options     draw_options = {};
 
     // scene
     yocto_scene scene = {};
@@ -506,7 +506,8 @@ static const char* fragment =
 
 // Draw a shape
 void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
-    const yocto_instance& instance, bool highlighted, const drawgl_options& options) {
+    const yocto_instance& instance, bool highlighted,
+    const drawgl_options& options) {
     if (instance.shape >= 0) {
         auto& shape    = scene.shapes[instance.shape];
         auto& vbos     = state.shapes.at(instance.shape);
@@ -713,12 +714,13 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const vec2i& viewport_size, const pair<string, int>& highlighted, 
+    const vec2i& viewport_size, const pair<string, int>& highlighted,
     const drawgl_options& options) {
-    auto& camera = scene.cameras.at(options.camera_id);
-    auto camera_view = frame_to_mat(inverse(camera.frame));
-    auto camera_proj = perspective_mat(get_camera_fovy(camera),
-        (float)viewport_size.x / (float)viewport_size.y, options.near_plane, options.far_plane);
+    auto& camera      = scene.cameras.at(options.camera_id);
+    auto  camera_view = frame_to_mat(inverse(camera.frame));
+    auto  camera_proj = perspective_mat(get_camera_fovy(camera),
+        (float)viewport_size.x / (float)viewport_size.y, options.near_plane,
+        options.far_plane);
 
     bind_opengl_program(state.program);
     set_opengl_uniform(state.program, "cam_pos", camera.frame.o);
@@ -916,14 +918,16 @@ void draw_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "view")) {
             if (app.load_done) {
-                draw_combobox_opengl_widget(
-                    win, "camera", app.draw_options.camera_id, app.scene.cameras, false);
+                draw_combobox_opengl_widget(win, "camera",
+                    app.draw_options.camera_id, app.scene.cameras, false);
             }
             draw_slider_opengl_widget(
                 win, "resolution", app.draw_options.image_size, 256, 4096);
-            draw_checkbox_opengl_widget(win, "eyelight", app.draw_options.eyelight);
+            draw_checkbox_opengl_widget(
+                win, "eyelight", app.draw_options.eyelight);
             continue_opengl_widget_line(win);
-            draw_checkbox_opengl_widget(win, "wireframe", app.draw_options.wireframe);
+            draw_checkbox_opengl_widget(
+                win, "wireframe", app.draw_options.wireframe);
             continue_opengl_widget_line(win);
             draw_checkbox_opengl_widget(win, "edges", app.draw_options.edges);
             if (app.time_range != zero2f) {
@@ -932,9 +936,12 @@ void draw_widgets(const opengl_window& win) {
                 draw_textinput_opengl_widget(win, "anim group", app.anim_group);
                 draw_checkbox_opengl_widget(win, "animate", app.animate);
             }
-            draw_slider_opengl_widget(win, "exposure", app.draw_options.exposure, -10, 10);
-            draw_slider_opengl_widget(win, "gamma", app.draw_options.gamma, 0.1f, 4);
-            draw_slider_opengl_widget(win, "near", app.draw_options.near_plane, 0.01f, 1.0f);
+            draw_slider_opengl_widget(
+                win, "exposure", app.draw_options.exposure, -10, 10);
+            draw_slider_opengl_widget(
+                win, "gamma", app.draw_options.gamma, 0.1f, 4);
+            draw_slider_opengl_widget(
+                win, "near", app.draw_options.near_plane, 0.01f, 1.0f);
             draw_slider_opengl_widget(
                 win, "far", app.draw_options.far_plane, 1000.0f, 10000.0f);
             draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
@@ -970,8 +977,8 @@ void draw(const opengl_window& win) {
     set_glviewport(get_opengl_framebuffer_size(win));
     if (app.load_done) {
         app.draw_options.image_size = {0, get_opengl_framebuffer_size(win).y};
-        draw_glscene(app.state, app.scene, 
-            get_opengl_framebuffer_size(win), app.selection, app.draw_options);
+        draw_glscene(app.state, app.scene, get_opengl_framebuffer_size(win),
+            app.selection, app.draw_options);
     }
     draw_widgets(win);
     swap_opengl_buffers(win);
@@ -1125,9 +1132,10 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = cmdline_parser{};
     init_cmdline_parser(parser, argc, argv, "views scenes inteactively", "yview");
-    app.draw_options.camera_id  = parse_argument(parser, "--camera", 0, "Camera index.");
-    app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r", 512,
-                             "Image vertical resolution.")};
+    app.draw_options.camera_id = parse_argument(
+        parser, "--camera", 0, "Camera index.");
+    app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r",
+                                          512, "Image vertical resolution.")};
     app.draw_options.eyelight   = parse_argument(
         parser, "--eyelight,-c", false, "Eyelight rendering.");
     app.double_sided = parse_argument(
