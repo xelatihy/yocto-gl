@@ -460,6 +460,7 @@ int main(int argc, char* argv[]) {
     if (no_parallel) {
         app.bvh_options.run_serially  = true;
         app.load_options.run_serially = true;
+        app.trace_options.run_serially = true;
     }
 
     // load scene
