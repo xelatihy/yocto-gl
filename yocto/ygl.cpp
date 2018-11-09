@@ -7559,7 +7559,7 @@ int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 // Starts an anyncrhounous renderer.
 void trace_image_async_start(image<vec4f>& rendered_image,
     image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, vector<thread>& threads, int& current_sample,
+    const trace_lights& lights, vector<thread>& threads, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_image_options& options) {
     log_trace("start tracing async");
     auto& camera     = scene.cameras.at(options.camera_id);
@@ -7573,7 +7573,7 @@ void trace_image_async_start(image<vec4f>& rendered_image,
     auto nthreads = thread::hardware_concurrency();
     threads.clear();
     for (auto tid = 0; tid < nthreads; tid++) {
-        threads.push_back(thread([&, tid, nthreads, regions]() {
+        threads.push_back(thread([&, options, tid, nthreads, regions]() {
             for (auto s = 0; s < options.num_samples;
                  s += options.samples_per_batch) {
                 if (!tid) current_sample = s;

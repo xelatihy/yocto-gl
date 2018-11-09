@@ -1074,20 +1074,20 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
 
     // assign opacity texture if needed
     if (options.assign_texture_opacity) {
-        auto has_opacity = vector<bool>(scene.textures.size());
+        auto has_opacity = vector<int>(scene.textures.size());
         parallel_for((int)scene.textures.size(),
             [&scene, &has_opacity](int texture_id) {
                 auto& texture           = scene.textures[texture_id];
-                has_opacity[texture_id] = false;
+                has_opacity[texture_id] = 0;
                 for (auto& p : texture.hdr_image.pixels) {
                     if (p.w < 0.999f) {
-                        has_opacity[texture_id] = true;
+                        has_opacity[texture_id] = 1;
                         break;
                     }
                 }
                 for (auto& p : texture.ldr_image.pixels) {
                     if (p.w < 255) {
-                        has_opacity[texture_id] = true;
+                        has_opacity[texture_id] = 1;
                         break;
                     }
                 }

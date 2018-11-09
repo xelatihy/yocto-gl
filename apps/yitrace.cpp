@@ -47,6 +47,7 @@ struct app_state {
     bool                display_filmic   = false;
     bool                display_srgb     = true;
     int                 preview_ratio    = 8;
+    vec2i               image_size       = zero2i;
 
     // scene
     yocto_scene scene = {};
@@ -59,7 +60,7 @@ struct app_state {
     image<vec4f>                   display_image  = {};
     image<vec4f>                   preview_image  = {};
     atomic<bool>                   trace_stop;
-    int                            trace_sample  = 0;
+    atomic<int>                    trace_sample;
     vector<thread>                 trace_threads = {};
     concurrent_queue<image_region> trace_queue   = {};
 
@@ -76,7 +77,7 @@ struct app_state {
     opengl_texture            display_texture = {};
 
     // app status
-    bool   load_done = false, load_running = false;
+    atomic<bool> load_done, load_running;
     string status = "";
 };
 
@@ -89,16 +90,34 @@ void start_rendering_async(app_state& app) {
     app.status      = "rendering image";
     app.trace_start = get_time();
     app.trace_stop  = false;
+    app.trace_sample = 0;
 
     auto& camera    = app.scene.cameras[app.trace_options.camera_id];
-    auto image_size = get_camera_image_size(camera, app.trace_options.image_size);
-    init_image<vec4f>(app.display_image, image_size);
+    app.image_size = get_camera_image_size(camera, app.trace_options.image_size);
+    init_image(app.display_image, app.image_size);
 
     auto preview_options = app.trace_options;
     preview_options.image_size /= app.preview_ratio;
     preview_options.num_samples = 1;
     trace_image(
         app.preview_image, app.scene, app.bvh, app.lights, preview_options);
+    auto display_preview = image<vec4f>{};
+    tonemap_image(app.preview_image, display_preview,
+                  app.display_exposure, app.display_filmic,
+                  app.display_srgb);
+    auto large_preview = image<vec4f>{};
+    init_image(large_preview, app.image_size);
+    for (auto j = 0; j < app.image_size.y; j++) {
+        for (auto i = 0; i < app.image_size.x; i++) {
+            auto pi = clamp(i / app.preview_ratio, 0,
+                            display_preview.size.x - 1),
+            pj = clamp(j / app.preview_ratio, 0,
+                       display_preview.size.y - 1);
+            at(large_preview, {i, j}) = at(
+                                           display_preview, {pi, pj});
+        }
+    }
+    app.preview_image = large_preview;
     app.trace_queue.push({zero2i, zero2i});
 
     app.trace_options.cancel_flag = &app.trace_stop;
@@ -187,7 +206,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
                 app.rendered_image.size.x, app.rendered_image.size.y,
-                app.trace_sample);
+                (int)app.trace_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
                 cam_names.push_back(camera.name);
@@ -267,30 +286,16 @@ void draw(const opengl_window& win) {
         center_image(app.image_center, app.image_scale, app.display_image.size,
             win_size, app.zoom_to_fit);
         if (!app.display_texture) {
-            init_opengl_texture(app.display_texture, app.display_image.size,
-                false, false, false, false);
+            if(app.image_size != zero2i) {
+                init_opengl_texture(app.display_texture, app.image_size,
+                    false, false, false, false);
+            }
         } else {
             auto region = image_region{};
             while (app.trace_queue.try_pop(region)) {
                 if (region.size == zero2i) {
-                    auto display_preview = image<vec4f>{};
-                    tonemap_image(app.preview_image, display_preview,
-                        app.display_exposure, app.display_filmic,
-                        app.display_srgb);
-                    auto large_preview = image<vec4f>{};
-                    init_image(large_preview, app.rendered_image.size);
-                    for (auto j = 0; j < app.rendered_image.size.y; j++) {
-                        for (auto i = 0; i < app.rendered_image.size.x; i++) {
-                            auto pi = clamp(i / app.preview_ratio, 0,
-                                     display_preview.size.x - 1),
-                                 pj = clamp(j / app.preview_ratio, 0,
-                                     display_preview.size.y - 1);
-                            at(large_preview, {i, j}) = at(
-                                display_preview, {pi, pj});
-                        }
-                    }
                     update_opengl_texture(
-                        app.display_texture, large_preview, false);
+                        app.display_texture, app.preview_image, false);
                 } else {
                     tonemap_image_region(app.rendered_image, app.display_image,
                         region, app.display_exposure, app.display_filmic,
@@ -462,6 +467,10 @@ int main(int argc, char* argv[]) {
         app.load_options.run_serially  = true;
         app.trace_options.run_serially = true;
     }
+
+    // init app
+    app.load_done = false;
+    app.load_running = false;
 
     // load scene
     load_scene_async(app);
