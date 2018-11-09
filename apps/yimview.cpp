@@ -101,12 +101,11 @@ void update_display_async(app_image& img) {
     img.texture_done = false;
     auto regions     = vector<image_region>{};
     make_image_regions(regions, img.img.size);
-    for (auto region_id = 0; region_id < regions.size(); region_id++) {
-        if (img.display_stop) break;
-        tonemap_image_region(img.img, img.display, regions[region_id],
+    parallel_foreach(regions, [&img](const image_region& region){
+        tonemap_image_region(img.img, img.display, region,
             img.exposure, img.filmic, img.srgb);
-        img.display_queue.push(regions[region_id]);
-    }
+        img.display_queue.push(region);
+    }, img.display_stop);
     img.display_done = true;
 }
 

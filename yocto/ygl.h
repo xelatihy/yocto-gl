@@ -317,6 +317,7 @@
 #include <cstring>
 #include <deque>
 #include <functional>
+#include <future>
 #include <limits>
 #include <mutex>
 #include <string>
@@ -358,8 +359,10 @@ using std::ignore;
 using std::lock_guard;
 using std::make_unique;
 using std::mutex;
+using std::packaged_task;
 using std::pair;
 using std::runtime_error;
+using std::shared_future;
 using std::string;
 using std::thread;
 using std::unordered_map;
@@ -2065,6 +2068,120 @@ struct concurrent_queue {
     mutex    _mutex;
     deque<T> _queue;
 };
+
+// Simpler thread pool inpired by ...
+struct thread_pool {
+    // construct a pool
+    thread_pool() : thread_pool(thread::hardware_concurrency()) {}
+    thread_pool(int nthreads) { _init(nthreads); }
+    ~thread_pool() { stop(); }
+
+    // add a task
+    template <typename Func, typename... Args>
+    shared_future<void> enqueue(Func&& func, Args&&... args) {
+        auto task = std::bind(std::forward(func), std::forward(args)...);
+        return _enqueue(std::move(task));
+    }
+    template <typename Func>
+    shared_future<void> enqueue(Func&& func) {
+        return _enqueue(std::forward(func));
+    }
+
+    // clear
+    void clear() {
+        std::unique_lock<std::mutex> lock(_tasks_mutex);
+        _tasks.clear();
+    }
+
+    // stop
+    void stop() {
+        clear();
+        {
+            std::unique_lock<std::mutex> lock(_tasks_mutex);
+            _stop = true;
+        }
+        _tasks_condition.notify_all();
+        for (auto& t : _threads) t.join();
+    }
+
+    // wait for current tasks to end
+    void wait() {
+        std::unique_lock<std::mutex> lock(_completion_mutex);
+        _completion_condition.wait(
+            lock, [&] { return !_active_threads && _tasks.empty(); });
+    }
+
+   private:
+    vector<thread>               _threads;
+    deque<packaged_task<void()>> _tasks;
+    std::mutex                   _tasks_mutex;
+    std::condition_variable      _tasks_condition;
+    std::mutex                   _completion_mutex;
+    std::condition_variable      _completion_condition;
+    std::atomic<int>             _active_threads;
+    bool                         _stop = false;
+
+    void _init(int nthreads) {
+        for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
+            _threads.emplace_back([&] {
+                while (true) {
+                    packaged_task<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock(_tasks_mutex);
+                        _tasks_condition.wait(
+                            lock, [&] { return !_stop || !_tasks.empty(); });
+                        if (!_stop && _tasks.empty()) return;
+
+                        {
+                            std::unique_lock<std::mutex> lock(_completion_mutex);
+                            ++_active_threads;
+                        }
+                        task = std::move(_tasks.front());
+                        _tasks.pop_front();
+                    }
+
+                    task();
+
+                    {
+                        std::unique_lock<std::mutex> lock(_completion_mutex);
+                        --_active_threads;
+                    }
+
+                    _completion_condition.notify_all();
+                }
+            });
+        }
+    }
+
+    shared_future<void> _enqueue(std::function<void()> task) {
+        packaged_task<void()> task_packaged(std::move(task));
+        auto                  task_future = task_packaged.get_future();
+        {
+            std::unique_lock<std::mutex> lock(_tasks_mutex);
+            _tasks.push_back(std::move(task_packaged));
+        }
+        _tasks_condition.notify_one();
+        return task_future.share();
+    }
+};
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes the integer index.
+template <typename Func>
+inline void parallel_for(int begin, int end, const Func& func,
+    atomic<bool>& cancel, bool serial = false);
+template <typename Func>
+inline void parallel_for(int num, const Func& func,
+    atomic<bool>& cancel, bool serial = false);
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms. `Func` takes a reference to a `T`.
+template <typename T, typename Func>
+inline void parallel_foreach(vector<T>& values, const Func& func,
+    atomic<bool>& cancel, bool serial = false) {
+    parallel_for(0, (int)values.size(),
+        [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+}
 
 }  // namespace ygl
 
@@ -4440,5 +4557,46 @@ inline string format_num(uint64_t num) {
 }
 
 }  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR CONCURRENCY UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Simple parallel for used since our target platforms do not yet support
+// parallel algorithms.
+template<typename Func>
+inline void parallel_for(int begin, int end, const Func& func,
+    atomic<bool>& cancel, bool serial) {
+    if(serial) {
+        for(auto idx = begin; idx < end; idx++) {
+            if(cancel) break;
+            func(idx);
+        }
+    } else {
+        auto threads = vector<thread>{};
+        auto nthreads = thread::hardware_concurrency();
+        atomic<int> next_idx(begin);
+        for(auto thread_id = 0; thread_id < nthreads; thread_id++) {
+            threads.emplace_back([&func,&next_idx,&cancel,end]() {
+                while(true) {
+                    if(cancel) break;
+                    auto idx = next_idx.fetch_add(1);
+                    if(idx >= end) break;
+                    func(idx);
+                }
+            });
+        }
+        for(auto& t : threads) t.join();
+    }
+}
+
+template<typename Func>
+inline void parallel_for(int num, const Func& func,
+    atomic<bool>& cancel, bool serial) {
+    return parallel_for(0, num, func, cancel, serial);
+}
+
+}
 
 #endif
