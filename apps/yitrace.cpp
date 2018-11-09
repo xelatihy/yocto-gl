@@ -88,6 +88,7 @@ void start_rendering_async(app_state& app) {
     stop_rendering_async(app);
     app.status      = "rendering image";
     app.trace_start = get_time();
+    app.trace_stop  = false;
 
     auto& camera    = app.scene.cameras[app.trace_options.camera_id];
     auto image_size = get_camera_image_size(camera, app.trace_options.image_size);
@@ -281,18 +282,20 @@ void draw(const opengl_window& win) {
                     tonemap_image(app.preview_image, display_preview,
                         app.display_exposure, app.display_filmic,
                         app.display_srgb);
+                    auto large_preview = image<vec4f>{};
+                    init_image(large_preview, app.rendered_image.size);
                     for (auto j = 0; j < app.rendered_image.size.y; j++) {
                         for (auto i = 0; i < app.rendered_image.size.x; i++) {
                             auto pi = clamp(i / app.preview_ratio, 0,
                                      display_preview.size.x - 1),
                                  pj = clamp(j / app.preview_ratio, 0,
                                      display_preview.size.y - 1);
-                            at(app.display_image, {i, j}) = at(
+                            at(large_preview, {i, j}) = at(
                                 display_preview, {pi, pj});
                         }
                     }
                     update_opengl_texture(
-                        app.display_texture, app.display_image, false);
+                        app.display_texture, large_preview, false);
                 } else {
                     tonemap_image_region(app.rendered_image, app.display_image,
                         region, app.display_exposure, app.display_filmic,
