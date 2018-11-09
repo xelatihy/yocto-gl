@@ -7561,11 +7561,16 @@ void trace_image_async_start(image<vec4f>& rendered_image,
     const trace_lights& lights, vector<thread>& threads, int& current_sample,
     concurrent_queue<image_region>& queue, const trace_image_options& options) {
     log_trace("start tracing async");
-    auto nthreads = thread::hardware_concurrency();
-    threads.clear();
-    if (options.cancel_flag) *options.cancel_flag = false;
+    auto& camera     = scene.cameras.at(options.camera_id);
+    auto  image_size = get_camera_image_size(camera, options.image_size);
+    init_image(rendered_image, image_size, zero4f);
+    init_trace_pixels(pixels, image_size, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(regions, rendered_image.size);
+    if (options.cancel_flag) *options.cancel_flag = false;
+
+    auto nthreads = thread::hardware_concurrency();
+    threads.clear();
     for (auto tid = 0; tid < nthreads; tid++) {
         threads.push_back(thread([&, tid, nthreads, regions]() {
             for (auto s = 0; s < options.num_samples; s++) {

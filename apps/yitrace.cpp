@@ -92,12 +92,7 @@ void start_rendering_async(app_state& app) {
 
     auto& camera    = app.scene.cameras[app.trace_options.camera_id];
     auto image_size = get_camera_image_size(camera, app.trace_options.image_size);
-
-    init_image<vec4f>(app.rendered_image, image_size);
     init_image<vec4f>(app.display_image, image_size);
-    init_image<vec4f>(app.preview_image, image_size / app.preview_ratio);
-    init_trace_pixels(
-        app.trace_pixels, image_size, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
     preview_options.image_size /= app.preview_ratio;
