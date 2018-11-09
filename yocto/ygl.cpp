@@ -1802,7 +1802,7 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 }
 
 // Build BVH nodes
-void build_bvh_nodes(
+void build_bvh_nodes_serial(
     vector<bvh_node>& nodes, vector<bvh_prim>& prims, const build_bvh_options& options) {
     // prepare to build nodes
     nodes.clear();
@@ -1814,6 +1814,68 @@ void build_bvh_nodes(
 
     // create nodes until the queue is empty
     while (!queue.empty()) {
+        // exit if needed
+        if(options.cancel_flag && *options.cancel_flag) return;
+
+        // grab node to work on
+        auto next = queue.front();
+        queue.pop_front();
+        auto nodeid = next.x, start = next.y, end = next.z;
+
+        // grab node
+        auto& node = nodes[nodeid];
+
+        // compute bounds
+        node.bbox = invalid_bbox3f;
+        for (auto i = start; i < end; i++) node.bbox += prims[i].bbox;
+
+        // split into two children
+        if (end - start > bvh_max_prims) {
+            // get split
+            auto split = (options.high_quality) ?
+                             split_bvh_node_sah(prims, start, end) :
+                             split_bvh_node_balanced(prims, start, end);
+            auto mid = split.first, split_axis = split.second;
+
+            // make an internal node
+            node.is_internal      = true;
+            node.split_axis       = split_axis;
+            node.num_primitives   = 2;
+            node.primitive_ids[0] = (int)nodes.size() + 0;
+            node.primitive_ids[1] = (int)nodes.size() + 1;
+            nodes.emplace_back();
+            nodes.emplace_back();
+            queue.push_back({node.primitive_ids[0], start, mid});
+            queue.push_back({node.primitive_ids[1], mid, end});
+        } else {
+            // Make a leaf node
+            node.is_internal    = false;
+            node.num_primitives = end - start;
+            for (auto i = 0; i < node.num_primitives; i++)
+                node.primitive_ids[i] = prims[start + i].primid;
+        }
+    }
+
+    // cleanup
+    nodes.shrink_to_fit();
+}
+
+// Build BVH nodes
+void build_bvh_nodes_parallel(
+    vector<bvh_node>& nodes, vector<bvh_prim>& prims, const build_bvh_options& options) {
+    // prepare to build nodes
+    nodes.clear();
+    nodes.reserve(prims.size() * 2);
+
+    // queue up first node
+    auto queue = deque<vec3i>{{0, 0, (int)prims.size()}};
+    nodes.emplace_back();
+
+    // create nodes until the queue is empty
+    while (!queue.empty()) {
+        // exit if needed
+        if(options.cancel_flag && *options.cancel_flag) return;
+        
         // grab node to work on
         auto next = queue.front();
         queue.pop_front();
@@ -1893,7 +1955,11 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     }
 
     // build nodes
-    build_bvh_nodes(bvh.nodes, prims, options);
+    if(options.run_serially) {
+        build_bvh_nodes_serial(bvh.nodes, prims, options);
+    } else {
+        build_bvh_nodes_parallel(bvh.nodes, prims, options);
+    }
 }
 
 // Build a BVH from a set of primitives.
@@ -1927,7 +1993,11 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
     }
 
     // build nodes
-    build_bvh_nodes(bvh.nodes, prims, options);
+    if(options.run_serially) {
+        build_bvh_nodes_serial(bvh.nodes, prims, options);
+    } else {
+        build_bvh_nodes_parallel(bvh.nodes, prims, options);
+    }
 }
 
 // Recursively recomputes the node bounds for a shape bvh
