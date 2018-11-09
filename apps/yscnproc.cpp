@@ -56,8 +56,8 @@ int main(int argc, char** argv) {
     check_cmdline(parser);
 
     // fix params
-    auto load_params = load_scene_options();
-    auto save_params = save_scene_options();
+    auto load_params = load_scene_params();
+    auto save_params = save_scene_params();
     load_params.skip_textures = skip_textures;
     save_params.skip_textures = skip_textures;
 

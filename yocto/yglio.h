@@ -41,7 +41,7 @@
 // 2. read a value with `value = parse_argument(parser, name, default, help)`
 //    - is name starts with '--' or '-' then it is an option
 //    - otherwise it is a positional arguments
-//    - options and arguments may be intermixed
+//    - params and arguments may be intermixed
 //    - the type of each option is determined by the default value `default`
 //    - the value is parsed on the stop
 // 3. finished parsing with `check_cmdline(parser)`
@@ -109,7 +109,7 @@ struct cmdline_parser {
     vector<string> args      = {};  // command line arguments
     string         usage_cmd = "";  // program name
     string         usage_hlp = "";  // program help
-    string         usage_opt = "";  // options help
+    string         usage_opt = "";  // params help
     string         usage_arg = "";  // arguments help
     string         error     = "";  // current parse error
 };
@@ -122,7 +122,7 @@ void check_cmdline(cmdline_parser& parser);
 
 // Parse an int, float, string, vecXX and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
-// vecXX options use space-separated values but all in one argument
+// vecXX params use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
 template <typename T>
 inline T parse_argument(cmdline_parser& parser, const string& name, T def,
@@ -138,7 +138,7 @@ inline T parse_argument(cmdline_parser& parser, const string& name, T def,
 
 // Parse an int, float, string, vecXX and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
-// vecXX options use space-separated values but all in one argument
+// vecXX params use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
 template <typename T>
 inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
@@ -211,58 +211,58 @@ bool save_volume1f(const string& filename, const volume<float>& vol);
 // -----------------------------------------------------------------------------
 namespace ygl {
 
-// Scene load options
-struct load_scene_options {
+// Scene load params
+struct load_scene_params {
     bool skip_textures = false;
     bool exit_on_error = false;
     bool obj_split_shapes = true;
     bool obj_preserve_face_varying = false;
     bool assign_texture_opacity = true;
 };
-// Scene save options
-struct save_scene_options {
+// Scene save params
+struct save_scene_params {
     bool skip_textures = false;
     bool exit_on_error = false;
 };
 
 // Load/save a scene in the supported formats.
 bool load_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options = {});
+    const load_scene_params& params = {});
 bool save_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options = {});
+    const save_scene_params& params = {});
 
 // Load/save a scene in the builtin JSON format.
 bool load_json_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options = {});
+    const load_scene_params& params = {});
 bool save_json_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options = {});
+    const save_scene_params& params = {});
 
 // Load/save a scene from/to OBJ.
 bool load_obj_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options = {});
+    const load_scene_params& params = {});
 bool save_obj_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options = {});
+    const save_scene_params& params = {});
 
 // Load/save a scene from/to glTF.
 bool load_gltf_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options = {});
+    const load_scene_params& params = {});
 bool save_gltf_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options = {});
+    const save_scene_params& params = {});
 
 // Load/save a scene from/to pbrt. This is not robust at all and only
 // works on scene that have been previously adapted since the two renderers
 // are too different to match.
 bool load_pbrt_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options = {});
+    const load_scene_params& params = {});
 bool save_pbrt_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options = {});
+    const save_scene_params& params = {});
 
 // Load/save a binary dump useful for very fast scene IO. This format is not
 // an archival format and should only be used as an intermediate format.
 bool load_ybin_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options = {});
+    const load_scene_params& params = {});
 bool save_ybin_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options = {});
+    const save_scene_params& params = {});
 
 }  // namespace ygl
 
@@ -438,7 +438,7 @@ struct obj_callbacks {
     function<void(const obj_environment&)>    environmnet = {};
 };
 
-// Load obj options
+// Load obj params
 struct load_obj_params {
     bool exit_on_error = false;
     bool geometry_only = false;
@@ -447,7 +447,7 @@ struct load_obj_params {
 };
 
 // Load obj scene
-bool load_obj(const string& filename, const obj_callbacks& cb, const load_obj_params& options = {});
+bool load_obj(const string& filename, const obj_callbacks& cb, const load_obj_params& params = {});
 
 }  // namespace ygl
 
@@ -539,10 +539,10 @@ inline string get_option_usage(const string& name, const string& usage,
 inline void print_cmdline_usage(const cmdline_parser& parser) {
     printf("%s: %s\n", parser.usage_cmd.c_str(), parser.usage_hlp.c_str());
     printf("usage: %s %s %s\n\n", parser.usage_cmd.c_str(),
-        (parser.usage_opt.empty()) ? "" : "[options]",
+        (parser.usage_opt.empty()) ? "" : "[params]",
         (parser.usage_arg.empty()) ? "" : "arguments");
     if (!parser.usage_opt.empty()) {
-        printf("options:\n");
+        printf("params:\n");
         printf("%s\n", parser.usage_opt.c_str());
     }
     if (!parser.usage_arg.empty()) {

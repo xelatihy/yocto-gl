@@ -984,7 +984,7 @@ namespace ygl {
 
 // Load a scene
 bool load_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options) {
+    const load_scene_params& params) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return load_json_scene(filename, scene, params);
@@ -1005,7 +1005,7 @@ bool load_scene(const string& filename, yocto_scene& scene,
 
 // Save a scene
 bool save_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options) {
+    const save_scene_params& params) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
         return save_json_scene(filename, scene, params);
@@ -1024,7 +1024,7 @@ bool save_scene(const string& filename, const yocto_scene& scene,
 }
 
 bool load_scene_textures(yocto_scene& scene, const string& dirname, 
-    const load_scene_options& options) {
+    const load_scene_params& params) {
     if(params.skip_textures) return true;
     
     // load images
@@ -1088,7 +1088,7 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
 // helper to save textures
 bool save_scene_textures(
     const yocto_scene& scene, const string& dirname, 
-    const save_scene_options& options) {
+    const save_scene_params& params) {
     if(params.skip_textures) return true;
 
     // save images
@@ -2311,7 +2311,7 @@ bool serialize_json_object(json& js, yocto_scene& value, bool save) {
 
 // Load a scene in the builtin JSON format.
 bool load_json_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options) {
+    const load_scene_params& params) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     // initialize
     scene = {};
@@ -2370,7 +2370,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
 
 // Save a scene in the builtin JSON format.
 bool save_json_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options) {
+    const save_scene_params& params) {
     auto scope = log_trace_scoped("saving scene {}", filename);
     // save json
     auto js = json();
@@ -2473,7 +2473,7 @@ inline bool parse_value(parse_string_view& view, obj_texture_info& info) {
     // texture name
     info.path = normalize_path(tokens.back());
 
-    // texture options
+    // texture params
     auto last = string();
     for (auto i = 0; i < tokens.size() - 1; i++) {
         if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
@@ -2484,7 +2484,7 @@ inline bool parse_value(parse_string_view& view, obj_texture_info& info) {
 }
 
 // Load obj materials
-bool load_mtl(const string& filename, const obj_callbacks& cb, const load_obj_params& options) {
+bool load_mtl(const string& filename, const obj_callbacks& cb, const load_obj_params& params) {
     // open file
     auto fs = open(filename, "rt");
     if (!fs) return false;
@@ -2583,7 +2583,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb, const load_obj_pa
 }
 
 // Load obj extensions
-bool load_objx(const string& filename, const obj_callbacks& cb, const load_obj_params& options) {
+bool load_objx(const string& filename, const obj_callbacks& cb, const load_obj_params& params) {
     // open file
     auto fs = open(filename, "rt");
     if (!fs) return false;
@@ -2628,7 +2628,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb, const load_obj_p
 }
 
 // Load obj scene
-bool load_obj(const string& filename, const obj_callbacks& cb, const load_obj_params& options) {
+bool load_obj(const string& filename, const obj_callbacks& cb, const load_obj_params& params) {
     // open file
     auto fs = open(filename, "rt");
     if (!fs) return false;
@@ -2729,7 +2729,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb, const load_obj_pa
 
 // Loads an OBJ
 bool load_obj_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_scene_params& params) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = {};
 
@@ -2790,7 +2790,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         }
         return -1;
     };
-    // Parse texture options and name
+    // Parse texture params and name
     auto add_texture = [&scene, &tmap](
                            const obj_texture_info& info, bool force_linear) {
         if (info.path == "") return -1;
@@ -2811,7 +2811,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
 
         return index;
     };
-    // Parse texture options and name
+    // Parse texture params and name
     auto add_voltexture = [&scene, &vmap](
                               const obj_texture_info& info, bool srgb) {
         if (info.path == "") return -1;
@@ -3389,7 +3389,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
 }
 
 bool save_obj_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options) {
+    const save_scene_params& params) {
     auto scope = log_trace_scoped("saving scene {}", filename);
     if (!save_obj(filename, scene, true)) return false;
     if (!scene.materials.empty()) {
@@ -3946,7 +3946,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
 
 // Load a scene
 bool load_gltf_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options) {
+    const load_scene_params& params) {
     // initialization
     scene = {};
 
@@ -4209,7 +4209,7 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
 
 // Save gltf json
 bool save_gltf_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options) {
+    const save_scene_params& params) {
     // save json
     auto js = json();
     try {
@@ -4402,7 +4402,7 @@ bool pbrt_to_json(const string& filename, json& js) {
 
 // load pbrt scenes
 bool load_pbrt_scene(const string& filename, yocto_scene& scene,
-    const load_scene_options& options) {
+    const load_scene_params& params) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = yocto_scene{};
     // convert to json
@@ -5034,7 +5034,7 @@ WorldEnd
 
 // Save a pbrt scene
 bool save_pbrt_scene(const string& filename, const yocto_scene& scene,
-    const save_scene_options& options) {
+    const save_scene_params& params) {
     // save json
     if (!save_pbrt(filename, scene)) return false;
 
@@ -5393,7 +5393,7 @@ bool serialize_scene(yocto_scene& scene, file_stream& fs, bool save) {
 
 // Load/save a binary dump useful for very fast scene IO.
 bool load_ybin_scene(const string& filename, yocto_scene& scene, 
-    const load_scene_options& options) {
+    const load_scene_params& params) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     auto fs    = open(filename, "rb");
     if (!fs) return false;
@@ -5404,7 +5404,7 @@ bool load_ybin_scene(const string& filename, yocto_scene& scene,
 
 // Load/save a binary dump useful for very fast scene IO.
 bool save_ybin_scene(const string& filename, const yocto_scene& scene, 
-    const save_scene_options& options) {
+    const save_scene_params& params) {
     auto fs = open(filename, "wb");
     if (!fs) return false;
     if (!serialize_scene((yocto_scene&)scene, fs, true)) return false;
