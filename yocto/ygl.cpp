@@ -2097,10 +2097,12 @@ void refit_scene_bvh(bvh_scene& bvh) { refit_scene_bvh(bvh, 0); }
 // Intersect ray with a bvh.
 bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     float& distance, int& element_id, vec2f& element_uv) {
+#if YGL_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(
             bvh, ray_, find_any, distance, element_id, element_uv);
+#endif
 
     // node stack
     int  node_stack[128];
@@ -2193,10 +2195,12 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
 // Intersect ray with a bvh.
 bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
+#if YGL_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(
             bvh, ray_, find_any, distance, instance_id, element_id, element_uv);
+#endif
 
     // node stack
     int  node_stack[128];
