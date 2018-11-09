@@ -7573,7 +7573,7 @@ void trace_image_async_start(image<vec4f>& rendered_image,
     auto nthreads = thread::hardware_concurrency();
     threads.clear();
     for (auto tid = 0; tid < nthreads; tid++) {
-        threads.push_back(thread([&, options, tid, nthreads, regions]() {
+        threads.push_back(thread([options, tid, nthreads, regions, &current_sample, &queue, &lights, &scene, &rendered_image, &pixels, &bvh]() {
             for (auto s = 0; s < options.num_samples;
                  s += options.samples_per_batch) {
                 if (!tid) current_sample = s;
