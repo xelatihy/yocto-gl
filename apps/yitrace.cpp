@@ -36,9 +36,10 @@ struct app_state {
     // loading options
     string filename       = "scene.json";
     string imfilename     = "out.obj";
-    bool   use_embree_bvh = false;
     bool   double_sided   = false;
     bool   add_skyenv     = false;
+    load_scene_options    load_options = {};
+    build_bvh_options     bvh_options = {};
 
     // scene
     yocto_scene scene = {};
@@ -115,7 +116,7 @@ void start_rendering_async(app_state& app) {
 bool load_scene_sync(app_state& app) {
     // scene loading
     app.status = "loading scene";
-    if (!load_scene(app.filename, app.scene)) {
+    if (!load_scene(app.filename, app.scene, app.load_options)) {
         log_fatal("cannot load scene " + app.filename);
         return false;
     }
@@ -135,7 +136,7 @@ bool load_scene_sync(app_state& app) {
 
     // build bvh
     app.status = "computing bvh";
-    build_scene_bvh(app.scene, app.bvh, true, app.use_embree_bvh);
+    build_scene_bvh(app.scene, app.bvh, app.bvh_options);
 
     // init renderer
     app.status = "initializing lights";
@@ -443,7 +444,9 @@ int main(int argc, char* argv[]) {
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
-    app.use_embree_bvh = parse_argument(
+    auto no_parallel = parse_argument(
+        parser, "--noparallel", false, "Disable parallel execution.");
+    app.bvh_options.use_embree = parse_argument(
         parser, "--embree", false, "Use Embree ratracer");
     app.double_sided = parse_argument(
         parser, "--double-sided", false, "Double-sided rendering.");
@@ -454,6 +457,12 @@ int main(int argc, char* argv[]) {
     app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
+
+    // fix parallel code
+    if(no_parallel) {
+        app.bvh_options.run_serially = true;
+        app.load_options.run_serially = true;
+    }
 
     // load scene
     load_scene_async(app);

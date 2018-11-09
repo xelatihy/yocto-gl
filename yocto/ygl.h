@@ -2864,19 +2864,20 @@ struct bvh_scene {
     void* embree_bvh = nullptr;
 };
 
+// Options for build bvh
+struct build_bvh_options {
+    bool high_quality = true;
+    bool use_embree = false;
+    bool run_serially = false;
+    atomic<bool>* cancel_flag = nullptr;
+};
+
 // Build a BVH from the given set of primitives.
-void build_shape_bvh(bvh_shape& bvh, bool high_quality = false);
-void build_scene_bvh(bvh_scene& bvh, bool high_quality = false);
+void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
+void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
 // Update the node bounds for a shape bvh.
 void refit_shape_bvh(bvh_shape& bvh);
 void refit_scene_bvh(bvh_scene& bvh);
-
-// Build a BVH from the given set of primitives.
-// Uses Embree if available and requested, otherwise the standard build.
-void build_shape_bvh_embree(bvh_shape& bvh, bool high_quality = false);
-void clear_shape_bvh_embree(bvh_shape& bvh);
-void build_scene_bvh_embree(bvh_scene& bvh, bool high_quality = false);
-void clear_scene_bvh_embree(bvh_scene& bvh);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
@@ -3606,11 +3607,11 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 
 // Updates/refits bvh.
 void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
-    bool high_quality, bool embree = false);
+    const build_bvh_options& options = {});
 void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
-    bool high_quality, bool embree = false);
+    const build_bvh_options& options = {});
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    bool high_quality, bool embree = false);
+    const build_bvh_options& options = {});
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
 void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh);
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);

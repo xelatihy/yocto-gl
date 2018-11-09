@@ -31,6 +31,10 @@
 using namespace ygl;
 
 int main(int argc, char* argv[]) {
+    // options
+    load_scene_options load_options = {};
+    build_bvh_options bvh_options = {};
+
     // parse command line
     auto parser = cmdline_parser{};
     init_cmdline_parser(parser, argc, argv, "Offline path tracing", "ytrace");
@@ -56,7 +60,7 @@ int main(int argc, char* argv[]) {
     auto exposure = parse_argument(parser, "--exposure,-e", 0.0f, "Hdr exposure");
     auto filmic   = parse_argument(parser, "--filmic", false, "Hdr filmic");
     auto srgb     = parse_argument(parser, "--no-srgb", true, "No srgb");
-    auto embree   = parse_argument(
+    bvh_options.use_embree   = parse_argument(
         parser, "--embree", false, "Use Embree ratracer");
     auto double_sided = parse_argument(
         parser, "--double-sided,-D", false, "Double-sided rendering.");
@@ -68,9 +72,15 @@ int main(int argc, char* argv[]) {
         parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline(parser);
 
+    // fix parallel code
+    if(no_parallel) {
+        bvh_options.run_serially = true;
+        load_options.run_serially = true;
+    }
+
     // scene loading
     auto scene = yocto_scene{};
-    if (!load_scene(filename, scene))
+    if (!load_scene(filename, scene, load_options))
         log_fatal("cannot load scene {}", filename);
 
     // tesselate
@@ -84,7 +94,7 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     auto bvh = bvh_scene{};
-    build_scene_bvh(scene, bvh, true, embree);
+    build_scene_bvh(scene, bvh, bvh_options);
 
     // init renderer
     auto lights = trace_lights{};
