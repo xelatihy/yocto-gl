@@ -120,7 +120,7 @@ int main(int argc, char* argv[]) {
         auto nsamples = min(trace_options.samples_per_batch,
             trace_options.num_samples - sample);
         trace_image_samples(rendered_image, trace_pixels, scene, bvh, lights,
-            sample, trace_options.samples_per_batch, trace_options);
+            sample, trace_options);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(sample + nsamples) + "." + get_extension(imfilename));

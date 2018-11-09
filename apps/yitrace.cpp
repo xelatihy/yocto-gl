@@ -422,6 +422,7 @@ void run_ui(app_state& app) {
 int main(int argc, char* argv[]) {
     // application
     app_state app{};
+    app.trace_options.samples_per_batch = 1;
 
     // parse command line
     auto parser = cmdline_parser{};

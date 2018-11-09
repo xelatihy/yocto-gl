@@ -3921,7 +3921,7 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
 // render the next batch of samples.
 int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int current_sample, int num_samples, const trace_image_options& options);
+    int current_sample, const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
