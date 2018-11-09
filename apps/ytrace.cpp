@@ -109,15 +109,10 @@ int main(int argc, char* argv[]) {
         trace_options.sampler_type = trace_sampler_type::eyelight;
     }
 
-    // initialize rendering objects
-    auto& camera     = scene.cameras[trace_options.camera_id];
-    auto  image_size = get_camera_image_size(camera, trace_options.image_size);
-    auto  rendered_image = image<vec4f>{};
-    init_image<vec4f>(rendered_image, image_size);
+    // allocate buffers
+    auto rendered_image = image<vec4f>{};
     auto trace_pixels = image<trace_pixel>{};
-    init_trace_pixels(trace_pixels, image_size, trace_options.random_seed);
-    auto sampler_func = get_trace_sampler_func(trace_options.sampler_type);
-
+    
     // render
     auto scope = log_trace_begin("rendering image");
     for (auto sample = 0; sample < trace_options.num_samples;
