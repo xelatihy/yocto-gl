@@ -4,8 +4,8 @@
 //
 // Yocto/Utils is a collection of utilities used in writing other Yocto/GL 
 // libraries and example applications. We support printing and parsing builting 
-// and Yocto/Math values, and parsing values from the command line. 
-// We include in this library basic concurrency utilities.
+// and Yocto/Math values, parsing command line arguments, simple path 
+// manipulation, file lading/saving and basic concurrency utilities.
 //
 //
 // ## Printing and parsing values
@@ -31,6 +31,17 @@
 //    - the value is parsed on the stop
 // 3. finished parsing with `check_cmdline(parser)`
 //    - if an error occurred, the parser will exit and print a usage message
+//
+//
+// ## Path manipulation
+//
+// We define a few path manipulation utilities to split and join path components.
+//
+//
+// ## File IO
+//
+// 1. load and save text files with `load_text()` and `save_text()`
+// 2. load and save binary files with `load_binary()` and `save_binary()`
 //
 //
 // ## Concurrency utilities
@@ -191,6 +202,42 @@ inline bool parse_arguments_ref(cmdline_parser& parser, const string& name,
 template <typename T>
 inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
     T& val, const string& usage, const vector<string>& labels, bool req = false);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Normalize path delimiters.
+inline string normalize_path(const string& filename);
+// Get directory name (not including '/').
+inline string get_dirname(const string& filename);
+// Get extension (not including '.').
+inline string get_extension(const string& filename);
+// Get filename without directory.
+inline string get_filename(const string& filename);
+// Replace extension.
+inline string replace_extension(const string& filename, const string& ext);
+
+// Check if a file can be opened for reading.
+inline bool exists_file(const string& filename);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// FILE IO
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Load/save a text file
+inline bool load_text(const string& filename, string& str);
+inline bool save_text(const string& filename, const string& str);
+
+// Load/save a binary file
+inline bool load_binary(const string& filename, vector<byte>& data);
+inline bool save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace ygl
 
@@ -882,6 +929,270 @@ inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
     auto values = vector<T>{};
     if (!parse_arguments_ref(parser, name, values, usage, req)) return def;
     return values;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+string normalize_path(const string& filename_) {
+    auto filename = filename_;
+    for (auto& c : filename)
+        if (c == '\\') c = '/';
+    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+        log_error("absolute paths are not supported");
+        return filename_;
+    }
+    if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+        filename[3] == '/') {
+        log_error("absolute paths are not supported");
+        return filename_;
+    }
+    auto pos = (size_t)0;
+    while ((pos = filename.find("//")) != filename.npos)
+        filename = filename.substr(0, pos) + filename.substr(pos + 1);
+    return filename;
+}
+
+// Get directory name (not including '/').
+string get_dirname(const string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos      = filename.rfind('/');
+    if (pos == string::npos) return "";
+    return filename.substr(0, pos);
+}
+
+// Get extension (not including '.').
+string get_extension(const string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos      = filename.rfind('.');
+    if (pos == string::npos) return "";
+    return filename.substr(pos + 1);
+}
+
+// Get filename without directory.
+string get_filename(const string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos      = filename.rfind('/');
+    if (pos == string::npos) return "";
+    return filename.substr(pos + 1);
+}
+
+// Replace extension.
+string replace_extension(const string& filename_, const string& ext_) {
+    auto filename = normalize_path(filename_);
+    auto ext      = normalize_path(ext_);
+    if (ext.at(0) == '.') ext = ext.substr(1);
+    auto pos = filename.rfind('.');
+    if (pos == string::npos) return filename;
+    return filename.substr(0, pos) + "." + ext;
+}
+
+// Check if a file can be opened for reading.
+bool exists_file(const string& filename) {
+    auto f = fopen(filename.c_str(), "r");
+    if (!f) return false;
+    fclose(f);
+    return true;
+}
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF FILE READING
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// log io error
+template <typename... Args>
+inline void log_io_error(const string& fmt, const Args&... args) {
+    log_error(fmt, args...);
+}
+
+// File stream wrapper
+struct file_stream {
+    string filename = "";
+    string mode     = "";
+    FILE*  fs       = nullptr;
+
+    file_stream()                   = default;
+    file_stream(const file_stream&) = delete;
+    file_stream& operator=(const file_stream&) = delete;
+    file_stream(file_stream&&)                 = default;
+    file_stream& operator=(file_stream&&) = default;
+
+    ~file_stream() {
+        if (fs) {
+            fclose(fs);
+            fs = nullptr;
+        }
+    }
+
+    operator bool() const { return fs; }
+};
+
+// Opens a file
+inline file_stream open(const string& filename, const string& mode) {
+    auto fs = fopen(filename.c_str(), mode.c_str());
+    if (!fs) {
+        log_io_error("cannot open {}", filename);
+        return {};
+    }
+    return {filename, mode, fs};
+}
+
+// Close a file
+inline bool close(file_stream& fs) {
+    if (!fs) {
+        log_io_error("cannot close {}", fs.filename);
+        return false;
+    }
+    fclose(fs.fs);
+    fs.fs = nullptr;
+    return true;
+}
+
+// Gets the length of a file
+inline size_t get_length(file_stream& fs) {
+    if (!fs) return 0;
+    fseek(fs.fs, 0, SEEK_END);
+    auto fsize = ftell(fs.fs);
+    fseek(fs.fs, 0, SEEK_SET);
+    return fsize;
+}
+
+// Print to file
+inline bool write_text(file_stream& fs, const string& str) {
+    if (!fs) return false;
+    if (fprintf(fs.fs, "%s", str.c_str()) < 0) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Write to file
+template <typename T>
+inline bool write_value(file_stream& fs, const T& value) {
+    if (!fs) return false;
+    if (fwrite(&value, sizeof(T), 1, fs.fs) != 1) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Write to file
+template <typename T>
+inline bool write_values(file_stream& fs, const vector<T>& vals) {
+    if (!fs) return false;
+    if (fwrite(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Write to file
+template <typename T>
+inline bool write_values(file_stream& fs, size_t num, const T* vals) {
+    if (!fs) return false;
+    if (fwrite(vals, sizeof(T), num, fs.fs) != num) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Print shortcut
+template <typename... Args>
+inline bool print(file_stream& fs, const string& fmt, const Args&... args) {
+    if (!fs) return false;
+    return write_text(fs, format(fmt, args...));
+}
+
+// Read binary data to fill the whole buffer
+inline bool read_line(file_stream& fs, string& value) {
+    if (!fs) return false;
+    // TODO: make lkne as large as possible
+    value = "";
+    char buffer[4096];
+    if (!fgets(buffer, 4096, fs.fs)) return false;
+    value = string(buffer);
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+template <typename T>
+inline bool read_value(file_stream& fs, T& value) {
+    if (!fs) return false;
+    if (fread(&value, sizeof(T), 1, fs.fs) != 1) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+template <typename T>
+inline bool read_values(file_stream& fs, vector<T>& vals) {
+    if (!fs) return false;
+    if (fread(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+template <typename T>
+inline bool read_values(file_stream& fs, size_t num, T* vals) {
+    if (!fs) return false;
+    if (fread(vals, sizeof(T), num, fs.fs) != num) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Load a text file
+inline bool load_text(const string& filename, string& str) {
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    auto fs = open(filename, "rb");
+    if (!fs) return false;
+    auto buffer = vector<char>(get_length(fs));
+    if (!read_values(fs, buffer)) return false;
+    str = string{buffer.begin(), buffer.end()};
+    return true;
+}
+
+// Save a text file
+inline bool save_text(const string& filename, const string& str) {
+    auto fs = open(filename, "wt");
+    if (!fs) return false;
+    if (!write_text(fs, str)) return false;
+    return true;
+}
+
+// Load a binary file
+inline bool load_binary(const string& filename, vector<byte>& data) {
+    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+    auto fs = open(filename, "rb");
+    if (!fs) return false;
+    data = vector<byte>(get_length(fs));
+    if (!read_values(fs, data)) return false;
+    return true;
+}
+
+// Save a binary file
+inline bool save_binary(const string& filename, const vector<byte>& data) {
+    auto fs = open(filename.c_str(), "wb");
+    if (!fs) return false;
+    if (!write_values(fs, data)) return false;
+    return true;
 }
 
 }  // namespace ygl
