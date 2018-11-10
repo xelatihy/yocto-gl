@@ -1121,17 +1121,26 @@ struct mat;
 template <typename T, int N>
 struct mat<T, N, 1> {
     vec<T, N> x = {};
+
+    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
+    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T, int N>
 struct mat<T, N, 2> {
     vec<T, N> x = {};
     vec<T, N> y = {};
+
+    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
+    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T, int N>
 struct mat<T, N, 3> {
     vec<T, 3> x = {};
     vec<T, 3> y = {};
     vec<T, 3> z = {};
+
+    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
+    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T, int N>
 struct mat<T, N, 4> {
@@ -1139,6 +1148,9 @@ struct mat<T, N, 4> {
     vec<T, 4> y = {};
     vec<T, 4> z = {};
     vec<T, 4> w = {};
+
+    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
+    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
 };
 
 // Type aliases.
@@ -1367,6 +1379,9 @@ struct frame<T, 2> {
     vec<T, 2> x = {1, 0};
     vec<T, 2> y = {0, 1};
     vec<T, 2> o = {0, 0};
+
+    constexpr vec<T, 2>&       operator[](int idx) { return *(&x + idx); }
+    constexpr const vec<T, 2>& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T>
 struct frame<T, 3> {
@@ -1374,6 +1389,9 @@ struct frame<T, 3> {
     vec<T, 3> y = {0, 1, 0};
     vec<T, 3> z = {0, 0, 1};
     vec<T, 3> o = {0, 0, 0};
+
+    constexpr vec<T, 3>&       operator[](int idx) { return *(&x + idx); }
+    constexpr const vec<T, 3>& operator[](int idx) const { return *(&x + idx); }
 };
 
 // Type aliases.
@@ -1501,6 +1519,9 @@ template <typename T>
 struct bbox<T, 1> {
     T min = maxt<T>();
     T max = mint<T>();
+
+    constexpr T&       operator[](int idx) { return *(&min + idx); }
+    constexpr const T& operator[](int idx) const { return *(&min + idx); }
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -1508,6 +1529,9 @@ template <typename T>
 struct bbox<T, 2> {
     vec<T, 2> min = {maxt<T>(), maxt<T>()};
     vec<T, 2> max = {mint<T>(), mint<T>()};
+
+    constexpr T&       operator[](int idx) { return *(&min + idx); }
+    constexpr const T& operator[](int idx) const { return *(&min + idx); }
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -1515,6 +1539,9 @@ template <typename T>
 struct bbox<T, 3> {
     vec<T, 3> min = {maxt<T>(), maxt<T>(), maxt<T>()};
     vec<T, 3> max = {mint<T>(), mint<T>(), mint<T>()};
+
+    constexpr T&       operator[](int idx) { return *(&min + idx); }
+    constexpr const T& operator[](int idx) const { return *(&min + idx); }
 };
 
 // Axis aligned bounding box represented as a min/max vector pairs.
@@ -1522,6 +1549,9 @@ template <typename T>
 struct bbox<T, 4> {
     vec<T, 4> min = {maxt<T>(), maxt<T>(), maxt<T>(), maxt<T>()};
     vec<T, 4> max = {mint<T>(), mint<T>(), mint<T>(), mint<T>()};
+
+    constexpr T&       operator[](int idx) { return *(&min + idx); }
+    constexpr const T& operator[](int idx) const { return *(&min + idx); }
 };
 
 // Type aliases
