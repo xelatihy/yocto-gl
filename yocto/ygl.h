@@ -506,17 +506,26 @@ struct vec;
 template <typename T>
 struct vec<T, 1> {
     T x = 0;
+
+    constexpr T&       operator[](int idx) { return *(&x + idx); }
+    constexpr const T& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T>
 struct vec<T, 2> {
     T x = 0;
     T y = 0;
+
+    constexpr T&       operator[](int idx) { return *(&x + idx); }
+    constexpr const T& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T>
 struct vec<T, 3> {
     T x = 0;
     T y = 0;
     T z = 0;
+
+    constexpr T&       operator[](int idx) { return *(&x + idx); }
+    constexpr const T& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T>
 struct vec<T, 4> {
@@ -524,6 +533,9 @@ struct vec<T, 4> {
     T y = 0;
     T z = 0;
     T w = 0;
+
+    constexpr T&       operator[](int idx) { return *(&x + idx); }
+    constexpr const T& operator[](int idx) const { return *(&x + idx); }
 };
 
 // Type aliases.
@@ -548,24 +560,6 @@ constexpr const auto zero3i = vec3i{0, 0, 0};
 constexpr const auto zero4i = vec4i{0, 0, 0, 0};
 constexpr const auto zero4b = vec4b{0, 0, 0, 0};
 
-// Access component by index.
-template <typename T, int N>
-constexpr inline T& at(vec<T, N>& v, int i) {
-    return *(&v.x + i);
-}
-template <typename T, int N>
-constexpr inline const T& at(const vec<T, N>& v, int i) {
-    return *(&v.x + i);
-}
-template <int I, typename T, int N>
-constexpr inline T& get(vec<T, N>& v) {
-    return *(&v.x + N);
-}
-template <int I, typename T, int N>
-constexpr inline const T& get(const vec<T, N>& v) {
-    return *(&v.x + N);
-}
-
 // Access xyz component of a vec4 typically used for color operation.
 template <typename T>
 constexpr inline vec<T, 3>& xyz(const vec<T, 4>& v) {
@@ -583,27 +577,27 @@ constexpr int size(const vec<T, N>& v) {
 }
 template <typename T, int N>
 constexpr T* begin(vec<T, N>& v) {
-    return &v.x;
+    return &v[0];
 }
 template <typename T, int N>
 constexpr const T* begin(const vec<T, N>& v) {
-    return &v.x;
+    return &v[0];
 }
 template <typename T, int N>
 constexpr T* end(vec<T, N>& v) {
-    return &v.x + N;
+    return &v[0] + N;
 }
 template <typename T, int N>
 constexpr const T* end(const vec<T, N>& v) {
-    return &v.x + N;
+    return &v[0] + N;
 }
 template <typename T, int N>
 constexpr T* data(vec<T, N>& v) {
-    return &v.x;
+    return &v[0];
 }
 template <typename T, int N>
 constexpr const T* data(const vec<T, N>& v) {
-    return &v.x;
+    return &v[0];
 }
 
 // Vector comparison operations.
@@ -1101,35 +1095,13 @@ constexpr inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
 namespace std {
 
 // Hash functor for vector for use with unordered_map
-template <typename T>
-struct hash<ygl::vec<T, 2>> {
-    size_t operator()(const ygl::vec<T, 2>& v) const {
+template <typename T, int N>
+struct hash<ygl::vec<T, N>> {
+    size_t operator()(const ygl::vec<T, N>& v) const {
         auto vh = hash<T>();
         auto h  = (size_t)0;
-        for (auto i = 0; i < 2; i++)
-            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-};
-// Hash functor for vector for use with unordered_map
-template <typename T>
-struct hash<ygl::vec<T, 3>> {
-    size_t operator()(const ygl::vec<T, 3>& v) const {
-        auto vh = hash<int>();
-        auto h  = (size_t)0;
-        for (auto i = 0; i < 3; i++)
-            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
-        return h;
-    }
-};
-// Hash functor for vector for use with unordered_map
-template <typename T>
-struct hash<ygl::vec<T, 4>> {
-    size_t operator()(const ygl::vec<T, 4>& v) const {
-        auto vh = hash<int>();
-        auto h  = (size_t)0;
-        for (auto i = 0; i < 4; i++)
-            h ^= vh((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        for (auto i = 0; i < N; i++)
+            h ^= vh(v[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
         return h;
     }
 };

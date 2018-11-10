@@ -1665,7 +1665,7 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     auto min_left = 0, min_right = 0;
     for (auto axis = 0; axis < 3; axis++) {
         for (auto b = 1; b < nbins; b++) {
-            auto split = (&cbbox.min.x)[axis] + b * (&csize.x)[axis] / nbins;
+            auto split     = (&cbbox.min.x)[axis] + b * csize[axis] / nbins;
             auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
             auto left_nprims = 0, right_nprims = 0;
             for (auto i = start; i < end; i++) {
@@ -1765,7 +1765,7 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
     // split the space in the middle along the largest axis
     split_axis   = largest_axis;
     auto cmiddle = (cbbox.max + cbbox.min) / 2;
-    auto middle  = (&cmiddle.x)[largest_axis];
+    auto middle  = cmiddle[largest_axis];
     mid = (int)(std::partition(prims.data() + start, prims.data() + end,
                     [split_axis, middle](auto& a) {
                         return (&a.center.x)[split_axis] < middle;
@@ -2160,7 +2160,7 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         if (node.is_internal) {
             // for internal nodes, attempts to proceed along the
             // split axis from smallest to largest nodes
-            if ((&ray_dsign.x)[node.split_axis]) {
+            if (ray_dsign[node.split_axis]) {
                 node_stack[node_cur++] = node.primitive_ids[0];
                 node_stack[node_cur++] = node.primitive_ids[1];
             } else {
@@ -2259,7 +2259,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
         if (node.is_internal) {
             // for internal nodes, attempts to proceed along the
             // split axis from smallest to largest nodes
-            if ((&ray_dsign.x)[node.split_axis]) {
+            if (ray_dsign[node.split_axis]) {
                 node_stack[node_cur++] = node.primitive_ids[0];
                 node_stack[node_cur++] = node.primitive_ids[1];
             } else {
@@ -3978,16 +3978,14 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
 
     auto sun_le = zero3f;
     for (auto i = 0; i < 3; i++) {
-        auto tauR = exp(
-            -sun_m * 0.008735f * pow((&sun_lambda.x)[i] / 1000, -4.08f));
-        auto tauA = exp(
-            -sun_m * sun_beta * pow((&sun_lambda.x)[i] / 1000, -1.3f));
-        auto tauO      = exp(-sun_m * (&sun_ko.x)[i] * .35f);
-        auto tauG      = exp(-1.41f * (&sun_kg.x)[i] * sun_m /
-                        pow(1 + 118.93f * (&sun_kg.x)[i] * sun_m, 0.45f));
-        auto tauWA     = exp(-0.2385f * (&sun_kwa.x)[i] * 2.0f * sun_m /
-                         pow(1 + 20.07f * (&sun_kwa.x)[i] * 2.0f * sun_m, 0.45f));
-        (&sun_le.x)[i] = (&sun_sol.x)[i] * tauR * tauA * tauO * tauG * tauWA;
+        auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda[i] / 1000, -4.08f));
+        auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda[i] / 1000, -1.3f));
+        auto tauO = exp(-sun_m * sun_ko[i] * .35f);
+        auto tauG = exp(-1.41f * sun_kg[i] * sun_m /
+                        pow(1 + 118.93f * sun_kg[i] * sun_m, 0.45f));
+        auto tauWA = exp(-0.2385f * sun_kwa[i] * 2.0f * sun_m /
+                         pow(1 + 20.07f * sun_kwa[i] * 2.0f * sun_m, 0.45f));
+        sun_le[i]  = sun_sol[i] * tauR * tauA * tauO * tauG * tauWA;
     }
 
     auto sun = [has_sun, sunAngularRadius, sun_le](auto theta, auto gamma) {
@@ -4354,10 +4352,10 @@ yocto_surface displace_surface(const yocto_surface& surface,
         auto qpos = surface.quads_positions[fid];
         auto qtxt = surface.quads_texturecoords[fid];
         for (auto i = 0; i < 4; i++) {
-            offset[(&qpos.x)[i]] += displacement.height_scale *
-                                    mean(xyz(evaluate_texture(displacement,
-                                        surface.texturecoords[(&qtxt.x)[i]])));
-            count[(&qpos.x)[i]] += 1;
+            offset[qpos[i]] += displacement.height_scale *
+                               mean(xyz(evaluate_texture(displacement,
+                                   surface.texturecoords[qtxt[i]])));
+            count[qpos[i]] += 1;
         }
     }
     auto normals = compute_vertex_normals(
@@ -5709,7 +5707,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
     auto tr = 1.0f, t = 0.0f;
     auto pos = from;
     while (true) {
-        auto step = -log(1 - get_random_float(rng)) / at(vd, channel);
+        auto step = -log(1 - get_random_float(rng)) / vd[channel];
         t += step;
         if (t >= distance) break;
         pos += dir * step;
@@ -5718,7 +5716,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
             auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
-        tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
+        tr *= 1.0f - max(0.0f, density[channel] / vd[channel]);
     }
     return {tr, tr, tr};
 }
@@ -5726,7 +5724,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
 float sample_distance(const yocto_scene& scene, const yocto_material& material,
     const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
     auto pos      = from;
-    auto majorant = at(material.volume_density, channel);
+    auto majorant = material.volume_density[channel];
     if (majorant == 0) return maxf;
 
     // delta tracking
@@ -5744,7 +5742,7 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
             auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
-        if (at(density, channel) / majorant >= get_random_float(rng))
+        if (density[channel] / majorant >= get_random_float(rng))
             return distance;
 
         // Escape from volume.
@@ -6838,15 +6836,15 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
     auto weight = zero3f;
 
     // For the sampled channel, transmission / pdf == 1.0
-    at(weight, ch) = 1.0;
+    weight[ch] = 1.0;
 
     // Compute weight for the remaining channels i.
     // In order to avoid numerical nasties (NaNs) transmission / pdf is
     // evaluated. transmission[i] = exp(-distance * vd[i]) pdf             =
     // exp(-distance * vd[channel])
     int i = (ch + 1) % 3, j = (ch + 2) % 3;
-    at(weight, i) = exp(-distance * (at(vd, i) - at(vd, ch)));
-    at(weight, j) = exp(-distance * (at(vd, j) - at(vd, ch)));
+    weight[i] = exp(-distance * (vd[i] - vd[ch]));
+    weight[j] = exp(-distance * (vd[j] - vd[ch]));
     return weight;
 }
 
@@ -6897,10 +6895,10 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // sampled spectrum.
         if (!single_channel && is_material_volume_colored(material) &&
             !is_material_volume_homogeneus(material)) {
-            at(weight, ch) *= 3;
-            at(weight, (ch + 1) % 3) = 0;
-            at(weight, (ch + 2) % 3) = 0;
-            single_channel           = true;
+            weight[ch] *= 3;
+            weight[(ch + 1) % 3] = 0;
+            weight[(ch + 2) % 3] = 0;
+            single_channel       = true;
         }
 
         // TODO: FIXME REMOVING BBOX
@@ -7033,7 +7031,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // medium interaction
         else {
             ray.o += ray.d * distance;
-            float scattering_prob = at(va, ch);
+            float scattering_prob = va[ch];
 
             // absorption and emission
             if (get_random_float(rng) >= scattering_prob) {
