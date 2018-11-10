@@ -1,5 +1,5 @@
 //
-// Utilities to use OpenGL 3, GLFW and ImGui.
+// Yocto/OpenGL: Utilities to use OpenGL 3, GLFW and ImGui.
 //
 
 //
@@ -27,8 +27,8 @@
 //
 //
 
-#ifndef _YGLUTILS_H_
-#define _YGLUTILS_H_
+#ifndef _YOCTO_OPENGL_
+#define _YOCTO_OPENGL_
 
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_utils.h"
