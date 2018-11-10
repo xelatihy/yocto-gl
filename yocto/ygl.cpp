@@ -307,18 +307,6 @@ vector<vec3f> compute_vertex_tangents(const vector<vec2i>& lines,
     for (auto& tangent : tangents) tangent = normalize(tangent);
     return tangents;
 }
-void compute_vertex_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
-    const vector<vec3f>& positions) {
-    assert(tangents.size() == positions.size());
-    for(auto& t : tangents) t = zero3f;
-    for (auto& l : lines) {
-        auto tangent = line_tangent(positions[l.x], positions[l.y]);
-        auto length  = line_length(positions[l.x], positions[l.y]);
-        tangents[l.x] += tangent * length;
-        tangents[l.y] += tangent * length;
-    }
-    for (auto& tangent : tangents) tangent = normalize(tangent);
-}
 
 // Compute per-vertex normals for triangles.
 vector<vec3f> compute_vertex_normals(const vector<vec3i>& triangles,
@@ -335,20 +323,6 @@ vector<vec3f> compute_vertex_normals(const vector<vec3i>& triangles,
     }
     for (auto& normal : normals) normal = normalize(normal);
     return normals;
-}
-void compute_vertex_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
-    assert(normals.size() == positions.size());
-    for(auto& n : normals) n = zero3f;
-    for (auto& t : triangles) {
-        auto normal = triangle_normal(
-            positions[t.x], positions[t.y], positions[t.z]);
-        auto area = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-        normals[t.x] += normal * area;
-        normals[t.y] += normal * area;
-        normals[t.z] += normal * area;
-    }
-    for (auto& normal : normals) normal = normalize(normal);
 }
 
 // Compute per-vertex normals for quads.
@@ -369,22 +343,7 @@ vector<vec3f> compute_vertex_normals(const vector<vec4i>& quads,
     for (auto& normal : normals) normal = normalize(normal);
     return normals;
 }
-void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-    assert(normals.size() == positions.size());
-    for(auto& n : normals) n = zero3f;
-    for (auto q : quads) {
-        auto normal = quad_normal(
-            positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-        auto area = quad_area(
-            positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-        normals[q.x] += normal * area;
-        normals[q.y] += normal * area;
-        normals[q.z] += normal * area;
-        if (q.z != q.w) normals[q.w] += normal * area;
-    }
-    for (auto& normal : normals) normal = normalize(normal);
-}
+
 
 // Compute per-vertex tangent frame for triangle meshes.
 // Tangent space is defined by a four component vector.
@@ -415,30 +374,7 @@ vector<vec4f> compute_tangent_spaces(
     }
     return tangentspaces;
 }
-void compute_tangent_spaces(vector<vec4f>& tangentspaces, 
-    const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords) {
-    assert(tangentspaces.size() == positions.size());
-    auto tangu = vector<vec3f>(positions.size(), zero3f);
-    auto tangv = vector<vec3f>(positions.size(), zero3f);
-    for (auto t : triangles) {
-        auto tutv = triangle_tangents_fromuv(positions[t.x], positions[t.y],
-            positions[t.z], texturecoords[t.x], texturecoords[t.y],
-            texturecoords[t.z]);
-        tutv      = {normalize(tutv.first), normalize(tutv.second)};
-        for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tutv.first;
-        for (auto vid : {t.x, t.y, t.z}) tangv[vid] += tutv.second;
-    }
-    for (auto& t : tangu) t = normalize(t);
-    for (auto& t : tangv) t = normalize(t);
-    tangentspaces = vector<vec4f>(positions.size(), zero4f);
-    for (auto i = 0; i < positions.size(); i++) {
-        tangu[i] = orthonormalize(tangu[i], normals[i]);
-        auto s = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
-        tangentspaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
-    }
-}
+
 
 // Apply skinning
 tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
@@ -466,30 +402,6 @@ tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
     }
     return {skinned_positions, skinned_normals};
 }
-void compute_skinning(vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals,
-    const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
-    assert(skinned_positions.size() == positions.size());
-    assert(skinned_normals.size() == normals.size());
-    for (auto i = 0; i < positions.size(); i++) {
-        skinned_positions[i] = transform_point(xforms[joints[i].x], positions[i]) *
-                                   weights[i].x +
-                               transform_point(xforms[joints[i].y], positions[i]) *
-                                   weights[i].y +
-                               transform_point(xforms[joints[i].z], positions[i]) *
-                                   weights[i].z +
-                               transform_point(xforms[joints[i].w], positions[i]) *
-                                   weights[i].w;
-    }
-    for (auto i = 0; i < positions.size(); i++) {
-        skinned_normals[i] = normalize(
-            transform_direction(xforms[joints[i].x], normals[i]) * weights[i].x +
-            transform_direction(xforms[joints[i].y], normals[i]) * weights[i].y +
-            transform_direction(xforms[joints[i].z], normals[i]) * weights[i].z +
-            transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
-    }
-}
 
 // Apply skinning as specified in Khronos glTF
 tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
@@ -507,22 +419,6 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
         skinned_normals[i] = normalize(transform_direction(xform, normals[i]));
     }
     return {skinned_positions, skinned_normals};
-}
-void compute_matrix_skinning(
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals,
-    const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
-    assert(skinned_positions.size() == positions.size());
-    assert(skinned_normals.size() == normals.size());
-    for (auto i = 0; i < positions.size(); i++) {
-        auto xform = xforms[joints[i].x] * weights[i].x +
-                     xforms[joints[i].y] * weights[i].y +
-                     xforms[joints[i].z] * weights[i].z +
-                     xforms[joints[i].w] * weights[i].w;
-        skinned_positions[i] = transform_point(xform, positions[i]);
-        skinned_normals[i] = normalize(transform_direction(xform, normals[i]));
-    }
 }
 
 // Creates an edge map
