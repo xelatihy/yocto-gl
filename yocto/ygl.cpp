@@ -7526,8 +7526,8 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 
 // Init a sequence of random number generators.
 image<trace_pixel> make_trace_pixels(const vec2i& image_size, uint64_t seed) {
-    auto pixels   = image<trace_pixel>{image_size};
-    auto rng = make_rng(1301081);
+    auto pixels = image<trace_pixel>{image_size};
+    auto rng    = make_rng(1301081);
     for (auto j = 0; j < pixels.size().y; j++) {
         for (auto i = 0; i < pixels.size().x; i++) {
             auto& pixel = pixels[{i, j}];
@@ -7539,8 +7539,8 @@ image<trace_pixel> make_trace_pixels(const vec2i& image_size, uint64_t seed) {
 
 // Init trace lights
 trace_lights make_trace_lights(const yocto_scene& scene) {
-    auto scope = log_trace_scoped("making trace lights");
-    auto lights     = trace_lights{};
+    auto scope  = log_trace_scoped("making trace lights");
+    auto lights = trace_lights{};
 
     lights.shape_elements_cdf.resize(scene.shapes.size());
     lights.surface_elements_cdf.resize(scene.surfaces.size());
@@ -7583,14 +7583,14 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights,
-    const trace_image_options& options) {
-    auto  scope      = log_trace_scoped("tracing image");
-    auto  image_size = get_camera_image_size(scene.cameras.at(options.camera_id), options.image_size);
+image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const trace_image_options& options) {
+    auto scope      = log_trace_scoped("tracing image");
+    auto image_size = get_camera_image_size(
+        scene.cameras.at(options.camera_id), options.image_size);
     auto rendered_image = image<vec4f>{image_size};
-    auto pixels = make_trace_pixels(image_size, options.random_seed);
-    auto regions = make_image_regions(rendered_image.size());
+    auto pixels         = make_trace_pixels(image_size, options.random_seed);
+    auto regions        = make_image_regions(rendered_image.size());
 
     if (options.run_serially) {
         for (auto& region : regions) {
@@ -7661,8 +7661,8 @@ void trace_image_async_start(image<vec4f>& rendered_image,
     auto& camera     = scene.cameras.at(options.camera_id);
     auto  image_size = get_camera_image_size(camera, options.image_size);
     rendered_image   = {image_size, zero4f};
-    pixels = make_trace_pixels(image_size, options.random_seed);
-    auto regions = make_image_regions(rendered_image.size());
+    pixels           = make_trace_pixels(image_size, options.random_seed);
+    auto regions     = make_image_regions(rendered_image.size());
     if (options.cancel_flag) *options.cancel_flag = false;
 
 #if 0

@@ -3801,8 +3801,8 @@ struct trace_lights {
 };
 
 // Initialize lights.
-trace_lights        make_trace_lights(const yocto_scene& scene);
-inline bool empty(const trace_lights& lights) {
+trace_lights make_trace_lights(const yocto_scene& scene);
+inline bool  empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
@@ -3815,8 +3815,8 @@ struct trace_pixel {
 };
 
 // Initialize state of the renderer.
-image<trace_pixel> make_trace_pixels(const vec2i& image_size,
-    uint64_t random_seed = trace_default_seed);
+image<trace_pixel> make_trace_pixels(
+    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
@@ -3863,9 +3863,8 @@ struct trace_image_options {
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights,
-    const trace_image_options& options);
+image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
