@@ -3168,29 +3168,25 @@ inline image<T> get_image_region(
 vec2i get_image_size(const vec2i& size, float aspect);
 
 // Conversion from/to floats.
-void byte_to_float(const image<vec4b>& bt, image<vec4f>& fl);
-void float_to_byte(const image<vec4f>& fl, image<vec4b>& bt);
+image<vec4f> byte_to_float(const image<vec4b>& bt);
+image<vec4b> float_to_byte(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-void gamma_to_linear(const image<vec4f>& srgb, image<vec4f>& lin, float gamma);
-void linear_to_gamma(const image<vec4f>& lin, image<vec4f>& srgb, float gamma);
+image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
+image<vec4f> linear_to_srgb(const image<vec4f>& lin);
 
-// Conversion between linear and sRGB images.
-void srgb_to_linear(const image<vec4f>& srgb, image<vec4f>& lin);
-void linear_to_srgb(const image<vec4f>& lin, image<vec4f>& srgb);
-void srgb_to_linear(const image<vec4b>& srgb, image<vec4f>& lin);
-void linear_to_srgb(const image<vec4f>& lin, image<vec4b>& srgb);
+// Conversion between linear and gamma-encoded images.
+image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma);
+image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-void tonemap_image(const image<vec4f>& hdr, image<vec4f>& ldr, float exposure,
+image<vec4f> tonemap_image(const image<vec4f>& hdr, float exposure,
     bool filmic, bool srgb);
-void tonemap_image_region(const image<vec4f>& hdr, image<vec4f>& ldr,
-    const bbox2i& region, float exposure, bool filmic, bool srgb);
-void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr, float exposure,
-    bool filmic, bool srgb);
+void tonemap_image_region(image<vec4f>& ldr,
+    const bbox2i& region, const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-void resize_image(const image<vec4f>& img, image<vec4f>& res, const vec2i& size);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 
 }  // namespace ygl
 
@@ -3200,43 +3196,41 @@ void resize_image(const image<vec4f>& img, image<vec4f>& res, const vec2i& size)
 namespace ygl {
 
 // Make example images.
-void make_grid_image(image<vec4f>& img, const vec2i& size, int tile = 8,
+image<vec4f> make_grid_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-void make_checker_image(image<vec4f>& img, const vec2i& size, int tile = 8,
+image<vec4f> make_checker_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-void make_bumpdimple_image(image<vec4f>& img, const vec2i& size, int tile = 8);
-void make_ramp_image(image<vec4f>& img, const vec2i& size, const vec4f& c0,
+image<vec4f> make_bumpdimple_image(const vec2i& size, int tile = 8);
+image<vec4f> make_ramp_image(const vec2i& size, const vec4f& c0,
     const vec4f& c1, float srgb = false);
-void make_gammaramp_image(image<vec4f>& img, const vec2i& size);
-void make_uvramp_image(image<vec4f>& img, const vec2i& size);
-void make_uvgrid_image(
-    image<vec4f>& img, const vec2i& size, int tile = 8, bool colored = true);
+image<vec4f> make_gammaramp_image(const vec2i& size);
+image<vec4f> make_uvramp_image(const vec2i& size);
+image<vec4f> make_uvgrid_image(const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-void bump_to_normal_map(
-    const image<vec4f>& img, image<vec4f>& normal, float scale = 1);
+image<vec4f> bump_to_normal_map(
+    const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-void make_sunsky_image(image<vec4f>& img, const vec2i& size, float thetaSun,
+image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-void make_lights_image(image<vec4f>& img, const vec2i& size,
+image<vec4f> make_lights_image(const vec2i& size,
     const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
     float lwidth = pif / 16, float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-void make_noise_image(
-    image<vec4f>& img, const vec2i& size, float scale = 1, bool wrap = true);
-void make_fbm_image(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_noise_image(const vec2i& size, float scale = 1, bool wrap = true);
+image<vec4f> make_fbm_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-void make_ridge_image(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_ridge_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-void make_turbulence_image(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_turbulence_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -3360,7 +3354,7 @@ struct volume {
 };
 
 // make a simple example volume
-void make_test_volume1f(volume<float>& vol, const vec3i& size, float scale = 10,
+volume<float> make_test_volume(const vec3i& size, float scale = 10,
     float exponent = 6);
 
 }  // namespace ygl

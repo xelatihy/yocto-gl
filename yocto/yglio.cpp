@@ -785,22 +785,22 @@ bool load_image_nolog(const string& filename, image<vec4f>& img) {
     } else if (ext == "png" || ext == "PNG") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "jpg" || ext == "JPG") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "tga" || ext == "TGA") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "bmp" || ext == "BMP") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else {
         log_io_error("unsupported image format {}", ext);
@@ -816,21 +816,13 @@ bool load_image(const string& filename, image<vec4f>& img) {
 bool save_image_nolog(const string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_png_image(filename, imgb);
+        return save_png_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "jpg" || ext == "JPG") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_jpg_image(filename, imgb);
+        return save_jpg_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "tga" || ext == "TGA") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_tga_image(filename, imgb);
+        return save_tga_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "bmp" || ext == "BMP") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_bmp_image(filename, imgb);
+        return save_bmp_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "hdr" || ext == "HDR") {
         return save_hdr_image(filename, img);
     } else if (ext == "pfm" || ext == "PFM") {
@@ -863,17 +855,17 @@ bool load_image_nolog(const string& filename, image<vec4b>& img) {
     if (ext == "exr" || ext == "EXR") {
         auto imgf = image<vec4f>{};
         if (!load_exr_image(filename, imgf)) return false;
-        linear_to_srgb(imgf, img);
+        img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "pfm" || ext == "PFM") {
         auto imgf = image<vec4f>{};
         if (!load_pfm_image(filename, imgf)) return false;
-        linear_to_srgb(imgf, img);
+        img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "hdr" || ext == "HDR") {
         auto imgf = image<vec4f>{};
         if (!load_stb_image(filename, imgf)) return false;
-        linear_to_srgb(imgf, img);
+        img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "png" || ext == "PNG") {
         return load_stb_image(filename, img);
@@ -905,17 +897,11 @@ bool save_image_nolog(const string& filename, const image<vec4b>& img) {
     } else if (ext == "bmp" || ext == "BMP") {
         return save_bmp_image(filename, img);
     } else if (ext == "hdr" || ext == "HDR") {
-        auto imgf = image<vec4f>{};
-        srgb_to_linear(img, imgf);
-        return save_hdr_image(filename, imgf);
+        return save_hdr_image(filename, srgb_to_linear(byte_to_float(img)));
     } else if (ext == "pfm" || ext == "PFM") {
-        auto imgf = image<vec4f>{};
-        srgb_to_linear(img, imgf);
-        return save_pfm_image(filename, imgf);
+        return save_pfm_image(filename, srgb_to_linear(byte_to_float(img)));
     } else if (ext == "exr" || ext == "EXR") {
-        auto imgf = image<vec4f>{};
-        srgb_to_linear(img, imgf);
-        return save_exr_image(filename, imgf);
+        return save_exr_image(filename, srgb_to_linear(byte_to_float(img)));
     } else {
         log_io_error("unsupported image format {}", ext);
         return false;
@@ -943,23 +929,21 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     if (is_hdr_filename(filename)) {
         return save_image(filename, hdr);
     } else {
-        auto ldr = image<vec4b>{};
-        tonemap_image(hdr, ldr, exposure, filmic, srgb);
-        return save_image(filename, ldr);
+        return save_image(filename, float_to_byte(tonemap_image(hdr, exposure, filmic, srgb)));
     }
 }
 
 // Resize image.
-void resize_image(
-    const image<vec4f>& img, image<vec4f>& res_img, const vec2i& size) {
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
     if (size == zero2i) {
         log_error("bad image size in resize_image");
     }
-    res_img = {get_image_size(size, get_image_aspect(img))};
+    auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
     stbir_resize_float_generic((float*)img.data(), img.size().x,
         img.size().y, sizeof(vec4f) * img.size().x, (float*)res_img.data(),
         res_img.size().x, res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return img;
 }
 
 }  // namespace ygl
@@ -1565,39 +1549,39 @@ bool apply_json_procedural(
     auto is_hdr = false;
     auto size   = js.value("size", vec2i{512, 512});
     if (type == "grid") {
-        make_grid_image(value.hdr_image, size, js.value("tile", 8),
+        value.hdr_image = make_grid_image(size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        make_checker_image(value.hdr_image, size, js.value("tile", 8),
+        value.hdr_image = make_checker_image(size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(value.hdr_image, size, js.value("tile", 8));
+        value.hdr_image = make_bumpdimple_image(size, js.value("tile", 8));
     } else if (type == "uvramp") {
-        make_uvramp_image(value.hdr_image, size);
+        value.hdr_image = make_uvramp_image(size);
     } else if (type == "uvgrid") {
-        make_uvgrid_image(value.hdr_image, size);
+        value.hdr_image = make_uvgrid_image(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        make_sunsky_image(value.hdr_image, size, js.value("sun_angle", pif / 4),
+        value.hdr_image = make_sunsky_image(size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr = true;
     } else if (type == "noise") {
-        make_noise_image(value.hdr_image, size, js.value("scale", 1.0f),
+        value.hdr_image = make_noise_image(size, js.value("scale", 1.0f),
             js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(value.hdr_image, size, js.value("scale", 1.0f),
+        value.hdr_image = make_fbm_image(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image, size, js.value("scale", 1.0f),
+        value.hdr_image = make_ridge_image(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(value.hdr_image, size, js.value("scale", 1.0f),
+        value.hdr_image = make_turbulence_image(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
@@ -1605,15 +1589,15 @@ bool apply_json_procedural(
         return false;
     }
     if (js.value("bump_to_normal", false)) {
-        bump_to_normal_map(
-            value.hdr_image, value.hdr_image, js.value("bump_scale", 1.0f));
+        value.hdr_image = bump_to_normal_map(
+            value.hdr_image, js.value("bump_scale", 1.0f));
         value.ldr_as_linear = true;
     }
     if (!is_hdr) {
         if (!value.ldr_as_linear) {
-            linear_to_srgb(value.hdr_image, value.ldr_image);
+            value.ldr_image = float_to_byte(linear_to_srgb(value.hdr_image));
         } else {
-            float_to_byte(value.hdr_image, value.ldr_image);
+            value.ldr_image = float_to_byte(value.hdr_image);
         }
         value.hdr_image = {};
     }
@@ -1666,7 +1650,7 @@ bool apply_json_procedural(
     if (type == "") return true;
     auto size = js.value("width", vec3i{512, 512, 512});
     if (type == "test_volume") {
-        make_test_volume1f(value.volume_data, size, js.value("scale", 10.0f),
+        value.volume_data = make_test_volume(size, js.value("scale", 10.0f),
             js.value("exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);

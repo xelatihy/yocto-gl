@@ -102,7 +102,7 @@ void update_display_async(app_image& img) {
     auto regions     = make_image_regions(img.img.size());
     parallel_foreach(regions,
         [&img](const bbox2i& region) {
-            tonemap_image_region(img.img, img.display, region, img.exposure,
+            tonemap_image_region(img.display, region, img.img, img.exposure,
                 img.filmic, img.srgb);
             img.display_queue.push(region);
         },
@@ -131,15 +131,11 @@ void load_image_async(app_image& img) {
 // save an image
 void save_image_async(app_image& img) {
     if (!is_hdr_filename(img.outname)) {
-        auto img8 = image<vec4b>{};
-        float_to_byte(img.display, img8);
-        if (!save_image(img.outname, img8)) {
+        if (!save_image(img.outname, float_to_byte(img.display))) {
             img.error_msg = "error saving image";
         }
     } else {
-        auto linear = image<vec4f>{};
-        srgb_to_linear(img.display, linear);
-        if (!save_image(img.outname, linear)) {
+        if (!save_image(img.outname, srgb_to_linear(img.display))) {
             img.error_msg = "error saving image";
         }
     }

@@ -102,8 +102,7 @@ void start_rendering_async(app_state& app) {
     preview_options.num_samples = 1;
     trace_image(
         app.preview_image, app.scene, app.bvh, app.lights, preview_options);
-    auto display_preview = image<vec4f>{};
-    tonemap_image(app.preview_image, display_preview, app.display_exposure,
+    auto display_preview = tonemap_image(app.preview_image, app.display_exposure,
         app.display_filmic, app.display_srgb);
     auto large_preview = image<vec4f>{app.image_size};
     for (auto j = 0; j < app.image_size.y; j++) {
@@ -295,8 +294,8 @@ void draw(const opengl_window& win) {
                         app.display_texture, app.preview_image, false);
                     break;
                 } else {
-                    tonemap_image_region(app.rendered_image, app.display_image,
-                        region, app.display_exposure, app.display_filmic,
+                    tonemap_image_region(app.display_image,
+                        region, app.rendered_image, app.display_exposure, app.display_filmic,
                         app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);

@@ -188,9 +188,7 @@ int main(int argc, char* argv[]) {
 
     // resize
     if (resize_size != zero2i) {
-        auto res_img = image<vec4f>{};
-        resize_image(img, res_img, resize_size);
-        img = res_img;
+        img = resize_image(img, resize_size);
     }
 
     // bilateral
@@ -199,7 +197,7 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) tonemap_image(img, img, exposure, filmic, srgb);
+    if (tonemap) img = tonemap_image(img, exposure, filmic, srgb);
 
     // save
     if (!save_image(output, img)) log_fatal("cannot save image {}", output);
