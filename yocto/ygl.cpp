@@ -294,9 +294,10 @@ float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gain,
 namespace ygl {
 
 // Compute per-vertex tangents for lines.
-void compute_vertex_tangents(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, vector<vec3f>& tangents) {
-    tangents = vector<vec3f>(positions.size(), zero3f);
+void compute_vertex_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+    const vector<vec3f>& positions) {
+    tangents.resize(positions.size());
+    for(auto& t : tangents) t = zero3f;
     for (auto& l : lines) {
         auto tangent = line_tangent(positions[l.x], positions[l.y]);
         auto length  = line_length(positions[l.x], positions[l.y]);
@@ -305,11 +306,18 @@ void compute_vertex_tangents(const vector<vec2i>& lines,
     }
     for (auto& tangent : tangents) tangent = normalize(tangent);
 }
+vector<vec3f> compute_vertex_tangents(const vector<vec2i>& lines,
+    const vector<vec3f>& positions) {
+    auto tangents = vector<vec3f>(positions.size());
+    compute_vertex_tangents(tangents, lines, positions);
+    return tangents; 
+}
 
 // Compute per-vertex normals for triangles.
-void compute_vertex_normals(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, vector<vec3f>& normals) {
-    normals = vector<vec3f>(positions.size(), zero3f);
+void compute_vertex_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions) {
+    normals.resize(positions.size());
+    for(auto& n : normals) n = zero3f;
     for (auto& t : triangles) {
         auto normal = triangle_normal(
             positions[t.x], positions[t.y], positions[t.z]);
@@ -320,11 +328,18 @@ void compute_vertex_normals(const vector<vec3i>& triangles,
     }
     for (auto& normal : normals) normal = normalize(normal);
 }
+vector<vec3f> compute_vertex_normals(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions) {
+    auto normals = vector<vec3f>(positions.size());
+    compute_vertex_normals(normals, triangles, positions);
+    return normals; 
+}
 
 // Compute per-vertex normals for quads.
-void compute_vertex_normals(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, vector<vec3f>& normals) {
-    normals = vector<vec3f>(positions.size(), zero3f);
+void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+    normals.resize(positions.size());
+    for(auto& n : normals) n = zero3f;
     for (auto q : quads) {
         auto normal = quad_normal(
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
@@ -337,15 +352,22 @@ void compute_vertex_normals(const vector<vec4i>& quads,
     }
     for (auto& normal : normals) normal = normalize(normal);
 }
+vector<vec3f> compute_vertex_normals(const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+    auto normals = vector<vec3f>(positions.size());
+    compute_vertex_normals(normals, quads, positions);
+    return normals; 
+}
 
 // Compute per-vertex tangent frame for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-void compute_tangent_spaces(const vector<vec3i>& triangles,
+void compute_tangent_spaces(vector<vec4f>& tangentspaces, 
+    const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, vector<vec4f>& tangentspaces) {
+    const vector<vec2f>& texturecoords) {
     auto tangu = vector<vec3f>(positions.size(), zero3f);
     auto tangv = vector<vec3f>(positions.size(), zero3f);
     for (auto t : triangles) {
@@ -364,6 +386,14 @@ void compute_tangent_spaces(const vector<vec3i>& triangles,
         auto s = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
         tangentspaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
+}
+vector<vec4f> compute_tangent_spaces( 
+    const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords) {
+    auto tangentspaces = vector<vec4f>{positions.size()};
+    compute_tangent_spaces(tangentspaces, triangles, positions, normals, texturecoords);
+    return tangentspaces;
 }
 
 // Apply skinning
@@ -3466,7 +3496,7 @@ void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions,
     }
 
     if (clump.x > 0 || noise.x > 0 || rotation.x > 0)
-        compute_vertex_tangents(lines, positions, normals);
+        normals = compute_vertex_tangents(lines, positions);
 }
 
 }  // namespace ygl
@@ -4096,9 +4126,9 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
     if (!shape.points.empty()) {
         normals = vector<vec3f>(shape.positions.size(), {0, 0, 1});
     } else if (!shape.lines.empty()) {
-        return compute_vertex_tangents(shape.lines, shape.positions, normals);
+        return compute_vertex_tangents(normals, shape.lines, shape.positions);
     } else if (!shape.triangles.empty()) {
-        return compute_vertex_normals(shape.triangles, shape.positions, normals);
+        return compute_vertex_normals(normals, shape.triangles, shape.positions);
     } else {
         normals = {};
         return;
@@ -4108,8 +4138,8 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
 // Compute vertex normals
 void compute_surface_normals(const yocto_surface& shape, vector<vec3f>& normals) {
     if (!shape.quads_positions.empty()) {
-        return compute_vertex_normals(
-            shape.quads_positions, shape.positions, normals);
+        return compute_vertex_normals(normals,
+            shape.quads_positions, shape.positions);
     } else {
         normals = {};
         return;
@@ -4275,8 +4305,7 @@ yocto_surface displace_surface(const yocto_surface& surface,
             count[(&qpos.x)[i]] += 1;
         }
     }
-    auto normals = vector<vec3f>();
-    compute_vertex_normals(surface.quads_positions, surface.positions, normals);
+    auto normals = compute_vertex_normals(surface.quads_positions, surface.positions);
     for (auto vid = 0; vid < surface.positions.size(); vid++) {
         displaced_surface.positions[vid] += normals[vid] * offset[vid] /
                                             count[vid];
@@ -4695,10 +4724,10 @@ void add_missing_tangent_space(yocto_scene& scene) {
         if (material.normal_texture < 0 && material.bump_texture < 0) continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty())
-                compute_vertex_normals(
-                    shape.triangles, shape.positions, shape.normals);
-            compute_tangent_spaces(shape.triangles, shape.positions,
-                shape.normals, shape.texturecoords, shape.tangentspaces);
+                shape.normals = compute_vertex_normals(
+                    shape.triangles, shape.positions);
+            shape.tangentspaces = compute_tangent_spaces(shape.triangles, shape.positions,
+                shape.normals, shape.texturecoords);
         } else {
             log_error("type not supported");
         }

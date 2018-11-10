@@ -2426,21 +2426,31 @@ inline T interpolate_bezier_derivative(
 namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-void compute_vertex_tangents(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, vector<vec3f>& tangents);
-void compute_vertex_normals(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, vector<vec3f>& normals);
-void compute_vertex_normals(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, vector<vec3f>& normals);
+vector<vec3f> compute_vertex_tangents(const vector<vec2i>& lines,
+    const vector<vec3f>& positions);
+vector<vec3f> compute_vertex_normals(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions);
+vector<vec3f> compute_vertex_normals(const vector<vec4i>& quads,
+    const vector<vec3f>& positions);
+void compute_vertex_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
+    const vector<vec3f>& positions);
+void compute_vertex_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions);
+void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+    const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-void compute_tangent_spaces(const vector<vec3i>& triangles,
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, vector<vec4f>& tangentspaces);
+    const vector<vec2f>& texturecoords);
+void compute_tangent_spaces(vector<vec4f>& tangentspaces,
+    const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
 void compute_skinning(const vector<vec3f>& positions,
