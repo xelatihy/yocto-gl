@@ -30,7 +30,8 @@
 #ifndef _YGLUTILS_H_
 #define _YGLUTILS_H_
 
-#include "../yocto/ygl.h"
+#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_utils.h"
 
 // forward declaration
 struct GLFWwindow;

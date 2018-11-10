@@ -27,6 +27,8 @@
 //
 
 #include "yocto_bvh.h"
+#include "yocto_shape.h"
+#include "yocto_utils.h"
 
 #if YOCTO_EMBREE
 #include <embree3/rtcore.h>

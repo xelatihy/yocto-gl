@@ -67,6 +67,8 @@
 
 #include "yocto_math.h"
 #include "yocto_image.h"
+#include "yocto_bvh.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // SCENE DATA
@@ -481,7 +483,8 @@ struct microfacet_brdf {
 microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
-bool            is_bsdf_delta(const microfacet_brdf& f);
+bool            is_brdf_delta(const microfacet_brdf& f);
+bool            is_brdf_zero(const microfacet_brdf& f);
 
 // Check volume properties.
 bool is_material_volume_homogeneus(const yocto_material& vol);

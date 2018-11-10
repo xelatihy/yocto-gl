@@ -210,69 +210,6 @@ image<vec4f> make_turbulence_image(const vec2i& size, float scale = 1,
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
-// ANIMATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Find the first keyframe value that is greater than the argument.
-inline int evaluate_keyframed_index(
-    const vector<float>& times, const float& time) {
-    for (auto i = 0; i < times.size(); i++)
-        if (times[i] > time) return i;
-    return (int)times.size();
-}
-
-// Evaluates a keyframed value using step interpolation.
-template <typename T>
-inline T evaluate_keyframed_step(
-    const vector<float>& times, const vector<T>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
-    return vals.at(idx - 1);
-}
-
-// Evaluates a keyframed value using linear interpolation.
-template <typename T>
-inline vec4f evaluate_keyframed_slerp(
-    const vector<float>& times, const vector<vec4f>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
-    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return slerp(vals.at(idx - 1), vals.at(idx), t);
-}
-
-// Evaluates a keyframed value using linear interpolation.
-template <typename T>
-inline T evaluate_keyframed_linear(
-    const vector<float>& times, const vector<T>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
-    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
-}
-
-// Evaluates a keyframed value using Bezier interpolation.
-template <typename T>
-inline T evaluate_keyframed_bezier(
-    const vector<float>& times, const vector<T>& vals, float time) {
-    if (time <= times.front()) return vals.front();
-    if (time >= times.back()) return vals.back();
-    time     = clamp(time, times.front(), times.back() - 0.001f);
-    auto idx = evaluate_keyframed_index(times, time);
-    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return interpolate_bezier(
-        vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
 namespace ygl {
@@ -444,6 +381,35 @@ vec3f xyY_to_xyz(const vec3f& xyY);
 // Convert between CIE XYZ and RGB
 vec3f xyz_to_rgb(const vec3f& xyz);
 vec3f rgb_to_xyz(const vec3f& rgb);
+
+}  // namespace ygl
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace ygl {
+
+// Gets pixels in an image region
+template <typename T>
+inline void get_image_region(
+    image<T>& clipped, const image<T>& img, const bbox2i& region) {
+    clipped.resize(bbox_size(region));
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+        }
+    }
+}
+template <typename T>
+inline image<T> get_image_region(const image<T>& img, const bbox2i& region) {
+    auto clipped = image<T>{bbox_size(region)};
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+        }
+    }
+    return clipped;
+}
 
 }  // namespace ygl
 

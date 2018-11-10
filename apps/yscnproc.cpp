@@ -26,8 +26,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
+#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_utils.h"
 using namespace ygl;
 
 bool mkdir(const string& dir) {

@@ -30,8 +30,9 @@
 // Compare two images are returns either 0 or 1.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
+#include "../yocto/yocto_image.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_utils.h"
 using namespace ygl;
 
 template <typename T>

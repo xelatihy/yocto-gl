@@ -81,8 +81,8 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 namespace ygl {
 
 // Loads/saves a 1 channel volume.
-bool load_volume1f(const string& filename, volume<float>& vol);
-bool save_volume1f(const string& filename, const volume<float>& vol);
+bool load_volume(const string& filename, volume<float>& vol);
+bool save_volume(const string& filename, const volume<float>& vol);
 
 }  // namespace ygl
 

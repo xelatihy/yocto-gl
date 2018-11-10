@@ -27,6 +27,7 @@
 //
 
 #include "yocto_imageio.h"
+#include "yocto_utils.h"
 
 #include <cstdlib>
 #include <climits>
@@ -550,7 +551,7 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
 namespace ygl {
 
 // Loads volume data from binary format.
-bool load_volume1f_nolog(const string& filename, volume<float>& vol) {
+bool load_volume_nolog(const string& filename, volume<float>& vol) {
     auto fs = open(filename, "r");
     if (!fs) return false;
     auto size = zero3i;
@@ -559,13 +560,13 @@ bool load_volume1f_nolog(const string& filename, volume<float>& vol) {
     if (!read_values(fs, size.x * size.y * size.z, vol.data())) return false;
     return true;
 }
-bool load_volume1f(const string& filename, volume<float>& vol) {
+bool load_volume(const string& filename, volume<float>& vol) {
     auto scope = log_trace_scoped("loading volume {}", filename);
-    return load_volume1f_nolog(filename, vol);
+    return load_volume_nolog(filename, vol);
 }
 
 // Saves volume data in binary format.
-bool save_volume1f_nolog(const string& filename, const volume<float>& vol) {
+bool save_volume_nolog(const string& filename, const volume<float>& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
     auto size = vol.size();
@@ -573,9 +574,9 @@ bool save_volume1f_nolog(const string& filename, const volume<float>& vol) {
     if (!write_values(fs, size.x * size.y * size.z, vol.data())) return false;
     return true;
 }
-bool save_volume1f(const string& filename, const volume<float>& vol) {
+bool save_volume(const string& filename, const volume<float>& vol) {
     auto scope = log_trace_scoped("saving volume {}", filename);
-    return save_volume1f_nolog(filename, vol);
+    return save_volume_nolog(filename, vol);
 }
 
 }  // namespace ygl

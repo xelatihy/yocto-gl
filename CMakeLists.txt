@@ -45,8 +45,14 @@ if(MSVC)
 endif(MSVC)
 
 add_library(ygl 
-    yocto/ygl.h yocto/ygl.cpp
-    yocto/yglio.h yocto/yglio.cpp
+    yocto/yocto_math.h yocto/yocto_utils.h
+    yocto/yocto_shape.h yocto/yocto_shape.cpp
+    yocto/yocto_bvh.h yocto/yocto_bvh.cpp
+    yocto/yocto_image.h yocto/yocto_image.cpp
+    yocto/yocto_scene.h yocto/yocto_scene.cpp
+    yocto/yocto_trace.h yocto/yocto_trace.cpp
+    yocto/yocto_imageio.h yocto/yocto_imageio.cpp
+    yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
 )
 
 if(UNIX AND NOT APPLE)

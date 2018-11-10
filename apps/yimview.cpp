@@ -26,8 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
+#include "../yocto/yocto_image.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_utils.h"
 #include "yglutils.h"
 using namespace ygl;
 

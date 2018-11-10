@@ -706,6 +706,101 @@ vec3f evaluate_transmission(const yocto_scene& scene, const bvh_scene& bvh,
 
 #endif
 
+vec3f evaluate_transmission(const yocto_scene& scene,
+    const yocto_material& material, const vec3f& from, const vec3f& dir,
+    float distance, int channel, rng_state& rng) {
+    auto& vd = material.volume_density;
+    if (is_material_volume_homogeneus(material))
+        return vec3f{exp(-distance * vd.x), exp(-distance * vd.y),
+            exp(-distance * vd.z)};
+
+    // ratio tracking
+    auto tr = 1.0f, t = 0.0f;
+    auto pos = from;
+    while (true) {
+        auto step = -log(1 - get_random_float(rng)) / vd[channel];
+        t += step;
+        if (t >= distance) break;
+        pos += dir * step;
+        auto density = material.volume_density;
+        if (material.volume_density_texture >= 0) {
+            auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
+            density *= evaluate_voltexture(volume_density_texture, pos);
+        }
+        tr *= 1.0f - max(0.0f, density[channel] / vd[channel]);
+    }
+    return {tr, tr, tr};
+}
+
+float sample_distance(const yocto_scene& scene, const yocto_material& material,
+    const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
+    auto pos      = from;
+    auto majorant = material.volume_density[channel];
+    if (majorant == 0) return maxf;
+
+    // delta tracking
+    auto distance = 0.0f;
+    while (true) {
+        auto r = get_random_float(rng);
+        if (r == 0) return maxf;
+        auto step = -log(r) / majorant;
+        if (is_material_volume_homogeneus(material)) return step;
+
+        pos += dir * step;
+        distance += step;
+        auto density = material.volume_density;
+        if (material.volume_density_texture >= 0) {
+            auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
+            density *= evaluate_voltexture(volume_density_texture, pos);
+        }
+        if (density[channel] / majorant >= get_random_float(rng))
+            return distance;
+
+        // Escape from volume.
+        if (pos.x > 1 || pos.y > 1 || pos.z > 1) return maxf;
+        if (pos.x < -1 || pos.y < -1 || pos.z < -1) return maxf;
+    }
+}
+
+float sample_distance(const yocto_scene& scene, const yocto_instance& instance,
+    const bbox3f& bbox, const vec3f& from, const vec3f& dir, int channel,
+    rng_state& rng) {
+    auto& shape    = scene.shapes[instance.shape];
+    auto& material = scene.materials[shape.material];
+    if (material.volume_density == zero3f) return maxf;
+
+    // Transform coordinates so that every position in the bounding box of the
+    // instance is mapped to the cube [-1,1]^3 (the same space of volume texture
+    // sampling).
+    auto scale    = bbox.max - bbox.min;
+    auto frame    = instance.frame;
+    auto froml    = transform_point_inverse(frame, from) / scale;
+    auto dirl     = transform_direction_inverse(frame, dir) / scale;
+    auto ll       = length(dirl);
+    auto distance = sample_distance(
+        scene, material, froml, dirl / ll, channel, rng);
+    return distance * ll;
+}
+
+vec3f sample_phase_function(float g, const vec2f& u) {
+    auto cos_theta = 0.0f;
+    if (abs(g) < 1e-3) {
+        cos_theta = 1 - 2 * u.x;
+    } else {
+        float square = (1 - g * g) / (1 - g + 2 * g * u.x);
+        cos_theta    = (1 + g * g - square * square) / (2 * g);
+    }
+
+    auto sin_theta = sqrt(max(0.0f, 1 - cos_theta * cos_theta));
+    auto phi       = 2 * pif * u.y;
+    return {sin_theta * cos(phi), sin_theta * sin(phi), cos_theta};
+}
+
+float evaluate_phase_function(float cos_theta, float g) {
+    auto denom = 1 + g * g + 2 * g * cos_theta;
+    return (1 - g * g) / (4 * pif * denom * sqrt(denom));
+}
+
 // Probability of computing direct illumination.
 float prob_direct(const microfacet_brdf& brdf) {
     // This is just heuristic. Any other choice is equally correct.

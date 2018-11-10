@@ -27,10 +27,10 @@
 //
 //
 
-#ifndef _YSCENEUI_H_
-#define _YSCENEUI_H_
+#ifndef _YOCTO_SCENEUI_H_
+#define _YOCTO_SCENEUI_H_
 
-#include "../yocto/ygl.h"
+#include "../yocto/yocto_scene.h"
 #include "yglutils.h"
 using namespace ygl;
 
