@@ -205,44 +205,6 @@ inline T interpolate_bezier_derivative(
            (p3 - p2) * 3 * u * u;
 }
 
-// Primitive bounds.
-template <typename T>
-constexpr inline bbox<T, 3> point_bounds(const vec<T, 3>& p, T r = 0) {
-    auto bounds = bbox<T, 3>{};
-    bounds += p - vec3f{r, r, r};
-    bounds += p + vec3f{r, r, r};
-    return bounds;
-}
-template <typename T>
-constexpr inline bbox<T, 3> line_bounds(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, T r0 = 0, T r1 = 0) {
-    auto bounds = bbox<T, 3>{};
-    bounds += p0 - vec3f{r0, r0, r0};
-    bounds += p0 + vec3f{r0, r0, r0};
-    bounds += p1 - vec3f{r1, r1, r1};
-    bounds += p1 + vec3f{r1, r1, r1};
-    return bounds;
-}
-template <typename T>
-constexpr inline bbox<T, 3> triangle_bounds(
-    const vec<T, 3>& p0, const vec<T, 3>& p1, const vec<T, 3>& p2) {
-    auto bounds = bbox<T, 3>{};
-    bounds += p0;
-    bounds += p1;
-    bounds += p2;
-    return bounds;
-}
-template <typename T>
-constexpr inline bbox<T, 3> quad_bounds(const vec<T, 3>& p0,
-    const vec<T, 3>& p1, const vec<T, 3>& p2, const vec<T, 3>& p3) {
-    auto bounds = bbox<T, 3>{};
-    bounds += p0;
-    bounds += p1;
-    bounds += p2;
-    bounds += p3;
-    return bounds;
-}
-
 }  // namespace ygl
 
 // -----------------------------------------------------------------------------
