@@ -325,6 +325,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <tuple>
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
@@ -361,12 +362,15 @@ using std::make_unique;
 using std::mutex;
 using std::packaged_task;
 using std::pair;
+using std::tuple;
 using std::runtime_error;
 using std::shared_future;
 using std::string;
 using std::thread;
 using std::unordered_map;
 using std::vector;
+using std::tie;
+using std::get;
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
@@ -2453,15 +2457,22 @@ void compute_tangent_spaces(vector<vec4f>& tangentspaces,
     const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-void compute_skinning(const vector<vec3f>& positions,
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms,
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
+void compute_skinning(vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals,
+    const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-void compute_matrix_skinning(const vector<vec3f>& positions,
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
+    const vector<vec4i>& joints, const vector<mat4f>& xforms);
+void compute_matrix_skinning(vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals,
+    const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms);
 
 // Dictionary to store edge information.
 // key: edge, value: (edge index, adjacent face, other adjacent face)

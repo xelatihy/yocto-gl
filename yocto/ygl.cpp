@@ -296,7 +296,7 @@ namespace ygl {
 // Compute per-vertex tangents for lines.
 void compute_vertex_tangents(vector<vec3f>& tangents, const vector<vec2i>& lines,
     const vector<vec3f>& positions) {
-    tangents.resize(positions.size());
+    assert(tangents.size() == positions.size());
     for(auto& t : tangents) t = zero3f;
     for (auto& l : lines) {
         auto tangent = line_tangent(positions[l.x], positions[l.y]);
@@ -316,6 +316,7 @@ vector<vec3f> compute_vertex_tangents(const vector<vec2i>& lines,
 // Compute per-vertex normals for triangles.
 void compute_vertex_normals(vector<vec3f>& normals, const vector<vec3i>& triangles,
     const vector<vec3f>& positions) {
+    assert(normals.size() == positions.size());
     normals.resize(positions.size());
     for(auto& n : normals) n = zero3f;
     for (auto& t : triangles) {
@@ -338,7 +339,7 @@ vector<vec3f> compute_vertex_normals(const vector<vec3i>& triangles,
 // Compute per-vertex normals for quads.
 void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
     const vector<vec3f>& positions) {
-    normals.resize(positions.size());
+    assert(normals.size() == positions.size());
     for(auto& n : normals) n = zero3f;
     for (auto q : quads) {
         auto normal = quad_normal(
@@ -368,6 +369,7 @@ void compute_tangent_spaces(vector<vec4f>& tangentspaces,
     const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texturecoords) {
+    assert(tangentspaces.size() == positions.size());
     auto tangu = vector<vec3f>(positions.size(), zero3f);
     auto tangv = vector<vec3f>(positions.size(), zero3f);
     for (auto t : triangles) {
@@ -397,12 +399,12 @@ vector<vec4f> compute_tangent_spaces(
 }
 
 // Apply skinning
-void compute_skinning(const vector<vec3f>& positions,
+void compute_skinning(vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals,
+    const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms,
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals) {
-    skinned_positions = vector<vec3f>(positions.size());
-    skinned_normals   = vector<vec3f>(normals.size());
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
+    assert(skinned_positions.size() == positions.size());
+    assert(skinned_normals.size() == normals.size());
     for (auto i = 0; i < positions.size(); i++) {
         skinned_positions[i] = transform_point(xforms[joints[i].x], positions[i]) *
                                    weights[i].x +
@@ -421,14 +423,23 @@ void compute_skinning(const vector<vec3f>& positions,
             transform_direction(xforms[joints[i].w], normals[i]) * weights[i].w);
     }
 }
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
+    auto skinned_positions = vector<vec3f>{positions.size()};
+    auto skinned_normals = vector<vec3f>{normals.size()};
+    compute_skinning(skinned_positions, skinned_normals, positions, normals, weights, joints, xforms);
+    return {skinned_positions, skinned_normals};
+}
 
 // Apply skinning as specified in Khronos glTF
-void compute_matrix_skinning(const vector<vec3f>& positions,
+void compute_matrix_skinning(
+    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals,
+    const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals) {
-    skinned_positions = vector<vec3f>(positions.size());
-    skinned_normals   = vector<vec3f>(normals.size());
+    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+    assert(skinned_positions.size() == positions.size());
+    assert(skinned_normals.size() == normals.size());
     for (auto i = 0; i < positions.size(); i++) {
         auto xform = xforms[joints[i].x] * weights[i].x +
                      xforms[joints[i].y] * weights[i].y +
@@ -437,6 +448,14 @@ void compute_matrix_skinning(const vector<vec3f>& positions,
         skinned_positions[i] = transform_point(xform, positions[i]);
         skinned_normals[i] = normalize(transform_direction(xform, normals[i]));
     }
+}
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+    auto skinned_positions = vector<vec3f>{positions.size()};
+    auto skinned_normals = vector<vec3f>{normals.size()};
+    compute_matrix_skinning(skinned_positions, skinned_normals, positions, normals, weights, joints, xforms);
+    return {skinned_positions, skinned_normals};
 }
 
 // Create key entry for edge_map
