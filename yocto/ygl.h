@@ -127,9 +127,9 @@
 // 11. convert quads to triangles with `convert_quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
 //     `convert_face_varying()`
-// 13. subdivide elements by edge splits with `subdivide_lines_inplace()`,
-//     `subdivide_triangles_inplace()`, `subdivide_quads_inplace()`, `subdivide_beziers_inplace()`
-// 14. Catmull-Clark subdivision surface with `subdivide_catmullclark_inplace()`
+// 13. subdivide elements by edge splits with `subdivide_lines()`,
+//     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
+// 14. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
 //
 //
 // ## Random Number Generation, Noise, and Monte Carlo support
@@ -216,7 +216,7 @@
 // 1. load a scene with Yocto/GLIO,
 // 2. add missing data with `add_XXX()` functions
 // 3. use `compute_shape_box()/compute_scene_box()` to compute element bounds
-// 4. can merge scene together with `merge_scene_inplace()`
+// 4. can merge scene together with `merge_scene()`
 // 6. for ray-intersection and closest point queries, a BVH can be created with
 //    `build_shape_bvh()/build_scene_bvh()` and refit with
 //    `refit_shape_bvh()/refit_scene_bvh()`
@@ -2511,91 +2511,50 @@ vector<vector<vec4i>> ungroup_quads(const vector<vec4i>& quads, const vector<int
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-void subdivide_lines_inplace(vector<vec2i>& lines, vector<T>& vert, int level);
-template <typename T>
-inline tuple<vector<vec2i>, vector<T>> subdivide_lines(const vector<vec2i>& lines, const vector<T>& vert, int level) {
-    auto tlines = lines;
-    auto tvert = vert;
-    subdivide_lines_inplace(tlines, tvert, level);
-    return {tlines, tvert};
-}
+tuple<vector<vec2i>, vector<T>> subdivide_lines(const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-void subdivide_triangles_inplace(vector<vec3i>& triangles, vector<T>& vert, int level);
-template <typename T>
-inline tuple<vector<vec3i>, vector<T>> subdivide_triangles(const vector<vec3i>& triangles, const vector<T>& vert, int level) {
-    auto ttriangles = triangles;
-    auto tvert = vert;
-    subdivide_triangles_inplace(ttriangles, tvert, level);
-    return {ttriangles, tvert};
-}
+tuple<vector<vec3i>, vector<T>> subdivide_triangles(const vector<vec3i>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-void subdivide_quads_inplace(vector<vec4i>& quads, vector<T>& vert, int level);
-template <typename T>
-inline tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, const vector<T>& vert, int level) {
-    auto tquads = quads;
-    auto tvert = vert;
-    subdivide_quads_inplace(tquads, tvert, level);
-    return {tquads, tvert};
-}
+tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-void subdivide_beziers_inplace(vector<vec4i>& beziers, vector<T>& vert, int level);
-template <typename T>
-inline tuple<vector<vec4i>, vector<T>> subdivide_beziers(const vector<vec4i>& beziers, const vector<T>& vert, int level) {
-    auto tbeziers = beziers;
-    auto tvert = vert;
-    subdivide_beziers_inplace(tbeziers, tvert, level);
-    return {tbeziers, tvert};
-}
+tuple<vector<vec4i>, vector<T>> subdivide_beziers(const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-void subdivide_catmullclark_inplace(vector<vec4i>& quads, vector<T>& vert, int level,
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads, const vector<T>& vert,
     bool lock_boundary = false);
-template <typename T>
-inline tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads, const vector<T>& vert, int level,
-    bool lock_boundary = false) {
-    auto tquads = quads;
-    auto tvert = vert;
-    subdivide_catmullclark_inplace(tquads, tvert, level, lock_boundary);
-    return {tquads, tvert};
-}
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold);
-void weld_vertices_inplace(
-    vector<vec3f>& positions, float threshold, vector<int>& welded_indices);
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, float threshold);
-void weld_triangles_inplace(
-    vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
 tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold);
-void weld_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
-void merge_lines_inplace(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines_inplace, int num_verts);
-void merge_triangles_inplace(vector<vec3i>& triangles,
-    const vector<vec2i>& merge_triangles_inplace, int num_verts);
-void merge_quads_inplace(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads_inplace, int num_verts);
-void merge_lines_inplace(vector<vec2i>& lines, vector<vec3f>& positions,
+void merge_lines(
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts);
+void merge_triangles(vector<vec3i>& triangles,
+    const vector<vec2i>& merge_triangles, int num_verts);
+void merge_quads(
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
+void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& tangents, vector<vec2f>& texturecoords,
-    vector<float>& radius, const vector<vec2i>& merge_lines_inplace,
+    vector<float>& radius, const vector<vec2i>& merge_lines,
     const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
     const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
-void merge_triangles_inplace(vector<vec3i>& triangles, vector<vec3f>& positions,
+void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec2i>& merge_triangles_inplace, const vector<vec3f>& merge_positions,
+    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
-void merge_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions,
+void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec4i>& merge_quads_inplace, const vector<vec3f>& merge_positions,
+    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
 
 // Pick a point in a point set uniformly.
@@ -3570,7 +3529,7 @@ void print_stats(const yocto_scene& scene);
 
 // Merge scene into one another. Note that the objects are _moved_ from
 // merge_from to merged_into, so merge_from will be empty after this function.
-void merge_scene_inplace(yocto_scene& merge_into, const yocto_scene& merge_from);
+void merge_scene(yocto_scene& merge_into, const yocto_scene& merge_from);
 
 }  // namespace ygl
 
