@@ -242,8 +242,8 @@
 // environment is used.
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
-// 2. prepare lights for rendering with `init_trace_lights()`
-// 3. create the random number generators with `init_trace_pixels()`
+// 2. prepare lights for rendering with `make_trace_lights()`
+// 3. create the random number generators with `make_trace_pixels()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -322,6 +322,7 @@
 #include <mutex>
 #include <string>
 #include <thread>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -355,6 +356,7 @@ using std::array;
 using std::atomic;
 using std::deque;
 using std::function;
+using std::get;
 using std::ignore;
 using std::lock_guard;
 using std::make_unique;
@@ -365,6 +367,8 @@ using std::runtime_error;
 using std::shared_future;
 using std::string;
 using std::thread;
+using std::tie;
+using std::tuple;
 using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
@@ -1553,12 +1557,30 @@ using bbox1f = bbox<float, 1>;
 using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
 using bbox4f = bbox<float, 4>;
+using bbox1i = bbox<int, 1>;
+using bbox2i = bbox<int, 2>;
+using bbox3i = bbox<int, 3>;
+using bbox4i = bbox<int, 4>;
 
 // Empty bbox constant.
 const auto invalid_bbox1f = bbox1f();
 const auto invalid_bbox2f = bbox2f();
 const auto invalid_bbox3f = bbox3f();
 const auto invalid_bbox4f = bbox4f();
+const auto invalid_bbox1i = bbox1i();
+const auto invalid_bbox2i = bbox2i();
+const auto invalid_bbox3i = bbox3i();
+const auto invalid_bbox4i = bbox4i();
+
+// Bounding box size and center
+template <typename T, int N>
+vec<T, N> bbox_size(const bbox<T, N>& a) {
+    return a.max - a.min;
+}
+template <typename T, int N>
+vec<T, N> bbox_center(const bbox<T, N>& a) {
+    return (a.min + a.max) / 2;
+}
 
 // Bounding box comparisons.
 template <typename T>
@@ -2412,37 +2434,40 @@ inline T interpolate_bezier_derivative(
 namespace ygl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-void compute_vertex_tangents(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, vector<vec3f>& tangents);
-void compute_vertex_normals(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, vector<vec3f>& normals);
-void compute_vertex_normals(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, vector<vec3f>& normals);
+vector<vec3f> compute_vertex_tangents(
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
+vector<vec3f> compute_vertex_normals(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+vector<vec3f> compute_vertex_normals(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-void compute_tangent_spaces(const vector<vec3i>& triangles,
+vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, vector<vec4f>& tangentspaces);
+    const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-void compute_skinning(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<frame3f>& xforms,
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
+tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-void compute_matrix_skinning(const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec4f>& weights,
-    const vector<vec4i>& joints, const vector<mat4f>& xforms,
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals);
+tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec4f>& weights, const vector<vec4i>& joints,
+    const vector<mat4f>& xforms);
 
 // Dictionary to store edge information.
 // key: edge, value: (edge index, adjacent face, other adjacent face)
 using edge_map = unordered_map<vec2i, vec3i>;
 
+// initializes an edge map
+edge_map make_edge_map(const vector<vec3i>& triangles);
+edge_map make_edge_map(const vector<vec4i>& tquadsriangles);
 // Create key entry for edge_map
 vec2i make_edge(const vec2i& e);
 // Initialize an edge map with elements.
@@ -2454,78 +2479,73 @@ int insert_edge(edge_map& emap, const vec2i& edge, int face);
 int get_edge_index(const edge_map& emap, const vec2i& edge);
 int get_edge_count(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
-void get_edges(const edge_map& emap, vector<vec2i>& edges);
-void get_boundary(const edge_map& emap, vector<vec2i>& boundary);
-
-// Create an array of edges.
-inline void get_edges(const vector<vec3i>& triangles, vector<vec2i>& edges) {
-    auto emap = edge_map();
-    insert_edges(emap, triangles);
-    get_edges(emap, edges);
+vector<vec2i>        get_edges(const edge_map& emap);
+vector<vec2i>        get_boundary(const edge_map& emap);
+inline vector<vec2i> get_edges(const vector<vec3i>& triangles) {
+    return get_edges(make_edge_map(triangles));
 }
-inline void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges) {
-    auto emap = edge_map();
-    insert_edges(emap, quads);
-    get_edges(emap, edges);
+inline vector<vec2i> get_edges(const vector<vec4i>& quads) {
+    return get_edges(make_edge_map(quads));
 }
 
 // Convert quads to triangles
-void convert_quads_to_triangles(
-    const vector<vec4i>& quads, vector<vec3i>& triangles);
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-void convert_quads_to_triangles(
-    const vector<vec4i>& quads, vector<vec3i>& triangles, int row_length);
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length);
 // Convert triangles to quads by creating degenerate quads
-void convert_triangles_to_quads(
-    const vector<vec3i>& triangles, vector<vec4i>& quads);
+vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
-void convert_bezier_to_lines(const vector<vec4i>& beziers, vector<vec2i>& lines);
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
 // with ids, it also plits the faces per id.
-void convert_face_varying(const vector<vec4i>& quads_positions,
-    const vector<vec4i>&                       quads_normals,
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    vector<vec4i>& split_quads, vector<vec3f>& split_positions,
-    vector<vec3f>& split_normals, vector<vec2f>& split_texturecoords);
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
 // Split primitives per id
-void ungroup_lines(const vector<vec2i>& lines, const vector<int>& ids,
-    vector<vector<vec2i>>& split_lines);
-void ungroup_triangles(const vector<vec3i>& triangles, const vector<int>& ids,
-    vector<vector<vec3i>>& split_triangles);
-void ungroup_quads(const vector<vec4i>& quads, const vector<int>& ids,
-    vector<vector<vec4i>>& split_quads);
+vector<vector<vec2i>> ungroup_lines(
+    const vector<vec2i>& lines, const vector<int>& ids);
+vector<vector<vec3i>> ungroup_triangles(
+    const vector<vec3i>& triangles, const vector<int>& ids);
+vector<vector<vec4i>> ungroup_quads(
+    const vector<vec4i>& quads, const vector<int>& ids);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-void subdivide_lines(vector<vec2i>& lines, vector<T>& vert, int level);
+tuple<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert, int level);
+tuple<vector<vec3i>, vector<T>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-void subdivide_quads(vector<vec4i>& quads, vector<T>& vert, int level);
+tuple<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert, int level);
+tuple<vector<vec4i>, vector<T>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-void subdivide_catmullclark(vector<vec4i>& quads, vector<T>& vert, int level,
-    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
+    const vector<T>& vert, bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-void weld_vertices(
-    vector<vec3f>& positions, float threshold, vector<int>& welded_indices);
-void weld_triangles(
-    vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
-void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
+tuple<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
 void merge_lines(
@@ -2552,23 +2572,25 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
 inline int sample_points_element(int npoints, float re) {
     return sample_uniform_index(npoints, re);
 }
-inline void sample_points_element_cdf(int npoints, vector<float>& cdf) {
-    cdf = vector<float>(npoints);
+inline vector<float> sample_points_element_cdf(int npoints) {
+    auto cdf = vector<float>(npoints);
     for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
+    return cdf;
 }
 inline int sample_points_element(const vector<float>& cdf, float re) {
     return sample_discrete_distribution(cdf, re);
 }
 
 // Pick a point on lines uniformly.
-inline void sample_lines_element_cdf(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, vector<float>& cdf) {
-    cdf = vector<float>(lines.size());
+inline vector<float> sample_lines_element_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& positions) {
+    auto cdf = vector<float>(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
         auto w = line_length(positions[l.x], positions[l.y]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
+    return cdf;
 }
 inline pair<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru) {
@@ -2576,14 +2598,15 @@ inline pair<int, float> sample_lines_element(
 }
 
 // Pick a point on a triangle mesh uniformly.
-inline void sample_triangles_element_cdf(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, vector<float>& cdf) {
-    cdf = vector<float>(triangles.size());
+inline vector<float> sample_triangles_element_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+    auto cdf = vector<float>(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
         auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
+    return cdf;
 }
 inline pair<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -2592,15 +2615,16 @@ inline pair<int, vec2f> sample_triangles_element(
 }
 
 // Pick a point on a quad mesh uniformly.
-inline void sample_quads_element_cdf(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, vector<float>& cdf) {
-    cdf = vector<float>(quads.size());
+inline vector<float> sample_quads_element_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+    auto cdf = vector<float>(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
         auto w = quad_area(
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
+    return cdf;
 }
 inline pair<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -2618,16 +2642,14 @@ inline pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
-void sample_triangles_points(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, int npoints,
-    vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals,
-    vector<vec2f>& sampled_texturecoords, int seed = 7);
-void sample_quads_points(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, int npoints,
-    vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals,
-    vector<vec2f>& sampled_texturecoords, int seed = 7);
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed = 7);
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    int npoints, int seed = 7);
 
 }  // namespace ygl
 
@@ -2813,94 +2835,69 @@ namespace ygl {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-void make_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize);
-void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec3f& size, const vec2f& uvsize);
-void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize);
-void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize);
-void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec3f& size, const vec3f& uvsize, float radius);
-void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    float size, const vec2f& uvsize);
-void make_sphere_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
-    float uvsize);
-void make_sphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    float size, const vec2f& uvsize, const vec2f& zflip);
-void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    float size, const vec2f& uvsize);
-void make_disk_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
-    float uvsize);
-void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
-    float uvsize, float height);
-void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
-    const vec2f& size, const vec2f& uvsize);
-void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize);
-void make_cylinder_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius);
-void make_geodesic_sphere_shape(vector<vec3i>& triangles,
-    vector<vec3f>& positions, vector<vec3f>& normals, int tesselation,
-    float size);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_stack_shape(
+    const vec3i& steps, const vec3f& size, const vec2f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_rounded_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_shape(
+    const vec2i& steps, float size, const vec2f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_cube_shape(
+    int steps, float size, float uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_flipcap_shape(
+    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_shape(
+    const vec2i& steps, float size, const vec2f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_quad_shape(
+    int steps, float size, float uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_bulged_shape(
+    int steps, float size, float uvsize, float height);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_side_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_shape(
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_rounded_shape(
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius);
+tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
+    int tesselation, float size);
 
 // Make examples shapes with are watertight (good for subdivs).
-// Returns (triangles, quads, pos)
-void make_suzanne_shape(
-    vector<vec4i>& quads, vector<vec3f>& positions, float size);
-void make_cube_shape(
-    vector<vec4i>& quads, vector<vec3f>& positions, const vec3f& size);
+tuple<vector<vec4i>, vector<vec3f>> make_suzanne_shape(float size);
+tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-void make_cube_facevarying_shape(vector<vec4i>& quads_positions,
-    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize);
-void make_cube_posonly_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
+    vector<vec2f>>
+make_cube_facevarying_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-void make_cube_multiplematerials_shape(vector<vec4i>& quads_positions,
-    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<int>& quads_materials,
+tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<int>, vector<vec3f>,
+    vector<vec3f>, vector<vec2f>>
+make_cube_multiplematerials_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-void make_lines_shape(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_lines_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize,
     const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-void make_point_shape(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_point_shape(
     float point_radius = 0.001f);
-void make_points_shape(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_points_shape(
     int num, float uvsize, float point_radius = 0.001f);
-void make_random_points_shape(vector<int>& points, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_random_points_shape(
     int num, const vec3f& size, float uvsize, float point_radius = 0.001f,
     uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
-void make_bezier_circle_shape(
-    vector<vec4i>& beziers, vector<vec3f>& positions, float size);
+tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size);
 
 // Make a hair ball around a shape.  Returns lines, pos, norm, texcoord, radius.
 // length: minimum and maximum length
@@ -2908,8 +2905,7 @@ void make_bezier_circle_shape(
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_hair_shape(
     const vec2i& steps, const vector<vec3i>& striangles,
     const vector<vec4i>& squads, const vector<vec3f>& spos,
     const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
@@ -3034,50 +3030,74 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
-    vec2i     size   = {0, 0};
-    vector<T> pixels = {};
+    image() : _size{0, 0}, _pixels{} {}
+    image(const vec2i& size, const T& value = {})
+        : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
+    image(const vec2i& size, const T* values)
+        : _size{size}, _pixels(values, values + size.x * size.y) {}
+
+    bool  empty() const { return _size.x == 0 && _size.y == 0; }
+    vec2i size() const { return _size; }
+
+    void clear() {
+        _size = {0, 0};
+        _pixels.clear();
+    }
+    void resize(const vec2i& size, const T& value = {}) {
+        if (size == _size) return;
+        if (_size == zero2i) {
+            *this = image{size, value};
+        } else if (size == zero2i) {
+            clear();
+        } else {
+            auto img = image{size, value};
+            for (auto j = 0; j < min(size.y, _size.y); j++) {
+                for (auto i = 0; i < min(size.x, _size.x); i++) {
+                    img[{i, j}] = (*this)[{i, j}];
+                }
+            }
+            _size = size;
+            swap(_pixels, img._pixels);
+        }
+    }
+
+    T& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    const T& operator[](const vec2i& ij) const {
+        return _pixels[ij.y * _size.x + ij.x];
+    }
+    T&       at(const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    const T& at(const vec2i& ij) const {
+        return _pixels[ij.y * _size.x + ij.x];
+    }
+
+    T*       data() { return _pixels.data(); }
+    const T* data() const { return _pixels.data(); }
+
+    T*       begin() { return _pixels.data(); }
+    T*       end() { return _pixels.data() + _pixels.size(); }
+    const T* begin() const { return _pixels.data(); }
+    const T* end() const { return _pixels.data() + _pixels.size(); }
+
+   private:
+    vec2i     _size   = {0, 0};
+    vector<T> _pixels = {};
 };
-
-// Image onstructors
-template <typename T>
-inline void init_image(image<T>& img, const vec2i& size, const T& v = T{}) {
-    img = image<T>{size, vector<T>((size_t)(size.x * size.y), v)};
-}
-template <typename T>
-inline void init_image(image<T>& img, const vec2i& size, const T* v) {
-    img = image<T>{size, vector<T>(v, v + size.x * size.y)};
-}
-
-// Element access.
-template <typename T>
-inline T& at(image<T>& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.size.x + ij.x];
-}
-template <typename T>
-inline const T& at(const image<T>& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.size.x + ij.x];
-}
 
 // Size
 template <typename T>
 inline float get_image_aspect(const image<T>& img) {
-    return (float)img.size.x / (float)img.size.y;
+    return (float)img.size().x / (float)img.size().y;
 }
 
-// Image region defined by its corner at x,y and with size width x height
-struct image_region {
-    vec2i offset = {0, 0};
-    vec2i size   = {0, 0};
-};
-
 // Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions, const vec2i& image_size,
-    int region_size = 32);
+vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size = 32);
 
 // Gets pixels in an image region
 template <typename T>
 inline void get_image_region(
-    const image<T>& img, image<T>& clipped, const image_region& region);
+    image<T>& clipped, const image<T>& img, const bbox2i& region);
+template <typename T>
+inline image<T> get_image_region(const image<T>& img, const bbox2i& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -3085,29 +3105,25 @@ inline void get_image_region(
 vec2i get_image_size(const vec2i& size, float aspect);
 
 // Conversion from/to floats.
-void byte_to_float(const image<vec4b>& bt, image<vec4f>& fl);
-void float_to_byte(const image<vec4f>& fl, image<vec4b>& bt);
+image<vec4f> byte_to_float(const image<vec4b>& bt);
+image<vec4b> float_to_byte(const image<vec4f>& fl);
 
 // Conversion between linear and gamma-encoded images.
-void gamma_to_linear(const image<vec4f>& srgb, image<vec4f>& lin, float gamma);
-void linear_to_gamma(const image<vec4f>& lin, image<vec4f>& srgb, float gamma);
+image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
+image<vec4f> linear_to_srgb(const image<vec4f>& lin);
 
-// Conversion between linear and sRGB images.
-void srgb_to_linear(const image<vec4f>& srgb, image<vec4f>& lin);
-void linear_to_srgb(const image<vec4f>& lin, image<vec4f>& srgb);
-void srgb_to_linear(const image<vec4b>& srgb, image<vec4f>& lin);
-void linear_to_srgb(const image<vec4f>& lin, image<vec4b>& srgb);
+// Conversion between linear and gamma-encoded images.
+image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma);
+image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-void tonemap_image(const image<vec4f>& hdr, image<vec4f>& ldr, float exposure,
-    bool filmic, bool srgb);
-void tonemap_image_region(const image<vec4f>& hdr, image<vec4f>& ldr,
-    const image_region& region, float exposure, bool filmic, bool srgb);
-void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr, float exposure,
-    bool filmic, bool srgb);
+image<vec4f> tonemap_image(
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image_region(image<vec4f>& ldr, const bbox2i& region,
+    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-void resize_image(const image<vec4f>& img, image<vec4f>& res, const vec2i& size);
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 
 }  // namespace ygl
 
@@ -3117,43 +3133,42 @@ void resize_image(const image<vec4f>& img, image<vec4f>& res, const vec2i& size)
 namespace ygl {
 
 // Make example images.
-void make_grid_image(image<vec4f>& img, const vec2i& size, int tile = 8,
+image<vec4f> make_grid_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-void make_checker_image(image<vec4f>& img, const vec2i& size, int tile = 8,
+image<vec4f> make_checker_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-void make_bumpdimple_image(image<vec4f>& img, const vec2i& size, int tile = 8);
-void make_ramp_image(image<vec4f>& img, const vec2i& size, const vec4f& c0,
-    const vec4f& c1, float srgb = false);
-void make_gammaramp_image(image<vec4f>& img, const vec2i& size);
-void make_uvramp_image(image<vec4f>& img, const vec2i& size);
-void make_uvgrid_image(
-    image<vec4f>& img, const vec2i& size, int tile = 8, bool colored = true);
+image<vec4f> make_bumpdimple_image(const vec2i& size, int tile = 8);
+image<vec4f> make_ramp_image(
+    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
+image<vec4f> make_gammaramp_image(const vec2i& size);
+image<vec4f> make_uvramp_image(const vec2i& size);
+image<vec4f> make_uvgrid_image(
+    const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-void bump_to_normal_map(
-    const image<vec4f>& img, image<vec4f>& normal, float scale = 1);
+image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at theta elevation in [0,pif/2], turbidity
 // in [1.7,10] with or without sun.
-void make_sunsky_image(image<vec4f>& img, const vec2i& size, float thetaSun,
+image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     float turbidity = 3, bool has_sun = false,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
-void make_lights_image(image<vec4f>& img, const vec2i& size,
-    const vec3f& le = {1, 1, 1}, int nlights = 4, float langle = pif / 4,
-    float lwidth = pif / 16, float lheight = pif / 16);
+image<vec4f> make_lights_image(const vec2i& size, const vec3f& le = {1, 1, 1},
+    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
+    float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-void make_noise_image(
-    image<vec4f>& img, const vec2i& size, float scale = 1, bool wrap = true);
-void make_fbm_image(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_noise_image(
+    const vec2i& size, float scale = 1, bool wrap = true);
+image<vec4f> make_fbm_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-void make_ridge_image(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_ridge_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-void make_turbulence_image(image<vec4f>& img, const vec2i& size, float scale = 1,
+image<vec4f> make_turbulence_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace ygl
@@ -3229,33 +3244,63 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
-    vec3i     size   = {0, 0, 0};
-    vector<T> voxels = {};
+    volume() : _size{0, 0, 0}, _voxels{} {}
+    volume(const vec3i& size, const T& value = {})
+        : _size{size}, _voxels((size_t)(size.x * size.y * size.z), value) {}
+    volume(const vec3i& size, const T* values)
+        : _size{size}, _voxels(values, values + size.x * size.y + size.z) {}
+
+    bool  empty() const { return _size.x == 0 && _size.y == 0 && _size.z == 0; }
+    vec3i size() const { return _size; }
+
+    void clear() {
+        _size = {0, 0, 0};
+        _voxels.clear();
+    }
+    void resize(const vec3i& size, const T& value = {}) {
+        if (size == _size) return;
+        if (_size == zero3i) {
+            *this = volume{size, value};
+        } else if (size == zero3i) {
+            clear();
+        } else {
+            auto vol = volume{size, value};
+            for (auto k = 0; k < min(size.z, _size.z); k++) {
+                for (auto j = 0; j < min(size.y, _size.y); j++) {
+                    for (auto i = 0; i < min(size.x, _size.x); i++) {
+                        vol[{i, j, k}] = (*this)[{i, j, k}];
+                    }
+                }
+            }
+            _size = size;
+            swap(_voxels, vol._voxels);
+        }
+    }
+
+    T& operator[](const vec3i& ijk) {
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
+    const T& operator[](const vec3i& ijk) const {
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
+    T& at(const vec3i& ijk) {
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
+    const T& at(const vec3i& ijk) const {
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    }
+
+    T*       data() { return _voxels.data(); }
+    const T* data() const { return _voxels.data(); }
+
+   private:
+    vec3i     _size   = {0, 0};
+    vector<T> _voxels = {};
 };
 
-// Volume onstructors
-template <typename T>
-inline void init_volume(volume<T>& vol, const vec3i& size, const T& v = T{}) {
-    vol = volume<T>{size, vector<T>((size_t)(size.x * size.y * size.z), v)};
-}
-template <typename T>
-inline void init_volume(volume<T>& vol, const vec3i& size, const T* v) {
-    vol = volume<T>{size, vector<T>(v, v + size.x * size.y * size.z)};
-}
-
-// Element access
-template <typename T>
-T& at(volume<T>& vol, const vec3i& ijk) {
-    return vol.voxels[ijk.z * vol.size.x * vol.size.y + ijk.y * vol.size.x + ijk.x];
-}
-template <typename T>
-const T& at(const volume<T>& vol, const vec3i& ijk) {
-    return vol.voxels[ijk.z * vol.size.x * vol.size.y + ijk.y * vol.size.x + ijk.x];
-}
-
 // make a simple example volume
-void make_test_volume1f(volume<float>& vol, const vec3i& size, float scale = 10,
-    float exponent = 6);
+volume<float> make_test_volume(
+    const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace ygl
 
@@ -3510,7 +3555,8 @@ bbox3f compute_shape_bounds(const yocto_shape& shape);
 bbox3f compute_scene_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
+vector<vec3f> compute_shape_normals(const yocto_shape& shape);
+vector<vec3f> compute_surface_normals(const yocto_surface& surface);
 
 // Updates/refits bvh.
 void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
@@ -3579,7 +3625,7 @@ vec4f evaluate_shape_element_tangentspace(
     const yocto_shape& shape, int element_id);
 
 // Sample a shape element based on area/length.
-void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf);
+vector<float>    compute_shape_elements_cdf(const yocto_shape& shape);
 pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float            sample_shape_element_pdf(const yocto_shape& shape,
@@ -3598,8 +3644,7 @@ vec3f evaluate_surface_element_normal(const yocto_surface& shape, int element_id
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
-void compute_surface_elements_cdf(
-    const yocto_surface& surface, vector<float>& cdf);
+vector<float>    compute_surface_elements_cdf(const yocto_surface& surface);
 pair<int, vec2f> sample_surface_element(const yocto_surface& surface,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float            sample_surface_element_pdf(const yocto_surface& surface,
@@ -3756,8 +3801,8 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void        init_trace_lights(trace_lights& lights, const yocto_scene& scene);
-inline bool empty(const trace_lights& lights) {
+trace_lights make_trace_lights(const yocto_scene& scene);
+inline bool  empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
 
@@ -3770,8 +3815,8 @@ struct trace_pixel {
 };
 
 // Initialize state of the renderer.
-void init_trace_pixels(image<trace_pixel>& pixels, const vec2i& image_size,
-    uint64_t random_seed = trace_default_seed);
+image<trace_pixel> make_trace_pixels(
+    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
@@ -3818,9 +3863,8 @@ struct trace_image_options {
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights,
-    const trace_image_options& options);
+image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
@@ -3834,11 +3878,11 @@ int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 void trace_image_async_start(image<vec4f>& rendered_image,
     image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, vector<thread>& threads,
-    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    atomic<int>& current_sample, concurrent_queue<bbox2i>& queue,
     const trace_image_options& options);
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
-    concurrent_queue<image_region>& queue, const trace_image_options& options);
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
@@ -4132,14 +4176,23 @@ namespace ygl {
 // Gets pixels in an image region
 template <typename T>
 inline void get_image_region(
-    const image<T>& img, image<T>& clipped, const image_region& region) {
-    init_image(clipped, region.size);
-    for (auto j = 0; j < region.size.y; j++) {
-        for (auto i = 0; i < region.size.x; i++) {
-            at(clipped, {i, j}) = at(
-                img, {i + region.offset.x, j + region.offset.y});
+    image<T>& clipped, const image<T>& img, const bbox2i& region) {
+    clipped.resize(bbox_size(region));
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
         }
     }
+}
+template <typename T>
+inline image<T> get_image_region(const image<T>& img, const bbox2i& region) {
+    auto clipped = image<T>{bbox_size(region)};
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+        }
+    }
+    return clipped;
 }
 
 }  // namespace ygl
@@ -4208,7 +4261,7 @@ template <typename T, int N>
 inline bool print_value(string& str, const ray<T, N>& v) {
     return print_value(str, (const array<T, N * 2 + 2>&)v);
 }
-inline bool print_value(string& str, const image_region& v) {
+inline bool print_value(string& str, const bbox2i& v) {
     return print_value(str, (const array<int, 4>&)v);
 }
 
@@ -4338,7 +4391,7 @@ template <typename T, int N>
 inline bool parse_value(parse_string_view& str, ray<T, N>& v) {
     return parse_value(str, (array<T, N * 2 + 2>&)v);
 }
-inline bool parse_value(parse_string_view& str, image_region& v) {
+inline bool parse_value(parse_string_view& str, bbox2i& v) {
     return parse_value(str, (array<int, 4>&)v);
 }
 

@@ -75,11 +75,11 @@ bool init_opengl_texture(opengl_texture& texture, const vec2i& image_size,
 void update_opengl_texture(
     opengl_texture& texture, const image<vec4f>& img, bool mipmap);
 void update_opengl_texture_region(opengl_texture& texture,
-    const image<vec4f>& img, const image_region& region, bool mipmap);
+    const image<vec4f>& img, const bbox2i& region, bool mipmap);
 
 inline bool init_opengl_texture(opengl_texture& texture,
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.size, as_float, false, linear, mipmap))
+    if (!init_opengl_texture(texture, img.size(), as_float, false, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;
@@ -90,11 +90,11 @@ bool init_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
 void update_opengl_texture(
     opengl_texture& texture, const image<vec4b>& img, bool mipmap);
 void update_opengl_texture_region(opengl_texture& texture,
-    const image<vec4b>& img, const image_region& region, bool mipmap);
+    const image<vec4b>& img, const bbox2i& region, bool mipmap);
 
 inline bool init_opengl_texture(opengl_texture& texture,
     const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.size, false, as_srgb, linear, mipmap))
+    if (!init_opengl_texture(texture, img.size(), false, as_srgb, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;

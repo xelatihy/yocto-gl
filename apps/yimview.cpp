@@ -59,8 +59,8 @@ struct app_image {
     atomic<bool> load_done, display_done, stats_done, texture_done;
     thread       load_thread, display_thread, stats_thread, save_thread;
     atomic<bool> display_stop;
-    concurrent_queue<image_region> display_queue;
-    string                         error_msg = "";
+    concurrent_queue<bbox2i> display_queue;
+    string                   error_msg = "";
 
     // viewing properties
     vec2f image_center = zero2f;
@@ -88,7 +88,7 @@ void update_stats_async(app_image& img) {
     img.stats_done       = false;
     img.stats.pxl_bounds = invalid_bbox4f;
     img.stats.lum_bounds = invalid_bbox1f;
-    for (auto p : img.img.pixels) {
+    for (auto& p : img.img) {
         img.stats.pxl_bounds += p;
         img.stats.lum_bounds += luminance(xyz(p));
     }
@@ -99,11 +99,10 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = vector<image_region>{};
-    make_image_regions(regions, img.img.size);
+    auto regions     = make_image_regions(img.img.size());
     parallel_foreach(regions,
-        [&img](const image_region& region) {
-            tonemap_image_region(img.img, img.display, region, img.exposure,
+        [&img](const bbox2i& region) {
+            tonemap_image_region(img.display, region, img.img, img.exposure,
                 img.filmic, img.srgb);
             img.display_queue.push(region);
         },
@@ -132,15 +131,11 @@ void load_image_async(app_image& img) {
 // save an image
 void save_image_async(app_image& img) {
     if (!is_hdr_filename(img.outname)) {
-        auto img8 = image<vec4b>{};
-        float_to_byte(img.display, img8);
-        if (!save_image(img.outname, img8)) {
+        if (!save_image(img.outname, float_to_byte(img.display))) {
             img.error_msg = "error saving image";
         }
     } else {
-        auto linear = image<vec4f>{};
-        srgb_to_linear(img.display, linear);
-        if (!save_image(img.outname, linear)) {
+        if (!save_image(img.outname, srgb_to_linear(img.display))) {
             img.error_msg = "error saving image";
         }
     }
@@ -154,15 +149,15 @@ void add_new_image(app_state& app, const string& filename, const string& outname
     img.filename = filename;
     img.outname = (outname == "") ? replace_extension(filename, ".display.png") :
                                     outname;
-    img.name        = get_filename(filename);
-    img.exposure    = exposure;
-    img.filmic      = filmic;
-    img.srgb        = srgb;
-    img.load_done   = false;
-    img.display_done= false;
-    img.stats_done  = false;
-    img.load_thread = thread([&img]() { load_image_async(img); });
-    app.img_id      = (int)app.imgs.size() - 1;
+    img.name         = get_filename(filename);
+    img.exposure     = exposure;
+    img.filmic       = filmic;
+    img.srgb         = srgb;
+    img.load_done    = false;
+    img.display_done = false;
+    img.stats_done   = false;
+    img.load_thread  = thread([&img]() { load_image_async(img); });
+    app.img_id       = (int)app.imgs.size() - 1;
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
@@ -192,7 +187,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 status = "done";
             draw_label_opengl_widget(win, "status", status.c_str());
             draw_label_opengl_widget(
-                win, "size", "%d x %d ", img.img.size.x, img.img.size.y);
+                win, "size", "%d x %d ", img.img.size().x, img.img.size().y);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             end_header_opengl_widget(win);
@@ -207,12 +202,12 @@ void draw_opengl_widgets(const opengl_window& win) {
         if (begin_header_opengl_widget(win, "inspect")) {
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(
-                mouse_pos, img.image_center, img.image_scale, img.img.size);
+                mouse_pos, img.image_center, img.image_scale, img.img.size());
             draw_dragger_opengl_widget(win, "mouse", ij);
             auto pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img.img.size.x && ij.y >= 0 &&
-                ij.y < img.img.size.y) {
-                pixel = at(img.img, ij);
+            if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
+                ij.y < img.img.size().y) {
+                pixel = img.img[ij];
             }
             draw_coloredit_opengl_widget(win, "pixel", pixel);
             auto stats = (img.stats_done) ? img.stats : image_stats{};
@@ -244,12 +239,12 @@ void draw(const opengl_window& win) {
     set_glviewport(fb_size);
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        center_image(img.image_center, img.image_scale, img.display.size,
+        center_image(img.image_center, img.image_scale, img.display.size(),
             win_size, img.zoom_to_fit);
         draw_glimage_background(
-            img.display.size, win_size, img.image_center, img.image_scale);
+            img.display.size(), win_size, img.image_center, img.image_scale);
         set_glblending(true);
-        draw_glimage(img.gl_txt, img.display.size, win_size, img.image_center,
+        draw_glimage(img.gl_txt, img.display.size(), win_size, img.image_center,
             img.image_scale);
         set_glblending(false);
     }
@@ -261,9 +256,10 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(img.gl_txt, img.display.size, false, false, false, false);
+            init_opengl_texture(
+                img.gl_txt, img.display.size(), false, false, false, false);
         } else {
-            auto region = image_region{};
+            auto region = bbox2i{};
             while (img.display_queue.try_pop(region)) {
                 update_opengl_texture_region(
                     img.gl_txt, img.display, region, false);

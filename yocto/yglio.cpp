@@ -260,6 +260,17 @@ bool write_values(file_stream& fs, const vector<T>& vals) {
     return true;
 }
 
+// Write to file
+template <typename T>
+bool write_values(file_stream& fs, size_t num, const T* vals) {
+    if (!fs) return false;
+    if (fwrite(vals, sizeof(T), num, fs.fs) != num) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
 // Print shortcut
 template <typename... Args>
 bool print(file_stream& fs, const string& fmt, const Args&... args) {
@@ -294,6 +305,17 @@ template <typename T>
 bool read_values(file_stream& fs, vector<T>& vals) {
     if (!fs) return false;
     if (fread(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+template <typename T>
+bool read_values(file_stream& fs, size_t num, T* vals) {
+    if (!fs) return false;
+    if (fread(vals, sizeof(T), num, fs.fs) != num) {
         log_io_error("cannot read from {}", fs.filename);
         return false;
     }
@@ -419,20 +441,22 @@ inline void from_json(const json& js, bbox<T, N>& value) {
 template <typename T>
 inline void to_json(json& js, const image<T>& value) {
     js           = json::object();
-    js["size"]   = value.size;
-    js["pixels"] = value.pixels;
+    js["size"]   = value.size();
+    js["pixels"] = vector<T>{
+        value.data(), value.data() + value.size().x * value.size().y};
 }
 template <typename T>
 inline void from_json(const json& js, image<T>& value) {
     auto size   = js.at("size").get<vec2i>();
     auto pixels = js.at("pixels").get<vector<T>>();
-    value       = image<T>{size, pixels};
+    value       = image<T>{size, pixels.data()};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
     js           = json::object();
-    js["size"]   = value.size;
-    js["voxels"] = value.voxels;
+    js["size"]   = value.size();
+    js["voxels"] = vector<T>{value.data(),
+        value.data() + value.size().x * value.size().y * value.size().z};
 }
 template <typename T>
 inline void from_json(const json& js, volume<T>& value) {
@@ -612,12 +636,12 @@ bool load_pfm_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, (vec4f*)pixels.data());
+    img = {{width, height}, (vec4f*)pixels.data()};
     return true;
 }
 bool save_pfm_image(const string& filename, const image<vec4f>& img) {
-    if (!save_pfm(filename.c_str(), img.size.x, img.size.y, 4,
-            (float*)img.pixels.data())) {
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -637,12 +661,12 @@ bool load_exr_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
 bool save_exr_image(const string& filename, const image<vec4f>& img) {
-    if (!SaveEXR((float*)img.pixels.data(), img.size.x, img.size.y, 4,
+    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -658,7 +682,7 @@ bool load_stb_image(const string& filename, image<vec4b>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -670,23 +694,23 @@ bool load_stb_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
 
 // save an image with stbi
 bool save_png_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), img.size.x, img.size.y, 4,
-            img.pixels.data(), img.size.x * 4)) {
+    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_jpg_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_jpg(filename.c_str(), img.size.x, img.size.y, 4,
-            img.pixels.data(), 75)) {
+    if (!stbi_write_jpg(
+            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -694,7 +718,7 @@ bool save_jpg_image(const string& filename, const image<vec4b>& img) {
 }
 bool save_tga_image(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.size.x, img.size.y, 4, img.pixels.data())) {
+            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -702,15 +726,15 @@ bool save_tga_image(const string& filename, const image<vec4b>& img) {
 }
 bool save_bmp_image(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size.x, img.size.y, 4, img.pixels.data())) {
+            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_hdr_image(const string& filename, const image<vec4f>& img) {
-    if (!stbi_write_hdr(filename.c_str(), img.size.x, img.size.y, 4,
-            (float*)img.pixels.data())) {
+    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -727,7 +751,7 @@ bool load_stb_image_from_memory(
         log_io_error("error loading in-memory image");
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -740,7 +764,7 @@ bool load_stbi_image_from_memory(
         log_io_error("error loading in-memory image {}");
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -763,22 +787,22 @@ bool load_image_nolog(const string& filename, image<vec4f>& img) {
     } else if (ext == "png" || ext == "PNG") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "jpg" || ext == "JPG") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "tga" || ext == "TGA") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "bmp" || ext == "BMP") {
         auto img8 = image<vec4b>{};
         if (!load_stb_image(filename, img8)) return false;
-        srgb_to_linear(img8, img);
+        img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else {
         log_io_error("unsupported image format {}", ext);
@@ -794,21 +818,13 @@ bool load_image(const string& filename, image<vec4f>& img) {
 bool save_image_nolog(const string& filename, const image<vec4f>& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_png_image(filename, imgb);
+        return save_png_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "jpg" || ext == "JPG") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_jpg_image(filename, imgb);
+        return save_jpg_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "tga" || ext == "TGA") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_tga_image(filename, imgb);
+        return save_tga_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "bmp" || ext == "BMP") {
-        auto imgb = image<vec4b>{};
-        linear_to_srgb(img, imgb);
-        return save_bmp_image(filename, imgb);
+        return save_bmp_image(filename, float_to_byte(linear_to_srgb(img)));
     } else if (ext == "hdr" || ext == "HDR") {
         return save_hdr_image(filename, img);
     } else if (ext == "pfm" || ext == "PFM") {
@@ -841,17 +857,17 @@ bool load_image_nolog(const string& filename, image<vec4b>& img) {
     if (ext == "exr" || ext == "EXR") {
         auto imgf = image<vec4f>{};
         if (!load_exr_image(filename, imgf)) return false;
-        linear_to_srgb(imgf, img);
+        img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "pfm" || ext == "PFM") {
         auto imgf = image<vec4f>{};
         if (!load_pfm_image(filename, imgf)) return false;
-        linear_to_srgb(imgf, img);
+        img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "hdr" || ext == "HDR") {
         auto imgf = image<vec4f>{};
         if (!load_stb_image(filename, imgf)) return false;
-        linear_to_srgb(imgf, img);
+        img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "png" || ext == "PNG") {
         return load_stb_image(filename, img);
@@ -883,17 +899,11 @@ bool save_image_nolog(const string& filename, const image<vec4b>& img) {
     } else if (ext == "bmp" || ext == "BMP") {
         return save_bmp_image(filename, img);
     } else if (ext == "hdr" || ext == "HDR") {
-        auto imgf = image<vec4f>{};
-        srgb_to_linear(img, imgf);
-        return save_hdr_image(filename, imgf);
+        return save_hdr_image(filename, srgb_to_linear(byte_to_float(img)));
     } else if (ext == "pfm" || ext == "PFM") {
-        auto imgf = image<vec4f>{};
-        srgb_to_linear(img, imgf);
-        return save_pfm_image(filename, imgf);
+        return save_pfm_image(filename, srgb_to_linear(byte_to_float(img)));
     } else if (ext == "exr" || ext == "EXR") {
-        auto imgf = image<vec4f>{};
-        srgb_to_linear(img, imgf);
-        return save_exr_image(filename, imgf);
+        return save_exr_image(filename, srgb_to_linear(byte_to_float(img)));
     } else {
         log_io_error("unsupported image format {}", ext);
         return false;
@@ -921,23 +931,22 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     if (is_hdr_filename(filename)) {
         return save_image(filename, hdr);
     } else {
-        auto ldr = image<vec4b>{};
-        tonemap_image(hdr, ldr, exposure, filmic, srgb);
-        return save_image(filename, ldr);
+        return save_image(filename,
+            float_to_byte(tonemap_image(hdr, exposure, filmic, srgb)));
     }
 }
 
 // Resize image.
-void resize_image(
-    const image<vec4f>& img, image<vec4f>& res_img, const vec2i& size) {
+image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
     if (size == zero2i) {
         log_error("bad image size in resize_image");
     }
-    init_image(res_img, get_image_size(size, get_image_aspect(img)));
-    stbir_resize_float_generic((float*)img.pixels.data(), img.size.x,
-        img.size.y, sizeof(vec4f) * img.size.x, (float*)res_img.pixels.data(),
-        res_img.size.x, res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,
+    auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
+    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
+        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    return img;
 }
 
 }  // namespace ygl
@@ -953,8 +962,8 @@ bool load_volume1f_nolog(const string& filename, volume<float>& vol) {
     if (!fs) return false;
     auto size = zero3i;
     if (!read_value(fs, size)) return false;
-    init_volume(vol, size);
-    if (!read_values(fs, vol.voxels)) return false;
+    vol.resize(size);
+    if (!read_values(fs, size.x * size.y * size.z, vol.data())) return false;
     return true;
 }
 bool load_volume1f(const string& filename, volume<float>& vol) {
@@ -966,8 +975,9 @@ bool load_volume1f(const string& filename, volume<float>& vol) {
 bool save_volume1f_nolog(const string& filename, const volume<float>& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
-    if (!write_value(fs, vol.size)) return false;
-    if (!write_values(fs, vol.voxels)) return false;
+    auto size = vol.size();
+    if (!write_value(fs, size)) return false;
+    if (!write_values(fs, size.x * size.y * size.z, vol.data())) return false;
     return true;
 }
 bool save_volume1f(const string& filename, const volume<float>& vol) {
@@ -1032,8 +1042,8 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.textures,
         [&exit_error, &options, &dirname](yocto_texture& texture) {
             if (exit_error) return;
-            if (texture.filename == "" || !texture.hdr_image.pixels.empty() ||
-                !texture.ldr_image.pixels.empty())
+            if (texture.filename == "" || !texture.hdr_image.empty() ||
+                !texture.ldr_image.empty())
                 return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (is_hdr_filename(filename)) {
@@ -1059,8 +1069,7 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.voltextures,
         [&exit_error, &options, &dirname](yocto_voltexture& texture) {
             if (exit_error) return;
-            if (texture.filename == "" || !texture.volume_data.voxels.empty())
-                return;
+            if (texture.filename == "" || !texture.volume_data.empty()) return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (!load_volume1f_nolog(filename, texture.volume_data)) {
                 if (options.exit_on_error) {
@@ -1079,13 +1088,13 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
             [&scene, &has_opacity](int texture_id) {
                 auto& texture           = scene.textures[texture_id];
                 has_opacity[texture_id] = 0;
-                for (auto& p : texture.hdr_image.pixels) {
+                for (auto& p : texture.hdr_image) {
                     if (p.w < 0.999f) {
                         has_opacity[texture_id] = 1;
                         break;
                     }
                 }
-                for (auto& p : texture.ldr_image.pixels) {
+                for (auto& p : texture.ldr_image) {
                     if (p.w < 255) {
                         has_opacity[texture_id] = 1;
                         break;
@@ -1114,9 +1123,7 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.textures,
         [&exit_error, &options, &dirname](const yocto_texture& texture) {
             if (exit_error) return;
-            if (texture.hdr_image.pixels.empty() &&
-                texture.ldr_image.pixels.empty())
-                return;
+            if (texture.hdr_image.empty() && texture.ldr_image.empty()) return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (is_hdr_filename(filename)) {
                 if (!save_image_nolog(filename, texture.hdr_image)) {
@@ -1141,7 +1148,7 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.voltextures,
         [&exit_error, &options, &dirname](const yocto_voltexture& texture) {
             if (exit_error) return;
-            if (texture.volume_data.voxels.empty()) return;
+            if (texture.volume_data.empty()) return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (!save_volume1f_nolog(filename, texture.volume_data)) {
                 if (options.exit_on_error) {
@@ -1162,13 +1169,11 @@ void merge_triangles_and_quads(
     vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
     if (quads.empty()) return;
     if (force_triangles) {
-        auto qtriangles = vector<vec3i>{};
-        convert_quads_to_triangles(quads, qtriangles);
+        auto qtriangles = convert_quads_to_triangles(quads);
         triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
         quads = {};
     } else {
-        auto tquads = vector<vec4i>{};
-        convert_triangles_to_quads(triangles, tquads);
+        auto tquads = convert_triangles_to_quads(triangles);
         quads.insert(quads.end(), tquads.begin(), tquads.end());
         triangles = {};
     }
@@ -1306,11 +1311,25 @@ namespace ygl {
 
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
-    return a.size == b.size && a.pixels == b.pixels;
+    if (a.size() != b.size()) return false;
+    for (auto j = 0; j < a.size().y; j++) {
+        for (auto i = 0; i < a.size().x; i++) {
+            if (a[{i, j}] != b[{i, j}]) return false;
+        }
+    }
+    return true;
 }
 template <typename T>
 bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.size == b.size && a.data == b.data;
+    if (a.size() != b.size()) return false;
+    for (auto k = 0; k < a.size().z; k++) {
+        for (auto j = 0; j < a.size().y; j++) {
+            for (auto i = 0; i < a.size().x; i++) {
+                if (a[{i, j, k}] != b[{i, j, k}]) return false;
+            }
+        }
+    }
+    return true;
 }
 
 // Dumps a json value
@@ -1530,39 +1549,39 @@ bool apply_json_procedural(
     auto is_hdr = false;
     auto size   = js.value("size", vec2i{512, 512});
     if (type == "grid") {
-        make_grid_image(value.hdr_image, size, js.value("tile", 8),
+        value.hdr_image = make_grid_image(size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        make_checker_image(value.hdr_image, size, js.value("tile", 8),
+        value.hdr_image = make_checker_image(size, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(value.hdr_image, size, js.value("tile", 8));
+        value.hdr_image = make_bumpdimple_image(size, js.value("tile", 8));
     } else if (type == "uvramp") {
-        make_uvramp_image(value.hdr_image, size);
+        value.hdr_image = make_uvramp_image(size);
     } else if (type == "uvgrid") {
-        make_uvgrid_image(value.hdr_image, size);
+        value.hdr_image = make_uvgrid_image(size);
     } else if (type == "sky") {
         if (size.x < size.y * 2) size.x = size.y * 2;
-        make_sunsky_image(value.hdr_image, size, js.value("sun_angle", pif / 4),
+        value.hdr_image = make_sunsky_image(size, js.value("sun_angle", pif / 4),
             js.value("turbidity", 3.0f), js.value("has_sun", false),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        is_hdr = true;
+        is_hdr          = true;
     } else if (type == "noise") {
-        make_noise_image(value.hdr_image, size, js.value("scale", 1.0f),
-            js.value("wrap", true));
+        value.hdr_image = make_noise_image(
+            size, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(value.hdr_image, size, js.value("scale", 1.0f),
+        value.hdr_image = make_fbm_image(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image, size, js.value("scale", 1.0f),
+        value.hdr_image = make_ridge_image(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(value.hdr_image, size, js.value("scale", 1.0f),
+        value.hdr_image = make_turbulence_image(size, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
@@ -1570,15 +1589,15 @@ bool apply_json_procedural(
         return false;
     }
     if (js.value("bump_to_normal", false)) {
-        bump_to_normal_map(
-            value.hdr_image, value.hdr_image, js.value("bump_scale", 1.0f));
+        value.hdr_image = bump_to_normal_map(
+            value.hdr_image, js.value("bump_scale", 1.0f));
         value.ldr_as_linear = true;
     }
     if (!is_hdr) {
         if (!value.ldr_as_linear) {
-            linear_to_srgb(value.hdr_image, value.ldr_image);
+            value.ldr_image = float_to_byte(linear_to_srgb(value.hdr_image));
         } else {
-            float_to_byte(value.hdr_image, value.ldr_image);
+            value.ldr_image = float_to_byte(value.hdr_image);
         }
         value.hdr_image = {};
     }
@@ -1631,8 +1650,8 @@ bool apply_json_procedural(
     if (type == "") return true;
     auto size = js.value("width", vec3i{512, 512, 512});
     if (type == "test_volume") {
-        make_test_volume1f(value.volume_data, size, js.value("scale", 10.0f),
-            js.value("exponent", 6.0f));
+        value.volume_data = make_test_volume(
+            size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);
         return false;
@@ -1660,7 +1679,7 @@ bool serialize_json_object(
             def.no_interpolation, save))
         return false;
     if (value.filename == "") {
-        if (!value.volume_data.voxels.empty()) js["vol"] = value.volume_data;
+        if (!value.volume_data.empty()) js["vol"] = value.volume_data;
     }
     if (!serialize_json_procedural(js, value, "!!proc", scene, save))
         return false;
@@ -1758,96 +1777,112 @@ bool apply_json_procedural(
     value.texturecoords = {};
     value.radius        = {};
     if (type == "quad") {
-        make_quad_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "quady") {
-        make_quad_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "quad_stack") {
-        make_quad_stack_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_quad_stack_shape(js.value("steps",
+                                                             vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "cube") {
-        make_cube_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_cube_shape(js.value("steps",
+                                                       vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
-        make_cube_rounded_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{32, 32, 32}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_cube_rounded_shape(js.value("steps",
+                                                               vec3i{32, 32, 32}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f));
     } else if (type == "sphere") {
-        make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_sphere_shape(js.value("steps",
+                                                         vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "sphere_cube") {
-        make_sphere_cube_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f));
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_sphere_cube_shape(js.value("steps", 32),
+            js.value("size", 2.0f), js.value("uvsize", 1.0f));
     } else if (type == "sphere_flipcap") {
-        make_sphere_flipcap_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_sphere_flipcap_shape(js.value("steps",
+                                                                 vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
             js.value("zflip", vec2f{-0.75f, +0.75f}));
     } else if (type == "disk") {
-        make_disk_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{32, 16}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_disk_shape(js.value("steps",
+                                                       vec2i{32, 16}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "disk_quad") {
-        make_disk_quad_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f));
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_disk_quad_shape(js.value("steps", 32),
+            js.value("size", 2.0f), js.value("uvsize", 1.0f));
     } else if (type == "disk_bulged") {
-        make_disk_bulged_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32), js.value("size", 2.0f),
-            js.value("uvsize", 1.0f), js.value("height", 0.25f));
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_disk_bulged_shape(js.value("steps", 32),
+            js.value("size", 2.0f), js.value("uvsize", 1.0f),
+            js.value("height", 0.25f));
     } else if (type == "cylinder_side") {
-        make_cylinder_side_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_cylinder_side_shape(js.value("steps",
+                                                                vec2i{64, 32}),
             js.value("size", vec2f{2.0f, 2.0f}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "cylinder") {
-        make_cylinder_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{64, 32, 16}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_cylinder_shape(js.value("steps",
+                                                           vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
             js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cylinder_rounded") {
-        make_cylinder_rounded_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{64, 32, 16}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_cylinder_rounded_shape(js.value("steps",
+                                                                   vec3i{64, 32,
+                                                                       16}),
             js.value("size", vec2f{2.0f, 2.0f}),
             js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f));
     } else if (type == "sphere_geodesic") {
-        make_geodesic_sphere_shape(value.triangles, value.positions,
-            value.normals, js.value("tesselation", 4), js.value("size", 2.0f));
+        tie(value.triangles, value.positions,
+            value.normals) = make_geodesic_sphere_shape(js.value("tesselation", 4),
+            js.value("size", 2.0f));
     } else if (type == "floor") {
-        make_floor_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_floor_shape(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}));
     } else if (type == "matball") {
-        make_sphere_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_sphere_shape(js.value("steps",
+                                                         vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "hairball") {
         auto base_quads         = vector<vec4i>{};
         auto base_positions     = vector<vec3f>{};
         auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
-        make_sphere_cube_shape(base_quads, base_positions, base_normals,
-            base_texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1);
-        make_hair_shape(value.lines, value.positions, value.normals,
-            value.texturecoords, value.radius, js.value("steps", vec2i{4, 65536}),
+        tie(base_quads, base_positions, base_normals,
+            base_texturecoords) = make_sphere_cube_shape(32,
+            js.value("size", 2.0f) * 0.8f, 1);
+        tie(value.lines, value.positions, value.normals, value.texturecoords,
+            value.radius) = make_hair_shape(js.value("steps", vec2i{4, 65536}),
             {}, base_quads, base_positions, base_normals, base_texturecoords,
             js.value("length", vec2f{0.2f, 0.2f}),
             js.value("radius", vec2f{0.001f, 0.001f}),
             js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
-        make_sphere_cube_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, 32, js.value("size", 2.0f) * 0.8f, 1);
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_sphere_cube_shape(32,
+            js.value("size", 2.0f) * 0.8f, 1);
     } else if (type == "suzanne") {
-        make_suzanne_shape(value.quads, value.positions, js.value("size", 2.0f));
+        tie(value.quads, value.positions) = make_suzanne_shape(
+            js.value("size", 2.0f));
     } else if (type == "cube_posonly") {
-        make_cube_posonly_shape(value.quads, value.positions,
+        tie(value.quads, value.positions) = make_cube_posonly_shape(
             js.value("steps", vec3i{1, 1, 1}), js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
     } else {
@@ -1927,96 +1962,107 @@ bool apply_json_procedural(
     value.normals             = {};
     value.texturecoords       = {};
     if (type == "quad") {
-        make_quad_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "quady") {
-        make_quad_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "quad_stack") {
-        make_quad_stack_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_quad_stack_shape(js.value("steps",
+                                                             vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "cube") {
-        make_cube_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_cube_shape(js.value("steps",
+                                                       vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
-        make_cube_rounded_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords,
-            js.value("steps", vec3i{32, 32, 32}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_cube_rounded_shape(js.value("steps",
+                                                               vec3i{32, 32, 32}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f));
     } else if (type == "sphere") {
-        make_sphere_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_sphere_shape(js.value("steps",
+                                                         vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "sphere_cube") {
-        make_sphere_cube_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords, js.value("steps", 32),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_sphere_cube_shape(js.value("steps", 32),
             js.value("size", 2.0f), js.value("uvsize", 1.0f));
     } else if (type == "sphere_flipcap") {
-        make_sphere_flipcap_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_sphere_flipcap_shape(js.value("steps",
+                                                                 vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
             js.value("zflip", vec2f{-0.75f, +0.75f}));
     } else if (type == "disk") {
-        make_disk_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{32, 16}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_disk_shape(js.value("steps",
+                                                       vec2i{32, 16}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "disk_quad") {
-        make_disk_quad_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords, js.value("steps", 32),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_disk_quad_shape(js.value("steps", 32),
             js.value("size", 2.0f), js.value("uvsize", 1.0f));
     } else if (type == "disk_bulged") {
-        make_disk_bulged_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords, js.value("steps", 32),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_disk_bulged_shape(js.value("steps", 32),
             js.value("size", 2.0f), js.value("uvsize", 1.0f),
             js.value("height", 0.25f));
     } else if (type == "cylinder_side") {
-        make_cylinder_side_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_cylinder_side_shape(js.value("steps",
+                                                                vec2i{64, 32}),
             js.value("size", vec2f{2.0f, 2.0f}), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "cylinder") {
-        make_cylinder_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{64, 32, 16}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_cylinder_shape(js.value("steps",
+                                                           vec3i{64, 32, 16}),
             js.value("size", vec2f{2.0f, 2.0f}),
             js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cylinder_rounded") {
-        make_cylinder_rounded_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords,
-            js.value("steps", vec3i{64, 32, 16}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_cylinder_rounded_shape(js.value("steps",
+                                                                   vec3i{64, 32,
+                                                                       16}),
             js.value("size", vec2f{2.0f, 2.0f}),
             js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f));
     } else if (type == "floor") {
-        make_floor_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{1, 1}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_floor_shape(js.value("steps", vec2i{1, 1}),
             js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}));
     } else if (type == "matball") {
-        make_sphere_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec2i{64, 32}),
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_sphere_shape(js.value("steps",
+                                                         vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "hairball_interior") {
-        make_sphere_cube_shape(value.quads_positions, value.positions,
-            value.normals, value.texturecoords, 32,
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_sphere_cube_shape(32,
             js.value("size", 2.0f) * 0.8f, 1);
     } else if (type == "suzanne") {
-        make_suzanne_shape(
-            value.quads_positions, value.positions, js.value("size", 2.0f));
+        tie(value.quads_positions, value.positions) = make_suzanne_shape(
+            js.value("size", 2.0f));
     } else if (type == "cube_facevarying") {
-        make_cube_facevarying_shape(value.quads_positions, value.quads_normals,
+        tie(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
+            value.texturecoords) = make_cube_facevarying_shape(js.value("steps",
+                                                                   vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_multiplematerials") {
-        make_cube_multiplematerials_shape(value.quads_positions,
-            value.quads_normals, value.quads_texturecoords, value.positions,
-            value.normals, value.texturecoords, value.quads_materials,
-            js.value("steps", vec3i{1, 1, 1}), js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+        tie(value.quads_positions, value.quads_normals, value.quads_texturecoords,
+            value.quads_materials, value.positions, value.normals,
+            value.texturecoords) = make_cube_multiplematerials_shape(js.value("steps",
+                                                                         vec3i{1, 1,
+                                                                             1}),
+            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_posonly") {
-        make_cube_posonly_shape(value.quads_positions, value.positions,
+        tie(value.quads_positions, value.positions) = make_cube_posonly_shape(
             js.value("steps", vec3i{1, 1, 1}), js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
     } else {
@@ -2290,11 +2336,11 @@ bool apply_json_procedural(
             num_shapes++;
         }
 
-        auto pos      = vector<vec3f>();
-        auto norm     = vector<vec3f>();
-        auto texcoord = vector<vec2f>();
-        sample_triangles_points(base.triangles, base.positions, base.normals,
-            base.texturecoords, num, pos, norm, texcoord, seed);
+        auto pos                 = vector<vec3f>();
+        auto norm                = vector<vec3f>();
+        auto texcoord            = vector<vec2f>();
+        tie(pos, norm, texcoord) = sample_triangles_points(base.triangles,
+            base.positions, base.normals, base.texturecoords, num, seed);
 
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
@@ -4168,8 +4214,7 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
             pjs["mode"] = 4;
         }
         if (!shape.quads.empty()) {
-            auto triangles = vector<vec3i>{};
-            convert_quads_to_triangles(shape.quads, triangles);
+            auto triangles = convert_quads_to_triangles(shape.quads);
             pjs["indices"] = add_accessor(
                 (int)triangles.size() * 3, "SCALAR", true);
             pjs["mode"] = 4;
@@ -4237,8 +4282,7 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     if (!write_values(fs, shape.points)) return false;
     if (!write_values(fs, shape.lines)) return false;
     if (!write_values(fs, shape.triangles)) return false;
-    auto qtriangles = vector<vec3i>{};
-    convert_quads_to_triangles(shape.quads, qtriangles);
+    auto qtriangles = convert_quads_to_triangles(shape.quads);
     if (!write_values(fs, qtriangles)) return false;
 
     return true;
@@ -4798,16 +4842,18 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto radius    = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_sphere_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {64, 32}, 2 * radius, {1, 1});
+                tie(shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords) = make_sphere_shape({64, 32},
+                    2 * radius, {1, 1});
             } else if (type == "disk") {
                 shape.name     = "disk" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
                 auto radius    = 1.0f;
                 if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
-                make_disk_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {32, 16}, 2 * radius, {1, 1});
+                tie(shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords) = make_disk_shape({32, 16}, 2 * radius,
+                    {1, 1});
             } else {
                 printf("%s shape not supported\n", type.c_str());
             }
@@ -4881,10 +4927,11 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
-                auto dir  = normalize(from - to);
-                auto size = distant_dist * sin(5 * pif / 180);
-                make_quad_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {1, 1}, {size, size}, {1, 1});
+                auto dir                 = normalize(from - to);
+                auto size                = distant_dist * sin(5 * pif / 180);
+                tie(shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords) = make_quad_shape({1, 1}, {size, size},
+                    {1, 1});
                 scene.shapes.push_back(shape);
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
@@ -5167,14 +5214,16 @@ bool serialize_bin_value(string& str, file_stream& fs, bool save) {
 template <typename T>
 bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, img.size)) return false;
-        if (!write_values(fs, img.pixels)) return false;
+        if (!write_value(fs, img.size())) return false;
+        if (!write_values(fs, img.size().x * img.size().y, img.data()))
+            return false;
         return true;
     } else {
         auto size = zero2i;
         if (!read_value(fs, size)) return false;
-        init_image(img, size);
-        if (!read_values(fs, img.pixels)) return false;
+        img.resize(size);
+        if (!read_values(fs, img.size().x * img.size().y, img.data()))
+            return false;
         return true;
     }
 }
@@ -5183,14 +5232,18 @@ bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
 template <typename T>
 bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, vol.size)) return false;
-        if (!write_values(fs, vol.voxels)) return false;
+        if (!write_value(fs, vol.size())) return false;
+        if (!write_values(
+                fs, vol.size().x * vol.size().y * vol.size().z, vol.data()))
+            return false;
         return true;
     } else {
         auto size = zero3i;
         if (!read_value(fs, size)) return false;
-        init_volume(vol, size);
-        if (!read_values(fs, vol.voxels)) return false;
+        vol.resize(size);
+        if (!read_values(
+                fs, vol.size().x * vol.size().y * vol.size().z, vol.data()))
+            return false;
         return true;
     }
 }
