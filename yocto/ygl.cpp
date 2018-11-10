@@ -1075,16 +1075,14 @@ void weld_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions, float th
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-void sample_triangles_points(const vector<vec3i>& triangles,
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
+ sample_triangles_points(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, int npoints,
-    vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals,
-    vector<vec2f>& sampled_texturecoords, int seed) {
-    sampled_positions     = vector<vec3f>(npoints);
-    sampled_normals       = vector<vec3f>(npoints);
-    sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf              = vector<float>{};
-    sample_triangles_element_cdf(triangles, positions, cdf);
+    const vector<vec2f>& texturecoords, int npoints, int seed) {
+    auto sampled_positions     = vector<vec3f>(npoints);
+    auto sampled_normals       = vector<vec3f>(npoints);
+    auto sampled_texturecoords = vector<vec2f>(npoints);
+    auto cdf              = sample_triangles_element_cdf(triangles, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto sample = sample_triangles_element(cdf, get_random_float(rng),
@@ -1106,21 +1104,21 @@ void sample_triangles_points(const vector<vec3i>& triangles,
             sampled_texturecoords[i] = zero2f;
         }
     }
+    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-void sample_quads_points(const vector<vec4i>& quads,
+tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>>
+sample_quads_points(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texturecoords, int npoints,
-    vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals,
-    vector<vec2f>& sampled_texturecoords, int seed) {
-    sampled_positions     = vector<vec3f>(npoints);
-    sampled_normals       = vector<vec3f>(npoints);
-    sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf              = vector<float>{};
-    sample_quads_element_cdf(quads, positions, cdf);
+    int seed) {
+    auto sampled_positions     = vector<vec3f>(npoints);
+    auto sampled_normals       = vector<vec3f>(npoints);
+    auto sampled_texturecoords = vector<vec2f>(npoints);
+    auto cdf              = sample_quads_element_cdf(quads, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto sample          = sample_quads_element(cdf, get_random_float(rng),
@@ -1143,6 +1141,7 @@ void sample_quads_points(const vector<vec4i>& quads,
             sampled_texturecoords[i] = zero2f;
         }
     }
+    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 // Merge shape elements
@@ -3508,8 +3507,8 @@ void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions,
     auto          quads_triangles = convert_quads_to_triangles(squads);
     alltriangles.insert(
         alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
-    sample_triangles_points(alltriangles, spos, snorm, stexcoord, steps.y, bpos,
-        bnorm, btexcoord, seed);
+        tie(bpos, bnorm, btexcoord) = 
+    sample_triangles_points(alltriangles, spos, snorm, stexcoord, steps.y, seed);
 
     auto rng  = make_rng(seed, 3);
     auto blen = vector<float>(bpos.size());
@@ -4522,20 +4521,18 @@ vec2f compute_animation_range(const yocto_scene& scene, const string& anim_group
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf) {
+vector<float> compute_shape_elements_cdf(const yocto_shape& shape) {
     if (!shape.triangles.empty()) {
         return sample_triangles_element_cdf(
-            shape.triangles, shape.positions, cdf);
+            shape.triangles, shape.positions);
     } else if (!shape.quads.empty()) {
-        return sample_quads_element_cdf(shape.quads, shape.positions, cdf);
+        return sample_quads_element_cdf(shape.quads, shape.positions);
     } else if (!shape.lines.empty()) {
-        return sample_lines_element_cdf(shape.lines, shape.positions, cdf);
+        return sample_lines_element_cdf(shape.lines, shape.positions);
     } else if (!shape.points.empty()) {
-        return sample_points_element_cdf(shape.points.size(), cdf);
+        return sample_points_element_cdf(shape.points.size());
     } else {
-        log_error("empty shape not supported");
-        cdf = {};
-        return;
+        return {};
     }
 }
 
@@ -4564,15 +4561,13 @@ float sample_shape_element_pdf(const yocto_shape& shape,
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-void compute_surface_elements_cdf(
-    const yocto_surface& surface, vector<float>& cdf) {
+vector<float> compute_surface_elements_cdf(
+    const yocto_surface& surface) {
     if (!surface.quads_positions.empty()) {
         return sample_quads_element_cdf(
-            surface.quads_positions, surface.positions, cdf);
+            surface.quads_positions, surface.positions);
     } else {
-        log_error("empty shape not supported");
-        cdf = {};
-        return;
+        return {};
     }
 }
 
@@ -7558,14 +7553,14 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
             auto& shape = scene.shapes[instance.shape];
             if (shape.triangles.empty() && shape.quads.empty()) continue;
             lights.instances.push_back(instance_id);
-            compute_shape_elements_cdf(
-                shape, lights.shape_elements_cdf[instance.shape]);
+            lights.shape_elements_cdf[instance.shape] = compute_shape_elements_cdf(
+                shape);
         } else if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
             if (surface.quads_positions.empty()) continue;
             lights.instances.push_back(instance_id);
-            compute_surface_elements_cdf(
-                surface, lights.surface_elements_cdf[instance.surface]);
+            lights.surface_elements_cdf[instance.surface] = compute_surface_elements_cdf(
+                surface);
         } else {
             continue;
         }

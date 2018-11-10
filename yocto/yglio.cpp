@@ -2328,8 +2328,9 @@ bool apply_json_procedural(
         auto pos      = vector<vec3f>();
         auto norm     = vector<vec3f>();
         auto texcoord = vector<vec2f>();
+        tie(pos, norm, texcoord) =
         sample_triangles_points(base.triangles, base.positions, base.normals,
-            base.texturecoords, num, pos, norm, texcoord, seed);
+            base.texturecoords, num, seed);
 
         auto rng = make_rng(seed, 17);
         for (auto i = 0; i < num; i++) {
