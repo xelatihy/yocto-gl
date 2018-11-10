@@ -26,9 +26,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
-using namespace ygl;
+#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_trace.h"
+#include "../yocto/yocto_utils.h"
+using namespace yocto;
 
 int main(int argc, char* argv[]) {
     // options
@@ -37,8 +40,7 @@ int main(int argc, char* argv[]) {
     trace_image_options trace_options = {};
 
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "Offline path tracing", "ytrace");
+    auto parser = make_cmdline_parser(argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
     trace_options.image_size = vec2i{0, parse_argument(parser, "--resolution,-r",

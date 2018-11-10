@@ -27,12 +27,12 @@
 //
 //
 
-#ifndef _YSCENEUI_H_
-#define _YSCENEUI_H_
+#ifndef _YOCTO_SCENEUI_H_
+#define _YOCTO_SCENEUI_H_
 
-#include "../yocto/ygl.h"
-#include "yglutils.h"
-using namespace ygl;
+#include "../yocto/yocto_scene.h"
+#include "yocto_opengl.h"
+using namespace yocto;
 
 inline const unordered_map<int, string>& animation_type_names() {
     static auto names = unordered_map<int, string>{

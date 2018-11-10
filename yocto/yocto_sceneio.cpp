@@ -54,7 +54,9 @@
 //
 //
 
-#include "yglio.h"
+#include "yocto_sceneio.h"
+#include "yocto_imageio.h"
+#include "yocto_utils.h"
 
 #include <cstdlib>
 #include <regex>
@@ -68,303 +70,10 @@
 #include "ext/happly.h"
 #endif
 
-#ifndef _WIN32
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#ifndef __clang__
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#endif
-
-#ifndef __clang_analyzer__
-
-#define STB_IMAGE_IMPLEMENTATION
-#include "ext/stb_image.h"
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "ext/stb_image_write.h"
-
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "ext/stb_image_resize.h"
-
-#define TINYEXR_IMPLEMENTATION
-#include "ext/tinyexr.h"
-
-#endif
-
-#ifndef _WIN32
-#pragma GCC diagnostic pop
-#endif
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH UTILITIES
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-string normalize_path(const string& filename_) {
-    auto filename = filename_;
-    for (auto& c : filename)
-        if (c == '\\') c = '/';
-    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-        log_error("absolute paths are not supported");
-        return filename_;
-    }
-    if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-        filename[3] == '/') {
-        log_error("absolute paths are not supported");
-        return filename_;
-    }
-    auto pos = (size_t)0;
-    while ((pos = filename.find("//")) != filename.npos)
-        filename = filename.substr(0, pos) + filename.substr(pos + 1);
-    return filename;
-}
-
-// Get directory name (not including '/').
-string get_dirname(const string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos      = filename.rfind('/');
-    if (pos == string::npos) return "";
-    return filename.substr(0, pos);
-}
-
-// Get extension (not including '.').
-string get_extension(const string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos      = filename.rfind('.');
-    if (pos == string::npos) return "";
-    return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-string get_filename(const string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos      = filename.rfind('/');
-    if (pos == string::npos) return "";
-    return filename.substr(pos + 1);
-}
-
-// Replace extension.
-string replace_extension(const string& filename_, const string& ext_) {
-    auto filename = normalize_path(filename_);
-    auto ext      = normalize_path(ext_);
-    if (ext.at(0) == '.') ext = ext.substr(1);
-    auto pos = filename.rfind('.');
-    if (pos == string::npos) return filename;
-    return filename.substr(0, pos) + "." + ext;
-}
-
-// Check if a file can be opened for reading.
-bool exists_file(const string& filename) {
-    auto f = fopen(filename.c_str(), "r");
-    if (!f) return false;
-    fclose(f);
-    return true;
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF FILE READING
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// log io error
-template <typename... Args>
-void log_io_error(const string& fmt, const Args&... args) {
-    log_error(fmt, args...);
-}
-
-// File stream wrapper
-struct file_stream {
-    string filename = "";
-    string mode     = "";
-    FILE*  fs       = nullptr;
-
-    file_stream()                   = default;
-    file_stream(const file_stream&) = delete;
-    file_stream& operator=(const file_stream&) = delete;
-    file_stream(file_stream&&)                 = default;
-    file_stream& operator=(file_stream&&) = default;
-
-    ~file_stream() {
-        if (fs) {
-            fclose(fs);
-            fs = nullptr;
-        }
-    }
-
-    operator bool() const { return fs; }
-};
-
-// Opens a file
-file_stream open(const string& filename, const string& mode) {
-    auto fs = fopen(filename.c_str(), mode.c_str());
-    if (!fs) {
-        log_io_error("cannot open {}", filename);
-        return {};
-    }
-    return {filename, mode, fs};
-}
-
-// Close a file
-bool close(file_stream& fs) {
-    if (!fs) {
-        log_io_error("cannot close {}", fs.filename);
-        return false;
-    }
-    fclose(fs.fs);
-    fs.fs = nullptr;
-    return true;
-}
-
-// Gets the length of a file
-size_t get_length(file_stream& fs) {
-    if (!fs) return 0;
-    fseek(fs.fs, 0, SEEK_END);
-    auto fsize = ftell(fs.fs);
-    fseek(fs.fs, 0, SEEK_SET);
-    return fsize;
-}
-
-// Print to file
-bool write_text(file_stream& fs, const string& str) {
-    if (!fs) return false;
-    if (fprintf(fs.fs, "%s", str.c_str()) < 0) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-bool write_value(file_stream& fs, const T& value) {
-    if (!fs) return false;
-    if (fwrite(&value, sizeof(T), 1, fs.fs) != 1) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-bool write_values(file_stream& fs, const vector<T>& vals) {
-    if (!fs) return false;
-    if (fwrite(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-bool write_values(file_stream& fs, size_t num, const T* vals) {
-    if (!fs) return false;
-    if (fwrite(vals, sizeof(T), num, fs.fs) != num) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Print shortcut
-template <typename... Args>
-bool print(file_stream& fs, const string& fmt, const Args&... args) {
-    if (!fs) return false;
-    return write_text(fs, format(fmt, args...));
-}
-
-// Read binary data to fill the whole buffer
-bool read_line(file_stream& fs, string& value) {
-    if (!fs) return false;
-    // TODO: make lkne as large as possible
-    value = "";
-    char buffer[4096];
-    if (!fgets(buffer, 4096, fs.fs)) return false;
-    value = string(buffer);
-    return true;
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-bool read_value(file_stream& fs, T& value) {
-    if (!fs) return false;
-    if (fread(&value, sizeof(T), 1, fs.fs) != 1) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-bool read_values(file_stream& fs, vector<T>& vals) {
-    if (!fs) return false;
-    if (fread(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-bool read_values(file_stream& fs, size_t num, T* vals) {
-    if (!fs) return false;
-    if (fread(vals, sizeof(T), num, fs.fs) != num) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Load a text file
-bool load_text(const string& filename, string& str) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
-    auto buffer = vector<char>(get_length(fs));
-    if (!read_values(fs, buffer)) return false;
-    str = string{buffer.begin(), buffer.end()};
-    return true;
-}
-
-// Save a text file
-bool save_text(const string& filename, const string& str) {
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
-    if (!write_text(fs, str)) return false;
-    return true;
-}
-
-// Load a binary file
-bool load_binary(const string& filename, vector<byte>& data) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
-    data = vector<byte>(get_length(fs));
-    if (!read_values(fs, data)) return false;
-    return true;
-}
-
-// Save a binary file
-bool save_binary(const string& filename, const vector<byte>& data) {
-    auto fs = open(filename.c_str(), "wb");
-    if (!fs) return false;
-    if (!write_values(fs, data)) return false;
-    return true;
-}
-
-}  // namespace ygl
-
 // -----------------------------------------------------------------------------
 // JSON UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 // Json alias
 using json = nlohmann::json;
@@ -465,532 +174,12 @@ inline void from_json(const json& js, volume<T>& value) {
     value       = volume<T>{size, voxels.data()};
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR IMAGEIO
+// GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace ygl {
-
-// Split a string
-vector<string> split_string(const string& str) {
-    auto ret = vector<string>();
-    if (str.empty()) return ret;
-    auto lpos = (size_t)0;
-    while (lpos != str.npos) {
-        auto pos = str.find_first_of(" \t\n\r", lpos);
-        if (pos != str.npos) {
-            if (pos > lpos) ret.push_back(str.substr(lpos, pos - lpos));
-            lpos = pos + 1;
-        } else {
-            if (lpos < str.size()) ret.push_back(str.substr(lpos));
-            lpos = pos;
-        }
-    }
-    return ret;
-}
-
-// Pfm load
-vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
-    auto fs = open(filename, "rb");
-    if (!fs) return {};
-
-    // buffer
-    char buffer[256];
-    auto toks = vector<string>();
-
-    // read magic
-    if (!fgets(buffer, 256, fs.fs)) return {};
-    toks = split_string(buffer);
-    if (toks[0] == "Pf")
-        nc = 1;
-    else if (toks[0] == "PF")
-        nc = 3;
-    else
-        return {};
-
-    // read w, h
-    if (!fgets(buffer, 256, fs.fs)) return {};
-    toks = split_string(buffer);
-    w    = atoi(toks[0].c_str());
-    h    = atoi(toks[1].c_str());
-
-    // read scale
-    if (!fgets(buffer, 256, fs.fs)) return {};
-    toks   = split_string(buffer);
-    auto s = atof(toks[0].c_str());
-
-    // read the data (flip y)
-    auto npixels = w * h;
-    auto nvalues = w * h * nc;
-    auto nrow    = w * nc;
-    auto pixels  = vector<float>(nvalues);
-    for (auto j = h - 1; j >= 0; j--) {
-        if (fread(pixels.data() + j * nrow, sizeof(float), nrow, fs.fs) != nrow) {
-            return {};
-        }
-    }
-
-    // endian conversion
-    if (s > 0) {
-        for (auto i = 0; i < nvalues; ++i) {
-            auto dta = (uint8_t*)(pixels.data() + i);
-            swap(dta[0], dta[3]);
-            swap(dta[1], dta[2]);
-        }
-    }
-
-    // scale
-    auto scl = (s > 0) ? s : -s;
-    if (scl != 1) {
-        for (auto i = 0; i < nvalues; i++) pixels[i] *= scl;
-    }
-
-    // proper number of channels
-    if (!req || nc == req) return pixels;
-
-    // pack into channels
-    if (req < 0 || req > 4) {
-        return {};
-    }
-    auto cpixels = vector<float>(req * npixels);
-    for (auto i = 0; i < npixels; i++) {
-        auto vp = pixels.data() + i * nc;
-        auto cp = cpixels.data() + i * req;
-        if (nc == 1) {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[0];
-                    cp[2] = vp[0];
-                    cp[3] = 1;
-                    break;
-            }
-        } else {
-            switch (req) {
-                case 1: cp[0] = vp[0]; break;
-                case 2:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    break;
-                case 3:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    break;
-                case 4:
-                    cp[0] = vp[0];
-                    cp[1] = vp[1];
-                    cp[2] = vp[2];
-                    cp[3] = 1;
-                    break;
-            }
-        }
-    }
-    return cpixels;
-}
-
-// save pfm
-bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
-    auto fs = fopen(filename, "wb");
-    if (!fs) return false;
-
-    fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF");
-    fprintf(fs, "%d %d\n", w, h);
-    fprintf(fs, "-1\n");
-    if (nc == 1 || nc == 3) {
-        fwrite(pixels, sizeof(float), w * h * nc, fs);
-    } else {
-        for (auto i = 0; i < w * h; i++) {
-            auto vz = 0.0f;
-            auto v  = pixels + i * nc;
-            fwrite(v + 0, sizeof(float), 1, fs);
-            fwrite(v + 1, sizeof(float), 1, fs);
-            if (nc == 2)
-                fwrite(&vz, sizeof(float), 1, fs);
-            else
-                fwrite(v + 2, sizeof(float), 1, fs);
-        }
-    }
-
-    fclose(fs);
-
-    return true;
-}
-
-// load pfm image
-bool load_pfm_image(const string& filename, image<vec4f>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
-    if (pixels.empty()) {
-        log_io_error("error loading image {}", filename);
-        return false;
-    }
-    img = {{width, height}, (vec4f*)pixels.data()};
-    return true;
-}
-bool save_pfm_image(const string& filename, const image<vec4f>& img) {
-    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
-        log_io_error("error saving image {}", filename);
-        return false;
-    }
-    return true;
-}
-
-// load exr image weith tiny exr
-bool load_exr_image(const string& filename, image<vec4f>& img) {
-    auto width = 0, height = 0;
-    auto pixels = (vec4f*)nullptr;
-    if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(), nullptr) <
-        0) {
-        log_io_error("error loading image {}", filename);
-        return false;
-    }
-    if (!pixels) {
-        log_io_error("error loading image {}", filename);
-        return false;
-    }
-    img = {{width, height}, pixels};
-    free(pixels);
-    return true;
-}
-bool save_exr_image(const string& filename, const image<vec4f>& img) {
-    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-            filename.c_str())) {
-        log_io_error("error saving image {}", filename);
-        return false;
-    }
-    return true;
-}
-
-// load an image using stbi library
-bool load_stb_image(const string& filename, image<vec4b>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) {
-        log_io_error("error loading image {}", filename);
-        return false;
-    }
-    img = {{width, height}, pixels};
-    free(pixels);
-    return true;
-}
-bool load_stb_image(const string& filename, image<vec4f>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4f*)stbi_loadf(
-        filename.c_str(), &width, &height, &ncomp, 4);
-    if (!pixels) {
-        log_io_error("error loading image {}", filename);
-        return false;
-    }
-    img = {{width, height}, pixels};
-    free(pixels);
-    return true;
-}
-
-// save an image with stbi
-bool save_png_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4)) {
-        log_io_error("error saving image {}", filename);
-        return false;
-    }
-    return true;
-}
-bool save_jpg_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
-        log_io_error("error saving image {}", filename);
-        return false;
-    }
-    return true;
-}
-bool save_tga_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-        log_io_error("error saving image {}", filename);
-        return false;
-    }
-    return true;
-}
-bool save_bmp_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-        log_io_error("error saving image {}", filename);
-        return false;
-    }
-    return true;
-}
-bool save_hdr_image(const string& filename, const image<vec4f>& img) {
-    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
-        log_io_error("error saving image {}", filename);
-        return false;
-    }
-    return true;
-}
-
-// load an image using stbi library
-bool load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec4b>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4b*)stbi_load_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        log_io_error("error loading in-memory image");
-        return false;
-    }
-    img = {{width, height}, pixels};
-    free(pixels);
-    return true;
-}
-bool load_stbi_image_from_memory(
-    const byte* data, int data_size, image<vec4f>& img) {
-    auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4f*)stbi_loadf_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
-    if (!pixels) {
-        log_io_error("error loading in-memory image {}");
-        return false;
-    }
-    img = {{width, height}, pixels};
-    free(pixels);
-    return true;
-}
-
-// check hdr extensions
-bool is_hdr_filename(const string& filename) {
-    auto ext = get_extension(filename);
-    return ext == "hdr" || ext == "exr" || ext == "pfm";
-}
-
-// Loads an hdr image.
-bool load_image_nolog(const string& filename, image<vec4f>& img) {
-    auto ext = get_extension(filename);
-    if (ext == "exr" || ext == "EXR") {
-        return load_exr_image(filename, img);
-    } else if (ext == "pfm" || ext == "PFM") {
-        return load_pfm_image(filename, img);
-    } else if (ext == "hdr" || ext == "HDR") {
-        return load_stb_image(filename, img);
-    } else if (ext == "png" || ext == "PNG") {
-        auto img8 = image<vec4b>{};
-        if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
-        return true;
-    } else if (ext == "jpg" || ext == "JPG") {
-        auto img8 = image<vec4b>{};
-        if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
-        return true;
-    } else if (ext == "tga" || ext == "TGA") {
-        auto img8 = image<vec4b>{};
-        if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
-        return true;
-    } else if (ext == "bmp" || ext == "BMP") {
-        auto img8 = image<vec4b>{};
-        if (!load_stb_image(filename, img8)) return false;
-        img = srgb_to_linear(byte_to_float(img8));
-        return true;
-    } else {
-        log_io_error("unsupported image format {}", ext);
-        return false;
-    }
-}
-bool load_image(const string& filename, image<vec4f>& img) {
-    auto scope = log_trace_scoped("loading image {}", filename);
-    return load_image_nolog(filename, img);
-}
-
-// Saves an hdr image.
-bool save_image_nolog(const string& filename, const image<vec4f>& img) {
-    auto ext = get_extension(filename);
-    if (ext == "png" || ext == "PNG") {
-        return save_png_image(filename, float_to_byte(linear_to_srgb(img)));
-    } else if (ext == "jpg" || ext == "JPG") {
-        return save_jpg_image(filename, float_to_byte(linear_to_srgb(img)));
-    } else if (ext == "tga" || ext == "TGA") {
-        return save_tga_image(filename, float_to_byte(linear_to_srgb(img)));
-    } else if (ext == "bmp" || ext == "BMP") {
-        return save_bmp_image(filename, float_to_byte(linear_to_srgb(img)));
-    } else if (ext == "hdr" || ext == "HDR") {
-        return save_hdr_image(filename, img);
-    } else if (ext == "pfm" || ext == "PFM") {
-        return save_pfm_image(filename, img);
-    } else if (ext == "exr" || ext == "EXR") {
-        return save_exr_image(filename, img);
-    } else {
-        log_io_error("unsupported image format {}", ext);
-        return false;
-    }
-}
-bool save_image(const string& filename, const image<vec4f>& img) {
-    auto scope = log_trace_scoped("saving image {}", filename);
-    return save_image_nolog(filename, img);
-}
-
-// Loads an hdr image.
-bool load_image_from_memory_nolog(
-    const byte* data, int data_size, image<vec4f>& img) {
-    return load_stbi_image_from_memory(data, data_size, img);
-}
-bool load_image_from_memory(const byte* data, int data_size, image<vec4f>& img) {
-    auto scope = log_trace_scoped("loading image in memory");
-    return load_image_from_memory_nolog(data, data_size, img);
-}
-
-// Loads an hdr image.
-bool load_image_nolog(const string& filename, image<vec4b>& img) {
-    auto ext = get_extension(filename);
-    if (ext == "exr" || ext == "EXR") {
-        auto imgf = image<vec4f>{};
-        if (!load_exr_image(filename, imgf)) return false;
-        img = float_to_byte(linear_to_srgb(imgf));
-        return true;
-    } else if (ext == "pfm" || ext == "PFM") {
-        auto imgf = image<vec4f>{};
-        if (!load_pfm_image(filename, imgf)) return false;
-        img = float_to_byte(linear_to_srgb(imgf));
-        return true;
-    } else if (ext == "hdr" || ext == "HDR") {
-        auto imgf = image<vec4f>{};
-        if (!load_stb_image(filename, imgf)) return false;
-        img = float_to_byte(linear_to_srgb(imgf));
-        return true;
-    } else if (ext == "png" || ext == "PNG") {
-        return load_stb_image(filename, img);
-    } else if (ext == "jpg" || ext == "JPG") {
-        return load_stb_image(filename, img);
-    } else if (ext == "tga" || ext == "TGA") {
-        return load_stb_image(filename, img);
-    } else if (ext == "bmp" || ext == "BMP") {
-        return load_stb_image(filename, img);
-    } else {
-        log_io_error("unsupported image format {}", ext);
-        return false;
-    }
-}
-bool load_image(const string& filename, image<vec4b>& img) {
-    auto scope = log_trace_scoped("loading image {}", filename);
-    return load_image_nolog(filename, img);
-}
-
-// Saves an ldr image.
-bool save_image_nolog(const string& filename, const image<vec4b>& img) {
-    auto ext = get_extension(filename);
-    if (ext == "png" || ext == "PNG") {
-        return save_png_image(filename, img);
-    } else if (ext == "jpg" || ext == "JPG") {
-        return save_jpg_image(filename, img);
-    } else if (ext == "tga" || ext == "TGA") {
-        return save_tga_image(filename, img);
-    } else if (ext == "bmp" || ext == "BMP") {
-        return save_bmp_image(filename, img);
-    } else if (ext == "hdr" || ext == "HDR") {
-        return save_hdr_image(filename, srgb_to_linear(byte_to_float(img)));
-    } else if (ext == "pfm" || ext == "PFM") {
-        return save_pfm_image(filename, srgb_to_linear(byte_to_float(img)));
-    } else if (ext == "exr" || ext == "EXR") {
-        return save_exr_image(filename, srgb_to_linear(byte_to_float(img)));
-    } else {
-        log_io_error("unsupported image format {}", ext);
-        return false;
-    }
-}
-bool save_image(const string& filename, const image<vec4b>& img) {
-    auto scope = log_trace_scoped("saving image {}", filename);
-    return save_image_nolog(filename, img);
-}
-
-// Loads an ldr image.
-bool load_image_from_memory_nolog(
-    const byte* data, int data_size, image<vec4b>& img) {
-    return load_stb_image_from_memory(data, data_size, img);
-}
-bool load_image_from_memory(const byte* data, int data_size, image<vec4b>& img) {
-    auto scope = log_trace_scoped("loading image in memory");
-    return load_image_from_memory_nolog(data, data_size, img);
-}
-
-// Convenience helper that saves an HDR images as wither a linear HDR file or
-// a tonemapped LDR file depending on file name
-bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
-    float exposure, bool filmic, bool srgb) {
-    if (is_hdr_filename(filename)) {
-        return save_image(filename, hdr);
-    } else {
-        return save_image(filename,
-            float_to_byte(tonemap_image(hdr, exposure, filmic, srgb)));
-    }
-}
-
-// Resize image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
-    if (size == zero2i) {
-        log_error("bad image size in resize_image");
-    }
-    auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
-    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
-        sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
-        res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
-        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
-    return img;
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR VOLUME IMAGE IO
-// -----------------------------------------------------------------------------
-namespace ygl {
-
-// Loads volume data from binary format.
-bool load_volume1f_nolog(const string& filename, volume<float>& vol) {
-    auto fs = open(filename, "r");
-    if (!fs) return false;
-    auto size = zero3i;
-    if (!read_value(fs, size)) return false;
-    vol.resize(size);
-    if (!read_values(fs, size.x * size.y * size.z, vol.data())) return false;
-    return true;
-}
-bool load_volume1f(const string& filename, volume<float>& vol) {
-    auto scope = log_trace_scoped("loading volume {}", filename);
-    return load_volume1f_nolog(filename, vol);
-}
-
-// Saves volume data in binary format.
-bool save_volume1f_nolog(const string& filename, const volume<float>& vol) {
-    auto fs = open(filename, "w");
-    if (!fs) return false;
-    auto size = vol.size();
-    if (!write_value(fs, size)) return false;
-    if (!write_values(fs, size.x * size.y * size.z, vol.data())) return false;
-    return true;
-}
-bool save_volume1f(const string& filename, const volume<float>& vol) {
-    auto scope = log_trace_scoped("saving volume {}", filename);
-    return save_volume1f_nolog(filename, vol);
-}
-
-}  // namespace ygl
-
-// -----------------------------------------------------------------------------
-// GENERIC IMAGE LOADING
-// -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 // Load a scene
 bool load_scene(const string& filename, yocto_scene& scene,
@@ -1033,6 +222,10 @@ bool save_scene(const string& filename, const yocto_scene& scene,
     }
 }
 
+bool load_image_nolog(const string& filename, image<vec4f>& img);
+bool load_image_nolog(const string& filename, image<vec4b>& img);
+bool load_volume_nolog(const string& filename, volume<float>& vol);
+
 bool load_scene_textures(yocto_scene& scene, const string& dirname,
     const load_scene_options& options) {
     if (options.skip_textures) return true;
@@ -1071,7 +264,7 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (texture.filename == "" || !texture.volume_data.empty()) return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
-            if (!load_volume1f_nolog(filename, texture.volume_data)) {
+            if (!load_volume_nolog(filename, texture.volume_data)) {
                 if (options.exit_on_error) {
                     exit_error = true;
                     return;
@@ -1113,6 +306,10 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     return true;
 }
 
+bool save_image_nolog(const string& filename, const image<vec4f>& img);
+bool save_image_nolog(const string& filename, const image<vec4b>& img);
+bool save_volume_nolog(const string& filename, const volume<float>& vol);
+
 // helper to save textures
 bool save_scene_textures(const yocto_scene& scene, const string& dirname,
     const save_scene_options& options) {
@@ -1150,7 +347,7 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (texture.volume_data.empty()) return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
-            if (!save_volume1f_nolog(filename, texture.volume_data)) {
+            if (!save_volume_nolog(filename, texture.volume_data)) {
                 if (options.exit_on_error) {
                     exit_error = true;
                     return;
@@ -1194,12 +391,12 @@ bool is_face_varying(const vector<vec4i>& quads_positions,
     return false;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IO UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 // Encode in base64
 string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
@@ -1302,12 +499,12 @@ string base64_decode(string const& encoded_string) {
     return ret;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // BUILTIN JSON FORMAT
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
@@ -2496,12 +1693,12 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
     return a.position == b.position && a.texturecoord == b.texturecoord &&
@@ -2969,7 +2166,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         if (scene.instances.back().shape < 0 &&
             scene.instances.back().surface < 0) {
             if (options.obj_preserve_face_varying ||
-                scene.instances.back().name.find("[ygl::facevarying]") !=
+                scene.instances.back().name.find("[yocto::facevarying]") !=
                     string::npos) {
                 scene.surfaces.push_back({});
                 scene.surfaces.back().name = scene.instances.back().name;
@@ -3493,12 +2690,12 @@ bool save_obj_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 static bool startswith(const string& str, const string& substr) {
     if (str.length() < substr.length()) return false;
@@ -4318,12 +3515,12 @@ bool save_gltf_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 // convert pbrt to json
 bool pbrt_to_json(const string& filename, json& js) {
@@ -4479,6 +3676,61 @@ bool pbrt_to_json(const string& filename, json& js) {
     // auto fstr = std::fstream(filename + ".json");
     // fstr << js;
     return true;
+}
+
+// Compute the fresnel term for dielectrics. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
+    auto eta = eta_;
+    if (cosw < 0) {
+        eta  = vec3f{1, 1, 1} / eta;
+        cosw = -cosw;
+    }
+
+    auto sin2 = 1 - cosw * cosw;
+    auto eta2 = eta * eta;
+
+    auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
+    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
+        return vec3f{1, 1, 1};  // tir
+
+    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
+    auto t1 = eta * t0;
+    auto t2 = eta * cosw;
+
+    auto rs = (vec3f{cosw, cosw, cosw} - t1) / (vec3f{cosw, cosw, cosw} + t1);
+    auto rp = (t0 - t2) / (t0 + t2);
+
+    return (rs * rs + rp * rp) / 2.0f;
+}
+
+// Compute the fresnel term for metals. Implementation from
+// https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
+vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
+    if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
+
+    cosw       = clamp(cosw, (float)-1, (float)1);
+    auto cos2  = cosw * cosw;
+    auto sin2  = clamp(1 - cos2, (float)0, (float)1);
+    auto eta2  = eta * eta;
+    auto etak2 = etak * etak;
+
+    auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
+    auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
+    auto a2plusb2   = vec3f{
+        sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
+    auto t1  = a2plusb2 + vec3f{cos2, cos2, cos2};
+    auto a_2 = (a2plusb2 + t0) / 2.0f;
+    auto a   = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
+    auto t2  = 2.0f * a * cosw;
+    auto rs  = (t1 - t2) / (t1 + t2);
+
+    auto t3 = vec3f{cos2, cos2, cos2} * a2plusb2 +
+              vec3f{sin2, sin2, sin2} * vec3f{sin2, sin2, sin2};
+    auto t4 = t2 * sin2;
+    auto rp = rs * (t3 - t4) / (t3 + t4);
+
+    return (rp + rs) / 2.0f;
 }
 
 // load pbrt scenes
@@ -4746,7 +3998,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 } else if (type == "metal") {
                     auto eta           = get_vec3f(jcmd.at("eta"));
                     auto k             = get_vec3f(jcmd.at("k"));
-                    material.specular  = fresnel_metal(1, eta, k);
+                    material.specular  = pbrt_fresnel_metal(1, eta, k);
                     material.roughness = 0;
                 } else if (type == "substrate") {
                     if (jcmd.count("Kd"))
@@ -5153,12 +4405,12 @@ void pbrt_flipyz_scene(yocto_scene& scene) {
     }
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF BINARY SCENE FORMAT
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 // serialize_bin( ) can both save/load data to/from a binary file. The behaviour
 // is set by the boolean 'save'. serialize_bin(name, file, true) : writes name
@@ -5500,12 +4752,12 @@ bool save_ybin_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 // Reset mesh data
 void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
@@ -6093,17 +5345,17 @@ bool save_obj_facevarying_mesh(const string& filename,
     return true;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF OBJ IO
 // -----------------------------------------------------------------------------
-namespace ygl {}
+namespace yocto {}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PLY IO
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 // Load ply mesh
 bool load_ply(const string& filename, ply_data& ply) {
@@ -6242,12 +5494,12 @@ bool load_ply(const string& filename, ply_data& ply) {
     return true;
 }
 
-}  // namespace ygl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto {
 
 #if 0
 
@@ -6394,4 +5646,4 @@ bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_position
 
 #endif
 
-}  // namespace ygl
+}  // namespace yocto

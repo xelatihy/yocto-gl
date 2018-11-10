@@ -26,9 +26,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
-using namespace ygl;
+#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_utils.h"
+using namespace yocto;
 
 string to_string(const obj_vertex& v) {
     auto s = std::to_string(v.position);
@@ -43,9 +44,8 @@ string to_string(const obj_vertex& v) {
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(
-        parser, argc, argv, "Process obj files directly", "yobjproc");
+    auto parser = make_cmdline_parser(
+        argc, argv, "Process obj files directly", "yobjproc");
     auto translation = parse_argument(
         parser, "--translation,-t", zero3f, "translation");
     auto scale = parse_argument(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
