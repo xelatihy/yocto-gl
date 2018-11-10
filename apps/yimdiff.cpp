@@ -33,7 +33,7 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_utils.h"
-using namespace yocto_gl;
+using namespace yoctogl;
 
 template <typename T>
 image<vec<T, 4>> compute_diff_image(

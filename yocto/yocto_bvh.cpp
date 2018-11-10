@@ -37,7 +37,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF RAY-PRIMITIVE INTERSECTION FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 // Intersect a ray with a point (approximate)
 bool intersect_point(
@@ -205,12 +205,12 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     return tmin <= tmax;
 }
 
-}  // namespace yocto_gl
+}  // namespace yoctogl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENRTATION OF POINT-PRIMITIVE DISTANCE FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 // TODO: documentation
 bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
@@ -348,12 +348,12 @@ bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
     return true;
 }
 
-}  // namespace yocto_gl
+}  // namespace yoctogl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR BVH
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 // Cleanup
 void clear_shape_bvh_embree(bvh_shape& bvh) {
@@ -1379,4 +1379,4 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
     }
 #endif
 
-}  // namespace yocto_gl
+}  // namespace yoctogl

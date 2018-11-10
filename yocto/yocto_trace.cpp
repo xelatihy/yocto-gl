@@ -31,7 +31,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 // Trace stats.
 atomic<uint64_t> _trace_npaths{0};
@@ -1884,11 +1884,11 @@ void reset_trace_stats() {
     _trace_npaths = 0;
 }
 
-}  // namespace yocto_gl
+}  // namespace yoctogl
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PATH TRACING SUPPORT FUNCTION
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 // Phong exponent to roughness.
 float specular_exponent_to_roughness(float exponent) {
@@ -1993,12 +1993,12 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
     return wh_local;
 }
 
-}  // namespace yocto_gl
+}  // namespace yoctogl
 
 // -----------------------------------------------------------------------------
 // NUMERICAL TESTS FOR MONTE CARLO INTEGRATION
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 float integrate_func_base(
     function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
@@ -2130,4 +2130,4 @@ void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
     }
 }
 
-}  // namespace yocto_gl
+}  // namespace yoctogl

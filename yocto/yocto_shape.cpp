@@ -31,7 +31,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 // Compute per-vertex tangents for lines.
 vector<vec3f> compute_vertex_tangents(
@@ -882,12 +882,12 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
         merge_texturecoords.end());
 }
 
-}  // namespace yocto_gl
+}  // namespace yoctogl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace yocto_gl {
+namespace yoctogl {
 
 // Make a quad.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_shape(
@@ -1965,5 +1965,5 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     return {lines, positions, normals, texturecoords, radius};
 }
 
-}  // namespace yocto_gl
+}  // namespace yoctogl
 
