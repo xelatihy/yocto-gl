@@ -26,9 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
-using namespace ygl;
+#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_utils.h"
+using namespace yocto;
 
 bool mkdir(const string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
@@ -44,8 +46,7 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
+    auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
     auto skip_textures = parse_argument(
         parser, "--skip-textures", false, "Disable textures.");
     auto uniform_txt = parse_argument(

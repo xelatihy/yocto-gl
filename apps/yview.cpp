@@ -26,9 +26,11 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
-#include "yglutils.h"
+#include "../yocto/yocto_scene.h"
+#include "../yocto/yocto_sceneio.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_utils.h"
+#include "yocto_opengl.h"
 #include "ysceneui.h"
 
 struct drawgl_shape {
@@ -596,16 +598,16 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
-        check_glerror();
+        check_opengl_error();
         set_opengl_uniform(state.program, "mtype"), 0);
         glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
         set_opengl_uniform(state.program, "op"), material.op);
         set_opengl_uniform(state.program, "shp_normal_offset"), 0.01f);
-        check_glerror();
+        check_opengl_error();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        check_glerror();
+        check_opengl_error();
     }
 #endif
         if (options.edges) log_error("edges are momentarily disabled");
@@ -695,16 +697,16 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
         enable_glculling(false);
-        check_glerror();
+        check_opengl_error();
         set_opengl_uniform(state.program, "mtype"), 0);
         glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
         set_opengl_uniform(state.program, "op"), material.op);
         set_opengl_uniform(state.program, "shp_normal_offset"), 0.01f);
-        check_glerror();
+        check_opengl_error();
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
         glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        check_glerror();
+        check_opengl_error();
     }
 #endif
         if (options.edges) log_error("edges are momentarily disabled");
@@ -777,7 +779,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         }
     }
 
-    if (options.wireframe) set_glwireframe(true);
+    if (options.wireframe) set_opengl_wireframe(true);
     for (auto instance_id = 0; instance_id < scene.instances.size();
          instance_id++) {
         auto& instance = scene.instances[instance_id];
@@ -789,7 +791,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     }
 
     unbind_opengl_program();
-    if (options.wireframe) set_glwireframe(false);
+    if (options.wireframe) set_opengl_wireframe(false);
 }
 
 void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
@@ -973,8 +975,8 @@ void draw_widgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
 
-    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
-    set_glviewport(get_opengl_framebuffer_size(win));
+    clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
+    set_opengl_viewport(get_opengl_framebuffer_size(win));
     if (app.load_done) {
         app.draw_options.image_size = {0, get_opengl_framebuffer_size(win).y};
         draw_glscene(app.state, app.scene, get_opengl_framebuffer_size(win),
@@ -1130,8 +1132,7 @@ int main(int argc, char* argv[]) {
     app_state app{};
 
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "views scenes inteactively", "yview");
+    auto parser = make_cmdline_parser(argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
     app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r",

@@ -30,9 +30,10 @@
 // Compare two images are returns either 0 or 1.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
-using namespace ygl;
+#include "../yocto/yocto_image.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_utils.h"
+using namespace yocto;
 
 template <typename T>
 image<vec<T, 4>> compute_diff_image(
@@ -73,8 +74,7 @@ image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "Compares two images", "yimdiff");
+    auto parser = make_cmdline_parser(argc, argv, "Compares two images", "yimdiff");
     auto threshold = parse_argument(
         parser, "--threshold,-t", 0.1f, "Thhhreshold");
     auto output = parse_argument(

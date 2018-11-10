@@ -26,9 +26,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/ygl.h"
-#include "../yocto/yglio.h"
-using namespace ygl;
+#include "../yocto/yocto_image.h"
+#include "../yocto/yocto_imageio.h"
+#include "../yocto/yocto_utils.h"
+using namespace yocto;
 
 #if 0
 template <typename Image>
@@ -129,8 +130,7 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "Process images", "yimproc");
+    auto parser = make_cmdline_parser(argc, argv, "Process images", "yimproc");
     auto tonemap = parse_argument(parser, "--tonemap,-t", false, "Tonemap image");
     auto exposure = parse_argument(
         parser, "--exposure,-e", 0.0f, "Tonemap exposure");

@@ -27,7 +27,7 @@
 //
 //
 
-#include "yglutils.h"
+#include "yocto_opengl.h"
 #include <cstdarg>
 
 #ifdef __APPLE__
@@ -41,13 +41,13 @@
 #include "ext/imgui/imgui_impl_glfw.h"
 #include "ext/imgui/imgui_impl_opengl3.h"
 
-namespace ygl {
+namespace yocto {
 
-void check_glerror() {
+void check_opengl_error() {
     if (glGetError() != GL_NO_ERROR) log_error("gl error");
 }
 
-void clear_glframebuffer(const vec4f& color, bool clear_depth) {
+void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
     glClearColor(color.x, color.y, color.z, color.w);
     if (clear_depth) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -57,18 +57,18 @@ void clear_glframebuffer(const vec4f& color, bool clear_depth) {
     }
 }
 
-void set_glviewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
+void set_opengl_viewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
 
-void set_glviewport(const vec2i& size) { glViewport(0, 0, size.x, size.y); }
+void set_opengl_viewport(const vec2i& size) { glViewport(0, 0, size.x, size.y); }
 
-void set_glwireframe(bool enabled) {
+void set_opengl_wireframe(bool enabled) {
     if (enabled)
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     else
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 }
 
-void set_glblending(bool enabled) {
+void set_opengl_blending(bool enabled) {
     if (enabled) {
         glEnable(GL_BLEND);
         glBlendEquationSeparate(GL_FUNC_ADD, GL_FUNC_ADD);
@@ -514,7 +514,7 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
     }
 
     // draw
-    check_glerror();
+    check_opengl_error();
     bind_opengl_program(gl_prog);
     set_opengl_uniform_texture(gl_prog, "txt", gl_txt, 0);
     set_opengl_uniform(gl_prog, "window_size",
@@ -526,7 +526,7 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
     set_opengl_vertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
     draw_opengl_triangles(gl_triangles, 2);
     unbind_opengl_program();
-    check_glerror();
+    check_opengl_error();
 }
 
 void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
@@ -947,4 +947,4 @@ void end_child_opengl_widget(const opengl_window& win) {
     ImGui::PopID();
 }
 
-}  // namespace ygl
+}  // namespace yocto
