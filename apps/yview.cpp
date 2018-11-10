@@ -832,8 +832,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             init_opengl_elementbuffer(
                 vbos.triangles_buffer, shape.triangles, false);
         if (!shape.quads.empty()) {
-            auto triangles = vector<vec3i>{};
-            convert_quads_to_triangles(shape.quads, triangles);
+            auto triangles = convert_quads_to_triangles(shape.quads);
             init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
         }
         state.shapes[shape_id] = vbos;
@@ -865,8 +864,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         vbos.split_quads_buffer = {};
         for (auto& quads : split_quads) {
             if (!quads.empty()) vbos.split_quads_buffer.push_back({});
-            auto triangles = vector<vec3i>{};
-            convert_quads_to_triangles(quads, triangles);
+            auto triangles = convert_quads_to_triangles(quads);
             init_opengl_elementbuffer(
                 vbos.split_quads_buffer.back(), triangles, false);
         }

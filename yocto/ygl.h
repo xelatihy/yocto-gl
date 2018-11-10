@@ -2502,18 +2502,16 @@ inline vector<vec2i> get_edges(const vector<vec4i>& quads) {
 }
 
 // Convert quads to triangles
-void convert_quads_to_triangles(
-    const vector<vec4i>& quads, vector<vec3i>& triangles);
+vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-void convert_quads_to_triangles(
-    const vector<vec4i>& quads, vector<vec3i>& triangles, int row_length);
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length);
 // Convert triangles to quads by creating degenerate quads
-void convert_triangles_to_quads(
-    const vector<vec3i>& triangles, vector<vec4i>& quads);
+vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
-void convert_bezier_to_lines(const vector<vec4i>& beziers, vector<vec2i>& lines);
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
@@ -3585,7 +3583,8 @@ bbox3f compute_shape_bounds(const yocto_shape& shape);
 bbox3f compute_scene_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
+vector<vec3f> compute_shape_normals(const yocto_shape& shape);
+vector<vec3f> compute_surface_normals(const yocto_surface& surface);
 
 // Updates/refits bvh.
 void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,

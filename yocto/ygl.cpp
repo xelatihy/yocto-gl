@@ -539,21 +539,22 @@ vector<vec2i> get_boundary(const edge_map& emap) {
 }
 
 // Convert quads to triangles
-void convert_quads_to_triangles(
-    const vector<vec4i>& quads, vector<vec3i>& triangles) {
-    triangles = vector<vec3i>();
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads) {
+    auto triangles = vector<vec3i>();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
         if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
     }
+    return triangles;
 }
 
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-void convert_quads_to_triangles(
-    const vector<vec4i>& quads, vector<vec3i>& triangles, int row_length) {
-    triangles = vector<vec3i>();
+vector<vec3i> convert_quads_to_triangles(
+    const vector<vec4i>& quads, int row_length) {
+    auto triangles = vector<vec3i>();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
@@ -575,25 +576,28 @@ void convert_quads_to_triangles(
             }
         }
 #endif
+    return triangles;
 }
 
 // Convert triangles to quads by creating degenerate quads
-void convert_triangles_to_quads(
-    const vector<vec3i>& triangles, vector<vec4i>& quads) {
-    quads = vector<vec4i>();
+vector<vec4i> convert_triangles_to_quads(
+    const vector<vec3i>& triangles) {
+    auto quads = vector<vec4i>();
     quads.reserve(triangles.size());
     for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
+    return quads;
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
-void convert_bezier_to_lines(const vector<vec4i>& beziers, vector<vec2i>& lines) {
-    lines = vector<vec2i>();
+vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
+    auto lines = vector<vec2i>();
     lines.reserve(beziers.size() * 3);
     for (auto b : beziers) {
         lines.push_back({b.x, b.y});
         lines.push_back({b.y, b.z});
         lines.push_back({b.z, b.w});
     }
+    return lines;
 }
 
 // Convert face varying data to single primitives. Returns the quads indices
@@ -3480,8 +3484,7 @@ void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f> bnorm;
     vector<vec2f> btexcoord;
     auto          alltriangles    = striangles;
-    auto          quads_triangles = vector<vec3i>{};
-    convert_quads_to_triangles(squads, quads_triangles);
+    auto          quads_triangles = convert_quads_to_triangles(squads);
     alltriangles.insert(
         alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
     sample_triangles_points(alltriangles, spos, snorm, stexcoord, steps.y, bpos,
@@ -4158,27 +4161,24 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
 }
 
 // Compute vertex normals
-void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
+vector<vec3f> compute_shape_normals(const yocto_shape& shape) {
     if (!shape.points.empty()) {
-        normals = vector<vec3f>(shape.positions.size(), {0, 0, 1});
+        return vector<vec3f>(shape.positions.size(), {0, 0, 1});
     } else if (!shape.lines.empty()) {
-        return compute_vertex_tangents(normals, shape.lines, shape.positions);
+        return compute_vertex_tangents(shape.lines, shape.positions);
     } else if (!shape.triangles.empty()) {
-        return compute_vertex_normals(normals, shape.triangles, shape.positions);
+        return compute_vertex_normals(shape.triangles, shape.positions);
     } else {
-        normals = {};
-        return;
+        return {};
     }
 }
 
 // Compute vertex normals
-void compute_surface_normals(const yocto_surface& shape, vector<vec3f>& normals) {
+vector<vec3f> compute_surface_normals(const yocto_surface& shape) {
     if (!shape.quads_positions.empty()) {
-        return compute_vertex_normals(normals,
-            shape.quads_positions, shape.positions);
+        return compute_vertex_normals(shape.quads_positions, shape.positions);
     } else {
-        normals = {};
-        return;
+        return {};
     }
 }
 
@@ -4244,7 +4244,7 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
     }
 
     if (compute_normals) {
-        compute_shape_normals(subdivided, subdivided.normals);
+        subdivided.normals = compute_shape_normals(subdivided);
     }
 
     return subdivided;
@@ -4293,7 +4293,7 @@ yocto_surface subdivide_surface(const yocto_surface& surface,
     if (compute_normals) {
         if (!subdivided.quads_positions.empty())
             subdivided.quads_normals = subdivided.quads_positions;
-        compute_surface_normals(subdivided, subdivided.normals);
+        subdivided.normals = compute_surface_normals(subdivided);
     }
 
     return subdivided;
@@ -4305,11 +4305,7 @@ yocto_shape displace_shape(const yocto_shape& shape,
         return shape;
     }
     auto displaced_shape = shape;
-    auto normals         = vector<vec3f>();
-    if (shape.normals.empty())
-        compute_shape_normals(shape, normals);
-    else
-        normals = shape.normals;
+    auto normals         = (shape.normals.empty()) ? compute_shape_normals(shape) : shape.normals;
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
         displaced_shape.positions[vid] += normals[vid] *
                                           displacement.height_scale *
@@ -4318,7 +4314,7 @@ yocto_shape displace_shape(const yocto_shape& shape,
     }
 
     if (compute_normals)
-        compute_shape_normals(displaced_shape, displaced_shape.normals);
+        displaced_shape.normals = compute_shape_normals(displaced_shape);
 
     return displaced_shape;
 }
@@ -4349,7 +4345,7 @@ yocto_surface displace_surface(const yocto_surface& surface,
 
     if (compute_normals) {
         displaced_surface.quads_normals = displaced_surface.quads_positions;
-        compute_surface_normals(displaced_surface, displaced_surface.normals);
+        displaced_surface.normals = compute_surface_normals(displaced_surface);
     }
 
     return displaced_surface;

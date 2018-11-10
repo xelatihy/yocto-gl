@@ -1185,13 +1185,11 @@ void merge_triangles_and_quads(
     vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
     if (quads.empty()) return;
     if (force_triangles) {
-        auto qtriangles = vector<vec3i>{};
-        convert_quads_to_triangles(quads, qtriangles);
+        auto qtriangles = convert_quads_to_triangles(quads);
         triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
         quads = {};
     } else {
-        auto tquads = vector<vec4i>{};
-        convert_triangles_to_quads(triangles, tquads);
+        auto tquads = convert_triangles_to_quads(triangles);
         quads.insert(quads.end(), tquads.begin(), tquads.end());
         triangles = {};
     }
@@ -4205,8 +4203,7 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
             pjs["mode"] = 4;
         }
         if (!shape.quads.empty()) {
-            auto triangles = vector<vec3i>{};
-            convert_quads_to_triangles(shape.quads, triangles);
+            auto triangles = convert_quads_to_triangles(shape.quads);
             pjs["indices"] = add_accessor(
                 (int)triangles.size() * 3, "SCALAR", true);
             pjs["mode"] = 4;
@@ -4274,8 +4271,7 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     if (!write_values(fs, shape.points)) return false;
     if (!write_values(fs, shape.lines)) return false;
     if (!write_values(fs, shape.triangles)) return false;
-    auto qtriangles = vector<vec3i>{};
-    convert_quads_to_triangles(shape.quads, qtriangles);
+    auto qtriangles = convert_quads_to_triangles(shape.quads);
     if (!write_values(fs, qtriangles)) return false;
 
     return true;
