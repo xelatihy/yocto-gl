@@ -242,8 +242,8 @@
 // environment is used.
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
-// 2. prepare lights for rendering with `init_trace_lights()`
-// 3. create the random number generators with `init_trace_pixels()`
+// 2. prepare lights for rendering with `make_trace_lights()`
+// 3. create the random number generators with `make_trace_pixels()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -3801,7 +3801,7 @@ struct trace_lights {
 };
 
 // Initialize lights.
-void        init_trace_lights(trace_lights& lights, const yocto_scene& scene);
+trace_lights        make_trace_lights(const yocto_scene& scene);
 inline bool empty(const trace_lights& lights) {
     return lights.instances.empty() && lights.environments.empty();
 }
@@ -3815,7 +3815,7 @@ struct trace_pixel {
 };
 
 // Initialize state of the renderer.
-void init_trace_pixels(image<trace_pixel>& pixels, const vec2i& image_size,
+image<trace_pixel> make_trace_pixels(const vec2i& image_size,
     uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
@@ -3863,7 +3863,7 @@ struct trace_image_options {
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
+image<vec4f> trace_image(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights,
     const trace_image_options& options);
 

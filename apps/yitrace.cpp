@@ -92,16 +92,15 @@ void start_rendering_async(app_state& app) {
     app.trace_stop   = false;
     app.trace_sample = 0;
 
-    auto& camera   = app.scene.cameras[app.trace_options.camera_id];
-    app.image_size = get_camera_image_size(camera, app.trace_options.image_size);
+    app.image_size = get_camera_image_size(app.scene.cameras[app.trace_options.camera_id], app.trace_options.image_size);
     app.rendered_image = image<vec4f>{app.image_size};
     app.display_image  = image<vec4f>{app.image_size};
+    app.trace_pixels = make_trace_pixels(app.image_size, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
     preview_options.image_size /= app.preview_ratio;
     preview_options.num_samples = 1;
-    trace_image(
-        app.preview_image, app.scene, app.bvh, app.lights, preview_options);
+    app.preview_image = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = tonemap_image(app.preview_image,
         app.display_exposure, app.display_filmic, app.display_srgb);
     auto large_preview   = image<vec4f>{app.image_size};
@@ -150,7 +149,7 @@ bool load_scene_sync(app_state& app) {
 
     // init renderer
     app.status = "initializing lights";
-    init_trace_lights(app.lights, app.scene);
+    app.lights = make_trace_lights(app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights) &&

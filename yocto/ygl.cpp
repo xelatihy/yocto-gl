@@ -7525,9 +7525,8 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 }
 
 // Init a sequence of random number generators.
-void init_trace_pixels(
-    image<trace_pixel>& pixels, const vec2i& image_size, uint64_t seed) {
-    pixels   = image<trace_pixel>{image_size};
+image<trace_pixel> make_trace_pixels(const vec2i& image_size, uint64_t seed) {
+    auto pixels   = image<trace_pixel>{image_size};
     auto rng = make_rng(1301081);
     for (auto j = 0; j < pixels.size().y; j++) {
         for (auto i = 0; i < pixels.size().x; i++) {
@@ -7535,12 +7534,13 @@ void init_trace_pixels(
             pixel.rng   = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
+    return pixels;
 }
 
 // Init trace lights
-void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
+trace_lights make_trace_lights(const yocto_scene& scene) {
     auto scope = log_trace_scoped("making trace lights");
-    lights     = trace_lights{};
+    auto lights     = trace_lights{};
 
     lights.shape_elements_cdf.resize(scene.shapes.size());
     lights.surface_elements_cdf.resize(scene.surfaces.size());
@@ -7578,19 +7578,18 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         }
     }
 
-    if (lights.instances.empty() && lights.environments.empty()) lights = {};
+    if (lights.instances.empty() && lights.environments.empty()) return {};
+    return lights;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
+image<vec4f> trace_image(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights,
     const trace_image_options& options) {
     auto  scope      = log_trace_scoped("tracing image");
-    auto& camera     = scene.cameras.at(options.camera_id);
-    auto  image_size = get_camera_image_size(camera, options.image_size);
-    rendered_image.resize(image_size);
-    auto pixels = image<trace_pixel>{};
-    init_trace_pixels(pixels, rendered_image.size());
+    auto  image_size = get_camera_image_size(scene.cameras.at(options.camera_id), options.image_size);
+    auto rendered_image = image<vec4f>{image_size};
+    auto pixels = make_trace_pixels(image_size, options.random_seed);
     auto regions = make_image_regions(rendered_image.size());
 
     if (options.run_serially) {
@@ -7615,18 +7614,13 @@ void trace_image(image<vec4f>& rendered_image, const yocto_scene& scene,
         }
         for (auto& t : threads) t.join();
     }
+    return rendered_image;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
-    if (current_sample == 0) {
-        auto& camera     = scene.cameras.at(options.camera_id);
-        auto  image_size = get_camera_image_size(camera, options.image_size);
-        rendered_image   = image<vec4f>{image_size, zero4f};
-        init_trace_pixels(pixels, image_size, options.random_seed);
-    }
     auto regions = make_image_regions(rendered_image.size());
     auto scope   = log_trace_scoped(
         "tracing samples {}-{}", current_sample, options.num_samples);
@@ -7667,7 +7661,7 @@ void trace_image_async_start(image<vec4f>& rendered_image,
     auto& camera     = scene.cameras.at(options.camera_id);
     auto  image_size = get_camera_image_size(camera, options.image_size);
     rendered_image   = {image_size, zero4f};
-    init_trace_pixels(pixels, image_size, options.random_seed);
+    pixels = make_trace_pixels(image_size, options.random_seed);
     auto regions = make_image_regions(rendered_image.size());
     if (options.cancel_flag) *options.cancel_flag = false;
 
