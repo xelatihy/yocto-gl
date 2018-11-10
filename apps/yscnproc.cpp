@@ -30,7 +30,7 @@
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_utils.h"
-using namespace ygl;
+using namespace yocto_gl;
 
 bool mkdir(const string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")

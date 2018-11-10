@@ -61,7 +61,7 @@
 // -----------------------------------------------------------------------------
 // IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Image container.
 template <typename T>
@@ -161,12 +161,12 @@ void tonemap_image_region(image<vec4f>& ldr, const bbox2i& region,
 // Resize an image.
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // EXAMPLE IMAGES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Make example images.
 image<vec4f> make_grid_image(const vec2i& size, int tile = 8,
@@ -207,12 +207,12 @@ image<vec4f> make_ridge_image(const vec2i& size, float scale = 1,
 image<vec4f> make_turbulence_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // VOLUME TYPE AND UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Volume container.
 template <typename T>
@@ -275,12 +275,12 @@ struct volume {
 volume<float> make_test_volume(
     const vec3i& size, float scale = 10, float exponent = 6);
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Element-wise float to byte conversion.
 inline vec4b float_to_byte(const vec4f& a) {
@@ -382,12 +382,12 @@ vec3f xyY_to_xyz(const vec3f& xyY);
 vec3f xyz_to_rgb(const vec3f& xyz);
 vec3f rgb_to_xyz(const vec3f& rgb);
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Gets pixels in an image region
 template <typename T>
@@ -411,6 +411,6 @@ inline image<T> get_image_region(const image<T>& img, const bbox2i& region) {
     return clipped;
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 #endif

@@ -29,7 +29,7 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_utils.h"
-using namespace ygl;
+using namespace yocto_gl;
 
 #if 0
 template <typename Image>

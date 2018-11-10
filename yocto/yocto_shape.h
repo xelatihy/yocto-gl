@@ -107,7 +107,7 @@
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Line properties.
 inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
@@ -205,12 +205,12 @@ inline T interpolate_bezier_derivative(
            (p3 - p2) * 3 * u * u;
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // SHAPE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
 vector<vec3f> compute_vertex_tangents(
@@ -430,12 +430,12 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed = 7);
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // SHAPE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
@@ -517,6 +517,6 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     const vec2f& noise = zero2f, const vec2f& clump = zero2f,
     const vec2f& rotation = zero2f, int seed = 7);
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 #endif

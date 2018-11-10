@@ -31,7 +31,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Convert between CIE XYZ and xyY
 vec3f xyz_to_xyY(const vec3f& xyz) {
@@ -102,12 +102,12 @@ vec3f rgb_to_hsv(const vec3f& rgb) {
         fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -218,12 +218,12 @@ void tonemap_image_region(image<vec4f>& ldr, const bbox2i& region,
     }
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGE EXAMPLES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Make a grid image
 image<vec4f> make_grid_image(
@@ -574,12 +574,12 @@ image<vec4f> make_turbulence_image(const vec2i& size, float scale,
     return img;
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME EXAMPLES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // make a simple example volume
 volume<float> make_test_volume(const vec3i& size, float scale, float exponent) {
@@ -598,4 +598,4 @@ volume<float> make_test_volume(const vec3i& size, float scale, float exponent) {
     return vol;
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl

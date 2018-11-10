@@ -29,7 +29,7 @@
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
 #include "../yocto/yocto_utils.h"
-using namespace ygl;
+using namespace yocto_gl;
 
 string to_string(const obj_vertex& v) {
     auto s = std::to_string(v.position);

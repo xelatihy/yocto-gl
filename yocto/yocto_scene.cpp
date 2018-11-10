@@ -32,7 +32,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Computes a shape bounding box.
 bbox3f compute_shape_bounds(const yocto_shape& shape) {
@@ -759,12 +759,12 @@ void log_validation_errors(const yocto_scene& scene, bool skip_textures) {
         log_error(err + " [validation]");
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR EVAL AND SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Scene intersection.
 scene_intersection intersect_scene(const yocto_scene& scene,
@@ -1572,12 +1572,12 @@ bool is_material_volume_colored(const yocto_material& material) {
 }
 
 
-}  // namespace ygl
+}  // namespace yocto_gl
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace ygl {
+namespace yocto_gl {
 
 // Merge scene into one another
 void merge_scene(yocto_scene& merge_scene, const yocto_scene& merge_from) {
@@ -1747,5 +1747,5 @@ void print_stats(const yocto_scene& scene) {
     printf("bbox max: %g %g %g\n", bbox.max.x, bbox.max.y, bbox.max.z);
 }
 
-}  // namespace ygl
+}  // namespace yocto_gl
 

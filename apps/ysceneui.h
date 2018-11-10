@@ -32,7 +32,7 @@
 
 #include "../yocto/yocto_scene.h"
 #include "yocto_opengl.h"
-using namespace ygl;
+using namespace yocto_gl;
 
 inline const unordered_map<int, string>& animation_type_names() {
     static auto names = unordered_map<int, string>{
