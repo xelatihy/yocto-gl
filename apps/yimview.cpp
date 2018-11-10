@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2017 Fabio Pellacini
+// Copyright (c) 2016 -- 2018 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,165 +26,325 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
+#include "../yocto/ygl.h"
+#include "../yocto/yglio.h"
+#include "yglutils.h"
+using namespace ygl;
 
-// Generic image that contains either an HDR or an LDR image, giving access
-// to both. This is helpful when writing viewers or generic image
-// manipulation code
-struct gimage {
-    /// image path
-    std::string filename;
-    /// HDR image content
-    ygl::image4f hdr;
-    /// LDR image content
-    ygl::image4b ldr;
-
-    /// image width
-    int width() const {
-        if (!hdr.empty()) return hdr.width();
-        if (!ldr.empty()) return ldr.width();
-        return 0;
-    }
-
-    /// image height
-    int height() const {
-        if (!hdr.empty()) return hdr.height();
-        if (!ldr.empty()) return ldr.height();
-        return 0;
-    }
+struct image_stats {
+    bbox4f pxl_bounds = {zero4f, zero4f};
+    bbox1f lum_bounds = {0, 0};
 };
 
-// Loads a generic image
-inline gimage load_gimage(const std::string& filename) {
-    auto img = gimage();
-    img.filename = filename;
-    if (ygl::is_hdr_filename(filename)) {
-        img.hdr = ygl::load_image4f(filename);
-    } else {
-        img.ldr = ygl::load_image4b(filename);
+struct app_image {
+    // original data
+    string       filename = "";
+    string       outname  = "";
+    string       name     = "";
+    image<vec4f> img      = {};
+
+    // diplay image
+    image<vec4f>   display = {};
+    opengl_texture gl_txt  = {};
+
+    // image stats
+    image_stats stats;
+
+    // tonemapping values
+    float exposure = 0;
+    bool  filmic   = false;
+    bool  srgb     = true;
+
+    // computation futures
+    atomic<bool> load_done, display_done, stats_done, texture_done;
+    thread       load_thread, display_thread, stats_thread, save_thread;
+    atomic<bool> display_stop;
+    concurrent_queue<image_region> display_queue;
+    string                         error_msg = "";
+
+    // viewing properties
+    vec2f image_center = zero2f;
+    float image_scale  = 1;
+    bool  zoom_to_fit  = false;
+
+    // cleanup and stop threads
+    ~app_image() {
+        display_stop = true;
+        if (load_thread.joinable()) load_thread.join();
+        if (display_thread.joinable()) display_thread.join();
+        if (stats_thread.joinable()) stats_thread.join();
+        if (save_thread.joinable()) save_thread.join();
     }
-    if (img.hdr.empty() && img.ldr.empty()) {
-        throw std::runtime_error("cannot load image " + img.filename);
-    }
-    return img;
-}
+};
 
 struct app_state {
-    std::vector<gimage*> imgs;
-    int cur_img = 0;
-
-    ygl::gl_stdimage_program gl_prog = {};
-    std::unordered_map<gimage*, ygl::gl_texture> gl_txt = {};
-    ygl::gl_stdimage_params params;
-
-    ~app_state() {
-        for (auto v : imgs) delete v;
-    }
+    // images
+    deque<app_image> imgs;
+    int              img_id = 0;
 };
 
-void draw(ygl::gl_window* win) {
-    auto app = (app_state*)get_user_pointer(win);
-    auto img = app->imgs[app->cur_img];
-    auto window_size = get_window_size(win);
-    auto framebuffer_size = get_framebuffer_size(win);
-    ygl::gl_set_viewport(framebuffer_size);
-    ygl::draw_image(
-        app->gl_prog, app->gl_txt.at(img), window_size, app->params);
-
-    if (ygl::begin_widgets(win, "yimview")) {
-        ygl::draw_label_widget(win, "filename", img->filename);
-        ygl::draw_label_widget(
-            win, "size", "{} x {}", img->width(), img->height());
-        ygl::draw_params_widgets(win, "", app->params);
-        ygl::draw_imageinspect_widgets(
-            win, "", img->hdr, img->ldr, get_mouse_posf(win), app->params);
+// compute min/max
+void update_stats_async(app_image& img) {
+    img.stats_done       = false;
+    img.stats.pxl_bounds = invalid_bbox4f;
+    img.stats.lum_bounds = invalid_bbox1f;
+    for (auto p : img.img.pixels) {
+        img.stats.pxl_bounds += p;
+        img.stats.lum_bounds += luminance(xyz(p));
     }
-    ygl::end_widgets(win);
-
-    ygl::swap_buffers(win);
+    img.stats_done = true;
 }
 
-void run_ui(app_state* app) {
-    // window
-    auto win = ygl::make_window(
-        app->imgs[0]->width(), app->imgs[0]->height(), "yimview", app);
-    ygl::set_window_callbacks(win, nullptr, nullptr, draw);
+void update_display_async(app_image& img) {
+    auto scope       = log_trace_scoped("computing display image");
+    img.display_done = false;
+    img.texture_done = false;
+    auto regions     = vector<image_region>{};
+    make_image_regions(regions, img.img.size);
+    parallel_foreach(regions,
+        [&img](const image_region& region) {
+            tonemap_image_region(img.img, img.display, region, img.exposure,
+                img.filmic, img.srgb);
+            img.display_queue.push(region);
+        },
+        &img.display_stop);
+    img.display_done = true;
+}
 
-    // window values
-    int mouse_button = 0;
-    ygl::vec2f mouse_pos, mouse_last;
+// load image
+void load_image_async(app_image& img) {
+    img.load_done    = false;
+    img.stats_done   = false;
+    img.display_done = false;
+    img.texture_done = false;
+    img.error_msg    = "";
+    img.img          = {};
+    if (!load_image(img.filename, img.img)) {
+        img.error_msg = "cannot load image";
+        return;
+    }
+    img.load_done      = true;
+    img.display        = img.img;
+    img.display_thread = thread([&img]() { update_display_async(img); });
+    img.stats_thread   = thread([&img]() { update_stats_async(img); });
+}
 
-    // init widgets
-    ygl::init_widgets(win);
-
-    // load textures
-    app->gl_prog = ygl::make_stdimage_program();
-    for (auto img : app->imgs) {
-        if (!img->hdr.empty()) {
-            app->gl_txt[img] = make_texture(img->hdr, false, false, true);
-        } else if (!img->ldr.empty()) {
-            app->gl_txt[img] = make_texture(img->ldr, false, false, true);
+// save an image
+void save_image_async(app_image& img) {
+    if (!is_hdr_filename(img.outname)) {
+        auto img8 = image<vec4b>{};
+        float_to_byte(img.display, img8);
+        if (!save_image(img.outname, img8)) {
+            img.error_msg = "error saving image";
+        }
+    } else {
+        auto linear = image<vec4f>{};
+        srgb_to_linear(img.display, linear);
+        if (!save_image(img.outname, linear)) {
+            img.error_msg = "error saving image";
         }
     }
+}
 
-    while (!should_close(win)) {
-        mouse_last = mouse_pos;
-        mouse_pos = ygl::get_mouse_posf(win);
-        mouse_button = ygl::get_mouse_button(win);
+// add a new image
+void add_new_image(app_state& app, const string& filename, const string& outname,
+    float exposure = 0, bool filmic = false, bool srgb = true) {
+    app.imgs.emplace_back();
+    auto& img    = app.imgs.back();
+    img.filename = filename;
+    img.outname = (outname == "") ? replace_extension(filename, ".display.png") :
+                                    outname;
+    img.name        = get_filename(filename);
+    img.exposure    = exposure;
+    img.filmic      = filmic;
+    img.srgb        = srgb;
+    img.load_done   = false;
+    img.display_done= false;
+    img.stats_done  = false;
+    img.load_thread = thread([&img]() { load_image_async(img); });
+    app.img_id      = (int)app.imgs.size() - 1;
+}
 
-        auto img = app->imgs[app->cur_img];
-        ygl::set_window_title(
-            win, ygl::format("yimview | {} | {}x{}", img->filename,
-                     img->width(), img->height()));
+void draw_opengl_widgets(const opengl_window& win) {
+    auto& app    = *(app_state*)get_opengl_user_pointer(win);
+    auto  edited = false;
+    begin_opengl_widgets_frame(win);
+    if (begin_opengl_widgets_window(win, "yimview")) {
+        auto& img = app.imgs.at(app.img_id);
+        if (begin_header_opengl_widget(win, "image")) {
+            draw_combobox_opengl_widget(
+                win, "image", app.img_id, app.imgs, false);
+            draw_label_opengl_widget(win, "filename", "%s", img.filename.c_str());
+            draw_textinput_opengl_widget(win, "outname", img.outname);
+            if (draw_button_opengl_widget(win, "save display")) {
+                if (img.display_done) {
+                    img.save_thread = thread([&img]() { save_image_async(img); });
+                }
+            }
+            auto status = string();
+            if (img.error_msg != "")
+                status = "error: " + img.error_msg;
+            else if (!img.load_done)
+                status = "loading...";
+            else if (!img.display_done)
+                status = "displaying...";
+            else
+                status = "done";
+            draw_label_opengl_widget(win, "status", status.c_str());
+            draw_label_opengl_widget(
+                win, "size", "%d x %d ", img.img.size.x, img.img.size.y);
+            draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
+            draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
+            end_header_opengl_widget(win);
+        }
+        if (begin_header_opengl_widget(win, "adjust")) {
+            edited += draw_slider_opengl_widget(
+                win, "exposure", img.exposure, -5, 5);
+            edited += draw_checkbox_opengl_widget(win, "filmic", img.filmic);
+            edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
+            end_header_opengl_widget(win);
+        }
+        if (begin_header_opengl_widget(win, "inspect")) {
+            auto mouse_pos = get_opengl_mouse_pos(win);
+            auto ij        = get_image_coords(
+                mouse_pos, img.image_center, img.image_scale, img.img.size);
+            draw_dragger_opengl_widget(win, "mouse", ij);
+            auto pixel = zero4f;
+            if (ij.x >= 0 && ij.x < img.img.size.x && ij.y >= 0 &&
+                ij.y < img.img.size.y) {
+                pixel = at(img.img, ij);
+            }
+            draw_coloredit_opengl_widget(win, "pixel", pixel);
+            auto stats = (img.stats_done) ? img.stats : image_stats{};
+            draw_dragger_opengl_widget(win, "pxl min", stats.pxl_bounds.min);
+            draw_dragger_opengl_widget(win, "pxl max", stats.pxl_bounds.max);
+            draw_dragger_opengl_widget(win, "lum min", stats.lum_bounds.min);
+            draw_dragger_opengl_widget(win, "lum max", stats.lum_bounds.max);
+            end_header_opengl_widget(win);
+        }
+    }
+    end_opengl_widgets_frame(win);
+    if (edited) {
+        auto& img = app.imgs.at(app.img_id);
+        if (img.display_thread.joinable()) {
+            img.display_stop = true;
+            img.display_thread.join();
+        }
+        if (img.save_thread.joinable()) img.save_thread.join();
+        img.display_stop   = false;
+        img.display_thread = thread([&img]() { update_display_async(img); });
+    }
+}
 
-        // handle mouse
-        if (mouse_button && mouse_pos != mouse_last &&
-            !ygl::get_widget_active(win)) {
-            switch (mouse_button) {
-                case 1: app->params.offset += mouse_pos - mouse_last; break;
-                case 2:
-                    app->params.zoom *=
-                        powf(2, (mouse_pos[0] - mouse_last[0]) * 0.001f);
-                    break;
-                default: break;
+void draw(const opengl_window& win) {
+    auto& app      = *(app_state*)get_opengl_user_pointer(win);
+    auto& img      = app.imgs.at(app.img_id);
+    auto  win_size = get_opengl_window_size(win);
+    auto  fb_size  = get_opengl_framebuffer_size(win);
+    set_glviewport(fb_size);
+    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    if (img.gl_txt) {
+        center_image(img.image_center, img.image_scale, img.display.size,
+            win_size, img.zoom_to_fit);
+        draw_glimage_background(
+            img.display.size, win_size, img.image_center, img.image_scale);
+        set_glblending(true);
+        draw_glimage(img.gl_txt, img.display.size, win_size, img.image_center,
+            img.image_scale);
+        set_glblending(false);
+    }
+    draw_opengl_widgets(win);
+    swap_opengl_buffers(win);
+}
+
+void update(app_state& app) {
+    for (auto& img : app.imgs) {
+        if (!img.load_done) continue;
+        if (!img.gl_txt) {
+            init_opengl_texture(img.gl_txt, img.display.size, false, false, false, false);
+        } else {
+            auto region = image_region{};
+            while (img.display_queue.try_pop(region)) {
+                update_opengl_texture_region(
+                    img.gl_txt, img.display, region, false);
             }
         }
+    }
+}
+
+void drop_callback(const opengl_window& win, const vector<string>& paths) {
+    auto& app = *(app_state*)get_opengl_user_pointer(win);
+    for (auto path : paths) add_new_image(app, path, "");
+}
+
+void run_ui(app_state& app) {
+    // window
+    auto& img = app.imgs.at(app.img_id);
+    auto  win = opengl_window();
+    init_opengl_window(
+        win, {1280, 720}, "yimview | " + app.imgs.front().name, &app, draw);
+    set_drop_opengl_callback(win, drop_callback);
+
+    // init widgets
+    init_opengl_widgets(win);
+
+    // window values
+    auto mouse_pos = zero2f, last_pos = zero2f;
+    while (!should_opengl_window_close(win)) {
+        last_pos            = mouse_pos;
+        mouse_pos           = get_opengl_mouse_pos(win);
+        auto mouse_left     = get_opengl_mouse_left(win);
+        auto mouse_right    = get_opengl_mouse_right(win);
+        auto widgets_active = get_opengl_widgets_active(win);
+
+        // handle mouse
+        if (mouse_left && !widgets_active)
+            img.image_center += mouse_pos - last_pos;
+        if (mouse_right && !widgets_active)
+            img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+
+        // update
+        update(app);
 
         // draw
         draw(win);
 
         // event hadling
-        ygl::wait_events(win);
+        // could also wait if (mouse_left || mouse_right || widgets_active)
+        process_opengl_events(win);
     }
 
-    ygl::clear_window(win);
-    delete win;
+    // cleanup
+    delete_opengl_window(win);
 }
 
 int main(int argc, char* argv[]) {
-    auto app = new app_state();
+    // prepare application
+    auto app = app_state();
 
-    // command line params
-    auto parser = ygl::make_parser(argc, argv, "yimview", "view images");
-    app->params = ygl::parse_params(parser, "", app->params);
-    auto filenames = ygl::parse_args(
-        parser, "image", "image filename", std::vector<std::string>{});
-    // check parsing
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
-        exit(1);
-    }
+    // command line options
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "view images", "yimview");
+    auto exposure = parse_argument(
+        parser, "--exposure,-e", 0.0f, "display exposure");
+    auto filmic = parse_argument(parser, "--filmic", false, "display filmic");
+    auto srgb   = parse_argument(parser, "--no-srgb", true, "display as sRGB");
+    // auto quiet = parse_flag(
+    //     parser, "--quiet,-q", false, "Print only errors messages");
+    auto outfilename = parse_argument(
+        parser, "--out,-o", ""s, "image out filename");
+    auto filenames = parse_arguments(
+        parser, "images", vector<string>{}, "image filenames", true);
+    check_cmdline(parser);
 
     // loading images
-    for (auto filename : filenames) {
-        ygl::log_info("loading {}", filename);
-        app->imgs.push_back(new gimage(load_gimage(filename)));
-    }
+    for (auto filename : filenames)
+        add_new_image(app, filename, outfilename, exposure, filmic, srgb);
+    app.img_id = 0;
 
     // run ui
     run_ui(app);
 
     // done
-    delete app;
     return 0;
 }

@@ -8,9 +8,12 @@ ColumnLimit:     80
 
 AlignAfterOpenBracket: DontAlign
 
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+
 AllowAllParametersOfDeclarationOnNextLine: false
 
-AllowShortBlocksOnASingleLine: true
+AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
 AllowShortFunctionsOnASingleLine: All
 AllowShortIfStatementsOnASingleLine: true
@@ -22,15 +25,19 @@ BinPackParameters: true
 BreakBeforeBinaryOperators: None
 BreakBeforeTernaryOperators: false
 BreakConstructorInitializersBeforeComma: true
+BreakStringLiterals: false
+
+Cpp11BracedListStyle: true
 
 DerivePointerAlignment: false
 PointerAlignment: Left
 
 IndentWrappedFunctionNames: false
 
+PenaltyBreakAssignment: 1000
 PenaltyBreakBeforeFirstCallParameter: 1000
-PenaltyBreakComment: 300
-PenaltyBreakFirstLessLess: 120
-PenaltyBreakString: 500
-PenaltyExcessCharacter: 1000
-PenaltyReturnTypeOnItsOwnLine: 200
+PenaltyBreakComment: 30
+PenaltyBreakFirstLessLess: 30
+PenaltyBreakString: 30
+PenaltyExcessCharacter: 10
+PenaltyReturnTypeOnItsOwnLine: 1000

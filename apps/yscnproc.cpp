@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2017 Fabio Pellacini
+// Copyright (c) 2016 -- 2018 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -26,194 +26,74 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "../yocto/yocto_gl.h"
-using namespace std::literals;
+#include "../yocto/ygl.h"
+#include "../yocto/yglio.h"
+using namespace ygl;
 
-void mkdir(const std::string& dir) {
+bool mkdir(const string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
-        return;
+        return true;
 #ifndef _MSC_VER
     system(("mkdir -p " + dir).c_str());
+    return true;
 #else
     system(("mkdir " + dir).c_str());
+    return true;
 #endif
 }
 
-void validate_texture_paths(ygl::scene* obj, const std::string& filename) {
-    auto dirname = ygl::path_dirname(filename);
-    for (auto txt : obj->textures) {
-        auto f = fopen((dirname + txt->path).c_str(), "rb");
-        if (!f)
-            printf("Missing texture: %s\n", txt->path.c_str());
-        else
-            fclose(f);
-    }
-}
-
 int main(int argc, char** argv) {
-    // command line params
-    auto parser =
-        ygl::make_parser(argc, argv, "yscnproc", "converts obj to gltf");
-    auto textures =
-        ygl::parse_flag(parser, "--textures", "-t", "process textures");
-    auto no_flipy_texcoord = ygl::parse_flag(
-        parser, "--no-flipy-texcoord", "", "texcoord vertical flipping");
-    auto no_flip_opacity =
-        ygl::parse_flag(parser, "--no-flip-opacity", "", "flip opacity");
-    auto facet_non_smooth = ygl::parse_flag(
-        parser, "--facet-non-smooth", "", "facet non smooth surfaces");
-    auto scale = ygl::parse_opt(parser, "--scale", "", "scale the model", 1.0f);
-    auto flipyz =
-        ygl::parse_flag(parser, "--flipyz", "", "flip y and z coords");
-    auto add_scene = ygl::parse_flag(parser, "--scene", "", "add scene");
-    auto add_normals = ygl::parse_flag(parser, "--normals", "", "add normals");
-    auto tesselation =
-        ygl::parse_opt(parser, "--tesselation", "-T", "tesselation level", 0);
-    auto subdiv =
-        ygl::parse_opt(parser, "--subdiv", "", "Catmull-Clark subdivision", 0);
-    //    auto add_specgloss =
-    //        ygl::parse_flag( "--specgloss", "", "add spec gloss");
-    auto save_separate_buffers = ygl::parse_flag(
-        parser, "--separate-buffers", "", "save separate buffers");
-    auto info =
-        ygl::parse_flag(parser, "--print-info", "", "print information");
-    auto validate_textures = ygl::parse_flag(
-        parser, "--validate-textures", "", "validate texture paths");
-    auto validate =
-        ygl::parse_flag(parser, "--validate", "", "validate after saving");
-    auto output = ygl::parse_opt(
-        parser, "--output", "-o", "output scene filename", "out.obj"s);
-    auto filenames = ygl::parse_args(
-        parser, "scenes", "input scene filenames", std::vector<std::string>{});
-    if (ygl::should_exit(parser)) {
-        printf("%s\n", get_usage(parser).c_str());
-        exit(1);
-    }
+    // parse command line
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
+    auto skip_textures = parse_argument(
+        parser, "--skip-textures", false, "Disable textures.");
+    auto uniform_txt = parse_argument(
+        parser, "--uniform-texture", false, "uniform texture formats");
+    auto output = parse_argument(
+        parser, "--output,-o", "out.json"s, "output scene", true);
+    auto filename = parse_argument(
+        parser, "scene", "scene.json"s, "input scene", true);
+    check_cmdline(parser);
 
-    // load obj
-    auto scn = std::unique_ptr<ygl::scene>(new ygl::scene());
-    for (auto filename : filenames) {
-        auto to_merge = std::unique_ptr<ygl::scene>(nullptr);
-        try {
-            auto opts = ygl::load_options();
-            opts.load_textures = textures;
-            opts.obj_flip_texcoord = !no_flipy_texcoord;
-            opts.obj_flip_tr = !no_flip_opacity;
-            opts.obj_facet_non_smooth = facet_non_smooth;
-            opts.preserve_quads = true;
-            to_merge = std::unique_ptr<ygl::scene>(load_scene(filename, opts));
+    // fix options
+    auto load_options          = load_scene_options();
+    auto save_options          = save_scene_options();
+    load_options.skip_textures = skip_textures;
+    save_options.skip_textures = skip_textures;
 
-        } catch (const std::exception& e) {
-            ygl::log_fatal("unable to load file %s with error {}\n",
-                filename.c_str(), e.what());
-        }
+    // load scene
+    auto scene = yocto_scene{};
+    if (!load_scene(filename, scene, load_options))
+        log_fatal("cannot load scene {}", filename);
 
-        // check missing texture
-        if (validate_textures) validate_texture_paths(to_merge.get(), filename);
-
-        // print information
-        if (info) {
-            printf("information ------------------------\n");
-            printf("filename: %s\n", filename.c_str());
-            ygl::print_info(to_merge.get());
-        }
-
-        // merge the scene into the other
-        if (filenames.size() > 1) {
-            ygl::merge_into(scn.get(), to_merge.get());
-        } else {
-            swap(scn, to_merge);
-        }
-    }
-
-    // print information
-    if (info && filenames.size() > 1) {
-        printf("information ------------------------\n");
-        printf("merged\n");
-        ygl::print_info(scn.get());
-    }
-
-    // add missing elements
-    {
-        auto opts = ygl::add_elements_options::none();
-        opts.default_names = true;
-        opts.smooth_normals = add_normals;
-        opts.shape_instances = add_scene;
-        opts.default_paths = true;
-        ygl::add_elements(scn.get(), opts);
-    }
-
-    // process geometry
-    if (scale != 1.0f) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto& p : shp->pos) p *= scale;
+    // change texture names
+    if (uniform_txt) {
+        for (auto& texture : scene.textures) {
+            auto ext = get_extension(texture.filename);
+            if (is_hdr_filename(texture.filename)) {
+                if (ext == "hdr" || ext == "exr") continue;
+                if (ext == "pfm")
+                    replace_extension(filename, "hdr");
+                else
+                    log_error("unknown texture format {}", ext);
+            } else {
+                if (ext == "png" || ext == "jpg") continue;
+                if (ext == "tga" || ext == "bmp")
+                    replace_extension(filename, "png");
+                else
+                    log_error("unknown texture format {}", ext);
             }
         }
-    }
-
-    if (flipyz) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto& p : shp->pos) std::swap(p.y, p.z);
-                for (auto& n : shp->norm) std::swap(n.y, n.z);
-            }
-        }
-    }
-
-    if (tesselation) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto l = 0; l < tesselation; l++) {
-                    ygl::subdivide_shape_once(shp);
-                }
-            }
-        }
-    }
-
-    if (subdiv) {
-        for (auto sgr : scn->shapes) {
-            for (auto shp : sgr->shapes) {
-                for (auto l = 0; l < subdiv; l++) {
-                    ygl::subdivide_shape_once(shp, true);
-                }
-            }
-        }
-    }
-
-    // print infomation again if needed
-    if (info && scale != 1.0f) {
-        printf("post-correction information -------\n");
-        printf("output: %s\n", output.c_str());
-        ygl::print_info(scn.get());
     }
 
     // make a directory if needed
-    try {
-        mkdir(ygl::path_dirname(output));
-    } catch (const std::exception& e) {
-        ygl::log_fatal("unable to make directory %s with error {}\n",
-            ygl::path_dirname(output), e.what());
-    }
-    // save scene
-    try {
-        auto opts = ygl::save_options();
-        opts.save_textures = textures;
-        opts.gltf_separate_buffers = save_separate_buffers;
-        ygl::save_scene(output, scn.get(), opts);
-    } catch (const std::exception& e) {
-        ygl::log_fatal("unable to save scene %s with error {}\n",
-            output.c_str(), e.what());
-    }
+    if (!mkdir(get_dirname(output)))
+        log_fatal("cannot create directory {}", get_dirname(output));
 
-    // validate
-    if (validate) {
-        auto vscn = std::unique_ptr<ygl::scene>(ygl::load_scene(output));
-        if (info) {
-            printf("validate information -----------------\n");
-            ygl::print_info(vscn.get());
-        }
-    }
+    // save scene
+    if (!save_scene(output, scene, save_options))
+        log_fatal("cannot save scene {}", output);
 
     // done
     return 0;
