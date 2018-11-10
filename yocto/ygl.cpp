@@ -1536,6 +1536,7 @@ void build_embree_bvh(bvh_scene& bvh) {
         for (auto instance_id = 0; instance_id < bvh.instances.size();
              instance_id++) {
             auto& instance    = bvh.instances[instance_id];
+            if (instance.shape_id < 0 && instance.surface_id < 0) continue;
             auto  embree_geom = rtcNewGeometry(
                 embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
             if (instance.shape_id >= 0) {
@@ -2010,7 +2011,7 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
                 prims.push_back(
                     {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
             } else {
-                log_error("empty instance");
+                log_warning("empty instance");
             }
         }
     }
@@ -2023,10 +2024,8 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
     // build nodes
     if (options.run_serially) {
-        log_info("scene serial");
         build_bvh_nodes_serial(bvh.nodes, prims, options);
     } else {
-        log_info("scene parallel");
         build_bvh_nodes_parallel(bvh.nodes, prims, options);
     }
 }
@@ -2065,7 +2064,7 @@ void refit_shape_bvh(bvh_shape& bvh, int nodeid) {
             node.bbox += point_bounds(bvh.positions[p], bvh.radius[p]);
         }
     } else {
-        log_error("empty bvh");
+        log_warning("empty bvh");
     }
 }
 
@@ -2086,7 +2085,7 @@ void refit_scene_bvh(bvh_scene& bvh, int nodeid) {
             node.bbox += transform_bbox(instance.frame, sbvh.nodes[0].bbox);
         }
     } else {
-        log_error("empty bvh");
+        log_warning("empty bvh");
     }
 }
 
@@ -2103,6 +2102,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         return intersect_embree_bvh(
             bvh, ray_, find_any, distance, element_id, element_uv);
 #endif
+
+    // check empty
+    if(bvh.nodes.empty()) return false;
 
     // node stack
     int  node_stack[128];
@@ -2181,8 +2183,6 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
                     element_id = node.primitive_ids[i];
                 }
             }
-        } else {
-            log_error("empty bvh");
         }
 
         // check for early exit
@@ -2201,6 +2201,9 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
         return intersect_embree_bvh(
             bvh, ray_, find_any, distance, instance_id, element_id, element_uv);
 #endif
+
+    // check empty
+    if(bvh.nodes.empty()) return false;
 
     // node stack
     int  node_stack[128];
@@ -2257,8 +2260,6 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
                         ray.tmax    = distance;
                         instance_id = node.primitive_ids[i];
                     }
-                } else {
-                    log_error("empty instance");
                 }
             }
         } else {
