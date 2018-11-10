@@ -468,6 +468,8 @@ inline void log_info(const string& fmt, const Args&... args);
 template <typename... Args>
 inline void log_error(const string& fmt, const Args&... args);
 template <typename... Args>
+inline void log_warning(const string& fmt, const Args&... args);
+template <typename... Args>
 inline void log_fatal(const string& fmt, const Args&... args);
 
 // Setup logging
@@ -4399,6 +4401,10 @@ inline void log_info(const string& fmt, const Args&... args) {
 template <typename... Args>
 inline void log_error(const string& fmt, const Args&... args) {
     log_message("ERROR", format(fmt, args...).c_str());
+}
+template <typename... Args>
+inline void log_warning(const string& fmt, const Args&... args) {
+    log_message("WARN ", format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline void log_fatal(const string& fmt, const Args&... args) {
