@@ -1146,29 +1146,29 @@ void sample_quads_points(const vector<vec4i>& quads,
 }
 
 // Merge shape elements
-void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts) {
-    for (auto& l : merge_lines)
+void merge_lines_inplace(
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines_inplace, int num_verts) {
+    for (auto& l : merge_lines_inplace)
         lines.push_back({l.x + num_verts, l.y + num_verts});
 }
-void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec3i>& merge_triangles, int num_verts) {
-    for (auto& t : merge_triangles)
+void merge_triangles_inplace(vector<vec3i>& triangles,
+    const vector<vec3i>& merge_triangles_inplace, int num_verts) {
+    for (auto& t : merge_triangles_inplace)
         triangles.push_back({t.x + num_verts, t.y + num_verts, t.z + num_verts});
 }
-void merge_quads(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
-    for (auto& q : merge_quads)
+void merge_quads_inplace(
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads_inplace, int num_verts) {
+    for (auto& q : merge_quads_inplace)
         quads.push_back({q.x + num_verts, q.y + num_verts, q.z + num_verts,
             q.w + num_verts});
 }
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+void merge_lines_inplace(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& tangents, vector<vec2f>& texturecoords,
-    vector<float>& radius, const vector<vec2i>& merge_lines,
+    vector<float>& radius, const vector<vec2i>& merge_lines_inplace,
     const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
     const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius) {
     auto merge_verts = (int)positions.size();
-    for (auto& l : merge_lines)
+    for (auto& l : merge_lines_inplace)
         lines.push_back({l.x + merge_verts, l.y + merge_verts});
     positions.insert(
         positions.end(), merge_positions.begin(), merge_positions.end());
@@ -1177,12 +1177,12 @@ void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
         merge_texturecoords.end());
     radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
 }
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+void merge_triangles_inplace(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec3i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec3i>& merge_triangles_inplace, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords) {
     auto merge_verts = (int)positions.size();
-    for (auto& t : merge_triangles)
+    for (auto& t : merge_triangles_inplace)
         triangles.push_back(
             {t.x + merge_verts, t.y + merge_verts, t.z + merge_verts});
     positions.insert(
@@ -1191,12 +1191,12 @@ void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
         merge_texturecoords.end());
 }
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+void merge_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec4i>& merge_quads_inplace, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords) {
     auto merge_verts = (int)positions.size();
-    for (auto& q : merge_quads)
+    for (auto& q : merge_quads_inplace)
         quads.push_back({q.x + merge_verts, q.y + merge_verts,
             q.z + merge_verts, q.w + merge_verts});
     positions.insert(
@@ -2619,7 +2619,7 @@ void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
             {steps.x, steps.y}, {size.x, size.y}, uvsize);
         for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
-        merge_quads(quads, positions, normals, texturecoords, qquads,
+        merge_quads_inplace(quads, positions, normals, texturecoords, qquads,
             qpositions, qnormals, qtexturecoords);
     }
 }
@@ -2639,7 +2639,7 @@ void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         qpositions[i] = {qpositions[i].x, qpositions[i].y, size.z / 2};
         qnormals[i]   = {0, 0, 1};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - z
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
@@ -2648,7 +2648,7 @@ void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         qpositions[i] = {-qpositions[i].x, qpositions[i].y, -size.z / 2};
         qnormals[i]   = {0, 0, -1};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // + x
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
@@ -2657,7 +2657,7 @@ void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         qpositions[i] = {size.x / 2, qpositions[i].y, -qpositions[i].x};
         qnormals[i]   = {1, 0, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - x
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
@@ -2666,7 +2666,7 @@ void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         qpositions[i] = {-size.x / 2, qpositions[i].y, qpositions[i].x};
         qnormals[i]   = {-1, 0, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // + y
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
@@ -2675,7 +2675,7 @@ void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         qpositions[i] = {qpositions[i].x, size.y / 2, -qpositions[i].y};
         qnormals[i]   = {0, 1, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // - y
     make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
@@ -2684,7 +2684,7 @@ void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         qpositions[i] = {qpositions[i].x, -size.y / 2, qpositions[i].y};
         qnormals[i]   = {0, -1, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
 }
 
@@ -2847,7 +2847,7 @@ void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     // side
     make_cylinder_side_shape(qquads, qpositions, qnormals, qtexturecoords,
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // top
     make_disk_shape(qquads, qpositions, qnormals, qtexturecoords,
@@ -2855,7 +2855,7 @@ void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i].z = size.y / 2;
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
     // bottom
     make_disk_shape(qquads, qpositions, qnormals, qtexturecoords,
@@ -2865,7 +2865,7 @@ void make_cylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
         qnormals[i]     = -qnormals[i];
     }
     for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
-    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+    merge_quads_inplace(quads, positions, normals, texturecoords, qquads, qpositions,
         qnormals, qtexturecoords);
 }
 
@@ -5803,7 +5803,7 @@ float evaluate_phase_function(float cos_theta, float g) {
 namespace ygl {
 
 // Merge scene into one another
-void merge_scene(yocto_scene& merge_scene, const yocto_scene& merge_from) {
+void merge_scene_inplace(yocto_scene& merge_scene_inplace, const yocto_scene& merge_from) {
     log_error("this is  broken since we did not fix references");
     auto merge = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());
@@ -5811,16 +5811,16 @@ void merge_scene(yocto_scene& merge_scene, const yocto_scene& merge_from) {
     auto merge_ = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());
     };
-    merge_(merge_scene.cameras, merge_from.cameras);
-    merge(merge_scene.textures, merge_from.textures);
-    merge(merge_scene.voltextures, merge_from.voltextures);
-    merge(merge_scene.materials, merge_from.materials);
-    merge(merge_scene.shapes, merge_from.shapes);
-    merge(merge_scene.surfaces, merge_from.surfaces);
-    merge(merge_scene.instances, merge_from.instances);
-    merge(merge_scene.environments, merge_from.environments);
-    merge_(merge_scene.nodes, merge_from.nodes);
-    merge_(merge_scene.animations, merge_from.animations);
+    merge_(merge_scene_inplace.cameras, merge_from.cameras);
+    merge(merge_scene_inplace.textures, merge_from.textures);
+    merge(merge_scene_inplace.voltextures, merge_from.voltextures);
+    merge(merge_scene_inplace.materials, merge_from.materials);
+    merge(merge_scene_inplace.shapes, merge_from.shapes);
+    merge(merge_scene_inplace.surfaces, merge_from.surfaces);
+    merge(merge_scene_inplace.instances, merge_from.instances);
+    merge(merge_scene_inplace.environments, merge_from.environments);
+    merge_(merge_scene_inplace.nodes, merge_from.nodes);
+    merge_(merge_scene_inplace.animations, merge_from.animations);
 }
 
 void print_stats(const yocto_scene& scene) {

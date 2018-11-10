@@ -216,7 +216,7 @@
 // 1. load a scene with Yocto/GLIO,
 // 2. add missing data with `add_XXX()` functions
 // 3. use `compute_shape_box()/compute_scene_box()` to compute element bounds
-// 4. can merge scene together with `merge_scene()`
+// 4. can merge scene together with `merge_scene_inplace()`
 // 6. for ray-intersection and closest point queries, a BVH can be created with
 //    `build_shape_bvh()/build_scene_bvh()` and refit with
 //    `refit_shape_bvh()/refit_scene_bvh()`
@@ -2596,24 +2596,24 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
 void weld_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
-void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts);
-void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec2i>& merge_triangles, int num_verts);
-void merge_quads(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+void merge_lines_inplace(
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines_inplace, int num_verts);
+void merge_triangles_inplace(vector<vec3i>& triangles,
+    const vector<vec2i>& merge_triangles_inplace, int num_verts);
+void merge_quads_inplace(
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads_inplace, int num_verts);
+void merge_lines_inplace(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& tangents, vector<vec2f>& texturecoords,
-    vector<float>& radius, const vector<vec2i>& merge_lines,
+    vector<float>& radius, const vector<vec2i>& merge_lines_inplace,
     const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
     const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+void merge_triangles_inplace(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec2i>& merge_triangles_inplace, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+void merge_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec4i>& merge_quads_inplace, const vector<vec3f>& merge_positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
 
 // Pick a point in a point set uniformly.
@@ -3599,7 +3599,7 @@ void print_stats(const yocto_scene& scene);
 
 // Merge scene into one another. Note that the objects are _moved_ from
 // merge_from to merged_into, so merge_from will be empty after this function.
-void merge_scene(yocto_scene& merge_into, const yocto_scene& merge_from);
+void merge_scene_inplace(yocto_scene& merge_into, const yocto_scene& merge_from);
 
 }  // namespace ygl
 
