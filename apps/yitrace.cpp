@@ -437,9 +437,7 @@ int main(int argc, char* argv[]) {
     app.trace_options.samples_per_batch = 1;
 
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(
-        parser, argc, argv, "progressive path tracing", "yitrace");
+    auto parser = make_cmdline_parser(argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
     app.trace_options.image_size = {0, parse_argument(parser, "--resolution,-r",

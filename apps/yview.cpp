@@ -1132,8 +1132,7 @@ int main(int argc, char* argv[]) {
     app_state app{};
 
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "views scenes inteactively", "yview");
+    auto parser = make_cmdline_parser(argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
     app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r",

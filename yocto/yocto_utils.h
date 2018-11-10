@@ -162,14 +162,21 @@ inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 // -----------------------------------------------------------------------------
 namespace yocto_gl {
 
-// Forward declaration
-struct cmdline_parser;
+// Command line parser data. All data should be considered private.
+struct cmdline_parser {
+    vector<string> args      = {};  // command line arguments
+    string         usage_cmd = "";  // program name
+    string         usage_hlp = "";  // program help
+    string         usage_opt = "";  // options help
+    string         usage_arg = "";  // arguments help
+    string         error     = "";  // current parse error
+};
 
 // Initialize a command line parser.
-void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
+inline cmdline_parser make_cmdline_parser(int argc, char** argv,
     const string& usage, const string& cmd = "");
 // check if any error occurred and exit appropriately
-void check_cmdline(cmdline_parser& parser);
+inline void check_cmdline(cmdline_parser& parser);
 
 // Parse an int, float, string, vecXX and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -661,23 +668,14 @@ inline string format_num(uint64_t num) {
 // -----------------------------------------------------------------------------
 namespace yocto_gl {
 
-// Command line parser data. All data should be considered private.
-struct cmdline_parser {
-    vector<string> args      = {};  // command line arguments
-    string         usage_cmd = "";  // program name
-    string         usage_hlp = "";  // program help
-    string         usage_opt = "";  // options help
-    string         usage_arg = "";  // arguments help
-    string         error     = "";  // current parse error
-};
-
 // initialize a command line parser
-inline void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
+inline cmdline_parser make_cmdline_parser(int argc, char** argv,
     const string& usage, const string& cmd) {
-    parser           = cmdline_parser{};
+    auto parser           = cmdline_parser{};
     parser.args      = {argv + 1, argv + argc};
     parser.usage_cmd = (cmd.empty()) ? argv[0] : cmd;
     parser.usage_hlp = usage;
+    return parser;
 }
 
 // check if option or argument
