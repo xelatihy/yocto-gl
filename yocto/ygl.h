@@ -3099,8 +3099,11 @@ vector<image_region> make_image_regions(const vec2i& image_size,
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(
-    const image<T>& img, image<T>& clipped, const image_region& region);
+inline void get_image_region(image<T>& clipped, 
+    const image<T>& img, const image_region& region);
+template <typename T>
+inline image<T> get_image_region(
+    const image<T>& img, const image_region& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -4177,8 +4180,8 @@ namespace ygl {
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(
-    const image<T>& img, image<T>& clipped, const image_region& region) {
+inline void get_image_region(image<T>& clipped, 
+    const image<T>& img, const image_region& region) {
     clipped.resize(region.size);
     for (auto j = 0; j < region.size.y; j++) {
         for (auto i = 0; i < region.size.x; i++) {
@@ -4186,6 +4189,17 @@ inline void get_image_region(
                 img[{i + region.offset.x, j + region.offset.y}];
         }
     }
+}
+template <typename T>
+inline image<T> get_image_region(const image<T>& img, const image_region& region) {
+    auto clipped = image<T>{region.size};
+    for (auto j = 0; j < region.size.y; j++) {
+        for (auto i = 0; i < region.size.x; i++) {
+            clipped[{i, j}] = 
+                img[{i + region.offset.x, j + region.offset.y}];
+        }
+    }
+    return clipped;
 }
 
 }  // namespace ygl
