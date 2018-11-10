@@ -35,8 +35,8 @@
 using namespace ygl;
 
 template <typename T>
-image<vec<T, 4>> compute_diff_image(const image<vec<T, 4>>& a,
-    const image<vec<T, 4>>& b) {
+image<vec<T, 4>> compute_diff_image(
+    const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
     auto diff = image<vec<T, 4>>{a.size()};
     for (auto j = 0; j < a.size().y; j++) {
         for (auto i = 0; i < a.size().x; i++) {
@@ -64,7 +64,7 @@ image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
     auto display = image<vec<T, 4>>{diff.size()};
     for (auto j = 0; j < diff.size().y; j++) {
         for (auto i = 0; i < diff.size().x; i++) {
-            auto diff_value   = max(diff[{i, j}]);
+            auto diff_value = max(diff[{i, j}]);
             display[{i, j}] = {diff_value, diff_value, diff_value, alpha};
         }
     }
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
         if (img1.size() != img2.size()) log_fatal("image size differs");
-        auto diff    = compute_diff_image(img1, img2);
+        auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
             auto display = display_diff(diff, 1.0f);
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]) {
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
         if (img1.size() != img2.size()) log_fatal("image size differs");
-        auto diff    = compute_diff_image(img1, img2);
+        auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
             auto display = display_diff(diff, (byte)255);

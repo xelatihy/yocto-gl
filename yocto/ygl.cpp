@@ -642,22 +642,22 @@ tuple<vector<vec2i>, vector<T>> subdivide_lines(
     // early exit
     if (lines.empty() || vert.empty()) return {lines, vert};
     // sizes
-        auto nverts = (int)vert.size();
-        auto nlines = (int)lines.size();
-        // create vertices
-        auto tvert = vector<T>(nverts + nlines);
-        for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-        for (auto i = 0; i < nlines; i++) {
-            auto l            = lines[i];
-            tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
-        }
-        // create lines
-        auto tlines = vector<vec2i>(nlines * 2);
-        for (auto i = 0; i < nlines; i++) {
-            auto l            = lines[i];
-            tlines[i * 2 + 0] = {l.x, nverts + i};
-            tlines[i * 2 + 0] = {nverts + i, l.y};
-        }
+    auto nverts = (int)vert.size();
+    auto nlines = (int)lines.size();
+    // create vertices
+    auto tvert = vector<T>(nverts + nlines);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nlines; i++) {
+        auto l            = lines[i];
+        tvert[nverts + i] = (vert[l.x] + vert[l.y]) / 2;
+    }
+    // create lines
+    auto tlines = vector<vec2i>(nlines * 2);
+    for (auto i = 0; i < nlines; i++) {
+        auto l            = lines[i];
+        tlines[i * 2 + 0] = {l.x, nverts + i};
+        tlines[i * 2 + 0] = {nverts + i, l.y};
+    }
     return {tlines, tvert};
 }
 
@@ -676,114 +676,112 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vert) {
     // early exit
     if (triangles.empty() || vert.empty()) return {triangles, vert};
-        // get edges
-        auto emap  = make_edge_map(triangles);
-        auto edges = get_edges(emap);
-        // number of elements
-        auto nverts = (int)vert.size();
-        auto nedges = (int)edges.size();
-        auto nfaces = (int)triangles.size();
-        // create vertices
-        auto tvert = vector<T>(nverts + nedges);
-        for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-        for (auto i = 0; i < nedges; i++) {
-            auto e            = edges[i];
-            tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
-        }
-        // create triangles
-        auto ttriangles = vector<vec3i>(nfaces * 4);
-        for (auto i = 0; i < nfaces; i++) {
-            auto t                = triangles[i];
-            ttriangles[i * 4 + 0] = {t.x,
-                nverts + get_edge_index(emap, {t.x, t.y}),
-                nverts + get_edge_index(emap, {t.z, t.x})};
-            ttriangles[i * 4 + 1] = {t.y,
-                nverts + get_edge_index(emap, {t.y, t.z}),
-                nverts + get_edge_index(emap, {t.x, t.y})};
-            ttriangles[i * 4 + 2] = {t.z,
-                nverts + get_edge_index(emap, {t.z, t.x}),
-                nverts + get_edge_index(emap, {t.y, t.z})};
-            ttriangles[i * 4 + 3] = {nverts + get_edge_index(emap, {t.x, t.y}),
-                nverts + get_edge_index(emap, {t.y, t.z}),
-                nverts + get_edge_index(emap, {t.z, t.x})};
-        }
-        return {ttriangles, tvert};
+    // get edges
+    auto emap  = make_edge_map(triangles);
+    auto edges = get_edges(emap);
+    // number of elements
+    auto nverts = (int)vert.size();
+    auto nedges = (int)edges.size();
+    auto nfaces = (int)triangles.size();
+    // create vertices
+    auto tvert = vector<T>(nverts + nedges);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
+        auto e            = edges[i];
+        tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+    }
+    // create triangles
+    auto ttriangles = vector<vec3i>(nfaces * 4);
+    for (auto i = 0; i < nfaces; i++) {
+        auto t                = triangles[i];
+        ttriangles[i * 4 + 0] = {t.x, nverts + get_edge_index(emap, {t.x, t.y}),
+            nverts + get_edge_index(emap, {t.z, t.x})};
+        ttriangles[i * 4 + 1] = {t.y, nverts + get_edge_index(emap, {t.y, t.z}),
+            nverts + get_edge_index(emap, {t.x, t.y})};
+        ttriangles[i * 4 + 2] = {t.z, nverts + get_edge_index(emap, {t.z, t.x}),
+            nverts + get_edge_index(emap, {t.y, t.z})};
+        ttriangles[i * 4 + 3] = {nverts + get_edge_index(emap, {t.x, t.y}),
+            nverts + get_edge_index(emap, {t.y, t.z}),
+            nverts + get_edge_index(emap, {t.z, t.x})};
+    }
+    return {ttriangles, tvert};
 }
 
-template tuple<vector<vec3i>, vector<float>> subdivide_triangles(const vector<vec3i>&, const vector<float>&);
-template tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(const vector<vec3i>&, const vector<vec2f>&);
-template tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(const vector<vec3i>&, const vector<vec3f>&);
-template tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(const vector<vec3i>&, const vector<vec4f>&);
+template tuple<vector<vec3i>, vector<float>> subdivide_triangles(
+    const vector<vec3i>&, const vector<float>&);
+template tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+    const vector<vec3i>&, const vector<vec2f>&);
+template tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+    const vector<vec3i>&, const vector<vec3f>&);
+template tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+    const vector<vec3i>&, const vector<vec4f>&);
 
 // Subdivide quads.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, const vector<T>& vert) {
+tuple<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vert) {
     // early exit
     if (quads.empty() || vert.empty()) return {quads, vert};
-        // get edges
-        auto emap  = make_edge_map(quads);
-        auto edges = get_edges(emap);
-        // number of elements
-        auto nverts = (int)vert.size();
-        auto nedges = (int)edges.size();
-        auto nfaces = (int)quads.size();
-        // create vertices
-        auto tvert = vector<T>(nverts + nedges + nfaces);
-        for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-        for (auto i = 0; i < nedges; i++) {
-            auto e            = edges[i];
-            tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+    // get edges
+    auto emap  = make_edge_map(quads);
+    auto edges = get_edges(emap);
+    // number of elements
+    auto nverts = (int)vert.size();
+    auto nedges = (int)edges.size();
+    auto nfaces = (int)quads.size();
+    // create vertices
+    auto tvert = vector<T>(nverts + nedges + nfaces);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
+        auto e            = edges[i];
+        tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+    }
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q.z != q.w) {
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
+                                             vert[q.w]) /
+                                         4;
+        } else {
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
-        for (auto i = 0; i < nfaces; i++) {
-            auto q = quads[i];
-            if (q.z != q.w) {
-                tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] +
-                                                 vert[q.z] + vert[q.w]) /
-                                             4;
-            } else {
-                tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) /
-                                             3;
-            }
+    }
+    // create quads
+    auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
+    auto qi     = 0;
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q.z != q.w) {
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.w, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
+            tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.w})};
+        } else {
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
         }
-        // create quads
-        auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
-        auto qi     = 0;
-        for (auto i = 0; i < nfaces; i++) {
-            auto q = quads[i];
-            if (q.z != q.w) {
-                tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.w, q.x})};
-                tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.x, q.y})};
-                tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.y, q.z})};
-                tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.z, q.w})};
-            } else {
-                tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.z, q.x})};
-                tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.x, q.y})};
-                tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.y, q.z})};
-            }
-        }
-        tquads.resize(qi);
-        // done
-        return {tquads, tvert};
+    }
+    tquads.resize(qi);
+    // done
+    return {tquads, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_quads(const vector<vec4i>&, const vector<float>&);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(const vector<vec4i>&, const vector<vec2f>&);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(const vector<vec4i>&, const vector<vec3f>&);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(const vector<vec4i>&, const vector<vec4f>&);
+template tuple<vector<vec4i>, vector<float>> subdivide_quads(
+    const vector<vec4i>&, const vector<float>&);
+template tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
+    const vector<vec4i>&, const vector<vec2f>&);
+template tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
+    const vector<vec4i>&, const vector<vec3f>&);
+template tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
+    const vector<vec4i>&, const vector<vec4f>&);
 
 // Subdivide beziers.
 template <typename T>
@@ -792,37 +790,41 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     // early exit
     if (beziers.empty() || vert.empty()) return {beziers, vert};
     // get edges
-        auto vmap     = unordered_map<int, int>();
-        auto tvert    = vector<T>();
-        auto tbeziers = vector<vec4i>();
-        for (auto b : beziers) {
-            if (vmap.find(b.x) == vmap.end()) {
-                vmap[b.x] = (int)tvert.size();
-                tvert.push_back(vert[b.x]);
-            }
-            if (vmap.find(b.w) == vmap.end()) {
-                vmap[b.w] = (int)tvert.size();
-                tvert.push_back(vert[b.w]);
-            }
-            auto bo = (int)tvert.size();
-            tbeziers.push_back({vmap.at(b.x), bo + 0, bo + 1, bo + 2});
-            tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
-            tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
-            tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
-            tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 +
-                            3 * vert[b.z] / 8 + vert[b.w] / 8);
-            tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
-            tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
+    auto vmap     = unordered_map<int, int>();
+    auto tvert    = vector<T>();
+    auto tbeziers = vector<vec4i>();
+    for (auto b : beziers) {
+        if (vmap.find(b.x) == vmap.end()) {
+            vmap[b.x] = (int)tvert.size();
+            tvert.push_back(vert[b.x]);
         }
+        if (vmap.find(b.w) == vmap.end()) {
+            vmap[b.w] = (int)tvert.size();
+            tvert.push_back(vert[b.w]);
+        }
+        auto bo = (int)tvert.size();
+        tbeziers.push_back({vmap.at(b.x), bo + 0, bo + 1, bo + 2});
+        tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
+        tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
+        tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
+        tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 + 3 * vert[b.z] / 8 +
+                        vert[b.w] / 8);
+        tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
+        tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
+    }
 
     // done
     return {tbeziers, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_beziers(const vector<vec4i>&, const vector<float>&);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(const vector<vec4i>&, const vector<vec2f>&);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(const vector<vec4i>&, const vector<vec3f>&);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(const vector<vec4i>&, const vector<vec4f>&);
+template tuple<vector<vec4i>, vector<float>> subdivide_beziers(
+    const vector<vec4i>&, const vector<float>&);
+template tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+    const vector<vec4i>&, const vector<vec2f>&);
+template tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+    const vector<vec4i>&, const vector<vec3f>&);
+template tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+    const vector<vec4i>&, const vector<vec4f>&);
 
 // Subdivide catmullclark.
 template <typename T>
@@ -830,130 +832,122 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
     // early exit
     if (quads.empty() || vert.empty()) return {quads, vert};
-        // get edges
-        auto emap     = make_edge_map(quads);
-        auto edges    = get_edges(emap);
-        auto boundary = get_boundary(emap);
-        // number of elements
-        auto nverts    = (int)vert.size();
-        auto nedges    = (int)edges.size();
-        auto nboundary = (int)boundary.size();
-        auto nfaces    = (int)quads.size();
+    // get edges
+    auto emap     = make_edge_map(quads);
+    auto edges    = get_edges(emap);
+    auto boundary = get_boundary(emap);
+    // number of elements
+    auto nverts    = (int)vert.size();
+    auto nedges    = (int)edges.size();
+    auto nboundary = (int)boundary.size();
+    auto nfaces    = (int)quads.size();
 
-        // split elements ------------------------------------
-        // create vertices
-        auto tvert = vector<T>(nverts + nedges + nfaces);
-        for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
-        for (auto i = 0; i < nedges; i++) {
-            auto e            = edges[i];
-            tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
-        }
-        for (auto i = 0; i < nfaces; i++) {
-            auto q = quads[i];
-            if (q.z != q.w) {
-                tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] +
-                                                 vert[q.z] + vert[q.w]) /
-                                             4;
-            } else {
-                tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) /
-                                             3;
-            }
-        }
-        // create quads
-        auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
-        auto qi     = 0;
-        for (auto i = 0; i < nfaces; i++) {
-            auto q = quads[i];
-            if (q.z != q.w) {
-                tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.w, q.x})};
-                tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.x, q.y})};
-                tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.y, q.z})};
-                tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.z, q.w})};
-            } else {
-                tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.z, q.x})};
-                tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.x, q.y})};
-                tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
-                    nverts + nedges + i,
-                    nverts + get_edge_index(emap, {q.y, q.z})};
-            }
-        }
-        tquads.resize(qi);
-
-        // split boundary
-        auto tboundary = vector<vec2i>(nboundary * 2);
-        for (auto i = 0; i < nboundary; i++) {
-            auto e = boundary[i];
-            tboundary.push_back({e.x, nverts + get_edge_index(emap, e)});
-            tboundary.push_back({nverts + get_edge_index(emap, e), e.y});
-        }
-
-        // setup creases -----------------------------------
-        auto tcrease_edges = vector<vec2i>();
-        auto tcrease_verts = vector<int>();
-        if (lock_boundary) {
-            for (auto& b : tboundary) {
-                tcrease_verts.push_back(b.x);
-                tcrease_verts.push_back(b.y);
-            }
+    // split elements ------------------------------------
+    // create vertices
+    auto tvert = vector<T>(nverts + nedges + nfaces);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
+        auto e            = edges[i];
+        tvert[nverts + i] = (vert[e.x] + vert[e.y]) / 2;
+    }
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q.z != q.w) {
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
+                                             vert[q.w]) /
+                                         4;
         } else {
-            for (auto& b : tboundary) tcrease_edges.push_back(b);
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
+    }
+    // create quads
+    auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
+    auto qi     = 0;
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q.z != q.w) {
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.w, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.w}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
+            tquads[qi++] = {q.w, nverts + get_edge_index(emap, {q.w, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.w})};
+        } else {
+            tquads[qi++] = {q.x, nverts + get_edge_index(emap, {q.x, q.y}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.z, q.x})};
+            tquads[qi++] = {q.y, nverts + get_edge_index(emap, {q.y, q.z}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.x, q.y})};
+            tquads[qi++] = {q.z, nverts + get_edge_index(emap, {q.z, q.x}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q.y, q.z})};
+        }
+    }
+    tquads.resize(qi);
 
-        // define vertex valence ---------------------------
-        auto tvert_val = vector<int>(tvert.size(), 2);
-        for (auto& e : tboundary) {
-            tvert_val[e.x] = (lock_boundary) ? 0 : 1;
-            tvert_val[e.y] = (lock_boundary) ? 0 : 1;
-        }
+    // split boundary
+    auto tboundary = vector<vec2i>(nboundary * 2);
+    for (auto i = 0; i < nboundary; i++) {
+        auto e = boundary[i];
+        tboundary.push_back({e.x, nverts + get_edge_index(emap, e)});
+        tboundary.push_back({nverts + get_edge_index(emap, e), e.y});
+    }
 
-        // averaging pass ----------------------------------
-        auto avert  = vector<T>(tvert.size(), T());
-        auto acount = vector<int>(tvert.size(), 0);
-        for (auto p : tcrease_verts) {
-            if (tvert_val[p] != 0) continue;
-            avert[p] += tvert[p];
-            acount[p] += 1;
+    // setup creases -----------------------------------
+    auto tcrease_edges = vector<vec2i>();
+    auto tcrease_verts = vector<int>();
+    if (lock_boundary) {
+        for (auto& b : tboundary) {
+            tcrease_verts.push_back(b.x);
+            tcrease_verts.push_back(b.y);
         }
-        for (auto& e : tcrease_edges) {
-            auto c = (tvert[e.x] + tvert[e.y]) / 2.0f;
-            for (auto vid : {e.x, e.y}) {
-                if (tvert_val[vid] != 1) continue;
-                avert[vid] += c;
-                acount[vid] += 1;
-            }
-        }
-        for (auto& q : tquads) {
-            auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4.0f;
-            for (auto vid : {q.x, q.y, q.z, q.w}) {
-                if (tvert_val[vid] != 2) continue;
-                avert[vid] += c;
-                acount[vid] += 1;
-            }
-        }
-        for (auto i = 0; i < tvert.size(); i++) avert[i] /= (float)acount[i];
+    } else {
+        for (auto& b : tboundary) tcrease_edges.push_back(b);
+    }
 
-        // correction pass ----------------------------------
-        // p = p + (avg_p - p) * (4/avg_count)
-        for (auto i = 0; i < tvert.size(); i++) {
-            if (tvert_val[i] != 2) continue;
-            avert[i] = tvert[i] + (avert[i] - tvert[i]) * (4.0f / acount[i]);
-        }
-        tvert = avert;
+    // define vertex valence ---------------------------
+    auto tvert_val = vector<int>(tvert.size(), 2);
+    for (auto& e : tboundary) {
+        tvert_val[e.x] = (lock_boundary) ? 0 : 1;
+        tvert_val[e.y] = (lock_boundary) ? 0 : 1;
+    }
 
-        // done
-        return {tquads, tvert};
+    // averaging pass ----------------------------------
+    auto avert  = vector<T>(tvert.size(), T());
+    auto acount = vector<int>(tvert.size(), 0);
+    for (auto p : tcrease_verts) {
+        if (tvert_val[p] != 0) continue;
+        avert[p] += tvert[p];
+        acount[p] += 1;
+    }
+    for (auto& e : tcrease_edges) {
+        auto c = (tvert[e.x] + tvert[e.y]) / 2.0f;
+        for (auto vid : {e.x, e.y}) {
+            if (tvert_val[vid] != 1) continue;
+            avert[vid] += c;
+            acount[vid] += 1;
+        }
+    }
+    for (auto& q : tquads) {
+        auto c = (tvert[q.x] + tvert[q.y] + tvert[q.z] + tvert[q.w]) / 4.0f;
+        for (auto vid : {q.x, q.y, q.z, q.w}) {
+            if (tvert_val[vid] != 2) continue;
+            avert[vid] += c;
+            acount[vid] += 1;
+        }
+    }
+    for (auto i = 0; i < tvert.size(); i++) avert[i] /= (float)acount[i];
+
+    // correction pass ----------------------------------
+    // p = p + (avg_p - p) * (4/avg_count)
+    for (auto i = 0; i < tvert.size(); i++) {
+        if (tvert_val[i] != 2) continue;
+        avert[i] = tvert[i] + (avert[i] - tvert[i]) * (4.0f / acount[i]);
+    }
+    tvert = avert;
+
+    // done
+    return {tquads, tvert};
 }
 
 template tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
@@ -1088,8 +1082,8 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
 }
 
 // Merge shape elements
-void merge_lines(vector<vec2i>& lines,
-    const vector<vec2i>& merge_lines, int num_verts) {
+void merge_lines(
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts) {
     for (auto& l : merge_lines)
         lines.push_back({l.x + num_verts, l.y + num_verts});
 }
@@ -1098,8 +1092,8 @@ void merge_triangles(vector<vec3i>& triangles,
     for (auto& t : merge_triangles)
         triangles.push_back({t.x + num_verts, t.y + num_verts, t.z + num_verts});
 }
-void merge_quads(vector<vec4i>& quads,
-    const vector<vec4i>& merge_quads, int num_verts) {
+void merge_quads(
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
     for (auto& q : merge_quads)
         quads.push_back({q.x + num_verts, q.y + num_verts, q.z + num_verts,
             q.w + num_verts});
@@ -1121,9 +1115,8 @@ void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
 }
 void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec3i>& merge_triangles,
-    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords) {
+    const vector<vec3i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords) {
     auto merge_verts = (int)positions.size();
     for (auto& t : merge_triangles)
         triangles.push_back(
@@ -1136,9 +1129,8 @@ void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
 }
 void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec4i>& merge_quads,
-    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords) {
+    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords) {
     auto merge_verts = (int)positions.size();
     for (auto& q : merge_quads)
         quads.push_back({q.x + merge_verts, q.y + merge_verts,
@@ -2594,8 +2586,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
         qpositions[i] = {qpositions[i].x, qpositions[i].y, size.z / 2};
         qnormals[i]   = {0, 0, 1};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // - z
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_quad_shape(
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
@@ -2603,8 +2595,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
         qpositions[i] = {-qpositions[i].x, qpositions[i].y, -size.z / 2};
         qnormals[i]   = {0, 0, -1};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // + x
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_quad_shape(
         {steps.y, steps.z}, {size.y, size.z}, {uvsize.y, uvsize.z});
@@ -2612,8 +2604,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
         qpositions[i] = {size.x / 2, qpositions[i].y, -qpositions[i].x};
         qnormals[i]   = {1, 0, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // - x
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_quad_shape(
         {steps.y, steps.z}, {size.y, size.z}, {uvsize.y, uvsize.z});
@@ -2621,8 +2613,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
         qpositions[i] = {-size.x / 2, qpositions[i].y, qpositions[i].x};
         qnormals[i]   = {-1, 0, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // + y
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_quad_shape(
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
@@ -2630,8 +2622,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
         qpositions[i] = {qpositions[i].x, size.y / 2, -qpositions[i].y};
         qnormals[i]   = {0, 1, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // - y
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_quad_shape(
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
@@ -2639,8 +2631,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
         qpositions[i] = {qpositions[i].x, -size.y / 2, qpositions[i].y};
         qnormals[i]   = {0, -1, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     return {quads, positions, normals, texturecoords};
 }
 
@@ -2838,16 +2830,16 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_
     // side
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_cylinder_side_shape(
         {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // top
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_disk_shape(
         {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
     for (auto i = 0; i < qpositions.size(); i++) {
         qpositions[i].z = size.y / 2;
     }
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // bottom
     tie(qquads, qpositions, qnormals, qtexturecoords) = make_disk_shape(
         {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
@@ -2856,8 +2848,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_
         qnormals[i]     = -qnormals[i];
     }
     for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
-    merge_quads(quads, positions, normals, texturecoords, qquads,
-        qpositions, qnormals, qtexturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     return {quads, positions, normals, texturecoords};
 }
 
@@ -2902,9 +2894,9 @@ tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
         {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
         {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
         {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    auto positions = sphere_pos;
-    auto triangles = sphere_triangles;
-    for(auto l = 0; l < max(0, tesselation - 2); l ++) {
+    auto        positions        = sphere_pos;
+    auto        triangles        = sphere_triangles;
+    for (auto l = 0; l < max(0, tesselation - 2); l++) {
         tie(triangles, positions) = subdivide_triangles(triangles, positions);
     }
     for (auto& p : positions) p = normalize(p) * size / 2;
@@ -4226,68 +4218,55 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
     if (!subdivided.points.empty()) {
         log_error("point subdivision not supported");
     } else if (!subdivided.lines.empty()) {
-    for(auto l = 0; l < subdivision_level; l ++) {
-        auto lines                                  = subdivided.lines;
-        tie(subdivided.lines, subdivided.positions) = 
-        subdivide_lines(
-            lines, subdivided.positions);
-        tie(ignore, subdivided.normals) = subdivide_lines(
-            lines, subdivided.normals);
-        tie(ignore, subdivided.texturecoords) = subdivide_lines(
-            lines, subdivided.texturecoords);
-        tie(ignore, subdivided.colors) = subdivide_lines(
-            lines, subdivided.colors);
-        tie(ignore, subdivided.radius) = subdivide_lines(
-            lines, subdivided.radius);
-    }
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto lines                                  = subdivided.lines;
+            tie(subdivided.lines, subdivided.positions) = subdivide_lines(
+                lines, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_lines(
+                lines, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_lines(
+                lines, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_lines(
+                lines, subdivided.colors);
+            tie(ignore, subdivided.radius) = subdivide_lines(
+                lines, subdivided.radius);
+        }
     } else if (!subdivided.triangles.empty()) {
-    for(auto l = 0; l < subdivision_level; l ++) {
-        auto triangles = subdivided.triangles;
-        tie(subdivided.triangles, subdivided.positions) = 
-        subdivide_triangles(
-            triangles, subdivided.positions);
-        tie(ignore, subdivided.normals) = 
-        subdivide_triangles(
-            triangles, subdivided.normals);
-        tie(ignore, subdivided.texturecoords) = 
-        subdivide_triangles(triangles,
-            subdivided.texturecoords);
-        tie(ignore, subdivided.colors) = 
-        subdivide_triangles(
-            triangles, subdivided.colors);
-    }
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto triangles = subdivided.triangles;
+            tie(subdivided.triangles, subdivided.positions) = subdivide_triangles(
+                triangles, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_triangles(
+                triangles, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_triangles(
+                triangles, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_triangles(
+                triangles, subdivided.colors);
+        }
     } else if (!subdivided.quads.empty() && !catmull_clark) {
-    for(auto l = 0; l < subdivision_level; l ++) {
-        auto quads = subdivided.quads;
-        tie(subdivided.quads, subdivided.positions) = 
-        subdivide_quads(
-            quads, subdivided.positions);
-        tie(ignore, subdivided.normals) = 
-        subdivide_quads(
-            quads, subdivided.normals);
-        tie(ignore, subdivided.texturecoords) = 
-        subdivide_quads(
-            quads, subdivided.texturecoords);
-        tie(ignore, subdivided.colors) = 
-        subdivide_quads(
-            quads, subdivided.colors);
-    }
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto quads                                  = subdivided.quads;
+            tie(subdivided.quads, subdivided.positions) = subdivide_quads(
+                quads, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_quads(
+                quads, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_quads(
+                quads, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_quads(
+                quads, subdivided.colors);
+        }
     } else if (!subdivided.quads.empty() && catmull_clark) {
-    for(auto l = 0; l < subdivision_level; l ++) {
-        auto quads = subdivided.quads;
-        tie(subdivided.quads, subdivided.positions) = 
-        subdivide_catmullclark(
-            quads, subdivided.positions);
-        tie(ignore, subdivided.normals) = 
-        subdivide_catmullclark(
-            quads, subdivided.normals);
-        tie(ignore, subdivided.texturecoords) = 
-        subdivide_catmullclark(
-            quads, subdivided.texturecoords);
-        tie(ignore, subdivided.colors) = 
-        subdivide_catmullclark(
-            quads, subdivided.colors);
-    }
+        for (auto l = 0; l < subdivision_level; l++) {
+            auto quads                                  = subdivided.quads;
+            tie(subdivided.quads, subdivided.positions) = subdivide_catmullclark(
+                quads, subdivided.positions);
+            tie(ignore, subdivided.normals) = subdivide_catmullclark(
+                quads, subdivided.normals);
+            tie(ignore, subdivided.texturecoords) = subdivide_catmullclark(
+                quads, subdivided.texturecoords);
+            tie(ignore, subdivided.colors) = subdivide_catmullclark(
+                quads, subdivided.colors);
+        }
     }
 
     if (compute_normals) {
@@ -4312,34 +4291,25 @@ yocto_surface subdivide_surface(const yocto_surface& surface,
         return new_ids;
     };
     if (!subdivided.quads_positions.empty() && !catmull_clark) {
-    for(auto l = 0; l < subdivision_level; l ++) {
-        subdivided.quads_materials =
-        subdivide_ids(subdivided.quads_positions, subdivided.quads_materials);
-        tie(subdivided.quads_positions,
-            subdivided.positions) =
-        subdivide_quads(subdivided.quads_positions,
-            subdivided.positions);
-            tie(subdivided.quads_normals, subdivided.normals) =
-        subdivide_quads(
-            subdivided.quads_normals, subdivided.normals);
-            tie(subdivided.quads_texturecoords,
-            subdivided.texturecoords) =
-        subdivide_quads(subdivided.quads_texturecoords,
-            subdivided.texturecoords);
-    }
+        for (auto l = 0; l < subdivision_level; l++) {
+            subdivided.quads_materials = subdivide_ids(
+                subdivided.quads_positions, subdivided.quads_materials);
+            tie(subdivided.quads_positions, subdivided.positions) = subdivide_quads(
+                subdivided.quads_positions, subdivided.positions);
+            tie(subdivided.quads_normals, subdivided.normals) = subdivide_quads(
+                subdivided.quads_normals, subdivided.normals);
+            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_quads(
+                subdivided.quads_texturecoords, subdivided.texturecoords);
+        }
     } else if (!subdivided.quads_positions.empty() && catmull_clark) {
-    for(auto l = 0; l < subdivision_level; l ++) {
-        subdivided.quads_materials =
-        subdivide_ids(subdivided.quads_positions, subdivided.quads_materials);
-        tie(subdivided.quads_positions,
-            subdivided.positions) =
-        subdivide_catmullclark(subdivided.quads_positions,
-            subdivided.positions);
-            tie(subdivided.quads_texturecoords,
-            subdivided.texturecoords) =
-        subdivide_catmullclark(subdivided.quads_texturecoords,
-            subdivided.texturecoords, true);
-    }
+        for (auto l = 0; l < subdivision_level; l++) {
+            subdivided.quads_materials = subdivide_ids(
+                subdivided.quads_positions, subdivided.quads_materials);
+            tie(subdivided.quads_positions, subdivided.positions) = subdivide_catmullclark(
+                subdivided.quads_positions, subdivided.positions);
+            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_catmullclark(
+                subdivided.quads_texturecoords, subdivided.texturecoords, true);
+        }
     }
 
     if (compute_normals) {
@@ -5830,8 +5800,7 @@ float evaluate_phase_function(float cos_theta, float g) {
 namespace ygl {
 
 // Merge scene into one another
-void merge_scene(
-    yocto_scene& merge_scene, const yocto_scene& merge_from) {
+void merge_scene(yocto_scene& merge_scene, const yocto_scene& merge_from) {
     log_error("this is  broken since we did not fix references");
     auto merge = [](auto& v1, auto& v2) {
         v1.insert(v1.end(), v2.begin(), v2.end());

@@ -60,7 +60,7 @@ struct app_image {
     thread       load_thread, display_thread, stats_thread, save_thread;
     atomic<bool> display_stop;
     concurrent_queue<bbox2i> display_queue;
-    string                         error_msg = "";
+    string                   error_msg = "";
 
     // viewing properties
     vec2f image_center = zero2f;
@@ -149,15 +149,15 @@ void add_new_image(app_state& app, const string& filename, const string& outname
     img.filename = filename;
     img.outname = (outname == "") ? replace_extension(filename, ".display.png") :
                                     outname;
-    img.name        = get_filename(filename);
-    img.exposure    = exposure;
-    img.filmic      = filmic;
-    img.srgb        = srgb;
-    img.load_done   = false;
-    img.display_done= false;
-    img.stats_done  = false;
-    img.load_thread = thread([&img]() { load_image_async(img); });
-    app.img_id      = (int)app.imgs.size() - 1;
+    img.name         = get_filename(filename);
+    img.exposure     = exposure;
+    img.filmic       = filmic;
+    img.srgb         = srgb;
+    img.load_done    = false;
+    img.display_done = false;
+    img.stats_done   = false;
+    img.load_thread  = thread([&img]() { load_image_async(img); });
+    app.img_id       = (int)app.imgs.size() - 1;
 }
 
 void draw_opengl_widgets(const opengl_window& win) {
@@ -256,7 +256,8 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(img.gl_txt, img.display.size(), false, false, false, false);
+            init_opengl_texture(
+                img.gl_txt, img.display.size(), false, false, false, false);
         } else {
             auto region = bbox2i{};
             while (img.display_queue.try_pop(region)) {

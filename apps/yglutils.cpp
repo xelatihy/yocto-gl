@@ -194,7 +194,8 @@ void update_opengl_texture_region(opengl_texture& texture,
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     auto clipped = get_image_region(img, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.min.x, region.min.y,
-        bbox_size(region).x, bbox_size(region).y, GL_RGBA, GL_FLOAT, clipped.data());
+        bbox_size(region).x, bbox_size(region).y, GL_RGBA, GL_FLOAT,
+        clipped.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
