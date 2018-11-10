@@ -62,7 +62,7 @@ struct app_state {
     atomic<bool>                   trace_stop;
     atomic<int>                    trace_sample;
     vector<thread>                 trace_threads = {};
-    concurrent_queue<image_region> trace_queue   = {};
+    concurrent_queue<bbox2i> trace_queue   = {};
 
     // view image
     vec2f                     image_center = zero2f;
@@ -287,10 +287,10 @@ void draw(const opengl_window& win) {
                     false, false, false);
             }
         } else {
-            auto region = image_region{};
+            auto region = bbox2i{};
             auto size   = 0;
             while (app.trace_queue.try_pop(region)) {
-                if (region.size == zero2i) {
+                if (bbox_size(region) == zero2i) {
                     update_opengl_texture(
                         app.display_texture, app.preview_image, false);
                     break;
@@ -300,7 +300,7 @@ void draw(const opengl_window& win) {
                         app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
-                    size += region.size.x * region.size.y;
+                    size += bbox_size(region).x * bbox_size(region).y;
                     if (size >=
                         app.rendered_image.size().x * app.rendered_image.size().y)
                         break;

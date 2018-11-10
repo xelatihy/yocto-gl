@@ -1553,12 +1553,26 @@ using bbox1f = bbox<float, 1>;
 using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
 using bbox4f = bbox<float, 4>;
+using bbox1i = bbox<int, 1>;
+using bbox2i = bbox<int, 2>;
+using bbox3i = bbox<int, 3>;
+using bbox4i = bbox<int, 4>;
 
 // Empty bbox constant.
 const auto invalid_bbox1f = bbox1f();
 const auto invalid_bbox2f = bbox2f();
 const auto invalid_bbox3f = bbox3f();
 const auto invalid_bbox4f = bbox4f();
+const auto invalid_bbox1i = bbox1i();
+const auto invalid_bbox2i = bbox2i();
+const auto invalid_bbox3i = bbox3i();
+const auto invalid_bbox4i = bbox4i();
+
+// Bounding box size and center
+template<typename T, int N>
+vec<T, N> bbox_size(const bbox<T, N>& a) { return a.max - a.min; }
+template<typename T, int N>
+vec<T, N> bbox_center(const bbox<T, N>& a) { return (a.min + a.max) / 2; }
 
 // Bounding box comparisons.
 template <typename T>
@@ -3087,23 +3101,17 @@ inline float get_image_aspect(const image<T>& img) {
     return (float)img.size().x / (float)img.size().y;
 }
 
-// Image region defined by its corner at x,y and with size width x height
-struct image_region {
-    vec2i offset = {0, 0};
-    vec2i size   = {0, 0};
-};
-
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(const vec2i& image_size,
+vector<bbox2i> make_image_regions(const vec2i& image_size,
     int region_size = 32);
 
 // Gets pixels in an image region
 template <typename T>
 inline void get_image_region(image<T>& clipped, 
-    const image<T>& img, const image_region& region);
+    const image<T>& img, const bbox2i& region);
 template <typename T>
 inline image<T> get_image_region(
-    const image<T>& img, const image_region& region);
+    const image<T>& img, const bbox2i& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -3128,7 +3136,7 @@ void linear_to_srgb(const image<vec4f>& lin, image<vec4b>& srgb);
 void tonemap_image(const image<vec4f>& hdr, image<vec4f>& ldr, float exposure,
     bool filmic, bool srgb);
 void tonemap_image_region(const image<vec4f>& hdr, image<vec4f>& ldr,
-    const image_region& region, float exposure, bool filmic, bool srgb);
+    const bbox2i& region, float exposure, bool filmic, bool srgb);
 void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr, float exposure,
     bool filmic, bool srgb);
 
@@ -3883,11 +3891,11 @@ int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 void trace_image_async_start(image<vec4f>& rendered_image,
     image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, vector<thread>& threads,
-    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    atomic<int>& current_sample, concurrent_queue<bbox2i>& queue,
     const trace_image_options& options);
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
-    concurrent_queue<image_region>& queue, const trace_image_options& options);
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
@@ -4181,22 +4189,22 @@ namespace ygl {
 // Gets pixels in an image region
 template <typename T>
 inline void get_image_region(image<T>& clipped, 
-    const image<T>& img, const image_region& region) {
-    clipped.resize(region.size);
-    for (auto j = 0; j < region.size.y; j++) {
-        for (auto i = 0; i < region.size.x; i++) {
+    const image<T>& img, const bbox2i& region) {
+    clipped.resize(bbox_size(region));
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
             clipped[{i, j}] = 
-                img[{i + region.offset.x, j + region.offset.y}];
+                img[{i + region.min.x, j + region.min.y}];
         }
     }
 }
 template <typename T>
-inline image<T> get_image_region(const image<T>& img, const image_region& region) {
-    auto clipped = image<T>{region.size};
-    for (auto j = 0; j < region.size.y; j++) {
-        for (auto i = 0; i < region.size.x; i++) {
+inline image<T> get_image_region(const image<T>& img, const bbox2i& region) {
+    auto clipped = image<T>{bbox_size(region)};
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
             clipped[{i, j}] = 
-                img[{i + region.offset.x, j + region.offset.y}];
+                img[{i + region.min.x, j + region.min.y}];
         }
     }
     return clipped;
@@ -4268,7 +4276,7 @@ template <typename T, int N>
 inline bool print_value(string& str, const ray<T, N>& v) {
     return print_value(str, (const array<T, N * 2 + 2>&)v);
 }
-inline bool print_value(string& str, const image_region& v) {
+inline bool print_value(string& str, const bbox2i& v) {
     return print_value(str, (const array<int, 4>&)v);
 }
 
@@ -4398,7 +4406,7 @@ template <typename T, int N>
 inline bool parse_value(parse_string_view& str, ray<T, N>& v) {
     return parse_value(str, (array<T, N * 2 + 2>&)v);
 }
-inline bool parse_value(parse_string_view& str, image_region& v) {
+inline bool parse_value(parse_string_view& str, bbox2i& v) {
     return parse_value(str, (array<int, 4>&)v);
 }
 

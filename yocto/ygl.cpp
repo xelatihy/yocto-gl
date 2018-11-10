@@ -3568,12 +3568,12 @@ vec2i get_image_size(const vec2i& size, float aspect) {
 }
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(const vec2i& image_size, int region_size) {
-    auto regions = vector<image_region>{};
+vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size) {
+    auto regions = vector<bbox2i>{};
     for (auto y = 0; y < image_size.y; y += region_size) {
         for (auto x = 0; x < image_size.x; x += region_size) {
-            regions.push_back({{x, y}, {min(region_size, image_size.x - x),
-                                           min(region_size, image_size.y - y)}});
+            regions.push_back({{x, y}, {min(x + region_size, image_size.x),
+                                           min(y + region_size, image_size.y)}});
         }
     }
     return regions;
@@ -3672,9 +3672,9 @@ void tonemap_image(const image<vec4f>& hdr, image<vec4b>& ldr, float exposure,
 
 // Tonemap image
 void tonemap_image_region(const image<vec4f>& hdr, image<vec4f>& ldr,
-    const image_region& region, float exposure, bool filmic, bool srgb) {
-    for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
-        for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
+    const bbox2i& region, float exposure, bool filmic, bool srgb) {
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
             ldr[{i, j}] = tonemap_filmic(
                 hdr[{i, j}], exposure, filmic, srgb);
         }
@@ -7411,12 +7411,12 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
 // Trace a block of samples
 void trace_image_region(image<vec4f>& rendered_image,
     image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const image_region& region, int num_samples,
+    const trace_lights& lights, const bbox2i& region, int num_samples,
     const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
     auto  sampler = get_trace_sampler_func(options.sampler_type);
-    for (auto j = region.offset.y; j < region.offset.y + region.size.y; j++) {
-        for (auto i = region.offset.x; i < region.offset.x + region.size.x; i++) {
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region. min.x; i < region.max.x; i++) {
             auto& pixel = pixels[{i, j}];
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
@@ -7583,7 +7583,7 @@ int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 void trace_image_async_start(image<vec4f>& rendered_image,
     image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, vector<thread>& threads,
-    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
+    atomic<int>& current_sample, concurrent_queue<bbox2i>& queue,
     const trace_image_options& options) {
     log_trace("start tracing async");
     auto& camera     = scene.cameras.at(options.camera_id);
@@ -7627,7 +7627,7 @@ void trace_image_async_start(image<vec4f>& rendered_image,
                 options.num_samples - current_sample);
             parallel_foreach(regions,
                 [num_samples, &options, &rendered_image, &scene, &lights, &bvh,
-                    &pixels, &queue](const image_region& region) {
+                    &pixels, &queue](const bbox2i& region) {
                     trace_image_region(rendered_image, pixels, scene, bvh,
                         lights, region, num_samples, options);
                     queue.push(region);
@@ -7641,7 +7641,7 @@ void trace_image_async_start(image<vec4f>& rendered_image,
 
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
-    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     if (options.cancel_flag) *options.cancel_flag = true;
     for (auto& t : threads) t.join();
     threads.clear();
