@@ -845,12 +845,13 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         auto  positions     = vector<vec3f>();
         auto  normals       = vector<vec3f>();
         auto  texturecoords = vector<vec2f>();
+        tie(quads, positions, normals, texturecoords) = 
         convert_face_varying(surface.quads_positions, surface.quads_normals,
             surface.quads_texturecoords, surface.positions, surface.normals,
-            surface.texturecoords, quads, positions, normals, texturecoords);
+            surface.texturecoords);
         auto split_quads = vector<vector<vec4i>>();
         if (surface.materials.size() > 1 && !surface.quads_materials.empty()) {
-            ungroup_quads(quads, surface.quads_materials, split_quads);
+            split_quads = ungroup_quads(quads, surface.quads_materials);
         } else {
             split_quads = {quads};
         }

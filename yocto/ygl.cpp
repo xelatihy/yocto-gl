@@ -602,15 +602,14 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-void convert_face_varying(const vector<vec4i>& quads_positions,
+tuple< vector<vec4i>,  vector<vec3f>,  vector<vec3f>,  vector<vec2f>>
+convert_face_varying(const vector<vec4i>& quads_positions,
     const vector<vec4i>&                       quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    vector<vec4i>& split_quads, vector<vec3f>& split_positions,
-    vector<vec3f>& split_normals, vector<vec2f>& split_texcturecoords) {
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords) {
     // make faces unique
     unordered_map<vec3i, int> vert_map;
-    split_quads = vector<vec4i>(quads_positions.size());
+    auto split_quads = vector<vec4i>(quads_positions.size());
     for (auto fid = 0; fid < quads_positions.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
             auto v = vec3i{
@@ -631,50 +630,49 @@ void convert_face_varying(const vector<vec4i>& quads_positions,
     }
 
     // fill vert data
-    split_positions.clear();
+    auto split_positions = vector<vec3f>{};
     if (!positions.empty()) {
         split_positions.resize(vert_map.size());
         for (auto kv : vert_map) {
             split_positions[kv.second] = positions[kv.first.x];
         }
     }
-    split_normals.clear();
+    auto split_normals = vector<vec3f>{};
     if (!normals.empty()) {
         split_normals.resize(vert_map.size());
         for (auto kv : vert_map) {
             split_normals[kv.second] = normals[kv.first.y];
         }
     }
-    split_texcturecoords.clear();
+    auto split_texcturecoords = vector<vec2f>{};
     if (!texturecoords.empty()) {
         split_texcturecoords.resize(vert_map.size());
         for (auto kv : vert_map) {
             split_texcturecoords[kv.second] = texturecoords[kv.first.z];
         }
     }
+
+    return {split_quads, split_positions, split_normals, split_texcturecoords};
 }
 
 // Split primitives per id
 template <typename T>
-void ungroup_elems(const vector<T>& elems, const vector<int>& ids,
-    vector<vector<T>>& split_elems) {
+vector<vector<T>> ungroup_elems(const vector<T>& elems, const vector<int>& ids) {
     auto max_id = *std::max_element(ids.begin(), ids.end());
-    split_elems = vector<vector<T>>(max_id + 1);
+    auto split_elems = vector<vector<T>>(max_id + 1);
     for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
         split_elems[ids[elem_id]].push_back(elems[elem_id]);
     }
+    return split_elems;
 }
-void ungroup_lines(const vector<vec2i>& lines, const vector<int>& ids,
-    vector<vector<vec2i>>& split_lines) {
-    ungroup_elems(lines, ids, split_lines);
+vector<vector<vec2i>> ungroup_lines(const vector<vec2i>& lines, const vector<int>& ids) {
+    return ungroup_elems(lines, ids);
 }
-void ungroup_triangles(const vector<vec3i>& triangles, const vector<int>& ids,
-    vector<vector<vec3i>>& split_triangles) {
-    ungroup_elems(triangles, ids, split_triangles);
+vector<vector<vec3i>> ungroup_triangles(const vector<vec3i>& triangles, const vector<int>& ids) {
+    return ungroup_elems(triangles, ids);
 }
-void ungroup_quads(const vector<vec4i>& quads, const vector<int>& ids,
-    vector<vector<vec4i>>& split_quads) {
-    ungroup_elems(quads, ids, split_quads);
+vector<vector<vec4i>> ungroup_quads(const vector<vec4i>& quads, const vector<int>& ids) {
+    return ungroup_elems(quads, ids);
 }
 
 // Subdivide lines.

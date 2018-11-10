@@ -2516,20 +2516,16 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
 // with ids, it also plits the faces per id.
-void convert_face_varying(const vector<vec4i>& quads_positions,
+tuple< vector<vec4i>,  vector<vec3f>,  vector<vec3f>,  vector<vec2f>>
+convert_face_varying(const vector<vec4i>& quads_positions,
     const vector<vec4i>&                       quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    vector<vec4i>& split_quads, vector<vec3f>& split_positions,
-    vector<vec3f>& split_normals, vector<vec2f>& split_texturecoords);
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
 // Split primitives per id
-void ungroup_lines(const vector<vec2i>& lines, const vector<int>& ids,
-    vector<vector<vec2i>>& split_lines);
-void ungroup_triangles(const vector<vec3i>& triangles, const vector<int>& ids,
-    vector<vector<vec3i>>& split_triangles);
-void ungroup_quads(const vector<vec4i>& quads, const vector<int>& ids,
-    vector<vector<vec4i>>& split_quads);
+vector<vector<vec2i>> ungroup_lines(const vector<vec2i>& lines, const vector<int>& ids);
+vector<vector<vec3i>> ungroup_triangles(const vector<vec3i>& triangles, const vector<int>& ids);
+vector<vector<vec4i>> ungroup_quads(const vector<vec4i>& quads, const vector<int>& ids);
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
