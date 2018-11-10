@@ -260,6 +260,17 @@ bool write_values(file_stream& fs, const vector<T>& vals) {
     return true;
 }
 
+// Write to file
+template <typename T>
+bool write_values(file_stream& fs, size_t num, const T* vals) {
+    if (!fs) return false;
+    if (fwrite(vals, sizeof(T), num, fs.fs) != num) {
+        log_io_error("cannot write to {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
 // Print shortcut
 template <typename... Args>
 bool print(file_stream& fs, const string& fmt, const Args&... args) {
@@ -294,6 +305,17 @@ template <typename T>
 bool read_values(file_stream& fs, vector<T>& vals) {
     if (!fs) return false;
     if (fread(vals.data(), sizeof(T), vals.size(), fs.fs) != vals.size()) {
+        log_io_error("cannot read from {}", fs.filename);
+        return false;
+    }
+    return true;
+}
+
+// Read binary data to fill the whole buffer
+template <typename T>
+bool read_values(file_stream& fs, size_t num, T* vals) {
+    if (!fs) return false;
+    if (fread(vals, sizeof(T), num, fs.fs) != num) {
         log_io_error("cannot read from {}", fs.filename);
         return false;
     }
@@ -419,20 +441,20 @@ inline void from_json(const json& js, bbox<T, N>& value) {
 template <typename T>
 inline void to_json(json& js, const image<T>& value) {
     js           = json::object();
-    js["size"]   = value.size;
-    js["pixels"] = value.pixels;
+    js["size"]   = value.size();
+    js["pixels"] = vector<T>{value.data(), value.data() + value.size().x * value.size().y};
 }
 template <typename T>
 inline void from_json(const json& js, image<T>& value) {
     auto size   = js.at("size").get<vec2i>();
     auto pixels = js.at("pixels").get<vector<T>>();
-    value       = image<T>{size, pixels};
+    value       = image<T>{size, pixels.data()};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
     js           = json::object();
-    js["size"]   = value.size;
-    js["voxels"] = value.voxels;
+    js["size"]   = value.size();
+    js["voxels"] = vector<T>{value.data(), value.data() + value.size().x * value.size().y * value.size().z};
 }
 template <typename T>
 inline void from_json(const json& js, volume<T>& value) {
@@ -616,8 +638,8 @@ bool load_pfm_image(const string& filename, image<vec4f>& img) {
     return true;
 }
 bool save_pfm_image(const string& filename, const image<vec4f>& img) {
-    if (!save_pfm(filename.c_str(), img.size.x, img.size.y, 4,
-            (float*)img.pixels.data())) {
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -642,7 +664,7 @@ bool load_exr_image(const string& filename, image<vec4f>& img) {
     return true;
 }
 bool save_exr_image(const string& filename, const image<vec4f>& img) {
-    if (!SaveEXR((float*)img.pixels.data(), img.size.x, img.size.y, 4,
+    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -677,16 +699,16 @@ bool load_stb_image(const string& filename, image<vec4f>& img) {
 
 // save an image with stbi
 bool save_png_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), img.size.x, img.size.y, 4,
-            img.pixels.data(), img.size.x * 4)) {
+    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_jpg_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_jpg(filename.c_str(), img.size.x, img.size.y, 4,
-            img.pixels.data(), 75)) {
+    if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -694,7 +716,7 @@ bool save_jpg_image(const string& filename, const image<vec4b>& img) {
 }
 bool save_tga_image(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.size.x, img.size.y, 4, img.pixels.data())) {
+            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -702,15 +724,15 @@ bool save_tga_image(const string& filename, const image<vec4b>& img) {
 }
 bool save_bmp_image(const string& filename, const image<vec4b>& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size.x, img.size.y, 4, img.pixels.data())) {
+            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_hdr_image(const string& filename, const image<vec4f>& img) {
-    if (!stbi_write_hdr(filename.c_str(), img.size.x, img.size.y, 4,
-            (float*)img.pixels.data())) {
+    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -934,9 +956,9 @@ void resize_image(
         log_error("bad image size in resize_image");
     }
     init_image(res_img, get_image_size(size, get_image_aspect(img)));
-    stbir_resize_float_generic((float*)img.pixels.data(), img.size.x,
-        img.size.y, sizeof(vec4f) * img.size.x, (float*)res_img.pixels.data(),
-        res_img.size.x, res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,
+    stbir_resize_float_generic((float*)img.data(), img.size().x,
+        img.size().y, sizeof(vec4f) * img.size().x, (float*)res_img.data(),
+        res_img.size().x, res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
 }
 
@@ -953,8 +975,8 @@ bool load_volume1f_nolog(const string& filename, volume<float>& vol) {
     if (!fs) return false;
     auto size = zero3i;
     if (!read_value(fs, size)) return false;
-    init_volume(vol, size);
-    if (!read_values(fs, vol.voxels)) return false;
+    vol.resize(size);
+    if (!read_values(fs, size.x * size.y * size.z, vol.data())) return false;
     return true;
 }
 bool load_volume1f(const string& filename, volume<float>& vol) {
@@ -966,8 +988,9 @@ bool load_volume1f(const string& filename, volume<float>& vol) {
 bool save_volume1f_nolog(const string& filename, const volume<float>& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
-    if (!write_value(fs, vol.size)) return false;
-    if (!write_values(fs, vol.voxels)) return false;
+    auto size = vol.size();
+    if (!write_value(fs, size)) return false;
+    if (!write_values(fs, size.x * size.y * size.z, vol.data())) return false;
     return true;
 }
 bool save_volume1f(const string& filename, const volume<float>& vol) {
@@ -1032,8 +1055,8 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.textures,
         [&exit_error, &options, &dirname](yocto_texture& texture) {
             if (exit_error) return;
-            if (texture.filename == "" || !texture.hdr_image.pixels.empty() ||
-                !texture.ldr_image.pixels.empty())
+            if (texture.filename == "" || !texture.hdr_image.empty() ||
+                !texture.ldr_image.empty())
                 return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (is_hdr_filename(filename)) {
@@ -1059,7 +1082,7 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.voltextures,
         [&exit_error, &options, &dirname](yocto_voltexture& texture) {
             if (exit_error) return;
-            if (texture.filename == "" || !texture.volume_data.voxels.empty())
+            if (texture.filename == "" || !texture.volume_data.empty())
                 return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (!load_volume1f_nolog(filename, texture.volume_data)) {
@@ -1079,13 +1102,13 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
             [&scene, &has_opacity](int texture_id) {
                 auto& texture           = scene.textures[texture_id];
                 has_opacity[texture_id] = 0;
-                for (auto& p : texture.hdr_image.pixels) {
+                for (auto& p : texture.hdr_image) {
                     if (p.w < 0.999f) {
                         has_opacity[texture_id] = 1;
                         break;
                     }
                 }
-                for (auto& p : texture.ldr_image.pixels) {
+                for (auto& p : texture.ldr_image) {
                     if (p.w < 255) {
                         has_opacity[texture_id] = 1;
                         break;
@@ -1114,8 +1137,8 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.textures,
         [&exit_error, &options, &dirname](const yocto_texture& texture) {
             if (exit_error) return;
-            if (texture.hdr_image.pixels.empty() &&
-                texture.ldr_image.pixels.empty())
+            if (texture.hdr_image.empty() &&
+                texture.ldr_image.empty())
                 return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (is_hdr_filename(filename)) {
@@ -1141,7 +1164,7 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
     parallel_foreach(scene.voltextures,
         [&exit_error, &options, &dirname](const yocto_voltexture& texture) {
             if (exit_error) return;
-            if (texture.volume_data.voxels.empty()) return;
+            if (texture.volume_data.empty()) return;
             auto filename = normalize_path(dirname + "/" + texture.filename);
             if (!save_volume1f_nolog(filename, texture.volume_data)) {
                 if (options.exit_on_error) {
@@ -1306,11 +1329,25 @@ namespace ygl {
 
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
-    return a.size == b.size && a.pixels == b.pixels;
+    if(a.size() != b.size()) return false;
+    for(auto j = 0; j < a.size().y; j ++) {
+        for(auto i = 0; i < a.size().x; i ++) {
+            if(a[{i, j}] != b[{i, j}]) return false;
+        }
+    }
+    return true;
 }
 template <typename T>
 bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.size == b.size && a.data == b.data;
+    if(a.size() != b.size()) return false;
+    for(auto k = 0; k < a.size().z; k ++) {
+        for(auto j = 0; j < a.size().y; j ++) {
+            for(auto i = 0; i < a.size().x; i ++) {
+                if(a[{i, j, k}] != b[{i, j, k}]) return false;
+            }
+        }
+    }
+    return true;
 }
 
 // Dumps a json value
@@ -1660,7 +1697,7 @@ bool serialize_json_object(
             def.no_interpolation, save))
         return false;
     if (value.filename == "") {
-        if (!value.volume_data.voxels.empty()) js["vol"] = value.volume_data;
+        if (!value.volume_data.empty()) js["vol"] = value.volume_data;
     }
     if (!serialize_json_procedural(js, value, "!!proc", scene, save))
         return false;
@@ -5167,14 +5204,14 @@ bool serialize_bin_value(string& str, file_stream& fs, bool save) {
 template <typename T>
 bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, img.size)) return false;
-        if (!write_values(fs, img.pixels)) return false;
+        if (!write_value(fs, img.size())) return false;
+        if (!write_values(fs, img.size().x * img.size().y, img.data())) return false;
         return true;
     } else {
         auto size = zero2i;
         if (!read_value(fs, size)) return false;
-        init_image(img, size);
-        if (!read_values(fs, img.pixels)) return false;
+        img.resize(size);
+        if (!read_values(fs, img.size().x * img.size().y, img.data())) return false;
         return true;
     }
 }
@@ -5183,14 +5220,14 @@ bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
 template <typename T>
 bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, vol.size)) return false;
-        if (!write_values(fs, vol.voxels)) return false;
+        if (!write_value(fs, vol.size())) return false;
+        if (!write_values(fs, vol.size().x * vol.size().y* vol.size().z, vol.data())) return false;
         return true;
     } else {
         auto size = zero3i;
         if (!read_value(fs, size)) return false;
-        init_volume(vol, size);
-        if (!read_values(fs, vol.voxels)) return false;
+        vol.resize(size);
+        if (!read_values(fs, vol.size().x * vol.size().y* vol.size().z, vol.data())) return false;
         return true;
     }
 }

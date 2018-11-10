@@ -797,10 +797,10 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     state.textures.resize(scene.textures.size());
     for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
         auto texture = scene.textures[texture_id];
-        if (!texture.hdr_image.pixels.empty()) {
+        if (!texture.hdr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.hdr_image,
                 true, true, true);
-        } else if (!texture.ldr_image.pixels.empty()) {
+        } else if (!texture.ldr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
                 !texture.ldr_as_linear, true, true);
         } else {

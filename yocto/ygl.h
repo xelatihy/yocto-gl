@@ -3034,34 +3034,77 @@ namespace ygl {
 // Image container.
 template <typename T>
 struct image {
-    vec2i     size   = {0, 0};
-    vector<T> pixels = {};
+    image() : _size{0,0}, _pixels{} {}
+    image(const vec2i& size, const T& value = {}) : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
+    image(const vec2i& size, const T* values) : _size{size}, _pixels(values, values + size.x * size.y) {}
+
+    bool empty() const { return _size.x == 0 && _size.y == 0; }
+    vec2i size() const { return _size; }
+
+    void clear() {
+        _size = {0, 0};
+        _pixels.clear();
+    }
+    void resize(const vec2i& size, const T& value = {}) {
+        if(size == _size) return;
+        if(_size == zero2i) {
+            *this = image{size, value};
+        } else if(size == zero2i) {
+            clear();
+        } else {
+            auto img = image{size, value};
+            for(auto j = 0; j < min(size.y, _size.y); j ++) {
+                for(auto i = 0; i < min(size.x, _size.x); i ++) {
+                    img[{i,j}] = (*this)[{i,j}];
+                }
+            }
+            _size = size;
+            swap(_pixels, img._pixels);
+        }
+    }
+
+    T& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    const T& operator[](const vec2i& ij) const { return _pixels[ij.y * _size.x + ij.x]; }
+    T& at(const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    const T& at(const vec2i& ij) const { return _pixels[ij.y * _size.x + ij.x]; }
+
+    T* data() { return _pixels.data(); }
+    const T* data() const { return _pixels.data(); }
+
+    T* begin() { return _pixels.data(); }
+    T* end() { return _pixels.data() + _pixels.size(); }
+    const T* begin() const { return _pixels.data(); }
+    const T* end() const { return _pixels.data() + _pixels.size(); }
+
+  private:
+    vec2i     _size   = {0, 0};
+    vector<T> _pixels = {};
 };
 
 // Image onstructors
 template <typename T>
 inline void init_image(image<T>& img, const vec2i& size, const T& v = T{}) {
-    img = image<T>{size, vector<T>((size_t)(size.x * size.y), v)};
+    img = {size, v};
 }
 template <typename T>
 inline void init_image(image<T>& img, const vec2i& size, const T* v) {
-    img = image<T>{size, vector<T>(v, v + size.x * size.y)};
+    img = {size, v};
 }
 
 // Element access.
 template <typename T>
 inline T& at(image<T>& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.size.x + ij.x];
+    return img[ij];
 }
 template <typename T>
 inline const T& at(const image<T>& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.size.x + ij.x];
+    return img[ij];
 }
 
 // Size
 template <typename T>
 inline float get_image_aspect(const image<T>& img) {
-    return (float)img.size.x / (float)img.size.y;
+    return (float)img.size().x / (float)img.size().y;
 }
 
 // Image region defined by its corner at x,y and with size width x height
@@ -3071,7 +3114,7 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions, const vec2i& image_size,
+vector<image_region> make_image_regions(const vec2i& image_size,
     int region_size = 32);
 
 // Gets pixels in an image region
@@ -3229,28 +3272,71 @@ namespace ygl {
 // Volume container.
 template <typename T>
 struct volume {
-    vec3i     size   = {0, 0, 0};
-    vector<T> voxels = {};
+    volume() : _size{0,0,0}, _voxels{} {}
+    volume(const vec3i& size, const T& value = {}) :
+        _size{size},
+        _voxels((size_t)(size.x * size.y * size.z), value)
+    {}
+    volume(const vec3i& size, const T* values) : _size{size}, _voxels(values, values + size.x * size.y + size.z) {}
+
+    bool empty() const { return _size.x == 0 && _size.y == 0 && _size.z == 0; }
+    vec3i size() const { return _size; }
+
+    void clear() {
+        _size = {0, 0, 0};
+        _voxels.clear();
+    }
+    void resize(const vec3i& size, const T& value = {}) {
+        if(size == _size) return;
+        if(_size == zero3i) {
+            *this = volume{size, value};
+        } else if(size == zero3i) {
+            clear();
+        } else {
+            auto vol = volume{size, value};
+            for(auto k = 0; k < min(size.z, _size.z); k ++) {
+                for(auto j = 0; j < min(size.y, _size.y); j ++) {
+                    for(auto i = 0; i < min(size.x, _size.x); i ++) {
+                        vol[{i,j,k}] = (*this)[{i,j,k}];
+                    }
+                }
+            }
+            _size = size;
+            swap(_voxels, vol._voxels);
+        }
+    }
+
+    T& operator[](const vec3i& ijk) { return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x]; }
+    const T& operator[](const vec3i& ijk) const { return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x]; }
+    T& at(const vec3i& ijk) { return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x]; }
+    const T& at(const vec3i& ijk) const { return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x]; }
+
+    T* data() { return _voxels.data(); }
+    const T* data() const { return _voxels.data(); }
+
+  private:
+    vec3i     _size   = {0, 0};
+    vector<T> _voxels = {};
 };
 
 // Volume onstructors
 template <typename T>
 inline void init_volume(volume<T>& vol, const vec3i& size, const T& v = T{}) {
-    vol = volume<T>{size, vector<T>((size_t)(size.x * size.y * size.z), v)};
+    vol = {size, v};
 }
 template <typename T>
 inline void init_volume(volume<T>& vol, const vec3i& size, const T* v) {
-    vol = volume<T>{size, vector<T>(v, v + size.x * size.y * size.z)};
+    vol = {size, v};
 }
 
 // Element access
 template <typename T>
 T& at(volume<T>& vol, const vec3i& ijk) {
-    return vol.voxels[ijk.z * vol.size.x * vol.size.y + ijk.y * vol.size.x + ijk.x];
+    return vol[ijk];
 }
 template <typename T>
 const T& at(const volume<T>& vol, const vec3i& ijk) {
-    return vol.voxels[ijk.z * vol.size.x * vol.size.y + ijk.y * vol.size.x + ijk.x];
+    return vol[ijk];
 }
 
 // make a simple example volume

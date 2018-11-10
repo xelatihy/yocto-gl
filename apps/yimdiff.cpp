@@ -37,19 +37,21 @@ using namespace ygl;
 template <typename T>
 void compute_diff_image(image<vec<T, 4>>& diff, const image<vec<T, 4>>& a,
     const image<vec<T, 4>>& b) {
-    init_image(diff, a.size);
-    for (auto i = 0; i < a.size.x * a.size.y; i++) {
-        diff.pixels[i] = {(T)abs(a.pixels[i].x - b.pixels[i].x),
-            (T)abs(a.pixels[i].y - b.pixels[i].y),
-            (T)abs(a.pixels[i].z - b.pixels[i].z),
-            (T)abs(a.pixels[i].w - b.pixels[i].w)};
+    init_image(diff, a.size());
+    for (auto j = 0; j < a.size().y; j++) {
+        for (auto i = 0; i < a.size().x; i++) {
+            diff[{i, j}] = {(T)abs(a[{i, j}].x - b[{i, j}].x),
+                (T)abs(a[{i, j}].y - b[{i, j}].y),
+                (T)abs(a[{i, j}].z - b[{i, j}].z),
+                (T)abs(a[{i, j}].w - b[{i, j}].w)};
+        }
     }
 }
 
 template <typename T>
 vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
     auto max_value = vec<T, 4>{0, 0, 0, 0};
-    for (auto c : diff.pixels) {
+    for (auto& c : diff) {
         max_value = {max(c.x, max_value.x), max(c.y, max_value.y),
             max(c.z, max_value.z), max(c.w, max_value.w)};
     }
@@ -59,10 +61,12 @@ vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
 template <typename T>
 void display_diff(
     image<vec<T, 4>>& display, const image<vec<T, 4>>& diff, T alpha) {
-    init_image(display, diff.size);
-    for (auto i = 0; i < diff.pixels.size(); i++) {
-        auto diff_value   = max(diff.pixels[i]);
-        display.pixels[i] = {diff_value, diff_value, diff_value, alpha};
+    init_image(display, diff.size());
+    for (auto j = 0; j < diff.size().y; j++) {
+        for (auto i = 0; i < diff.size().x; i++) {
+            auto diff_value   = max(diff[{i, j}]);
+            display[{i, j}] = {diff_value, diff_value, diff_value, alpha};
+        }
     }
 }
 
@@ -87,7 +91,7 @@ int main(int argc, char* argv[]) {
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
-        if (img1.size != img2.size) log_fatal("image size differs");
+        if (img1.size() != img2.size()) log_fatal("image size differs");
         auto diff    = image<vec4f>{};
         auto display = image<vec4f>{};
         compute_diff_image(diff, img1, img2);
@@ -107,7 +111,7 @@ int main(int argc, char* argv[]) {
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
-        if (img1.size != img2.size) log_fatal("image size differs");
+        if (img1.size() != img2.size()) log_fatal("image size differs");
         auto diff    = image<vec4b>{};
         auto display = image<vec4b>{};
         compute_diff_image(diff, img1, img2);

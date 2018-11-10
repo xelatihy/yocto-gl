@@ -79,7 +79,7 @@ void update_opengl_texture_region(opengl_texture& texture,
 
 inline bool init_opengl_texture(opengl_texture& texture,
     const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.size, as_float, false, linear, mipmap))
+    if (!init_opengl_texture(texture, img.size(), as_float, false, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;
@@ -94,7 +94,7 @@ void update_opengl_texture_region(opengl_texture& texture,
 
 inline bool init_opengl_texture(opengl_texture& texture,
     const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.size, false, as_srgb, linear, mipmap))
+    if (!init_opengl_texture(texture, img.size(), false, as_srgb, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;

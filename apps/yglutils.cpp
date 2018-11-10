@@ -182,8 +182,8 @@ void update_opengl_texture(
     opengl_texture& texture, const image<vec4f>& img, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size.x, img.size.y, GL_RGBA,
-        GL_FLOAT, img.pixels.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
+        GL_FLOAT, img.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -195,7 +195,7 @@ void update_opengl_texture_region(opengl_texture& texture,
     auto clipped = image<vec4f>{};
     get_image_region(img, clipped, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.offset.x, region.offset.y,
-        region.size.x, region.size.y, GL_RGBA, GL_FLOAT, clipped.pixels.data());
+        region.size.x, region.size.y, GL_RGBA, GL_FLOAT, clipped.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -204,8 +204,8 @@ void update_opengl_texture(
     opengl_texture& texture, const image<vec4b>& img, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size.x, img.size.y, GL_RGBA,
-        GL_UNSIGNED_BYTE, img.pixels.data());
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size().x, img.size().y, GL_RGBA,
+        GL_UNSIGNED_BYTE, img.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -218,7 +218,7 @@ void update_opengl_texture_region(opengl_texture& texture,
     get_image_region(img, clipped, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.offset.x, region.offset.y,
         region.size.x, region.size.y, GL_RGBA, GL_UNSIGNED_BYTE,
-        clipped.pixels.data());
+        clipped.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
