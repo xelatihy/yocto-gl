@@ -54,7 +54,7 @@
 
 #include <atomic>
 
-#if YGL_EMBREE
+#if YOCTO_EMBREE
 #include <embree3/rtcore.h>
 #endif
 
@@ -1467,14 +1467,14 @@ namespace ygl {
 
 // Cleanup
 void clear_shape_bvh_embree(bvh_shape& bvh) {
-#if YGL_EMBREE
+#if YOCTO_EMBREE
     if (bvh.embree_bvh) {
         rtcReleaseScene((RTCScene)bvh.embree_bvh);
     }
 #endif
 }
 void clear_scene_bvh_embree(bvh_scene& bvh) {
-#if YGL_EMBREE
+#if YOCTO_EMBREE
     if (bvh.embree_bvh) {
         for (auto i = 0; i < max(1, (int)bvh.instances.size()); i++) {
             auto geom = rtcGetGeometry((RTCScene)bvh.embree_bvh, i);
@@ -1486,7 +1486,7 @@ void clear_scene_bvh_embree(bvh_scene& bvh) {
 #endif
 }
 
-#if YGL_EMBREE
+#if YOCTO_EMBREE
 void embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
         case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
@@ -1976,7 +1976,7 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 
 // Build a BVH from a set of primitives.
 void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
-#if YGL_EMBREE
+#if YOCTO_EMBREE
     if (options.use_embree) return build_embree_bvh(bvh);
 #endif
 
@@ -2019,7 +2019,7 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 
 // Build a BVH from a set of primitives.
 void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
-#if YGL_EMBREE
+#if YOCTO_EMBREE
     if (options.use_embree) return build_embree_bvh(bvh);
 #endif
 
@@ -2121,7 +2121,7 @@ void refit_scene_bvh(bvh_scene& bvh) { refit_scene_bvh(bvh, 0); }
 // Intersect ray with a bvh.
 bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     float& distance, int& element_id, vec2f& element_uv) {
-#if YGL_EMBREE
+#if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(
@@ -2220,7 +2220,7 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
 // Intersect ray with a bvh.
 bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
-#if YGL_EMBREE
+#if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
         return intersect_embree_bvh(

@@ -292,12 +292,12 @@
 #ifndef _YGL_H_
 #define _YGL_H_
 
-#ifndef YGL_EMBREE
-#define YGL_EMBREE 1
+#ifndef YOCTO_EMBREE
+#define YOCTO_EMBREE 1
 #endif
 
-#ifndef YGL_QUADS_AS_TRIANGLES
-#define YGL_QUADS_AS_TRIANGLES 1
+#ifndef YOCTO_QUADS_AS_TRIANGLES
+#define YOCTO_QUADS_AS_TRIANGLES 1
 #endif
 
 // -----------------------------------------------------------------------------
@@ -2401,7 +2401,7 @@ inline T interpolate_triangle(
 template <typename T>
 inline T interpolate_quad(
     const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-#if YGL_QUADS_AS_TRIANGLES
+#if YOCTO_QUADS_AS_TRIANGLES
     if (uv.x + uv.y <= 1) {
         return interpolate_triangle(p0, p1, p3, uv);
     } else {
