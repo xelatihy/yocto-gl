@@ -458,6 +458,29 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(const vector<vec3f>&
     return {skinned_positions, skinned_normals};
 }
 
+// Creates an edge map
+edge_map make_edge_map(const vector<vec3i>& triangles) {
+    auto emap = edge_map{};
+    for (int i = 0; i < triangles.size(); i++) {
+        auto& t = triangles[i];
+        insert_edge(emap, {t.x, t.y}, i);
+        insert_edge(emap, {t.y, t.z}, i);
+        insert_edge(emap, {t.z, t.x}, i);
+    }
+    return emap;
+}
+edge_map make_edge_map(const vector<vec4i>& quads) {
+    auto emap = edge_map{};
+    for (int i = 0; i < quads.size(); i++) {
+        auto& q = quads[i];
+        insert_edge(emap, {q.x, q.y}, i);
+        insert_edge(emap, {q.y, q.z}, i);
+        if (q.z != q.w) insert_edge(emap, {q.z, q.w}, i);
+        insert_edge(emap, {q.w, q.x}, i);
+    }
+    return emap;
+}
+
 // Create key entry for edge_map
 vec2i make_edge(const vec2i& e) { return e.x < e.y ? e : vec2i{e.y, e.x}; }
 
@@ -503,14 +526,16 @@ int get_edge_count(const edge_map& emap, const vec2i& e) {
     return emap.at(es).z == -1 ? 1 : 2;
 }
 // Get a list of edges, boundary edges, boundary vertices
-void get_edges(const edge_map& emap, vector<vec2i>& edges) {
-    edges = vector<vec2i>(emap.size());
+vector<vec2i> get_edges(const edge_map& emap) {
+    auto edges = vector<vec2i>(emap.size());
     for (auto& kv : emap) edges[kv.second.x] = kv.first;
+    return edges;
 }
-void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
-    boundary = vector<vec2i>();
+vector<vec2i> get_boundary(const edge_map& emap) {
+    auto boundary = vector<vec2i>();
     for (auto& kv : emap)
         if (kv.second.z == -1) boundary.push_back(kv.first);
+    return boundary;
 }
 
 // Convert quads to triangles
@@ -690,10 +715,8 @@ void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert, int level) {
     // iterate over levels
     for (auto l = 0; l < level; l++) {
         // get edges
-        auto emap = edge_map{};
-        insert_edges(emap, triangles);
-        auto edges = vector<vec2i>{};
-        get_edges(emap, edges);
+        auto emap = make_edge_map(triangles);
+        auto edges = get_edges(emap);
         // number of elements
         auto nverts = (int)vert.size();
         auto nedges = (int)edges.size();
@@ -741,10 +764,8 @@ void subdivide_quads(vector<vec4i>& quads, vector<T>& vert, int level) {
     // iterate over levels
     for (auto l = 0; l < level; l++) {
         // get edges
-        auto emap = edge_map{};
-        insert_edges(emap, quads);
-        auto edges = vector<vec2i>{};
-        get_edges(emap, edges);
+        auto emap = make_edge_map(quads);
+        auto edges = get_edges(emap);
         // number of elements
         auto nverts = (int)vert.size();
         auto nedges = (int)edges.size();
@@ -858,13 +879,9 @@ void subdivide_catmullclark(
     // iterate over levels
     for (auto l = 0; l < level; l++) {
         // get edges
-        // get edges
-        auto emap = edge_map{};
-        insert_edges(emap, quads);
-        auto edges    = vector<vec2i>{};
-        auto boundary = vector<vec2i>{};
-        get_edges(emap, edges);
-        get_boundary(emap, boundary);
+        auto emap = make_edge_map(quads);
+        auto edges    = get_edges(emap);
+        auto boundary = get_boundary(emap);
         // number of elements
         auto nverts    = (int)vert.size();
         auto nedges    = (int)edges.size();
