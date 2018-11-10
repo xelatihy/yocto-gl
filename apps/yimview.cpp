@@ -29,7 +29,7 @@
 #include "../yocto/yocto_image.h"
 #include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_utils.h"
-#include "yglutils.h"
+#include "yocto_opengl.h"
 using namespace ygl;
 
 struct image_stats {
@@ -237,17 +237,17 @@ void draw(const opengl_window& win) {
     auto& img      = app.imgs.at(app.img_id);
     auto  win_size = get_opengl_window_size(win);
     auto  fb_size  = get_opengl_framebuffer_size(win);
-    set_glviewport(fb_size);
-    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    set_opengl_viewport(fb_size);
+    clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
         center_image(img.image_center, img.image_scale, img.display.size(),
             win_size, img.zoom_to_fit);
         draw_glimage_background(
             img.display.size(), win_size, img.image_center, img.image_scale);
-        set_glblending(true);
+        set_opengl_blending(true);
         draw_glimage(img.gl_txt, img.display.size(), win_size, img.image_center,
             img.image_scale);
-        set_glblending(false);
+        set_opengl_blending(false);
     }
     draw_opengl_widgets(win);
     swap_opengl_buffers(win);

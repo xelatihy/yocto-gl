@@ -38,13 +38,13 @@ struct GLFWwindow;
 
 namespace ygl {
 
-void clear_glframebuffer(const vec4f& color, bool clear_depth = true);
+void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth = true);
 
-void set_glviewport(int x, int y, int w, int h);
-void set_glviewport(const vec2i& size);
+void set_opengl_viewport(int x, int y, int w, int h);
+void set_opengl_viewport(const vec2i& size);
 
-void set_glwireframe(bool enabled);
-void set_glblending(bool enabled);
+void set_opengl_wireframe(bool enabled);
+void set_opengl_blending(bool enabled);
 
 struct opengl_program {
     uint program_id             = 0;

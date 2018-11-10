@@ -31,7 +31,7 @@
 #define _YOCTO_SCENEUI_H_
 
 #include "../yocto/yocto_scene.h"
-#include "yglutils.h"
+#include "yocto_opengl.h"
 using namespace ygl;
 
 inline const unordered_map<int, string>& animation_type_names() {

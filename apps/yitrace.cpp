@@ -31,7 +31,7 @@
 #include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
-#include "yglutils.h"
+#include "yocto_opengl.h"
 #include "ysceneui.h"
 
 // Application state
@@ -283,8 +283,8 @@ void draw_opengl_widgets(const opengl_window& win) {
 void draw(const opengl_window& win) {
     auto& app      = *(app_state*)get_opengl_user_pointer(win);
     auto  win_size = get_opengl_window_size(win);
-    set_glviewport(get_opengl_framebuffer_size(win));
-    clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
+    set_opengl_viewport(get_opengl_framebuffer_size(win));
+    clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
         center_image(app.image_center, app.image_scale,
             app.display_image.size(), win_size, app.zoom_to_fit);
@@ -314,12 +314,12 @@ void draw(const opengl_window& win) {
                 }
             }
         }
-        set_glblending(true);
+        set_opengl_blending(true);
         draw_glimage_background(app.display_image.size(), win_size,
             app.image_center, app.image_scale);
         draw_glimage(app.display_texture, app.display_image.size(), win_size,
             app.image_center, app.image_scale);
-        set_glblending(false);
+        set_opengl_blending(false);
     }
     draw_opengl_widgets(win);
     swap_opengl_buffers(win);

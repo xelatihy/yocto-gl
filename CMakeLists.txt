@@ -96,7 +96,7 @@ if(YOCTO_OPENGL)
     include_directories(apps/)
     add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-    add_library(yopengl apps/yglutils.h apps/yglutils.cpp 
+    add_library(yopengl apps/yocto_opengl.h apps/yocto_opengl.cpp 
         apps/ext/imgui/imgui.cpp apps/ext/imgui/imgui_draw.cpp apps/ext/imgui/imgui_widgets.cpp
         apps/ext/imgui/imgui_impl_glfw.cpp apps/ext/imgui/imgui_impl_opengl3.cpp apps/ext/glad/glad.c)
 
