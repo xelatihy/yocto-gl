@@ -59,8 +59,8 @@ struct drawgl_lights {
 
 bool empty(const drawgl_lights& lights) { return lights.positions.empty(); }
 
-void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
-    lights = drawgl_lights{};
+drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
+    auto lights = drawgl_lights{};
     for (auto& instance : scene.instances) {
         if (instance.shape < 0) continue;
         auto& shape    = scene.shapes[instance.shape];
@@ -89,6 +89,7 @@ void init_drawgl_lights(drawgl_lights& lights, const yocto_scene& scene) {
         lights.emission.push_back(ke);
         lights.types.push_back(0);
     }
+    return lights;
 }
 
 // Draw options
@@ -162,7 +163,7 @@ bool load_scene_sync(app_state& app) {
 
     // init renderer
     app.status = "initializing lights";
-    init_drawgl_lights(app.lights, app.scene);
+    app.lights = make_drawgl_lights(app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights) && !app.draw_options.eyelight) {
