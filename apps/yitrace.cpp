@@ -94,7 +94,8 @@ void start_rendering_async(app_state& app) {
 
     auto& camera   = app.scene.cameras[app.trace_options.camera_id];
     app.image_size = get_camera_image_size(camera, app.trace_options.image_size);
-    init_image(app.display_image, app.image_size);
+    app.rendered_image = image<vec4f>{app.image_size};
+    app.display_image = image<vec4f>{app.image_size};
 
     auto preview_options = app.trace_options;
     preview_options.image_size /= app.preview_ratio;
@@ -104,13 +105,12 @@ void start_rendering_async(app_state& app) {
     auto display_preview = image<vec4f>{};
     tonemap_image(app.preview_image, display_preview, app.display_exposure,
         app.display_filmic, app.display_srgb);
-    auto large_preview = image<vec4f>{};
-    init_image(large_preview, app.image_size);
+    auto large_preview = image<vec4f>{app.image_size};
     for (auto j = 0; j < app.image_size.y; j++) {
         for (auto i = 0; i < app.image_size.x; i++) {
             auto pi = clamp(i / app.preview_ratio, 0, display_preview.size().x - 1),
                  pj = clamp(j / app.preview_ratio, 0, display_preview.size().y - 1);
-            at(large_preview, {i, j}) = at(display_preview, {pi, pj});
+            large_preview[{i, j}] = display_preview[{pi, pj}];
         }
     }
     app.preview_image = large_preview;
@@ -252,7 +252,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             if (ij.x >= 0 && ij.x < app.rendered_image.size().x && ij.y >= 0 &&
                 ij.y < app.rendered_image.size().y) {
                 draw_coloredit_opengl_widget(
-                    win, "pixel", at(app.rendered_image, ij));
+                    win, "pixel", app.rendered_image[ij]);
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);

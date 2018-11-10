@@ -634,7 +634,7 @@ bool load_pfm_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, (vec4f*)pixels.data());
+    img = {{width, height}, (vec4f*)pixels.data()};
     return true;
 }
 bool save_pfm_image(const string& filename, const image<vec4f>& img) {
@@ -659,7 +659,7 @@ bool load_exr_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -680,7 +680,7 @@ bool load_stb_image(const string& filename, image<vec4b>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -692,7 +692,7 @@ bool load_stb_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -749,7 +749,7 @@ bool load_stb_image_from_memory(
         log_io_error("error loading in-memory image");
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -762,7 +762,7 @@ bool load_stbi_image_from_memory(
         log_io_error("error loading in-memory image {}");
         return false;
     }
-    init_image(img, {width, height}, pixels);
+    img = {{width, height}, pixels};
     free(pixels);
     return true;
 }
@@ -955,7 +955,7 @@ void resize_image(
     if (size == zero2i) {
         log_error("bad image size in resize_image");
     }
-    init_image(res_img, get_image_size(size, get_image_aspect(img)));
+    res_img = {get_image_size(size, get_image_aspect(img))};
     stbir_resize_float_generic((float*)img.data(), img.size().x,
         img.size().y, sizeof(vec4f) * img.size().x, (float*)res_img.data(),
         res_img.size().x, res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,

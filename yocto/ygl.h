@@ -3081,26 +3081,6 @@ struct image {
     vector<T> _pixels = {};
 };
 
-// Image onstructors
-template <typename T>
-inline void init_image(image<T>& img, const vec2i& size, const T& v = T{}) {
-    img = {size, v};
-}
-template <typename T>
-inline void init_image(image<T>& img, const vec2i& size, const T* v) {
-    img = {size, v};
-}
-
-// Element access.
-template <typename T>
-inline T& at(image<T>& img, const vec2i& ij) {
-    return img[ij];
-}
-template <typename T>
-inline const T& at(const image<T>& img, const vec2i& ij) {
-    return img[ij];
-}
-
 // Size
 template <typename T>
 inline float get_image_aspect(const image<T>& img) {
@@ -3318,26 +3298,6 @@ struct volume {
     vec3i     _size   = {0, 0};
     vector<T> _voxels = {};
 };
-
-// Volume onstructors
-template <typename T>
-inline void init_volume(volume<T>& vol, const vec3i& size, const T& v = T{}) {
-    vol = {size, v};
-}
-template <typename T>
-inline void init_volume(volume<T>& vol, const vec3i& size, const T* v) {
-    vol = {size, v};
-}
-
-// Element access
-template <typename T>
-T& at(volume<T>& vol, const vec3i& ijk) {
-    return vol[ijk];
-}
-template <typename T>
-const T& at(const volume<T>& vol, const vec3i& ijk) {
-    return vol[ijk];
-}
 
 // make a simple example volume
 void make_test_volume1f(volume<float>& vol, const vec3i& size, float scale = 10,
@@ -4219,11 +4179,11 @@ namespace ygl {
 template <typename T>
 inline void get_image_region(
     const image<T>& img, image<T>& clipped, const image_region& region) {
-    init_image(clipped, region.size);
+    clipped.resize(region.size);
     for (auto j = 0; j < region.size.y; j++) {
         for (auto i = 0; i < region.size.x; i++) {
-            at(clipped, {i, j}) = at(
-                img, {i + region.offset.x, j + region.offset.y});
+            clipped[{i, j}] = 
+                img[{i + region.offset.x, j + region.offset.y}];
         }
     }
 }

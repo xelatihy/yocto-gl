@@ -211,7 +211,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
                 ij.y < img.img.size().y) {
-                pixel = at(img.img, ij);
+                pixel = img.img[ij];
             }
             draw_coloredit_opengl_widget(win, "pixel", pixel);
             auto stats = (img.stats_done) ? img.stats : image_stats{};

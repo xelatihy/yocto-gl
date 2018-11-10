@@ -65,8 +65,7 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     float range_sigma, const vector<image<vec4f>>& features,
     const vector<float>& features_sigma) {
-    auto filtered = image<vec4f>{};
-    init_image(filtered, img.size());
+    auto filtered = image<vec4f>{img.size()};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -83,19 +82,19 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.size().x || jj >= img.size().y) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = at(img, {i, j}) - at(img, {i, j});
+                    auto rgb = img[{i, j}] - img[{i, j}];
                     auto w   = (float)exp(-dot(uv, uv) * sw) *
                              (float)exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat = at(features[fi], {i, j}) -
-                                    at(features[fi], {i, j});
+                        auto feat = features[fi][{i, j}] -
+                                    features[fi][{i, j}];
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
-                    av += w * at(img, {ii, jj});
+                    av += w * img[{ii, jj}];
                     aw += w;
                 }
             }
-            at(filtered, {i, j}) = av / aw;
+            filtered[{i, j}] = av / aw;
         }
     }
     return filtered;
@@ -117,13 +116,13 @@ image<vec4f> filter_bilateral(
                     if (ii < 0 || jj < 0) continue;
                     if (ii >= img.size().x || jj >= img.size().y) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = at(img, {i, j}) - at(img, {ii, jj});
+                    auto rgb = img[{i, j}] - img[{ii, jj}];
                     auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
-                    av += w * at(img, {ii, jj});
+                    av += w * img[{ii, jj}];
                     aw += w;
                 }
             }
-            at(filtered, {i, j}) = av / aw;
+            filtered[{i, j}] = av / aw;
         }
     }
     return filtered;
@@ -170,7 +169,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < img.size().y; j++)
             for (auto i = 0; i < img.size().x; i++)
-                at(img, {i, j}).w = at(alpha, {i, j}).w;
+                img[{i, j}].w = alpha[{i, j}].w;
     }
 
     // set alpha
@@ -184,7 +183,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < img.size().y; j++)
             for (auto i = 0; i < img.size().x; i++)
-                at(img, {i, j}).w = mean(at(alpha, {i, j}));
+                img[{i, j}].w = mean(alpha[{i, j}]);
     }
 
     // resize
