@@ -677,7 +677,7 @@ vector<vector<vec4i>> ungroup_quads(const vector<vec4i>& quads, const vector<int
 
 // Subdivide lines.
 template <typename T>
-void subdivide_lines(vector<vec2i>& lines, vector<T>& vert, int level) {
+void subdivide_lines_inplace(vector<vec2i>& lines, vector<T>& vert, int level) {
     // early exit
     if (lines.empty() || vert.empty()) return;
     // iterate over levels
@@ -704,14 +704,14 @@ void subdivide_lines(vector<vec2i>& lines, vector<T>& vert, int level) {
     }
 }
 
-template void subdivide_lines(vector<vec2i>&, vector<float>&, int);
-template void subdivide_lines(vector<vec2i>&, vector<vec2f>&, int);
-template void subdivide_lines(vector<vec2i>&, vector<vec3f>&, int);
-template void subdivide_lines(vector<vec2i>&, vector<vec4f>&, int);
+template void subdivide_lines_inplace(vector<vec2i>&, vector<float>&, int);
+template void subdivide_lines_inplace(vector<vec2i>&, vector<vec2f>&, int);
+template void subdivide_lines_inplace(vector<vec2i>&, vector<vec3f>&, int);
+template void subdivide_lines_inplace(vector<vec2i>&, vector<vec4f>&, int);
 
 // Subdivide triangle.
 template <typename T>
-void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert, int level) {
+void subdivide_triangles_inplace(vector<vec3i>& triangles, vector<T>& vert, int level) {
     // early exit
     if (triangles.empty() || vert.empty()) return;
     // iterate over levels
@@ -753,14 +753,14 @@ void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert, int level) {
     }
 }
 
-template void subdivide_triangles(vector<vec3i>&, vector<float>&, int);
-template void subdivide_triangles(vector<vec3i>&, vector<vec2f>&, int);
-template void subdivide_triangles(vector<vec3i>&, vector<vec3f>&, int);
-template void subdivide_triangles(vector<vec3i>&, vector<vec4f>&, int);
+template void subdivide_triangles_inplace(vector<vec3i>&, vector<float>&, int);
+template void subdivide_triangles_inplace(vector<vec3i>&, vector<vec2f>&, int);
+template void subdivide_triangles_inplace(vector<vec3i>&, vector<vec3f>&, int);
+template void subdivide_triangles_inplace(vector<vec3i>&, vector<vec4f>&, int);
 
 // Subdivide quads.
 template <typename T>
-void subdivide_quads(vector<vec4i>& quads, vector<T>& vert, int level) {
+void subdivide_quads_inplace(vector<vec4i>& quads, vector<T>& vert, int level) {
     // early exit
     if (quads.empty() || vert.empty()) return;
     // iterate over levels
@@ -827,14 +827,14 @@ void subdivide_quads(vector<vec4i>& quads, vector<T>& vert, int level) {
     }
 }
 
-template void subdivide_quads(vector<vec4i>&, vector<float>&, int);
-template void subdivide_quads(vector<vec4i>&, vector<vec2f>&, int);
-template void subdivide_quads(vector<vec4i>&, vector<vec3f>&, int);
-template void subdivide_quads(vector<vec4i>&, vector<vec4f>&, int);
+template void subdivide_quads_inplace(vector<vec4i>&, vector<float>&, int);
+template void subdivide_quads_inplace(vector<vec4i>&, vector<vec2f>&, int);
+template void subdivide_quads_inplace(vector<vec4i>&, vector<vec3f>&, int);
+template void subdivide_quads_inplace(vector<vec4i>&, vector<vec4f>&, int);
 
 // Subdivide beziers.
 template <typename T>
-void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert, int level) {
+void subdivide_beziers_inplace(vector<vec4i>& beziers, vector<T>& vert, int level) {
     // early exit
     if (beziers.empty() || vert.empty()) return;
     // iterate over levels
@@ -867,14 +867,14 @@ void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert, int level) {
     }
 }
 
-template void subdivide_beziers(vector<vec4i>&, vector<float>&, int);
-template void subdivide_beziers(vector<vec4i>&, vector<vec2f>&, int);
-template void subdivide_beziers(vector<vec4i>&, vector<vec3f>&, int);
-template void subdivide_beziers(vector<vec4i>&, vector<vec4f>&, int);
+template void subdivide_beziers_inplace(vector<vec4i>&, vector<float>&, int);
+template void subdivide_beziers_inplace(vector<vec4i>&, vector<vec2f>&, int);
+template void subdivide_beziers_inplace(vector<vec4i>&, vector<vec3f>&, int);
+template void subdivide_beziers_inplace(vector<vec4i>&, vector<vec4f>&, int);
 
 // Subdivide catmullclark.
 template <typename T>
-void subdivide_catmullclark(
+void subdivide_catmullclark_inplace(
     vector<vec4i>& quads, vector<T>& vert, int level, bool lock_boundary) {
     // early exit
     if (quads.empty() || vert.empty()) return;
@@ -1007,15 +1007,15 @@ void subdivide_catmullclark(
     }
 }
 
-template void subdivide_catmullclark(vector<vec4i>&, vector<float>&, int, bool);
-template void subdivide_catmullclark(vector<vec4i>&, vector<vec2f>&, int, bool);
-template void subdivide_catmullclark(vector<vec4i>&, vector<vec3f>&, int, bool);
-template void subdivide_catmullclark(vector<vec4i>&, vector<vec4f>&, int, bool);
+template void subdivide_catmullclark_inplace(vector<vec4i>&, vector<float>&, int, bool);
+template void subdivide_catmullclark_inplace(vector<vec4i>&, vector<vec2f>&, int, bool);
+template void subdivide_catmullclark_inplace(vector<vec4i>&, vector<vec3f>&, int, bool);
+template void subdivide_catmullclark_inplace(vector<vec4i>&, vector<vec4f>&, int, bool);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-void weld_vertices(
-    vector<vec3f>& positions, float threshold, vector<int>& welded_indices) {
-    welded_indices        = vector<int>(positions.size());
+tuple<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold) {
+    auto welded_indices        = vector<int>(positions.size());
     auto welded_positions = vector<vec3f>();
     for (auto i = 0; i < positions.size(); i++) {
         welded_indices[i] = (int)welded_positions.size();
@@ -1028,27 +1028,48 @@ void weld_vertices(
         if (welded_indices[i] == (int)welded_positions.size())
             welded_positions.push_back(positions[i]);
     }
-    swap(positions, welded_positions);
+    return {welded_positions, welded_indices};
 }
-void weld_triangles(
-    vector<vec3i>& triangles, vector<vec3f>& positions, float threshold) {
-    auto welded_indices = vector<int>();
-    weld_vertices(positions, threshold, welded_indices);
+void weld_vertices_inplace(
+    vector<vec3f>& positions, float threshold, vector<int>& welded_indices) {
+    tie(positions, welded_indices) = weld_vertices(positions, threshold);
+}
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, float threshold) {
+    auto welded_positions = vector<vec3f>{};
+    auto welded_indices = vector<int>{};
+    tie(welded_positions, welded_indices) = weld_vertices(positions, threshold);
+    auto welded_triangles = vector<vec3i>{};
     for (auto& t : triangles) {
-        t.x = welded_indices[t.x];
-        t.y = welded_indices[t.y];
-        t.z = welded_indices[t.z];
+        welded_triangles.push_back({
+            welded_indices[t.x],
+            welded_indices[t.y],
+            welded_indices[t.z]
+        });
     }
+    return {welded_triangles, welded_positions};
 }
-void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold) {
-    auto welded_indices = vector<int>();
-    weld_vertices(positions, threshold, welded_indices);
+void weld_triangles_inplace(
+    vector<vec3i>& triangles, vector<vec3f>& positions, float threshold) {
+    tie(triangles, positions) = weld_triangles(triangles, positions, threshold);
+}
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold) {
+    auto welded_positions = vector<vec3f>{};
+    auto welded_indices = vector<int>{};
+    tie(welded_positions, welded_indices) = weld_vertices(positions, threshold);
+    auto welded_quads = vector<vec4i>{};
     for (auto& q : quads) {
-        q.x = welded_indices[q.x];
-        q.y = welded_indices[q.y];
-        q.z = welded_indices[q.z];
-        q.w = welded_indices[q.w];
+        welded_quads.push_back({
+            welded_indices[q.x],
+            welded_indices[q.y],
+            welded_indices[q.z],
+            welded_indices[q.w],
+        });
     }
+    return {welded_quads, welded_positions};
+}
+void weld_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions, float threshold) {
+    tie(quads, positions) = weld_quads(quads, positions, threshold);
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
@@ -2888,7 +2909,7 @@ void make_geodesic_sphere_shape(vector<vec3i>& triangles,
         {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
     positions                    = sphere_pos;
     triangles                    = sphere_triangles;
-    subdivide_triangles(triangles, positions, max(0, tesselation - 2));
+    subdivide_triangles_inplace(triangles, positions, max(0, tesselation - 2));
     for (auto& p : positions) p = normalize(p) * size / 2;
     normals = positions;
 }
@@ -2906,6 +2927,7 @@ void make_cube_facevarying_shape(vector<vec4i>& quads_positions,
     quads_positions     = quads;
     quads_normals       = quads;
     quads_texturecoords = quads;
+    tie(quads_positions, positions) = 
     weld_quads(quads_positions, positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
 }
@@ -2929,6 +2951,7 @@ void make_cube_posonly_shape(vector<vec4i>& quads, vector<vec3f>& positions,
     auto texturecoords = vector<vec2f>{};
     make_cube_shape(
         quads, positions, normals, texturecoords, steps, size, uvsize);
+    tie(quads, positions) = 
     weld_quads(quads, positions,
         min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
 }
@@ -4189,54 +4212,54 @@ yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
         log_error("point subdivision not supported");
     } else if (!subdivided.lines.empty()) {
         auto lines_positions = subdivided.lines;
-        subdivide_lines(lines_positions, subdivided.positions, subdivision_level);
+        subdivide_lines_inplace(lines_positions, subdivided.positions, subdivision_level);
         auto lines_normals = subdivided.lines;
-        subdivide_lines(lines_normals, subdivided.normals, subdivision_level);
+        subdivide_lines_inplace(lines_normals, subdivided.normals, subdivision_level);
         auto lines_texturecoords = subdivided.lines;
-        subdivide_lines(
+        subdivide_lines_inplace(
             lines_texturecoords, subdivided.texturecoords, subdivision_level);
         auto lines_colors = subdivided.lines;
-        subdivide_lines(lines_colors, subdivided.colors, subdivision_level);
+        subdivide_lines_inplace(lines_colors, subdivided.colors, subdivision_level);
         auto lines_radius = subdivided.lines;
-        subdivide_lines(lines_radius, subdivided.colors, subdivision_level);
+        subdivide_lines_inplace(lines_radius, subdivided.colors, subdivision_level);
         subdivided.lines = lines_positions;
     } else if (!subdivided.triangles.empty()) {
         auto triangles_positions = subdivided.triangles;
-        subdivide_triangles(
+        subdivide_triangles_inplace(
             triangles_positions, subdivided.positions, subdivision_level);
         auto triangles_normals = subdivided.triangles;
-        subdivide_triangles(
+        subdivide_triangles_inplace(
             triangles_normals, subdivided.normals, subdivision_level);
         auto triangles_texturecoords = subdivided.triangles;
-        subdivide_triangles(triangles_texturecoords, subdivided.texturecoords,
+        subdivide_triangles_inplace(triangles_texturecoords, subdivided.texturecoords,
             subdivision_level);
         auto triangles_colors = subdivided.triangles;
-        subdivide_triangles(
+        subdivide_triangles_inplace(
             triangles_colors, subdivided.colors, subdivision_level);
         subdivided.triangles = triangles_positions;
     } else if (!subdivided.quads.empty() && !catmull_clark) {
         auto quads_positions = subdivided.quads;
-        subdivide_quads(quads_positions, subdivided.positions, subdivision_level);
+        subdivide_quads_inplace(quads_positions, subdivided.positions, subdivision_level);
         auto quads_normals = subdivided.quads;
-        subdivide_quads(quads_normals, subdivided.normals, subdivision_level);
+        subdivide_quads_inplace(quads_normals, subdivided.normals, subdivision_level);
         auto quads_texturecoords = subdivided.quads;
-        subdivide_quads(
+        subdivide_quads_inplace(
             quads_texturecoords, subdivided.texturecoords, subdivision_level);
         auto quads_colors = subdivided.quads;
-        subdivide_quads(quads_colors, subdivided.colors, subdivision_level);
+        subdivide_quads_inplace(quads_colors, subdivided.colors, subdivision_level);
         subdivided.quads = quads_positions;
     } else if (!subdivided.quads.empty() && catmull_clark) {
         auto quads_positions = subdivided.quads;
-        subdivide_catmullclark(
+        subdivide_catmullclark_inplace(
             quads_positions, subdivided.positions, subdivision_level);
         auto quads_normals = subdivided.quads;
-        subdivide_catmullclark(
+        subdivide_catmullclark_inplace(
             quads_normals, subdivided.normals, subdivision_level);
         auto quads_texturecoords = subdivided.quads;
-        subdivide_catmullclark(
+        subdivide_catmullclark_inplace(
             quads_texturecoords, subdivided.texturecoords, subdivision_level);
         auto quads_colors = subdivided.quads;
-        subdivide_catmullclark(
+        subdivide_catmullclark_inplace(
             quads_colors, subdivided.colors, subdivision_level);
         subdivided.quads = quads_positions;
     }
@@ -4273,18 +4296,18 @@ yocto_surface subdivide_surface(const yocto_surface& surface,
     if (!subdivided.quads_positions.empty() && !catmull_clark) {
         subdivide_ids(subdivided.quads_positions, subdivided.quads_materials,
             subdivision_level);
-        subdivide_quads(subdivided.quads_positions, subdivided.positions,
+        subdivide_quads_inplace(subdivided.quads_positions, subdivided.positions,
             subdivision_level);
-        subdivide_quads(
+        subdivide_quads_inplace(
             subdivided.quads_normals, subdivided.normals, subdivision_level);
-        subdivide_quads(subdivided.quads_texturecoords,
+        subdivide_quads_inplace(subdivided.quads_texturecoords,
             subdivided.texturecoords, subdivision_level);
     } else if (!subdivided.quads_positions.empty() && catmull_clark) {
         subdivide_ids(subdivided.quads_positions, subdivided.quads_materials,
             subdivision_level);
-        subdivide_catmullclark(subdivided.quads_positions, subdivided.positions,
+        subdivide_catmullclark_inplace(subdivided.quads_positions, subdivided.positions,
             subdivision_level);
-        subdivide_catmullclark(subdivided.quads_texturecoords,
+        subdivide_catmullclark_inplace(subdivided.quads_texturecoords,
             subdivided.texturecoords, subdivision_level, true);
     }
 

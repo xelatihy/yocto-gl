@@ -127,9 +127,9 @@
 // 11. convert quads to triangles with `convert_quads_to_triangles()`
 // 12. convert face varying to vertex shared representations with
 //     `convert_face_varying()`
-// 13. subdivide elements by edge splits with `subdivide_lines()`,
-//     `subdivide_triangles()`, `subdivide_quads()`, `subdivide_beziers()`
-// 14. Catmull-Clark subdivision surface with `subdivide_catmullclark()`
+// 13. subdivide elements by edge splits with `subdivide_lines_inplace()`,
+//     `subdivide_triangles_inplace()`, `subdivide_quads_inplace()`, `subdivide_beziers_inplace()`
+// 14. Catmull-Clark subdivision surface with `subdivide_catmullclark_inplace()`
 //
 //
 // ## Random Number Generation, Noise, and Monte Carlo support
@@ -2529,29 +2529,71 @@ vector<vector<vec4i>> ungroup_quads(const vector<vec4i>& quads, const vector<int
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-void subdivide_lines(vector<vec2i>& lines, vector<T>& vert, int level);
+void subdivide_lines_inplace(vector<vec2i>& lines, vector<T>& vert, int level);
+template <typename T>
+inline tuple<vector<vec2i>, vector<T>> subdivide_lines(const vector<vec2i>& lines, const vector<T>& vert, int level) {
+    auto tlines = lines;
+    auto tvert = vert;
+    subdivide_lines_inplace(tlines, tvert, level);
+    return {tlines, tvert};
+}
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-void subdivide_triangles(vector<vec3i>& triangles, vector<T>& vert, int level);
+void subdivide_triangles_inplace(vector<vec3i>& triangles, vector<T>& vert, int level);
+template <typename T>
+inline tuple<vector<vec3i>, vector<T>> subdivide_triangles(const vector<vec3i>& triangles, const vector<T>& vert, int level) {
+    auto ttriangles = triangles;
+    auto tvert = vert;
+    subdivide_triangles_inplace(ttriangles, tvert, level);
+    return {ttriangles, tvert};
+}
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-void subdivide_quads(vector<vec4i>& quads, vector<T>& vert, int level);
+void subdivide_quads_inplace(vector<vec4i>& quads, vector<T>& vert, int level);
+template <typename T>
+inline tuple<vector<vec4i>, vector<T>> subdivide_quads(const vector<vec4i>& quads, const vector<T>& vert, int level) {
+    auto tquads = quads;
+    auto tvert = vert;
+    subdivide_quads_inplace(tquads, tvert, level);
+    return {tquads, tvert};
+}
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-void subdivide_beziers(vector<vec4i>& beziers, vector<T>& vert, int level);
+void subdivide_beziers_inplace(vector<vec4i>& beziers, vector<T>& vert, int level);
+template <typename T>
+inline tuple<vector<vec4i>, vector<T>> subdivide_beziers(const vector<vec4i>& beziers, const vector<T>& vert, int level) {
+    auto tbeziers = beziers;
+    auto tvert = vert;
+    subdivide_beziers_inplace(tbeziers, tvert, level);
+    return {tbeziers, tvert};
+}
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-void subdivide_catmullclark(vector<vec4i>& quads, vector<T>& vert, int level,
+void subdivide_catmullclark_inplace(vector<vec4i>& quads, vector<T>& vert, int level,
     bool lock_boundary = false);
+template <typename T>
+inline tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads, const vector<T>& vert, int level,
+    bool lock_boundary = false) {
+    auto tquads = quads;
+    auto tvert = vert;
+    subdivide_catmullclark_inplace(tquads, tvert, level, lock_boundary);
+    return {tquads, tvert};
+}
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
-void weld_vertices(
+tuple<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold);
+void weld_vertices_inplace(
     vector<vec3f>& positions, float threshold, vector<int>& welded_indices);
-void weld_triangles(
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold);
+void weld_triangles_inplace(
     vector<vec3i>& triangles, vector<vec3f>& positions, float threshold);
-void weld_quads(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold);
+void weld_quads_inplace(vector<vec4i>& quads, vector<vec3f>& positions, float threshold);
 
 // Merge shape elements
 void merge_lines(
