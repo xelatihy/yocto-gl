@@ -73,7 +73,7 @@
 // -----------------------------------------------------------------------------
 // JSON UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Json alias
 using json = nlohmann::json;
@@ -174,12 +174,12 @@ inline void from_json(const json& js, volume<T>& value) {
     value       = volume<T>{size, voxels.data()};
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Load a scene
 bool load_scene(const string& filename, yocto_scene& scene,
@@ -391,12 +391,12 @@ bool is_face_varying(const vector<vec4i>& quads_positions,
     return false;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IO UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Encode in base64
 string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len) {
@@ -499,12 +499,12 @@ string base64_decode(string const& encoded_string) {
     return ret;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // BUILTIN JSON FORMAT
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
@@ -1693,12 +1693,12 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // OBJ CONVERSION
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 inline bool operator==(const obj_vertex& a, const obj_vertex& b) {
     return a.position == b.position && a.texturecoord == b.texturecoord &&
@@ -2166,7 +2166,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         if (scene.instances.back().shape < 0 &&
             scene.instances.back().surface < 0) {
             if (options.obj_preserve_face_varying ||
-                scene.instances.back().name.find("[yoctogl::facevarying]") !=
+                scene.instances.back().name.find("[yocto::facevarying]") !=
                     string::npos) {
                 scene.surfaces.push_back({});
                 scene.surfaces.back().name = scene.instances.back().name;
@@ -2690,12 +2690,12 @@ bool save_obj_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GLTF CONVESION
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 static bool startswith(const string& str, const string& substr) {
     if (str.length() < substr.length()) return false;
@@ -3515,12 +3515,12 @@ bool save_gltf_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PBRT
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // convert pbrt to json
 bool pbrt_to_json(const string& filename, json& js) {
@@ -4405,12 +4405,12 @@ void pbrt_flipyz_scene(yocto_scene& scene) {
     }
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF BINARY SCENE FORMAT
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // serialize_bin( ) can both save/load data to/from a binary file. The behaviour
 // is set by the boolean 'save'. serialize_bin(name, file, true) : writes name
@@ -4752,12 +4752,12 @@ bool save_ybin_scene(const string& filename, const yocto_scene& scene,
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Reset mesh data
 void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
@@ -5345,17 +5345,17 @@ bool save_obj_facevarying_mesh(const string& filename,
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF OBJ IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {}
+namespace yocto {}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PLY IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Load ply mesh
 bool load_ply(const string& filename, ply_data& ply) {
@@ -5494,12 +5494,12 @@ bool load_ply(const string& filename, ply_data& ply) {
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SHAPE IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 #if 0
 
@@ -5646,4 +5646,4 @@ bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_position
 
 #endif
 
-}  // namespace yoctogl
+}  // namespace yocto

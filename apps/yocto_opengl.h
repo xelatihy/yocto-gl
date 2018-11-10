@@ -36,7 +36,7 @@
 // forward declaration
 struct GLFWwindow;
 
-namespace yoctogl {
+namespace yocto {
 
 void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth = true);
 
@@ -338,6 +338,6 @@ void begin_child_opengl_widget(
     const opengl_window& win, const char* lbl, const vec2i& size);
 void end_child_opengl_widget(const opengl_window& win);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif

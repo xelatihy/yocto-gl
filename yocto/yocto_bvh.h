@@ -84,7 +84,7 @@
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
@@ -184,12 +184,12 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
     float max_distance, bool find_any, float& distance, int& instance_id,
     int& element_id, vec2f& element_uv);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RAY INTERSECTION AND CLOSEST POINT FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Intersect a ray with a point (approximate).
 // Based on http://geomalgorithms.com/a02-lines.html.
@@ -254,6 +254,6 @@ bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);
 // Check if two bounding boxes overlap.
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif

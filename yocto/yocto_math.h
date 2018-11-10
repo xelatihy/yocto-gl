@@ -158,7 +158,7 @@
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 using std::abs;
 using std::acos;
@@ -249,12 +249,12 @@ template <class T>
 constexpr const T    pi  = (T)3.14159265358979323846;
 constexpr const auto pif = 3.14159265f;
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // VECTORS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Small size vectors.
 template <typename T, int N>
@@ -848,14 +848,14 @@ constexpr inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
     return quat_conjugate(a) / dot(a, a);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 namespace std {
 
 // Hash functor for vector for use with unordered_map
 template <typename T, int N>
-struct hash<yoctogl::vec<T, N>> {
-    size_t operator()(const yoctogl::vec<T, N>& v) const {
+struct hash<yocto::vec<T, N>> {
+    size_t operator()(const yocto::vec<T, N>& v) const {
         auto vh = hash<T>();
         auto h  = (size_t)0;
         for (auto i = 0; i < N; i++)
@@ -869,7 +869,7 @@ struct hash<yoctogl::vec<T, N>> {
 // -----------------------------------------------------------------------------
 // MATRICES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Small Fixed-size square matrices stored in column major format.
 template <typename T, int N, int M>
@@ -1120,12 +1120,12 @@ constexpr inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
     return adjugate(a) * (1 / determinant(a));
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RIGID BODY TRANSFORMS/FRAMES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T, int N>
@@ -1261,12 +1261,12 @@ constexpr inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true)
     return {minv.x, minv.y, minv.z, -(minv * a.o)};
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // AXIS ALIGNED BOUNDING BOXES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // DEscribes a range of values in N dimensions.
 template <typename T, int N>
@@ -1471,12 +1471,12 @@ constexpr inline bbox<T, 3> quad_bounds(const vec<T, 3>& p0,
     return bounds;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RAYS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Rays with origin, direction and min/max t value.
 template <typename T, int N>
@@ -1517,12 +1517,12 @@ constexpr inline ray<T, N> make_segment(
     return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // TRANSFORMS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
 template <typename T>
@@ -1797,12 +1797,12 @@ inline void center_image(vec2f& center, float& scale, const vec2i& image_size,
     }
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // PCG random numbers from http://www.pcg-random.org/
 struct rng_state {
@@ -1859,12 +1859,12 @@ inline vec3f get_random_vec3f(rng_state& rng) {
     return {x, y, z};
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // MONETACARLO SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere_direction(const vec2f& ruv) {
@@ -1978,12 +1978,12 @@ inline float sample_discrete_distribution_pdf(const vector<float>& cdf, int idx)
     return cdf.at(idx) - cdf.at(idx - 1);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PERLIN NOISE FUNCTION
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Compute the revised Perlin noise function. Wrap provides a wrapping noise
 // but must be power of two (wraps at 256 anyway). For octave based noise,
@@ -2000,12 +2000,12 @@ inline float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
 inline float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // ANIMATION UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
 inline int evaluate_keyframed_index(
@@ -2063,12 +2063,12 @@ inline T evaluate_keyframed_bezier(
         vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR MATRICES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Matrix diagonals and transposes.
 template <typename T>
@@ -2217,12 +2217,12 @@ constexpr inline T determinant(const mat<T, 4, 4>& a) {
                        a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR UI UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Turntable for UI navigation.
 inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
@@ -2303,12 +2303,12 @@ inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
     frame = {rot.x, rot.y, rot.z, pos};
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR PERLIN NOISE
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // clang-format off
 inline float stb__perlin_lerp(float a, float b, float t)
@@ -2533,6 +2533,6 @@ inline float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gai
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif

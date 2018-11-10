@@ -61,7 +61,7 @@
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Scene load options
 struct load_scene_options {
@@ -120,12 +120,12 @@ bool load_ybin_scene(const string& filename, yocto_scene& scene,
 bool save_ybin_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options = {});
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // MESH IO FUNCTIONS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Load/Save a mesh
 bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
@@ -185,12 +185,12 @@ bool save_obj_facevarying_mesh(const string& filename,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<int>& quads_materials, bool flip_texcoord = true);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SIMPLE OBJ LOADER
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // OBJ vertex
 struct obj_vertex {
@@ -306,12 +306,12 @@ struct load_obj_options {
 bool load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options = {});
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SIMPLE PLY LOADER
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // ply type
 enum struct ply_type { ply_uchar, ply_int, ply_float, ply_int_list };
@@ -339,6 +339,6 @@ struct ply_data {
 // Load ply mesh
 bool load_ply(const string& filename, ply_data& ply);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif

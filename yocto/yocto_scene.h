@@ -73,7 +73,7 @@
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
@@ -287,12 +287,12 @@ struct yocto_scene {
     vector<yocto_animation>   animations   = {};
 };
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Print scene statistics.
 void print_stats(const yocto_scene& scene);
@@ -301,12 +301,12 @@ void print_stats(const yocto_scene& scene);
 // merge_from to merged_into, so merge_from will be empty after this function.
 void merge_scene(yocto_scene& merge_into, const yocto_scene& merge_from);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // EVALUATION OF SCENE PROPERTIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Update node transforms.
 void update_transforms(
@@ -548,6 +548,6 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     const vec3f& direction);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif

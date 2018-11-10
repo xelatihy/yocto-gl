@@ -31,7 +31,7 @@
 #include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
-using namespace yoctogl;
+using namespace yocto;
 
 int main(int argc, char* argv[]) {
     // options

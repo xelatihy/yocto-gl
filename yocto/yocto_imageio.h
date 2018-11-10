@@ -52,7 +52,7 @@
 // -----------------------------------------------------------------------------
 // IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Check if an image is HDR based on filename.
 bool is_hdr_filename(const string& filename);
@@ -73,17 +73,17 @@ bool load_image_from_memory(const byte* data, int data_size, image<vec4b>& img);
 bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
     float exposure = 0, bool filmic = false, bool srgb = true);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Loads/saves a 1 channel volume.
 bool load_volume(const string& filename, volume<float>& vol);
 bool save_volume(const string& filename, const volume<float>& vol);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif

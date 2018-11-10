@@ -21,14 +21,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
 # compile flags
 if(YOCTO_OPENGL)
-    add_definitions(-DYGL_OPENGL=1)
+    add_definitions(-DYOCTO_OPENGL=1)
 else(YOCTO_OPENGL)
-    add_definitions(-DYGL_OPENGL=0)
+    add_definitions(-DYOCTO_OPENGL=0)
 endif(YOCTO_OPENGL)
 if(YOCTO_EMBREE)
-    add_definitions(-DYGL_EMBREE=1)
+    add_definitions(-DYOCTO_EMBREE=1)
 else(YOCTO_EMBREE)
-    add_definitions(-DYGL_EMBREE=0)
+    add_definitions(-DYOCTO_EMBREE=0)
 endif(YOCTO_EMBREE)
 
 # platform compile flags

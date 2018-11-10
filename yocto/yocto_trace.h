@@ -75,7 +75,7 @@
 // -----------------------------------------------------------------------------
 // PATH TRACING
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Default trace seed
 const auto trace_default_seed = 961748941ull;
@@ -178,12 +178,12 @@ void trace_image_async_stop(vector<thread>& threads,
 pair<uint64_t, uint64_t> get_trace_stats();
 void                     reset_trace_stats();
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PATH TRACING SUPPORT FUNCTION
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Phong exponent to roughness.
 float specular_exponent_to_roughness(float n);
@@ -215,6 +215,6 @@ float evaluate_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
 vec3f sample_phase_function(float vg, const vec2f& u);
 float evaluate_phase_function(float cos_theta, float vg);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif

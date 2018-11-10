@@ -30,7 +30,7 @@
 #include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
-using namespace yoctogl;
+using namespace yocto;
 
 struct image_stats {
     bbox4f pxl_bounds = {zero4f, zero4f};

@@ -64,7 +64,7 @@
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR IMAGEIO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Split a string
 vector<string> split_string(const string& str) {
@@ -543,12 +543,12 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
     return img;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR VOLUME IMAGE IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Loads volume data from binary format.
 bool load_volume_nolog(const string& filename, volume<float>& vol) {
@@ -579,4 +579,4 @@ bool save_volume(const string& filename, const volume<float>& vol) {
     return save_volume_nolog(filename, vol);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto

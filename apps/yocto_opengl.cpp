@@ -41,7 +41,7 @@
 #include "ext/imgui/imgui_impl_glfw.h"
 #include "ext/imgui/imgui_impl_opengl3.h"
 
-namespace yoctogl {
+namespace yocto {
 
 void check_opengl_error() {
     if (glGetError() != GL_NO_ERROR) log_error("gl error");
@@ -947,4 +947,4 @@ void end_child_opengl_widget(const opengl_window& win) {
     ImGui::PopID();
 }
 
-}  // namespace yoctogl
+}  // namespace yocto

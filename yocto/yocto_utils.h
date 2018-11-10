@@ -90,7 +90,7 @@
 // -----------------------------------------------------------------------------
 // PRINT/PARSE UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Formats a string `fmt` with values taken from `args`. Uses `{}` as
 // placeholder.
@@ -123,12 +123,12 @@ inline int64_t get_time() {
     return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // LOGGING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Log info/error/fatal/trace message
 template <typename... Args>
@@ -155,12 +155,12 @@ inline void log_trace_end(log_scope& scope);
 template <typename... Args>
 inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMMEDIATE-MODE COMMAND LINE PARSING
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Command line parser data. All data should be considered private.
 struct cmdline_parser {
@@ -210,12 +210,12 @@ template <typename T>
 inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
     T& val, const string& usage, const vector<string>& labels, bool req = false);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Normalize path delimiters.
 inline string normalize_path(const string& filename);
@@ -231,12 +231,12 @@ inline string replace_extension(const string& filename, const string& ext);
 // Check if a file can be opened for reading.
 inline bool exists_file(const string& filename);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // FILE IO
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Load/save a text file
 inline bool load_text(const string& filename, string& str);
@@ -246,12 +246,12 @@ inline bool save_text(const string& filename, const string& str);
 inline bool load_binary(const string& filename, vector<byte>& data);
 inline bool save_binary(const string& filename, const vector<byte>& data);
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // a simple concurrent queue that locks at every call
 template <typename T>
@@ -316,12 +316,12 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
         [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Prints basic types
 inline bool print_value(string& str, const string& value) {
@@ -538,12 +538,12 @@ inline bool parse(const string& str, Args&... args) {
     return is_whitespace(view);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF LOGGING UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Logging configutation
 inline bool& _log_console() {
@@ -633,12 +633,12 @@ inline void set_log_file(const string& filename, bool append) {
     _log_filestream() = fopen(filename.c_str(), append ? "at" : "wt");
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration) {
@@ -661,12 +661,12 @@ inline string format_num(uint64_t num) {
     return std::to_string(rem);
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMMAND-LINE PARSING
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // initialize a command line parser
 inline cmdline_parser make_cmdline_parser(int argc, char** argv,
@@ -929,12 +929,12 @@ inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
     return values;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF PATH UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 string normalize_path(const string& filename_) {
     auto filename = filename_;
@@ -997,12 +997,12 @@ bool exists_file(const string& filename) {
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF FILE READING
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // log io error
 template <typename... Args>
@@ -1193,12 +1193,12 @@ inline bool save_binary(const string& filename, const vector<byte>& data) {
     return true;
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
-namespace yoctogl {
+namespace yocto {
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms.
@@ -1228,6 +1228,6 @@ inline void parallel_for(
     }
 }
 
-}  // namespace yoctogl
+}  // namespace yocto
 
 #endif
