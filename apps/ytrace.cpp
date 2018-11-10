@@ -99,8 +99,7 @@ int main(int argc, char* argv[]) {
     build_scene_bvh(scene, bvh, bvh_options);
 
     // init renderer
-    auto lights = trace_lights{};
-    init_trace_lights(lights, scene);
+    auto lights = make_trace_lights(scene);
 
     // fix renderer type if no lights
     if (empty(lights) &&
@@ -110,8 +109,10 @@ int main(int argc, char* argv[]) {
     }
 
     // allocate buffers
-    auto rendered_image = image<vec4f>{};
-    auto trace_pixels   = image<trace_pixel>{};
+    auto image_size = get_camera_image_size(
+        scene.cameras[trace_options.camera_id], trace_options.image_size);
+    auto rendered_image = image<vec4f>{image_size};
+    auto trace_pixels = make_trace_pixels(image_size, trace_options.random_seed);
 
     // render
     auto scope = log_trace_begin("rendering image");

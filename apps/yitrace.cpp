@@ -54,15 +54,15 @@ struct app_state {
     bvh_scene   bvh   = {};
 
     // rendering state
-    trace_lights                   lights         = {};
-    image<trace_pixel>             trace_pixels   = {};
-    image<vec4f>                   rendered_image = {};
-    image<vec4f>                   display_image  = {};
-    image<vec4f>                   preview_image  = {};
-    atomic<bool>                   trace_stop;
-    atomic<int>                    trace_sample;
-    vector<thread>                 trace_threads = {};
-    concurrent_queue<image_region> trace_queue   = {};
+    trace_lights             lights         = {};
+    image<trace_pixel>       trace_pixels   = {};
+    image<vec4f>             rendered_image = {};
+    image<vec4f>             display_image  = {};
+    image<vec4f>             preview_image  = {};
+    atomic<bool>             trace_stop;
+    atomic<int>              trace_sample;
+    vector<thread>           trace_threads = {};
+    concurrent_queue<bbox2i> trace_queue   = {};
 
     // view image
     vec2f                     image_center = zero2f;
@@ -92,25 +92,29 @@ void start_rendering_async(app_state& app) {
     app.trace_stop   = false;
     app.trace_sample = 0;
 
-    auto& camera   = app.scene.cameras[app.trace_options.camera_id];
-    app.image_size = get_camera_image_size(camera, app.trace_options.image_size);
-    init_image(app.display_image, app.image_size);
+    app.image_size = get_camera_image_size(
+        app.scene.cameras[app.trace_options.camera_id],
+        app.trace_options.image_size);
+    app.rendered_image = image<vec4f>{app.image_size};
+    app.display_image  = image<vec4f>{app.image_size};
+    app.trace_pixels   = make_trace_pixels(
+        app.image_size, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
     preview_options.image_size /= app.preview_ratio;
     preview_options.num_samples = 1;
-    trace_image(
-        app.preview_image, app.scene, app.bvh, app.lights, preview_options);
-    auto display_preview = image<vec4f>{};
-    tonemap_image(app.preview_image, display_preview, app.display_exposure,
-        app.display_filmic, app.display_srgb);
-    auto large_preview = image<vec4f>{};
-    init_image(large_preview, app.image_size);
+    app.preview_image           = trace_image(
+        app.scene, app.bvh, app.lights, preview_options);
+    auto display_preview = tonemap_image(app.preview_image,
+        app.display_exposure, app.display_filmic, app.display_srgb);
+    auto large_preview   = image<vec4f>{app.image_size};
     for (auto j = 0; j < app.image_size.y; j++) {
         for (auto i = 0; i < app.image_size.x; i++) {
-            auto pi = clamp(i / app.preview_ratio, 0, display_preview.size.x - 1),
-                 pj = clamp(j / app.preview_ratio, 0, display_preview.size.y - 1);
-            at(large_preview, {i, j}) = at(display_preview, {pi, pj});
+            auto pi = clamp(
+                     i / app.preview_ratio, 0, display_preview.size().x - 1),
+                 pj = clamp(
+                     j / app.preview_ratio, 0, display_preview.size().y - 1);
+            large_preview[{i, j}] = display_preview[{pi, pj}];
         }
     }
     app.preview_image = large_preview;
@@ -149,7 +153,7 @@ bool load_scene_sync(app_state& app) {
 
     // init renderer
     app.status = "initializing lights";
-    init_trace_lights(app.lights, app.scene);
+    app.lights = make_trace_lights(app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights) &&
@@ -201,7 +205,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                app.rendered_image.size.x, app.rendered_image.size.y,
+                app.rendered_image.size().x, app.rendered_image.size().y,
                 (int)app.trace_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
@@ -247,12 +251,12 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale, app.rendered_image.size);
+                app.image_scale, app.rendered_image.size());
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app.rendered_image.size.x && ij.y >= 0 &&
-                ij.y < app.rendered_image.size.y) {
+            if (ij.x >= 0 && ij.x < app.rendered_image.size().x && ij.y >= 0 &&
+                ij.y < app.rendered_image.size().y) {
                 draw_coloredit_opengl_widget(
-                    win, "pixel", at(app.rendered_image, ij));
+                    win, "pixel", app.rendered_image[ij]);
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);
@@ -279,38 +283,38 @@ void draw(const opengl_window& win) {
     set_glviewport(get_opengl_framebuffer_size(win));
     clear_glframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
-        center_image(app.image_center, app.image_scale, app.display_image.size,
-            win_size, app.zoom_to_fit);
+        center_image(app.image_center, app.image_scale,
+            app.display_image.size(), win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_size != zero2i) {
                 init_opengl_texture(app.display_texture, app.image_size, false,
                     false, false, false);
             }
         } else {
-            auto region = image_region{};
+            auto region = bbox2i{};
             auto size   = 0;
             while (app.trace_queue.try_pop(region)) {
-                if (region.size == zero2i) {
+                if (bbox_size(region) == zero2i) {
                     update_opengl_texture(
                         app.display_texture, app.preview_image, false);
                     break;
                 } else {
-                    tonemap_image_region(app.rendered_image, app.display_image,
-                        region, app.display_exposure, app.display_filmic,
-                        app.display_srgb);
+                    tonemap_image_region(app.display_image, region,
+                        app.rendered_image, app.display_exposure,
+                        app.display_filmic, app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
-                    size += region.size.x * region.size.y;
-                    if (size >=
-                        app.rendered_image.size.x * app.rendered_image.size.y)
+                    size += bbox_size(region).x * bbox_size(region).y;
+                    if (size >= app.rendered_image.size().x *
+                                    app.rendered_image.size().y)
                         break;
                 }
             }
         }
         set_glblending(true);
-        draw_glimage_background(app.display_image.size, win_size,
+        draw_glimage_background(app.display_image.size(), win_size,
             app.image_center, app.image_scale);
-        draw_glimage(app.display_texture, app.display_image.size, win_size,
+        draw_glimage(app.display_texture, app.display_image.size(), win_size,
             app.image_center, app.image_scale);
         set_glblending(false);
     }
@@ -398,13 +402,13 @@ void run_ui(app_state& app) {
         if (app.load_done && (mouse_left || mouse_right) && alt_down &&
             !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale, app.rendered_image.size);
-            if (ij.x < 0 || ij.x >= app.rendered_image.size.x || ij.y < 0 ||
-                ij.y >= app.rendered_image.size.y) {
+                app.image_scale, app.rendered_image.size());
+            if (ij.x < 0 || ij.x >= app.rendered_image.size().x || ij.y < 0 ||
+                ij.y >= app.rendered_image.size().y) {
                 auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
-                auto  ray    = evaluate_camera_ray(
-                    camera, ij, app.rendered_image.size, {0.5f, 0.5f}, zero2f);
-                auto isec = intersect_scene(app.scene, app.bvh, ray);
+                auto  ray    = evaluate_camera_ray(camera, ij,
+                    app.rendered_image.size(), {0.5f, 0.5f}, zero2f);
+                auto  isec   = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {"instance", isec.instance_id};
             }
