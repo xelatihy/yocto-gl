@@ -117,40 +117,31 @@ inline void from_json(const json& js, vec<T, N>& value) {
 
 template <typename T, int N>
 inline void to_json(json& js, const frame<T, N>& value) {
-    js = *(const std::array<vec<T, N>, N + 1>*)&value;
+    js = *(const std::array<T, N * (N + 1)>*)&value;
 }
 template <typename T, int N>
 inline void from_json(const json& js, frame<T, N>& value) {
-    auto jvalue = js.get<std::array<vec<T, N>, N + 1>>();
+    auto jvalue = js.get<std::array<T, N * (N + 1)>>();
     value = *(frame<T, N>*)&jvalue;
 }
 
 template <typename T, int N, int M>
 inline void to_json(json& js, const mat<T, N, M>& value) {
-    js = *(const std::array<vec<T, N>, M>*)&value;
+    js = *(const std::array<T, N * M>*)&value;
 }
 template <typename T, int N, int M>
 inline void from_json(const json& js, mat<T, N, M>& value) {
-    auto jvalue = js.get<std::array<vec<T, N>, M>>();
+    auto jvalue = js.get<std::array<T, N * M>>();
     value = *(mat<T, N, M>*)&jvalue;
 }
 
-template <typename T>
-inline void to_json(json& js, const bbox<T, 1>& value) {
-    js = *(const std::array<T, 2>*)&value;
-}
-template <typename T>
-inline void from_json(const json& js, bbox<T, 1>& value) {
-    auto jvalue = js.get<std::array<T, 2>>();
-    value = *(bbox<T, 1>*)&jvalue;
-}
 template <typename T, int N>
 inline void to_json(json& js, const bbox<T, N>& value) {
-    js = *(const std::array<vec<T, N>, 2>*)&value;
+    js = *(const std::array<T, N * 2>*)&value;
 }
 template <typename T, int N>
 inline void from_json(const json& js, bbox<T, N>& value) {
-    auto jvalue = js.get<std::array<vec<T, N>, 2>>();
+    auto jvalue = js.get<std::array<T, N * 2>>();
     value = *(bbox<T, N>*)&jvalue;
 }
 
@@ -640,15 +631,15 @@ bool serialize_json_value(json& js, vec<T, N>& value, bool save) {
 }
 template<typename T, int N, int M>
 bool serialize_json_value(json& js, mat<T, N, M>& value, bool save) {
-    return serialize_json_values(js, &value[0], M, save);
+    return serialize_json_values(js, &value[0][0], N*M, save);
 }
 template<typename T, int N>
 bool serialize_json_value(json& js, frame<T, N>& value, bool save) {
-    return serialize_json_values(js, &value[0], N+1, save);
+    return serialize_json_values(js, &value[0][0], N*(N+1), save);
 }
 template<typename T, int N>
 bool serialize_json_value(json& js, bbox<T, N>& value, bool save) {
-    return serialize_json_values(js, &value[0], 2, save);
+    return serialize_json_values(js, &value[0][0], N*2, save);
 }
 
 // Dumps a json value
