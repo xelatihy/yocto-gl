@@ -1434,6 +1434,10 @@ struct ray<T, 2> {
     vec<T, 2> d    = {0, 1};
     T         tmin = 0;
     T         tmax = maxt<T>();
+
+    constexpr ray() : o{}, d{}, tmin{0}, tmax{max<T>()} { }
+    constexpr ray(const vec<T, 2>& o_, const vec<T, 2>& d_, const T& tmin_, const T& tmax_) : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} { }
+    constexpr ray(const ray&) = default;
 };
 template <typename T>
 struct ray<T, 3> {
@@ -1441,6 +1445,10 @@ struct ray<T, 3> {
     vec<T, 3> d    = {0, 0, 1};
     T         tmin = 0;
     T         tmax = maxt<T>();
+
+    constexpr ray() : o{}, d{}, tmin{0}, tmax{max<T>()} { }
+    constexpr ray(const vec<T, 3>& o_, const vec<T, 3>& d_, const T& tmin_, const T& tmax_) : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} { }
+    constexpr ray(const ray&) = default;
 };
 
 // Type aliases.
