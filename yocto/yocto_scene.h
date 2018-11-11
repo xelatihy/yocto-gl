@@ -325,11 +325,11 @@ vector<vec3f> compute_shape_normals(const yocto_shape& shape);
 vector<vec3f> compute_surface_normals(const yocto_surface& surface);
 
 // Updates/refits bvh.
-void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
+bvh_shape make_shape_bvh(const yocto_shape& shape,
     const build_bvh_options& options = {});
-void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
+bvh_shape make_surface_bvh(const yocto_surface& surface,
     const build_bvh_options& options = {});
-void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+bvh_scene make_scene_bvh(const yocto_scene& scene, 
     const build_bvh_options& options = {});
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
 void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh);

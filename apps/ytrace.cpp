@@ -97,8 +97,7 @@ int main(int argc, char* argv[]) {
     log_validation_errors(scene);
 
     // build bvh
-    auto bvh = bvh_scene{};
-    build_scene_bvh(scene, bvh, bvh_options);
+    auto bvh = make_scene_bvh(scene, bvh_options);
 
     // init renderer
     auto lights = make_trace_lights(scene);

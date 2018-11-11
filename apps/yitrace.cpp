@@ -152,7 +152,7 @@ bool load_scene_sync(app_state& app) {
 
     // build bvh
     app.status = "computing bvh";
-    build_scene_bvh(app.scene, app.bvh, app.bvh_options);
+    app.bvh = make_scene_bvh(app.scene, app.bvh_options);
 
     // init renderer
     app.status = "initializing lights";

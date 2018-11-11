@@ -159,12 +159,22 @@ struct build_bvh_options {
     atomic<bool>* cancel_flag  = nullptr;
 };
 
-// Build a BVH from the given set of primitives.
-void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
-void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
+// Build a BVH from the given set of shape primitives.
+bvh_shape make_shape_bvh(const vector<int>& points, const vector<vec3f>& positions, const vector<float>& radius, const build_bvh_options& options = {});
+bvh_shape make_shape_bvh(const vector<vec2i>& lines, const vector<vec3f>& positions, const vector<float>& radius, const build_bvh_options& options = {});
+bvh_shape make_shape_bvh(const vector<vec3i>& triangles, const vector<vec3f>& positions, const build_bvh_options& options = {});
+bvh_shape make_shape_bvh(const vector<vec4i>& quads, const vector<vec3f>& positions, const build_bvh_options& options = {});
+
+// Build a BVH from the given set of instances.
+bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
+    const vector<bvh_shape>& shape_bvhs,
+    const vector<bvh_shape>& surface_bvhs, 
+    const build_bvh_options& options = {});
+
 // Update the node bounds for a shape bvh.
-void refit_shape_bvh(bvh_shape& bvh);
-void refit_scene_bvh(bvh_scene& bvh);
+void refit_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions);
+void refit_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions, const vector<float>& radius);
+void refit_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
