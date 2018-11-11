@@ -37,13 +37,14 @@ namespace yocto {
 // Convert between CIE XYZ and xyY
 vec3f xyz_to_xyY(const vec3f& xyz) {
     if (xyz == zero_vec3f) return zero_vec3f;
-    return {xyz[0] / (xyz[0] + xyz[1] + xyz[2]), xyz[1] / (xyz[0] + xyz[1] + xyz[2]),
-        xyz[1]};
+    return {xyz[0] / (xyz[0] + xyz[1] + xyz[2]),
+        xyz[1] / (xyz[0] + xyz[1] + xyz[2]), xyz[1]};
 }
 // Convert between CIE XYZ and xyY
 vec3f xyY_to_xyz(const vec3f& xyY) {
     if (xyY[1] == 0) return zero_vec3f;
-    return {xyY[0] * xyY[2] / xyY[1], xyY[2], (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
+    return {xyY[0] * xyY[2] / xyY[1], xyY[2],
+        (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
 }
 // Convert between CIE XYZ and RGB
 vec3f xyz_to_rgb(const vec3f& xyz) {
@@ -356,7 +357,7 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
             auto normal = vec3f{
                 scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
             normal[1] = -normal[1];  // make green pointing up, even if y axis
-                                   // points down
+                                     // points down
             normal       = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
             norm[{i, j}] = {normal[0], normal[1], normal[2], 1};
         }
@@ -444,7 +445,8 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     }
 
     auto sun = [has_sun, sunAngularRadius, sun_le](auto theta, auto gamma) {
-        return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f : zero_vec3f;
+        return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
+                                                       zero_vec3f;
     };
 
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
@@ -508,8 +510,7 @@ image<vec4f> make_noise_image(const vec2i& size, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto p = vec3f{i / (float)img.width(), j / (float)img.height(),
-                         0.5f} *
+            auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
                      scale;
             auto g      = perlin_noise(p, wrap3i);
             g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -526,8 +527,7 @@ image<vec4f> make_fbm_image(const vec2i& size, float scale, float lacunarity,
     auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto p = vec3f{i / (float)img.width(), j / (float)img.height(),
-                         0.5f} *
+            auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
                      scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -544,8 +544,7 @@ image<vec4f> make_ridge_image(const vec2i& size, float scale, float lacunarity,
     auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto p = vec3f{i / (float)img.width(), j / (float)img.height(),
-                         0.5f} *
+            auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
                      scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
@@ -563,8 +562,7 @@ image<vec4f> make_turbulence_image(const vec2i& size, float scale,
     auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto p = vec3f{i / (float)img.width(), j / (float)img.height(),
-                         0.5f} *
+            auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
                      scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
@@ -591,7 +589,8 @@ volume<float> make_test_volume(const vec3i& size, float scale, float exponent) {
                 auto p = vec3f{
                     i / (float)size[0], j / (float)size[1], k / (float)size[2]};
                 float value = pow(
-                    max(max(cos(scale * p[0]), cos(scale * p[1])), 0.0f), exponent);
+                    max(max(cos(scale * p[0]), cos(scale * p[1])), 0.0f),
+                    exponent);
                 vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
             }
         }

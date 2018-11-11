@@ -256,8 +256,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto ij        = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale, app.rendered_image.size());
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij[0] >= 0 && ij[0] < app.rendered_image.width() && ij[1] >= 0 &&
-                ij[1] < app.rendered_image.height()) {
+            if (ij[0] >= 0 && ij[0] < app.rendered_image.width() &&
+                ij[1] >= 0 && ij[1] < app.rendered_image.height()) {
                 draw_coloredit_opengl_widget(
                     win, "pixel", app.rendered_image[ij]);
             } else {

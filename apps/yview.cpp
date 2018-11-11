@@ -571,8 +571,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             state.program, "vert_pos", vbos.positions_buffer, zero_vec3f);
         set_opengl_vertexattrib(
             state.program, "vert_norm", vbos.normals_buffer, zero_vec3f);
-        set_opengl_vertexattrib(
-            state.program, "vert_texcoord", vbos.texturecoords_buffer, zero_vec2f);
+        set_opengl_vertexattrib(state.program, "vert_texcoord",
+            vbos.texturecoords_buffer, zero_vec2f);
         set_opengl_vertexattrib(
             state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
         set_opengl_vertexattrib(state.program, "vert_tangsp",
@@ -753,8 +753,9 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
                         shape.positions[t[1]], shape.positions[t[2]]);
             } else if (!shape.quads.empty()) {
                 for (auto q : shape.quads)
-                    area += quad_area(shape.positions[q[0]], shape.positions[q[1]],
-                        shape.positions[q[2]], shape.positions[q[3]]);
+                    area += quad_area(shape.positions[q[0]],
+                        shape.positions[q[1]], shape.positions[q[2]],
+                        shape.positions[q[3]]);
             } else if (!shape.lines.empty()) {
                 for (auto l : shape.lines)
                     area += line_length(
@@ -934,8 +935,8 @@ void draw_widgets(const opengl_window& win) {
             continue_opengl_widget_line(win);
             draw_checkbox_opengl_widget(win, "edges", app.draw_options.edges);
             if (app.time_range != zero_vec2f) {
-                draw_slider_opengl_widget(
-                    win, "time", app.time, app.time_range[0], app.time_range[1]);
+                draw_slider_opengl_widget(win, "time", app.time,
+                    app.time_range[0], app.time_range[1]);
                 draw_textinput_opengl_widget(win, "anim group", app.anim_group);
                 draw_checkbox_opengl_widget(win, "animate", app.animate);
             }

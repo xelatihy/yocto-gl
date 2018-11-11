@@ -571,7 +571,8 @@ bool save_volume_nolog(const string& filename, const volume<float>& vol) {
     if (!fs) return false;
     auto size = vol.size();
     if (!write_value(fs, size)) return false;
-    if (!write_values(fs, size[0] * size[1] * size[2], vol.data())) return false;
+    if (!write_values(fs, size[0] * size[1] * size[2], vol.data()))
+        return false;
     return true;
 }
 bool save_volume(const string& filename, const volume<float>& vol) {

@@ -135,8 +135,10 @@ int main(int argc, char* argv[]) {
     if (print_info) {
         auto center = (bbox.max + bbox.min) / 2;
         auto size   = bbox.max - bbox.min;
-        printf("bbox min: % 6g % 6g % 6g\n", bbox.min[0], bbox.min[1], bbox.min[2]);
-        printf("bbox max: % 6g % 6g % 6g\n", bbox.max[0], bbox.max[1], bbox.max[2]);
+        printf("bbox min: % 6g % 6g % 6g\n", bbox.min[0], bbox.min[1],
+            bbox.min[2]);
+        printf("bbox max: % 6g % 6g % 6g\n", bbox.max[0], bbox.max[1],
+            bbox.max[2]);
         printf("bbox cen: % 6g % 6g % 6g\n", center[0], center[1], center[2]);
         printf("bbox siz: % 6g % 6g % 6g\n", size[0], size[1], size[2]);
         if (translation != zero_vec3f || scale != vec3f{1, 1, 1}) {

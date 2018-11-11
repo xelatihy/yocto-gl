@@ -85,8 +85,8 @@ struct image {
 
     bool  empty() const { return _size[0] == 0 && _size[1] == 0; }
     vec2i size() const { return _size; }
-    int width() const { return _size[0]; }
-    int height() const { return _size[1]; }
+    int   width() const { return _size[0]; }
+    int   height() const { return _size[1]; }
 
     void clear() {
         _size = {0, 0};
@@ -236,11 +236,13 @@ struct volume {
     volume(const vec3i& size, const T* values)
         : _size{size}, _voxels(values, values + size[0] * size[1] + size[2]) {}
 
-    bool  empty() const { return _size[0] == 0 && _size[1] == 0 && _size[2] == 0; }
+    bool empty() const {
+        return _size[0] == 0 && _size[1] == 0 && _size[2] == 0;
+    }
     vec3i size() const { return _size; }
-    int width() const { return _size[0]; }
-    int height() const { return _size[1]; }
-    int depth() const { return _size[2]; }
+    int   width() const { return _size[0]; }
+    int   height() const { return _size[1]; }
+    int   depth() const { return _size[2]; }
 
     void clear() {
         _size = {0, 0, 0};
@@ -301,7 +303,8 @@ namespace yocto {
 // Element-wise float to byte conversion.
 inline vec4b float_to_byte(const vec4f& a) {
     return {(byte)clamp(int(a[0] * 256), 0, 255),
-        (byte)clamp(int(a[1] * 256), 0, 255), (byte)clamp(int(a[2] * 256), 0, 255),
+        (byte)clamp(int(a[1] * 256), 0, 255),
+        (byte)clamp(int(a[2] * 256), 0, 255),
         (byte)clamp(int(a[3] * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
@@ -313,14 +316,16 @@ inline vec3f gamma_to_linear(const vec3f& srgb, float gamma = 2.2f) {
     return {pow(srgb[0], gamma), pow(srgb[1], gamma), pow(srgb[2], gamma)};
 }
 inline vec3f linear_to_gamma(const vec3f& lin, float gamma = 2.2f) {
-    return {pow(lin[0], 1 / gamma), pow(lin[1], 1 / gamma), pow(lin[2], 1 / gamma)};
+    return {
+        pow(lin[0], 1 / gamma), pow(lin[1], 1 / gamma), pow(lin[2], 1 / gamma)};
 }
 inline vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f) {
-    return {pow(srgb[0], gamma), pow(srgb[1], gamma), pow(srgb[2], gamma), srgb[3]};
+    return {
+        pow(srgb[0], gamma), pow(srgb[1], gamma), pow(srgb[2], gamma), srgb[3]};
 }
 inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
-    return {pow(lin[0], 1 / gamma), pow(lin[1], 1 / gamma), pow(lin[2], 1 / gamma),
-        lin[3]};
+    return {pow(lin[0], 1 / gamma), pow(lin[1], 1 / gamma),
+        pow(lin[2], 1 / gamma), lin[3]};
 }
 
 // sRGB non-linear curve
@@ -341,19 +346,20 @@ inline float linear_to_srgb(float lin) {
 
 // Conversion between linear and srgb colors.
 inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {
-        srgb_to_linear(srgb[0]), srgb_to_linear(srgb[1]), srgb_to_linear(srgb[2])};
+    return {srgb_to_linear(srgb[0]), srgb_to_linear(srgb[1]),
+        srgb_to_linear(srgb[2])};
 }
 inline vec3f linear_to_srgb(const vec3f& lin) {
-    return {linear_to_srgb(lin[0]), linear_to_srgb(lin[1]), linear_to_srgb(lin[2])};
+    return {
+        linear_to_srgb(lin[0]), linear_to_srgb(lin[1]), linear_to_srgb(lin[2])};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
     return {srgb_to_linear(srgb[0]), srgb_to_linear(srgb[1]),
         srgb_to_linear(srgb[2]), srgb[3]};
 }
 inline vec4f linear_to_srgb(const vec4f& lin) {
-    return {linear_to_srgb(lin[0]), linear_to_srgb(lin[1]), linear_to_srgb(lin[2]),
-        lin[3]};
+    return {linear_to_srgb(lin[0]), linear_to_srgb(lin[1]),
+        linear_to_srgb(lin[2]), lin[3]};
 }
 
 // Approximate luminance estimate for sRGB primaries (better relative luminance)
@@ -373,8 +379,8 @@ inline float tonemap_filmic(float hdr) {
 }
 // Apply ACES fitted curve.
 inline vec4f tonemap_filmic(const vec4f& hdr) {
-    return {tonemap_filmic(hdr[0]), tonemap_filmic(hdr[1]), tonemap_filmic(hdr[2]),
-        hdr[3]};
+    return {tonemap_filmic(hdr[0]), tonemap_filmic(hdr[1]),
+        tonemap_filmic(hdr[2]), hdr[3]};
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with

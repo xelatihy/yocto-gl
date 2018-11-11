@@ -112,17 +112,17 @@ inline void to_json(json& js, const vec<T, N>& value) {
 template <typename T, int N>
 inline void from_json(const json& js, vec<T, N>& value) {
     auto jvalue = js.get<std::array<T, N>>();
-    value = *(vec<T, N>*)&jvalue;
+    value       = *(vec<T, N>*)&jvalue;
 }
 
 template <typename T, int N>
 inline void to_json(json& js, const frame<T, N>& value) {
-    js = *(const std::array<T, N * (N + 1)>*)&value;
+    js = *(const std::array<T, N*(N + 1)>*)&value;
 }
 template <typename T, int N>
 inline void from_json(const json& js, frame<T, N>& value) {
-    auto jvalue = js.get<std::array<T, N * (N + 1)>>();
-    value = *(frame<T, N>*)&jvalue;
+    auto jvalue = js.get<std::array<T, N*(N + 1)>>();
+    value       = *(frame<T, N>*)&jvalue;
 }
 
 template <typename T, int N, int M>
@@ -132,7 +132,7 @@ inline void to_json(json& js, const mat<T, N, M>& value) {
 template <typename T, int N, int M>
 inline void from_json(const json& js, mat<T, N, M>& value) {
     auto jvalue = js.get<std::array<T, N * M>>();
-    value = *(mat<T, N, M>*)&jvalue;
+    value       = *(mat<T, N, M>*)&jvalue;
 }
 
 template <typename T, int N>
@@ -142,7 +142,7 @@ inline void to_json(json& js, const bbox<T, N>& value) {
 template <typename T, int N>
 inline void from_json(const json& js, bbox<T, N>& value) {
     auto jvalue = js.get<std::array<T, N * 2>>();
-    value = *(bbox<T, N>*)&jvalue;
+    value       = *(bbox<T, N>*)&jvalue;
 }
 
 template <typename T>
@@ -533,37 +533,37 @@ bool serialize_json_value(json& js, int& value, bool save) {
         js = value;
         return true;
     } else {
-        if(!js.is_number_integer()) return false;
+        if (!js.is_number_integer()) return false;
         value = js.get<int>();
         return true;
     }
 }
-    bool serialize_json_value(json& js, bool& value, bool save) {
-        if (save) {
-            js = value;
-            return true;
-        } else {
-            if(!js.is_boolean()) return false;
-            value = js.get<bool>();
-            return true;
-        }
+bool serialize_json_value(json& js, bool& value, bool save) {
+    if (save) {
+        js = value;
+        return true;
+    } else {
+        if (!js.is_boolean()) return false;
+        value = js.get<bool>();
+        return true;
     }
-    bool serialize_json_value(json& js, unsigned char& value, bool save) {
-        if (save) {
-            js = (int)value;
-            return true;
-        } else {
-            if(!js.is_number_integer()) return false;
-            value = (unsigned char)js.get<int>();
-            return true;
-        }
+}
+bool serialize_json_value(json& js, unsigned char& value, bool save) {
+    if (save) {
+        js = (int)value;
+        return true;
+    } else {
+        if (!js.is_number_integer()) return false;
+        value = (unsigned char)js.get<int>();
+        return true;
     }
+}
 bool serialize_json_value(json& js, float& value, bool save) {
     if (save) {
         js = value;
         return true;
     } else {
-        if(!js.is_number()) return false;
+        if (!js.is_number()) return false;
         value = js.get<float>();
         return true;
     }
@@ -573,7 +573,7 @@ bool serialize_json_value(json& js, double& value, bool save) {
         js = value;
         return true;
     } else {
-        if(!js.is_number()) return false;
+        if (!js.is_number()) return false;
         value = js.get<float>();
         return true;
     }
@@ -583,63 +583,63 @@ bool serialize_json_value(json& js, string& value, bool save) {
         js = value;
         return true;
     } else {
-        if(!js.is_string()) return false;
+        if (!js.is_string()) return false;
         value = js.get<string>();
         return true;
     }
 }
-    
-template<typename T>
+
+template <typename T>
 bool serialize_json_values(json& js, T* values, int num, bool save) {
     if (save) {
         js = json::array();
-        for (auto i = 0; i < num; i ++) {
+        for (auto i = 0; i < num; i++) {
             js.push_back({});
             if (!serialize_json_value(js.back(), values[i], save)) return false;
         }
         return true;
     } else {
-        if(!js.is_array()) return false;
-        if(js.size() != num) return false;
-        for(auto i = 0; i < num; i ++)
-            if(!serialize_json_value(js.at(i), values[i], save)) return false;
+        if (!js.is_array()) return false;
+        if (js.size() != num) return false;
+        for (auto i = 0; i < num; i++)
+            if (!serialize_json_value(js.at(i), values[i], save)) return false;
         return true;
     }
 }
 
-template<typename T>
+template <typename T>
 bool serialize_json_value(json& js, vector<T>& value, bool save) {
     if (save) {
         js = json::array();
-        for (auto i = 0; i < value.size(); i ++) {
+        for (auto i = 0; i < value.size(); i++) {
             js.push_back({});
             if (!serialize_json_value(js.back(), value[i], save)) return false;
         }
         return true;
     } else {
-        if(!js.is_array()) return false;
+        if (!js.is_array()) return false;
         value.resize(js.size());
-        for(auto i = 0; i <  value.size(); i ++)
-            if(!serialize_json_value(js.at(i), value[i], save)) return false;
+        for (auto i = 0; i < value.size(); i++)
+            if (!serialize_json_value(js.at(i), value[i], save)) return false;
         return true;
     }
 }
 
-template<typename T, int N>
+template <typename T, int N>
 bool serialize_json_value(json& js, vec<T, N>& value, bool save) {
     return serialize_json_values(js, &value[0], N, save);
 }
-template<typename T, int N, int M>
+template <typename T, int N, int M>
 bool serialize_json_value(json& js, mat<T, N, M>& value, bool save) {
-    return serialize_json_values(js, &value[0][0], N*M, save);
+    return serialize_json_values(js, &value[0][0], N * M, save);
 }
-template<typename T, int N>
+template <typename T, int N>
 bool serialize_json_value(json& js, frame<T, N>& value, bool save) {
-    return serialize_json_values(js, &value[0][0], N*(N+1), save);
+    return serialize_json_values(js, &value[0][0], N * (N + 1), save);
 }
-template<typename T, int N>
+template <typename T, int N>
 bool serialize_json_value(json& js, bbox<T, N>& value, bool save) {
-    return serialize_json_values(js, &value[0][0], N*2, save);
+    return serialize_json_values(js, &value[0][0], N * 2, save);
 }
 
 // Dumps a json value
@@ -656,36 +656,39 @@ bool serialize_json_value(
     }
 }
 
-    // Dumps a json value
-    template <typename T>
-    bool serialize_json_values(
-                              json& js, T* values, int num, const char* name,  bool save) {
-        if (save) {
-            if (!values || num == 0) return true;
-            return serialize_json_values(js[name], values, num, save);
-        } else {
-            if (!js.count(name)) return true;
-            return serialize_json_values(js.at(name), values, num, save);
-        }
+// Dumps a json value
+template <typename T>
+bool serialize_json_values(
+    json& js, T* values, int num, const char* name, bool save) {
+    if (save) {
+        if (!values || num == 0) return true;
+        return serialize_json_values(js[name], values, num, save);
+    } else {
+        if (!js.count(name)) return true;
+        return serialize_json_values(js.at(name), values, num, save);
     }
-    
-    template<typename T>
-    bool serialize_json_value(json& js, image<T>& value, bool save) {
-        auto size = value.size();
-        if(!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
-        if(!save) value = image<T>{size};
-        if(!serialize_json_values(js, value.data(), size[0]*size[1], "pixels", save)) return false;
-        return true;
-    }
-    template<typename T>
-    bool serialize_json_value(json& js, volume<T>& value, bool save) {
-        auto size = value.size();
-        if(!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
-        if(!save) value = volume<T>{size};
-        if(!serialize_json_values(js, value.data(), size[0]*size[1], "voxels", save)) return false;
-        return true;
-    }
-    
+}
+
+template <typename T>
+bool serialize_json_value(json& js, image<T>& value, bool save) {
+    auto size = value.size();
+    if (!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
+    if (!save) value = image<T>{size};
+    if (!serialize_json_values(
+            js, value.data(), size[0] * size[1], "pixels", save))
+        return false;
+    return true;
+}
+template <typename T>
+bool serialize_json_value(json& js, volume<T>& value, bool save) {
+    auto size = value.size();
+    if (!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
+    if (!save) value = volume<T>{size};
+    if (!serialize_json_values(
+            js, value.data(), size[0] * size[1], "voxels", save))
+        return false;
+    return true;
+}
 
 // Dumps a json value
 template <typename T>
@@ -2672,7 +2675,8 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                             to_string(vert(qp[1], qt[1])),
                             to_string(vert(qp[2], qt[2])));
                     } else {
-                        print(fs, "f {} {} {} {}\n", to_string(vert(qp[0], qt[0])),
+                        print(fs, "f {} {} {} {}\n",
+                            to_string(vert(qp[0], qt[0])),
                             to_string(vert(qp[1], qt[1])),
                             to_string(vert(qp[2], qt[2])),
                             to_string(vert(qp[3], qt[3])));
@@ -2710,7 +2714,8 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                             to_string(vert(qp[1], qn[1])),
                             to_string(vert(qp[2], qn[2])));
                     } else {
-                        print(fs, "f {} {} {} {}\n", to_string(vert(qp[0], qn[0])),
+                        print(fs, "f {} {} {} {}\n",
+                            to_string(vert(qp[0], qn[0])),
                             to_string(vert(qp[1], qn[1])),
                             to_string(vert(qp[2], qn[2])),
                             to_string(vert(qp[3], qn[3])));
@@ -4031,7 +4036,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto camera           = yocto_camera{};
             camera.name           = "camera" + std::to_string(cid++);
             camera.frame          = inverse(stack.back().frame);
-            camera.frame.axes[2]       = -camera.frame.axes[2];
+            camera.frame.axes[2]  = -camera.frame.axes[2];
             camera.focus_distance = stack.back().focus;
             auto aspect           = stack.back().aspect;
             auto fovy             = 1.0f;
@@ -4234,9 +4239,11 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 printf("%s shape not supported\n", type.c_str());
             }
             auto frame = stack.back().frame;
-            auto scl = vec3f{length(frame.axes[0]), length(frame.axes[1]), length(frame.axes[2])};
+            auto scl   = vec3f{length(frame.axes[0]), length(frame.axes[1]),
+                length(frame.axes[2])};
             for (auto& p : shape.positions) p *= scl;
-            frame = {{normalize(frame.axes[0]), normalize(frame.axes[1]), normalize(frame.axes[2])},
+            frame = {{normalize(frame.axes[0]), normalize(frame.axes[1]),
+                         normalize(frame.axes[2])},
                 frame.origin};
             if (stack.back().reverse) {
                 for (auto& t : shape.triangles) swap(t[1], t[2]);
@@ -4617,8 +4624,7 @@ bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
         auto size = zero_vec3i;
         if (!read_value(fs, size)) return false;
         vol.resize(size);
-        if (!read_values(
-                fs, vol.width() * vol.height() * vol.depth(), vol.data()))
+        if (!read_values(fs, vol.width() * vol.height() * vol.depth(), vol.data()))
             return false;
         return true;
     }
@@ -5232,7 +5238,8 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
                 to_string(vert(q[1])), to_string(vert(q[2])));
         } else {
             print(fs, "f {} {} {} {}\n", to_string(vert(q[0])),
-                to_string(vert(q[1])), to_string(vert(q[2])), to_string(vert(q[3])));
+                to_string(vert(q[1])), to_string(vert(q[2])),
+                to_string(vert(q[3])));
         }
     }
 

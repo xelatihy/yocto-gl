@@ -407,7 +407,7 @@ inline bool print_value(string& str, const mat<T, N, M>& v) {
 }
 template <typename T, int N>
 inline bool print_value(string& str, const frame<T, N>& v) {
-    return print_values(str, &v[0][0],N*(N + 1));
+    return print_values(str, &v[0][0], N * (N + 1));
 }
 template <typename T, int N>
 inline bool print_value(string& str, const bbox<T, N>& v) {
@@ -542,7 +542,7 @@ inline bool parse_value(parse_string_view& str, mat<T, N, M>& v) {
 }
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, frame<T, N>& v) {
-    return parse_values(str, &v[0][0], N*(N + 1));
+    return parse_values(str, &v[0][0], N * (N + 1));
 }
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, bbox<T, N>& v) {

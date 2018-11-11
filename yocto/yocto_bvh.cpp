@@ -327,12 +327,18 @@ bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
     auto dd = 0.0f;
 
     // For each axis count any excess distance outside box extents
-    if (pos[0] < bbox.min[0]) dd += (bbox.min[0] - pos[0]) * (bbox.min[0] - pos[0]);
-    if (pos[0] > bbox.max[0]) dd += (pos[0] - bbox.max[0]) * (pos[0] - bbox.max[0]);
-    if (pos[1] < bbox.min[1]) dd += (bbox.min[1] - pos[1]) * (bbox.min[1] - pos[1]);
-    if (pos[1] > bbox.max[1]) dd += (pos[1] - bbox.max[1]) * (pos[1] - bbox.max[1]);
-    if (pos[2] < bbox.min[2]) dd += (bbox.min[2] - pos[2]) * (bbox.min[2] - pos[2]);
-    if (pos[2] > bbox.max[2]) dd += (pos[2] - bbox.max[2]) * (pos[2] - bbox.max[2]);
+    if (pos[0] < bbox.min[0])
+        dd += (bbox.min[0] - pos[0]) * (bbox.min[0] - pos[0]);
+    if (pos[0] > bbox.max[0])
+        dd += (pos[0] - bbox.max[0]) * (pos[0] - bbox.max[0]);
+    if (pos[1] < bbox.min[1])
+        dd += (bbox.min[1] - pos[1]) * (bbox.min[1] - pos[1]);
+    if (pos[1] > bbox.max[1])
+        dd += (pos[1] - bbox.max[1]) * (pos[1] - bbox.max[1]);
+    if (pos[2] < bbox.min[2])
+        dd += (bbox.min[2] - pos[2]) * (bbox.min[2] - pos[2]);
+    if (pos[2] > bbox.max[2])
+        dd += (pos[2] - bbox.max[2]) * (pos[2] - bbox.max[2]);
 
     // check distance
     return dd < dist_max * dist_max;
@@ -340,9 +346,12 @@ bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
 
 // TODO: doc
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
-    if (bbox1.max[0] < bbox2.min[0] || bbox1.min[0] > bbox2.max[0]) return false;
-    if (bbox1.max[1] < bbox2.min[1] || bbox1.min[1] > bbox2.max[1]) return false;
-    if (bbox1.max[2] < bbox2.min[2] || bbox1.min[2] > bbox2.max[2]) return false;
+    if (bbox1.max[0] < bbox2.min[0] || bbox1.min[0] > bbox2.max[0])
+        return false;
+    if (bbox1.max[1] < bbox2.min[1] || bbox1.min[1] > bbox2.max[1])
+        return false;
+    if (bbox1.max[2] < bbox2.min[2] || bbox1.min[2] > bbox2.max[2])
+        return false;
     return true;
 }
 
@@ -585,9 +594,8 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     }
     // split
     mid = (int)(std::partition(prims.data() + start, prims.data() + end,
-                    [split_axis, middle](auto& a) {
-                        return a.center[split_axis] < middle;
-                    }) -
+                    [split_axis, middle](
+                        auto& a) { return a.center[split_axis] < middle; }) -
                 prims.data());
 
     // if we were not able to split, just break the primitives in half
@@ -661,9 +669,8 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
     auto cmiddle = (cbbox.max + cbbox.min) / 2;
     auto middle  = cmiddle[largest_axis];
     mid = (int)(std::partition(prims.data() + start, prims.data() + end,
-                    [split_axis, middle](auto& a) {
-                        return a.center[split_axis] < middle;
-                    }) -
+                    [split_axis, middle](
+                        auto& a) { return a.center[split_axis] < middle; }) -
                 prims.data());
 
     // if we were not able to split, just break the primitives in half
@@ -882,18 +889,18 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         }
     } else if (!bvh.lines.empty()) {
         for (auto& l : bvh.lines) {
-            prims.push_back({line_bounds(bvh.positions[l[0]], bvh.positions[l[1]],
-                bvh.radius[l[0]], bvh.radius[l[1]])});
+            prims.push_back({line_bounds(bvh.positions[l[0]],
+                bvh.positions[l[1]], bvh.radius[l[0]], bvh.radius[l[1]])});
         }
     } else if (!bvh.triangles.empty()) {
         for (auto& t : bvh.triangles) {
-            prims.push_back({triangle_bounds(
-                bvh.positions[t[0]], bvh.positions[t[1]], bvh.positions[t[2]])});
+            prims.push_back({triangle_bounds(bvh.positions[t[0]],
+                bvh.positions[t[1]], bvh.positions[t[2]])});
         }
     } else if (!bvh.quads.empty()) {
         for (auto& q : bvh.quads) {
-            prims.push_back({quad_bounds(bvh.positions[q[0]], bvh.positions[q[1]],
-                bvh.positions[q[2]], bvh.positions[q[3]])});
+            prims.push_back({quad_bounds(bvh.positions[q[0]],
+                bvh.positions[q[1]], bvh.positions[q[2]], bvh.positions[q[3]])});
         }
     }
 
@@ -1108,7 +1115,8 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv  = vec3f{1 / ray.direction[0], 1 / ray.direction[1], 1 / ray.direction[2]};
+    auto ray_dinv = vec3f{
+        1 / ray.direction[0], 1 / ray.direction[1], 1 / ray.direction[2]};
     auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
         (ray_dinv[2] < 0) ? 1 : 0};
 
@@ -1135,8 +1143,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.triangles.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (intersect_triangle(ray, bvh.positions[t[0]], bvh.positions[t[1]],
-                        bvh.positions[t[2]], distance, element_uv)) {
+                if (intersect_triangle(ray, bvh.positions[t[0]],
+                        bvh.positions[t[1]], bvh.positions[t[2]], distance,
+                        element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1145,9 +1154,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.quads.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.quads[node.primitive_ids[i]];
-                if (intersect_quad(ray, bvh.positions[t[0]], bvh.positions[t[1]],
-                        bvh.positions[t[2]], bvh.positions[t[3]], distance,
-                        element_uv)) {
+                if (intersect_quad(ray, bvh.positions[t[0]],
+                        bvh.positions[t[1]], bvh.positions[t[2]],
+                        bvh.positions[t[3]], distance, element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1156,8 +1165,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.lines.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh.lines[node.primitive_ids[i]];
-                if (intersect_line(ray, bvh.positions[l[0]], bvh.positions[l[1]],
-                        bvh.radius[l[0]], bvh.radius[l[1]], distance, element_uv)) {
+                if (intersect_line(ray, bvh.positions[l[0]],
+                        bvh.positions[l[1]], bvh.radius[l[0]], bvh.radius[l[1]],
+                        distance, element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1207,7 +1217,8 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv  = vec3f{1 / ray.direction[0], 1 / ray.direction[1], 1 / ray.direction[2]};
+    auto ray_dinv = vec3f{
+        1 / ray.direction[0], 1 / ray.direction[1], 1 / ray.direction[2]};
     auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
         (ray_dinv[2] < 0) ? 1 : 0};
 
@@ -1293,8 +1304,9 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
                 if (overlap_triangle(pos, max_distance, bvh.positions[t[0]],
-                        bvh.positions[t[1]], bvh.positions[t[2]], bvh.radius[t[0]],
-                        bvh.radius[t[1]], bvh.radius[t[2]], distance, element_uv)) {
+                        bvh.positions[t[1]], bvh.positions[t[2]],
+                        bvh.radius[t[0]], bvh.radius[t[1]], bvh.radius[t[2]],
+                        distance, element_uv)) {
                     hit          = true;
                     max_distance = distance;
                     element_id   = node.primitive_ids[i];
@@ -1306,7 +1318,8 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
                 if (overlap_quad(pos, max_distance, bvh.positions[q[0]],
                         bvh.positions[q[1]], bvh.positions[q[2]],
                         bvh.positions[q[3]], bvh.radius[q[0]], bvh.radius[q[1]],
-                        bvh.radius[q[2]], bvh.radius[q[3]], distance, element_uv)) {
+                        bvh.radius[q[2]], bvh.radius[q[3]], distance,
+                        element_uv)) {
                     hit          = true;
                     max_distance = distance;
                     element_id   = node.primitive_ids[i];

@@ -278,23 +278,27 @@ vec3f sample_smooth_brdf_direction(const microfacet_brdf& brdf,
     if (brdf.diffuse != zero_vec3f && rnl < prob[0]) {
         auto rz = sqrtf(rn[1]), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn[0];
         auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero_vec3f, normal) :
-                                               make_frame_fromz(zero_vec3f, -normal);
+        auto fp = dot(normal, outgoing) >= 0 ?
+                      make_frame_fromz(zero_vec3f, normal) :
+                      make_frame_fromz(zero_vec3f, -normal);
         return transform_direction(fp, il);
     }
     // sample according to specular GGX
     else if (brdf.specular != zero_vec3f && rnl < prob[0] + prob[1]) {
         auto hl = sample_ggx(brdf.roughness, rn);
-        auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero_vec3f, normal) :
-                                               make_frame_fromz(zero_vec3f, -normal);
+        auto fp = dot(normal, outgoing) >= 0 ?
+                      make_frame_fromz(zero_vec3f, normal) :
+                      make_frame_fromz(zero_vec3f, -normal);
         auto h = transform_direction(fp, hl);
         return reflect(outgoing, h);
     }
     // transmission hack
-    else if (brdf.transmission != zero_vec3f && rnl < prob[0] + prob[1] + prob[2]) {
+    else if (brdf.transmission != zero_vec3f &&
+             rnl < prob[0] + prob[1] + prob[2]) {
         auto hl = sample_ggx(brdf.roughness, rn);
-        auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero_vec3f, normal) :
-                                               make_frame_fromz(zero_vec3f, -normal);
+        auto fp = dot(normal, outgoing) >= 0 ?
+                      make_frame_fromz(zero_vec3f, normal) :
+                      make_frame_fromz(zero_vec3f, -normal);
         auto h  = transform_direction(fp, hl);
         auto ir = reflect(outgoing, h);
         return dot(normal, outgoing) >= 0 ? reflect(-ir, -normal) :
@@ -1163,8 +1167,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             if (pdf == 0) break;
             weight *= brdf_cosine / pdf;
             if (weight == zero_vec3f) break;
-            ray.origin            = p;
-            ray.direction            = incoming;
+            ray.origin       = p;
+            ray.direction    = incoming;
             bool transmitted = (ndi > 0) != (ndo > 0);
 
             // transmission in medium
@@ -1655,8 +1659,8 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size(), pixel.rng);
-                auto radiance_hit = sampler(scene, bvh, lights, ray.origin, ray.direction,
-                    pixel.rng, options.max_bounces);
+                auto radiance_hit = sampler(scene, bvh, lights, ray.origin,
+                    ray.direction, pixel.rng, options.max_bounces);
                 auto radiance     = radiance_hit.first;
                 auto hit          = radiance_hit.second;
                 if (!isfinite(radiance[0]) || !isfinite(radiance[1]) ||
@@ -1671,7 +1675,7 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
                 pixel.samples += 1;
             }
             auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero_vec3f;
-            auto coverage = (float)pixel.hits / (float)pixel.samples;
+            auto coverage          = (float)pixel.hits / (float)pixel.samples;
             rendered_image[{i, j}] = {
                 radiance[0], radiance[1], radiance[2], coverage};
         }
@@ -1898,7 +1902,8 @@ float specular_exponent_to_roughness(float exponent) {
 // Specular to fresnel eta.
 void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
     es  = {(1 + sqrt(ks[0])) / (1 - sqrt(ks[0])),
-        (1 + sqrt(ks[1])) / (1 - sqrt(ks[1])), (1 + sqrt(ks[2])) / (1 - sqrt(ks[2]))};
+        (1 + sqrt(ks[1])) / (1 - sqrt(ks[1])),
+        (1 + sqrt(ks[2])) / (1 - sqrt(ks[2]))};
     esk = {0, 0, 0};
 }
 
