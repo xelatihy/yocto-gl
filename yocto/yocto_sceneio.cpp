@@ -107,46 +107,51 @@ bool save_json(const string& filename, const json& js) {
 
 template <typename T, int N>
 inline void to_json(json& js, const vec<T, N>& value) {
-    js = (const std::array<T, N>&)value;
+    js = *(const std::array<T, N>*)&value;
 }
 template <typename T, int N>
 inline void from_json(const json& js, vec<T, N>& value) {
-    (std::array<T, N>&)value = js.get<std::array<T, N>>();
+    auto jvalue = js.get<std::array<T, N>>();
+    value = *(vec<T, N>*)&jvalue;
 }
 
 template <typename T, int N>
 inline void to_json(json& js, const frame<T, N>& value) {
-    js = (const std::array<vec<T, N>, N + 1>&)value;
+    js = *(const std::array<vec<T, N>, N + 1>*)&value;
 }
 template <typename T, int N>
 inline void from_json(const json& js, frame<T, N>& value) {
-    (std::array<vec<T, N>, N + 1>&)value = js.get<std::array<vec<T, N>, N + 1>>();
+    auto jvalue = js.get<std::array<vec<T, N>, N + 1>>();
+    value = *(frame<T, N>*)&jvalue;
 }
 
 template <typename T, int N, int M>
 inline void to_json(json& js, const mat<T, N, M>& value) {
-    js = (const std::array<vec<T, N>, M>&)value;
+    js = *(const std::array<vec<T, N>, M>*)&value;
 }
 template <typename T, int N, int M>
 inline void from_json(const json& js, mat<T, N, M>& value) {
-    (std::array<vec<T, N>, M>&)value = js.get<std::array<vec<T, N>, M>>();
+    auto jvalue = js.get<std::array<vec<T, N>, M>>();
+    value = *(mat<T, N, M>*)&jvalue;
 }
 
 template <typename T>
 inline void to_json(json& js, const bbox<T, 1>& value) {
-    js = (const std::array<T, 2>&)value;
+    js = *(const std::array<T, 2>*)&value;
 }
 template <typename T>
 inline void from_json(const json& js, bbox<T, 1>& value) {
-    (std::array<T, 2>&)value = js.get<std::array<T, 2>>();
+    auto jvalue = js.get<std::array<T, 2>>();
+    value = *(bbox<T, 1>*)&jvalue;
 }
 template <typename T, int N>
 inline void to_json(json& js, const bbox<T, N>& value) {
-    js = (const std::array<vec<T, N>, 2>&)value;
+    js = *(const std::array<vec<T, N>, 2>*)&value;
 }
 template <typename T, int N>
 inline void from_json(const json& js, bbox<T, N>& value) {
-    (std::array<vec<T, N>, 2>&)value = js.get<std::array<vec<T, N>, 2>>();
+    auto jvalue = js.get<std::array<vec<T, N>, 2>>();
+    value = *(bbox<T, N>*)&jvalue;
 }
 
 template <typename T>
