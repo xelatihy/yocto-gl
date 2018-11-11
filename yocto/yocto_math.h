@@ -170,69 +170,62 @@ namespace yocto {
 
 // Small size vectors.
 template <typename T, int N>
-struct vec {
-    T x = 0;
-
-    constexpr vec() : x{0} { }
-    constexpr vec(const T& x_) : x{x_} { }
-    constexpr vec(const vec<T, 1>& v) = default;
-
-    constexpr T&       operator[](int idx) { return *(&x + idx); }
-    constexpr const T& operator[](int idx) const { return *(&x + idx); }
-};
+struct vec;
 template <typename T>
 struct vec<T, 1> {
-    T x = 0;
+    constexpr static const int N = 1;
 
-    constexpr vec() : x{0} { }
+    T elements[N] = {0};
+
+    constexpr vec() : elements{0} { }
     // constexpr explicit vec(const T& v) : x{v} { }
-    constexpr vec(const T& x_) : x{x_} { }
-    constexpr vec(const vec<T, 1>& v) = default;
+    constexpr vec(const T& x_) : elements{x_} { }
+    constexpr vec(const vec<T, N>& v) = default;
 
-    constexpr T&       operator[](int idx) { return *(&x + idx); }
-    constexpr const T& operator[](int idx) const { return *(&x + idx); }
+    constexpr T&       operator[](int idx) { return elements[idx]; }
+    constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
 template <typename T>
 struct vec<T, 2> {
-    T x = 0;
-    T y = 0;
+    constexpr static const int N = 2;
+    
+    T elements[N] = {0};
 
-    constexpr vec() : x{0}, y{0} { }
-    constexpr explicit vec(const T& v) : x{v}, y{v} { }
-    constexpr vec(const T& x_, const T& y_) : x{x_}, y{y_} { }
-    constexpr vec(const vec<T, 2>& v) = default;
+    constexpr vec() : elements{0, 0} { }
+    constexpr explicit vec(const T& v) : elements{v, v} { }
+    constexpr vec(const T& x_, const T& y_) : elements{x_, y_} { }
+    constexpr vec(const vec<T, N>& v) = default;
 
-    constexpr T&       operator[](int idx) { return *(&x + idx); }
-    constexpr const T& operator[](int idx) const { return *(&x + idx); }
+    constexpr T&       operator[](int idx) { return elements[idx]; }
+    constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
 template <typename T>
 struct vec<T, 3> {
-    T x = 0;
-    T y = 0;
-    T z = 0;
+    constexpr static const int N = 3;
+    
+    T elements[N] = {0};
 
-    constexpr vec() : x{0}, y{0}, z{0} { }
-    constexpr explicit vec(const T& v) : x{v}, y{v}, z{v} { }
-    constexpr vec(const T& x_, const T& y_, const T& z_) : x{x_}, y{y_}, z{z_} { }
-    constexpr vec(const vec<T, 3>& v) = default;
+    constexpr vec() : elements{0, 0, 0} { }
+    constexpr explicit vec(const T& v) : elements{v, v, v} { }
+    constexpr vec(const T& x_, const T& y_, const T& z_) : elements{x_, y_, z_} { }
+    constexpr vec(const vec<T, N>& v) = default;
 
-    constexpr T&       operator[](int idx) { return *(&x + idx); }
-    constexpr const T& operator[](int idx) const { return *(&x + idx); }
+    constexpr T&       operator[](int idx) { return elements[idx]; }
+    constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
 template <typename T>
 struct vec<T, 4> {
-    T x = 0;
-    T y = 0;
-    T z = 0;
-    T w = 0;
+    constexpr static const int N = 4;
+    
+    T elements[N] = {0};
 
-    constexpr vec() : x{0}, y{0}, z{0}, w{0} { }
-    constexpr explicit vec(const T& v) : x{v}, y{v}, z{v}, w{v} { }
-    constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_) : x{x_}, y{y_}, z{z_}, w{w_} { }
-    constexpr vec(const vec<T, 4>& v) = default;
+    constexpr vec() : elements{0, 0, 0, 0} { }
+    constexpr explicit vec(const T& v) : elements{v, v, v, v} { }
+    constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_) : elements{x_, y_, z_, w_} { }
+    constexpr vec(const vec<T, N>& v) = default;
 
-    constexpr T&       operator[](int idx) { return *(&x + idx); }
-    constexpr const T& operator[](int idx) const { return *(&x + idx); }
+    constexpr T&       operator[](int idx) { return elements[idx]; }
+    constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
 
 // Type aliases.
