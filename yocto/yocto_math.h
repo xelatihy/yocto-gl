@@ -181,6 +181,18 @@ struct vec {
     constexpr const T& operator[](int idx) const { return *(&x + idx); }
 };
 template <typename T>
+struct vec<T, 1> {
+    T x = 0;
+
+    constexpr vec() : x{0} { }
+    // constexpr explicit vec(const T& v) : x{v} { }
+    constexpr vec(const T& x_) : x{x_} { }
+    constexpr vec(const vec<T, 1>& v) = default;
+
+    constexpr T&       operator[](int idx) { return *(&x + idx); }
+    constexpr const T& operator[](int idx) const { return *(&x + idx); }
+};
+template <typename T>
 struct vec<T, 2> {
     T x = 0;
     T y = 0;
