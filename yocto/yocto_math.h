@@ -109,7 +109,7 @@ using std::pair;
 using byte = unsigned char;
 using uint = unsigned int;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // MATH CONSTANTS AND FUNCTIONS

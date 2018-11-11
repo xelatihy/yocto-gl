@@ -69,7 +69,7 @@ namespace yocto {
 using std::function;
 using std::unordered_map;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS

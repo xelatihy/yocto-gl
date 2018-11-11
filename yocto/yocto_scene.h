@@ -80,7 +80,7 @@ namespace yocto {
 using std::string;
 using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SCENE DATA

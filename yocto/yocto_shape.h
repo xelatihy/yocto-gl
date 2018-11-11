@@ -104,9 +104,9 @@
 
 #include "yocto_math.h"
 
-#include <vector>
 #include <tuple>
 #include <unordered_map>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -120,7 +120,7 @@ using std::tuple;
 using std::unordered_map;
 using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
@@ -366,9 +366,9 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
 
 // Pick a point in a point set uniformly.
-int sample_points_element(int npoints, float re);
-vector<float> sample_points_element_cdf(int npoints) ;
-int sample_points_element(const vector<float>& cdf, float re);
+int           sample_points_element(int npoints, float re);
+vector<float> sample_points_element_cdf(int npoints);
+int           sample_points_element(const vector<float>& cdf, float re);
 
 // Pick a point on lines uniformly.
 vector<float> sample_lines_element_cdf(

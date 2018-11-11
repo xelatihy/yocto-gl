@@ -87,14 +87,14 @@
 
 #include "yocto_math.h"
 
+#include <cctype>
+#include <chrono>
+#include <cstdio>
 #include <deque>
 #include <mutex>
 #include <string>
-#include <chrono>
 #include <thread>
-#include <cstdio>
 #include <vector>
-#include <cctype>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -105,13 +105,13 @@ using std::atomic;
 using std::deque;
 using std::lock_guard;
 using std::mutex;
-using std::thread;
 using std::string;
+using std::thread;
 using std::vector;
 using namespace std::string_literals;
 using namespace std::chrono_literals;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PRINT/PARSE UTILITIES

@@ -113,7 +113,7 @@ using std::pair;
 using std::string;
 using std::vector;
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // RANDOM NUMBER GENERATION
