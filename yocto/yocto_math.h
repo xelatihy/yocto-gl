@@ -270,6 +270,16 @@ struct vec<T, 4> {
 
 #endif
 
+// Vector constants
+template<typename T, int N>
+constexpr inline vec<T, N> make_zero_vec() { return vec<T, N>{}; }
+template<typename T, int N>
+constexpr inline vec<T, N> make_one_vec() { return vec<T, N>{(T)1}; }
+template<typename T, int N>
+constexpr vec<T, N> zero_vec = vec<T, N>{};
+template<typename T, int N>
+constexpr vec<T, N> one_vec = vec<T, N>{(T)1};
+
 // Type aliases.
 using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;
@@ -282,15 +292,15 @@ using vec4i = vec<int, 4>;
 using vec4b = vec<byte, 4>;
 
 // Zero vector constants.
-constexpr const auto zero1f = vec1f{0};
-constexpr const auto zero2f = vec2f{0, 0};
-constexpr const auto zero3f = vec3f{0, 0, 0};
-constexpr const auto zero4f = vec4f{0, 0, 0, 0};
-constexpr const auto zero1i = vec1i{0};
-constexpr const auto zero2i = vec2i{0, 0};
-constexpr const auto zero3i = vec3i{0, 0, 0};
-constexpr const auto zero4i = vec4i{0, 0, 0, 0};
-constexpr const auto zero4b = vec4b{0, 0, 0, 0};
+constexpr const auto zero1f = zero_vec<float, 1>;
+constexpr const auto zero2f = zero_vec<float, 2>;
+constexpr const auto zero3f = zero_vec<float, 3>;
+constexpr const auto zero4f = zero_vec<float, 4>;
+constexpr const auto zero1i = zero_vec<int, 1>;
+constexpr const auto zero2i = zero_vec<int, 2>;
+constexpr const auto zero3i = zero_vec<int, 3>;
+constexpr const auto zero4i = zero_vec<int, 4>;
+constexpr const auto zero4b = zero_vec<byte, 4>;
 
 // Access xyz component of a vec4 typically used for color operation.
 template <typename T>
