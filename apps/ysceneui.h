@@ -34,6 +34,9 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include <unordered_map>
+using std::unordered_map;
+
 inline const unordered_map<int, string>& animation_type_names() {
     static auto names = unordered_map<int, string>{
         {(int)yocto_interpolation_type::linear, "linear"},

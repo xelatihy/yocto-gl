@@ -69,8 +69,22 @@
 
 #include "yocto_bvh.h"
 #include "yocto_math.h"
+#include "yocto_random.h"
 #include "yocto_scene.h"
 #include "yocto_utils.h"
+
+#include <functional>
+#include <vector>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::function;
+using std::vector;
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PATH TRACING
