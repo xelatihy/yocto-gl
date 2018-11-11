@@ -44,7 +44,7 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "/EHsc")
 endif(MSVC)
 
-add_library(yoctogl 
+add_library(yocto 
     yocto/yocto_math.h yocto/yocto_utils.h yocto/yocto_random.h
     yocto/yocto_shape.h yocto/yocto_shape.cpp
     yocto/yocto_bvh.h yocto/yocto_bvh.cpp
@@ -57,11 +57,11 @@ add_library(yoctogl
 
 if(UNIX AND NOT APPLE)
     find_package(Threads REQUIRED)
-    target_link_libraries(yoctogl Threads::Threads)
+    target_link_libraries(yocto Threads::Threads)
 endif(UNIX AND NOT APPLE)
 
 if(YOCTO_EMBREE)
-target_link_libraries(yoctogl libembree3.dylib)
+target_link_libraries(yocto libembree3.dylib)
 endif(YOCTO_EMBREE)
 
 add_executable(ytrace apps/ytrace.cpp)
@@ -69,10 +69,10 @@ add_executable(yscnproc apps/yscnproc.cpp)
 add_executable(yimproc apps/yimproc.cpp)
 add_executable(yobjproc apps/yobjproc.cpp)
 
-target_link_libraries(ytrace yoctogl)
-target_link_libraries(yscnproc yoctogl)
-target_link_libraries(yimproc yoctogl)
-target_link_libraries(yobjproc yoctogl)
+target_link_libraries(ytrace yocto)
+target_link_libraries(yscnproc yocto)
+target_link_libraries(yimproc yocto)
+target_link_libraries(yobjproc yocto)
 
 if(YOCTO_OPENGL)
     find_package(OpenGL REQUIRED)
@@ -96,7 +96,7 @@ if(YOCTO_OPENGL)
     include_directories(apps/)
     add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
 
-    add_library(yoctoopengl apps/yocto_opengl.h apps/yocto_opengl.cpp 
+    add_library(yocto_opengl apps/yocto_opengl.h apps/yocto_opengl.cpp 
         apps/ext/imgui/imgui.cpp apps/ext/imgui/imgui_draw.cpp apps/ext/imgui/imgui_widgets.cpp
         apps/ext/imgui/imgui_impl_glfw.cpp apps/ext/imgui/imgui_impl_opengl3.cpp apps/ext/glad/glad.c)
 
@@ -104,15 +104,15 @@ if(YOCTO_OPENGL)
     add_executable(yitrace apps/yitrace.cpp)
     add_executable(yimview apps/yimview.cpp)
 
-    target_link_libraries(yview yoctogl yoctoopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
-    target_link_libraries(yitrace yoctogl yoctoopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
-    target_link_libraries(yimview yoctogl yoctoopengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
+    target_link_libraries(yview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
+    target_link_libraries(yitrace yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
+    target_link_libraries(yimview yocto yocto_opengl ${OPENGL_gl_LIBRARY} ${GLFW_LIBRARY} ${GL_EXTRA_LIBRARIES})
 endif(YOCTO_OPENGL)
 
 if(YOCTO_TESTING)
 enable_testing()
 add_executable(yimdiff apps/yimdiff.cpp)
-target_link_libraries(yimdiff yoctogl)
+target_link_libraries(yimdiff yocto)
 set(test-yimproc ${CMAKE_SOURCE_DIR}/tests/run-tests/test-yimproc.sh)
 set(test-ytrace ${CMAKE_SOURCE_DIR}/tests/run-tests/test-ytrace.sh)
 set(test-yscnproc ${CMAKE_SOURCE_DIR}/tests/run-tests/test-yscnproc.sh)
