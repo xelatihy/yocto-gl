@@ -1467,7 +1467,7 @@ bool apply_json_procedural(
         auto rotation    = js.value("rotation", zero_vec4f);
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
         value.frame = translation_frame(translation) * scaling_frame(scaling) *
-                      rotation_frame((vec3f)(rotation), rotation[3]);
+                      rotation_frame(make_shorter_vec(rotation), rotation[3]);
     }
     return true;
 }
@@ -1496,7 +1496,7 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero_vec4f);
-        value.frame   = rotation_frame((vec3f)(rotation), rotation[3]);
+        value.frame   = rotation_frame(make_shorter_vec(rotation), rotation[3]);
     }
     return true;
 }

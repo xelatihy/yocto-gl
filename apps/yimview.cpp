@@ -91,7 +91,7 @@ void update_stats_async(app_image& img) {
     img.stats.lum_bounds = invalid_bbox1f;
     for (auto& p : img.img) {
         img.stats.pxl_bounds += p;
-        img.stats.lum_bounds += luminance((vec3f)(p));
+        img.stats.lum_bounds += luminance(make_shorter_vec(p));
     }
     img.stats_done = true;
 }

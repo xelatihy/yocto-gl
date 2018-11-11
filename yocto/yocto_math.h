@@ -167,7 +167,7 @@ struct vec<T, 1> {
     T elements[1] = {0};
 
     constexpr vec() : elements{0} {}
-    constexpr explicit vec(const vec<T, 2>& xy) : elements{xy[0]} {};
+    constexpr vec(const T& x) : elements{x} {}
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -177,10 +177,7 @@ struct vec<T, 2> {
     T elements[2] = {0};
 
     constexpr vec() : elements{0, 0} {}
-    constexpr vec(const T& x_, const T& y_) : elements{x_, y_} {}
-    constexpr vec(const vec<T, 1>& x, T w) : elements{x[0], w} {}
-    constexpr explicit vec(const vec<T, 3>& xyz)
-        : elements{xyz[0], xyz[1]} {};
+    constexpr vec(const T& x, const T& y) : elements{x, y} {}
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -190,11 +187,8 @@ struct vec<T, 3> {
     T elements[3] = {0};
 
     constexpr vec() : elements{0, 0, 0} {}
-    constexpr vec(const T& x_, const T& y_, const T& z_)
-        : elements{x_, y_, z_} {}
-    constexpr vec(const vec<T, 2>& xy, T w) : elements{xy[0], xy[1], w} {}
-    constexpr explicit vec(const vec<T, 4>& xyzw)
-        : elements{xyzw[0], xyzw[1], xyzw[2]} {};
+    constexpr vec(const T& x, const T& y, const T& z)
+        : elements{x, y, z} {}
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -204,10 +198,8 @@ struct vec<T, 4> {
     T elements[4] = {0};
 
     constexpr vec() : elements{0, 0, 0, 0} {}
-    constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_)
-        : elements{x_, y_, z_, w_} {}
-    constexpr vec(const vec<T, 3>& xyz, T w)
-        : elements{xyz[0], xyz[1], xyz[2], w} {}
+    constexpr vec(const T& x, const T& y, const T& z, const T& w)
+        : elements{x, y, z, w} {}
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -258,6 +250,21 @@ constexpr const auto zero_vec2i = zero_vec<int, 2>;
 constexpr const auto zero_vec3i = zero_vec<int, 3>;
 constexpr const auto zero_vec4i = zero_vec<int, 4>;
 constexpr const auto zero_vec4b = zero_vec<byte, 4>;
+
+// Element access
+template<typename T, int N>
+constexpr inline vec<T, N-1> make_shorter_vec(const vec<T, N>& value) {
+    auto smaller = vec<T, N-1>{};
+    for(auto i = 0; i < N - 1; i ++) smaller[i] = value[i];
+    return smaller;
+}
+template<typename T, int N>
+constexpr inline vec<T, N+1> make_longer_vec(const vec<T, N>& value, T last) {
+    auto longer = vec<T, N+1>{};
+    for(auto i = 0; i < N; i ++) longer[i] = value[i];
+    longer[N] = last;
+    return longer;
+}
 
 // Vector comparison operations.
 template <typename T, int N>
@@ -810,13 +817,13 @@ constexpr inline frame<T, 3> make_frame_fromzx(
 template <typename T, int N>
 constexpr inline mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& a) {
     auto c = mat<T, N + 1, N + 1>{};
-    for (auto j = 0; j < N + 1; j++) c[j] = {a[j], j == N ? (T)1 : (T)0};
+    for (auto j = 0; j < N + 1; j++) c[j] = make_longer_vec(a[j], j == N ? (T)1 : (T)0);
     return c;
 }
 template <typename T, int N>
 constexpr inline frame<T, N - 1> mat_to_frame(const mat<T, N, N>& a) {
     auto c = frame<T, N - 1>{};
-    for (auto j = 0; j < N; j++) c[j] = (vec<T, N - 1>)a[j];
+    for (auto j = 0; j < N; j++) c[j] = make_shorter_vec(a[j]);
     return c;
 }
 
@@ -1032,14 +1039,14 @@ namespace yocto {
 template <typename T, int N>
 constexpr inline vec<T, N> transform_point(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
-    auto tvb = a * vec<T, N + 1>{b, 1};
-    return (vec<T, N>)tvb / tvb[N];
+    auto tvb = a * make_longer_vec(b, (T)1);
+    return make_shorter_vec(tvb) / tvb[N];
 }
 template <typename T, int N>
 constexpr inline vec<T, N> transform_vector(
     const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
-    auto tvb = a * vec<T, N + 1>{b, 0};
-    return (vec<T, N>)tvb / tvb[N];
+    auto tvb = a * make_longer_vec(b, (T)0);
+    return make_shorter_vec(tvb) / tvb[N];
 }
 template <typename T, int N>
 constexpr inline vec<T, N> transform_vector(
