@@ -175,7 +175,7 @@ static inline const float& _safemax(const float& a, const float& b) {
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
     // determine intersection ranges
-    auto invd = vec3f{1, 1, 1} / ray.direction;
+    auto invd = 1.0f / ray.direction;
     auto t0   = (bbox.min - ray.origin) * invd;
     auto t1   = (bbox.max - ray.origin) * invd;
     // flip based on range directions
@@ -190,8 +190,7 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
 
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox_) {
-    auto bbox  = &bbox_.min;
+    const vec3i& ray_dsign, const bbox3f& bbox) {
     auto txmin = (bbox[ray_dsign[0]][0] - ray.origin[0]) * ray_dinv[0];
     auto txmax = (bbox[1 - ray_dsign[0]][0] - ray.origin[0]) * ray_dinv[0];
     auto tymin = (bbox[ray_dsign[1]][1] - ray.origin[1]) * ray_dinv[1];

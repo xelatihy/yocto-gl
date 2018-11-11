@@ -1180,8 +1180,8 @@ struct bbox {
     constexpr bbox(const vec<T, N>& min_, const vec<T, N>& max_) : min{min_}, max{max_} { }
     constexpr bbox(const bbox&) = default;
 
-    constexpr T&       operator[](int idx) { return *(&min + idx); }
-    constexpr const T& operator[](int idx) const { return *(&min + idx); }
+    constexpr vec<T, N>&       operator[](int idx) { return idx == 0 ? min : max; }
+    constexpr const vec<T, N>& operator[](int idx) const { return idx == 0 ? min : max; }
 };
 
 // Type aliases
