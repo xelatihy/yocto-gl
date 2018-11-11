@@ -1219,61 +1219,17 @@ constexpr inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true)
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// DEscribes a range of values in N dimensions.
+// Describes a range of values in N dimensions.
 template <typename T, int N>
-struct bbox;
+struct bbox {
+    using V = vec<T, N>;
 
-// Range of values in 1D.
-template <typename T>
-struct bbox<T, 1> {
-    vec<T, 1> min = {maxt<T>()};
-    vec<T, 1> max = {mint<T>()};
+    vec<T, N> min = {maxt<T>()};
+    vec<T, N> max = {mint<T>()};
 
     constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
-    constexpr bbox(const vec<T, 1>& min_, const vec<T, 1>& max_) : min{min_}, max{max_} { }
-    constexpr bbox(const bbox& ) = default;
-
-    constexpr T&       operator[](int idx) { return *(&min + idx); }
-    constexpr const T& operator[](int idx) const { return *(&min + idx); }
-};
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 2> {
-    vec<T, 2> min = {maxt<T>(), maxt<T>()};
-    vec<T, 2> max = {mint<T>(), mint<T>()};
-
-    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
-    constexpr bbox(const vec<T, 2>& min_, const vec<T, 2>& max_) : min{min_}, max{max_} { }
-    constexpr bbox(const bbox& ) = default;
-
-    constexpr T&       operator[](int idx) { return *(&min + idx); }
-    constexpr const T& operator[](int idx) const { return *(&min + idx); }
-};
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 3> {
-    vec<T, 3> min = {maxt<T>(), maxt<T>(), maxt<T>()};
-    vec<T, 3> max = {mint<T>(), mint<T>(), mint<T>()};
-
-    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
-    constexpr bbox(const vec<T, 3>& min_, const vec<T, 3>& max_) : min{min_}, max{max_} { }
-    constexpr bbox(const bbox& ) = default;
-
-    constexpr T&       operator[](int idx) { return *(&min + idx); }
-    constexpr const T& operator[](int idx) const { return *(&min + idx); }
-};
-
-// Axis aligned bounding box represented as a min/max vector pairs.
-template <typename T>
-struct bbox<T, 4> {
-    vec<T, 4> min = {maxt<T>(), maxt<T>(), maxt<T>(), maxt<T>()};
-    vec<T, 4> max = {mint<T>(), mint<T>(), mint<T>(), mint<T>()};
-
-    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
-    constexpr bbox(const vec<T, 4>& min_, const vec<T, 4>& max_) : min{min_}, max{max_} { }
-    constexpr bbox(const bbox& ) = default;
+    constexpr bbox(const vec<T, N>& min_, const vec<T, N>& max_) : min{min_}, max{max_} { }
+    constexpr bbox(const bbox&) = default;
 
     constexpr T&       operator[](int idx) { return *(&min + idx); }
     constexpr const T& operator[](int idx) const { return *(&min + idx); }
@@ -1310,93 +1266,37 @@ vec<T, N> bbox_center(const bbox<T, N>& a) {
 }
 
 // Bounding box comparisons.
-template <typename T>
-constexpr inline bool operator==(const bbox<T, 1>& a, const bbox<T, 1>& b) {
+template <typename T, int N>
+constexpr inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
     return a.min == b.min && a.max == b.max;
 }
-template <typename T>
-constexpr inline bool operator!=(const bbox<T, 1>& a, const bbox<T, 1>& b) {
-    return a.min != b.min || a.max != b.max;
-}
-template <typename T>
-constexpr inline bool operator==(const bbox<T, 2>& a, const bbox<T, 2>& b) {
-    return a.min == b.min && a.max == b.max;
-}
-template <typename T>
-constexpr inline bool operator!=(const bbox<T, 2>& a, const bbox<T, 2>& b) {
-    return a.min != b.min || a.max != b.max;
-}
-template <typename T>
-constexpr inline bool operator==(const bbox<T, 3>& a, const bbox<T, 3>& b) {
-    return a.min == b.min && a.max == b.max;
-}
-template <typename T>
-constexpr inline bool operator!=(const bbox<T, 3>& a, const bbox<T, 3>& b) {
-    return a.min != b.min || a.max != b.max;
-}
-template <typename T>
-constexpr inline bool operator==(const bbox<T, 4>& a, const bbox<T, 4>& b) {
-    return a.min == b.min && a.max == b.max;
-}
-template <typename T>
-constexpr inline bool operator!=(const bbox<T, 4>& a, const bbox<T, 4>& b) {
+template <typename T, int N>
+constexpr inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
     return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
 template <typename T>
 constexpr inline bbox<T, 1>& operator+=(bbox<T, 1>& a, T b) {
-    a.min = {min(a.min.x, b)};
-    a.max = {max(a.max.x, b)};
-    return a;
-}
-template <typename T>
-constexpr inline bbox<T, 1>& operator+=(bbox<T, 1>& a, const bbox<T, 1>& b) {
-    a.min = {min(a.min.x, b.min.x)};
-    a.max = {max(a.max.x, b.max.x)};
+    a.min[0] = {min(a.min[0], b)};
+    a.max[0] = {max(a.max[0], b)};
     return a;
 }
 // Bounding box expansions with points and other boxes.
-template <typename T>
-constexpr inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const vec<T, 2>& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y)};
+template <typename T, int N>
+constexpr inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
+    for(auto i = 0; i < N; i++) {
+        a.min[i] = min(a.min[i], b[i]);
+        a.max[i] = max(a.max[i], b[i]);
+    }
     return a;
 }
-template <typename T>
-constexpr inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const bbox<T, 2>& b) {
-    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y)};
-    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y)};
-    return a;
-}
-// Bounding box expansions with points and other boxes.
-template <typename T>
-constexpr inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const vec<T, 3>& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z)};
-    return a;
-}
-template <typename T>
-constexpr inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const bbox<T, 3>& b) {
-    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
-    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)};
-    return a;
-}
-// Bounding box expansions with points and other boxes.
-template <typename T>
-constexpr inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const vec<T, 4>& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z),
-        min(a.min.w, b.w)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z),
-        max(a.max.w, b.w)};
-    return a;
-}
-template <typename T>
-constexpr inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
-    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y),
-        min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
-    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y),
-        max(a.max.z, b.max.z), max(a.max.w, b.max.w)};
+template <typename T, int N>
+constexpr inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
+    for(auto i = 0; i < N; i++) {
+        a.min[i] = min(a.min[i], b.min[i]);
+        a.max[i] = max(a.max[i], b.max[i]);
+    }
     return a;
 }
 
