@@ -911,7 +911,7 @@ constexpr inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
 }
 template <typename T, int N>
 constexpr inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
-    return !(a == b);
+    return a.min != b.min || a.max != b.max;
 }
 
 // Bounding box expansions with points and other boxes.
@@ -986,30 +986,15 @@ namespace yocto {
 
 // Rays with origin, direction and min/max t value.
 template <typename T, int N>
-struct ray;
-
-// Rays with origin, direction and min/max t value.
-template <typename T>
-struct ray<T, 2> {
-    vec<T, 2> origin    = {0, 0};
-    vec<T, 2> direction    = {0, 1};
+struct ray {
+    vec<T, N> origin    = {0, 0};
+    vec<T, N> direction    = {0, 1};
     T         tmin = 0;
     T         tmax = maxt<T>();
 
     constexpr ray() : origin{}, direction{}, tmin{0}, tmax{max<T>()} { }
-    constexpr ray(const vec<T, 2>& origin_, const vec<T, 2>& direction_,
+    constexpr ray(const vec<T, N>& origin_, const vec<T, N>& direction_,
                   const T& tmin_, const T& tmax_) : origin{origin_}, direction{direction_}, tmin{tmin_}, tmax{tmax_} { }
-    constexpr ray(const ray&) = default;
-};
-template <typename T>
-struct ray<T, 3> {
-    vec<T, 3> origin    = {0, 0, 0};
-    vec<T, 3> direction    = {0, 0, 1};
-    T         tmin = 0;
-    T         tmax = maxt<T>();
-
-    constexpr ray() : origin{}, direction{}, tmin{0}, tmax{max<T>()} { }
-    constexpr ray(const vec<T, 3>& origin_, const vec<T, 3>& direction_, const T& tmin_, const T& tmax_) : origin{origin_}, direction{direction_}, tmin{tmin_}, tmax{tmax_} { }
     constexpr ray(const ray&) = default;
 };
 
@@ -1018,17 +1003,17 @@ using ray2f = ray<float, 2>;
 using ray3f = ray<float, 3>;
 
 // Default ray epsilon
-const auto default_ray_epsf = 1e-4f;
+const auto default_ray_eps = 1e-4;
 
 // Construct a ray from direction or segments using a default epsilon.
 template <typename T, int N>
 constexpr inline ray<T, N> make_ray(
-    const vec<T, N>& origin, const vec<T, N>& direction, T eps = default_ray_epsf) {
+    const vec<T, N>& origin, const vec<T, N>& direction, T eps = (T)default_ray_eps) {
     return {origin, direction, eps, maxt<T>()};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> make_segment(
-    const vec<T, N>& p1, const vec<T, N>& p2, T eps = default_ray_epsf) {
+    const vec<T, N>& p1, const vec<T, N>& p2, T eps = (T)default_ray_eps) {
     return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
