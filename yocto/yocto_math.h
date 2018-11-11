@@ -177,10 +177,8 @@ struct vec  {
         for(auto i = 0; i < N-1; i ++) elements[i] = vals[i];
         elements[N-1] = last;
     }
-    constexpr explicit operator vec<T, N-1>() const { 
-        auto smaller = vec<T, N-1>{};
-        for(auto i = 0; i < N-1; i ++) smaller[i] = elements[i];
-        return smaller;
+    constexpr explicit vec(const vec<T, N+1>& vals) {
+        for(auto i = 0; i < N; i ++) elements[i] = vals[i];
     }
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
@@ -201,6 +199,7 @@ struct vec<T, 1> {
     // constexpr explicit vec(const T& v) : x{v} { }
     constexpr vec(const T& x_) : elements{x_} { }
     constexpr vec(const vec<T, N>& v) = default;
+    constexpr explicit vec(const vec<T, N + 1>& xy) : elements{xy[0]} { };
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -216,7 +215,7 @@ struct vec<T, 2> {
     constexpr vec(const T& x_, const T& y_) : elements{x_, y_} { }
     constexpr vec(const vec<T, N>& v) = default;
     constexpr vec(const vec<T, N-1>& x, T w) : elements{x[0], w} { }
-    constexpr explicit operator vec<T, N-1>() const { return { elements[0] }; }
+    constexpr explicit vec(const vec<T, N + 1>& xyz) : elements{xyz[0], xyz[1]} { };
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -232,7 +231,7 @@ struct vec<T, 3> {
     constexpr vec(const T& x_, const T& y_, const T& z_) : elements{x_, y_, z_} { }
     constexpr vec(const vec<T, N>& v) = default;
     constexpr vec(const vec<T, N-1>& xy, T w) : elements{xy[0], xy[1], w} { }
-    constexpr explicit operator vec<T, N-1>() const { return { elements[0], elements[1] }; }
+    constexpr explicit vec(const vec<T, N + 1>& xyzw) : elements{xyzw[0], xyzw[1], xyzw[2]} { };
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -248,7 +247,7 @@ struct vec<T, 4> {
     constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_) : elements{x_, y_, z_, w_} { }
     constexpr vec(const vec<T, N>& v) = default;
     constexpr vec(const vec<T, N-1>& xyz, T w) : elements{xyz[0], xyz[1], xyz[2], w} { }
-    constexpr explicit operator vec<T, N-1>() const { return { elements[0], elements[1], elements[2] }; }
+    constexpr explicit vec(const vec<T, N + 1>& xyzww) : elements{xyzww[0], xyzww[1], xyzww[2], xyzww[3]} { };
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
