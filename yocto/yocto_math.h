@@ -170,7 +170,7 @@ struct vec {
         for (auto i = 0; i < N; i++) elements[i] = val;
     }
     constexpr vec(initializer_list<T> vals) {
-        // assert(vals.size() == N);
+        // // assert(vals.size() == N);
         auto vals_ptr = vals.begin();
         for (auto i = 0; i < N; i++) elements[i] = vals_ptr[i];
     }
@@ -606,7 +606,7 @@ struct mat {
         for (auto j = 0; j < M; j++) columns[j] = {};
     }
     constexpr mat(initializer_list<vec<T, N>> vals) {
-        assert(vals.size() == M);
+        // assert(vals.size() == M);
         auto vals_ptr = vals.begin();
         for (auto j = 0; j < M; j++) columns[j] = vals_ptr[j];
     }
