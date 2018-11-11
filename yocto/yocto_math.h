@@ -861,11 +861,11 @@ constexpr inline bool operator!=(const frame<T, 2>& a, const frame<T, 2>& b) {
 }
 template <typename T>
 constexpr inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
+    return a.axes == b.axes && a.origin == b.origin;
 }
 template <typename T>
 constexpr inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
-    return !(a == b);
+    return a.axes != b.axes || a.origin != b.origin;
 }
 
 // Frame composition, equivalent to affine matrix product.
