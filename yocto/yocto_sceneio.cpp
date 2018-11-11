@@ -3797,7 +3797,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
         float m[16] = {0};
         for (auto i = 0; i < 16; i++) m[i] = js.at(i).get<float>();
-        return {{m[0], m[1], m[2]}, {m[4], m[5], m[6]}, {m[8], m[9], m[10]},
+        return {{{m[0], m[1], m[2]}, {m[4], m[5], m[6]}, {m[8], m[9], m[10]}},
             {m[12], m[13], m[14]}};
     };
 
@@ -4114,7 +4114,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto frame = stack.back().frame;
             auto scl = vec3f{length(frame.axes[0]), length(frame.axes[1]), length(frame.axes[2])};
             for (auto& p : shape.positions) p *= scl;
-            frame = {normalize(frame.axes[0]), normalize(frame.axes[1]), normalize(frame.axes[2]),
+            frame = {{normalize(frame.axes[0]), normalize(frame.axes[1]), normalize(frame.axes[2])},
                 frame.origin};
             if (stack.back().reverse) {
                 for (auto& t : shape.triangles) swap(t[1], t[2]);
@@ -4161,7 +4161,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
                 // * stack.back().frame;
                 environment.frame = stack.back().frame *
-                                    frame3f{{0, 0, 1}, {0, 1, 0}, {1, 0, 0},
+                                    frame3f{{{0, 0, 1}, {0, 1, 0}, {1, 0, 0}},
                                         {0, 0, 0}};
                 environment.emission = {1, 1, 1};
                 if (jcmd.count("scale"))
@@ -4403,7 +4403,7 @@ void pbrt_flipyz_scene(yocto_scene& scene) {
     }
     for (auto& instance : scene.instances) {
         instance.frame = instance.frame *
-                         frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
+                         frame3f{{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}}, {0, 0, 0}};
     }
 }
 

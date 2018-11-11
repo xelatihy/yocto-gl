@@ -790,12 +790,6 @@ struct frame {
 
     constexpr frame() : axes{identity_mat<T, N>}, origin{zero_vec<T, N>} { }
     constexpr frame(const mat<T, N, N>& axes_, const vec<T, N>& origin_) : axes{axes_}, origin{origin_} { }
-    constexpr frame(initializer_list<vec<T, N>> vals) {
-        assert(vals.size() == N+1);
-        auto vals_ptr = vals.begin();
-        for(auto j = 0; j < N; j ++) axes[j] = vals_ptr[j];
-        origin = vals_ptr[N];
-    }
 
     constexpr vec<T, N>&       operator[](int idx) { return idx < N ? axes[idx] : origin; }
     constexpr const vec<T, N>& operator[](int idx) const { return idx < N ? axes[idx] : origin; }
@@ -822,7 +816,7 @@ constexpr inline frame<T, 3> make_frame_fromz(
     auto z = normalize(v);
     auto x = normalize(orthogonal(z));
     auto y = normalize(cross(z, x));
-    return {x, y, z, o};
+    return {{x, y, z}, o};
 }
 template <typename T>
 constexpr inline frame<T, 3> make_frame_fromzx(
@@ -830,7 +824,7 @@ constexpr inline frame<T, 3> make_frame_fromzx(
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
     auto y = normalize(cross(z, x));
-    return {x, y, z, o};
+    return {{x, y, z}, o};
 }
 
 // Frame to matrix conversion.
@@ -1187,24 +1181,24 @@ template <typename T>
 constexpr inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
     auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
-    return {{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
+    return {{{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
                 (1 - c) * vv[0] * vv[2] - s * vv[1]},
         {(1 - c) * vv[0] * vv[1] - s * vv[2], c + (1 - c) * vv[1] * vv[1],
             (1 - c) * vv[1] * vv[2] + s * vv[0]},
         {(1 - c) * vv[0] * vv[2] + s * vv[1], (1 - c) * vv[1] * vv[2] - s * vv[0],
-            c + (1 - c) * vv[2] * vv[2]},
+            c + (1 - c) * vv[2] * vv[2]}},
         {0, 0, 0}};
 }
 template <typename T>
 constexpr inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
     auto v = quat;
-    return {{v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
+    return {{{v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
                 (v[0] * v[1] + v[2] * v[3]) * 2, (v[2] * v[0] - v[1] * v[3]) * 2},
         {(v[0] * v[1] - v[2] * v[3]) * 2,
             v[3] * v[3] - v[0] * v[0] + v[1] * v[1] - v[2] * v[2],
             (v[1] * v[2] + v[0] * v[3]) * 2},
         {(v[2] * v[0] + v[1] * v[3]) * 2, (v[1] * v[2] - v[0] * v[3]) * 2,
-            v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]},
+            v[3] * v[3] - v[0] * v[0] - v[1] * v[1] + v[2] * v[2]}},
         {0, 0, 0}};
 }
 template <typename T>
@@ -1223,7 +1217,7 @@ constexpr inline frame<T, 3> lookat_frame(const vec<T, 3>& eye,
         w = -w;
         u = -u;
     }
-    return {u, v, w, eye};
+    return {{u, v, w}, eye};
 }
 
 // OpenGL frustum, ortho and perspecgive matrices.
