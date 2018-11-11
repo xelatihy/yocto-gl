@@ -79,14 +79,12 @@ template <typename T>
 struct image {
     image() : _size{0, 0}, _pixels{} {}
     image(const vec2i& size, const T& value = {})
-        : _size{size}, _pixels((size_t)(size[0] * size[1]), value) {}
+        : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
     image(const vec2i& size, const T* values)
-        : _size{size}, _pixels(values, values + size[0] * size[1]) {}
+        : _size{size}, _pixels(values, values + size.x * size.y) {}
 
-    bool  empty() const { return _size[0] == 0 && _size[1] == 0; }
+    bool  empty() const { return _size.x == 0 && _size.y == 0; }
     vec2i size() const { return _size; }
-    int width() const { return _size[0]; }
-    int height() const { return _size[1]; }
 
     void clear() {
         _size = {0, 0};
@@ -100,8 +98,8 @@ struct image {
             clear();
         } else {
             auto img = image{size, value};
-            for (auto j = 0; j < min(size[1], _size[1]); j++) {
-                for (auto i = 0; i < min(size[0], _size[0]); i++) {
+            for (auto j = 0; j < min(size.y, _size.y); j++) {
+                for (auto i = 0; i < min(size.x, _size.x); i++) {
                     img[{i, j}] = (*this)[{i, j}];
                 }
             }
@@ -110,13 +108,13 @@ struct image {
         }
     }
 
-    T& operator[](const vec2i& ij) { return _pixels[ij[1] * _size[0] + ij[0]]; }
+    T& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
     const T& operator[](const vec2i& ij) const {
-        return _pixels[ij[1] * _size[0] + ij[0]];
+        return _pixels[ij.y * _size.x + ij.x];
     }
-    T&       at(const vec2i& ij) { return _pixels[ij[1] * _size[0] + ij[0]]; }
+    T&       at(const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
     const T& at(const vec2i& ij) const {
-        return _pixels[ij[1] * _size[0] + ij[0]];
+        return _pixels[ij.y * _size.x + ij.x];
     }
 
     T*       data() { return _pixels.data(); }
@@ -135,7 +133,7 @@ struct image {
 // Size
 template <typename T>
 inline float get_image_aspect(const image<T>& img) {
-    return (float)img.width() / (float)img.height();
+    return (float)img.size().x / (float)img.size().y;
 }
 
 // Splits an image into an array of regions
@@ -232,15 +230,12 @@ template <typename T>
 struct volume {
     volume() : _size{0, 0, 0}, _voxels{} {}
     volume(const vec3i& size, const T& value = {})
-        : _size{size}, _voxels((size_t)(size[0] * size[1] * size[2]), value) {}
+        : _size{size}, _voxels((size_t)(size.x * size.y * size.z), value) {}
     volume(const vec3i& size, const T* values)
-        : _size{size}, _voxels(values, values + size[0] * size[1] + size[2]) {}
+        : _size{size}, _voxels(values, values + size.x * size.y + size.z) {}
 
-    bool  empty() const { return _size[0] == 0 && _size[1] == 0 && _size[2] == 0; }
+    bool  empty() const { return _size.x == 0 && _size.y == 0 && _size.z == 0; }
     vec3i size() const { return _size; }
-    int width() const { return _size[0]; }
-    int height() const { return _size[1]; }
-    int depth() const { return _size[2]; }
 
     void clear() {
         _size = {0, 0, 0};
@@ -254,9 +249,9 @@ struct volume {
             clear();
         } else {
             auto vol = volume{size, value};
-            for (auto k = 0; k < min(size[2], _size[2]); k++) {
-                for (auto j = 0; j < min(size[1], _size[1]); j++) {
-                    for (auto i = 0; i < min(size[0], _size[0]); i++) {
+            for (auto k = 0; k < min(size.z, _size.z); k++) {
+                for (auto j = 0; j < min(size.y, _size.y); j++) {
+                    for (auto i = 0; i < min(size.x, _size.x); i++) {
                         vol[{i, j, k}] = (*this)[{i, j, k}];
                     }
                 }
@@ -267,16 +262,16 @@ struct volume {
     }
 
     T& operator[](const vec3i& ijk) {
-        return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
     const T& operator[](const vec3i& ijk) const {
-        return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
     T& at(const vec3i& ijk) {
-        return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
     const T& at(const vec3i& ijk) const {
-        return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
 
     T*       data() { return _voxels.data(); }
@@ -300,27 +295,27 @@ namespace yocto {
 
 // Element-wise float to byte conversion.
 inline vec4b float_to_byte(const vec4f& a) {
-    return {(byte)clamp(int(a[0] * 256), 0, 255),
-        (byte)clamp(int(a[1] * 256), 0, 255), (byte)clamp(int(a[2] * 256), 0, 255),
-        (byte)clamp(int(a[3] * 256), 0, 255)};
+    return {(byte)clamp(int(a.x * 256), 0, 255),
+        (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.w * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
-    return {a[0] / 255.0f, a[1] / 255.0f, a[2] / 255.0f, a[3] / 255.0f};
+    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
 
 // Conversion between linear and gamma-encoded colors.
 inline vec3f gamma_to_linear(const vec3f& srgb, float gamma = 2.2f) {
-    return {pow(srgb[0], gamma), pow(srgb[1], gamma), pow(srgb[2], gamma)};
+    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
 }
 inline vec3f linear_to_gamma(const vec3f& lin, float gamma = 2.2f) {
-    return {pow(lin[0], 1 / gamma), pow(lin[1], 1 / gamma), pow(lin[2], 1 / gamma)};
+    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
 }
 inline vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f) {
-    return {pow(srgb[0], gamma), pow(srgb[1], gamma), pow(srgb[2], gamma), srgb[3]};
+    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
 }
 inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f) {
-    return {pow(lin[0], 1 / gamma), pow(lin[1], 1 / gamma), pow(lin[2], 1 / gamma),
-        lin[3]};
+    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma),
+        lin.w};
 }
 
 // sRGB non-linear curve
@@ -342,26 +337,26 @@ inline float linear_to_srgb(float lin) {
 // Conversion between linear and srgb colors.
 inline vec3f srgb_to_linear(const vec3f& srgb) {
     return {
-        srgb_to_linear(srgb[0]), srgb_to_linear(srgb[1]), srgb_to_linear(srgb[2])};
+        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
 }
 inline vec3f linear_to_srgb(const vec3f& lin) {
-    return {linear_to_srgb(lin[0]), linear_to_srgb(lin[1]), linear_to_srgb(lin[2])};
+    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
-    return {srgb_to_linear(srgb[0]), srgb_to_linear(srgb[1]),
-        srgb_to_linear(srgb[2]), srgb[3]};
+    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
+        srgb_to_linear(srgb.z), srgb.w};
 }
 inline vec4f linear_to_srgb(const vec4f& lin) {
-    return {linear_to_srgb(lin[0]), linear_to_srgb(lin[1]), linear_to_srgb(lin[2]),
-        lin[3]};
+    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
+        lin.w};
 }
 
 // Approximate luminance estimate for sRGB primaries (better relative luminance)
 inline float luminance(const vec3f& a) {
-    return (0.2126f * a[0] + 0.7152f * a[1] + 0.0722 * a[2]);
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
 }
 inline float luminance(const vec4f& a) {
-    return (0.2126f * a[0] + 0.7152f * a[1] + 0.0722 * a[2]);
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
 }
 
 // Fitted ACES tonemapping curve.
@@ -373,8 +368,8 @@ inline float tonemap_filmic(float hdr) {
 }
 // Apply ACES fitted curve.
 inline vec4f tonemap_filmic(const vec4f& hdr) {
-    return {tonemap_filmic(hdr[0]), tonemap_filmic(hdr[1]), tonemap_filmic(hdr[2]),
-        hdr[3]};
+    return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z),
+        hdr.w};
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
@@ -382,7 +377,7 @@ inline vec4f tonemap_filmic(const vec4f& hdr) {
 inline vec4f tonemap_filmic(
     const vec4f& hdr, float exposure, bool filmic, bool srgb) {
     auto scale = pow(2.0f, exposure);
-    auto ldr   = vec4f{hdr[0] * scale, hdr[1] * scale, hdr[2] * scale, hdr[3]};
+    auto ldr   = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
     if (filmic) ldr = tonemap_filmic(ldr);
     if (srgb) ldr = linear_to_srgb(ldr);
     return ldr;
@@ -410,18 +405,18 @@ template <typename T>
 inline void get_image_region(
     image<T>& clipped, const image<T>& img, const bbox2i& region) {
     clipped.resize(bbox_size(region));
-    for (auto j = 0; j < bbox_size(region)[1]; j++) {
-        for (auto i = 0; i < bbox_size(region)[0]; i++) {
-            clipped[{i, j}] = img[{i + region.min[0], j + region.min[1]}];
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
         }
     }
 }
 template <typename T>
 inline image<T> get_image_region(const image<T>& img, const bbox2i& region) {
     auto clipped = image<T>{bbox_size(region)};
-    for (auto j = 0; j < bbox_size(region)[1]; j++) {
-        for (auto i = 0; i < bbox_size(region)[0]; i++) {
-            clipped[{i, j}] = img[{i + region.min[0], j + region.min[1]}];
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
         }
     }
     return clipped;
