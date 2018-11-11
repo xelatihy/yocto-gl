@@ -59,7 +59,9 @@ void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
 
 void set_opengl_viewport(int x, int y, int w, int h) { glViewport(x, y, w, h); }
 
-void set_opengl_viewport(const vec2i& size) { glViewport(0, 0, size.x, size.y); }
+void set_opengl_viewport(const vec2i& size) {
+    glViewport(0, 0, size.x, size.y);
+}
 
 void set_opengl_wireframe(bool enabled) {
     if (enabled)

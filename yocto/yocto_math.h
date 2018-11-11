@@ -3,7 +3,7 @@
 //
 // Yocto/Math provides the basic math primitives used in grahics, including
 // small-sized vectors and matrixes, frames, bounding boxes and transforms.
-// We also include support for random number generation, and primitives for 
+// We also include support for random number generation, and primitives for
 // Monte Carlo sampling.
 //
 //
@@ -2527,8 +2527,8 @@ inline float perlin_fbm_noise(const vec3f& p, float lacunarity, float gain,
 }
 
 // adapeted  stb_perlin.h
-inline float perlin_turbulence_noise(const vec3f& p, float lacunarity, float gain,
-    int octaves, const vec3i& wrap) {
+inline float perlin_turbulence_noise(const vec3f& p, float lacunarity,
+    float gain, int octaves, const vec3i& wrap) {
     return stb_perlin_turbulence_noise3(
         p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }

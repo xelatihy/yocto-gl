@@ -531,15 +531,17 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a shape BVH
-bvh_shape make_shape_bvh(const yocto_shape& shape, 
-    const build_bvh_options& options) {
-    if(!shape.points.empty()) {
-        return make_shape_bvh(shape.points, shape.positions, shape.radius, options);
-    } else if(!shape.lines.empty()) {
-        return make_shape_bvh(shape.lines, shape.positions, shape.radius, options);
-    } else if(!shape.triangles.empty()) {
+bvh_shape make_shape_bvh(
+    const yocto_shape& shape, const build_bvh_options& options) {
+    if (!shape.points.empty()) {
+        return make_shape_bvh(
+            shape.points, shape.positions, shape.radius, options);
+    } else if (!shape.lines.empty()) {
+        return make_shape_bvh(
+            shape.lines, shape.positions, shape.radius, options);
+    } else if (!shape.triangles.empty()) {
         return make_shape_bvh(shape.triangles, shape.positions, options);
-    } else if(!shape.quads.empty()) {
+    } else if (!shape.quads.empty()) {
         return make_shape_bvh(shape.quads, shape.positions, options);
     } else {
         return {};
@@ -547,14 +549,14 @@ bvh_shape make_shape_bvh(const yocto_shape& shape,
 }
 
 // Build a shape BVH
-bvh_shape make_surface_bvh(const yocto_surface& surface, 
-    const build_bvh_options& options) {
+bvh_shape make_surface_bvh(
+    const yocto_surface& surface, const build_bvh_options& options) {
     return make_shape_bvh(surface.quads_positions, surface.positions, options);
 }
 
 // Build a scene BVH
-bvh_scene make_scene_bvh(const yocto_scene& scene, 
-    const build_bvh_options& options) {
+bvh_scene make_scene_bvh(
+    const yocto_scene& scene, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
     // create bvh
     auto bvh = bvh_scene{};
@@ -562,22 +564,20 @@ bvh_scene make_scene_bvh(const yocto_scene& scene,
     // shapes
     auto shape_bvhs = vector<bvh_shape>();
     for (auto& shape : scene.shapes) {
-        shape_bvhs.push_back(make_shape_bvh(
-            shape, options));
+        shape_bvhs.push_back(make_shape_bvh(shape, options));
     }
 
     // surfaces
     auto surface_bvhs = vector<bvh_shape>();
     for (auto& surface : scene.surfaces) {
-        surface_bvhs.push_back(make_surface_bvh(
-            surface, options));
+        surface_bvhs.push_back(make_surface_bvh(surface, options));
     }
 
     // instances
     auto bvh_instances = vector<bvh_instance>{};
     for (auto& instance : scene.instances) {
-        bvh_instances.push_back({instance.frame,
-            inverse(instance.frame, false), instance.shape, instance.surface});
+        bvh_instances.push_back({instance.frame, inverse(instance.frame, false),
+            instance.shape, instance.surface});
     }
 
     // build bvh
@@ -1555,7 +1555,6 @@ bool is_material_volume_colored(const yocto_material& material) {
              material.volume_density.y == material.volume_density.z);
 }
 
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1732,4 +1731,3 @@ void print_stats(const yocto_scene& scene) {
 }
 
 }  // namespace yocto
-

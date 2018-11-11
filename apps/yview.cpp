@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
 #include "ysceneui.h"
@@ -1132,7 +1132,8 @@ int main(int argc, char* argv[]) {
     app_state app{};
 
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "views scenes inteactively", "yview");
+    auto parser = make_cmdline_parser(
+        argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
     app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r",

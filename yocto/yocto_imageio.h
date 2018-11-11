@@ -1,7 +1,7 @@
 //
 // # Yocto/ImageIO: Tiny library for image input and output
 //
-// Yocto/ImageIO provides loading and saving functionality for images. 
+// Yocto/ImageIO provides loading and saving functionality for images.
 // We support PNG, JPG, TGA, HDR, EXR formats.
 //
 // We do not use exception as the API for returning errors, although they might
