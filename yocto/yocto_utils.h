@@ -815,7 +815,7 @@ inline void check_cmdline(cmdline_parser& parser) {
     }
     if (!parser.args.empty()) parser.error += "unmatched arguments remaining\n";
     if (!parser.error.empty()) {
-        printf("error: %s", parser.error.c_str());
+        printf("error:\n%s\n", parser.error.c_str());
         print_cmdline_usage(parser);
         exit(1);
     }
@@ -834,23 +834,23 @@ inline bool parse_option_argument(cmdline_parser& parser, const string& name,
             pos, std::find(parser.args.begin(), parser.args.end(), name));
     }
     if (pos == parser.args.end()) {
-        if (req) parser.error += "missing value for " + name;
+        if (req) parser.error += "missing value for " + name + "\n";
         return false;
     }
     if (pos == parser.args.end() - 1) {
-        parser.error += "missing value for " + name;
+        parser.error += "missing value for " + name + "\n";
         return false;
     }
     auto vals = *(pos + 1);
     parser.args.erase(pos, pos + 2);
     if (!choices.empty() &&
         std::find(choices.begin(), choices.end(), vals) == choices.end()) {
-        parser.error += "bad value for " + name;
+        parser.error += "bad value for " + name + "\n";
         return false;
     }
     auto new_value = value;
     if (!parse(vals, new_value)) {
-        parser.error += "bad value for " + name;
+        parser.error += "bad value for " + name + "\n";
         return false;
     }
     value = new_value;
@@ -866,19 +866,19 @@ inline bool parse_positional_argument(cmdline_parser& parser, const string& name
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
-        if (req) parser.error += "missing value for " + name;
+        if (req) parser.error += "missing value for " + name + "\n";
         return false;
     }
     auto vals = *pos;
     parser.args.erase(pos);
     if (!choices.empty() &&
         std::find(choices.begin(), choices.end(), vals) == choices.end()) {
-        parser.error += "bad value for " + name;
+        parser.error += "bad value for " + name + "\n";
         return false;
     }
     auto new_value = value;
     if (!parse(vals, new_value)) {
-        parser.error += "bad value for " + name;
+        parser.error += "bad value for " + name + "\n";
         return false;
     }
     value = new_value;
@@ -894,7 +894,7 @@ inline bool parse_positional_arguments(cmdline_parser& parser,
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
-        if (req) parser.error += "missing value for " + name;
+        if (req) parser.error += "missing value for " + name + "\n";
         return false;
     }
     auto vals = vector<string>{pos, parser.args.end()};
@@ -903,7 +903,7 @@ inline bool parse_positional_arguments(cmdline_parser& parser,
     new_values.resize(vals.size());
     for (auto i = 0; i < vals.size(); i++) {
         if (!parse(vals[i], new_values[i])) {
-            parser.error += "bad value for " + name;
+            parser.error += "bad value for " + name + "\n";
             return false;
         }
     }
