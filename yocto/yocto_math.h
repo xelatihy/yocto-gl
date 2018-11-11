@@ -158,47 +158,16 @@ constexpr const auto pif = 3.14159265f;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small size vectors.
+// Small-sized vectors
 template <typename T, int N>
-struct vec {
-    T elements[N] = {};
+struct vec;
 
-    constexpr vec() {
-        for (auto i = 0; i < N; i++) elements[i] = 0;
-    }
-    constexpr explicit vec(const T& val) {
-        for (auto i = 0; i < N; i++) elements[i] = val;
-    }
-    constexpr vec(initializer_list<T> vals) {
-        // // assert(vals.size() == N);
-        auto vals_ptr = vals.begin();
-        for (auto i = 0; i < N; i++) elements[i] = vals_ptr[i];
-    }
-    constexpr vec(const vec<T, N>& v) = default;
-    constexpr vec(const vec<T, N - 1>& vals, T last) {
-        for (auto i = 0; i < N - 1; i++) elements[i] = vals[i];
-        elements[N - 1] = last;
-    }
-    constexpr explicit vec(const vec<T, N + 1>& vals) {
-        for (auto i = 0; i < N; i++) elements[i] = vals[i];
-    }
-
-    constexpr T&       operator[](int idx) { return elements[idx]; }
-    constexpr const T& operator[](int idx) const { return elements[idx]; }
-};
-
-#if YOCTO_SPECIALIZATIONS
-
-// Specializations for small sized vectors, only used for speed in the
-// above constructors.
 template <typename T>
 struct vec<T, 1> {
     T elements[1] = {0};
 
     constexpr vec() : elements{0} {}
-    // constexpr explicit vec(const T& v) : x{v} { }
     constexpr vec(const T& x_) : elements{x_} {}
-    constexpr vec(const vec<T, 1>& v) = default;
     constexpr explicit vec(const vec<T, 2>& xy) : elements{xy[0]} {};
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
@@ -211,7 +180,6 @@ struct vec<T, 2> {
     constexpr vec() : elements{0, 0} {}
     constexpr explicit vec(const T& v) : elements{v, v} {}
     constexpr vec(const T& x_, const T& y_) : elements{x_, y_} {}
-    constexpr vec(const vec<T, 2>& v) = default;
     constexpr vec(const vec<T, 1>& x, T w) : elements{x[0], w} {}
     constexpr explicit vec(const vec<T, 3>& xyz)
         : elements{xyz[0], xyz[1]} {};
@@ -227,7 +195,6 @@ struct vec<T, 3> {
     constexpr explicit vec(const T& v) : elements{v, v, v} {}
     constexpr vec(const T& x_, const T& y_, const T& z_)
         : elements{x_, y_, z_} {}
-    constexpr vec(const vec<T, 3>& v) = default;
     constexpr vec(const vec<T, 2>& xy, T w) : elements{xy[0], xy[1], w} {}
     constexpr explicit vec(const vec<T, 4>& xyzw)
         : elements{xyzw[0], xyzw[1], xyzw[2]} {};
@@ -243,17 +210,12 @@ struct vec<T, 4> {
     constexpr explicit vec(const T& v) : elements{v, v, v, v} {}
     constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_)
         : elements{x_, y_, z_, w_} {}
-    constexpr vec(const vec<T, 4>& v) = default;
     constexpr vec(const vec<T, 3>& xyz, T w)
         : elements{xyz[0], xyz[1], xyz[2], w} {}
-    // constexpr explicit vec(const vec<T, N + 1>& xyzww)
-    //     : elements{xyzww[0], xyzww[1], xyzww[2], xyzww[3]} {};
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
-
-#endif
 
 // Vector constants
 template <typename T, int N>
@@ -597,20 +559,52 @@ struct hash<yocto::vec<T, N>> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small Fixed-size square matrices stored in column major format.
+// Small fixed-size matrices stored in column major format.
 template <typename T, int N, int M>
-struct mat {
-    vec<T, N> columns[M] = {};
+struct mat;
 
-    constexpr mat() {
-        for (auto j = 0; j < M; j++) columns[j] = {};
+template <typename T, int N>
+struct mat<T, N, 1> {
+    vec<T, N> columns[1] = {};
+
+    constexpr mat() : columns{} { }
+    constexpr mat(const vec<T, N>& c0) : columns{c0} { }
+
+    constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
+    constexpr const vec<T, N>& operator[](int idx) const {
+        return columns[idx];
     }
-    constexpr mat(initializer_list<vec<T, N>> vals) {
-        // assert(vals.size() == M);
-        auto vals_ptr = vals.begin();
-        for (auto j = 0; j < M; j++) columns[j] = vals_ptr[j];
+};
+template <typename T, int N>
+struct mat<T, N, 2> {
+    vec<T, N> columns[2] = {};
+
+    constexpr mat() : columns{} { }
+    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1) : columns{c0,c1} { }
+
+    constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
+    constexpr const vec<T, N>& operator[](int idx) const {
+        return columns[idx];
     }
-    constexpr mat(const mat& v) = default;
+};
+template <typename T, int N>
+struct mat<T, N, 3> {
+    vec<T, N> columns[3] = {};
+
+    constexpr mat() : columns{} { }
+    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1, const vec<T, N>& c2) : columns{c0,c1,c2} { }
+
+    constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
+    constexpr const vec<T, N>& operator[](int idx) const {
+        return columns[idx];
+    }
+};
+template <typename T, int N>
+struct mat<T, N, 4> {
+    vec<T, N> columns[4] = {};
+
+    constexpr mat() : columns{} { }
+    constexpr mat(const vec<T, N>& c0,const vec<T, N>& c1,const vec<T, N>& c2,const vec<T, N>& c3) : columns{c0,c1,c2,c3} { }
 
     constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
     constexpr const vec<T, N>& operator[](int idx) const {
