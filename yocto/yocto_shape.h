@@ -104,6 +104,24 @@
 
 #include "yocto_math.h"
 
+#include <tuple>
+#include <unordered_map>
+#include <vector>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::get;
+using std::ignore;
+using std::tie;
+using std::tuple;
+using std::unordered_map;
+using std::vector;
+
+}  // namespace yocto
+
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
@@ -348,76 +366,29 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
 
 // Pick a point in a point set uniformly.
-inline int sample_points_element(int npoints, float re) {
-    return sample_uniform_index(npoints, re);
-}
-inline vector<float> sample_points_element_cdf(int npoints) {
-    auto cdf = vector<float>(npoints);
-    for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
-    return cdf;
-}
-inline int sample_points_element(const vector<float>& cdf, float re) {
-    return sample_discrete_distribution(cdf, re);
-}
+int           sample_points_element(int npoints, float re);
+vector<float> sample_points_element_cdf(int npoints);
+int           sample_points_element(const vector<float>& cdf, float re);
 
 // Pick a point on lines uniformly.
-inline vector<float> sample_lines_element_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(lines.size());
-    for (auto i = 0; i < cdf.size(); i++) {
-        auto l = lines[i];
-        auto w = line_length(positions[l.x], positions[l.y]);
-        cdf[i] = w + (i ? cdf[i - 1] : 0);
-    }
-    return cdf;
-}
-inline pair<int, float> sample_lines_element(
-    const vector<float>& cdf, float re, float ru) {
-    return {sample_discrete_distribution(cdf, re), ru};
-}
+vector<float> sample_lines_element_cdf(
+    const vector<vec2i>& lines, const vector<vec3f>& positions);
+pair<int, float> sample_lines_element(
+    const vector<float>& cdf, float re, float ru);
 
 // Pick a point on a triangle mesh uniformly.
-inline vector<float> sample_triangles_element_cdf(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(triangles.size());
-    for (auto i = 0; i < cdf.size(); i++) {
-        auto t = triangles[i];
-        auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
-        cdf[i] = w + (i ? cdf[i - 1] : 0);
-    }
-    return cdf;
-}
-inline pair<int, vec2f> sample_triangles_element(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete_distribution(cdf, re),
-        sample_triangle_coordinates(ruv)};
-}
+vector<float> sample_triangles_element_cdf(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+pair<int, vec2f> sample_triangles_element(
+    const vector<float>& cdf, float re, const vec2f& ruv);
 
 // Pick a point on a quad mesh uniformly.
-inline vector<float> sample_quads_element_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(quads.size());
-    for (auto i = 0; i < cdf.size(); i++) {
-        auto q = quads[i];
-        auto w = quad_area(
-            positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
-        cdf[i] = w + (i ? cdf[i - 1] : 0);
-    }
-    return cdf;
-}
-inline pair<int, vec2f> sample_quads_element(
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    return {sample_discrete_distribution(cdf, re), ruv};
-}
-inline pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
-    const vector<float>& cdf, float re, const vec2f& ruv) {
-    auto element_id = sample_discrete_distribution(cdf, re);
-    if (quads[element_id].z == quads[element_id].w) {
-        return {element_id, sample_triangle_coordinates(ruv)};
-    } else {
-        return {element_id, ruv};
-    }
-}
+vector<float> sample_quads_element_cdf(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
+pair<int, vec2f> sample_quads_element(
+    const vector<float>& cdf, float re, const vec2f& ruv);
+pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
+    const vector<float>& cdf, float re, const vec2f& ruv);
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.

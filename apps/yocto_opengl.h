@@ -30,12 +30,30 @@
 #ifndef _YOCTO_OPENGL_
 #define _YOCTO_OPENGL_
 
+// -----------------------------------------------------------------------------
+// INCLUDES
+// -----------------------------------------------------------------------------
+
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_utils.h"
+
+#include <functional>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::function;
+
+}
 
 // forward declaration
 struct GLFWwindow;
 
+// -----------------------------------------------------------------------------
+// OPENGL FUNCTIONS
+// -----------------------------------------------------------------------------
 namespace yocto {
 
 void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth = true);

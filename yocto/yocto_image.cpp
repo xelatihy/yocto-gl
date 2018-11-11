@@ -27,6 +27,7 @@
 //
 
 #include "yocto_image.h"
+#include "yocto_random.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION FOR COLOR UTILITIES

@@ -81,6 +81,20 @@
 
 #include "yocto_math.h"
 
+#include <atomic>
+#include <vector>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::atomic;
+using std::pair;
+using std::vector;
+
+}  // namespace yocto
+
 // -----------------------------------------------------------------------------
 // BVH FOR RAY INTERSECTION AND CLOSEST ELEMENT
 // -----------------------------------------------------------------------------
