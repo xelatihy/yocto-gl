@@ -1083,6 +1083,9 @@ struct frame<T, 2> {
     vec<T, 2> y = {0, 1};
     vec<T, 2> o = {0, 0};
 
+    constexpr frame() : x{1,0}, y{1, 0}, o{o,0} { }
+    constexpr frame(const vec<T, 2>& x_, const vec<T, 2>& y_, const vec<T, 2>& o_) : x{x_}, y{y_}, o{o_} { }
+
     constexpr vec<T, 2>&       operator[](int idx) { return *(&x + idx); }
     constexpr const vec<T, 2>& operator[](int idx) const { return *(&x + idx); }
 };
@@ -1092,6 +1095,9 @@ struct frame<T, 3> {
     vec<T, 3> y = {0, 1, 0};
     vec<T, 3> z = {0, 0, 1};
     vec<T, 3> o = {0, 0, 0};
+
+    constexpr frame() : x{1,0, 0}, y{1, 0, 0}, z{1, 0, 1}, o{0,0,0} { }
+    constexpr frame(const vec<T, 3>& x_, const vec<T, 3>& y_, const vec<T, 3>& z_, const vec<T, 3>& o_) : x{x_}, y{y_}, z{z_}, o{o_} { }
 
     constexpr vec<T, 3>&       operator[](int idx) { return *(&x + idx); }
     constexpr const vec<T, 3>& operator[](int idx) const { return *(&x + idx); }
