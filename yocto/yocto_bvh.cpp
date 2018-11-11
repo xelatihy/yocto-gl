@@ -587,7 +587,7 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     // split
     mid = (int)(std::partition(prims.data() + start, prims.data() + end,
                     [split_axis, middle](auto& a) {
-                        return (&a.center[0])[split_axis] < middle;
+                        return a.center[split_axis] < middle;
                     }) -
                 prims.data());
 
@@ -626,7 +626,7 @@ pair<int, int> split_bvh_node_balanced(
     mid        = (start + end) / 2;
     std::nth_element(prims.data() + start, prims.data() + mid,
         prims.data() + end, [split_axis](auto& a, auto& b) {
-            return (&a.center[0])[split_axis] < (&b.center[0])[split_axis];
+            return a.center[split_axis] < b.center[split_axis];
         });
 
     // if we were not able to split, just break the primitives in half
@@ -663,7 +663,7 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
     auto middle  = cmiddle[largest_axis];
     mid = (int)(std::partition(prims.data() + start, prims.data() + end,
                     [split_axis, middle](auto& a) {
-                        return (&a.center[0])[split_axis] < middle;
+                        return a.center[split_axis] < middle;
                     }) -
                 prims.data());
 
