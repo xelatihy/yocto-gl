@@ -29,6 +29,7 @@
 #include "yocto_scene.h"
 #include "yocto_utils.h"
 #include "yocto_shape.h"
+#include "yocto_random.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES

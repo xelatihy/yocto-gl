@@ -562,4 +562,67 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 
 }  // namespace yocto
 
+// -----------------------------------------------------------------------------
+// ANIMATION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Find the first keyframe value that is greater than the argument.
+inline int evaluate_keyframed_index(
+    const vector<float>& times, const float& time) {
+    for (auto i = 0; i < times.size(); i++)
+        if (times[i] > time) return i;
+    return (int)times.size();
+}
+
+// Evaluates a keyframed value using step interpolation.
+template <typename T>
+inline T evaluate_keyframed_step(
+    const vector<float>& times, const vector<T>& vals, float time) {
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    time     = clamp(time, times.front(), times.back() - 0.001f);
+    auto idx = evaluate_keyframed_index(times, time);
+    return vals.at(idx - 1);
+}
+
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
+inline vec4f evaluate_keyframed_slerp(
+    const vector<float>& times, const vector<vec4f>& vals, float time) {
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    time     = clamp(time, times.front(), times.back() - 0.001f);
+    auto idx = evaluate_keyframed_index(times, time);
+    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+    return slerp(vals.at(idx - 1), vals.at(idx), t);
+}
+
+// Evaluates a keyframed value using linear interpolation.
+template <typename T>
+inline T evaluate_keyframed_linear(
+    const vector<float>& times, const vector<T>& vals, float time) {
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    time     = clamp(time, times.front(), times.back() - 0.001f);
+    auto idx = evaluate_keyframed_index(times, time);
+    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+    return vals.at(idx - 1) * (1 - t) + vals.at(idx) * t;
+}
+
+// Evaluates a keyframed value using Bezier interpolation.
+template <typename T>
+inline T evaluate_keyframed_bezier(
+    const vector<float>& times, const vector<T>& vals, float time) {
+    if (time <= times.front()) return vals.front();
+    if (time >= times.back()) return vals.back();
+    time     = clamp(time, times.front(), times.back() - 0.001f);
+    auto idx = evaluate_keyframed_index(times, time);
+    auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
+    return interpolate_bezier(
+        vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
+}
+
+}  // namespace yocto
+
 #endif

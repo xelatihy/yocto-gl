@@ -71,6 +71,7 @@
 #include "yocto_math.h"
 #include "yocto_scene.h"
 #include "yocto_utils.h"
+#include "yocto_random.h"
 
 #include <functional>
 #include <vector>
