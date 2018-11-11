@@ -1452,24 +1452,25 @@ struct ray;
 // Rays with origin, direction and min/max t value.
 template <typename T>
 struct ray<T, 2> {
-    vec<T, 2> o    = {0, 0};
-    vec<T, 2> d    = {0, 1};
+    vec<T, 2> origin    = {0, 0};
+    vec<T, 2> direction    = {0, 1};
     T         tmin = 0;
     T         tmax = maxt<T>();
 
-    constexpr ray() : o{}, d{}, tmin{0}, tmax{max<T>()} { }
-    constexpr ray(const vec<T, 2>& o_, const vec<T, 2>& d_, const T& tmin_, const T& tmax_) : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} { }
+    constexpr ray() : origin{}, direction{}, tmin{0}, tmax{max<T>()} { }
+    constexpr ray(const vec<T, 2>& origin_, const vec<T, 2>& direction_,
+                  const T& tmin_, const T& tmax_) : origin{origin_}, direction{direction_}, tmin{tmin_}, tmax{tmax_} { }
     constexpr ray(const ray&) = default;
 };
 template <typename T>
 struct ray<T, 3> {
-    vec<T, 3> o    = {0, 0, 0};
-    vec<T, 3> d    = {0, 0, 1};
+    vec<T, 3> origin    = {0, 0, 0};
+    vec<T, 3> direction    = {0, 0, 1};
     T         tmin = 0;
     T         tmax = maxt<T>();
 
-    constexpr ray() : o{}, d{}, tmin{0}, tmax{max<T>()} { }
-    constexpr ray(const vec<T, 3>& o_, const vec<T, 3>& d_, const T& tmin_, const T& tmax_) : o{o_}, d{d_}, tmin{tmin_}, tmax{tmax_} { }
+    constexpr ray() : origin{}, direction{}, tmin{0}, tmax{max<T>()} { }
+    constexpr ray(const vec<T, 3>& origin_, const vec<T, 3>& direction_, const T& tmin_, const T& tmax_) : origin{origin_}, direction{direction_}, tmin{tmin_}, tmax{tmax_} { }
     constexpr ray(const ray&) = default;
 };
 
@@ -1483,8 +1484,8 @@ const auto default_ray_epsf = 1e-4f;
 // Construct a ray from direction or segments using a default epsilon.
 template <typename T, int N>
 constexpr inline ray<T, N> make_ray(
-    const vec<T, N>& o, const vec<T, N>& d, T eps = default_ray_epsf) {
-    return {o, d, eps, maxt<T>()};
+    const vec<T, N>& origin, const vec<T, N>& direction, T eps = default_ray_epsf) {
+    return {origin, direction, eps, maxt<T>()};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> make_segment(
@@ -1566,7 +1567,7 @@ constexpr inline vec<T, N> transform_direction(
 template <typename T, int N>
 constexpr inline ray<T, N> transform_ray(
     const frame<T, N>& a, const ray<T, N>& b) {
-    return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
+    return {transform_point(a, b.origin), transform_vector(a, b.direction), b.tmin, b.tmax};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> transform_ray(
@@ -1627,8 +1628,8 @@ constexpr inline vec3f transform_direction_inverse(
 template <typename T, int N>
 constexpr inline ray<T, N> transform_ray_inverse(
     const frame<T, N>& a, const ray<T, N>& b) {
-    return {transform_point_inverse(a, b.o),
-        transform_direction_inverse(a, b.d), b.tmin, b.tmax};
+    return {transform_point_inverse(a, b.origin),
+        transform_direction_inverse(a, b.direction), b.tmin, b.tmax};
 }
 template <typename T>
 constexpr inline bbox<T, 3> transform_bbox_inverse(

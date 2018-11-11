@@ -122,7 +122,7 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene& scene,
         if (get_random_float(rng) < op) return isec;
         ray = make_ray(evaluate_instance_position(
                            scene, instance, isec.element_id, isec.element_uv),
-            ray.d);
+            ray.direction);
     }
     return {};
 }
@@ -1063,10 +1063,10 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         auto bbox = transform_bbox(
             instance.frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
         auto distance = sample_distance(
-            scene, instance, bbox, ray.o, ray.d, ch, rng);
+            scene, instance, bbox, ray.origin, ray.direction, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
-        ray       = make_ray(ray.o, ray.d);
+        ray       = make_ray(ray.origin, ray.direction);
         ray.tmax  = distance;
         auto isec = intersect_scene_with_opacity(
             scene, bvh, ray, rng, max_bounces);
@@ -1082,7 +1082,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             if (emission) {
                 for (auto& environment : scene.environments)
                     radiance += weight * evaluate_environment_emission(
-                                             scene, environment, ray.d);
+                                             scene, environment, ray.direction);
             }
             return {radiance, false};
         }
@@ -1091,7 +1091,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         if (isec.instance_id >= 0) {
             auto& isec_instance = scene.instances[isec.instance_id];
             auto& isec_shape    = scene.shapes[isec_instance.shape];
-            auto  outgoing      = -ray.d;
+            auto  outgoing      = -ray.direction;
             auto& isec_material = scene.materials[isec_shape.material];
             auto  p             = evaluate_instance_position(
                 scene, isec_instance, isec.element_id, isec.element_uv);
@@ -1163,8 +1163,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             if (pdf == 0) break;
             weight *= brdf_cosine / pdf;
             if (weight == zero3f) break;
-            ray.o            = p;
-            ray.d            = incoming;
+            ray.origin            = p;
+            ray.direction            = incoming;
             bool transmitted = (ndi > 0) != (ndo > 0);
 
             // transmission in medium
@@ -1186,7 +1186,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         }
         // medium interaction
         else {
-            ray.o += ray.d * distance;
+            ray.origin += ray.direction * distance;
             float scattering_prob = va[ch];
 
             // absorption and emission
@@ -1203,10 +1203,10 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             // direct lighting
             vec3f direct;
             float pdf_direct;
-            vec3f l = direct_illumination(scene, bvh, lights, ray.o, ch,
+            vec3f l = direct_illumination(scene, bvh, lights, ray.origin, ch,
                 mediums, rng, pdf_direct, direct);
             if (pdf_direct != 0) {
-                auto f = va * evaluate_phase_function(dot(l, -ray.d), vg);
+                auto f = va * evaluate_phase_function(dot(l, -ray.direction), vg);
                 radiance += weight * direct * f / pdf_direct;
                 emission = false;
             }
@@ -1214,8 +1214,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             // indirect
             vec3f incoming = sample_phase_function(vg, get_random_vec2f(rng));
             weight *= va;
-            ray.d = transform_direction(
-                make_frame_fromz(zero3f, ray.d), incoming);
+            ray.direction = transform_direction(
+                make_frame_fromz(zero3f, ray.direction), incoming);
         }
 
         // russian roulette
@@ -1655,7 +1655,7 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size(), pixel.rng);
-                auto radiance_hit = sampler(scene, bvh, lights, ray.o, ray.d,
+                auto radiance_hit = sampler(scene, bvh, lights, ray.origin, ray.direction,
                     pixel.rng, options.max_bounces);
                 auto radiance     = radiance_hit.first;
                 auto hit          = radiance_hit.second;

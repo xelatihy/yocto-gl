@@ -42,14 +42,14 @@ namespace yocto {
 bool intersect_point(
     const ray3f& ray, const vec3f& p, float r, float& distance, vec2f& uv) {
     // find parameter for line-point minimum distance
-    auto w = p - ray.o;
-    auto t = dot(w, ray.d) / dot(ray.d, ray.d);
+    auto w = p - ray.origin;
+    auto t = dot(w, ray.direction) / dot(ray.direction, ray.direction);
 
     // exit if not within bounds
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // test for line-point distance vs point radius
-    auto rp  = ray.o + ray.d * t;
+    auto rp  = ray.origin + ray.direction * t;
     auto prp = p - rp;
     if (dot(prp, prp) > r * r) return false;
 
@@ -64,9 +64,9 @@ bool intersect_point(
 bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, float& distance, vec2f& uv) {
     // setup intersection options
-    auto u = ray.d;
+    auto u = ray.direction;
     auto v = p1 - p0;
-    auto w = ray.o - p0;
+    auto w = ray.origin - p0;
 
     // compute values to solve a linear system
     auto a   = dot(u, u);
@@ -91,7 +91,7 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     s = clamp(s, (float)0, (float)1);
 
     // compute segment-segment distance on the closest points
-    auto pr  = ray.o + ray.d * t;
+    auto pr  = ray.origin + ray.direction * t;
     auto pl  = p0 + (p1 - p0) * s;
     auto prl = pr - pl;
 
@@ -115,7 +115,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto edge2 = p2 - p0;
 
     // compute determinant to solve a linear system
-    auto pvec = cross(ray.d, edge2);
+    auto pvec = cross(ray.direction, edge2);
     auto det  = dot(edge1, pvec);
 
     // check determinant and exit if triangle and ray are parallel
@@ -124,13 +124,13 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto inv_det = 1.0f / det;
 
     // compute and check first bricentric coordinated
-    auto tvec = ray.o - p0;
+    auto tvec = ray.origin - p0;
     auto u    = dot(tvec, pvec) * inv_det;
     if (u < 0 || u > 1) return false;
 
     // compute and check second bricentric coordinated
     auto qvec = cross(tvec, edge1);
-    auto v    = dot(ray.d, qvec) * inv_det;
+    auto v    = dot(ray.direction, qvec) * inv_det;
     if (v < 0 || u + v > 1) return false;
 
     // compute and check ray parameter
@@ -175,9 +175,9 @@ static inline const float& _safemax(const float& a, const float& b) {
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
     // determine intersection ranges
-    auto invd = vec3f{1, 1, 1} / ray.d;
-    auto t0   = (bbox.min - ray.o) * invd;
-    auto t1   = (bbox.max - ray.o) * invd;
+    auto invd = vec3f{1, 1, 1} / ray.direction;
+    auto t0   = (bbox.min - ray.origin) * invd;
+    auto t1   = (bbox.max - ray.origin) * invd;
     // flip based on range directions
     if (invd.x < 0.0f) swap(t0.x, t1.x);
     if (invd.y < 0.0f) swap(t0.y, t1.y);
@@ -192,12 +192,12 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox_) {
     auto bbox  = &bbox_.min;
-    auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-    auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
+    auto txmin = (bbox[ray_dsign.x].x - ray.origin.x) * ray_dinv.x;
+    auto txmax = (bbox[1 - ray_dsign.x].x - ray.origin.x) * ray_dinv.x;
+    auto tymin = (bbox[ray_dsign.y].y - ray.origin.y) * ray_dinv.y;
+    auto tymax = (bbox[1 - ray_dsign.y].y - ray.origin.y) * ray_dinv.y;
+    auto tzmin = (bbox[ray_dsign.z].z - ray.origin.z) * ray_dinv.z;
+    auto tzmax = (bbox[1 - ray_dsign.z].z - ray.origin.z) * ray_dinv.z;
     auto tmin  = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
     auto tmax  = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
     tmax *= 1.00000024f;  // for double: 1.0000000000000004
@@ -483,12 +483,12 @@ void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
 bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
     float& distance, int& element_id, vec2f& uv) {
     RTCRayHit embree_ray;
-    embree_ray.ray.org_x     = ray.o.x;
-    embree_ray.ray.org_y     = ray.o.y;
-    embree_ray.ray.org_z     = ray.o.z;
-    embree_ray.ray.dir_x     = ray.d.x;
-    embree_ray.ray.dir_y     = ray.d.y;
-    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.org_x     = ray.origin.x;
+    embree_ray.ray.org_y     = ray.origin.y;
+    embree_ray.ray.org_z     = ray.origin.z;
+    embree_ray.ray.dir_x     = ray.direction.x;
+    embree_ray.ray.dir_y     = ray.direction.y;
+    embree_ray.ray.dir_z     = ray.direction.z;
     embree_ray.ray.tnear     = ray.tmin;
     embree_ray.ray.tfar      = ray.tmax;
     embree_ray.ray.flags     = 0;
@@ -506,12 +506,12 @@ bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
 bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& uv) {
     RTCRayHit embree_ray;
-    embree_ray.ray.org_x     = ray.o.x;
-    embree_ray.ray.org_y     = ray.o.y;
-    embree_ray.ray.org_z     = ray.o.z;
-    embree_ray.ray.dir_x     = ray.d.x;
-    embree_ray.ray.dir_y     = ray.d.y;
-    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.org_x     = ray.origin.x;
+    embree_ray.ray.org_y     = ray.origin.y;
+    embree_ray.ray.org_z     = ray.origin.z;
+    embree_ray.ray.dir_x     = ray.direction.x;
+    embree_ray.ray.dir_y     = ray.direction.y;
+    embree_ray.ray.dir_z     = ray.direction.z;
     embree_ray.ray.tnear     = ray.tmin;
     embree_ray.ray.tfar      = ray.tmax;
     embree_ray.ray.flags     = 0;
@@ -1109,7 +1109,7 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
+    auto ray_dinv  = vec3f{1 / ray.direction.x, 1 / ray.direction.y, 1 / ray.direction.z};
     auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
         (ray_dinv.z < 0) ? 1 : 0};
 
@@ -1208,7 +1208,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
+    auto ray_dinv  = vec3f{1 / ray.direction.x, 1 / ray.direction.y, 1 / ray.direction.z};
     auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
         (ray_dinv.z < 0) ? 1 : 0};
 
