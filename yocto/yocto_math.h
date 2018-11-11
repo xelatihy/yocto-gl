@@ -218,7 +218,7 @@ struct vec<T, 4> {
 
     constexpr vec() : x{0}, y{0}, z{0}, w{0} { }
     constexpr explicit vec(const T& v) : x{v}, y{v}, z{v}, w{w} { }
-    constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_) : x{x_}, y{y_}, z{w_}, w{w_} { }
+    constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_) : x{x_}, y{y_}, z{z_}, w{w_} { }
     constexpr vec(const vec<T, 4>& v) = default;
 
     constexpr T&       operator[](int idx) { return *(&x + idx); }
@@ -809,6 +809,10 @@ template <typename T, int N>
 struct mat<T, N, 1> {
     vec<T, N> x = {};
 
+    constexpr mat() : x{} { }
+    constexpr mat(const vec<T, N>& x_) : x{x_} { }
+    constexpr mat(const mat<T, N, 1>& v) = default;
+
     constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
     constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
 };
@@ -816,6 +820,10 @@ template <typename T, int N>
 struct mat<T, N, 2> {
     vec<T, N> x = {};
     vec<T, N> y = {};
+
+    constexpr mat() : x{}, y{} { }
+    constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_) : x{x_}, y{y_} { }
+    constexpr mat(const mat<T, N, 2>& v) = default;
 
     constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
     constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
@@ -826,6 +834,10 @@ struct mat<T, N, 3> {
     vec<T, 3> y = {};
     vec<T, 3> z = {};
 
+    constexpr mat() : x{}, y{}, z{} { }
+    constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_) : x{x_}, y{y_}, z{z_} { }
+    constexpr mat(const mat<T, N, 3>& v) = default;
+
     constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
     constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
 };
@@ -835,6 +847,10 @@ struct mat<T, N, 4> {
     vec<T, 4> y = {};
     vec<T, 4> z = {};
     vec<T, 4> w = {};
+
+    constexpr mat() : x{}, y{}, z{}, w{} { }
+    constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_, const vec<T, N>& w_) : x{x_}, y{y_}, z{z_}, w{w_} { }
+    constexpr mat(const mat<T, N, 4>& v) = default;
 
     constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
     constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
