@@ -318,69 +318,25 @@ constexpr const T* data(const vec<T, N>& v) {
 }
 
 // Vector comparison operations.
-template <typename T>
-constexpr inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return a[0] == b[0];
+template <typename T, int N>
+constexpr inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+    for(auto i = 0; i < N; i ++) if(a[i] != b[i]) return false;
+    return true;
 }
-template <typename T>
-constexpr inline bool operator!=(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return a[0] != b[0];
+template <typename T, int N>
+constexpr inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+    for(auto i = 0; i < N; i ++) if(a[i] == b[i]) return false;
+    return true;
 }
-template <typename T, typename T1>
-constexpr inline bool operator==(const vec<T, 1>& a, T1 b) {
-    return a[0] == b;
+template <typename T, int N, typename T1>
+constexpr inline bool operator==(const vec<T, N>& a, T1 b) {
+    for(auto i = 0; i < N; i ++) if(a[i] != b) return false;
+    return true;
 }
-template <typename T, typename T1>
-constexpr inline bool operator!=(const vec<T, 1>& a, T1 b) {
-    return a[0] != b;
-}
-template <typename T>
-constexpr inline bool operator==(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a[0] == b[0] && a[1] == b[1];
-}
-template <typename T>
-constexpr inline bool operator!=(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a[0] != b[0] || a[1] != b[1];
-}
-template <typename T, typename T1>
-constexpr inline bool operator==(const vec<T, 2>& a, T1 b) {
-    return a[0] == b && a[1] == b;
-}
-template <typename T, typename T1>
-constexpr inline bool operator!=(const vec<T, 2>& a, T1 b) {
-    return a[0] != b || a[1] != b;
-}
-template <typename T>
-constexpr inline bool operator==(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
-}
-template <typename T>
-constexpr inline bool operator!=(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return a[0] != b[0] || a[1] != b[1] || a[2] != b[2];
-}
-template <typename T, typename T1>
-constexpr inline bool operator==(const vec<T, 3>& a, T1 b) {
-    return a[0] == b && a[1] == b && a[2] == b;
-}
-template <typename T, typename T1>
-constexpr inline bool operator!=(const vec<T, 3>& a, T1 b) {
-    return a[0] != b || a[1] != b || a[2] != b;
-}
-template <typename T>
-constexpr inline bool operator==(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
-}
-template <typename T>
-constexpr inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return a[0] != b[0] || a[1] != b[1] || a[2] != b[2] || a[3] != b[3];
-}
-template <typename T, typename T1>
-constexpr inline bool operator==(const vec<T, 4>& a, T1 b) {
-    return a[0] == b && a[1] == b && a[2] == b && a[3] == b;
-}
-template <typename T, typename T1>
-constexpr inline bool operator!=(const vec<T, 4>& a, T1 b) {
-    return a[0] != b || a[1] != b || a[2] != b || a[3] != b;
+template <typename T, int N, typename T1>
+constexpr inline bool operator!=(const vec<T, N>& a, T1 b) {
+    for(auto i = 0; i < N; i ++) if(a[i] == b) return false;
+    return true;
 }
 
 // Vector operations.
