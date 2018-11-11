@@ -458,29 +458,19 @@ constexpr inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
 }
 
 // Vector products and lengths.
-template <typename T>
-constexpr inline T dot(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return a[0] * b[0];
-}
-template <typename T>
-constexpr inline T dot(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a[0] * b[0] + a[1] * b[1];
+template <typename T, int N>
+constexpr inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = T{0};
+    for(auto i = 0; i < N; i ++) c += a[i] * b[i];
+    return c;
 }
 template <typename T>
 constexpr inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
     return a[0] * b[1] - a[1] * b[0];
 }
 template <typename T>
-constexpr inline T dot(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-template <typename T>
 constexpr inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]};
-}
-template <typename T>
-constexpr inline T dot(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
 }
 
 template <typename T, int N>
@@ -554,55 +544,29 @@ inline vec<T, 3> refract(
 }
 
 // Max element and clamp.
-template <typename T, typename T1, typename T2>
-constexpr inline vec<T, 2> clamp(const vec<T, 2>& value, T1 min, T2 max) {
-    return {clamp(value[0], min, max), clamp(value[1], min, max)};
+template <typename T, int N, typename T1, typename T2>
+constexpr inline vec<T, N> clamp(const vec<T, N>& value, T1 min, T2 max) {
+    auto clamped = T{};
+    for(auto i = 0; i < N; i++) clamped[i] = clamp(value[i], min, max);
+    return clamped;
 }
-template <typename T, typename T1, typename T2>
-constexpr inline vec<T, 3> clamp(const vec<T, 3>& value, T1 min, T2 max) {
-    return {clamp(value[0], min, max), clamp(value[1], min, max),
-        clamp(value[2], min, max)};
+template <typename T, int N>
+constexpr inline T max(const vec<T, N>& a) {
+    auto c = T{a[0]};
+    for(auto i = 1; i < N; i ++) c = max(c, a[i]);
+    return c;
 }
-template <typename T, typename T1, typename T2>
-constexpr inline vec<T, 4> clamp(const vec<T, 4>& value, T1 min, T2 max) {
-    return {clamp(value[0], min, max), clamp(value[1], min, max),
-        clamp(value[2], min, max), clamp(value[3], min, max)};
+template <typename T, int N>
+constexpr inline T min(const vec<T, N>& a) {
+    auto c = T{a[0]};
+    for(auto i = 1; i < N; i ++) c = min(c, a[i]);
+    return c;
 }
-template <typename T>
-constexpr inline T max(const vec<T, 2>& a) {
-    return max(a[0], a[1]);
-}
-template <typename T>
-constexpr inline T max(const vec<T, 3>& a) {
-    return max(max(a[0], a[1]), a[2]);
-}
-template <typename T>
-constexpr inline T max(const vec<T, 4>& a) {
-    return max(max(max(a[0], a[1]), a[2]), a[3]);
-}
-template <typename T>
-constexpr inline T min(const vec<T, 2>& a) {
-    return min(a[0], a[1]);
-}
-template <typename T>
-constexpr inline T min(const vec<T, 3>& a) {
-    return min(min(a[0], a[1]), a[2]);
-}
-template <typename T>
-constexpr inline T min(const vec<T, 4>& a) {
-    return min(min(min(a[0], a[1]), a[2]), a[3]);
-}
-template <typename T>
-constexpr inline T mean(const vec<T, 2>& a) {
-    return (a[0] + a[1]) / 2;
-}
-template <typename T>
-constexpr inline T mean(const vec<T, 3>& a) {
-    return (a[0] + a[1] + a[2]) / 3;
-}
-template <typename T>
-constexpr inline T mean(const vec<T, 4>& a) {
-    return (a[0] + a[1] + a[2] + a[3]) / 4;
+template <typename T, int N>
+constexpr inline T mean(const vec<T, N>& a) {
+    auto c = T{0};
+    for(auto i = 0; i < N; i ++) c += a[i];
+    return c / N;
 }
 
 // Quaternion operatons represented as xi + yj + zk + w
