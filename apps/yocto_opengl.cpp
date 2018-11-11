@@ -361,7 +361,7 @@ void set_opengl_uniform(int locatiom, const vec4f& value) {
 
 void set_opengl_uniform(int locatiom, const mat4f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniformMatrix4fv(locatiom, 1, false, &value.x.x);
+    glUniformMatrix4fv(locatiom, 1, false, &value[0][0]);
     assert(glGetError() == GL_NO_ERROR);
 }
 

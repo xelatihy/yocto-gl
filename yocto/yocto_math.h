@@ -804,58 +804,19 @@ namespace yocto {
 
 // Small Fixed-size square matrices stored in column major format.
 template <typename T, int N, int M>
-struct mat;
+struct mat {
+    vec<T, N> columns[M] = {};
 
-// Small Fixed-size square matrices stored in column major format.
-template <typename T, int N>
-struct mat<T, N, 1> {
-    vec<T, N> x = {};
+    constexpr mat() { for(auto j = 0; j < M; j ++) columns[j] = {}; }
+    constexpr mat(initializer_list<vec<T, N>> vals) {
+        assert(vals.size() == M);
+        auto vals_ptr = vals.begin();
+        for(auto j = 0; j < M; j ++) columns[j] = vals_ptr[j];
+    }
+    constexpr mat(const mat& v) = default;
 
-    constexpr mat() : x{} { }
-    constexpr mat(const vec<T, N>& x_) : x{x_} { }
-    constexpr mat(const mat<T, N, 1>& v) = default;
-
-    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
-    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
-};
-template <typename T, int N>
-struct mat<T, N, 2> {
-    vec<T, N> x = {};
-    vec<T, N> y = {};
-
-    constexpr mat() : x{}, y{} { }
-    constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_) : x{x_}, y{y_} { }
-    constexpr mat(const mat<T, N, 2>& v) = default;
-
-    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
-    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
-};
-template <typename T, int N>
-struct mat<T, N, 3> {
-    vec<T, 3> x = {};
-    vec<T, 3> y = {};
-    vec<T, 3> z = {};
-
-    constexpr mat() : x{}, y{}, z{} { }
-    constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_) : x{x_}, y{y_}, z{z_} { }
-    constexpr mat(const mat<T, N, 3>& v) = default;
-
-    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
-    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
-};
-template <typename T, int N>
-struct mat<T, N, 4> {
-    vec<T, 4> x = {};
-    vec<T, 4> y = {};
-    vec<T, 4> z = {};
-    vec<T, 4> w = {};
-
-    constexpr mat() : x{}, y{}, z{}, w{} { }
-    constexpr mat(const vec<T, N>& x_, const vec<T, N>& y_, const vec<T, N>& z_, const vec<T, N>& w_) : x{x_}, y{y_}, z{z_}, w{w_} { }
-    constexpr mat(const mat<T, N, 4>& v) = default;
-
-    constexpr vec<T, N>&       operator[](int idx) { return *(&x + idx); }
-    constexpr const vec<T, N>& operator[](int idx) const { return *(&x + idx); }
+    constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
+    constexpr const vec<T, N>& operator[](int idx) const { return columns[idx]; }
 };
 
 // Type aliases.
