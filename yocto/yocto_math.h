@@ -266,16 +266,20 @@ struct vec<T, 4> {
 // Vector constants
 template <typename T, int N>
 constexpr inline vec<T, N> make_zero_vec() {
-    return vec<T, N>{};
+    auto v = vec<T, N>{};
+    for(auto i = 0; i < N; i++) v[i] = 0;
+    return v;
 }
 template <typename T, int N>
 constexpr inline vec<T, N> make_one_vec() {
-    return vec<T, N>{(T)1};
+    auto v = vec<T, N>{};
+    for(auto i = 0; i < N; i++) v[i] = 1;
+    return v;
 }
 template <typename T, int N>
-constexpr const vec<T, N> zero_vec = vec<T, N>{};
+constexpr const vec<T, N> zero_vec = make_zero_vec<T, N>();
 template <typename T, int N>
-constexpr const vec<T, N> one_vec = vec<T, N>{(T)1};
+constexpr const vec<T, N> one_vec = make_one_vec<T, N>();
 
 // Type aliases.
 using vec1f = vec<float, 1>;
