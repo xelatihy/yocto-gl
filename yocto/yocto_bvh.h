@@ -90,8 +90,8 @@
 namespace yocto {
 
 using std::atomic;
-using std::vector;
 using std::pair;
+using std::vector;
 
 }  // namespace yocto
 

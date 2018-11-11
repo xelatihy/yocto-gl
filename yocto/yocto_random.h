@@ -102,7 +102,6 @@
 #include <algorithm>
 #include <cstdint>
 #include <vector>
-#include <cstdint>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
