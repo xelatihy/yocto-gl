@@ -769,13 +769,14 @@ namespace yocto {
 // Rigid frames stored as a column-major affine transform matrix.
 template <typename T, int N>
 struct frame {
-    vec<T, N> axes[N] = {};
+    mat<T, N, N> axes = {};
     vec<T, N> origin = {};
 
     constexpr frame() {
         for(auto j = 0; j < N; j ++) for(auto i = 0; i < N; i ++) axes[j][i] = i == j ? 1 : 0;
         origin = {};
     }
+    constexpr frame(const mat<T, N, N>& axes_, const vec<T, N>& origin_) : axes{axes_}, origin{origin_} { }
     constexpr frame(initializer_list<vec<T, N>> vals) {
         assert(vals.size() == N+1);
         auto vals_ptr = vals.begin();
