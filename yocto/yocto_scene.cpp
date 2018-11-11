@@ -215,7 +215,7 @@ yocto_shape displace_shape(const yocto_shape& shape,
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
         displaced_shape.positions[vid] += normals[vid] *
                                           displacement.height_scale *
-                                          mean(xyz(evaluate_texture(displacement,
+                                          mean((vec3f)(evaluate_texture(displacement,
                                               shape.texturecoords[vid])));
     }
 
@@ -238,7 +238,7 @@ yocto_surface displace_surface(const yocto_surface& surface,
         auto qtxt = surface.quads_texturecoords[fid];
         for (auto i = 0; i < 4; i++) {
             offset[qpos[i]] += displacement.height_scale *
-                               mean(xyz(evaluate_texture(displacement,
+                               mean((vec3f)(evaluate_texture(displacement,
                                    surface.texturecoords[qtxt[i]])));
             count[qpos[i]] += 1;
         }
@@ -486,7 +486,7 @@ vector<float> compute_environment_texels_cdf(
             auto ij     = vec2i{i % size[0], i / size[0]};
             auto th     = (ij[1] + 0.5f) * pif / size[1];
             auto value  = lookup_texture(texture, ij);
-            elem_cdf[i] = max(xyz(value)) * sin(th);
+            elem_cdf[i] = max((vec3f)(value)) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
     } else {
@@ -911,7 +911,7 @@ vec3f evaluate_shape_shading_normal(const yocto_scene& scene,
                 shape, element_id, element_uv);
             auto  left_handed    = false;
             auto& normal_texture = scene.textures[material.normal_texture];
-            auto  texture = xyz(evaluate_texture(normal_texture, texcoord));
+            auto  texture = (vec3f)(evaluate_texture(normal_texture, texcoord));
             texture       = texture * 2 - vec3f{1, 1, 1};
             texture[1] = -texture[1];  // flip vertical axis to align green with
                                      // image up
@@ -1208,7 +1208,7 @@ vec3f evaluate_environment_emission(const yocto_scene& scene,
     auto ke = environment.emission;
     if (environment.emission_texture >= 0) {
         auto& emission_texture = scene.textures[environment.emission_texture];
-        ke *= xyz(evaluate_texture(emission_texture,
+        ke *= (vec3f)(evaluate_texture(emission_texture,
             evaluate_environment_texturecoord(environment, direction)));
     }
     return ke;
@@ -1414,10 +1414,10 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 vec3f evaluate_material_emission(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color) {
-    auto emission = material.emission * xyz(shape_color);
+    auto emission = material.emission * (vec3f)(shape_color);
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
-        emission *= xyz(evaluate_texture(emission_texture, texturecoord));
+        emission *= (vec3f)(evaluate_texture(emission_texture, texturecoord));
     }
     return emission;
 }
@@ -1425,17 +1425,17 @@ vec3f evaluate_material_diffuse(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color) {
     if (!material.base_metallic) {
-        auto diffuse = material.diffuse * xyz(shape_color);
+        auto diffuse = material.diffuse * (vec3f)(shape_color);
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
-            diffuse *= xyz(evaluate_texture(diffuse_texture, texturecoord));
+            diffuse *= (vec3f)(evaluate_texture(diffuse_texture, texturecoord));
         }
         return diffuse;
     } else {
-        auto base = material.diffuse * xyz(shape_color);
+        auto base = material.diffuse * (vec3f)(shape_color);
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
-            base *= xyz(evaluate_texture(diffuse_texture, texturecoord));
+            base *= (vec3f)(evaluate_texture(diffuse_texture, texturecoord));
         }
         auto metallic = material.specular;
         if (material.specular_texture >= 0) {
@@ -1449,17 +1449,17 @@ vec3f evaluate_material_specular(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color) {
     if (!material.base_metallic) {
-        auto specular = material.specular * xyz(shape_color);
+        auto specular = material.specular * (vec3f)(shape_color);
         if (material.specular_texture >= 0) {
             auto& specular_texture = scene.textures[material.specular_texture];
-            specular *= xyz(evaluate_texture(specular_texture, texturecoord));
+            specular *= (vec3f)(evaluate_texture(specular_texture, texturecoord));
         }
         return specular;
     } else {
-        auto base = material.diffuse * xyz(shape_color);
+        auto base = material.diffuse * (vec3f)(shape_color);
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
-            base *= xyz(evaluate_texture(diffuse_texture, texturecoord));
+            base *= (vec3f)(evaluate_texture(diffuse_texture, texturecoord));
         }
         auto metallic = material.specular[0];
         if (material.specular_texture >= 0) {
@@ -1501,10 +1501,10 @@ float evaluate_material_roughness(const yocto_scene& scene,
 vec3f evaluate_material_transmission(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color) {
-    auto transmission = material.transmission * xyz(shape_color);
+    auto transmission = material.transmission * (vec3f)(shape_color);
     if (material.transmission_texture >= 0) {
         auto& transmission_texture = scene.textures[material.transmission_texture];
-        transmission *= xyz(evaluate_texture(transmission_texture, texturecoord));
+        transmission *= (vec3f)(evaluate_texture(transmission_texture, texturecoord));
     }
     return transmission;
 }

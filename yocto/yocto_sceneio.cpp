@@ -1342,7 +1342,7 @@ bool apply_json_procedural(
         auto rotation    = js.value("rotation", zero_vec4f);
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
         value.frame = translation_frame(translation) * scaling_frame(scaling) *
-                      rotation_frame(xyz(rotation), rotation[3]);
+                      rotation_frame((vec3f)(rotation), rotation[3]);
     }
     return true;
 }
@@ -1371,7 +1371,7 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero_vec4f);
-        value.frame   = rotation_frame(xyz(rotation), rotation[3]);
+        value.frame   = rotation_frame((vec3f)(rotation), rotation[3]);
     }
     return true;
 }
@@ -4956,7 +4956,7 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         for (auto& t : triangles) print(fs, "3 {}\n", t);
         for (auto& q : quads) {
             if (q[2] == q[3])
-                print(fs, "3 {}\n", xyz(q));
+                print(fs, "3 {}\n", vec3i{q[0], q[1], q[2]});
             else
                 print(fs, "4 {}\n", q);
         }
@@ -4981,7 +4981,7 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
             if (q[2] == q[3]) {
                 auto n = (byte)3;
                 write_value(fs, n);
-                write_value(fs, xyz(q));
+                write_value(fs, vec3i{q[0], q[1], q[2]});
             } else {
                 auto n = (byte)4;
                 write_value(fs, n);

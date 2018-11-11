@@ -287,16 +287,6 @@ constexpr const auto zero_vec3i = zero_vec<int, 3>;
 constexpr const auto zero_vec4i = zero_vec<int, 4>;
 constexpr const auto zero_vec4b = zero_vec<byte, 4>;
 
-// Access xyz component of a vec4 typically used for color operation.
-template <typename T>
-constexpr inline vec<T, 3>& xyz(const vec<T, 4>& v) {
-    return (vec<T, 3>&)v;
-}
-template <typename T>
-constexpr inline vec<T, 3>& xyz(vec<T, 4>& v) {
-    return (vec<T, 3>&)v;
-}
-
 // Vector comparison operations.
 template <typename T, int N>
 constexpr inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
