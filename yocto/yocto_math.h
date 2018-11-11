@@ -652,12 +652,29 @@ using mat2f = mat<float, 2, 2>;
 using mat3f = mat<float, 3, 3>;
 using mat4f = mat<float, 4, 4>;
 
+// Matrix contants
+template<typename T, int N>
+constexpr inline mat<T, N, N> identity_mat() {
+    auto c = mat<T, N, N>{};
+    for(auto j = 0; j < N; j ++)    
+        for(auto i = 0; i < N; i ++)  
+            c[j][i] = j == i ? 1 : 0;
+    return c;  
+}
+template<typename T, int N>
+constexpr inline mat<T, N, N> diagonal_mat(const vec<T, N>& diagonal) {
+    auto c = mat<T, N, N>{};
+    for(auto j = 0; j < N; j ++)    
+        for(auto i = 0; i < N; i ++)  
+            c[j][i] = j == i ? diagonal[i] : 0;
+    return c;  
+}
+
 // Identity matrices constants.
-const auto identity_mat1f = mat1f{{1}};
-const auto identity_mat2f = mat2f{{1, 0}, {0, 1}};
-const auto identity_mat3f = mat3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-const auto identity_mat4f = mat4f{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+const auto identity_mat1f = identity_mat<float, 1>();
+const auto identity_mat2f = identity_mat<float, 2>();
+const auto identity_mat3f = identity_mat<float, 3>();
+const auto identity_mat4f = identity_mat<float, 4>();
 
 // Matrix comparisons.
 template <typename T, int N, int M>
@@ -792,9 +809,19 @@ struct frame {
 using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
 
+// Matrix contants
+template<typename T, int N>
+constexpr inline frame<T, N> identity_frame() {
+    auto c = frame<T, N>{};
+    for(auto j = 0; j < N; j ++)    
+        for(auto i = 0; i < N; i ++)  
+            c[j][i] = j == i ? 1 : 0;
+    return c;  
+}
+
 // Indentity frames.
-const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-const auto identity_frame3f = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+const auto identity_frame2f = identity_frame<float, 2>();
+const auto identity_frame3f = identity_frame<float, 3>();
 
 // Frame construction from axis.
 template <typename T>
@@ -943,18 +970,18 @@ constexpr inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
 template <typename T>
 constexpr inline bbox<T, 3> point_bounds(const vec<T, 3>& p, T r = 0) {
     auto bounds = bbox<T, 3>{};
-    bounds += p - vec3f{r, r, r};
-    bounds += p + vec3f{r, r, r};
+    bounds += p - vec<T, 3>{r, r, r};
+    bounds += p + vec<T, 3>{r, r, r};
     return bounds;
 }
 template <typename T>
 constexpr inline bbox<T, 3> line_bounds(
     const vec<T, 3>& p0, const vec<T, 3>& p1, T r0 = 0, T r1 = 0) {
     auto bounds = bbox<T, 3>{};
-    bounds += p0 - vec3f{r0, r0, r0};
-    bounds += p0 + vec3f{r0, r0, r0};
-    bounds += p1 - vec3f{r1, r1, r1};
-    bounds += p1 + vec3f{r1, r1, r1};
+    bounds += p0 - vec<T, 3>{r0, r0, r0};
+    bounds += p0 + vec<T, 3>{r0, r0, r0};
+    bounds += p1 - vec<T, 3>{r1, r1, r1};
+    bounds += p1 + vec<T, 3>{r1, r1, r1};
     return bounds;
 }
 template <typename T>
@@ -1025,61 +1052,39 @@ constexpr inline ray<T, N> make_segment(
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T>
-constexpr inline vec<T, 2> transform_point(
-    const mat<T, 3, 3>& a, const vec<T, 2>& b) {
-    auto tvb = a * vec3f{b[0], b[1], 1};
-    return vec<T, 2>{tvb[0], tvb[1]} / tvb[2];
+template <typename T, int N>
+constexpr inline vec<T, N> transform_point(
+    const mat<T, N+1, N+1>& a, const vec<T, N>& b) {
+    auto tvb = a * vec<T, N + 1>{b, 1};
+    return (vec<T, N>)tvb / tvb[N];
 }
-template <typename T>
-constexpr inline vec<T, 3> transform_point(
-    const mat<T, 4, 4>& a, const vec<T, 3>& b) {
-    auto tvb = a * vec<T, 4>{b[0], b[1], b[2], 1};
-    return vec<T, 3>{tvb[0], tvb[1], tvb[2]} / tvb[3];
+template <typename T, int N>
+constexpr inline vec<T, N> transform_vector(
+    const mat<T, N+1, N+1>& a, const vec<T, N>& b) {
+    auto tvb = a * vec<T, N + 1>{b, 0};
+    return (vec<T, N>)tvb / tvb[N];
 }
-template <typename T>
-constexpr inline vec<T, 2> transform_vector(
-    const mat<T, 3, 3>& a, const vec<T, 2>& b) {
-    auto tvb = a * vec<T, 3>{b[0], b[1], 0};
-    return vec<T, 2>{tvb[0], tvb[1]} / tvb[2];
-}
-template <typename T>
-constexpr inline vec<T, 3> transform_vector(
-    const mat<T, 3, 3>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+constexpr inline vec<T, N> transform_vector(
+    const mat<T, N, N>& a, const vec<T, N>& b) {
     return a * b;
-}
-template <typename T>
-constexpr inline vec<T, 3> transform_vector(
-    const mat<T, 4, 4>& a, const vec<T, 3>& b) {
-    auto tvb = a * vec4f{b[0], b[1], b[2], 0};
-    return vec<T, 3>{tvb[0], tvb[1], tvb[2]};
 }
 template <typename T, int N>
 constexpr inline vec<T, N> transform_direction(
-    const mat<T, 4, 4>& a, const vec<T, N>& b) {
+    const mat<T, N+1, N+1>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T>
-constexpr inline vec<T, 2> transform_point(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
-    return a[0] * b[0] + a[1] * b[1] + a.o;
+template <typename T, int N>
+constexpr inline vec<T, N> transform_point(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    return a.axes * b + a.origin;
 }
-template <typename T>
-constexpr inline vec<T, 3> transform_point(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3];
-}
-template <typename T>
-constexpr inline vec<T, 2> transform_vector(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
-    return a[0] * b[0] + a[1] * b[1];
-}
-template <typename T>
-constexpr inline vec<T, 3> transform_vector(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+template <typename T, int N>
+constexpr inline vec<T, N> transform_vector(
+    const frame<T, N>& a, const vec<T, N>& b) {
+        return a.axes * b;
 }
 template <typename T, int N>
 constexpr inline vec<T, N> transform_direction(
@@ -1098,14 +1103,34 @@ constexpr inline ray<T, N> transform_ray(
     const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
     return {transform_point(a, b.origin), transform_vector(a, b.direction), b.tmin, b.tmax};
 }
+
+template <typename T>
+constexpr inline bbox<T, 2> transform_bbox(
+    const frame<T, 2>& a, const bbox<T, 2>& b) {
+    auto corners = {vec<T, 2>{b.min[0], b.min[1]}, vec<T, 2>{b.min[0], b.max[1]},
+        vec<T, 2>{b.max[0], b.min[1]}, vec<T, 2>{b.max[0], b.max[1]}};
+    auto xformed = bbox<T, 3>();
+    for (auto& corner : corners) xformed += transform_point(a, corner);
+    return xformed;
+}
+template <typename T>
+constexpr inline bbox<T, 2> transform_bbox(
+    const mat<T, 3, 3>& a, const bbox<T, 2>& b) {
+    auto corners = {vec<T, 2>{b.min[0], b.min[1]}, vec<T, 2>{b.min[0], b.max[1]},
+        vec<T, 2>{b.max[0], b.min[1]}, vec<T, 2>{b.max[0], b.max[1]}};
+    auto xformed = bbox<T, 3>();
+    for (auto& corner : corners) xformed += transform_point(a, corner);
+    return xformed;
+}
+
 template <typename T>
 constexpr inline bbox<T, 3> transform_bbox(
     const frame<T, 3>& a, const bbox<T, 3>& b) {
-    auto corners = {vec3f{b.min[0], b.min[1], b.min[2]},
-        vec3f{b.min[0], b.min[1], b.max[2]}, vec3f{b.min[0], b.max[1], b.min[2]},
-        vec3f{b.min[0], b.max[1], b.max[2]}, vec3f{b.max[0], b.min[1], b.min[2]},
-        vec3f{b.max[0], b.min[1], b.max[2]}, vec3f{b.max[0], b.max[1], b.min[2]},
-        vec3f{b.max[0], b.max[1], b.max[2]}};
+    auto corners = {vec<T, 3>{b.min[0], b.min[1], b.min[2]},
+        vec<T, 3>{b.min[0], b.min[1], b.max[2]}, vec<T, 3>{b.min[0], b.max[1], b.min[2]},
+        vec<T, 3>{b.min[0], b.max[1], b.max[2]}, vec<T, 3>{b.max[0], b.min[1], b.min[2]},
+        vec<T, 3>{b.max[0], b.min[1], b.max[2]}, vec<T, 3>{b.max[0], b.max[1], b.min[2]},
+        vec<T, 3>{b.max[0], b.max[1], b.max[2]}};
     auto xformed = bbox<T, 3>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
@@ -1113,39 +1138,29 @@ constexpr inline bbox<T, 3> transform_bbox(
 template <typename T>
 constexpr inline bbox<T, 3> transform_bbox(
     const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
-    auto corners = {vec3f{b.min[0], b.min[1], b.min[2]},
-        vec3f{b.min[0], b.min[1], b.max[2]}, vec3f{b.min[0], b.max[1], b.min[2]},
-        vec3f{b.min[0], b.max[1], b.max[2]}, vec3f{b.max[0], b.min[1], b.min[2]},
-        vec3f{b.max[0], b.min[1], b.max[2]}, vec3f{b.max[0], b.max[1], b.min[2]},
-        vec3f{b.max[0], b.max[1], b.max[2]}};
+    auto corners = {vec<T, 3>{b.min[0], b.min[1], b.min[2]},
+        vec<T, 3>{b.min[0], b.min[1], b.max[2]}, vec<T, 3>{b.min[0], b.max[1], b.min[2]},
+        vec<T, 3>{b.min[0], b.max[1], b.max[2]}, vec<T, 3>{b.max[0], b.min[1], b.min[2]},
+        vec<T, 3>{b.max[0], b.min[1], b.max[2]}, vec<T, 3>{b.max[0], b.max[1], b.min[2]},
+        vec<T, 3>{b.max[0], b.max[1], b.max[2]}};
     auto xformed = bbox<T, 3>();
     for (auto& corner : corners) xformed += transform_point(a, corner);
     return xformed;
 }
 
 // Inverse transforms by frames, assuming they are rigid transforms.
-template <typename T>
-constexpr inline vec<T, 2> transform_point_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
-    return {dot(b - a[2], a[0]), dot(b - a[2], a[1])};
-}
-template <typename T>
-constexpr inline vec3f transform_point_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
-    return {dot(b - a[3], a[0]), dot(b - a[3], a[1]), dot(b - a[3], a[2])};
-}
-template <typename T>
-constexpr inline vec<T, 2> transform_vector_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
-    return {dot(b, a[0]), dot(b, a[1])};
-}
-template <typename T>
-constexpr inline vec3f transform_vector_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
-    return {dot(b, a[0]), dot(b, a[1]), dot(b, a[2])};
+template <typename T, int N>
+constexpr inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    return (b - a.origin) * a.axes;
 }
 template <typename T, int N>
-constexpr inline vec3f transform_direction_inverse(
+constexpr inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    return b * a.axes;
+}
+template <typename T, int N>
+constexpr inline vec<T, N> transform_direction_inverse(
     const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector_inverse(a, b));
 }
@@ -1155,20 +1170,20 @@ constexpr inline ray<T, N> transform_ray_inverse(
     return {transform_point_inverse(a, b.origin),
         transform_direction_inverse(a, b.direction), b.tmin, b.tmax};
 }
-template <typename T>
-constexpr inline bbox<T, 3> transform_bbox_inverse(
-    const frame<T, 3>& a, const bbox<T, 3>& b) {
+template <typename T, int N>
+constexpr inline bbox<T, N> transform_bbox_inverse(
+    const frame<T, N>& a, const bbox<T, N>& b) {
     return transform_bbox(inverse(a), b);
 }
 
 // Translation, scaling and rotations transforms.
-template <typename T>
-constexpr inline frame<T, 3> translation_frame(const vec<T, 3>& a) {
-    return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, a};
+template <typename T, int N>
+constexpr inline frame<T, N> translation_frame(const vec<T, N>& a) {
+    return {identity_mat<T, N>(), a};
 }
-template <typename T>
-constexpr inline frame<T, 3> scaling_frame(const vec<T, 3>& a) {
-    return {{a[0], 0, 0}, {0, a[1], 0}, {0, 0, a[2]}, {0, 0, 0}};
+template <typename T, int N>
+constexpr inline frame<T, N> scaling_frame(const vec<T, N>& a) {
+    return {diagonal_mat<T, N>(a), {}};
 }
 template <typename T>
 constexpr inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
@@ -1196,7 +1211,7 @@ constexpr inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
 }
 template <typename T>
 constexpr inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
-    return {rot[0], rot[1], rot[2], {0, 0, 0}};
+    return {rot, rot, rot, {}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
@@ -1253,7 +1268,7 @@ constexpr inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
 // Rotation conversions.
 template <typename T>
 constexpr inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
-    return {normalize(vec3f{quat[0], quat[1], quat[2]}), 2 * acos(quat[3])};
+    return {normalize(vec<T, 3>{quat[0], quat[1], quat[2]}), 2 * acos(quat[3])};
 }
 template <typename T>
 constexpr inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
@@ -1265,15 +1280,18 @@ constexpr inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
 template <typename T>
 constexpr inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
     return rotation_quat(
-        vec3f{axisangle[0], axisangle[1], axisangle[2]}, axisangle[3]);
+        vec<T, 3>{axisangle[0], axisangle[1], axisangle[2]}, axisangle[3]);
 }
 
 // Turntable and FPS Camera navigation.
-inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan);
-inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan);
-inline void camera_fps(frame3f& frame, const vec3f& transl, const vec2f& rotate);
+template<typename T>
+inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
+template<typename T>
+inline void camera_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rotate,
+    T dolly, const vec<T, 2>& pan);
+template<typename T>
+inline void camera_fps(frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
@@ -1459,8 +1477,9 @@ constexpr inline T determinant(const mat<T, 4, 4>& a) {
 namespace yocto {
 
 // Turntable for UI navigation.
-inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
-    const vec2f& rotate, float dolly, const vec2f& pan) {
+template<typename T>
+inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
         auto z     = normalize(to - from);
@@ -1468,7 +1487,7 @@ inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
         auto phi   = atan2(z[2], z[0]) + rotate[0];
         auto theta = acos(z[1]) + rotate[1];
         theta      = clamp(theta, 0.001f, pif - 0.001f);
-        auto nz    = vec3f{sin(theta) * cos(phi) * lz, cos(theta) * lz,
+        auto nz    = vec<T, 3>{sin(theta) * cos(phi) * lz, cos(theta) * lz,
             sin(theta) * sin(phi) * lz};
         from       = to - nz;
     }
@@ -1486,7 +1505,7 @@ inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
         auto z = normalize(to - from);
         auto x = normalize(cross(up, z));
         auto y = normalize(cross(z, x));
-        auto t = vec3f{pan[0] * x[0] + pan[1] * y[0], pan[0] * x[1] + pan[1] * y[1],
+        auto t = vec<T, 3>{pan[0] * x[0] + pan[1] * y[0], pan[0] * x[1] + pan[1] * y[1],
             pan[0] * x[2] + pan[1] * y[2]};
         from += t;
         to += t;
@@ -1494,14 +1513,15 @@ inline void camera_turntable(vec3f& from, vec3f& to, vec3f& up,
 }
 
 // Turntable for UI navigation.
-inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
-    float dolly, const vec2f& pan) {
+template<typename T>
+inline void camera_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rotate,
+    T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate != zero2f) {
         auto phi   = atan2(frame[2][2], frame[2][0]) + rotate[0];
         auto theta = acos(frame[2][1]) + rotate[1];
         theta      = clamp(theta, 0.001f, pif - 0.001f);
-        auto new_z = vec3f{
+        auto new_z = vec<T, 3>{
             sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
         auto new_center = frame.origin - frame.axes[2] * focus;
         auto new_o      = new_center + new_z * focus;
@@ -1523,15 +1543,16 @@ inline void camera_turntable(frame3f& frame, float& focus, const vec2f& rotate,
 }
 
 // FPS camera for UI navigation for a frame parametrization.
-inline void camera_fps(frame3f& frame, vec3f transl, vec2f rotate) {
+template<typename T>
+inline void camera_fps(const frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate) {
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
-    auto y = vec3f{0, 1, 0};
+    auto y = vec<T, 3>{0, 1, 0};
     auto z = orthonormalize(frame.axes[2], y);
     auto x = cross(y, z);
 
-    auto rot = rotation_frame(vec3f{1, 0, 0}, rotate[1]) *
-               frame3f{frame[0], frame[1], frame[2], vec3f{0, 0, 0}} *
-               rotation_frame(vec3f{0, 1, 0}, rotate[0]);
+    auto rot = rotation_frame(vec<T, 3>{1, 0, 0}, rotate[1]) *
+               frame3f{frame[0], frame[1], frame[2], vec<T, 3>{0, 0, 0}} *
+               rotation_frame(vec<T, 3>{0, 1, 0}, rotate[0]);
     auto pos = frame.origin + transl[0] * x + transl[1] * y + transl[2] * z;
 
     frame = {rot[0], rot[1], rot[2], pos};

@@ -99,7 +99,7 @@ trace_point trace_ray_with_opacity(const yocto_scene& scene,
         if (point.instance_id < 0) return point;
         if (point.opacity > 0.999f) return point;
         if (get_random_float(rng) < point.opacity) return point;
-        position = point.position + direction * default_ray_epsf;
+        position = point.position + direction * (float)default_ray_eps;
     }
     return {};
 }
