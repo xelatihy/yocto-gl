@@ -387,30 +387,35 @@ inline bool print_value(string& str, const array<T, N>& value) {
     }
     return true;
 }
+template <typename T>
+inline bool print_values(string& str, const T* values, int N) {
+    for (auto i = 0; i < N; i++) {
+        if (i) str += " ";
+        str += std::to_string(values[i]);
+    }
+    return true;
+}
 
 // Print compound types.
 template <typename T, int N>
 inline bool print_value(string& str, const vec<T, N>& v) {
-    return print_value(str, (const array<T, N>&)v);
+    return print_values(str, &v[0], N);
 }
 template <typename T, int N, int M>
 inline bool print_value(string& str, const mat<T, N, M>& v) {
-    return print_value(str, (const array<T, N * M>&)v);
+    return print_values(str, &v[0][0], N * M);
 }
 template <typename T, int N>
 inline bool print_value(string& str, const frame<T, N>& v) {
-    return print_value(str, (const array<T, N*(N + 1)>&)v);
+    return print_values(str, &v[0][0], N * (N + 1));
 }
 template <typename T, int N>
 inline bool print_value(string& str, const bbox<T, N>& v) {
-    return print_value(str, (const array<T, N * 2>&)v);
+    return print_values(str, &v[0][0], N * 2);
 }
 template <typename T, int N>
 inline bool print_value(string& str, const ray<T, N>& v) {
-    return print_value(str, (const array<T, N * 2 + 2>&)v);
-}
-inline bool print_value(string& str, const bbox2i& v) {
-    return print_value(str, (const array<int, 4>&)v);
+    return print_values(str, &v[0][0], N * 2 + 2);
 }
 
 // Prints a string.
@@ -518,29 +523,34 @@ inline bool parse_value(parse_string_view& str, array<T, N>& value) {
     }
     return true;
 }
+template <typename T>
+inline bool parse_values(parse_string_view& str, T* values, int N) {
+    for (auto i = 0; i < N; i++) {
+        if (!parse_value(str, values[i])) return false;
+    }
+    return true;
+}
+
 // Data acess
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, vec<T, N>& v) {
-    return parse_value(str, (array<T, N>&)v);
+    return parse_values(str, &v[0], N);
 }
 template <typename T, int N, int M>
 inline bool parse_value(parse_string_view& str, mat<T, N, M>& v) {
-    return parse_value(str, (array<T, N * M>&)v);
+    return parse_values(str, &v[0][0], N * M);
 }
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, frame<T, N>& v) {
-    return parse_value(str, (array<T, N*(N + 1)>&)v);
+    return parse_values(str, &v[0][0], N * (N + 1));
 }
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, bbox<T, N>& v) {
-    return parse_value(str, (array<T, N * 2>&)v);
+    return parse_values(str, &v[0][0], N * 2);
 }
 template <typename T, int N>
 inline bool parse_value(parse_string_view& str, ray<T, N>& v) {
-    return parse_value(str, (array<T, N * 2 + 2>&)v);
-}
-inline bool parse_value(parse_string_view& str, bbox2i& v) {
-    return parse_value(str, (array<int, 4>&)v);
+    return parse_values(str, &v.origin[0], N * 2 + 2);
 }
 
 // Prints a string.

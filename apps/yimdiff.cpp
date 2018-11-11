@@ -39,12 +39,12 @@ template <typename T>
 image<vec<T, 4>> compute_diff_image(
     const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
     auto diff = image<vec<T, 4>>{a.size()};
-    for (auto j = 0; j < a.size().y; j++) {
-        for (auto i = 0; i < a.size().x; i++) {
-            diff[{i, j}] = {(T)abs(a[{i, j}].x - b[{i, j}].x),
-                (T)abs(a[{i, j}].y - b[{i, j}].y),
-                (T)abs(a[{i, j}].z - b[{i, j}].z),
-                (T)abs(a[{i, j}].w - b[{i, j}].w)};
+    for (auto j = 0; j < a.height(); j++) {
+        for (auto i = 0; i < a.width(); i++) {
+            diff[{i, j}] = {(T)abs(a[{i, j}][0] - b[{i, j}][0]),
+                (T)abs(a[{i, j}][1] - b[{i, j}][1]),
+                (T)abs(a[{i, j}][2] - b[{i, j}][2]),
+                (T)abs(a[{i, j}][3] - b[{i, j}][3])};
         }
     }
     return diff;
@@ -54,8 +54,8 @@ template <typename T>
 vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
     auto max_value = vec<T, 4>{0, 0, 0, 0};
     for (auto& c : diff) {
-        max_value = {max(c.x, max_value.x), max(c.y, max_value.y),
-            max(c.z, max_value.z), max(c.w, max_value.w)};
+        max_value = {max(c[0], max_value[0]), max(c[1], max_value[1]),
+            max(c[2], max_value[2]), max(c[3], max_value[3])};
     }
     return max_value;
 }
@@ -63,8 +63,8 @@ vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
 template <typename T>
 image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
     auto display = image<vec<T, 4>>{diff.size()};
-    for (auto j = 0; j < diff.size().y; j++) {
-        for (auto i = 0; i < diff.size().x; i++) {
+    for (auto j = 0; j < diff.height(); j++) {
+        for (auto i = 0; i < diff.width(); i++) {
             auto diff_value = max(diff[{i, j}]);
             display[{i, j}] = {diff_value, diff_value, diff_value, alpha};
         }

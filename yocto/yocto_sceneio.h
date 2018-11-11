@@ -278,14 +278,14 @@ struct obj_camera {
     float   focal    = 0.050f;            // focal length
     float   aspect   = 16.0f / 9.0f;      // aspect ratio
     float   aperture = 0;                 // lens aperture
-    float   focus    = maxf;              // focus distance
+    float   focus    = float_max;         // focus distance
 };
 
 // Obj environment [extension].
 struct obj_environment {
     string           name;                      // name
     frame3f          frame = identity_frame3f;  // transform
-    vec3f            ke    = zero3f;            // emission color
+    vec3f            ke    = zero_vec3f;        // emission color
     obj_texture_info ke_txt;                    // emission texture
 };
 
