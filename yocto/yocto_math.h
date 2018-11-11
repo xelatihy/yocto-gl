@@ -1295,11 +1295,12 @@ inline void camera_fps(frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T,
 
 // Computes the image uv coordinates corresponding to the view parameters.
 // Returns negative coordinates if out of the image.
-inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
-    float scale, const vec2i& txt_size) {
+template<typename T>
+inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos, const vec<T, 2>& center,
+    T scale, const vec<int, 2>& txt_size) {
     auto xyf = (mouse_pos - center) / scale;
-    return vec2i{(int)round(xyf[0] + txt_size[0] / 2.0f),
-        (int)round(xyf[1] + txt_size[1] / 2.0f)};
+    return {(int)round(xyf[0] + txt_size[0] / 2),
+        (int)round(xyf[1] + txt_size[1] / 2)};
 }
 
 // Center image and autofit.
