@@ -672,7 +672,7 @@ bool serialize_json_values(
 template <typename T>
 bool serialize_json_value(json& js, image<T>& value, bool save) {
     auto size = value.size();
-    if (!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
+    if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save)) return false;
     if (!save) value = image<T>{size};
     if (!serialize_json_values(
             js, value.data(), size[0] * size[1], "pixels", save))
@@ -682,7 +682,7 @@ bool serialize_json_value(json& js, image<T>& value, bool save) {
 template <typename T>
 bool serialize_json_value(json& js, volume<T>& value, bool save) {
     auto size = value.size();
-    if (!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
+    if (!serialize_json_value(js, size, "size", vec3i{-1, -1, -1}, save)) return false;
     if (!save) value = volume<T>{size};
     if (!serialize_json_values(
             js, value.data(), size[0] * size[1], "voxels", save))

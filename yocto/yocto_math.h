@@ -167,7 +167,6 @@ struct vec<T, 1> {
     T elements[1] = {0};
 
     constexpr vec() : elements{0} {}
-    constexpr vec(const T& x_) : elements{x_} {}
     constexpr explicit vec(const vec<T, 2>& xy) : elements{xy[0]} {};
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
@@ -178,7 +177,6 @@ struct vec<T, 2> {
     T elements[2] = {0};
 
     constexpr vec() : elements{0, 0} {}
-    constexpr explicit vec(const T& v) : elements{v, v} {}
     constexpr vec(const T& x_, const T& y_) : elements{x_, y_} {}
     constexpr vec(const vec<T, 1>& x, T w) : elements{x[0], w} {}
     constexpr explicit vec(const vec<T, 3>& xyz)
@@ -192,7 +190,6 @@ struct vec<T, 3> {
     T elements[3] = {0};
 
     constexpr vec() : elements{0, 0, 0} {}
-    constexpr explicit vec(const T& v) : elements{v, v, v} {}
     constexpr vec(const T& x_, const T& y_, const T& z_)
         : elements{x_, y_, z_} {}
     constexpr vec(const vec<T, 2>& xy, T w) : elements{xy[0], xy[1], w} {}
@@ -207,7 +204,6 @@ struct vec<T, 4> {
     T elements[4] = {0};
 
     constexpr vec() : elements{0, 0, 0, 0} {}
-    constexpr explicit vec(const T& v) : elements{v, v, v, v} {}
     constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_)
         : elements{x_, y_, z_, w_} {}
     constexpr vec(const vec<T, 3>& xyz, T w)
@@ -228,6 +224,12 @@ template <typename T, int N>
 constexpr inline vec<T, N> make_one_vec() {
     auto v = vec<T, N>{};
     for(auto i = 0; i < N; i++) v[i] = 1;
+    return v;
+}
+template <typename T, int N>
+constexpr inline vec<T, N> make_uniform_vec(T value) {
+    auto v = vec<T, N>{};
+    for(auto i = 0; i < N; i++) v[i] = value;
     return v;
 }
 template <typename T, int N>
@@ -853,10 +855,10 @@ template <typename T, int N>
 struct bbox {
     using V = vec<T, N>;
 
-    vec<T, N> min = {type_max<T>};
-    vec<T, N> max = {type_min<T>};
+    vec<T, N> min = make_uniform_vec<T, N>(type_max<T>);
+    vec<T, N> max = make_uniform_vec<T, N>(type_min<T>);
 
-    constexpr bbox() : min{type_max<T>}, max{type_min<T>} {}
+    constexpr bbox() : min{make_uniform_vec<T, N>(type_max<T>)}, max{make_uniform_vec<T, N>(type_min<T>)} {}
     constexpr bbox(const vec<T, N>& min_, const vec<T, N>& max_)
         : min{min_}, max{max_} {}
     constexpr bbox(const bbox&) = default;
@@ -870,7 +872,7 @@ struct bbox {
 // Bbox constants
 template <typename T, int N>
 constexpr inline bbox<T, N> make_invalid_bbox() {
-    return {};
+    return {make_uniform_vec<T, N>(type_max<T>), make_uniform_vec<T, N>(type_min<T>)};
 }
 template <typename T, int N>
 constexpr const bbox<T, N> invalid_bbox = make_invalid_bbox<T, N>();
