@@ -815,39 +815,17 @@ constexpr inline frame<T, 3> make_frame_fromzx(
 }
 
 // Frame to matrix conversion.
-template <typename T>
-constexpr inline mat<T, 3, 3> frame_to_mat(const frame<T, 2>& a) {
-    return {
-        {a[0][0], a[0][1], 0},
-        {a[1][0], a[1][1], 0},
-        {a.o[0], a.o[1], 1},
-    };
+template <typename T, int N>
+constexpr inline mat<T, N+1, N+1> frame_to_mat(const frame<T, N>& a) {
+    auto c = mat<T, N+1, N+1>{};
+    for(auto j = 0; j < N+1; j ++) c[j] = {a[j], j == N ? (T)1 : (T)0};
+    return c;
 }
-template <typename T>
-constexpr inline frame<T, 2> mat_to_frame(const mat<T, 3, 3>& a) {
-    return {
-        {a[0][0], a[0][1]},
-        {a[1][0], a[1][1]},
-        {a[2][0], a[2][1]},
-    };
-}
-template <typename T>
-constexpr inline mat<T, 4, 4> frame_to_mat(const frame<T, 3>& a) {
-    return {
-        {a[0][0], a[0][1], a[0][2], 0},
-        {a[1][0], a[1][1], a[1][2], 0},
-        {a[2][0], a[2][1], a[2][2], 0},
-        {a[3][0], a[3][1], a[3][2], 1},
-    };
-}
-template <typename T>
-constexpr inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
-    return {
-        {a[0][0], a[0][1], a[0][2]},
-        {a[1][0], a[1][1], a[1][2]},
-        {a[2][0], a[2][1], a[2][2]},
-        {a[3][0], a[3][1], a[3][2]},
-    };
+template <typename T, int N>
+constexpr inline frame<T, N-1> mat_to_frame(const mat<T, N, N>& a) {
+    auto c = frame<T, N-1>{};
+    for(auto j = 0; j < N; j ++) c[j] = (vec<T, N-1>)a[j];
+    return c;
 }
 
 // Frame comparisons.
@@ -861,32 +839,16 @@ constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
 }
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T>
-constexpr inline frame<T, 2> operator*(
-    const frame<T, 2>& a, const frame<T, 2>& b) {
-    auto rot = mat<T, 2, 2>{a[0], a[1]} * mat<T, 2, 2>{b[0], b[1]};
-    auto pos = mat<T, 2, 2>{a[0], a[1]} * b.o + a.o;
-    return {rot[0], rot[1], pos};
-}
-template <typename T>
-constexpr inline frame<T, 3> operator*(
-    const frame<T, 3>& a, const frame<T, 3>& b) {
-    auto rot = mat<T, 3, 3>{a[0], a[1], a[2]} * mat<T, 3, 3>{b[0], b[1], b[2]};
-    auto pos = mat<T, 3, 3>{a[0], a[1], a[2]} * b[3] + a[3];
-    return {rot[0], rot[1], rot[2], pos};
+template <typename T, int N>
+constexpr inline frame<T, N> operator*(
+    const frame<T, N>& a, const frame<T, N>& b) {
+    return {a.axes * b.axes, a.axes * b.origin + a.origin};
 }
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T>
-constexpr inline frame<T, 2> inverse(const frame<T, 2>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a[0], a[1]}) :
-                             inverse(mat<T, 2, 2>{a[0], a[1]});
-    return {minv[0], minv[1], -(minv * a.o)};
-}
-template <typename T>
-constexpr inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 3, 3>{a[0], a[1], a[2]}) :
-                             inverse(mat<T, 3, 3>{a[0], a[1], a[2]});
-    return {minv[0], minv[1], minv[2], -(minv * a[3])};
+template <typename T, int N>
+constexpr inline frame<T, N> inverse(const frame<T, N>& a, bool is_rigid = true) {
+    auto axes_inv = (is_rigid) ? transpose(a.axes) : inverse(a.axes);
+    return {axes_inv, -(axes_inv * a.origin)};
 }
 
 }  // namespace yocto
