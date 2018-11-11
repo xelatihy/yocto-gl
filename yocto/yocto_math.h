@@ -340,57 +340,87 @@ constexpr inline bool operator!=(const vec<T, N>& a, T1 b) {
 }
 
 // Vector operations.
-template <typename T>
-constexpr inline vec<T, 1> operator-(const vec<T, 1>& a) {
-    return {-a[0]};
+template <typename T, int N>
+constexpr inline vec<T, N> operator+(const vec<T, N>& a) {
+    return a;
 }
-template <typename T>
-constexpr inline vec<T, 1> operator+(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return {a[0] + b[0]};
+template <typename T, int N>
+constexpr inline vec<T, N> operator-(const vec<T, N>& a) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = -a[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator+(const vec<T, 1>& a, T1 b) {
-    return {a[0] + b};
+template <typename T, int N>
+constexpr inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] + b[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator+(T1 a, const vec<T, 1>& b) {
-    return {a + b[0]};
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator+(const vec<T, N>& a, T1 b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] + b;
+    return c;
 }
-template <typename T>
-constexpr inline vec<T, 1> operator-(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return {a[0] - b[0]};
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator+(T1 a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a + b[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator-(const vec<T, 1>& a, T1 b) {
-    return {a[0] - b};
+template <typename T, int N>
+constexpr inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] - b[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator-(T1 a, const vec<T, 1>& b) {
-    return {a - b[0]};
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator-(const vec<T, N>& a, T1 b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] - b;
+    return c;
 }
-template <typename T>
-constexpr inline vec<T, 1> operator*(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return {a[0] * b[0]};
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator-(T1 a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a - b[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator*(const vec<T, 1>& a, T1 b) {
-    return {a[0] * b};
+template <typename T, int N>
+constexpr inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] * b[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator*(T1 a, const vec<T, 1>& b) {
-    return {a * b[0]};
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] * b;
+    return c;
 }
-template <typename T>
-constexpr inline vec<T, 1> operator/(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return {a[0] / b[0]};
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a * b[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator/(const vec<T, 1>& a, T1 b) {
-    return {a[0] / b};
+template <typename T, int N>
+constexpr inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] / b[i];
+    return c;
 }
-template <typename T, typename T1>
-constexpr inline vec<T, 1> operator/(T1 a, const vec<T, 1>& b) {
-    return {a / b[0]};
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a[i] / b;
+    return c;
+}
+template <typename T, int N, typename T1>
+constexpr inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
+    auto c = vec<T, N>{};
+    for(auto i = 0; i < N; i ++) c[i] = a / b[i];
+    return c;
 }
 
 // Vector operations.
