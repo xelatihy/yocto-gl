@@ -368,7 +368,7 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
 // Pick a point in a point set uniformly.
 int sample_points_element(int npoints, float re);
 vector<float> sample_points_element_cdf(int npoints) ;
-inline int sample_points_element(const vector<float>& cdf, float re);
+int sample_points_element(const vector<float>& cdf, float re);
 
 // Pick a point on lines uniformly.
 vector<float> sample_lines_element_cdf(

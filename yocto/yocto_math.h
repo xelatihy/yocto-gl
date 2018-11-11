@@ -77,7 +77,6 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
-#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -106,9 +105,6 @@ using std::tan;
 
 using std::array;
 using std::pair;
-using std::runtime_error;
-using std::string;
-using std::vector;
 
 using byte = unsigned char;
 using uint = unsigned int;

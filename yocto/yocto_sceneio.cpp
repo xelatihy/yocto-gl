@@ -3637,7 +3637,7 @@ bool pbrt_to_json(const string& filename, json& js) {
     auto i      = 0;
     while (i < tokens.size()) {
         if (!is_cmd(tokens, i)) {
-            runtime_error("command expected");
+            log_error("command expected");
             break;
         }
         auto& tok   = tokens[i++];
