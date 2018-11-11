@@ -645,133 +645,49 @@ const auto identity_mat4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-template <typename T, int N>
-constexpr inline bool operator==(const mat<T, N, 1>& a, const mat<T, N, 1>& b) {
-    return a[0] == b[0];
+template <typename T, int N, int M>
+constexpr inline bool operator==(const mat<T, N, M>& a, const mat<T, N, M>& b) {
+    for(auto j = 0; j < M; j ++) if(a[j] != b[j]) return false;
+    return true;
 }
-template <typename T, int N>
+template <typename T, int N, int M>
 constexpr inline bool operator!=(const mat<T, N, 1>& a, const mat<T, N, 1>& b) {
-    return !(a == b);
-}
-template <typename T, int N>
-constexpr inline bool operator==(const mat<T, N, 2>& a, const mat<T, N, 2>& b) {
-    return a[0] == b[0] && a[1] == b[1];
-}
-template <typename T, int N>
-constexpr inline bool operator!=(const mat<T, N, 2>& a, const mat<T, N, 2>& b) {
-    return !(a == b);
-}
-template <typename T, int N>
-constexpr inline bool operator==(const mat<T, N, 3>& a, const mat<T, N, 3>& b) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2];
-}
-template <typename T, int N>
-constexpr inline bool operator!=(const mat<T, N, 3>& a, const mat<T, N, 3>& b) {
-    return !(a == b);
-}
-template <typename T, int N>
-constexpr inline bool operator==(const mat<T, N, 4>& a, const mat<T, N, 4>& b) {
-    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
-}
-template <typename T, int N>
-constexpr inline bool operator!=(const mat<T, N, 4>& a, const mat<T, N, 4>& b) {
-    return !(a == b);
+    for(auto j = 0; j < M; j ++) if(a[j] == b[j]) return false;
+    return true;
 }
 
 // Matrix operations.
-template <typename T, int N>
-constexpr inline mat<T, N, 1> operator+(
-    const mat<T, N, 1>& a, const mat<T, N, 1>& b) {
-    return {a[0] + b[0]};
-}
-template <typename T, int N>
-constexpr inline mat<T, N, 1> operator*(const mat<T, N, 1>& a, T b) {
-    return {a[0] * b};
-}
-template <typename T, int N>
-constexpr inline vec<T, 1> operator*(const mat<T, N, 1>& a, const vec<T, 1>& b) {
-    return a[0] * b[0];
-}
-template <typename T, int N>
-constexpr inline vec<T, 1> operator*(const vec<T, N>& a, const mat<T, N, 1>& b) {
-    return {dot(a, b[0])};
+template <typename T, int N, int M>
+constexpr inline mat<T, N, M> operator+(
+    const mat<T, N, M>& a, const mat<T, N, M>& b) {
+    auto c = mat<T, N, M>{};
+    for(auto j = 0; j < M; j ++) c[j] = a[j] + b[j];
+    return c;
 }
 template <typename T, int N, int M>
-constexpr inline mat<T, N, 1> operator*(
-    const mat<T, N, M>& a, const mat<T, M, 1>& b) {
-    return {a * b[0]};
-}
-
-// Matrix operations.
-template <typename T, int N>
-constexpr inline mat<T, N, 2> operator+(
-    const mat<T, N, 2>& a, const mat<T, N, 2>& b) {
-    return {a[0] + b[0], a[1] + b[1]};
-}
-template <typename T, int N>
-constexpr inline mat<T, N, 2> operator*(const mat<T, N, 2>& a, T b) {
-    return {a[0] * b, a[1] * b};
-}
-template <typename T, int N>
-constexpr inline vec<T, 2> operator*(const mat<T, N, 2>& a, const vec<T, 2>& b) {
-    return a[0] * b[0] + a[1] * b[1];
-}
-template <typename T, int N>
-constexpr inline vec<T, 2> operator*(const vec<T, N>& a, const mat<T, N, 2>& b) {
-    return {dot(a, b[0]), dot(a, b[1])};
+constexpr inline mat<T, N, M> operator*(const mat<T, N, M>& a, T b) {
+    auto c = mat<T, N, M>{};
+    for(auto j = 0; j < M; j ++) c[j] = a[j] * b;
+    return c;
 }
 template <typename T, int N, int M>
-constexpr inline mat<T, N, 2> operator*(
-    const mat<T, N, M>& a, const mat<T, M, 2>& b) {
-    return {a * b[0], a * b[1]};
-}
-
-// Matrix operations.
-template <typename T, int N>
-constexpr inline mat<T, N, 3> operator+(
-    const mat<T, N, 3>& a, const mat<T, N, 3>& b) {
-    return {a[0] + b[0], a[1] + b[1], a[2] + b[2]};
-}
-template <typename T, int N>
-constexpr inline mat<T, N, 3> operator*(const mat<T, N, 3>& a, T b) {
-    return {a[0] * b, a[1] * b, a[2] * b};
-}
-template <typename T, int N>
-constexpr inline vec<T, 3> operator*(const mat<T, N, 3>& a, const vec<T, 3>& b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-template <typename T, int N>
-constexpr inline vec<T, 3> operator*(const vec<T, N> a, const mat<T, N, 3>& b) {
-    return {dot(a, b[0]), dot(a, b[1]), dot(a, b[2])};
+constexpr inline vec<T, N> operator*(const mat<T, N, M>& a, const vec<T, M>& b) {
+    auto c = vec<T, N>{};
+    for(auto j = 0; j < M; j ++) c += a[j] * b[j];
+    return c;
 }
 template <typename T, int N, int M>
-constexpr inline mat<T, N, 3> operator*(
-    const mat<T, N, M>& a, const mat<T, M, 3>& b) {
-    return {a * b[0], a * b[1], a * b[2]};
+constexpr inline vec<T, M> operator*(const vec<T, N>& a, const mat<T, N, M>& b) {
+    auto c = vec<T, M>{};
+    for(auto j = 0; j < M; j ++) c[j] = dot(a, b[j]);
+    return c;
 }
-
-// Matrix operations.
-template <typename T, int N>
-constexpr inline mat<T, N, 4> operator+(
-    const mat<T, N, 4>& a, const mat<T, N, 4>& b) {
-    return {a[0] + b[0], a[1] + b[1], a[2] + b[2], a[3] + b[3]};
-}
-template <typename T, int N>
-constexpr inline mat<T, N, 4> operator*(const mat<T, N, 4>& a, T b) {
-    return {a[0] * b, a[1] * b, a[2] * b, a[3] * b};
-}
-template <typename T, int N>
-constexpr inline vec<T, 4> operator*(const mat<T, N, 4>& a, const vec<T, 4>& b) {
-    return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
-}
-template <typename T, int N>
-constexpr inline vec<T, 4> operator*(const vec<T, N>& a, const mat<T, N, 4>& b) {
-    return {dot(a, b[0]), dot(a, b[1]), dot(a, b[2]), dot(a, b[3])};
-}
-template <typename T, int N, int M>
-constexpr inline mat<T, N, 4> operator*(
-    const mat<T, N, M>& a, const mat<T, M, 4>& b) {
-    return {a * b[0], a * b[1], a * b[2], a * b[3]};
+template <typename T, int N, int M, int K>
+constexpr inline mat<T, N, M> operator*(
+    const mat<T, N, K>& a, const mat<T, K, M>& b) {
+    auto c = mat<T, N, M>{};
+    for(auto j = 0; j < M; j ++) c[j] = a * b[j];
+    return c;
 }
 
 // Matrix assignments.
@@ -789,30 +705,18 @@ constexpr inline mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
 }
 
 // Matrix diagonals and transposes.
-template <typename T>
-constexpr inline vec<T, 1> diagonal(const mat<T, 1, 1>& a) {
-    return {a[0][0]};
+template <typename T, int N>
+constexpr inline vec<T, N> diagonal(const mat<T, N, N>& a) {
+    auto c = vec<T, N>{};
+    for(auto j = 0; j < N; j ++) c[j] = a[j][j];
+    return c;
 }
-template <typename T>
-constexpr inline vec<T, 2> diagonal(const mat<T, 2, 2>& a) {
-    return {a[0][0], a[1][1]};
+template <typename T, int N, int M>
+constexpr inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
+    auto c = mat<T, M, N>{};
+    for(auto j = 0; j < M; j ++) for(auto i = 0; i < N; i ++) c[i][j] = a[j][i];
+    return c;
 }
-template <typename T>
-constexpr inline vec<T, 3> diagonal(const mat<T, 3, 3>& a) {
-    return {a[0][0], a[1][1], a[2][2]};
-}
-template <typename T>
-constexpr inline vec<T, 4> diagonal(const mat<T, 4, 4>& a) {
-    return {a[0][0], a[1][1], a[2][2], a[3][3]};
-}
-template <typename T>
-constexpr inline mat<T, 1, 1> transpose(const mat<T, 1, 1>& a);
-template <typename T>
-constexpr inline mat<T, 2, 2> transpose(const mat<T, 2, 2>& a);
-template <typename T>
-constexpr inline mat<T, 3, 3> transpose(const mat<T, 3, 3>& a);
-template <typename T>
-constexpr inline mat<T, 4, 4> transpose(const mat<T, 4, 4>& a);
 
 // Matrix adjugates, determinant and inverses.
 template <typename T>
