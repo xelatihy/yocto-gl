@@ -156,7 +156,7 @@
 #include <vector>
 
 // -----------------------------------------------------------------------------
-// MATH CONSTANTS AND FUNCTIONS
+// USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -204,6 +204,13 @@ using namespace std::chrono_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;
+
+}
+
+// -----------------------------------------------------------------------------
+// MATH CONSTANTS AND FUNCTIONS
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 template <typename T>
 inline T min(const T& x, const T& y) {
