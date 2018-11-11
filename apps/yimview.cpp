@@ -188,7 +188,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 status = "done";
             draw_label_opengl_widget(win, "status", status.c_str());
             draw_label_opengl_widget(
-                win, "size", "%d x %d ", img.img.size().x, img.img.size().y);
+                win, "size", "%d x %d ", img.img.size()[0], img.img.size()[1]);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             end_header_opengl_widget(win);
@@ -206,8 +206,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 mouse_pos, img.image_center, img.image_scale, img.img.size());
             draw_dragger_opengl_widget(win, "mouse", ij);
             auto pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
-                ij.y < img.img.size().y) {
+            if (ij[0] >= 0 && ij[0] < img.img.size()[0] && ij[1] >= 0 &&
+                ij[1] < img.img.size()[1]) {
                 pixel = img.img[ij];
             }
             draw_coloredit_opengl_widget(win, "pixel", pixel);
@@ -298,7 +298,7 @@ void run_ui(app_state& app) {
         if (mouse_left && !widgets_active)
             img.image_center += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
-            img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
+            img.image_scale *= powf(2, (mouse_pos[0] - last_pos[0]) * 0.001f);
 
         // update
         update(app);

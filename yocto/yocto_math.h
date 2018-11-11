@@ -170,11 +170,7 @@ namespace yocto {
 
 // Small size vectors.
 template <typename T, int N>
-struct vec;
-
-// Small size vectors.
-template <typename T>
-struct vec<T, 1> {
+struct vec {
     T x = 0;
 
     constexpr vec() : x{0} { }
