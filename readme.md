@@ -58,10 +58,23 @@ Other external libraries are included with their own license.
 Yocto/GL is split into two small libraries to make code navigation easier.
 See each header file for documentation.
 
-- `yocto/yocto_gl.{h,cpp}`: math library, image and shape operations, ray-scene 
-  intesection with multi-level BVH, simple scene format, path tracing
-- `yocto/yocto_glio.{h,cpp}`: file and path operations, image loading and saving, 
-  scene loading and saving, immediate-mode command line parsing
+- `yocto/yocto_math.{h}`: fixed size vectors, matrices, frames, rays, 
+   bounding boxes, transforms
+- `yocto/yocto_utils.{h}`: printing and parsing values, path utlities, file io,
+   command line parsing
+- `yocto/yocto_random.{h}`: random number generation, Perlin noise, Monte Carlo
+   utilities
+- `yocto/yocto_shape.{h,cpp}`: geometry utilities, shape manipulation, 
+   procedural shapes
+- `yocto/yocto_bvh.{h,cpp}`: ray intersection and closest point queries 
+   using a two-level bounding volume hierarchy
+- `yocto/yocto_image.{h,cpp}`: color utilities, image manipulation, 
+   procedural images, procedural sun-sky
+- `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene 
+   properties
+- `yocto/yocto_trace.{h,cpp}`: path tracing
+- `yocto/yocto_imageio.{h,cpp}`: image loading and saving
+- `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving
 
 
 ## Example Applications

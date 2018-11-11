@@ -35,25 +35,25 @@ using namespace yocto;
 template <typename Image>
 Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
-    auto width = imgs[0].size().x * tilex;
-    auto height = imgs[0].size().y * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
+    auto width = imgs[0].width() * tilex;
+    auto height = imgs[0].height() * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
     auto ret = init_image(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (extents(img) != extents(imgs[0])) {
             log_fatal("images of different sizes are not accepted");
         }
-        auto ox = (img_idx % tilex) * img.size().x,
-             oy = (img_idx / tilex) * img.size().y;
+        auto ox = (img_idx % tilex) * img.width(),
+             oy = (img_idx / tilex) * img.height();
         if (ret.hdr) {
-            for (auto j = 0; j < img.size().y; j++) {
-                for (auto i = 0; i < img.size().x; i++) {
+            for (auto j = 0; j < img.height(); j++) {
+                for (auto i = 0; i < img.width(); i++) {
                     ret.hdr[{i + ox, j + oy}] = img.hdr[{i, j}];
                 }
             }
         } else {
-            for (auto j = 0; j < img.size().y; j++) {
-                for (auto i = 0; i < img.size().x; i++) {
+            for (auto j = 0; j < img.height(); j++) {
+                for (auto i = 0; i < img.width(); i++) {
                     ret.ldr[{i + ox, j + oy}] = img.ldr[{i, j}];
                 }
             }
@@ -73,15 +73,15 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     auto fw           = vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-    for (auto j = 0; j < img.size().y; j++) {
-        for (auto i = 0; i < img.size().x; i++) {
-            auto av = zero4f;
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            auto av = zero_vec4f;
             auto aw = 0.0f;
             for (auto fj = -filter_width; fj <= filter_width; fj++) {
                 for (auto fi = -filter_width; fi <= filter_width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= img.size().x || jj >= img.size().y) continue;
+                    if (ii >= img.width() || jj >= img.height()) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{i, j}];
                     auto w   = (float)exp(-dot(uv, uv) * sw) *
@@ -106,15 +106,15 @@ image<vec4f> filter_bilateral(
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-    for (auto j = 0; j < img.size().y; j++) {
-        for (auto i = 0; i < img.size().x; i++) {
-            auto av = zero4f;
+    for (auto j = 0; j < img.height(); j++) {
+        for (auto i = 0; i < img.width(); i++) {
+            auto av = zero_vec4f;
             auto aw = 0.0f;
             for (auto fj = -fwidth; fj <= fwidth; fj++) {
                 for (auto fi = -fwidth; fi <= fwidth; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= img.size().x || jj >= img.size().y) continue;
+                    if (ii >= img.width() || jj >= img.height()) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
                     auto rgb = img[{i, j}] - img[{ii, jj}];
                     auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
     auto filmic = parse_argument(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
     auto resize_size = parse_argument(
-        parser, "--resize", zero2i, "resize size (0 to maintain aspect)");
+        parser, "--resize", zero_vec2i, "resize size (0 to maintain aspect)");
     auto spatial_sigma = parse_argument(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
     auto range_sigma = parse_argument(
@@ -166,9 +166,9 @@ int main(int argc, char* argv[]) {
             log_fatal("bad image size");
             exit(1);
         }
-        for (auto j = 0; j < img.size().y; j++)
-            for (auto i = 0; i < img.size().x; i++)
-                img[{i, j}].w = alpha[{i, j}].w;
+        for (auto j = 0; j < img.height(); j++)
+            for (auto i = 0; i < img.width(); i++)
+                img[{i, j}][3] = alpha[{i, j}][3];
     }
 
     // set alpha
@@ -180,13 +180,13 @@ int main(int argc, char* argv[]) {
             log_fatal("bad image size");
             exit(1);
         }
-        for (auto j = 0; j < img.size().y; j++)
-            for (auto i = 0; i < img.size().x; i++)
-                img[{i, j}].w = mean(alpha[{i, j}]);
+        for (auto j = 0; j < img.height(); j++)
+            for (auto i = 0; i < img.width(); i++)
+                img[{i, j}][3] = mean(alpha[{i, j}]);
     }
 
     // resize
-    if (resize_size != zero2i) {
+    if (resize_size != zero_vec2i) {
         img = resize_image(img, resize_size);
     }
 

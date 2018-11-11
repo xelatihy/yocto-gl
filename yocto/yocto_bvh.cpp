@@ -42,14 +42,14 @@ namespace yocto {
 bool intersect_point(
     const ray3f& ray, const vec3f& p, float r, float& distance, vec2f& uv) {
     // find parameter for line-point minimum distance
-    auto w = p - ray.o;
-    auto t = dot(w, ray.d) / dot(ray.d, ray.d);
+    auto w = p - ray.origin;
+    auto t = dot(w, ray.direction) / dot(ray.direction, ray.direction);
 
     // exit if not within bounds
     if (t < ray.tmin || t > ray.tmax) return false;
 
     // test for line-point distance vs point radius
-    auto rp  = ray.o + ray.d * t;
+    auto rp  = ray.origin + ray.direction * t;
     auto prp = p - rp;
     if (dot(prp, prp) > r * r) return false;
 
@@ -64,9 +64,9 @@ bool intersect_point(
 bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     float r0, float r1, float& distance, vec2f& uv) {
     // setup intersection options
-    auto u = ray.d;
+    auto u = ray.direction;
     auto v = p1 - p0;
-    auto w = ray.o - p0;
+    auto w = ray.origin - p0;
 
     // compute values to solve a linear system
     auto a   = dot(u, u);
@@ -91,7 +91,7 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     s = clamp(s, (float)0, (float)1);
 
     // compute segment-segment distance on the closest points
-    auto pr  = ray.o + ray.d * t;
+    auto pr  = ray.origin + ray.direction * t;
     auto pl  = p0 + (p1 - p0) * s;
     auto prl = pr - pl;
 
@@ -115,7 +115,7 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto edge2 = p2 - p0;
 
     // compute determinant to solve a linear system
-    auto pvec = cross(ray.d, edge2);
+    auto pvec = cross(ray.direction, edge2);
     auto det  = dot(edge1, pvec);
 
     // check determinant and exit if triangle and ray are parallel
@@ -124,13 +124,13 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     auto inv_det = 1.0f / det;
 
     // compute and check first bricentric coordinated
-    auto tvec = ray.o - p0;
+    auto tvec = ray.origin - p0;
     auto u    = dot(tvec, pvec) * inv_det;
     if (u < 0 || u > 1) return false;
 
     // compute and check second bricentric coordinated
     auto qvec = cross(tvec, edge1);
-    auto v    = dot(ray.d, qvec) * inv_det;
+    auto v    = dot(ray.direction, qvec) * inv_det;
     if (v < 0 || u + v > 1) return false;
 
     // compute and check ray parameter
@@ -154,7 +154,7 @@ bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
         hit       = true;
     }
     if (intersect_triangle(tray, p2, p3, p1, distance, uv)) {
-        uv        = {1 - uv.x, 1 - uv.y};
+        uv        = {1 - uv[0], 1 - uv[1]};
         tray.tmax = distance;
         hit       = true;
     }
@@ -175,29 +175,28 @@ static inline const float& _safemax(const float& a, const float& b) {
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
     // determine intersection ranges
-    auto invd = vec3f{1, 1, 1} / ray.d;
-    auto t0   = (bbox.min - ray.o) * invd;
-    auto t1   = (bbox.max - ray.o) * invd;
+    auto invd = 1.0f / ray.direction;
+    auto t0   = (bbox.min - ray.origin) * invd;
+    auto t1   = (bbox.max - ray.origin) * invd;
     // flip based on range directions
-    if (invd.x < 0.0f) swap(t0.x, t1.x);
-    if (invd.y < 0.0f) swap(t0.y, t1.y);
-    if (invd.z < 0.0f) swap(t0.z, t1.z);
-    auto tmin = _safemax(t0.z, _safemax(t0.y, _safemax(t0.x, ray.tmin)));
-    auto tmax = _safemin(t1.z, _safemin(t1.y, _safemin(t1.x, ray.tmax)));
+    if (invd[0] < 0.0f) swap(t0[0], t1[0]);
+    if (invd[1] < 0.0f) swap(t0[1], t1[1]);
+    if (invd[2] < 0.0f) swap(t0[2], t1[2]);
+    auto tmin = _safemax(t0[2], _safemax(t0[1], _safemax(t0[0], ray.tmin)));
+    auto tmax = _safemin(t1[2], _safemin(t1[1], _safemin(t1[0], ray.tmax)));
     tmax *= 1.00000024f;  // for double: 1.0000000000000004
     return tmin <= tmax;
 }
 
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox_) {
-    auto bbox  = &bbox_.min;
-    auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
-    auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tymax = (bbox[1 - ray_dsign.y].y - ray.o.y) * ray_dinv.y;
-    auto tzmin = (bbox[ray_dsign.z].z - ray.o.z) * ray_dinv.z;
-    auto tzmax = (bbox[1 - ray_dsign.z].z - ray.o.z) * ray_dinv.z;
+    const vec3i& ray_dsign, const bbox3f& bbox) {
+    auto txmin = (bbox[ray_dsign[0]][0] - ray.origin[0]) * ray_dinv[0];
+    auto txmax = (bbox[1 - ray_dsign[0]][0] - ray.origin[0]) * ray_dinv[0];
+    auto tymin = (bbox[ray_dsign[1]][1] - ray.origin[1]) * ray_dinv[1];
+    auto tymax = (bbox[1 - ray_dsign[1]][1] - ray.origin[1]) * ray_dinv[1];
+    auto tzmin = (bbox[ray_dsign[2]][2] - ray.origin[2]) * ray_dinv[2];
+    auto tzmax = (bbox[1 - ray_dsign[2]][2] - ray.origin[2]) * ray_dinv[2];
     auto tmin  = _safemax(tzmin, _safemax(tymin, _safemax(txmin, ray.tmin)));
     auto tmax  = _safemin(tzmax, _safemin(tymax, _safemin(txmax, ray.tmax)));
     tmax *= 1.00000024f;  // for double: 1.0000000000000004
@@ -297,8 +296,8 @@ bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, float r0, float r1, float r2,
     float& distance, vec2f& uv) {
     uv      = closestuv_triangle(pos, p0, p1, p2);
-    auto p  = p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
-    auto r  = r0 * (1 - uv.x - uv.y) + r1 * uv.x + r2 * uv.y;
+    auto p  = p0 * (1 - uv[0] - uv[1]) + p1 * uv[0] + p2 * uv[1];
+    auto r  = r0 * (1 - uv[0] - uv[1]) + r1 * uv[0] + r2 * uv[1];
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     distance = sqrt(dd);
@@ -316,7 +315,7 @@ bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     }
     if (overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, distance, uv)) {
         // dist_max = distance;
-        uv  = {1 - uv.x, 1 - uv.y};
+        uv  = {1 - uv[0], 1 - uv[1]};
         hit = true;
     }
     return hit;
@@ -328,12 +327,18 @@ bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
     auto dd = 0.0f;
 
     // For each axis count any excess distance outside box extents
-    if (pos.x < bbox.min.x) dd += (bbox.min.x - pos.x) * (bbox.min.x - pos.x);
-    if (pos.x > bbox.max.x) dd += (pos.x - bbox.max.x) * (pos.x - bbox.max.x);
-    if (pos.y < bbox.min.y) dd += (bbox.min.y - pos.y) * (bbox.min.y - pos.y);
-    if (pos.y > bbox.max.y) dd += (pos.y - bbox.max.y) * (pos.y - bbox.max.y);
-    if (pos.z < bbox.min.z) dd += (bbox.min.z - pos.z) * (bbox.min.z - pos.z);
-    if (pos.z > bbox.max.z) dd += (pos.z - bbox.max.z) * (pos.z - bbox.max.z);
+    if (pos[0] < bbox.min[0])
+        dd += (bbox.min[0] - pos[0]) * (bbox.min[0] - pos[0]);
+    if (pos[0] > bbox.max[0])
+        dd += (pos[0] - bbox.max[0]) * (pos[0] - bbox.max[0]);
+    if (pos[1] < bbox.min[1])
+        dd += (bbox.min[1] - pos[1]) * (bbox.min[1] - pos[1]);
+    if (pos[1] > bbox.max[1])
+        dd += (pos[1] - bbox.max[1]) * (pos[1] - bbox.max[1]);
+    if (pos[2] < bbox.min[2])
+        dd += (bbox.min[2] - pos[2]) * (bbox.min[2] - pos[2]);
+    if (pos[2] > bbox.max[2])
+        dd += (pos[2] - bbox.max[2]) * (pos[2] - bbox.max[2]);
 
     // check distance
     return dd < dist_max * dist_max;
@@ -341,9 +346,12 @@ bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
 
 // TODO: doc
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
-    if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
-    if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
-    if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
+    if (bbox1.max[0] < bbox2.min[0] || bbox1.min[0] > bbox2.max[0])
+        return false;
+    if (bbox1.max[1] < bbox2.min[1] || bbox1.min[1] > bbox2.max[1])
+        return false;
+    if (bbox1.max[2] < bbox2.min[2] || bbox1.min[2] > bbox2.max[2])
+        return false;
     return true;
 }
 
@@ -483,12 +491,12 @@ void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
 bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
     float& distance, int& element_id, vec2f& uv) {
     RTCRayHit embree_ray;
-    embree_ray.ray.org_x     = ray.o.x;
-    embree_ray.ray.org_y     = ray.o.y;
-    embree_ray.ray.org_z     = ray.o.z;
-    embree_ray.ray.dir_x     = ray.d.x;
-    embree_ray.ray.dir_y     = ray.d.y;
-    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.org_x     = ray.origin[0];
+    embree_ray.ray.org_y     = ray.origin[1];
+    embree_ray.ray.org_z     = ray.origin[2];
+    embree_ray.ray.dir_x     = ray.direction[0];
+    embree_ray.ray.dir_y     = ray.direction[1];
+    embree_ray.ray.dir_z     = ray.direction[2];
     embree_ray.ray.tnear     = ray.tmin;
     embree_ray.ray.tfar      = ray.tmax;
     embree_ray.ray.flags     = 0;
@@ -506,12 +514,12 @@ bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
 bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     float& distance, int& instance_id, int& element_id, vec2f& uv) {
     RTCRayHit embree_ray;
-    embree_ray.ray.org_x     = ray.o.x;
-    embree_ray.ray.org_y     = ray.o.y;
-    embree_ray.ray.org_z     = ray.o.z;
-    embree_ray.ray.dir_x     = ray.d.x;
-    embree_ray.ray.dir_y     = ray.d.y;
-    embree_ray.ray.dir_z     = ray.d.z;
+    embree_ray.ray.org_x     = ray.origin[0];
+    embree_ray.ray.org_y     = ray.origin[1];
+    embree_ray.ray.org_z     = ray.origin[2];
+    embree_ray.ray.dir_x     = ray.direction[0];
+    embree_ray.ray.dir_y     = ray.direction[1];
+    embree_ray.ray.dir_z     = ray.direction[2];
     embree_ray.ray.tnear     = ray.tmin;
     embree_ray.ray.tfar      = ray.tmax;
     embree_ray.ray.flags     = 0;
@@ -532,7 +540,7 @@ bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {
     bbox3f bbox   = invalid_bbox3f;
-    vec3f  center = zero3f;
+    vec3f  center = zero_vec3f;
     int    primid = 0;
 };
 
@@ -546,25 +554,25 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     auto cbbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) cbbox += prims[i].center;
     auto csize = cbbox.max - cbbox.min;
-    if (csize == zero3f) return {mid, split_axis};
+    if (csize == zero_vec3f) return {mid, split_axis};
 
     // consider N bins, compute their cost and keep the minimum
     const int nbins     = 16;
     auto      middle    = 0.0f;
-    auto      min_cost  = maxf;
+    auto      min_cost  = float_max;
     auto      bbox_area = [](auto& b) {
         auto size = b.max - b.min;
-        return 1e-12f + 2 * size.x * size.y + 2 * size.x * size.z +
-               2 * size.y * size.z;
+        return 1e-12f + 2 * size[0] * size[1] + 2 * size[0] * size[2] +
+               2 * size[1] * size[2];
     };
     auto min_left = 0, min_right = 0;
     for (auto axis = 0; axis < 3; axis++) {
         for (auto b = 1; b < nbins; b++) {
-            auto split     = (&cbbox.min.x)[axis] + b * csize[axis] / nbins;
+            auto split     = (&cbbox.min[0])[axis] + b * csize[axis] / nbins;
             auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
             auto left_nprims = 0, right_nprims = 0;
             for (auto i = start; i < end; i++) {
-                if ((&prims[i].center.x)[axis] < split) {
+                if ((&prims[i].center[0])[axis] < split) {
                     left_bbox += prims[i].bbox;
                     left_nprims += 1;
                 } else {
@@ -586,9 +594,8 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     }
     // split
     mid = (int)(std::partition(prims.data() + start, prims.data() + end,
-                    [split_axis, middle](auto& a) {
-                        return (&a.center.x)[split_axis] < middle;
-                    }) -
+                    [split_axis, middle](
+                        auto& a) { return a.center[split_axis] < middle; }) -
                 prims.data());
 
     // if we were not able to split, just break the primitives in half
@@ -612,13 +619,13 @@ pair<int, int> split_bvh_node_balanced(
     auto cbbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) cbbox += prims[i].center;
     auto csize = cbbox.max - cbbox.min;
-    if (csize == zero3f) return {mid, split_axis};
+    if (csize == zero_vec3f) return {mid, split_axis};
 
     // split along largest
     auto largest_axis = 0;
-    if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
-    if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
-    if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+    if (csize[0] >= csize[1] && csize[0] >= csize[2]) largest_axis = 0;
+    if (csize[1] >= csize[0] && csize[1] >= csize[2]) largest_axis = 1;
+    if (csize[2] >= csize[0] && csize[2] >= csize[1]) largest_axis = 2;
 
     // balanced tree split: find the largest axis of the
     // bounding box and split along this one right in the middle
@@ -626,7 +633,7 @@ pair<int, int> split_bvh_node_balanced(
     mid        = (start + end) / 2;
     std::nth_element(prims.data() + start, prims.data() + mid,
         prims.data() + end, [split_axis](auto& a, auto& b) {
-            return (&a.center.x)[split_axis] < (&b.center.x)[split_axis];
+            return a.center[split_axis] < b.center[split_axis];
         });
 
     // if we were not able to split, just break the primitives in half
@@ -649,22 +656,21 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
     auto cbbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) cbbox += prims[i].center;
     auto csize = cbbox.max - cbbox.min;
-    if (csize == zero3f) return {mid, split_axis};
+    if (csize == zero_vec3f) return {mid, split_axis};
 
     // split along largest
     auto largest_axis = 0;
-    if (csize.x >= csize.y && csize.x >= csize.z) largest_axis = 0;
-    if (csize.y >= csize.x && csize.y >= csize.z) largest_axis = 1;
-    if (csize.z >= csize.x && csize.z >= csize.y) largest_axis = 2;
+    if (csize[0] >= csize[1] && csize[0] >= csize[2]) largest_axis = 0;
+    if (csize[1] >= csize[0] && csize[1] >= csize[2]) largest_axis = 1;
+    if (csize[2] >= csize[0] && csize[2] >= csize[1]) largest_axis = 2;
 
     // split the space in the middle along the largest axis
     split_axis   = largest_axis;
     auto cmiddle = (cbbox.max + cbbox.min) / 2;
     auto middle  = cmiddle[largest_axis];
     mid = (int)(std::partition(prims.data() + start, prims.data() + end,
-                    [split_axis, middle](auto& a) {
-                        return (&a.center.x)[split_axis] < middle;
-                    }) -
+                    [split_axis, middle](
+                        auto& a) { return a.center[split_axis] < middle; }) -
                 prims.data());
 
     // if we were not able to split, just break the primitives in half
@@ -687,7 +693,7 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     // grab node to work on
     auto next = queue.front();
     queue.pop_front();
-    auto nodeid = next.x, start = next.y, end = next.z;
+    auto nodeid = next[0], start = next[1], end = next[2];
 
     // grab node
     auto& node = nodes[nodeid];
@@ -741,7 +747,7 @@ void build_bvh_nodes_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
         // grab node to work on
         auto next = queue.front();
         queue.pop_front();
-        auto nodeid = next.x, start = next.y, end = next.z;
+        auto nodeid = next[0], start = next[1], end = next[2];
 
         // grab node
         auto& node = nodes[nodeid];
@@ -808,7 +814,7 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                 if (options.cancel_flag && *options.cancel_flag) return;
 
                 // grab node to work on
-                auto next = zero3i;
+                auto next = zero_vec3i;
                 {
                     lock_guard<mutex> lock{queue_mutex};
                     if (!queue.empty()) {
@@ -818,13 +824,13 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                 }
 
                 // wait a bit if needed
-                if (next == zero3i) {
+                if (next == zero_vec3i) {
                     std::this_thread::sleep_for(10us);
                     continue;
                 }
 
                 // grab node
-                auto  nodeid = next.x, start = next.y, end = next.z;
+                auto  nodeid = next[0], start = next[1], end = next[2];
                 auto& node = nodes[nodeid];
 
                 // compute bounds
@@ -883,18 +889,18 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         }
     } else if (!bvh.lines.empty()) {
         for (auto& l : bvh.lines) {
-            prims.push_back({line_bounds(bvh.positions[l.x], bvh.positions[l.y],
-                bvh.radius[l.x], bvh.radius[l.y])});
+            prims.push_back({line_bounds(bvh.positions[l[0]],
+                bvh.positions[l[1]], bvh.radius[l[0]], bvh.radius[l[1]])});
         }
     } else if (!bvh.triangles.empty()) {
         for (auto& t : bvh.triangles) {
-            prims.push_back({triangle_bounds(
-                bvh.positions[t.x], bvh.positions[t.y], bvh.positions[t.z])});
+            prims.push_back({triangle_bounds(bvh.positions[t[0]],
+                bvh.positions[t[1]], bvh.positions[t[2]])});
         }
     } else if (!bvh.quads.empty()) {
         for (auto& q : bvh.quads) {
-            prims.push_back({quad_bounds(bvh.positions[q.x], bvh.positions[q.y],
-                bvh.positions[q.z], bvh.positions[q.w])});
+            prims.push_back({quad_bounds(bvh.positions[q[0]],
+                bvh.positions[q[1]], bvh.positions[q[2]], bvh.positions[q[3]])});
         }
     }
 
@@ -1023,19 +1029,19 @@ void refit_shape_bvh(bvh_shape& bvh, int nodeid) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& t = bvh.triangles[node.primitive_ids[i]];
             node.bbox += triangle_bounds(
-                bvh.positions[t.x], bvh.positions[t.y], bvh.positions[t.z]);
+                bvh.positions[t[0]], bvh.positions[t[1]], bvh.positions[t[2]]);
         }
     } else if (!bvh.quads.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& t = bvh.quads[node.primitive_ids[i]];
-            node.bbox += quad_bounds(bvh.positions[t.x], bvh.positions[t.y],
-                bvh.positions[t.z], bvh.positions[t.w]);
+            node.bbox += quad_bounds(bvh.positions[t[0]], bvh.positions[t[1]],
+                bvh.positions[t[2]], bvh.positions[t[3]]);
         }
     } else if (!bvh.lines.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& l = bvh.lines[node.primitive_ids[i]];
-            node.bbox += line_bounds(bvh.positions[l.x], bvh.positions[l.y],
-                bvh.radius[l.x], bvh.radius[l.y]);
+            node.bbox += line_bounds(bvh.positions[l[0]], bvh.positions[l[1]],
+                bvh.radius[l[0]], bvh.radius[l[1]]);
         }
     } else if (!bvh.points.empty()) {
         for (auto i = 0; i < node.num_primitives; i++) {
@@ -1109,9 +1115,10 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-        (ray_dinv.z < 0) ? 1 : 0};
+    auto ray_dinv = vec3f{
+        1 / ray.direction[0], 1 / ray.direction[1], 1 / ray.direction[2]};
+    auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+        (ray_dinv[2] < 0) ? 1 : 0};
 
     // walking stack
     while (node_cur) {
@@ -1136,8 +1143,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.triangles.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (intersect_triangle(ray, bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], distance, element_uv)) {
+                if (intersect_triangle(ray, bvh.positions[t[0]],
+                        bvh.positions[t[1]], bvh.positions[t[2]], distance,
+                        element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1146,9 +1154,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.quads.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.quads[node.primitive_ids[i]];
-                if (intersect_quad(ray, bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], bvh.positions[t.w], distance,
-                        element_uv)) {
+                if (intersect_quad(ray, bvh.positions[t[0]],
+                        bvh.positions[t[1]], bvh.positions[t[2]],
+                        bvh.positions[t[3]], distance, element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1157,8 +1165,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!bvh.lines.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh.lines[node.primitive_ids[i]];
-                if (intersect_line(ray, bvh.positions[l.x], bvh.positions[l.y],
-                        bvh.radius[l.x], bvh.radius[l.y], distance, element_uv)) {
+                if (intersect_line(ray, bvh.positions[l[0]],
+                        bvh.positions[l[1]], bvh.radius[l[0]], bvh.radius[l[1]],
+                        distance, element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1208,9 +1217,10 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
-    auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
-        (ray_dinv.z < 0) ? 1 : 0};
+    auto ray_dinv = vec3f{
+        1 / ray.direction[0], 1 / ray.direction[1], 1 / ray.direction[2]};
+    auto ray_dsign = vec3i{(ray_dinv[0] < 0) ? 1 : 0, (ray_dinv[1] < 0) ? 1 : 0,
+        (ray_dinv[2] < 0) ? 1 : 0};
 
     // walking stack
     while (node_cur) {
@@ -1293,9 +1303,10 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
         } else if (!bvh.triangles.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (overlap_triangle(pos, max_distance, bvh.positions[t.x],
-                        bvh.positions[t.y], bvh.positions[t.z], bvh.radius[t.x],
-                        bvh.radius[t.y], bvh.radius[t.z], distance, element_uv)) {
+                if (overlap_triangle(pos, max_distance, bvh.positions[t[0]],
+                        bvh.positions[t[1]], bvh.positions[t[2]],
+                        bvh.radius[t[0]], bvh.radius[t[1]], bvh.radius[t[2]],
+                        distance, element_uv)) {
                     hit          = true;
                     max_distance = distance;
                     element_id   = node.primitive_ids[i];
@@ -1304,10 +1315,11 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
         } else if (!bvh.quads.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& q = bvh.quads[node.primitive_ids[i]];
-                if (overlap_quad(pos, max_distance, bvh.positions[q.x],
-                        bvh.positions[q.y], bvh.positions[q.z],
-                        bvh.positions[q.w], bvh.radius[q.x], bvh.radius[q.y],
-                        bvh.radius[q.z], bvh.radius[q.w], distance, element_uv)) {
+                if (overlap_quad(pos, max_distance, bvh.positions[q[0]],
+                        bvh.positions[q[1]], bvh.positions[q[2]],
+                        bvh.positions[q[3]], bvh.radius[q[0]], bvh.radius[q[1]],
+                        bvh.radius[q[2]], bvh.radius[q[3]], distance,
+                        element_uv)) {
                     hit          = true;
                     max_distance = distance;
                     element_id   = node.primitive_ids[i];
@@ -1316,8 +1328,8 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
         } else if (!bvh.lines.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh.lines[node.primitive_ids[i]];
-                if (overlap_line(pos, max_distance, bvh.positions[l.x],
-                        bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y],
+                if (overlap_line(pos, max_distance, bvh.positions[l[0]],
+                        bvh.positions[l[1]], bvh.radius[l[0]], bvh.radius[l[1]],
                         distance, element_uv)) {
                     hit          = true;
                     max_distance = distance;
@@ -1409,8 +1421,8 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
         while (node_cur) {
             // grab node
             auto node_idx = node_stack[--node_cur];
-            const auto node1 = bvh1->nodes[node_idx.x];
-            const auto node2 = bvh2->nodes[node_idx.y];
+            const auto node1 = bvh1->nodes[node_idx[0]];
+            const auto node2 = bvh2->nodes[node_idx[1]];
 
             // intersect bbox
             if (!overlap_bbox(node1.bbox, node2.bbox)) continue;
@@ -1434,12 +1446,12 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
                 if (node1.isleaf) {
                     for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
                          idx2++) {
-                        node_stack[node_cur++] = {node_idx.x, (int)idx2};
+                        node_stack[node_cur++] = {node_idx[0], (int)idx2};
                     }
                 } else if (node2.isleaf) {
                     for (auto idx1 = node1.start; idx1 < node1.start + node1.count;
                          idx1++) {
-                        node_stack[node_cur++] = {(int)idx1, node_idx.y};
+                        node_stack[node_cur++] = {(int)idx1, node_idx[1]};
                     }
                 } else {
                     for (auto idx2 = node2.start; idx2 < node2.start + node2.count;
