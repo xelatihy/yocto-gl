@@ -297,36 +297,6 @@ constexpr inline vec<T, 3>& xyz(vec<T, 4>& v) {
     return (vec<T, 3>&)v;
 }
 
-// Iteration and data
-template <typename T, int N>
-constexpr int size(const vec<T, N>& v) {
-    return N;
-}
-template <typename T, int N>
-constexpr T* begin(vec<T, N>& v) {
-    return &v[0];
-}
-template <typename T, int N>
-constexpr const T* begin(const vec<T, N>& v) {
-    return &v[0];
-}
-template <typename T, int N>
-constexpr T* end(vec<T, N>& v) {
-    return &v[0] + N;
-}
-template <typename T, int N>
-constexpr const T* end(const vec<T, N>& v) {
-    return &v[0] + N;
-}
-template <typename T, int N>
-constexpr T* data(vec<T, N>& v) {
-    return &v[0];
-}
-template <typename T, int N>
-constexpr const T* data(const vec<T, N>& v) {
-    return &v[0];
-}
-
 // Vector comparison operations.
 template <typename T, int N>
 constexpr inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
