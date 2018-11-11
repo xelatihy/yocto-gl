@@ -94,6 +94,7 @@
 #include <thread>
 #include <cstdio>
 #include <vector>
+#include <cctype>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
