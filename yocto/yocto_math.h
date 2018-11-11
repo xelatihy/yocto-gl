@@ -851,20 +851,12 @@ constexpr inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
 }
 
 // Frame comparisons.
-template <typename T>
-constexpr inline bool operator==(const frame<T, 2>& a, const frame<T, 2>& b) {
-    return a[0] == b[0] && a[1] == b[1] && a.o == b.o;
-}
-template <typename T>
-constexpr inline bool operator!=(const frame<T, 2>& a, const frame<T, 2>& b) {
-    return !(a == b);
-}
-template <typename T>
-constexpr inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
+template <typename T, int N>
+constexpr inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
     return a.axes == b.axes && a.origin == b.origin;
 }
-template <typename T>
-constexpr inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
+template <typename T, int N>
+constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
     return a.axes != b.axes || a.origin != b.origin;
 }
 
