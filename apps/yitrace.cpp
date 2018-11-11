@@ -26,9 +26,9 @@
 // POSSIBILITY OF SUCH DAMAGE.
 //
 
+#include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_scene.h"
 #include "../yocto/yocto_sceneio.h"
-#include "../yocto/yocto_imageio.h"
 #include "../yocto/yocto_trace.h"
 #include "../yocto/yocto_utils.h"
 #include "yocto_opengl.h"
@@ -152,7 +152,7 @@ bool load_scene_sync(app_state& app) {
 
     // build bvh
     app.status = "computing bvh";
-    build_scene_bvh(app.scene, app.bvh, app.bvh_options);
+    app.bvh    = make_scene_bvh(app.scene, app.bvh_options);
 
     // init renderer
     app.status = "initializing lights";
@@ -437,7 +437,8 @@ int main(int argc, char* argv[]) {
     app.trace_options.samples_per_batch = 1;
 
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "progressive path tracing", "yitrace");
+    auto parser = make_cmdline_parser(
+        argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
     app.trace_options.image_size = {0, parse_argument(parser, "--resolution,-r",

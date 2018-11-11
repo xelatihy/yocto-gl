@@ -531,93 +531,77 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a shape BVH
-void build_shape_bvh(const yocto_shape& shape, bvh_shape& bvh,
-    const build_bvh_options& options) {
-    // create bvh
-    bvh = bvh_shape{};
-
-    // set data
-    bvh.positions = shape.positions;
-    bvh.radius    = shape.radius;
-    bvh.points    = shape.points;
-    bvh.lines     = shape.lines;
-    bvh.triangles = shape.triangles;
-    bvh.quads     = shape.quads;
-
-    // build bvh
-    build_shape_bvh(bvh, options);
+bvh_shape make_shape_bvh(
+    const yocto_shape& shape, const build_bvh_options& options) {
+    if (!shape.points.empty()) {
+        return make_shape_bvh(
+            shape.points, shape.positions, shape.radius, options);
+    } else if (!shape.lines.empty()) {
+        return make_shape_bvh(
+            shape.lines, shape.positions, shape.radius, options);
+    } else if (!shape.triangles.empty()) {
+        return make_shape_bvh(shape.triangles, shape.positions, options);
+    } else if (!shape.quads.empty()) {
+        return make_shape_bvh(shape.quads, shape.positions, options);
+    } else {
+        return {};
+    }
 }
 
 // Build a shape BVH
-void build_surface_bvh(const yocto_surface& surface, bvh_shape& bvh,
-    const build_bvh_options& options) {
-    // create bvh
-    bvh = bvh_shape{};
-
-    // set data
-    bvh.positions = surface.positions;
-    bvh.quads     = surface.quads_positions;
-
-    // build bvh
-    build_shape_bvh(bvh, options);
+bvh_shape make_surface_bvh(
+    const yocto_surface& surface, const build_bvh_options& options) {
+    return make_shape_bvh(surface.quads_positions, surface.positions, options);
 }
 
 // Build a scene BVH
-void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const build_bvh_options& options) {
+bvh_scene make_scene_bvh(
+    const yocto_scene& scene, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
     // create bvh
-    bvh = bvh_scene{};
+    auto bvh = bvh_scene{};
 
     // shapes
-    bvh.shape_bvhs.resize(scene.shapes.size());
-    for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
-        build_shape_bvh(
-            scene.shapes[shape_id], bvh.shape_bvhs[shape_id], options);
+    auto shape_bvhs = vector<bvh_shape>();
+    for (auto& shape : scene.shapes) {
+        shape_bvhs.push_back(make_shape_bvh(shape, options));
     }
 
     // surfaces
-    bvh.surface_bvhs.resize(scene.surfaces.size());
-    for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
-        build_surface_bvh(
-            scene.surfaces[surface_id], bvh.surface_bvhs[surface_id], options);
+    auto surface_bvhs = vector<bvh_shape>();
+    for (auto& surface : scene.surfaces) {
+        surface_bvhs.push_back(make_surface_bvh(surface, options));
     }
 
     // instances
-    bvh.instances.resize(scene.instances.size());
-    for (auto instance_id = 0; instance_id < scene.instances.size();
-         instance_id++) {
-        auto& instance             = scene.instances[instance_id];
-        bvh.instances[instance_id] = {instance.frame,
-            inverse(instance.frame, false), instance.shape, instance.surface};
+    auto bvh_instances = vector<bvh_instance>{};
+    for (auto& instance : scene.instances) {
+        bvh_instances.push_back({instance.frame, inverse(instance.frame, false),
+            instance.shape, instance.surface});
     }
 
     // build bvh
-    build_scene_bvh(bvh, options);
+    return make_scene_bvh(bvh_instances, shape_bvhs, surface_bvhs, options);
 }
 
 // Refits a shape BVH
 void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh) {
-    bvh.positions = shape.positions;
-    bvh.radius    = shape.radius;
-    refit_shape_bvh(bvh);
+    refit_shape_bvh(bvh, shape.positions, shape.radius);
 }
 
 // Refits a surface BVH
 void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh) {
-    bvh.positions = surface.positions;
-    refit_shape_bvh(bvh);
+    refit_shape_bvh(bvh, surface.positions);
 }
 
 // Refits a scene BVH
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh) {
-    for (auto instance_id = 0; instance_id < scene.instances.size();
-         instance_id++) {
-        auto& instance             = scene.instances[instance_id];
-        bvh.instances[instance_id] = {instance.frame, inverse(instance.frame),
-            instance.shape, instance.surface};
+    auto bvh_instances = vector<bvh_instance>{};
+    for (auto& instance : scene.instances) {
+        bvh_instances.push_back({instance.frame, inverse(instance.frame),
+            instance.shape, instance.surface});
     }
-    refit_scene_bvh(bvh);
+    refit_scene_bvh(bvh, bvh_instances);
 }
 
 // Add missing names and resolve duplicated names.
@@ -1571,7 +1555,6 @@ bool is_material_volume_colored(const yocto_material& material) {
              material.volume_density.y == material.volume_density.z);
 }
 
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1748,4 +1731,3 @@ void print_stats(const yocto_scene& scene) {
 }
 
 }  // namespace yocto
-

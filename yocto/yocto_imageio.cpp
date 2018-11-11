@@ -29,8 +29,8 @@
 #include "yocto_imageio.h"
 #include "yocto_utils.h"
 
-#include <cstdlib>
 #include <climits>
+#include <cstdlib>
 
 #ifndef _WIN32
 #pragma GCC diagnostic push

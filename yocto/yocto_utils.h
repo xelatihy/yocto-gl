@@ -2,9 +2,9 @@
 // # Yocto/Utils: Tiny collection of utilities to support Yocto/GL
 //
 //
-// Yocto/Utils is a collection of utilities used in writing other Yocto/GL 
-// libraries and example applications. We support printing and parsing builting 
-// and Yocto/Math values, parsing command line arguments, simple path 
+// Yocto/Utils is a collection of utilities used in writing other Yocto/GL
+// libraries and example applications. We support printing and parsing builting
+// and Yocto/Math values, parsing command line arguments, simple path
 // manipulation, file lading/saving and basic concurrency utilities.
 //
 //
@@ -47,7 +47,7 @@
 // ## Concurrency utilities
 //
 // C++ has very basic supprt for concurrency and most of it is still platform
-// dependent. We provide here very basic support for concurrency utlities 
+// dependent. We provide here very basic support for concurrency utlities
 // built on top of C++ low-level threading and synchronization.
 //
 // 1. use `concurrent_queue()` for communicationing values between threads
@@ -173,8 +173,8 @@ struct cmdline_parser {
 };
 
 // Initialize a command line parser.
-inline cmdline_parser make_cmdline_parser(int argc, char** argv,
-    const string& usage, const string& cmd = "");
+inline cmdline_parser make_cmdline_parser(
+    int argc, char** argv, const string& usage, const string& cmd = "");
 // check if any error occurred and exit appropriately
 inline void check_cmdline(cmdline_parser& parser);
 
@@ -669,9 +669,9 @@ inline string format_num(uint64_t num) {
 namespace yocto {
 
 // initialize a command line parser
-inline cmdline_parser make_cmdline_parser(int argc, char** argv,
-    const string& usage, const string& cmd) {
-    auto parser           = cmdline_parser{};
+inline cmdline_parser make_cmdline_parser(
+    int argc, char** argv, const string& usage, const string& cmd) {
+    auto parser      = cmdline_parser{};
     parser.args      = {argv + 1, argv + argc};
     parser.usage_cmd = (cmd.empty()) ? argv[0] : cmd;
     parser.usage_hlp = usage;
