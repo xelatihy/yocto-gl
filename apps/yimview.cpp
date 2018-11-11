@@ -34,7 +34,7 @@ using namespace yocto;
 
 struct image_stats {
     bbox4f pxl_bounds = {zero4f, zero4f};
-    bbox1f lum_bounds = {0, 0};
+    bbox1f lum_bounds = {zero1f, zero1f};
 };
 
 struct app_image {

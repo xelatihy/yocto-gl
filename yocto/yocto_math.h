@@ -194,6 +194,8 @@ struct vec  {
 
 #if YOCTO_SPECIALIZATIONS
 
+// Specializations for small sized vectors, only used for speed in the 
+// above constructors.
 template <typename T>
 struct vec<T, 1> {
     constexpr static const int N = 1;
