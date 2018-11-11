@@ -217,7 +217,7 @@ struct vec<T, 4> {
     T w = 0;
 
     constexpr vec() : x{0}, y{0}, z{0}, w{0} { }
-    constexpr explicit vec(const T& v) : x{v}, y{v}, z{v}, w{w} { }
+    constexpr explicit vec(const T& v) : x{v}, y{v}, z{v}, w{v} { }
     constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_) : x{x_}, y{y_}, z{z_}, w{w_} { }
     constexpr vec(const vec<T, 4>& v) = default;
 
@@ -1226,8 +1226,12 @@ struct bbox;
 // Range of values in 1D.
 template <typename T>
 struct bbox<T, 1> {
-    T min = maxt<T>();
-    T max = mint<T>();
+    vec<T, 1> min = {maxt<T>()};
+    vec<T, 1> max = {mint<T>()};
+
+    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
+    constexpr bbox(const vec<T, 1>& min_, const vec<T, 1>& max_) : min{min_}, max{max_} { }
+    constexpr bbox(const bbox& ) = default;
 
     constexpr T&       operator[](int idx) { return *(&min + idx); }
     constexpr const T& operator[](int idx) const { return *(&min + idx); }
@@ -1239,6 +1243,10 @@ struct bbox<T, 2> {
     vec<T, 2> min = {maxt<T>(), maxt<T>()};
     vec<T, 2> max = {mint<T>(), mint<T>()};
 
+    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
+    constexpr bbox(const vec<T, 2>& min_, const vec<T, 2>& max_) : min{min_}, max{max_} { }
+    constexpr bbox(const bbox& ) = default;
+
     constexpr T&       operator[](int idx) { return *(&min + idx); }
     constexpr const T& operator[](int idx) const { return *(&min + idx); }
 };
@@ -1249,6 +1257,10 @@ struct bbox<T, 3> {
     vec<T, 3> min = {maxt<T>(), maxt<T>(), maxt<T>()};
     vec<T, 3> max = {mint<T>(), mint<T>(), mint<T>()};
 
+    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
+    constexpr bbox(const vec<T, 3>& min_, const vec<T, 3>& max_) : min{min_}, max{max_} { }
+    constexpr bbox(const bbox& ) = default;
+
     constexpr T&       operator[](int idx) { return *(&min + idx); }
     constexpr const T& operator[](int idx) const { return *(&min + idx); }
 };
@@ -1258,6 +1270,10 @@ template <typename T>
 struct bbox<T, 4> {
     vec<T, 4> min = {maxt<T>(), maxt<T>(), maxt<T>(), maxt<T>()};
     vec<T, 4> max = {mint<T>(), mint<T>(), mint<T>(), mint<T>()};
+
+    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
+    constexpr bbox(const vec<T, 4>& min_, const vec<T, 4>& max_) : min{min_}, max{max_} { }
+    constexpr bbox(const bbox& ) = default;
 
     constexpr T&       operator[](int idx) { return *(&min + idx); }
     constexpr const T& operator[](int idx) const { return *(&min + idx); }
@@ -1330,14 +1346,14 @@ constexpr inline bool operator!=(const bbox<T, 4>& a, const bbox<T, 4>& b) {
 // Bounding box expansions with points and other boxes.
 template <typename T>
 constexpr inline bbox<T, 1>& operator+=(bbox<T, 1>& a, T b) {
-    a.min = min(a.min, b);
-    a.max = max(a.max, b);
+    a.min = {min(a.min.x, b)};
+    a.max = {max(a.max.x, b)};
     return a;
 }
 template <typename T>
 constexpr inline bbox<T, 1>& operator+=(bbox<T, 1>& a, const bbox<T, 1>& b) {
-    a.min = min(a.min, b.min);
-    a.max = max(a.max, b.max);
+    a.min = {min(a.min.x, b.min.x)};
+    a.max = {max(a.max.x, b.max.x)};
     return a;
 }
 // Bounding box expansions with points and other boxes.

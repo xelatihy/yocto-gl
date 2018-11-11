@@ -819,6 +819,10 @@ bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     return ImGui::DragFloat(lbl, &value, speed, min, max);
 }
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec1f& value, float speed, float min, float max) {
+    return ImGui::DragFloat(lbl, &value.x, speed, min, max);
+}
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec2f& value, float speed, float min, float max) {
     return ImGui::DragFloat2(lbl, &value.x, speed, min, max);
 }
@@ -834,6 +838,10 @@ bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     int& value, float speed, int min, int max) {
     return ImGui::DragInt(lbl, &value, speed, min, max);
+}
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec1i& value, float speed, int min, int max) {
+    return ImGui::DragInt(lbl, &value.x, speed, min, max);
 }
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec2i& value, float speed, int min, int max) {
