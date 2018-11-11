@@ -532,23 +532,118 @@ bool operator==(const volume<T>& a, const volume<T>& b) {
 }
 
 // Dumps a json value
-template <typename T>
-bool serialize_json_value(json& js, T& value, bool save) {
+bool serialize_json_value(json& js, int& value, bool save) {
     if (save) {
-        try {
+        js = value;
+        return true;
+    } else {
+        if(!js.is_number_integer()) return false;
+        value = js.get<int>();
+        return true;
+    }
+}
+    bool serialize_json_value(json& js, bool& value, bool save) {
+        if (save) {
             js = value;
             return true;
-        } catch (...) {
-            return false;
-        }
-    } else {
-        try {
-            value = js.get<T>();
+        } else {
+            if(!js.is_boolean()) return false;
+            value = js.get<bool>();
             return true;
-        } catch (...) {
-            return false;
         }
     }
+    bool serialize_json_value(json& js, unsigned char& value, bool save) {
+        if (save) {
+            js = (int)value;
+            return true;
+        } else {
+            if(!js.is_number_integer()) return false;
+            value = (unsigned char)js.get<int>();
+            return true;
+        }
+    }
+bool serialize_json_value(json& js, float& value, bool save) {
+    if (save) {
+        js = value;
+        return true;
+    } else {
+        if(!js.is_number()) return false;
+        value = js.get<float>();
+        return true;
+    }
+}
+bool serialize_json_value(json& js, double& value, bool save) {
+    if (save) {
+        js = value;
+        return true;
+    } else {
+        if(!js.is_number()) return false;
+        value = js.get<float>();
+        return true;
+    }
+}
+bool serialize_json_value(json& js, string& value, bool save) {
+    if (save) {
+        js = value;
+        return true;
+    } else {
+        if(!js.is_string()) return false;
+        value = js.get<string>();
+        return true;
+    }
+}
+    
+template<typename T>
+bool serialize_json_values(json& js, T* values, int num, bool save) {
+    if (save) {
+        js = json::array();
+        for (auto i = 0; i < num; i ++) {
+            js.push_back({});
+            if (!serialize_json_value(js.back(), values[i], save)) return false;
+        }
+        return true;
+    } else {
+        if(!js.is_array()) return false;
+        if(js.size() != num) return false;
+        for(auto i = 0; i < num; i ++)
+            if(!serialize_json_value(js.at(i), values[i], save)) return false;
+        return true;
+    }
+}
+
+template<typename T>
+bool serialize_json_value(json& js, vector<T>& value, bool save) {
+    if (save) {
+        js = json::array();
+        for (auto i = 0; i < value.size(); i ++) {
+            js.push_back({});
+            if (!serialize_json_value(js.back(), value[i], save)) return false;
+        }
+        return true;
+    } else {
+        if(!js.is_array()) return false;
+        value.resize(js.size());
+        for(auto i = 0; i <  value.size(); i ++)
+            if(!serialize_json_value(js.at(i), value[i], save)) return false;
+        return true;
+    }
+}
+
+template<typename T, int N>
+bool serialize_json_value(json& js, vec<T, N>& value, bool save) {
+    return serialize_json_values(js, &value[0], N, save);
+}
+template<typename T, int N, int M>
+bool serialize_json_value(json& js, mat<T, N, M>& value, bool save) {
+    return serialize_json_values(js, &value[0], M, save);
+}
+template<typename T, int N>
+bool serialize_json_value(json& js, frame<T, N>& value, bool save) {
+    return serialize_json_values(js, &value[0], N+1, save);
+}
+template<typename T, int N>
+bool serialize_json_value(json& js, bbox<T, N>& value, bool save) {
+    return serialize_json_values(js, &value[0], 2, save);
 }
 
 // Dumps a json value
@@ -564,6 +659,37 @@ bool serialize_json_value(
         return serialize_json_value(js.at(name), value, save);
     }
 }
+
+    // Dumps a json value
+    template <typename T>
+    bool serialize_json_values(
+                              json& js, T* values, int num, const char* name,  bool save) {
+        if (save) {
+            if (!values || num == 0) return true;
+            return serialize_json_values(js[name], values, num, save);
+        } else {
+            if (!js.count(name)) return true;
+            return serialize_json_values(js.at(name), values, num, save);
+        }
+    }
+    
+    template<typename T>
+    bool serialize_json_value(json& js, image<T>& value, bool save) {
+        auto size = value.size();
+        if(!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
+        if(!save) value = image<T>{size};
+        if(!serialize_json_values(js, value.data(), size[0]*size[1], "pixels", save)) return false;
+        return true;
+    }
+    template<typename T>
+    bool serialize_json_value(json& js, volume<T>& value, bool save) {
+        auto size = value.size();
+        if(!serialize_json_value(js, size, "size", vec2i{-1}, save)) return false;
+        if(!save) value = volume<T>{size};
+        if(!serialize_json_values(js, value.data(), size[0]*size[1], "voxels", save)) return false;
+        return true;
+    }
+    
 
 // Dumps a json value
 template <typename T>
