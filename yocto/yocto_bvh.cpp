@@ -27,7 +27,6 @@
 //
 
 #include "yocto_bvh.h"
-#include "yocto_shape.h"
 #include "yocto_utils.h"
 
 #if YOCTO_EMBREE
@@ -298,8 +297,8 @@ bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, float r0, float r1, float r2,
     float& distance, vec2f& uv) {
     uv      = closestuv_triangle(pos, p0, p1, p2);
-    auto p  = interpolate_triangle(p0, p1, p2, uv);
-    auto r  = interpolate_triangle(r0, r1, r2, uv);
+    auto p  = p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+    auto r  = r0 * (1 - uv.x - uv.y) + r1 * uv.x + r2 * uv.y;
     auto dd = dot(p - pos, p - pos);
     if (dd > (dist_max + r) * (dist_max + r)) return false;
     distance = sqrt(dd);

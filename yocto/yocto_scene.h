@@ -68,7 +68,6 @@
 #include "yocto_bvh.h"
 #include "yocto_image.h"
 #include "yocto_math.h"
-#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // SCENE DATA

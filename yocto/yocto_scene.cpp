@@ -28,6 +28,7 @@
 
 #include "yocto_scene.h"
 #include "yocto_utils.h"
+#include "yocto_shape.h"
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES

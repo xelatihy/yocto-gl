@@ -57,6 +57,7 @@
 #include "yocto_sceneio.h"
 #include "yocto_imageio.h"
 #include "yocto_utils.h"
+#include "yocto_shape.h"
 
 #include <cstdlib>
 #include <regex>
