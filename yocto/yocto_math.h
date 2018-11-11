@@ -193,31 +193,27 @@ struct vec {
 // above constructors.
 template <typename T>
 struct vec<T, 1> {
-    constexpr static const int N = 1;
-
-    T elements[N] = {0};
+    T elements[1] = {0};
 
     constexpr vec() : elements{0} {}
     // constexpr explicit vec(const T& v) : x{v} { }
     constexpr vec(const T& x_) : elements{x_} {}
-    constexpr vec(const vec<T, N>& v) = default;
-    constexpr explicit vec(const vec<T, N + 1>& xy) : elements{xy[0]} {};
+    constexpr vec(const vec<T, 1>& v) = default;
+    constexpr explicit vec(const vec<T, 2>& xy) : elements{xy[0]} {};
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
 template <typename T>
 struct vec<T, 2> {
-    constexpr static const int N = 2;
-
-    T elements[N] = {0};
+    T elements[2] = {0};
 
     constexpr vec() : elements{0, 0} {}
     constexpr explicit vec(const T& v) : elements{v, v} {}
     constexpr vec(const T& x_, const T& y_) : elements{x_, y_} {}
-    constexpr vec(const vec<T, N>& v) = default;
-    constexpr vec(const vec<T, N - 1>& x, T w) : elements{x[0], w} {}
-    constexpr explicit vec(const vec<T, N + 1>& xyz)
+    constexpr vec(const vec<T, 2>& v) = default;
+    constexpr vec(const vec<T, 1>& x, T w) : elements{x[0], w} {}
+    constexpr explicit vec(const vec<T, 3>& xyz)
         : elements{xyz[0], xyz[1]} {};
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
@@ -225,17 +221,15 @@ struct vec<T, 2> {
 };
 template <typename T>
 struct vec<T, 3> {
-    constexpr static const int N = 3;
-
-    T elements[N] = {0};
+    T elements[3] = {0};
 
     constexpr vec() : elements{0, 0, 0} {}
     constexpr explicit vec(const T& v) : elements{v, v, v} {}
     constexpr vec(const T& x_, const T& y_, const T& z_)
         : elements{x_, y_, z_} {}
-    constexpr vec(const vec<T, N>& v) = default;
-    constexpr vec(const vec<T, N - 1>& xy, T w) : elements{xy[0], xy[1], w} {}
-    constexpr explicit vec(const vec<T, N + 1>& xyzw)
+    constexpr vec(const vec<T, 3>& v) = default;
+    constexpr vec(const vec<T, 2>& xy, T w) : elements{xy[0], xy[1], w} {}
+    constexpr explicit vec(const vec<T, 4>& xyzw)
         : elements{xyzw[0], xyzw[1], xyzw[2]} {};
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
@@ -243,19 +237,17 @@ struct vec<T, 3> {
 };
 template <typename T>
 struct vec<T, 4> {
-    constexpr static const int N = 4;
-
-    T elements[N] = {0};
+    T elements[4] = {0};
 
     constexpr vec() : elements{0, 0, 0, 0} {}
     constexpr explicit vec(const T& v) : elements{v, v, v, v} {}
     constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_)
         : elements{x_, y_, z_, w_} {}
-    constexpr vec(const vec<T, N>& v) = default;
-    constexpr vec(const vec<T, N - 1>& xyz, T w)
+    constexpr vec(const vec<T, 4>& v) = default;
+    constexpr vec(const vec<T, 3>& xyz, T w)
         : elements{xyz[0], xyz[1], xyz[2], w} {}
-    constexpr explicit vec(const vec<T, N + 1>& xyzww)
-        : elements{xyzww[0], xyzww[1], xyzww[2], xyzww[3]} {};
+    // constexpr explicit vec(const vec<T, N + 1>& xyzww)
+    //     : elements{xyzww[0], xyzww[1], xyzww[2], xyzww[3]} {};
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
