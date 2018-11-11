@@ -340,8 +340,7 @@ constexpr inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
 }
 template <typename T, int N>
 constexpr inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
-    for(auto i = 0; i < N; i ++) if(a[i] == b[i]) return false;
-    return true;
+    return !(a == b);
 }
 template <typename T, int N, typename T1>
 constexpr inline bool operator==(const vec<T, N>& a, T1 b) {
@@ -667,8 +666,7 @@ constexpr inline bool operator==(const mat<T, N, M>& a, const mat<T, N, M>& b) {
 }
 template <typename T, int N, int M>
 constexpr inline bool operator!=(const mat<T, N, 1>& a, const mat<T, N, 1>& b) {
-    for(auto j = 0; j < M; j ++) if(a[j] == b[j]) return false;
-    return true;
+    return !(a == b);
 }
 
 // Matrix operations.
@@ -853,11 +851,13 @@ constexpr inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
 // Frame comparisons.
 template <typename T, int N>
 constexpr inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
-    return a.axes == b.axes && a.origin == b.origin;
+    // return a.axes == b.axes && a.origin == b.origin;
+    for(auto j = 0; j < N + 1; j ++) if(a[j] != b[j]) return false;
+    return true;
 }
 template <typename T, int N>
 constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
-    return a.axes != b.axes || a.origin != b.origin;
+    return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
@@ -949,7 +949,7 @@ constexpr inline bool operator==(const bbox<T, N>& a, const bbox<T, N>& b) {
 }
 template <typename T, int N>
 constexpr inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
-    return a.min != b.min || a.max != b.max;
+    return !(a == b);
 }
 
 // Bounding box expansions with points and other boxes.
