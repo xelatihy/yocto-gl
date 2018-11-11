@@ -139,27 +139,13 @@ inline T lerp(const T& a, const T& b, T1 u) {
 }
 
 template <class T>
-const T mint_ = std::numeric_limits<T>::lowest();
+constexpr const T type_min = std::numeric_limits<T>::lowest();
 template <class T>
-const T maxt_ = std::numeric_limits<T>::max();
+constexpr const T type_max = std::numeric_limits<T>::max();
 template <class T>
-const T epst_ = std::numeric_limits<T>::epsilon();
-
-// type limits with simpler interface
-template <typename T>
-constexpr inline T mint() {
-    return std::numeric_limits<T>::lowest();
-}
-template <typename T>
-constexpr inline T maxt() {
-    return std::numeric_limits<T>::max();
-}
-template <typename T>
-constexpr inline T epst() {
-    return std::numeric_limits<T>::epsilon();
-}
-constexpr const auto maxf = maxt<float>();
-constexpr const auto epsf = epst<float>();
+constexpr const T type_epsilon = std::numeric_limits<T>::epsilon();
+constexpr const auto float_max = type_max<float>;
+constexpr const auto float_epsilon = type_epsilon<float>;
 
 template <class T>
 constexpr const T    pi  = (T)3.14159265358979323846;
@@ -276,9 +262,9 @@ constexpr inline vec<T, N> make_zero_vec() { return vec<T, N>{}; }
 template<typename T, int N>
 constexpr inline vec<T, N> make_one_vec() { return vec<T, N>{(T)1}; }
 template<typename T, int N>
-constexpr vec<T, N> zero_vec = vec<T, N>{};
+constexpr const vec<T, N> zero_vec = vec<T, N>{};
 template<typename T, int N>
-constexpr vec<T, N> one_vec = vec<T, N>{(T)1};
+constexpr const vec<T, N> one_vec = vec<T, N>{(T)1};
 
 // Type aliases.
 using vec1f = vec<float, 1>;
@@ -292,15 +278,15 @@ using vec4i = vec<int, 4>;
 using vec4b = vec<byte, 4>;
 
 // Zero vector constants.
-constexpr const auto zero1f = zero_vec<float, 1>;
-constexpr const auto zero2f = zero_vec<float, 2>;
-constexpr const auto zero3f = zero_vec<float, 3>;
-constexpr const auto zero4f = zero_vec<float, 4>;
-constexpr const auto zero1i = zero_vec<int, 1>;
-constexpr const auto zero2i = zero_vec<int, 2>;
-constexpr const auto zero3i = zero_vec<int, 3>;
-constexpr const auto zero4i = zero_vec<int, 4>;
-constexpr const auto zero4b = zero_vec<byte, 4>;
+constexpr const auto zero_vec1f = zero_vec<float, 1>;
+constexpr const auto zero_vec2f = zero_vec<float, 2>;
+constexpr const auto zero_vec3f = zero_vec<float, 3>;
+constexpr const auto zero_vec4f = zero_vec<float, 4>;
+constexpr const auto zero_vec1i = zero_vec<int, 1>;
+constexpr const auto zero_vec2i = zero_vec<int, 2>;
+constexpr const auto zero_vec3i = zero_vec<int, 3>;
+constexpr const auto zero_vec4i = zero_vec<int, 4>;
+constexpr const auto zero_vec4b = zero_vec<byte, 4>;
 
 // Access xyz component of a vec4 typically used for color operation.
 template <typename T>
@@ -656,15 +642,9 @@ struct mat {
     constexpr const vec<T, N>& operator[](int idx) const { return columns[idx]; }
 };
 
-// Type aliases.
-using mat1f = mat<float, 1, 1>;
-using mat2f = mat<float, 2, 2>;
-using mat3f = mat<float, 3, 3>;
-using mat4f = mat<float, 4, 4>;
-
 // Matrix contants
 template<typename T, int N>
-constexpr inline mat<T, N, N> identity_mat() {
+constexpr inline mat<T, N, N> make_identity_mat() {
     auto c = mat<T, N, N>{};
     for(auto j = 0; j < N; j ++)    
         for(auto i = 0; i < N; i ++)  
@@ -672,19 +652,28 @@ constexpr inline mat<T, N, N> identity_mat() {
     return c;  
 }
 template<typename T, int N>
-constexpr inline mat<T, N, N> diagonal_mat(const vec<T, N>& diagonal) {
+constexpr inline mat<T, N, N> make_diagonal_mat(const vec<T, N>& diagonal) {
     auto c = mat<T, N, N>{};
     for(auto j = 0; j < N; j ++)    
         for(auto i = 0; i < N; i ++)  
             c[j][i] = j == i ? diagonal[i] : 0;
     return c;  
 }
+template<typename T, int N>
+constexpr const mat<T, N, N> identity_mat = make_identity_mat<T, N>(); 
+
+
+// Type aliases.
+using mat1f = mat<float, 1, 1>;
+using mat2f = mat<float, 2, 2>;
+using mat3f = mat<float, 3, 3>;
+using mat4f = mat<float, 4, 4>;
 
 // Identity matrices constants.
-const auto identity_mat1f = identity_mat<float, 1>();
-const auto identity_mat2f = identity_mat<float, 2>();
-const auto identity_mat3f = identity_mat<float, 3>();
-const auto identity_mat4f = identity_mat<float, 4>();
+constexpr const auto identity_mat1f = identity_mat<float, 1>;
+constexpr const auto identity_mat2f = identity_mat<float, 2>;
+constexpr const auto identity_mat3f = identity_mat<float, 3>;
+constexpr const auto identity_mat4f = identity_mat<float, 4>;
 
 // Matrix comparisons.
 template <typename T, int N, int M>
@@ -799,10 +788,7 @@ struct frame {
     mat<T, N, N> axes = {};
     vec<T, N> origin = {};
 
-    constexpr frame() {
-        for(auto j = 0; j < N; j ++) for(auto i = 0; i < N; i ++) axes[j][i] = i == j ? 1 : 0;
-        origin = {};
-    }
+    constexpr frame() : axes{identity_mat<T, N>}, origin{zero_vec<T, N>} { }
     constexpr frame(const mat<T, N, N>& axes_, const vec<T, N>& origin_) : axes{axes_}, origin{origin_} { }
     constexpr frame(initializer_list<vec<T, N>> vals) {
         assert(vals.size() == N+1);
@@ -815,23 +801,19 @@ struct frame {
     constexpr const vec<T, N>& operator[](int idx) const { return idx < N ? axes[idx] : origin; }
 };
 
+// Frame contants
+template<typename T, int N>
+constexpr inline frame<T, N> make_identity_frame() { return {make_identity_mat<T, N>(), make_zero_vec<T, N>()}; }
+template<typename T, int N>
+constexpr const frame<T, N> identity_frame = make_identity_frame<T, N>();
+
 // Type aliases.
 using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
 
-// Matrix contants
-template<typename T, int N>
-constexpr inline frame<T, N> identity_frame() {
-    auto c = frame<T, N>{};
-    for(auto j = 0; j < N; j ++)    
-        for(auto i = 0; i < N; i ++)  
-            c[j][i] = j == i ? 1 : 0;
-    return c;  
-}
-
 // Indentity frames.
-const auto identity_frame2f = identity_frame<float, 2>();
-const auto identity_frame3f = identity_frame<float, 3>();
+constexpr const auto identity_frame2f = identity_frame<float, 2>;
+constexpr const auto identity_frame3f = identity_frame<float, 3>;
 
 // Frame construction from axis.
 template <typename T>
@@ -900,16 +882,22 @@ template <typename T, int N>
 struct bbox {
     using V = vec<T, N>;
 
-    vec<T, N> min = {maxt<T>()};
-    vec<T, N> max = {mint<T>()};
+    vec<T, N> min = {type_max<T>};
+    vec<T, N> max = {type_min<T>};
 
-    constexpr bbox() : min{maxt<T>()}, max{mint<T>()} { }
+    constexpr bbox() : min{type_max<T>}, max{type_min<T>} { }
     constexpr bbox(const vec<T, N>& min_, const vec<T, N>& max_) : min{min_}, max{max_} { }
     constexpr bbox(const bbox&) = default;
 
     constexpr vec<T, N>&       operator[](int idx) { return idx == 0 ? min : max; }
     constexpr const vec<T, N>& operator[](int idx) const { return idx == 0 ? min : max; }
 };
+
+// Bbox constants
+template<typename T, int N>
+constexpr inline bbox<T, N> make_invalid_bbox() { return {}; }
+template<typename T, int N>
+constexpr const bbox<T, N> invalid_bbox = make_invalid_bbox<T, N>();
 
 // Type aliases
 using bbox1f = bbox<float, 1>;
@@ -922,14 +910,14 @@ using bbox3i = bbox<int, 3>;
 using bbox4i = bbox<int, 4>;
 
 // Empty bbox constant.
-const auto invalid_bbox1f = bbox1f();
-const auto invalid_bbox2f = bbox2f();
-const auto invalid_bbox3f = bbox3f();
-const auto invalid_bbox4f = bbox4f();
-const auto invalid_bbox1i = bbox1i();
-const auto invalid_bbox2i = bbox2i();
-const auto invalid_bbox3i = bbox3i();
-const auto invalid_bbox4i = bbox4i();
+constexpr const auto invalid_bbox1f = invalid_bbox<float, 1>;
+constexpr const auto invalid_bbox2f = invalid_bbox<float, 2>;
+constexpr const auto invalid_bbox3f = invalid_bbox<float, 3>;
+constexpr const auto invalid_bbox4f = invalid_bbox<float, 4>;
+constexpr const auto invalid_bbox1i = invalid_bbox<int, 1>;
+constexpr const auto invalid_bbox2i = invalid_bbox<int, 2>;
+constexpr const auto invalid_bbox3i = invalid_bbox<int, 3>;
+constexpr const auto invalid_bbox4i = invalid_bbox<int, 4>;
 
 // Bounding box size and center
 template <typename T, int N>
@@ -1027,7 +1015,7 @@ struct ray {
     vec<T, N> origin    = {0, 0};
     vec<T, N> direction    = {0, 1};
     T         tmin = 0;
-    T         tmax = maxt<T>();
+    T         tmax = type_max<T>;
 
     constexpr ray() : origin{}, direction{}, tmin{0}, tmax{max<T>()} { }
     constexpr ray(const vec<T, N>& origin_, const vec<T, N>& direction_,
@@ -1046,7 +1034,7 @@ const auto default_ray_eps = 1e-4;
 template <typename T, int N>
 constexpr inline ray<T, N> make_ray(
     const vec<T, N>& origin, const vec<T, N>& direction, T eps = (T)default_ray_eps) {
-    return {origin, direction, eps, maxt<T>()};
+    return {origin, direction, eps, type_max<T>};
 }
 template <typename T, int N>
 constexpr inline ray<T, N> make_segment(
@@ -1189,11 +1177,11 @@ constexpr inline bbox<T, N> transform_bbox_inverse(
 // Translation, scaling and rotations transforms.
 template <typename T, int N>
 constexpr inline frame<T, N> translation_frame(const vec<T, N>& a) {
-    return {identity_mat<T, N>(), a};
+    return {identity_mat<T, N>, a};
 }
 template <typename T, int N>
 constexpr inline frame<T, N> scaling_frame(const vec<T, N>& a) {
-    return {diagonal_mat<T, N>(a), {}};
+    return {make_diagonal_mat<T, N>(a), {}};
 }
 template <typename T>
 constexpr inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
@@ -1528,7 +1516,7 @@ template<typename T>
 inline void camera_turntable(frame<T, 3>& frame, T& focus, const vec<T, 2>& rotate,
     T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
-    if (rotate != zero2f) {
+    if (rotate != zero_vec2f) {
         auto phi   = atan2(frame[2][2], frame[2][0]) + rotate[0];
         auto theta = acos(frame[2][1]) + rotate[1];
         theta      = clamp(theta, 0.001f, pif - 0.001f);

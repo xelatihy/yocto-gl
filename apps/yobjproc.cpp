@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "Process obj files directly", "yobjproc");
     auto translation = parse_argument(
-        parser, "--translation,-t", zero3f, "translation");
+        parser, "--translation,-t", zero_vec3f, "translation");
     auto scale = parse_argument(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
     auto print_info = parse_argument(
         parser, "--print-info,-i", false, "print obj info");
@@ -139,7 +139,7 @@ int main(int argc, char* argv[]) {
         printf("bbox max: % 6g % 6g % 6g\n", bbox.max[0], bbox.max[1], bbox.max[2]);
         printf("bbox cen: % 6g % 6g % 6g\n", center[0], center[1], center[2]);
         printf("bbox siz: % 6g % 6g % 6g\n", size[0], size[1], size[2]);
-        if (translation != zero3f || scale != vec3f{1, 1, 1}) {
+        if (translation != zero_vec3f || scale != vec3f{1, 1, 1}) {
             auto center = (tbox.max + tbox.min) / 2;
             auto size   = tbox.max - tbox.min;
             printf("tbox min: % 6g % 6g % 6g\n", tbox.min[0], tbox.min[1],

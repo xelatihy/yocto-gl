@@ -485,8 +485,8 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     const vector<vec4i>& squads, const vector<vec3f>& spos,
     const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
     const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
-    const vec2f& rotation = zero2f, int seed = 7);
+    const vec2f& noise = zero_vec2f, const vec2f& clump = zero_vec2f,
+    const vec2f& rotation = zero_vec2f, int seed = 7);
 
 }  // namespace yocto
 

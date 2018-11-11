@@ -531,7 +531,7 @@ bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
 // BVH primitive with its bbox, its center and the index to the primitive
 struct bvh_prim {
     bbox3f bbox   = invalid_bbox3f;
-    vec3f  center = zero3f;
+    vec3f  center = zero_vec3f;
     int    primid = 0;
 };
 
@@ -545,12 +545,12 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     auto cbbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) cbbox += prims[i].center;
     auto csize = cbbox.max - cbbox.min;
-    if (csize == zero3f) return {mid, split_axis};
+    if (csize == zero_vec3f) return {mid, split_axis};
 
     // consider N bins, compute their cost and keep the minimum
     const int nbins     = 16;
     auto      middle    = 0.0f;
-    auto      min_cost  = maxf;
+    auto      min_cost  = float_max;
     auto      bbox_area = [](auto& b) {
         auto size = b.max - b.min;
         return 1e-12f + 2 * size[0] * size[1] + 2 * size[0] * size[2] +
@@ -611,7 +611,7 @@ pair<int, int> split_bvh_node_balanced(
     auto cbbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) cbbox += prims[i].center;
     auto csize = cbbox.max - cbbox.min;
-    if (csize == zero3f) return {mid, split_axis};
+    if (csize == zero_vec3f) return {mid, split_axis};
 
     // split along largest
     auto largest_axis = 0;
@@ -648,7 +648,7 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
     auto cbbox = invalid_bbox3f;
     for (auto i = start; i < end; i++) cbbox += prims[i].center;
     auto csize = cbbox.max - cbbox.min;
-    if (csize == zero3f) return {mid, split_axis};
+    if (csize == zero_vec3f) return {mid, split_axis};
 
     // split along largest
     auto largest_axis = 0;
@@ -807,7 +807,7 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                 if (options.cancel_flag && *options.cancel_flag) return;
 
                 // grab node to work on
-                auto next = zero3i;
+                auto next = zero_vec3i;
                 {
                     lock_guard<mutex> lock{queue_mutex};
                     if (!queue.empty()) {
@@ -817,7 +817,7 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                 }
 
                 // wait a bit if needed
-                if (next == zero3i) {
+                if (next == zero_vec3i) {
                     std::this_thread::sleep_for(10us);
                     continue;
                 }

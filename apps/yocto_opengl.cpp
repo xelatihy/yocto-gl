@@ -525,7 +525,7 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
         gl_prog, "image_size", vec2f{(float)image_size[0], (float)image_size[1]});
     set_opengl_uniform(gl_prog, "image_center", image_center);
     set_opengl_uniform(gl_prog, "image_scale", image_scale);
-    set_opengl_vertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
+    set_opengl_vertexattrib(gl_prog, "texcoord", gl_texcoord, zero_vec2f);
     draw_opengl_triangles(gl_triangles, 2);
     unbind_opengl_program();
     check_opengl_error();
@@ -585,7 +585,7 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
         gl_prog, "border_size", vec2f{(float)border_size, (float)border_size});
     set_opengl_uniform(gl_prog, "image_center", image_center);
     set_opengl_uniform(gl_prog, "image_scale", image_scale);
-    set_opengl_vertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
+    set_opengl_vertexattrib(gl_prog, "texcoord", gl_texcoord, zero_vec2f);
     draw_opengl_triangles(gl_triangles, 2);
     unbind_opengl_program();
 }
@@ -648,13 +648,13 @@ void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb) 
 }
 
 vec2i get_opengl_framebuffer_size(const opengl_window& win) {
-    auto size = zero2i;
+    auto size = zero_vec2i;
     glfwGetFramebufferSize(win.win, &size[0], &size[1]);
     return size;
 }
 
 vec2i get_opengl_window_size(const opengl_window& win) {
-    auto size = zero2i;
+    auto size = zero_vec2i;
     glfwGetWindowSize(win.win, &size[0], &size[1]);
     return size;
 }

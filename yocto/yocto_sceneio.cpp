@@ -701,8 +701,8 @@ bool apply_json_procedural(
     const json& js, yocto_camera& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("from") || js.count("to")) {
-        auto from            = js.value("from", zero3f);
-        auto to              = js.value("to", zero3f);
+        auto from            = js.value("from", zero_vec3f);
+        auto to              = js.value("to", zero_vec3f);
         auto up              = js.value("up", vec3f{0, 1, 0});
         value.frame          = lookat_frame(from, to, up);
         value.focus_distance = length(from - to);
@@ -1332,14 +1332,14 @@ bool apply_json_procedural(
     const json& js, yocto_instance& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("from")) {
-        auto from   = js.value("from", zero3f);
-        auto to     = js.value("to", zero3f);
+        auto from   = js.value("from", zero_vec3f);
+        auto to     = js.value("to", zero_vec3f);
         auto up     = js.value("up", vec3f{0, 1, 0});
         value.frame = lookat_frame(from, to, up, true);
     }
     if (js.count("translation") || js.count("rotation") || js.count("scale")) {
-        auto translation = js.value("translation", zero3f);
-        auto rotation    = js.value("rotation", zero4f);
+        auto translation = js.value("translation", zero_vec3f);
+        auto rotation    = js.value("rotation", zero_vec4f);
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
         value.frame = translation_frame(translation) * scaling_frame(scaling) *
                       rotation_frame(xyz(rotation), rotation[3]);
@@ -1370,7 +1370,7 @@ bool apply_json_procedural(
     const json& js, yocto_environment& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("rotation")) {
-        auto rotation = js.value("rotation", zero4f);
+        auto rotation = js.value("rotation", zero_vec4f);
         value.frame   = rotation_frame(xyz(rotation), rotation[3]);
     }
     return true;
@@ -1400,8 +1400,8 @@ bool apply_json_procedural(
     const json& js, yocto_scene_node& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("from")) {
-        auto from   = js.value("from", zero3f);
-        auto to     = js.value("to", zero3f);
+        auto from   = js.value("from", zero_vec3f);
+        auto to     = js.value("to", zero_vec3f);
         auto up     = js.value("up", vec3f{0, 1, 0});
         value.local = lookat_frame(from, to, up, true);
     }
@@ -1935,17 +1935,17 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
 
         // possible token values
         if (cmd == "v") {
-            auto vert = zero3f;
+            auto vert = zero_vec3f;
             parse_value(view, vert);
             if (cb.vert) cb.vert(vert);
             vert_size.position += 1;
         } else if (cmd == "vn") {
-            auto vert = zero3f;
+            auto vert = zero_vec3f;
             parse_value(view, vert);
             if (cb.norm) cb.norm(vert);
             vert_size.normal += 1;
         } else if (cmd == "vt") {
-            auto vert = zero2f;
+            auto vert = zero_vec2f;
             parse_value(view, vert);
             if (options.flip_texcoord) vert[1] = 1 - vert[1];
             if (cb.texcoord) cb.texcoord(vert);
@@ -2389,13 +2389,13 @@ bool save_mtl(
     for (auto& material : scene.materials) {
         print(fs, "newmtl {}\n", material.name);
         print(fs, "  illum 2\n");
-        if (material.emission != zero3f)
+        if (material.emission != zero_vec3f)
             print(fs, "  Ke {}\n", material.emission);
-        if (material.diffuse != zero3f)
+        if (material.diffuse != zero_vec3f)
             print(fs, "  Kd {}\n", material.diffuse);
-        if (material.specular != zero3f)
+        if (material.specular != zero_vec3f)
             print(fs, "  Ks {}\n", material.specular);
-        if (material.transmission != zero3f)
+        if (material.transmission != zero_vec3f)
             print(fs, "  Kt {}\n", material.transmission);
         if (material.roughness != 1.0f)
             print(fs, "  Ns {}\n",
@@ -2435,11 +2435,11 @@ bool save_mtl(
         if (material.normal_texture >= 0)
             print(fs, "  map_norm {}\n",
                 scene.textures[material.normal_texture].filename);
-        if (material.volume_emission != zero3f)
+        if (material.volume_emission != zero_vec3f)
             print(fs, "  Ve {}\n", material.volume_emission);
-        if (material.volume_density != zero3f)
+        if (material.volume_density != zero_vec3f)
             print(fs, "  Vd {}\n", material.volume_density);
-        if (material.volume_albedo != zero3f)
+        if (material.volume_albedo != zero_vec3f)
             print(fs, "  Va {}\n", material.volume_albedo);
         if (material.volume_phaseg != 0)
             print(fs, "  Vg {}\n", material.volume_phaseg);
@@ -2780,7 +2780,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             auto& gmat        = gltf.at("materials").at(mid);
             auto  material    = yocto_material();
             material.name     = gmat.value("name", ""s);
-            material.emission = gmat.value("emissiveFactor", zero3f);
+            material.emission = gmat.value("emissiveFactor", zero_vec3f);
             if (gmat.count("emissiveTexture"))
                 material.emission_texture = add_texture(
                     gmat.at("emissiveTexture"), false);
@@ -3054,13 +3054,13 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                 auto ortho = gcam.value("orthographic", json::object());
                 set_camera_fovy(camera, ortho.value("ymag", 0.0f),
                     ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
-                camera.focus_distance = maxf;
+                camera.focus_distance = float_max;
                 camera.lens_aperture  = 0;
             } else {
                 auto persp = gcam.value("perspective", json::object());
                 set_camera_fovy(camera, persp.value("yfov", 1.0f),
                     persp.value("aspectRatio", 1.0f));
-                camera.focus_distance = maxf;
+                camera.focus_distance = float_max;
                 camera.lens_aperture  = 0;
             }
             scene.cameras.push_back(camera);
@@ -3074,7 +3074,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             auto  node = yocto_scene_node{};
             node.name  = gnde.value("name", ""s);
             if (gnde.count("camera")) node.camera = gnde.value("camera", 0);
-            node.translation = gnde.value("translation", zero3f);
+            node.translation = gnde.value("translation", zero_vec3f);
             node.rotation    = gnde.value("rotation", vec4f{0, 0, 0, 1});
             node.scale       = gnde.value("scale", vec3f{1, 1, 1});
             node.local = mat_to_frame(gnde.value("matrix", identity_mat4f));
@@ -3321,7 +3321,7 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
         auto mjs           = json();
         mjs["name"]        = material.name;
         mjs["doubleSided"] = material.double_sided;
-        if (material.emission != zero3f)
+        if (material.emission != zero_vec3f)
             mjs["emissiveFactor"] = material.emission;
         if (material.emission_texture >= 0)
             mjs["emissiveTexture"]["index"] = material.emission_texture;
@@ -3709,7 +3709,7 @@ vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
 // Compute the fresnel term for metals. Implementation from
 // https://seblagarde.wordpress.com/2013/04/29/memo-on-fresnel-equations/
 vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
-    if (etak == zero3f) return pbrt_fresnel_dielectric(cosw, eta);
+    if (etak == zero_vec3f) return pbrt_fresnel_dielectric(cosw, eta);
 
     cosw       = clamp(cosw, (float)-1, (float)1);
     auto cos2  = cosw * cosw;
@@ -3776,7 +3776,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>()};
         printf("cannot handle vec3f\n");
-        return zero3f;
+        return zero_vec3f;
     };
 
     auto get_vec4f = [](const json& js) -> vec4f {
@@ -3787,7 +3787,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>(), js.at(3).get<float>()};
         printf("cannot handle vec4f\n");
-        return zero4f;
+        return zero_vec4f;
     };
 
     auto get_mat4f = [](const json& js) -> frame3f {
@@ -4051,14 +4051,14 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     // if (!remap) material.rs = material.rs * material.rs;
                     if (remap) printf("remap roughness not supported\n");
                 }
-                if (stack.back().light_mat.emission != zero3f) {
+                if (stack.back().light_mat.emission != zero_vec3f) {
                     material.emission         = stack.back().light_mat.emission;
                     material.emission_texture = stack.back().light_mat.emission_texture;
                 }
             }
         } else if (cmd == "NamedMaterial") {
             stack.back().material = mat_map.at(jcmd.at("name").get<string>());
-            if (stack.back().light_mat.emission != zero3f) {
+            if (stack.back().light_mat.emission != zero_vec3f) {
                 auto material = yocto_material(
                     scene.materials[stack.back().material]);
                 material.name += "_" + std::to_string(lid++);
@@ -4202,7 +4202,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.name  = shape.name;
                 instance.shape = (int)scene.shapes.size() - 1;
                 instance.frame = stack.back().frame *
-                                 lookat_frame(dir * distant_dist, zero3f,
+                                 lookat_frame(dir * distant_dist, zero_vec3f,
                                      {0, 1, 0}, true);
                 scene.instances.push_back(instance);
                 printf("%s light not properly supported\n", type.c_str());
@@ -4352,7 +4352,7 @@ WorldEnd
         print(fs, "AttributeBegin\n");
         print(fs, "TransformBegin\n");
         print(fs, "ConcatTransform [{}]\n", frame_to_mat(instance.frame));
-        if (material.emission != zero3f)
+        if (material.emission != zero_vec3f)
             print(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ {} ]\n",
                 material.emission);
         print(fs, "NamedMaterial \"{}\"\n", material.name);
@@ -4473,7 +4473,7 @@ bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
             return false;
         return true;
     } else {
-        auto size = zero2i;
+        auto size = zero_vec2i;
         if (!read_value(fs, size)) return false;
         img.resize(size);
         if (!read_values(fs, img.width() * img.height(), img.data()))
@@ -4492,7 +4492,7 @@ bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
             return false;
         return true;
     } else {
-        auto size = zero3i;
+        auto size = zero_vec3i;
         if (!read_value(fs, size)) return false;
         vol.resize(size);
         if (!read_values(
@@ -4843,14 +4843,14 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
                 for (auto i = 0; i < count; i++)
                     dst[i * stride + offset] = vals[i];
             };
-            if (prop.name == "x") copy_floats(positions, zero3f, 3, 0);
-            if (prop.name == "y") copy_floats(positions, zero3f, 3, 1);
-            if (prop.name == "z") copy_floats(positions, zero3f, 3, 2);
-            if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
-            if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
-            if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
-            if (prop.name == "u") copy_floats(texturecoords, zero2f, 2, 0);
-            if (prop.name == "v") copy_floats(texturecoords, zero2f, 2, 1);
+            if (prop.name == "x") copy_floats(positions, zero_vec3f, 3, 0);
+            if (prop.name == "y") copy_floats(positions, zero_vec3f, 3, 1);
+            if (prop.name == "z") copy_floats(positions, zero_vec3f, 3, 2);
+            if (prop.name == "nx") copy_floats(normals, zero_vec3f, 3, 0);
+            if (prop.name == "ny") copy_floats(normals, zero_vec3f, 3, 1);
+            if (prop.name == "nz") copy_floats(normals, zero_vec3f, 3, 2);
+            if (prop.name == "u") copy_floats(texturecoords, zero_vec2f, 2, 0);
+            if (prop.name == "v") copy_floats(texturecoords, zero_vec2f, 2, 1);
             if (prop.name == "red") copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
             if (prop.name == "green")
                 copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);

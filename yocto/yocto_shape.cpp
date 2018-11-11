@@ -38,7 +38,7 @@ namespace yocto {
 vector<vec3f> compute_vertex_tangents(
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
     auto tangents = vector<vec3f>{positions.size()};
-    for (auto& tangent : tangents) tangent = zero3f;
+    for (auto& tangent : tangents) tangent = zero_vec3f;
     for (auto& l : lines) {
         auto tangent = line_tangent(positions[l[0]], positions[l[1]]);
         auto length  = line_length(positions[l[0]], positions[l[1]]);
@@ -53,7 +53,7 @@ vector<vec3f> compute_vertex_tangents(
 vector<vec3f> compute_vertex_normals(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto normals = vector<vec3f>{positions.size()};
-    for (auto& normal : normals) normal = zero3f;
+    for (auto& normal : normals) normal = zero_vec3f;
     for (auto& t : triangles) {
         auto normal = triangle_normal(
             positions[t[0]], positions[t[1]], positions[t[2]]);
@@ -70,7 +70,7 @@ vector<vec3f> compute_vertex_normals(
 vector<vec3f> compute_vertex_normals(
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
     auto normals = vector<vec3f>{positions.size()};
-    for (auto& normal : normals) normal = zero3f;
+    for (auto& normal : normals) normal = zero_vec3f;
     for (auto& q : quads) {
         auto normal = quad_normal(
             positions[q[0]], positions[q[1]], positions[q[2]], positions[q[3]]);
@@ -93,8 +93,8 @@ vector<vec3f> compute_vertex_normals(
 vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texturecoords) {
-    auto tangu = vector<vec3f>(positions.size(), zero3f);
-    auto tangv = vector<vec3f>(positions.size(), zero3f);
+    auto tangu = vector<vec3f>(positions.size(), zero_vec3f);
+    auto tangv = vector<vec3f>(positions.size(), zero_vec3f);
     for (auto t : triangles) {
         auto tutv = triangle_tangents_fromuv(positions[t[0]], positions[t[1]],
             positions[t[2]], texturecoords[t[0]], texturecoords[t[1]],
@@ -105,7 +105,7 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
-    auto tangentspaces = vector<vec4f>(positions.size(), zero4f);
+    auto tangentspaces = vector<vec4f>(positions.size(), zero_vec4f);
     for (auto i = 0; i < positions.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], normals[i]);
         auto s = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f : 1.0f;
@@ -852,7 +852,7 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
             sampled_texturecoords[i] = interpolate_triangle(texturecoords[t[0]],
                 texturecoords[t[1]], texturecoords[t[2]], sample.second);
         } else {
-            sampled_texturecoords[i] = zero2f;
+            sampled_texturecoords[i] = zero_vec2f;
         }
     }
     return {sampled_positions, sampled_normals, sampled_texturecoords};
@@ -888,7 +888,7 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
                 texturecoords[q[1]], texturecoords[q[2]], texturecoords[q[3]],
                 sample.second);
         } else {
-            sampled_texturecoords[i] = zero2f;
+            sampled_texturecoords[i] = zero_vec2f;
         }
     }
     return {sampled_positions, sampled_normals, sampled_texturecoords};
@@ -1991,7 +1991,7 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     if (clump[0] > 0) {
         for (auto bidx = 0; bidx < bpos.size(); bidx++) {
             cidx.push_back(0);
-            auto cdist = maxf;
+            auto cdist = float_max;
             for (auto c = 0; c < clump[1]; c++) {
                 auto d = length(bpos[bidx] - bpos[c]);
                 if (d < cdist) {

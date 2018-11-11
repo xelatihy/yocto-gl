@@ -75,7 +75,7 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto av = zero4f;
+            auto av = zero_vec4f;
             auto aw = 0.0f;
             for (auto fj = -filter_width; fj <= filter_width; fj++) {
                 for (auto fi = -filter_width; fi <= filter_width; fi++) {
@@ -108,7 +108,7 @@ image<vec4f> filter_bilateral(
     auto rw       = 1 / (2.0f * range_sigma * range_sigma);
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
-            auto av = zero4f;
+            auto av = zero_vec4f;
             auto aw = 0.0f;
             for (auto fj = -fwidth; fj <= fwidth; fj++) {
                 for (auto fi = -fwidth; fi <= fwidth; fi++) {
@@ -138,7 +138,7 @@ int main(int argc, char* argv[]) {
     auto filmic = parse_argument(
         parser, "--filmic,-f", false, "Tonemap uses filmic curve");
     auto resize_size = parse_argument(
-        parser, "--resize", zero2i, "resize size (0 to maintain aspect)");
+        parser, "--resize", zero_vec2i, "resize size (0 to maintain aspect)");
     auto spatial_sigma = parse_argument(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
     auto range_sigma = parse_argument(
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
     }
 
     // resize
-    if (resize_size != zero2i) {
+    if (resize_size != zero_vec2i) {
         img = resize_image(img, resize_size);
     }
 

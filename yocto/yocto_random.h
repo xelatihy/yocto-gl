@@ -304,14 +304,14 @@ namespace yocto {
 // lacunarity=~2.0 (spacing between successive octaves: 2.0 for warpping
 // output), gain=0.5 (relative weighting applied to each successive octave),
 // offset=1.0 (used to invert the ridges).
-inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
+inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero_vec3i);
 inline float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
     float gain = 0.5f, float offset = 1.0f, int octaves = 6,
-    const vec3i& wrap = zero3i);
+    const vec3i& wrap = zero_vec3i);
 inline float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
+    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero_vec3i);
 inline float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
-    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
+    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero_vec3i);
 
 }  // namespace yocto
 

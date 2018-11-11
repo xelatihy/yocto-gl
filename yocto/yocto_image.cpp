@@ -36,19 +36,19 @@ namespace yocto {
 
 // Convert between CIE XYZ and xyY
 vec3f xyz_to_xyY(const vec3f& xyz) {
-    if (xyz == zero3f) return zero3f;
+    if (xyz == zero_vec3f) return zero_vec3f;
     return {xyz[0] / (xyz[0] + xyz[1] + xyz[2]), xyz[1] / (xyz[0] + xyz[1] + xyz[2]),
         xyz[1]};
 }
 // Convert between CIE XYZ and xyY
 vec3f xyY_to_xyz(const vec3f& xyY) {
-    if (xyY[1] == 0) return zero3f;
+    if (xyY[1] == 0) return zero_vec3f;
     return {xyY[0] * xyY[2] / xyY[1], xyY[2], (1 - xyY[0] - xyY[1]) * xyY[2] / xyY[1]};
 }
 // Convert between CIE XYZ and RGB
 vec3f xyz_to_rgb(const vec3f& xyz) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (xyz == zero3f) return zero3f;
+    if (xyz == zero_vec3f) return zero_vec3f;
     return {+3.2404542f * xyz[0] - 1.5371385f * xyz[1] - 0.4985314f * xyz[2],
         -0.9692660f * xyz[0] + 1.8760108f * xyz[1] + 0.0415560f * xyz[2],
         +0.0556434f * xyz[0] - 0.2040259f * xyz[1] + 1.0572252f * xyz[2]};
@@ -56,7 +56,7 @@ vec3f xyz_to_rgb(const vec3f& xyz) {
 // Convert between CIE XYZ and RGB
 vec3f rgb_to_xyz(const vec3f& rgb) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (rgb == zero3f) return zero3f;
+    if (rgb == zero_vec3f) return zero_vec3f;
     return {0.4124564f * rgb[0] + 0.3575761f * rgb[1] + 0.1804375f * rgb[2],
         0.2126729f * rgb[0] + 0.7151522f * rgb[1] + 0.0721750f * rgb[2],
         0.0193339f * rgb[0] + 0.1191920f * rgb[1] + 0.9503041f * rgb[2]};
@@ -114,7 +114,7 @@ namespace yocto {
 // size may have zeros in either components. In which case, we use the aspect
 // ration to compute the other.
 vec2i get_image_size(const vec2i& size, float aspect) {
-    if (size == zero2i) {
+    if (size == zero_vec2i) {
         return {(int)round(720 * aspect), 720};
     } else if (size[1] == 0) {
         return {size[0], (int)round(size[0] / aspect)};
@@ -431,7 +431,7 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     auto sun_m      = 1.0f /
                  (cos(thetaSun) + 0.000940f * pow(1.6386f - thetaSun, -1.253f));
 
-    auto sun_le = zero3f;
+    auto sun_le = zero_vec3f;
     for (auto i = 0; i < 3; i++) {
         auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda[i] / 1000, -4.08f));
         auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda[i] / 1000, -1.3f));
@@ -444,13 +444,13 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     }
 
     auto sun = [has_sun, sunAngularRadius, sun_le](auto theta, auto gamma) {
-        return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f : zero3f;
+        return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f : zero_vec3f;
     };
 
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.height() / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.height());
-        theta      = clamp(theta, 0.0f, pif / 2 - epsf);
+        theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
         for (int i = 0; i < img.width(); i++) {
             auto phi = 2 * pif * (float(i + 0.5f) / img.width());
             auto w   = vec3f{
@@ -461,8 +461,8 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
         }
     }
 
-    if (ground_albedo != zero3f) {
-        auto ground = zero3f;
+    if (ground_albedo != zero_vec3f) {
+        auto ground = zero_vec3f;
         for (auto j = 0; j < img.height() / 2; j++) {
             auto theta = pif * ((j + 0.5f) / img.height());
             for (int i = 0; i < img.width(); i++) {
@@ -487,7 +487,7 @@ image<vec4f> make_lights_image(const vec2i& size, const vec3f& le, int nlights,
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
     for (auto j = 0; j < img.height() / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.height());
-        theta      = clamp(theta, 0.0f, pif / 2 - epsf);
+        theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
         if (fabs(theta - langle) > lheight / 2) continue;
         for (int i = 0; i < img.width(); i++) {
             auto phi     = 2 * pif * (float(i + 0.5f) / img.width());
@@ -505,7 +505,7 @@ image<vec4f> make_lights_image(const vec2i& size, const vec3f& le, int nlights,
 // Make a noise image. Wrap works only if size is a power of two.
 image<vec4f> make_noise_image(const vec2i& size, float scale, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(),
@@ -523,7 +523,7 @@ image<vec4f> make_noise_image(const vec2i& size, float scale, bool wrap) {
 image<vec4f> make_fbm_image(const vec2i& size, float scale, float lacunarity,
     float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(),
@@ -541,7 +541,7 @@ image<vec4f> make_fbm_image(const vec2i& size, float scale, float lacunarity,
 image<vec4f> make_ridge_image(const vec2i& size, float scale, float lacunarity,
     float gain, float offset, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(),
@@ -560,7 +560,7 @@ image<vec4f> make_ridge_image(const vec2i& size, float scale, float lacunarity,
 image<vec4f> make_turbulence_image(const vec2i& size, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(),

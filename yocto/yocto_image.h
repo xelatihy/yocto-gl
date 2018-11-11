@@ -94,9 +94,9 @@ struct image {
     }
     void resize(const vec2i& size, const T& value = {}) {
         if (size == _size) return;
-        if (_size == zero2i) {
+        if (_size == zero_vec2i) {
             *this = image{size, value};
-        } else if (size == zero2i) {
+        } else if (size == zero_vec2i) {
             clear();
         } else {
             auto img = image{size, value};
@@ -248,9 +248,9 @@ struct volume {
     }
     void resize(const vec3i& size, const T& value = {}) {
         if (size == _size) return;
-        if (_size == zero3i) {
+        if (_size == zero_vec3i) {
             *this = volume{size, value};
-        } else if (size == zero3i) {
+        } else if (size == zero_vec3i) {
             clear();
         } else {
             auto vol = volume{size, value};

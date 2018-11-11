@@ -97,7 +97,7 @@ struct yocto_camera {
     bool    orthographic   = false;
     vec2f   film_size      = {0.036f, 0.024f};
     float   focal_length   = 0.050f;
-    float   focus_distance = maxf;
+    float   focus_distance = float_max;
     float   lens_aperture  = 0;
 };
 
@@ -371,8 +371,8 @@ bool is_shape_face_varying(const yocto_shape& shape);
 struct scene_intersection {
     int   instance_id = -1;
     int   element_id  = -1;
-    vec2f element_uv  = zero2f;
-    float distance    = maxf;
+    vec2f element_uv  = zero_vec2f;
+    float distance    = float_max;
 };
 
 // Intersects a ray with the scene.
@@ -445,7 +445,7 @@ void  set_camera_fovy(
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction = zero3f, const vec2f& film = zero2f,
+    const vec3f& view_direction = zero_vec3f, const vec2f& film = zero_vec2f,
     float focal = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
@@ -486,9 +486,9 @@ bool is_material_emissive(const yocto_material& material);
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
-    vec3f diffuse      = zero3f;
-    vec3f specular     = zero3f;
-    vec3f transmission = zero3f;
+    vec3f diffuse      = zero_vec3f;
+    vec3f specular     = zero_vec3f;
+    vec3f transmission = zero_vec3f;
     float roughness    = 1;
     bool  refract      = false;
 };
