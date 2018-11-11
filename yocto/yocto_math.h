@@ -134,7 +134,6 @@
 
 #include <algorithm>
 #include <array>
-#include <atomic>
 #include <cctype>
 #include <cfloat>
 #include <chrono>
@@ -143,16 +142,10 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <deque>
 #include <functional>
-#include <future>
 #include <limits>
-#include <mutex>
-#include <string>
-#include <thread>
 #include <tuple>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -181,26 +174,15 @@ using std::swap;
 using std::tan;
 
 using std::array;
-using std::atomic;
-using std::deque;
-using std::function;
 using std::get;
 using std::ignore;
-using std::lock_guard;
-using std::make_unique;
-using std::mutex;
-using std::packaged_task;
 using std::pair;
 using std::runtime_error;
-using std::shared_future;
 using std::string;
-using std::thread;
 using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
-using namespace std::string_literals;
-using namespace std::chrono_literals;
 
 using byte = unsigned char;
 using uint = unsigned int;
