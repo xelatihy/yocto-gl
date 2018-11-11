@@ -286,7 +286,7 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(get_opengl_framebuffer_size(win));
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
-        center_image(app.image_center, app.image_scale,
+        update_image_view(app.image_center, app.image_scale,
             app.display_image.size(), win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_size != zero_vec2i) {
@@ -396,7 +396,7 @@ void run_ui(app_state& app) {
             if (mouse_right) dolly = (mouse_pos[0] - last_pos[0]) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
-            camera_turntable(
+            update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
             app.update_list.push_back({"camera", app.trace_options.camera_id});
         }

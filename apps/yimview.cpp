@@ -240,7 +240,7 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        center_image(img.image_center, img.image_scale, img.display.size(),
+        update_image_view(img.image_center, img.image_scale, img.display.size(),
             win_size, img.zoom_to_fit);
         draw_glimage_background(
             img.display.size(), win_size, img.image_center, img.image_scale);

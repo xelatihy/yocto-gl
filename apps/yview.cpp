@@ -722,7 +722,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
     const drawgl_options& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = frame_to_mat(inverse(camera.frame));
-    auto  camera_proj = perspective_mat(get_camera_fovy(camera),
+    auto  camera_proj = make_perspective_mat(get_camera_fovy(camera),
         (float)viewport_size[0] / (float)viewport_size[1], options.near_plane,
         options.far_plane);
 
@@ -1061,7 +1061,7 @@ void run_ui(app_state& app) {
             if (mouse_right) dolly = (mouse_pos[0] - last_pos[0]) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto& camera = app.scene.cameras.at(app.draw_options.camera_id);
-            camera_turntable(
+            update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
             app.update_list.push_back({"camera", app.draw_options.camera_id});
         }
