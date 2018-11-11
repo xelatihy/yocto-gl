@@ -34,7 +34,7 @@
 // `transform_direction()`). For frames we also the support inverse operations
 // (`transform_xxx_inverse()`). Transform matrices and frames can be
 // constructed from basic translation, rotation and scaling, e.g. with
-// `translation_mat()` or `translation_frame()` respectively, etc.
+// `translation_mat()` or `make_translation_frame()` respectively, etc.
 // For rotation we support axis-angle and quaternions, with slerp.
 //
 //
@@ -187,8 +187,7 @@ struct vec<T, 3> {
     T elements[3] = {0};
 
     constexpr vec() : elements{0, 0, 0} {}
-    constexpr vec(const T& x, const T& y, const T& z)
-        : elements{x, y, z} {}
+    constexpr vec(const T& x, const T& y, const T& z) : elements{x, y, z} {}
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -209,19 +208,19 @@ struct vec<T, 4> {
 template <typename T, int N>
 constexpr inline vec<T, N> make_zero_vec() {
     auto v = vec<T, N>{};
-    for(auto i = 0; i < N; i++) v[i] = 0;
+    for (auto i = 0; i < N; i++) v[i] = 0;
     return v;
 }
 template <typename T, int N>
 constexpr inline vec<T, N> make_one_vec() {
     auto v = vec<T, N>{};
-    for(auto i = 0; i < N; i++) v[i] = 1;
+    for (auto i = 0; i < N; i++) v[i] = 1;
     return v;
 }
 template <typename T, int N>
 constexpr inline vec<T, N> make_uniform_vec(T value) {
     auto v = vec<T, N>{};
-    for(auto i = 0; i < N; i++) v[i] = value;
+    for (auto i = 0; i < N; i++) v[i] = value;
     return v;
 }
 template <typename T, int N>
@@ -252,16 +251,16 @@ constexpr const auto zero_vec4i = zero_vec<int, 4>;
 constexpr const auto zero_vec4b = zero_vec<byte, 4>;
 
 // Element access
-template<typename T, int N>
-constexpr inline vec<T, N-1> make_shorter_vec(const vec<T, N>& value) {
-    auto smaller = vec<T, N-1>{};
-    for(auto i = 0; i < N - 1; i ++) smaller[i] = value[i];
+template <typename T, int N>
+constexpr inline vec<T, N - 1> make_shorter_vec(const vec<T, N>& value) {
+    auto smaller = vec<T, N - 1>{};
+    for (auto i = 0; i < N - 1; i++) smaller[i] = value[i];
     return smaller;
 }
-template<typename T, int N>
-constexpr inline vec<T, N+1> make_longer_vec(const vec<T, N>& value, T last) {
-    auto longer = vec<T, N+1>{};
-    for(auto i = 0; i < N; i ++) longer[i] = value[i];
+template <typename T, int N>
+constexpr inline vec<T, N + 1> make_longer_vec(const vec<T, N>& value, T last) {
+    auto longer = vec<T, N + 1>{};
+    for (auto i = 0; i < N; i++) longer[i] = value[i];
     longer[N] = last;
     return longer;
 }
@@ -576,8 +575,8 @@ template <typename T, int N>
 struct mat<T, N, 1> {
     vec<T, N> columns[1] = {};
 
-    constexpr mat() : columns{} { }
-    constexpr mat(const vec<T, N>& c0) : columns{c0} { }
+    constexpr mat() : columns{} {}
+    constexpr mat(const vec<T, N>& c0) : columns{c0} {}
 
     constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
     constexpr const vec<T, N>& operator[](int idx) const {
@@ -588,8 +587,8 @@ template <typename T, int N>
 struct mat<T, N, 2> {
     vec<T, N> columns[2] = {};
 
-    constexpr mat() : columns{} { }
-    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1) : columns{c0,c1} { }
+    constexpr mat() : columns{} {}
+    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1) : columns{c0, c1} {}
 
     constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
     constexpr const vec<T, N>& operator[](int idx) const {
@@ -600,8 +599,9 @@ template <typename T, int N>
 struct mat<T, N, 3> {
     vec<T, N> columns[3] = {};
 
-    constexpr mat() : columns{} { }
-    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1, const vec<T, N>& c2) : columns{c0,c1,c2} { }
+    constexpr mat() : columns{} {}
+    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1, const vec<T, N>& c2)
+        : columns{c0, c1, c2} {}
 
     constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
     constexpr const vec<T, N>& operator[](int idx) const {
@@ -612,8 +612,10 @@ template <typename T, int N>
 struct mat<T, N, 4> {
     vec<T, N> columns[4] = {};
 
-    constexpr mat() : columns{} { }
-    constexpr mat(const vec<T, N>& c0,const vec<T, N>& c1,const vec<T, N>& c2,const vec<T, N>& c3) : columns{c0,c1,c2,c3} { }
+    constexpr mat() : columns{} {}
+    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1, const vec<T, N>& c2,
+        const vec<T, N>& c3)
+        : columns{c0, c1, c2, c3} {}
 
     constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
     constexpr const vec<T, N>& operator[](int idx) const {
@@ -817,7 +819,8 @@ constexpr inline frame<T, 3> make_frame_fromzx(
 template <typename T, int N>
 constexpr inline mat<T, N + 1, N + 1> frame_to_mat(const frame<T, N>& a) {
     auto c = mat<T, N + 1, N + 1>{};
-    for (auto j = 0; j < N + 1; j++) c[j] = make_longer_vec(a[j], j == N ? (T)1 : (T)0);
+    for (auto j = 0; j < N + 1; j++)
+        c[j] = make_longer_vec(a[j], j == N ? (T)1 : (T)0);
     return c;
 }
 template <typename T, int N>
@@ -865,7 +868,9 @@ struct bbox {
     vec<T, N> min = make_uniform_vec<T, N>(type_max<T>);
     vec<T, N> max = make_uniform_vec<T, N>(type_min<T>);
 
-    constexpr bbox() : min{make_uniform_vec<T, N>(type_max<T>)}, max{make_uniform_vec<T, N>(type_min<T>)} {}
+    constexpr bbox()
+        : min{make_uniform_vec<T, N>(type_max<T>)}
+        , max{make_uniform_vec<T, N>(type_min<T>)} {}
     constexpr bbox(const vec<T, N>& min_, const vec<T, N>& max_)
         : min{min_}, max{max_} {}
     constexpr bbox(const bbox&) = default;
@@ -879,7 +884,8 @@ struct bbox {
 // Bbox constants
 template <typename T, int N>
 constexpr inline bbox<T, N> make_invalid_bbox() {
-    return {make_uniform_vec<T, N>(type_max<T>), make_uniform_vec<T, N>(type_min<T>)};
+    return {make_uniform_vec<T, N>(type_max<T>),
+        make_uniform_vec<T, N>(type_min<T>)};
 }
 template <typename T, int N>
 constexpr const bbox<T, N> invalid_bbox = make_invalid_bbox<T, N>();
@@ -1170,15 +1176,15 @@ constexpr inline bbox<T, N> transform_bbox_inverse(
 
 // Translation, scaling and rotations transforms.
 template <typename T, int N>
-constexpr inline frame<T, N> translation_frame(const vec<T, N>& a) {
+constexpr inline frame<T, N> make_translation_frame(const vec<T, N>& a) {
     return {identity_mat<T, N>, a};
 }
 template <typename T, int N>
-constexpr inline frame<T, N> scaling_frame(const vec<T, N>& a) {
+constexpr inline frame<T, N> make_scaling_frame(const vec<T, N>& a) {
     return {make_diagonal_mat<T, N>(a), {}};
 }
 template <typename T>
-constexpr inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
+constexpr inline frame<T, 3> make_rotation_frame(const vec<T, 3>& axis, T angle) {
     auto s = sin(angle), c = cos(angle);
     auto vv = normalize(axis);
     return {{{c + (1 - c) * vv[0] * vv[0], (1 - c) * vv[0] * vv[1] + s * vv[2],
@@ -1191,7 +1197,7 @@ constexpr inline frame<T, 3> rotation_frame(const vec<T, 3>& axis, T angle) {
         {0, 0, 0}};
 }
 template <typename T>
-constexpr inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
+constexpr inline frame<T, 3> make_rotation_frame(const vec<T, 4>& quat) {
     auto v = quat;
     return {
         {{v[3] * v[3] + v[0] * v[0] - v[1] * v[1] - v[2] * v[2],
@@ -1204,13 +1210,13 @@ constexpr inline frame<T, 3> rotation_frame(const vec<T, 4>& quat) {
         {0, 0, 0}};
 }
 template <typename T>
-constexpr inline frame<T, 3> rotation_frame(const mat<T, 3, 3>& rot) {
+constexpr inline frame<T, 3> make_rotation_frame(const mat<T, 3, 3>& rot) {
     return {rot, rot, rot, {}};
 }
 
 // Lookat frame. Z-axis can be inverted with inv_xz.
 template <typename T>
-constexpr inline frame<T, 3> lookat_frame(const vec<T, 3>& eye,
+constexpr inline frame<T, 3> make_lookat_frame(const vec<T, 3>& eye,
     const vec<T, 3>& center, const vec<T, 3>& up, bool inv_xz = false) {
     auto w = normalize(eye - center);
     auto u = normalize(cross(up, w));
@@ -1224,36 +1230,38 @@ constexpr inline frame<T, 3> lookat_frame(const vec<T, 3>& eye,
 
 // OpenGL frustum, ortho and perspecgive matrices.
 template <typename T>
-constexpr inline mat<T, 4, 4> frustum_mat(T l, T r, T b, T t, T n, T f) {
+constexpr inline mat<T, 4, 4> make_frustum_mat(T l, T r, T b, T t, T n, T f) {
     return {{2 * n / (r - l), 0, 0, 0}, {0, 2 * n / (t - b), 0, 0},
         {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
         {0, 0, -2 * f * n / (f - n), 0}};
 }
 template <typename T>
-constexpr inline mat<T, 4, 4> orthographic_mat(T l, T r, T b, T t, T n, T f) {
+constexpr inline mat<T, 4, 4> make_orthographic_mat(T l, T r, T b, T t, T n, T f) {
     return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
         {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
 template <typename T>
-constexpr inline mat<T, 4, 4> orthographic2d_mat(
+constexpr inline mat<T, 4, 4> make_orthographic2d_mat(
     T left, T right, T bottom, T top) {
-    return orthographic_mat(left, right, bottom, top, -1, 1);
+    return make_orthographic_mat(left, right, bottom, top, -1, 1);
 }
 template <typename T>
-constexpr inline mat<T, 4, 4> orthographic_mat(T xmag, T ymag, T near, T far) {
+constexpr inline mat<T, 4, 4> make_orthographic_mat(
+    T xmag, T ymag, T near, T far) {
     return {{1 / xmag, 0, 0, 0}, {0, 1 / ymag, 0, 0},
         {0, 0, 2 / (near - far), 0}, {0, 0, (far + near) / (near - far), 1}};
 }
 template <typename T>
-constexpr inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near, T far) {
+constexpr inline mat<T, 4, 4> make_perspective_mat(
+    T fovy, T aspect, T near, T far) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0},
         {0, 0, (far + near) / (near - far), -1},
         {0, 0, 2 * far * near / (near - far), 0}};
 }
 template <typename T>
-constexpr inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
+constexpr inline mat<T, 4, 4> make_perspective_mat(T fovy, T aspect, T near) {
     auto tg = tan(fovy / 2);
     return {{1 / (aspect * tg), 0, 0, 0}, {0, 1 / tg, 0, 0}, {0, 0, -1, -1},
         {0, 0, 2 * near, 0}};
@@ -1261,31 +1269,32 @@ constexpr inline mat<T, 4, 4> perspective_mat(T fovy, T aspect, T near) {
 
 // Rotation conversions.
 template <typename T>
-constexpr inline pair<vec<T, 3>, T> rotation_axisangle(const vec<T, 4>& quat) {
+constexpr inline pair<vec<T, 3>, T> make_rotation_axisangle(
+    const vec<T, 4>& quat) {
     return {normalize(vec<T, 3>{quat[0], quat[1], quat[2]}), 2 * acos(quat[3])};
 }
 template <typename T>
-constexpr inline vec<T, 4> rotation_quat(const vec<T, 3>& axis, T angle) {
+constexpr inline vec<T, 4> make_rotation_quat(const vec<T, 3>& axis, T angle) {
     auto len = length(axis);
     if (!len) return {0, 0, 0, 1};
     return vec4f{sin(angle / 2) * axis[0] / len, sin(angle / 2) * axis[1] / len,
         sin(angle / 2) * axis[2] / len, cos(angle / 2)};
 }
 template <typename T>
-constexpr inline vec<T, 4> rotation_quat(const vec<T, 4>& axisangle) {
-    return rotation_quat(
+constexpr inline vec<T, 4> make_rotation_quat(const vec<T, 4>& axisangle) {
+    return make_rotation_quat(
         vec<T, 3>{axisangle[0], axisangle[1], axisangle[2]}, axisangle[3]);
 }
 
 // Turntable and FPS Camera navigation.
 template <typename T>
-inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
+inline void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,
+    vec<T, 3>& up, const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
+template <typename T>
+inline void update_camera_turntable(frame<T, 3>& frame, T& focus,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
 template <typename T>
-inline void camera_turntable(frame<T, 3>& frame, T& focus,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan);
-template <typename T>
-inline void camera_fps(
+inline void update_camera_firstperson(
     frame<T, 3>& frame, const vec<T, 3>& transl, const vec<T, 2>& rotate);
 
 // Computes the image uv coordinates corresponding to the view parameters.
@@ -1299,8 +1308,8 @@ inline vec<int, 2> get_image_coords(const vec<T, 2>& mouse_pos,
 }
 
 // Center image and autofit.
-inline void center_image(vec2f& center, float& scale, const vec2i& image_size,
-    const vec2i& window_size, bool zoom_to_fit) {
+inline void update_image_view(vec2f& center, float& scale,
+    const vec2i& image_size, const vec2i& window_size, bool zoom_to_fit) {
     if (zoom_to_fit) {
         scale  = min(window_size[0] / (float)image_size[0],
             window_size[1] / (float)image_size[1]);
@@ -1480,8 +1489,8 @@ namespace yocto {
 
 // Turntable for UI navigation.
 template <typename T>
-inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
-    const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
+inline void update_camera_turntable(vec<T, 3>& from, vec<T, 3>& to,
+    vec<T, 3>& up, const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate[0] || rotate[1]) {
         auto z     = normalize(to - from);
@@ -1516,7 +1525,7 @@ inline void camera_turntable(vec<T, 3>& from, vec<T, 3>& to, vec<T, 3>& up,
 
 // Turntable for UI navigation.
 template <typename T>
-inline void camera_turntable(frame<T, 3>& frame, T& focus,
+inline void update_camera_turntable(frame<T, 3>& frame, T& focus,
     const vec<T, 2>& rotate, T dolly, const vec<T, 2>& pan) {
     // rotate if necessary
     if (rotate != zero_vec2f) {
@@ -1527,7 +1536,7 @@ inline void camera_turntable(frame<T, 3>& frame, T& focus,
             sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi)};
         auto new_center = frame.origin - frame.axes[2] * focus;
         auto new_o      = new_center + new_z * focus;
-        frame           = lookat_frame(new_o, new_center, {0, 1, 0});
+        frame           = make_lookat_frame(new_o, new_center, {0, 1, 0});
         focus           = length(new_o - new_center);
     }
 
@@ -1546,16 +1555,16 @@ inline void camera_turntable(frame<T, 3>& frame, T& focus,
 
 // FPS camera for UI navigation for a frame parametrization.
 template <typename T>
-inline void camera_fps(const frame<T, 3>& frame, const vec<T, 3>& transl,
-    const vec<T, 2>& rotate) {
+inline void update_camera_firstperson(const frame<T, 3>& frame,
+    const vec<T, 3>& transl, const vec<T, 2>& rotate) {
     // https://gamedev.stackexchange.com/questions/30644/how-to-keep-my-quaternion-using-fps-camera-from-tilting-and-messing-up
     auto y = vec<T, 3>{0, 1, 0};
     auto z = orthonormalize(frame.axes[2], y);
     auto x = cross(y, z);
 
-    auto rot = rotation_frame(vec<T, 3>{1, 0, 0}, rotate[1]) *
+    auto rot = make_rotation_frame(vec<T, 3>{1, 0, 0}, rotate[1]) *
                frame3f{frame[0], frame[1], frame[2], vec<T, 3>{0, 0, 0}} *
-               rotation_frame(vec<T, 3>{0, 1, 0}, rotate[0]);
+               make_rotation_frame(vec<T, 3>{0, 1, 0}, rotate[0]);
     auto pos = frame.origin + transl[0] * x + transl[1] * y + transl[2] * z;
 
     frame = {rot[0], rot[1], rot[2], pos};

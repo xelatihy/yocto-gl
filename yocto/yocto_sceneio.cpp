@@ -672,7 +672,8 @@ bool serialize_json_values(
 template <typename T>
 bool serialize_json_value(json& js, image<T>& value, bool save) {
     auto size = value.size();
-    if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save)) return false;
+    if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save))
+        return false;
     if (!save) value = image<T>{size};
     if (!serialize_json_values(
             js, value.data(), size[0] * size[1], "pixels", save))
@@ -682,7 +683,8 @@ bool serialize_json_value(json& js, image<T>& value, bool save) {
 template <typename T>
 bool serialize_json_value(json& js, volume<T>& value, bool save) {
     auto size = value.size();
-    if (!serialize_json_value(js, size, "size", vec3i{-1, -1, -1}, save)) return false;
+    if (!serialize_json_value(js, size, "size", vec3i{-1, -1, -1}, save))
+        return false;
     if (!save) value = volume<T>{size};
     if (!serialize_json_values(
             js, value.data(), size[0] * size[1], "voxels", save))
@@ -829,7 +831,7 @@ bool apply_json_procedural(
         auto from            = js.value("from", zero_vec3f);
         auto to              = js.value("to", zero_vec3f);
         auto up              = js.value("up", vec3f{0, 1, 0});
-        value.frame          = lookat_frame(from, to, up);
+        value.frame          = make_lookat_frame(from, to, up);
         value.focus_distance = length(from - to);
     }
     return true;
@@ -1460,14 +1462,16 @@ bool apply_json_procedural(
         auto from   = js.value("from", zero_vec3f);
         auto to     = js.value("to", zero_vec3f);
         auto up     = js.value("up", vec3f{0, 1, 0});
-        value.frame = lookat_frame(from, to, up, true);
+        value.frame = make_lookat_frame(from, to, up, true);
     }
     if (js.count("translation") || js.count("rotation") || js.count("scale")) {
         auto translation = js.value("translation", zero_vec3f);
         auto rotation    = js.value("rotation", zero_vec4f);
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
-        value.frame = translation_frame(translation) * scaling_frame(scaling) *
-                      rotation_frame(make_shorter_vec(rotation), rotation[3]);
+        value.frame      = make_translation_frame(translation) *
+                      make_scaling_frame(scaling) *
+                      make_rotation_frame(
+                          make_shorter_vec(rotation), rotation[3]);
     }
     return true;
 }
@@ -1496,7 +1500,8 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero_vec4f);
-        value.frame   = rotation_frame(make_shorter_vec(rotation), rotation[3]);
+        value.frame   = make_rotation_frame(
+            make_shorter_vec(rotation), rotation[3]);
     }
     return true;
 }
@@ -1528,7 +1533,7 @@ bool apply_json_procedural(
         auto from   = js.value("from", zero_vec3f);
         auto to     = js.value("to", zero_vec3f);
         auto up     = js.value("up", vec3f{0, 1, 0});
-        value.local = lookat_frame(from, to, up, true);
+        value.local = make_lookat_frame(from, to, up, true);
     }
     return true;
 }
@@ -1634,9 +1639,10 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_animation& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    if (js.count("rotation_axisangle")) {
-        for (auto& j : js.at("rotation_axisangle")) {
-            value.rotation_keyframes.push_back(rotation_quat(j.get<vec4f>()));
+    if (js.count("make_rotation_axisangle")) {
+        for (auto& j : js.at("make_rotation_axisangle")) {
+            value.rotation_keyframes.push_back(
+                make_rotation_quat(j.get<vec4f>()));
         }
     }
     return true;
@@ -1671,7 +1677,7 @@ bool apply_json_procedural(
             auto shape = get_random_int(rng, num_shapes - 1);
             value.instances.push_back({});
             value.instances.back().name  = "random_" + std::to_string(i);
-            value.instances.back().frame = translation_frame(pos[i]);
+            value.instances.back().frame = make_translation_frame(pos[i]);
             value.instances.back().shape = shape + shape_offset;
         }
     }
@@ -4013,19 +4019,20 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                                                                         "s"));
         } else if (cmd == "Scale") {
             auto v             = get_vec3f(jcmd.at("values"));
-            stack.back().frame = stack.back().frame * scaling_frame(v);
+            stack.back().frame = stack.back().frame * make_scaling_frame(v);
         } else if (cmd == "Translate") {
             auto v             = get_vec3f(jcmd.at("values"));
-            stack.back().frame = stack.back().frame * translation_frame(v);
+            stack.back().frame = stack.back().frame * make_translation_frame(v);
         } else if (cmd == "Rotate") {
             auto v             = get_vec4f(jcmd.at("values"));
             stack.back().frame = stack.back().frame *
-                                 rotation_frame(
+                                 make_rotation_frame(
                                      vec3f{v[1], v[2], v[3]}, v[0] * pif / 180);
         } else if (cmd == "LookAt") {
             auto m             = get_mat3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame *
-                                 inverse(lookat_frame(m[0], m[1], m[2], true));
+                                 inverse(
+                                     make_lookat_frame(m[0], m[1], m[2], true));
             stack.back().focus = length(m.axes[0] - m.axes[1]);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
@@ -4331,8 +4338,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.name  = shape.name;
                 instance.shape = (int)scene.shapes.size() - 1;
                 instance.frame = stack.back().frame *
-                                 lookat_frame(dir * distant_dist, zero_vec3f,
-                                     {0, 1, 0}, true);
+                                 make_lookat_frame(dir * distant_dist,
+                                     zero_vec3f, {0, 1, 0}, true);
                 scene.instances.push_back(instance);
                 printf("%s light not properly supported\n", type.c_str());
             } else {

@@ -370,8 +370,9 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
 // Update node transforms
 void update_transforms(yocto_scene& scene, yocto_scene_node& node,
     const frame3f& parent = identity_frame3f) {
-    auto frame = parent * node.local * translation_frame(node.translation) *
-                 rotation_frame(node.rotation) * scaling_frame(node.scale);
+    auto frame = parent * node.local * make_translation_frame(node.translation) *
+                 make_rotation_frame(node.rotation) *
+                 make_scaling_frame(node.scale);
     if (node.instance >= 0) scene.instances[node.instance].frame = frame;
     if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
     if (node.environment >= 0)
@@ -913,8 +914,9 @@ vec3f evaluate_shape_shading_normal(const yocto_scene& scene,
                 shape, element_id, element_uv);
             auto  left_handed    = false;
             auto& normal_texture = scene.textures[material.normal_texture];
-            auto  texture = make_shorter_vec(evaluate_texture(normal_texture, texcoord));
-            texture       = texture * 2 - vec3f{1, 1, 1};
+            auto  texture        = make_shorter_vec(
+                evaluate_texture(normal_texture, texcoord));
+            texture    = texture * 2 - vec3f{1, 1, 1};
             texture[1] = -texture[1];  // flip vertical axis to align green with
                                        // image up
             auto tu = orthonormalize(evaluate_shape_tangentspace(shape,
@@ -1375,7 +1377,7 @@ void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
     auto from             = camera_dir * (camera_dist * 1) + bbox_center;
     auto to               = bbox_center;
     auto up               = vec3f{0, 1, 0};
-    camera.frame          = lookat_frame(from, to, up);
+    camera.frame          = make_lookat_frame(from, to, up);
     camera.focus_distance = length(from - to);
     camera.lens_aperture  = 0;
 }
@@ -1422,7 +1424,8 @@ vec3f evaluate_material_emission(const yocto_scene& scene,
     auto emission = material.emission * make_shorter_vec(shape_color);
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
-        emission *= make_shorter_vec(evaluate_texture(emission_texture, texturecoord));
+        emission *= make_shorter_vec(
+            evaluate_texture(emission_texture, texturecoord));
     }
     return emission;
 }
@@ -1433,14 +1436,16 @@ vec3f evaluate_material_diffuse(const yocto_scene& scene,
         auto diffuse = material.diffuse * make_shorter_vec(shape_color);
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
-            diffuse *= make_shorter_vec(evaluate_texture(diffuse_texture, texturecoord));
+            diffuse *= make_shorter_vec(
+                evaluate_texture(diffuse_texture, texturecoord));
         }
         return diffuse;
     } else {
         auto base = material.diffuse * make_shorter_vec(shape_color);
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
-            base *= make_shorter_vec(evaluate_texture(diffuse_texture, texturecoord));
+            base *= make_shorter_vec(
+                evaluate_texture(diffuse_texture, texturecoord));
         }
         auto metallic = material.specular;
         if (material.specular_texture >= 0) {
@@ -1457,14 +1462,16 @@ vec3f evaluate_material_specular(const yocto_scene& scene,
         auto specular = material.specular * make_shorter_vec(shape_color);
         if (material.specular_texture >= 0) {
             auto& specular_texture = scene.textures[material.specular_texture];
-            specular *= make_shorter_vec(evaluate_texture(specular_texture, texturecoord));
+            specular *= make_shorter_vec(
+                evaluate_texture(specular_texture, texturecoord));
         }
         return specular;
     } else {
         auto base = material.diffuse * make_shorter_vec(shape_color);
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
-            base *= make_shorter_vec(evaluate_texture(diffuse_texture, texturecoord));
+            base *= make_shorter_vec(
+                evaluate_texture(diffuse_texture, texturecoord));
         }
         auto metallic = material.specular[0];
         if (material.specular_texture >= 0) {
