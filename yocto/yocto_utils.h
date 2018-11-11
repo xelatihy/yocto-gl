@@ -732,16 +732,51 @@ inline vector<string> get_option_names(const string& name_) {
     return names;
 }
 
+// get default string
+template<typename T>
+inline string get_option_default_string(const T& value) {
+    return to_string(value);
+}
+inline string get_option_default_string(const bool& value) {
+    return (value) ? "true"s : "false"s;
+}
+template<typename T>
+inline string get_option_default_string(const vector<T>& values) {
+    auto defs = string();
+    for (auto& d : values) defs += " " + d;
+    return defs;
+}
+
+// get option typename
+template<typename T>
+inline string get_option_typename() {
+    return "value";
+}
+template<>
+inline string get_option_typename<int>() { return "int"; }
+template<>
+inline string get_option_typename<bool>() { return ""; }
+template<>
+inline string get_option_typename<float>() { return "float"; }
+template<>
+inline string get_option_typename<string>() { return "string"; }
+
 // add help
+template<typename T>
 inline string get_option_usage(const string& name, const string& usage,
-    const string& def_, const vector<string>& choices) {
-    auto def = def_;
-    if (def != "") def = "[" + def + "]";
-    auto namevar = name;
-    if (name != "") namevar += " " + name;
+    const T& def_, bool req, const vector<string>& choices) {
+    auto def = ""s;
+    if(!req) {
+        def = get_option_default_string(def_);
+        if (def != "") def = "[" + def + "]";
+    }
+    auto nametype = name;
+    if (get_option_typename<T>() != "") {
+        nametype += " <" + get_option_typename<T>() + ">";
+    }
     char buffer[4096];
     sprintf(
-        buffer, "  %-24s %s %s\n", namevar.c_str(), usage.c_str(), def.c_str());
+        buffer, "  %-24s %s %s\n", nametype.c_str(), usage.c_str(), def.c_str());
     auto usagelines = string(buffer);
     if (!choices.empty()) {
         usagelines += "        accepted values:";
@@ -790,7 +825,7 @@ inline void check_cmdline(cmdline_parser& parser) {
 template <typename T>
 inline bool parse_option_argument(cmdline_parser& parser, const string& name,
     T& value, const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_opt += get_option_usage(name, usage, to_string(value), choices);
+    parser.usage_opt += get_option_usage(name, usage, value, req, choices);
     if (parser.error != "") return false;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
@@ -826,7 +861,7 @@ inline bool parse_option_argument(cmdline_parser& parser, const string& name,
 template <typename T>
 inline bool parse_positional_argument(cmdline_parser& parser, const string& name,
     T& value, const string& usage, bool req, const vector<string>& choices) {
-    parser.usage_arg += get_option_usage(name, usage, to_string(value), choices);
+    parser.usage_arg += get_option_usage(name, usage, value, req, choices);
     if (parser.error != "") return false;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
@@ -854,9 +889,7 @@ inline bool parse_positional_argument(cmdline_parser& parser, const string& name
 template <typename T>
 inline bool parse_positional_arguments(cmdline_parser& parser,
     const string& name, vector<T>& values, const string& usage, bool req) {
-    auto defs = string();
-    for (auto& d : values) defs += " " + d;
-    parser.usage_arg += get_option_usage(name, usage, defs, {});
+    parser.usage_arg += get_option_usage(name, usage, values, req, {});
     if (parser.error != "") return false;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
         [](auto& v) { return v[0] != '-'; });
@@ -881,7 +914,7 @@ inline bool parse_positional_arguments(cmdline_parser& parser,
 // Parse a flag. Name should start with either "--" or "-".
 inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
     bool& value, const string& usage) {
-    parser.usage_opt += get_option_usage(name, usage, "", {});
+    parser.usage_opt += get_option_usage(name, usage, false, false, {});
     if (parser.error != "") return false;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
