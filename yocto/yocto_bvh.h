@@ -91,6 +91,7 @@ namespace yocto {
 
 using std::atomic;
 using std::vector;
+using std::pair;
 
 }  // namespace yocto
 

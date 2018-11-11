@@ -101,8 +101,8 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <functional>
 #include <vector>
+#include <cstdint>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -110,8 +110,6 @@
 namespace yocto {
 
 using std::pair;
-using std::string;
-using std::vector;
 
 }  // namespace yocto
 
