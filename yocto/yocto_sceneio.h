@@ -59,6 +59,7 @@
 #include "yocto_scene.h"
 
 #include <functional>
+#include <unordered_map>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -66,6 +67,7 @@
 namespace yocto {
 
 using std::function;
+using std::unordered_map;
 
 }
 

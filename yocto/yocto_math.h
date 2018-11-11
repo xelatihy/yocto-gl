@@ -144,8 +144,6 @@
 #include <cstring>
 #include <functional>
 #include <limits>
-#include <tuple>
-#include <unordered_map>
 #include <vector>
 
 // -----------------------------------------------------------------------------
@@ -174,14 +172,9 @@ using std::swap;
 using std::tan;
 
 using std::array;
-using std::get;
-using std::ignore;
 using std::pair;
 using std::runtime_error;
 using std::string;
-using std::tie;
-using std::tuple;
-using std::unordered_map;
 using std::vector;
 
 using byte = unsigned char;
