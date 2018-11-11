@@ -452,6 +452,12 @@ void build_embree_bvh(bvh_scene& bvh) {
              instance_id++) {
             auto& instance = bvh.instances[instance_id];
             if (instance.shape_id < 0 && instance.surface_id < 0) continue;
+            if (instance.shape_id >= 0 &&
+                bvh.shape_bvhs[instance.shape_id].positions.empty())
+                continue;
+            if (instance.surface_id >= 0 &&
+                bvh.surface_bvhs[instance.surface_id].positions.empty())
+                continue;
             auto embree_geom = rtcNewGeometry(
                 embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
             if (instance.shape_id >= 0) {
@@ -907,6 +913,44 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     }
 }
 
+// Build a BVH from the given set of shape primitives.
+bvh_shape make_shape_bvh(const vector<int>& points,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const build_bvh_options& options) {
+    auto bvh      = bvh_shape{};
+    bvh.points    = points;
+    bvh.positions = positions;
+    bvh.radius    = radius;
+    build_shape_bvh(bvh, options);
+    return bvh;
+}
+bvh_shape make_shape_bvh(const vector<vec2i>& lines,
+    const vector<vec3f>& positions, const vector<float>& radius,
+    const build_bvh_options& options) {
+    auto bvh      = bvh_shape{};
+    bvh.lines     = lines;
+    bvh.positions = positions;
+    bvh.radius    = radius;
+    build_shape_bvh(bvh, options);
+    return bvh;
+}
+bvh_shape make_shape_bvh(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const build_bvh_options& options) {
+    auto bvh      = bvh_shape{};
+    bvh.triangles = triangles;
+    bvh.positions = positions;
+    build_shape_bvh(bvh, options);
+    return bvh;
+}
+bvh_shape make_shape_bvh(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const build_bvh_options& options) {
+    auto bvh      = bvh_shape{};
+    bvh.quads     = quads;
+    bvh.positions = positions;
+    build_shape_bvh(bvh, options);
+    return bvh;
+}
+
 // Build a BVH from a set of primitives.
 void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 #if YOCTO_EMBREE
@@ -919,14 +963,23 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
         for (auto& instance : bvh.instances) {
             if (instance.shape_id >= 0) {
                 auto& sbvh = bvh.shape_bvhs[instance.shape_id];
-                prims.push_back(
-                    {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+                if (sbvh.nodes.empty()) {
+                    prims.push_back({invalid_bbox3f});
+                } else {
+                    prims.push_back(
+                        {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+                }
             } else if (instance.surface_id >= 0) {
                 auto& sbvh = bvh.surface_bvhs[instance.surface_id];
-                prims.push_back(
-                    {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+                if (sbvh.nodes.empty()) {
+                    prims.push_back({invalid_bbox3f});
+                } else {
+                    prims.push_back(
+                        {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
+                }
             } else {
                 log_warning("empty instance");
+                prims.push_back({invalid_bbox3f});
             }
         }
     }
@@ -943,6 +996,18 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
     } else {
         build_bvh_nodes_parallel(bvh.nodes, prims, options);
     }
+}
+
+// Build a BVH from the given set of instances.
+bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
+    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs,
+    const build_bvh_options& options) {
+    auto bvh         = bvh_scene{};
+    bvh.instances    = instances;
+    bvh.shape_bvhs   = shape_bvhs;
+    bvh.surface_bvhs = surface_bvhs;
+    build_scene_bvh(bvh, options);
+    return bvh;
 }
 
 // Recursively recomputes the node bounds for a shape bvh
@@ -1005,8 +1070,20 @@ void refit_scene_bvh(bvh_scene& bvh, int nodeid) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_shape_bvh(bvh_shape& bvh) { refit_shape_bvh(bvh, 0); }
-void refit_scene_bvh(bvh_scene& bvh) { refit_scene_bvh(bvh, 0); }
+void refit_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions) {
+    bvh.positions = positions;
+    refit_shape_bvh(bvh, 0);
+}
+void refit_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
+    const vector<float>& radius) {
+    bvh.positions = positions;
+    bvh.radius    = radius;
+    refit_shape_bvh(bvh, 0);
+}
+void refit_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances) {
+    bvh.instances = instances;
+    refit_scene_bvh(bvh, 0);
+}
 
 // Intersect ray with a bvh.
 bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,

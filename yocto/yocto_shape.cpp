@@ -1966,4 +1966,3 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
 }
 
 }  // namespace yocto
-
