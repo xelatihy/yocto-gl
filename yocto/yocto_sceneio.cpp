@@ -3257,7 +3257,7 @@ bool load_gltf_scene(const string& filename, yocto_scene& scene,
     auto bbox = compute_scene_bounds(scene);
     for (auto& camera : scene.cameras) {
         auto center   = (bbox.min + bbox.max) / 2;
-        auto distance = dot(-camera.frame.z, center - camera.frame.o);
+        auto distance = dot(-camera.frame.axes[2], center - camera.frame.origin);
         if (distance > 0) camera.focus_distance = distance;
     }
 
@@ -3807,7 +3807,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             return identity_frame3f;
         }
         auto m = identity_frame3f;
-        for (auto i = 0; i < 9; i++) (&m.x.x)[i] = js.at(i).get<float>();
+        for (auto i = 0; i < 9; i++) (&m[0][0])[i] = js.at(i).get<float>();
         return m;
     };
 
@@ -3898,8 +3898,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         } else if (cmd == "LookAt") {
             auto m             = get_mat3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame *
-                                 inverse(lookat_frame(m.x, m.y, m.z, true));
-            stack.back().focus = length(m.x - m.y);
+                                 inverse(lookat_frame(m[0], m[1], m[2], true));
+            stack.back().focus = length(m.axes[0] - m.axes[1]);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
         } else if (cmd == "Film") {
@@ -3909,7 +3909,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto camera           = yocto_camera{};
             camera.name           = "camera" + std::to_string(cid++);
             camera.frame          = inverse(stack.back().frame);
-            camera.frame.z        = -camera.frame.z;
+            camera.frame.axes[2]       = -camera.frame.axes[2];
             camera.focus_distance = stack.back().focus;
             auto aspect           = stack.back().aspect;
             auto fovy             = 1.0f;
@@ -4112,10 +4112,10 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 printf("%s shape not supported\n", type.c_str());
             }
             auto frame = stack.back().frame;
-            auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
+            auto scl = vec3f{length(frame.axes[0]), length(frame.axes[1]), length(frame.axes[2])};
             for (auto& p : shape.positions) p *= scl;
-            frame = {normalize(frame.x), normalize(frame.y), normalize(frame.z),
-                frame.o};
+            frame = {normalize(frame.axes[0]), normalize(frame.axes[1]), normalize(frame.axes[2]),
+                frame.origin};
             if (stack.back().reverse) {
                 for (auto& t : shape.triangles) swap(t.y, t.z);
             }
@@ -4299,9 +4299,9 @@ WorldEnd
 
     // convert camera and settings
     auto& camera = scene.cameras.front();
-    auto  from   = camera.frame.o;
-    auto  to     = camera.frame.o - camera.frame.z;
-    auto  up     = camera.frame.y;
+    auto  from   = camera.frame.origin;
+    auto  to     = camera.frame.origin - camera.frame.axes[2];
+    auto  up     = camera.frame.axes[1];
     auto  res    = get_image_size({0, 512}, get_camera_aspect(camera));
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",

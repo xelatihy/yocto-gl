@@ -1361,7 +1361,7 @@ void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
     if (focal != 0) camera.focal_length = focal;
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
     auto bbox_radius = length(bbox.max - bbox.min) / 2;
-    auto camera_dir = (view_direction == zero3f) ? camera.frame.o - bbox_center :
+    auto camera_dir = (view_direction == zero3f) ? camera.frame.origin - bbox_center :
                                                    view_direction;
     if (camera_dir == zero3f) camera_dir = {0, 0, 1};
     auto camera_fov = min(get_camera_fovx(camera), get_camera_fovy(camera));

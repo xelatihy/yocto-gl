@@ -727,7 +727,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         options.far_plane);
 
     bind_opengl_program(state.program);
-    set_opengl_uniform(state.program, "cam_pos", camera.frame.o);
+    set_opengl_uniform(state.program, "cam_pos", camera.frame.origin);
     set_opengl_uniform(state.program, "cam_xform_inv", camera_view);
     set_opengl_uniform(state.program, "cam_proj", camera_proj);
     set_opengl_uniform(state.program, "eyelight", (int)options.eyelight);
