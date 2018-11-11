@@ -114,9 +114,9 @@ void start_rendering_async(app_state& app) {
     for (auto j = 0; j < app.image_size[1]; j++) {
         for (auto i = 0; i < app.image_size[0]; i++) {
             auto pi = clamp(
-                     i / app.preview_ratio, 0, display_preview.size()[0] - 1),
+                     i / app.preview_ratio, 0, display_preview.width() - 1),
                  pj = clamp(
-                     j / app.preview_ratio, 0, display_preview.size()[1] - 1);
+                     j / app.preview_ratio, 0, display_preview.height() - 1);
             large_preview[{i, j}] = display_preview[{pi, pj}];
         }
     }
@@ -208,7 +208,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                app.rendered_image.size()[0], app.rendered_image.size()[1],
+                app.rendered_image.width(), app.rendered_image.height(),
                 (int)app.trace_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
@@ -256,8 +256,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto ij        = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale, app.rendered_image.size());
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij[0] >= 0 && ij[0] < app.rendered_image.size()[0] && ij[1] >= 0 &&
-                ij[1] < app.rendered_image.size()[1]) {
+            if (ij[0] >= 0 && ij[0] < app.rendered_image.width() && ij[1] >= 0 &&
+                ij[1] < app.rendered_image.height()) {
                 draw_coloredit_opengl_widget(
                     win, "pixel", app.rendered_image[ij]);
             } else {
@@ -308,8 +308,8 @@ void draw(const opengl_window& win) {
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
                     size += bbox_size(region)[0] * bbox_size(region)[1];
-                    if (size >= app.rendered_image.size()[0] *
-                                    app.rendered_image.size()[1])
+                    if (size >= app.rendered_image.width() *
+                                    app.rendered_image.height())
                         break;
                 }
             }
@@ -406,8 +406,8 @@ void run_ui(app_state& app) {
             !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale, app.rendered_image.size());
-            if (ij[0] < 0 || ij[0] >= app.rendered_image.size()[0] || ij[1] < 0 ||
-                ij[1] >= app.rendered_image.size()[1]) {
+            if (ij[0] < 0 || ij[0] >= app.rendered_image.width() || ij[1] < 0 ||
+                ij[1] >= app.rendered_image.height()) {
                 auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
                     app.rendered_image.size(), {0.5f, 0.5f}, zero2f);

@@ -1300,9 +1300,9 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
     if (texture.volume_data.empty()) return 1;
 
     // get image width/height
-    auto width  = texture.volume_data.size()[0];
-    auto height = texture.volume_data.size()[1];
-    auto depth  = texture.volume_data.size()[2];
+    auto width  = texture.volume_data.width();
+    auto height = texture.volume_data.height();
+    auto depth  = texture.volume_data.depth();
 
     // get coordinates normalized for tiling
     auto s = clamp((texcoord[0] + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
@@ -1676,15 +1676,15 @@ void print_stats(const yocto_scene& scene) {
                      vert_quads_texcoord * sizeof(vec2f);
 
     for (auto& texture : scene.textures) {
-        texel_hdr += texture.hdr_image.size()[0] * texture.hdr_image.size()[1];
-        texel_ldr += texture.ldr_image.size()[0] * texture.ldr_image.size()[1];
+        texel_hdr += texture.hdr_image.width() * texture.hdr_image.height();
+        texel_ldr += texture.ldr_image.width() * texture.ldr_image.height();
     }
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
     for (auto& voltexture : scene.voltextures) {
-        voxel_hdr += voltexture.volume_data.size()[0] *
-                     voltexture.volume_data.size()[1] *
-                     voltexture.volume_data.size()[2];
+        voxel_hdr += voltexture.volume_data.width() *
+                     voltexture.volume_data.height() *
+                     voltexture.volume_data.depth();
     }
     memory_vols = voxel_hdr * sizeof(float);
 

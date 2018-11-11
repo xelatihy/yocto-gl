@@ -245,9 +245,9 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_checkbox_opengl_widget(
         win, "ldr_as_linear", value.ldr_as_linear);
     draw_label_opengl_widget(win, "hdr_image", "%d x %d",
-        value.hdr_image.size()[0], value.hdr_image.size()[1]);
+        value.hdr_image.width(), value.hdr_image.height());
     draw_label_opengl_widget(win, "ldr_image", "%d x %d",
-        value.ldr_image.size()[0], value.ldr_image.size()[1]);
+        value.ldr_image.width(), value.ldr_image.height());
     return edited;
 }
 

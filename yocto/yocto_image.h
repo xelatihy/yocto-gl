@@ -85,6 +85,8 @@ struct image {
 
     bool  empty() const { return _size[0] == 0 && _size[1] == 0; }
     vec2i size() const { return _size; }
+    int width() const { return _size[0]; }
+    int height() const { return _size[1]; }
 
     void clear() {
         _size = {0, 0};
@@ -133,7 +135,7 @@ struct image {
 // Size
 template <typename T>
 inline float get_image_aspect(const image<T>& img) {
-    return (float)img.size()[0] / (float)img.size()[1];
+    return (float)img.width() / (float)img.height();
 }
 
 // Splits an image into an array of regions
@@ -236,6 +238,9 @@ struct volume {
 
     bool  empty() const { return _size[0] == 0 && _size[1] == 0 && _size[2] == 0; }
     vec3i size() const { return _size; }
+    int width() const { return _size[0]; }
+    int height() const { return _size[1]; }
+    int depth() const { return _size[2]; }
 
     void clear() {
         _size = {0, 0, 0};

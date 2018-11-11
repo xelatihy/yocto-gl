@@ -1682,8 +1682,8 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 image<trace_pixel> make_trace_pixels(const vec2i& image_size, uint64_t seed) {
     auto pixels = image<trace_pixel>{image_size};
     auto rng    = make_rng(1301081);
-    for (auto j = 0; j < pixels.size()[1]; j++) {
-        for (auto i = 0; i < pixels.size()[0]; i++) {
+    for (auto j = 0; j < pixels.height(); j++) {
+        for (auto i = 0; i < pixels.width(); i++) {
             auto& pixel = pixels[{i, j}];
             pixel.rng   = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }

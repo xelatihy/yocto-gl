@@ -154,7 +154,7 @@ inline void to_json(json& js, const image<T>& value) {
     js           = json::object();
     js["size"]   = value.size();
     js["pixels"] = vector<T>{
-        value.data(), value.data() + value.size()[0] * value.size()[1]};
+        value.data(), value.data() + value.width() * value.height()};
 }
 template <typename T>
 inline void from_json(const json& js, image<T>& value) {
@@ -167,7 +167,7 @@ inline void to_json(json& js, const volume<T>& value) {
     js           = json::object();
     js["size"]   = value.size();
     js["voxels"] = vector<T>{value.data(),
-        value.data() + value.size()[0] * value.size()[1] * value.size()[2]};
+        value.data() + value.width() * value.height() * value.depth()};
 }
 template <typename T>
 inline void from_json(const json& js, volume<T>& value) {
@@ -511,8 +511,8 @@ namespace yocto {
 template <typename T>
 bool operator==(const image<T>& a, const image<T>& b) {
     if (a.size() != b.size()) return false;
-    for (auto j = 0; j < a.size()[1]; j++) {
-        for (auto i = 0; i < a.size()[0]; i++) {
+    for (auto j = 0; j < a.height(); j++) {
+        for (auto i = 0; i < a.width(); i++) {
             if (a[{i, j}] != b[{i, j}]) return false;
         }
     }
@@ -521,9 +521,9 @@ bool operator==(const image<T>& a, const image<T>& b) {
 template <typename T>
 bool operator==(const volume<T>& a, const volume<T>& b) {
     if (a.size() != b.size()) return false;
-    for (auto k = 0; k < a.size()[2]; k++) {
-        for (auto j = 0; j < a.size()[1]; j++) {
-            for (auto i = 0; i < a.size()[0]; i++) {
+    for (auto k = 0; k < a.depth(); k++) {
+        for (auto j = 0; j < a.height(); j++) {
+            for (auto i = 0; i < a.width(); i++) {
                 if (a[{i, j, k}] != b[{i, j, k}]) return false;
             }
         }
@@ -4469,14 +4469,14 @@ template <typename T>
 bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.size())) return false;
-        if (!write_values(fs, img.size()[0] * img.size()[1], img.data()))
+        if (!write_values(fs, img.width() * img.height(), img.data()))
             return false;
         return true;
     } else {
         auto size = zero2i;
         if (!read_value(fs, size)) return false;
         img.resize(size);
-        if (!read_values(fs, img.size()[0] * img.size()[1], img.data()))
+        if (!read_values(fs, img.width() * img.height(), img.data()))
             return false;
         return true;
     }
@@ -4488,7 +4488,7 @@ bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
     if (save) {
         if (!write_value(fs, vol.size())) return false;
         if (!write_values(
-                fs, vol.size()[0] * vol.size()[1] * vol.size()[2], vol.data()))
+                fs, vol.width() * vol.height() * vol.depth(), vol.data()))
             return false;
         return true;
     } else {
@@ -4496,7 +4496,7 @@ bool serialize_bin_value(volume<T>& vol, file_stream& fs, bool save) {
         if (!read_value(fs, size)) return false;
         vol.resize(size);
         if (!read_values(
-                fs, vol.size()[0] * vol.size()[1] * vol.size()[2], vol.data()))
+                fs, vol.width() * vol.height() * vol.depth(), vol.data()))
             return false;
         return true;
     }
