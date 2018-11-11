@@ -278,7 +278,7 @@ struct volume {
     const T* data() const { return _voxels.data(); }
 
    private:
-    vec3i     _size   = {0, 0};
+    vec3i     _size   = {0, 0, 0};
     vector<T> _voxels = {};
 };
 

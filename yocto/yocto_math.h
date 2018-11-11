@@ -175,6 +175,10 @@ template <typename T>
 struct vec<T, 1> {
     T x = 0;
 
+    constexpr vec() : x{0} { }
+    constexpr vec(const T& x_) : x{x_} { }
+    constexpr vec(const vec<T, 1>& v) = default;
+
     constexpr T&       operator[](int idx) { return *(&x + idx); }
     constexpr const T& operator[](int idx) const { return *(&x + idx); }
 };
@@ -182,6 +186,11 @@ template <typename T>
 struct vec<T, 2> {
     T x = 0;
     T y = 0;
+
+    constexpr vec() : x{0}, y{0} { }
+    constexpr explicit vec(const T& v) : x{v}, y{v} { }
+    constexpr vec(const T& x_, const T& y_) : x{x_}, y{y_} { }
+    constexpr vec(const vec<T, 2>& v) = default;
 
     constexpr T&       operator[](int idx) { return *(&x + idx); }
     constexpr const T& operator[](int idx) const { return *(&x + idx); }
@@ -191,6 +200,11 @@ struct vec<T, 3> {
     T x = 0;
     T y = 0;
     T z = 0;
+
+    constexpr vec() : x{0}, y{0}, z{0} { }
+    constexpr explicit vec(const T& v) : x{v}, y{v}, z{v} { }
+    constexpr vec(const T& x_, const T& y_, const T& z_) : x{x_}, y{y_}, z{z_} { }
+    constexpr vec(const vec<T, 3>& v) = default;
 
     constexpr T&       operator[](int idx) { return *(&x + idx); }
     constexpr const T& operator[](int idx) const { return *(&x + idx); }
@@ -202,6 +216,11 @@ struct vec<T, 4> {
     T z = 0;
     T w = 0;
 
+    constexpr vec() : x{0}, y{0}, z{0}, w{0} { }
+    constexpr explicit vec(const T& v) : x{v}, y{v}, z{v}, w{w} { }
+    constexpr vec(const T& x_, const T& y_, const T& z_, const T& w_) : x{x_}, y{y_}, z{w_}, w{w_} { }
+    constexpr vec(const vec<T, 4>& v) = default;
+
     constexpr T&       operator[](int idx) { return *(&x + idx); }
     constexpr const T& operator[](int idx) const { return *(&x + idx); }
 };
@@ -211,7 +230,7 @@ using vec1f = vec<float, 1>;
 using vec2f = vec<float, 2>;
 using vec3f = vec<float, 3>;
 using vec4f = vec<float, 4>;
-using vec1i = vec<int, 2>;
+using vec1i = vec<int, 1>;
 using vec2i = vec<int, 2>;
 using vec3i = vec<int, 3>;
 using vec4i = vec<int, 4>;
