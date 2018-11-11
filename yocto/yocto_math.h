@@ -815,29 +815,57 @@ constexpr inline frame<T, 3> make_frame_fromzx(
 }
 
 // Frame to matrix conversion.
-template <typename T, int N>
-constexpr inline mat<T, N+1, N+1> frame_to_mat(const frame<T, N>& a) {
-    auto c = mat<T, N+1>{};
-    for(auto j = 0; j < N+1; j ++) c[j] = {a[j], j == N ? (T)1 : (T)0 };
-    return c;
+template <typename T>
+constexpr inline mat<T, 3, 3> frame_to_mat(const frame<T, 2>& a) {
+    return {
+        {a[0][0], a[0][1], 0},
+        {a[1][0], a[1][1], 0},
+        {a.o[0], a.o[1], 1},
+    };
 }
-template <typename T, int N>
-constexpr inline frame<T, N-1> mat_to_frame(const mat<T, N, N>& a) {
-    auto c = frame<T, N-1>{};
-    for(auto j = 0; j < N; j ++) c[j] = (vec<T, N-1>)a[j];
-    return c;
+template <typename T>
+constexpr inline frame<T, 2> mat_to_frame(const mat<T, 3, 3>& a) {
+    return {
+        {a[0][0], a[0][1]},
+        {a[1][0], a[1][1]},
+        {a[2][0], a[2][1]},
+    };
+}
+template <typename T>
+constexpr inline mat<T, 4, 4> frame_to_mat(const frame<T, 3>& a) {
+    return {
+        {a[0][0], a[0][1], a[0][2], 0},
+        {a[1][0], a[1][1], a[1][2], 0},
+        {a[2][0], a[2][1], a[2][2], 0},
+        {a[3][0], a[3][1], a[3][2], 1},
+    };
+}
+template <typename T>
+constexpr inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
+    return {
+        {a[0][0], a[0][1], a[0][2]},
+        {a[1][0], a[1][1], a[1][2]},
+        {a[2][0], a[2][1], a[2][2]},
+        {a[3][0], a[3][1], a[3][2]},
+    };
 }
 
 // Frame comparisons.
-template <typename T, int N>
-constexpr inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
-    for(auto j = 0; j < N+1; j ++) if(a[j] != b[j]) return false;
-    return true;
+template <typename T>
+constexpr inline bool operator==(const frame<T, 2>& a, const frame<T, 2>& b) {
+    return a[0] == b[0] && a[1] == b[1] && a.o == b.o;
 }
-template <typename T, int N>
-constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
-    for(auto j = 0; j < N+1; j ++) if(a[j] == b[j]) return false;
-    return true;
+template <typename T>
+constexpr inline bool operator!=(const frame<T, 2>& a, const frame<T, 2>& b) {
+    return !(a == b);
+}
+template <typename T>
+constexpr inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
+    return a[0] == b[0] && a[1] == b[1] && a[2] == b[2] && a[3] == b[3];
+}
+template <typename T>
+constexpr inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
+    return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
