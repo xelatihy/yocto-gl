@@ -73,6 +73,7 @@
 #include "yocto_utils.h"
 
 #include <functional>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -80,6 +81,7 @@
 namespace yocto {
 
 using std::function;
+using std::vector;
 
 }
 

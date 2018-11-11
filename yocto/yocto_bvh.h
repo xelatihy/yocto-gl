@@ -81,12 +81,16 @@
 
 #include "yocto_math.h"
 
+#include <atomic>
+#include <vector>
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 using std::atomic;
+using std::vector;
 
 }
 

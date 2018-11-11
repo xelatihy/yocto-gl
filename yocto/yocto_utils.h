@@ -93,6 +93,7 @@
 #include <chrono>
 #include <thread>
 #include <cstdio>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES

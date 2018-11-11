@@ -104,6 +104,7 @@
 
 #include "yocto_math.h"
 
+#include <vector>
 #include <tuple>
 #include <unordered_map>
 
@@ -117,6 +118,7 @@ using std::ignore;
 using std::tie;
 using std::tuple;
 using std::unordered_map;
+using std::vector;
 
 }
 
