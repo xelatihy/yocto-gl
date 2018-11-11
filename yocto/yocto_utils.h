@@ -87,6 +87,7 @@
 
 #include "yocto_math.h"
 
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cstdio>
