@@ -67,6 +67,10 @@
 #ifndef _YOCTO_MATH_H_
 #define _YOCTO_MATH_H_
 
+#ifndef YOCTO_SPECIALIZATIONS
+#define YOCTO_SPECIALIZATIONS 1
+#endif
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -170,7 +174,26 @@ namespace yocto {
 
 // Small size vectors.
 template <typename T, int N>
-struct vec;
+struct vec  {
+    T elements[N] = {};
+
+    constexpr vec() {
+        for(auto i = 0; i < N; i ++) elements[i] = 0;
+    }
+    constexpr explicit vec(const T& val) { for(auto i = 0; i < N; i ++) elements[i] = val; }
+    constexpr vec(initializer_list<T> vals) {
+        // assert(vals.size() == N);
+        auto vals_ptr = vals.begin();
+        for(auto i = 0; i < N; i ++) elements[i] = vals_ptr[i];
+    }
+    constexpr vec(const vec<T, N>& v) = default;
+
+    constexpr T&       operator[](int idx) { return elements[idx]; }
+    constexpr const T& operator[](int idx) const { return elements[idx]; }
+};
+
+#if YOCTO_SPECIALIZATIONS
+
 template <typename T>
 struct vec<T, 1> {
     constexpr static const int N = 1;
@@ -227,6 +250,8 @@ struct vec<T, 4> {
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
+
+#endif
 
 // Type aliases.
 using vec1f = vec<float, 1>;
