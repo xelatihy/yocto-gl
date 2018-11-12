@@ -441,8 +441,12 @@ int main(int argc, char* argv[]) {
         argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.trace_options.image_resolution = parse_argument(parser, "--resolution,-r",
-        vec2i{0, 512}, "Image vertical resolution.");
+    app.trace_options.image_resolution = parse_argument(parser, "--resolution,-R",
+        vec2i{0, 512}, "Image resolution.");
+    if(app.trace_options.image_resolution == vec2i{0, 512}) {
+        app.trace_options.image_resolution[1] = parse_argument(parser, "--vresolution,-r",
+            512, "Image vertical resolution.");
+    }
     app.trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",

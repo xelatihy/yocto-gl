@@ -8,11 +8,11 @@ def cli():
 
 @cli.command()
 def release():
-    os.system('mkdir -p build && mkdir -p build/release && cd build/release && cmake ../.. -GNinja -DYOCTO_EMBREE=ON')
+    os.system('mkdir -p build && mkdir -p build/release && cd build/release && cmake ../.. -GNinja -DYOCTO_EMBREE=ON && ninja')
 
 @cli.command()
 def debug():
-    os.system('mkdir -p build && mkdir -p build/debug && cd build/debug && cmake ../.. -GNinja -DYOCTO_EMBREE=ON -DCMAKE_BUILD_TYPE=Debug')
+    os.system('mkdir -p build && mkdir -p build/debug && cd build/debug && cmake ../.. -GNinja -DYOCTO_EMBREE=ON -DCMAKE_BUILD_TYPE=Debug && ninja')
 
 @cli.command()
 def xcode():
