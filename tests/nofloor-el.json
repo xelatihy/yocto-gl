@@ -28,7 +28,10 @@
             "name": "sky",
             "filename": "textures/sky.hdr",
             "!!proc": {
-                "type": "sky"
+                "type": "sky",
+                "sun_angle": 0.2,
+                "has_sun": true,
+                "turbidity": 2
             }
         }
     ],

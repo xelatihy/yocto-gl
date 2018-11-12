@@ -401,8 +401,8 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     auto perez_E_xyY = vec3f{-0.00325f * T + 0.04517f, -0.01092f * T + 0.05291f,
         -0.06696f * T + 0.37027f};
 
-    auto perez_f = [thetaS](float A, float B, float C, float D, float E,
-                       float theta, float gamma, float zenith) -> float {
+    auto perez_f = [thetaS](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E,
+                       float theta, float gamma, vec3f zenith) -> vec3f {
         auto den = ((1 + A * exp(B)) *
                     (1 + C * exp(D * thetaS) + E * cos(thetaS) * cos(thetaS)));
         auto num = ((1 + A * exp(B / cos(theta))) *
@@ -412,13 +412,8 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
 
     auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
                    perez_E_xyY, zenith_xyY](auto theta, auto gamma) -> vec3f {
-        auto x = perez_f(perez_A_xyY[0], perez_B_xyY[0], perez_C_xyY[0],
-            perez_D_xyY[0], perez_E_xyY[0], theta, gamma, zenith_xyY[0]);
-        auto y = perez_f(perez_A_xyY[1], perez_B_xyY[1], perez_C_xyY[1],
-            perez_D_xyY[1], perez_E_xyY[1], theta, gamma, zenith_xyY[1]);
-        auto Y = perez_f(perez_A_xyY[2], perez_B_xyY[2], perez_C_xyY[2],
-            perez_D_xyY[2], perez_E_xyY[2], theta, gamma, zenith_xyY[2]);
-        return xyz_to_rgb(xyY_to_xyz({x, y, Y})) / 10000.0f;
+        return xyz_to_rgb(xyY_to_xyz(perez_f(perez_A_xyY, perez_B_xyY, 
+            perez_C_xyY, perez_D_xyY, perez_E_xyY, theta, gamma, zenith_xyY))) / 10000;
     };
 
     // compute sun luminance
@@ -432,17 +427,14 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     auto sun_m      = 1.0f /
                  (cos(thetaSun) + 0.000940f * pow(1.6386f - thetaSun, -1.253f));
 
-    auto sun_le = zero_vec3f;
-    for (auto i = 0; i < 3; i++) {
-        auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda[i] / 1000, -4.08f));
-        auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda[i] / 1000, -1.3f));
-        auto tauO = exp(-sun_m * sun_ko[i] * .35f);
-        auto tauG = exp(-1.41f * sun_kg[i] * sun_m /
-                        pow(1 + 118.93f * sun_kg[i] * sun_m, 0.45f));
-        auto tauWA = exp(-0.2385f * sun_kwa[i] * 2.0f * sun_m /
-                         pow(1 + 20.07f * sun_kwa[i] * 2.0f * sun_m, 0.45f));
-        sun_le[i]  = sun_sol[i] * tauR * tauA * tauO * tauG * tauWA;
-    }
+    auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda / 1000, -4.08f));
+    auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, -1.3f));
+    auto tauO = exp(-sun_m * sun_ko * .35f);
+    auto tauG = exp(-1.41f * sun_kg * sun_m /
+                    pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
+    auto tauWA = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
+                        pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
+    auto sun_le  = sun_sol * tauR * tauA * tauO * tauG * tauWA;
 
     auto sun = [has_sun, sunAngularRadius, sun_le](auto theta, auto gamma) {
         return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
