@@ -147,7 +147,8 @@ const auto trace_sampler_type_names = vector<string>{"path", "direct",
 // Tracer function
 using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces)>;
+    const vec3f& direction, rng_state& rng, int max_bounces, 
+    bool environments_hidden)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions
@@ -160,7 +161,7 @@ struct trace_image_options {
     int                max_bounces         = 8;
     int                samples_per_batch   = 16;
     float              pixel_clamp         = 100;
-    bool               environments_hidden = true;
+    bool               environments_hidden = false;
     uint64_t           random_seed         = 7;
     std::atomic<bool>* cancel_flag         = nullptr;
     bool               run_serially        = false;
