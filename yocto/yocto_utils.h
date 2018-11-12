@@ -210,10 +210,13 @@ inline void check_cmdline(cmdline_parser& parser);
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line).
 // Boolean flags are indicated with a pair of names "--name/--no-name", so
-// that we have both options available.
+// that we have both options available. You can also use the parse flag function 
+// in which case only one name is used and the flag will flip the value passed.
 template <typename T>
 inline T parse_argument(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req = false);
+inline bool parse_argument_flag(cmdline_parser& parser, const string& name, bool def,
+    const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
 inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
@@ -227,9 +230,14 @@ inline T parse_argument(cmdline_parser& parser, const string& name, T def,
 // Options's names starts with "--" or "-", otherwise they are arguments.
 // vecXX options use space-separated values but all in one argument
 // (use " or ' from the common line). Booleans are flags.
+// Boolean flags are indicated with a pair of names "--name/--no-name", so
+// that we have both options available. You can also use the parse flag function 
+// in which case only one name is used and the flag will flip the value passed.
 template <typename T>
 inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
     T& val, const string& usage, bool req = false);
+inline bool parse_argument_flag(cmdline_parser& parser, const string& name,
+    bool& val, const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
 inline bool parse_arguments_ref(cmdline_parser& parser, const string& name,
@@ -824,12 +832,12 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
 
 // Parse a flag. Name should start with either "--" or "-".
 inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
-    bool& value, const string& usage);
+    bool& value, const string& usage, bool req);
 
 // check if any error occurred and exit appropriately
 inline void check_cmdline(cmdline_parser& parser) {
     auto help = false;
-    if (parse_flag_argument(parser, "--help,-?", help, "print help")) {
+    if (parse_flag_argument(parser, "--help,-?", help, "print help", false)) {
         print_cmdline_usage(parser);
         exit(0);
     }
@@ -943,7 +951,7 @@ inline bool parse_positional_arguments(cmdline_parser& parser,
 
 // Parse a flag. Name should start with either "--" or "-".
 inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
-    bool& value, const string& usage) {
+    bool& value, const string& usage, bool req) {
     parser.usage_opt += get_option_usage(name, usage, false, false, {});
     if (parser.error != "") return false;
     auto names = get_flag_names(name);
@@ -963,9 +971,12 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
             break;
         }
     }
-    if (pos == parser.args.end()) return false;
+    if (pos == parser.args.end()) {
+        if(req) parser.error += "missing value for " + name + "\n";
+        return false;
+    }
     parser.args.erase(pos);
-    value = !value;
+    value = new_value;
     return true;
 }
 
@@ -978,19 +989,25 @@ inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
         return parse_option_argument(parser, name, value, usage, req, {});
     } else {
         return parse_positional_argument(parser, name, value, usage, req, {});
-    }
-               
+    }               
 }
 template <>
 inline bool parse_argument_ref<bool>(cmdline_parser& parser, const string& name,
     bool& value, const string& usage, bool req) {
     if(is_optional_flag(name)) {
-        return parse_flag_argument(parser, name, value, usage);
+        return parse_flag_argument(parser, name, value, usage, req);
     } else if(is_optional_argument(name)) {
         return parse_option_argument(parser, name, value, usage, req, {});
     } else {
         return parse_positional_argument(parser, name, value, usage, req, {});
     }
+}
+
+// Parse a boolean flag.
+inline bool parse_argument_flag_ref(cmdline_parser& parser, const string& name,
+    bool& value, const string& usage) {
+    auto new_name = (!value) ? name : "/" + name;
+    return parse_flag_argument(parser, new_name, value, usage, false);
 }
 
 template <typename T>
@@ -1024,6 +1041,14 @@ inline T parse_argument(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
     auto value = def;
     if (!parse_argument_ref(parser, name, value, usage, req)) return def;
+    return value;
+}
+
+// Parse a boolean flag.
+inline bool parse_argument_flag(cmdline_parser& parser, const string& name, bool def,
+    const string& usage) {
+    auto value = def;
+    if (!parse_argument_flag_ref(parser, name, value, usage)) return def;
     return value;
 }
 
