@@ -323,8 +323,10 @@ int main(int argc, char* argv[]) {
     auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
     auto exposure = parse_argument(
         parser, "--exposure,-e", 0.0f, "display exposure");
-    auto filmic = parse_argument(parser, "--filmic", false, "display filmic");
-    auto srgb   = parse_argument(parser, "--no-srgb", true, "display as sRGB");
+    auto filmic = parse_argument(
+        parser, "--filmic/--no-filmic", false, "display filmic");
+    auto srgb = parse_argument(
+        parser, "--srgb/--no-srgb", true, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
     auto outfilename = parse_argument(

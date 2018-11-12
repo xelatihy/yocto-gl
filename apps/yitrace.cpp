@@ -219,7 +219,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "camera", app.trace_options.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
-                win, "size", app.trace_options.image_size, 256, 4096);
+                win, "resolution", app.trace_options.image_size, 0, 4096);
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.trace_options.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
@@ -388,14 +388,16 @@ void run_ui(app_state& app) {
         // handle mouse and keyboard for navigation
         if (app.load_done && (mouse_left || mouse_right) && !alt_down &&
             !widgets_active) {
-            auto dolly  = 0.0f;
-            auto pan    = zero_vec2f;
-            auto rotate = zero_vec2f;
+            auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
+            auto  dolly  = 0.0f;
+            auto  pan    = zero_vec2f;
+            auto  rotate = zero_vec2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos[0] - last_pos[0]) / 100.0f;
-            if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
-            auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
+            if (mouse_left && shift_down)
+                pan = (mouse_pos - last_pos) * camera.focus_distance / 200.0f;
+            pan[0] = -pan[0];
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
             app.update_list.push_back({"camera", app.trace_options.camera_id});
@@ -441,8 +443,12 @@ int main(int argc, char* argv[]) {
         argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.trace_options.image_size = {0, parse_argument(parser, "--resolution,-r",
-                                           512, "Image vertical resolution.")};
+    app.trace_options.image_size = parse_argument(
+        parser, "--resolution,-R", vec2i{0, 512}, "Image resolution.");
+    if (app.trace_options.image_size == vec2i{0, 512}) {
+        app.trace_options.image_size[1] = parse_argument(
+            parser, "--vresolution,-r", 512, "Image vertical resolution.");
+    }
     app.trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
@@ -453,15 +459,16 @@ int main(int argc, char* argv[]) {
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.trace_options.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
-    auto no_parallel = parse_argument(
-        parser, "--noparallel", false, "Disable parallel execution.");
+    app.trace_options.environments_hidden = parse_argument(parser,
+        "--env-hidden/--no-env-hidden", false,
+        "Environments are hidden in renderer");
+    auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
+        "Disable parallel execution.");
     app.bvh_options.use_embree = parse_argument(
-        parser, "--embree", false, "Use Embree ratracer");
-    app.double_sided = parse_argument(
-        parser, "--double-sided", false, "Double-sided rendering.");
-    app.add_skyenv = parse_argument(
-        parser, "--add-skyenv", false, "Add missing environment map");
-    app.imfilename = parse_argument(
+        parser, "--embree/--no-embree", false, "Use Embree ratracer");
+    app.double_sided = parse_argument(parser,
+        "--double-sided/--no-double-sided", false, "Double-sided rendering.");
+    app.imfilename   = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);

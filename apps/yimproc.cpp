@@ -130,13 +130,14 @@ image<vec4f> filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "Process images", "yimproc");
-    auto tonemap = parse_argument(parser, "--tonemap,-t", false, "Tonemap image");
+    auto parser  = make_cmdline_parser(argc, argv, "Process images", "yimproc");
+    auto tonemap = parse_argument(
+        parser, "--tonemap/--no-tonemap,-t", false, "Tonemap image");
     auto exposure = parse_argument(
         parser, "--exposure,-e", 0.0f, "Tonemap exposure");
     auto srgb   = parse_argument(parser, "--srgb", true, "Tonemap to sRGB.");
     auto filmic = parse_argument(
-        parser, "--filmic,-f", false, "Tonemap uses filmic curve");
+        parser, "--filmic/--no-filmic,-f", false, "Tonemap uses filmic curve");
     auto resize_size = parse_argument(
         parser, "--resize", zero_vec2i, "resize size (0 to maintain aspect)");
     auto spatial_sigma = parse_argument(

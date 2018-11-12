@@ -930,12 +930,15 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0)
-        return {point.emission, !scene.environments.empty()};
+    if (point.instance_id < 0) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero_vec3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
     auto radiance = point.emission;
@@ -1011,7 +1014,7 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 // Iterative volume path tracing.
 pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     if (empty(lights)) return {zero_vec3f, false};
 
     // initialize
@@ -1234,14 +1237,17 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_path_naive(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_path_naive(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0)
-        return {point.emission, !scene.environments.empty()};
+    if (point.instance_id < 0) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero_vec3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
     auto radiance = point.emission;
@@ -1282,14 +1288,17 @@ pair<vec3f, bool> trace_path_naive(const yocto_scene& scene,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0)
-        return {point.emission, !scene.environments.empty()};
+    if (point.instance_id < 0) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero_vec3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
     auto radiance = point.emission;
@@ -1356,12 +1365,15 @@ pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene,
 // Direct illumination.
 pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0)
-        return {point.emission, !scene.environments.empty()};
+    if (point.instance_id < 0) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero_vec3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
     auto radiance = point.emission;
@@ -1390,7 +1402,7 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
         auto incoming_radiance = trace_direct(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1)
+            point.position, next_direction, rng, max_bounces - 1, true)
                                      .first;
         radiance += brdf_cosine * incoming_radiance / next_pdf;
     }
@@ -1402,12 +1414,16 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
 // Direct illumination.
 pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0)
-        return {point.emission, !scene.environments.empty()};
+    if (point.instance_id < 0) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero_vec3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
     auto radiance = point.emission;
@@ -1459,7 +1475,7 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
         auto incoming_radiance = trace_direct_nomis(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1)
+            point.position, next_direction, rng, max_bounces - 1, true)
                                      .first;
         radiance += brdf_cosine * incoming_radiance * next_pdf;
     }
@@ -1471,12 +1487,16 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
 // Environment illumination only with no shadows.
 pair<vec3f, bool> trace_environment(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0)
-        return {point.emission, !scene.environments.empty()};
+    if (point.instance_id < 0) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero_vec3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
     auto radiance = point.emission;
@@ -1503,12 +1523,15 @@ pair<vec3f, bool> trace_environment(const yocto_scene& scene,
 // Eyelight for quick previewing.
 pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces) {
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
-    if (point.instance_id < 0)
-        return {point.emission, !scene.environments.empty()};
+    if (point.instance_id < 0) {
+        if (environments_hidden || scene.environments.empty())
+            return {zero_vec3f, false};
+        return {point.emission, true};
+    }
 
     // initialize
     auto radiance = point.emission;
@@ -1526,7 +1549,8 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
 // Debug previewing.
 pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1539,7 +1563,8 @@ pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene,
 // Debug frontfacing.
 pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1555,7 +1580,8 @@ pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene,
 // Debug previewing.
 pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1570,7 +1596,8 @@ pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
 // Debug previewing.
 pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1583,7 +1610,8 @@ pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
 // Debug previewing.
 pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1596,7 +1624,8 @@ pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
 // Debug previewing.
 pair<vec3f, bool> trace_debug_roughness(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1610,7 +1639,8 @@ pair<vec3f, bool> trace_debug_roughness(const yocto_scene& scene,
 // Debug previewing.
 pair<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces) {
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1660,7 +1690,8 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
                 auto ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size(), pixel.rng);
                 auto radiance_hit = sampler(scene, bvh, lights, ray.origin,
-                    ray.direction, pixel.rng, options.max_bounces);
+                    ray.direction, pixel.rng, options.max_bounces,
+                    options.environments_hidden);
                 auto radiance     = radiance_hit.first;
                 auto hit          = radiance_hit.second;
                 if (!isfinite(radiance[0]) || !isfinite(radiance[1]) ||
