@@ -47,11 +47,12 @@ bool mkdir(const string& dir) {
 int main(int argc, char** argv) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
-    auto skip_textures = parse_argument(
-        parser, "--skip-textures", false, "Disable textures.");
-    auto uniform_txt = parse_argument(
-        parser, "--uniform-texture", false, "uniform texture formats");
-    auto output = parse_argument(
+    auto skip_textures = parse_argument(parser,
+        "--skip-textures/--no-skip-textures", false, "Disable textures.");
+    auto uniform_txt   = parse_argument(parser,
+        "--uniform-texture/--no-uniform-textures", false,
+        "uniform texture formats");
+    auto output        = parse_argument(
         parser, "--output,-o", "out.json"s, "output scene", true);
     auto filename = parse_argument(
         parser, "scene", "scene.json"s, "input scene", true);

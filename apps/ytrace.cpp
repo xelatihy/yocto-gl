@@ -44,8 +44,12 @@ int main(int argc, char* argv[]) {
         argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    trace_options.image_size = vec2i{0, parse_argument(parser, "--resolution,-r",
-                                            512, "Image vertical resolution.")};
+    trace_options.image_size = parse_argument(
+        parser, "--resolution,-R", vec2i{0, 512}, "Image resolution.");
+    if (trace_options.image_size == vec2i{0, 512}) {
+        trace_options.image_size[1] = parse_argument(
+            parser, "--vresolution,-r", 512, "Image vertical resolution.");
+    }
     trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
     trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
@@ -54,24 +58,25 @@ int main(int argc, char* argv[]) {
         parser, "--nbounces", 8, "Maximum number of bounces.");
     trace_options.pixel_clamp = parse_argument(
         parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
-    auto no_parallel = parse_argument(
-        parser, "--noparallel", false, "Disable parallel execution.");
+    auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
+        "Disable parallel execution.");
     trace_options.random_seed = parse_argument(
         parser, "--seed", 13, "Seed for the random number generators.");
     trace_options.samples_per_batch = parse_argument(
         parser, "--nbatch,-b", 16, "Samples per batch.");
-    auto save_batch = parse_argument(
+    trace_options.environments_hidden = parse_argument(parser,
+        "--env-hidden/--no-env-hidden", false,
+        "Environments are hidden in renderer");
+    auto save_batch                   = parse_argument(
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_argument(parser, "--exposure,-e", 0.0f, "Hdr exposure");
     auto filmic   = parse_argument(parser, "--filmic", false, "Hdr filmic");
     auto srgb     = parse_argument(parser, "--no-srgb", true, "No srgb");
     bvh_options.use_embree = parse_argument(
-        parser, "--embree", false, "Use Embree ratracer");
-    auto double_sided = parse_argument(
-        parser, "--double-sided,-D", false, "Double-sided rendering.");
-    auto add_skyenv = parse_argument(
-        parser, "--add-skyenv,-E", false, "add missing environment map");
-    auto imfilename = parse_argument(
+        parser, "--embree/--no-embree", false, "Use Embree ratracer");
+    auto double_sided = parse_argument(parser,
+        "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
+    auto imfilename   = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     auto filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
@@ -84,6 +89,7 @@ int main(int argc, char* argv[]) {
     }
 
     // scene loading
+    log_info("loading scene");
     auto scene = yocto_scene{};
     if (!load_scene(filename, scene, load_options))
         log_fatal("cannot load scene {}", filename);
@@ -92,19 +98,19 @@ int main(int argc, char* argv[]) {
     tesselate_shapes_and_surfaces(scene);
 
     // add components
-    if (add_skyenv && scene.environments.empty()) add_sky_environment(scene);
     if (double_sided)
         for (auto& material : scene.materials) material.double_sided = true;
     log_validation_errors(scene);
 
     // build bvh
+    log_info("building bvh");
     auto bvh = make_scene_bvh(scene, bvh_options);
 
     // init renderer
     auto lights = make_trace_lights(scene);
 
     // fix renderer type if no lights
-    if (empty(lights) &&
+    if ((lights.instances.empty() && lights.environments.empty()) &&
         trace_options.sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader");
         trace_options.sampler_type = trace_sampler_type::eyelight;
@@ -122,6 +128,7 @@ int main(int argc, char* argv[]) {
          sample += trace_options.samples_per_batch) {
         auto nsamples = min(trace_options.samples_per_batch,
             trace_options.num_samples - sample);
+        log_info("rendering image [{}/{}]", sample, trace_options.num_samples);
         trace_image_samples(rendered_image, trace_pixels, scene, bvh, lights,
             sample, trace_options);
         if (save_batch) {
@@ -135,6 +142,7 @@ int main(int argc, char* argv[]) {
     log_trace_end(scope);
 
     // save image
+    log_info("saving image");
     if (!save_tonemapped_image(imfilename, rendered_image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);
 

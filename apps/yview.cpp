@@ -926,7 +926,7 @@ void draw_widgets(const opengl_window& win) {
                     app.draw_options.camera_id, app.scene.cameras, false);
             }
             draw_slider_opengl_widget(
-                win, "resolution", app.draw_options.image_size, 256, 4096);
+                win, "resolution", app.draw_options.image_size, 0, 4096);
             draw_checkbox_opengl_widget(
                 win, "eyelight", app.draw_options.eyelight);
             continue_opengl_widget_line(win);
@@ -1138,17 +1138,21 @@ int main(int argc, char* argv[]) {
         argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r",
-                                          512, "Image vertical resolution.")};
-    app.draw_options.eyelight   = parse_argument(
-        parser, "--eyelight,-c", false, "Eyelight rendering.");
-    app.double_sided = parse_argument(
-        parser, "--double-sided,-D", false, "Double-sided rendering.");
+    app.draw_options.image_size = parse_argument(
+        parser, "--resolution,-R", vec2i{0, 512}, "Image vertical resolution.");
+    if (app.draw_options.image_size == vec2i{0, 512}) {
+        app.draw_options.image_size[1] = parse_argument(
+            parser, "--vresolution,-r", 512, "Image vertical resolution.");
+    }
+    app.draw_options.eyelight = parse_argument(
+        parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
+    app.double_sided        = parse_argument(parser,
+        "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
     auto highlight_filename = parse_argument(
         parser, "--highlights", ""s, "Highlight filename");
-    auto no_parallel = parse_argument(
-        parser, "--noparallel", false, "Disable parallel execution.");
-    app.imfilename = parse_argument(
+    auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
+        "Disable parallel execution.");
+    app.imfilename   = parse_argument(
         parser, "--output-image,-o", "out.png"s, "Image filename");
     app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);

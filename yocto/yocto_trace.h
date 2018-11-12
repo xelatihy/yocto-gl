@@ -147,22 +147,23 @@ const auto trace_sampler_type_names = vector<string>{"path", "direct",
 // Tracer function
 using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces)>;
+    const vec3f& direction, rng_state& rng, int max_bounces, bool environments_hidden)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions
 struct trace_image_options {
-    int                camera_id         = 0;
-    vec2i              image_size        = {0, 512};
-    trace_sampler_type sampler_type      = trace_sampler_type::path;
-    trace_sampler_func custom_sampler    = {};
-    int                num_samples       = 512;
-    int                max_bounces       = 8;
-    int                samples_per_batch = 16;
-    float              pixel_clamp       = 100;
-    uint64_t           random_seed       = 7;
-    std::atomic<bool>* cancel_flag       = nullptr;
-    bool               run_serially      = false;
+    int                camera_id           = 0;
+    vec2i              image_size          = {0, 512};
+    trace_sampler_type sampler_type        = trace_sampler_type::path;
+    trace_sampler_func custom_sampler      = {};
+    int                num_samples         = 512;
+    int                max_bounces         = 8;
+    int                samples_per_batch   = 16;
+    float              pixel_clamp         = 100;
+    bool               environments_hidden = false;
+    uint64_t           random_seed         = 7;
+    std::atomic<bool>* cancel_flag         = nullptr;
+    bool               run_serially        = false;
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
