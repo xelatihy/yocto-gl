@@ -97,14 +97,14 @@ void start_rendering_async(app_state& app) {
 
     app.image_size = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
-        app.trace_options.image_size);
+        app.trace_options.image_resolution);
     app.rendered_image = image<vec4f>{app.image_size};
     app.display_image  = image<vec4f>{app.image_size};
     app.trace_pixels   = make_trace_pixels(
         app.image_size, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
-    preview_options.image_size /= app.preview_ratio;
+    preview_options.image_resolution /= app.preview_ratio;
     preview_options.num_samples = 1;
     app.preview_image           = trace_image(
         app.scene, app.bvh, app.lights, preview_options);
@@ -219,7 +219,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "camera", app.trace_options.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
-                win, "size", app.trace_options.image_size, 256, 4096);
+                win, "resolution", app.trace_options.image_resolution, 0, 4096);
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.trace_options.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
@@ -441,8 +441,8 @@ int main(int argc, char* argv[]) {
         argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.trace_options.image_size = {0, parse_argument(parser, "--resolution,-r",
-                                           512, "Image vertical resolution.")};
+    app.trace_options.image_resolution = parse_argument(parser, "--resolution,-r",
+        vec2i{0, 512}, "Image vertical resolution.");
     app.trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
@@ -453,6 +453,9 @@ int main(int argc, char* argv[]) {
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.trace_options.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
+    app.trace_options.environments_hidden = parse_argument(parser,
+        "--env-hidden/--no-env-hidden", false,
+        "Environments are hidden in renderer");
     auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
         "Disable parallel execution.");
     app.bvh_options.use_embree = parse_argument(

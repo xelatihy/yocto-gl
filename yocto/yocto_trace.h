@@ -152,17 +152,18 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions
 struct trace_image_options {
-    int                camera_id         = 0;
-    vec2i              image_size        = {0, 512};
-    trace_sampler_type sampler_type      = trace_sampler_type::path;
-    trace_sampler_func custom_sampler    = {};
-    int                num_samples       = 512;
-    int                max_bounces       = 8;
-    int                samples_per_batch = 16;
-    float              pixel_clamp       = 100;
-    uint64_t           random_seed       = 7;
-    std::atomic<bool>* cancel_flag       = nullptr;
-    bool               run_serially      = false;
+    int                camera_id           = 0;
+    vec2i              image_resolution          = {0, 512};
+    trace_sampler_type sampler_type        = trace_sampler_type::path;
+    trace_sampler_func custom_sampler      = {};
+    int                num_samples         = 512;
+    int                max_bounces         = 8;
+    int                samples_per_batch   = 16;
+    float              pixel_clamp         = 100;
+    bool               environments_hidden = true;
+    uint64_t           random_seed         = 7;
+    std::atomic<bool>* cancel_flag         = nullptr;
+    bool               run_serially        = false;
 };
 
 // Progressively compute an image by calling trace_samples multiple times.

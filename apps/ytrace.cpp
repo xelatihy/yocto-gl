@@ -44,8 +44,8 @@ int main(int argc, char* argv[]) {
         argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    trace_options.image_size = vec2i{0, parse_argument(parser, "--resolution,-r",
-                                            512, "Image vertical resolution.")};
+    trace_options.image_resolution = parse_argument(parser, "--resolution,-r",
+        vec2i{0, 512}, "Image vertical resolution.");
     trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
     trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
@@ -60,7 +60,10 @@ int main(int argc, char* argv[]) {
         parser, "--seed", 13, "Seed for the random number generators.");
     trace_options.samples_per_batch = parse_argument(
         parser, "--nbatch,-b", 16, "Samples per batch.");
-    auto save_batch = parse_argument(
+    trace_options.environments_hidden = parse_argument(parser,
+        "--env-hidden/--no-env-hidden", false,
+        "Environments are hidden in renderer");
+    auto save_batch                   = parse_argument(
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_argument(parser, "--exposure,-e", 0.0f, "Hdr exposure");
     auto filmic   = parse_argument(parser, "--filmic", false, "Hdr filmic");
@@ -111,7 +114,7 @@ int main(int argc, char* argv[]) {
 
     // allocate buffers
     auto image_size = get_camera_image_size(
-        scene.cameras[trace_options.camera_id], trace_options.image_size);
+        scene.cameras[trace_options.camera_id], trace_options.image_resolution);
     auto rendered_image = image<vec4f>{image_size};
     auto trace_pixels = make_trace_pixels(image_size, trace_options.random_seed);
 
