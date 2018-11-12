@@ -44,11 +44,11 @@ int main(int argc, char* argv[]) {
         argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    trace_options.image_size = parse_argument(parser, "--resolution,-R",
-        vec2i{0, 512}, "Image resolution.");
-    if(trace_options.image_size == vec2i{0, 512}) {
-        trace_options.image_size[1] = parse_argument(parser, "--vresolution,-r",
-            512, "Image vertical resolution.");
+    trace_options.image_size = parse_argument(
+        parser, "--resolution,-R", vec2i{0, 512}, "Image resolution.");
+    if (trace_options.image_size == vec2i{0, 512}) {
+        trace_options.image_size[1] = parse_argument(
+            parser, "--vresolution,-r", 512, "Image vertical resolution.");
     }
     trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
@@ -128,8 +128,7 @@ int main(int argc, char* argv[]) {
          sample += trace_options.samples_per_batch) {
         auto nsamples = min(trace_options.samples_per_batch,
             trace_options.num_samples - sample);
-        log_info("rendering samples {}-{} of {}", sample, sample + nsamples,
-            trace_options.num_samples);
+        log_info("rendering image [{}/{}]", sample, trace_options.num_samples);
         trace_image_samples(rendered_image, trace_pixels, scene, bvh, lights,
             sample, trace_options);
         if (save_batch) {

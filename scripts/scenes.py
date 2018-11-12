@@ -54,8 +54,8 @@ def yview(directory='mcguire',scene='*',format='obj',mode='path'):
 def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
         'path': '-s 64 -r 360',
-        'embree': '-s 64 -r 360 --embree',
-        'eyelight': '-s 16 -r 360 -t eyelight'
+        'embree': '-s 64 -r 360',
+        'eyelight': '-s 16 -r 720 -t eyelight'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):

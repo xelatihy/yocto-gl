@@ -1138,13 +1138,13 @@ int main(int argc, char* argv[]) {
         argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.draw_options.image_size = parse_argument(parser, "--resolution,-R", 
-        vec2i{0, 512}, "Image vertical resolution.");
-    if(app.draw_options.image_size == vec2i{0, 512}) {
-        app.draw_options.image_size[1] = parse_argument(parser, "--vresolution,-r",
-            512, "Image vertical resolution.");
+    app.draw_options.image_size = parse_argument(
+        parser, "--resolution,-R", vec2i{0, 512}, "Image vertical resolution.");
+    if (app.draw_options.image_size == vec2i{0, 512}) {
+        app.draw_options.image_size[1] = parse_argument(
+            parser, "--vresolution,-r", 512, "Image vertical resolution.");
     }
-    app.draw_options.eyelight   = parse_argument(
+    app.draw_options.eyelight = parse_argument(
         parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
     app.double_sided        = parse_argument(parser,
         "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
