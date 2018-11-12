@@ -167,7 +167,11 @@ inline void log_warning(const string& fmt, const Args&... args);
 template <typename... Args>
 inline void log_fatal(const string& fmt, const Args&... args);
 
+// log levels
+enum struct log_level { fatal = 0, error = 1, warning = 2, info = 3, trace = 4 };
+
 // Setup logging
+inline void set_log_level(log_level level);
 inline void set_log_console(bool enabled);
 inline void set_log_file(const string& filename, bool append = false);
 
@@ -604,15 +608,25 @@ inline FILE*& _log_filestream() {
     static auto _log_filestream = (FILE*)nullptr;
     return _log_filestream;
 }
+inline log_level& _log_level() {
+    static auto _log_level = log_level::info;
+    return _log_level;
+}
+inline bool is_log_level_skipped(log_level level) {
+    return level > _log_level();
+}
 
 // Logs a message
-inline void log_message(const char* lbl, const char* msg) {
+inline void log_message(log_level level, const char* msg) {
+    static const char* labels[] = {
+        "FATAL", "ERROR", "WARN ", "INFO ", "TRACE"
+    };
     if (_log_console()) {
         printf("%s\n", msg);
         fflush(stdout);
     }
     if (_log_filestream()) {
-        fprintf(_log_filestream(), "%s %s\n", lbl, msg);
+        fprintf(_log_filestream(), "%s %s\n", labels[(int)level], msg);
         fflush(_log_filestream());
     }
 }
@@ -620,19 +634,23 @@ inline void log_message(const char* lbl, const char* msg) {
 // Log info/error/fatal/trace message
 template <typename... Args>
 inline void log_info(const string& fmt, const Args&... args) {
-    log_message("INFO ", format(fmt, args...).c_str());
+    if(is_log_level_skipped(log_level::info)) return;
+    log_message(log_level::info, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline void log_error(const string& fmt, const Args&... args) {
-    log_message("ERROR", format(fmt, args...).c_str());
+    if(is_log_level_skipped(log_level::error)) return;
+    log_message(log_level::error, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline void log_warning(const string& fmt, const Args&... args) {
-    log_message("WARN ", format(fmt, args...).c_str());
+    if(is_log_level_skipped(log_level::warning)) return;
+    log_message(log_level::warning, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline void log_fatal(const string& fmt, const Args&... args) {
-    log_message("FATAL", format(fmt, args...).c_str());
+    if(is_log_level_skipped(log_level::fatal)) return;
+    log_message(log_level::fatal, format(fmt, args...).c_str());
     exit(1);
 }
 
@@ -645,16 +663,19 @@ struct log_scope {
 };
 template <typename... Args>
 inline void log_trace(const string& fmt, const Args&... args) {
-    log_message("TRACE", format(fmt, args...).c_str());
+    if(is_log_level_skipped(log_level::trace)) return;
+    log_message(log_level::trace, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline log_scope log_trace_begin(const string& fmt, const Args&... args) {
+    if(is_log_level_skipped(log_level::trace)) return {"", -1, false};
     auto message = format(fmt, args...);
     log_trace(message + " [started]");
     return {message, get_time(), false};
 }
 template <typename... Args>
 inline void log_trace_end(log_scope& scope) {
+    if(is_log_level_skipped(log_level::trace)) return;
     if (scope.start_time >= 0) {
         log_trace(scope.message + " [ended: " +
                   format_duration(get_time() - scope.start_time) + "]");
@@ -664,6 +685,7 @@ inline void log_trace_end(log_scope& scope) {
 }
 template <typename... Args>
 inline log_scope log_trace_scoped(const string& fmt, const Args&... args) {
+    if(is_log_level_skipped(log_level::trace)) return {"", -1, false};
     auto message = format(fmt, args...);
     log_trace(message + " [started]");
     return {message, get_time(), true};
@@ -673,6 +695,7 @@ inline log_scope::~log_scope() {
 }
 
 // Configure the logging
+inline void set_log_level(log_level level) { _log_level() = level; }
 inline void set_log_console(bool enabled) { _log_console() = enabled; }
 inline void set_log_file(const string& filename, bool append) {
     if (_log_filestream()) {
@@ -862,9 +885,11 @@ inline void check_cmdline(cmdline_parser& parser) {
         auto verbose = false, quiet = false;
         if (parse_flag_argument(
                 parser, "--verbose,-v", verbose, "use verbose output", false)) {
+            set_log_level(log_level::trace);
         }
         if (parse_flag_argument(
                 parser, "--quiet,-q", quiet, "use quiet output", false)) {
+            set_log_level(log_level::error);
         }
     }
     if (!parser.args.empty()) {
