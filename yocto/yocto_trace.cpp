@@ -1402,7 +1402,7 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
         auto incoming_radiance = trace_direct(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1, true)
+            point.position, next_direction, rng, max_bounces - 1, false)
                                      .first;
         radiance += brdf_cosine * incoming_radiance / next_pdf;
     }
@@ -1475,7 +1475,7 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
         auto next_pdf = sample_delta_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
         auto incoming_radiance = trace_direct_nomis(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1, true)
+            point.position, next_direction, rng, max_bounces - 1, false)
                                      .first;
         radiance += brdf_cosine * incoming_radiance * next_pdf;
     }
