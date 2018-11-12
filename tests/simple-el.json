@@ -44,10 +44,7 @@
             "name": "sky",
             "filename": "textures/sky.hdr",
             "!!proc": {
-                "type": "sky",
-                "has_sun": true,
-                "sun_angle_scale": 5,
-                "sun_emission_scale": 10000
+                "type": "sky"
             }
         }
     ],
