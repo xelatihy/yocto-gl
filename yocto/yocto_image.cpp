@@ -368,7 +368,8 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
 // Implementation of sunsky modified heavily from pbrt
 image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale, 
-    float sun_emission_scale, const vec3f& ground_albedo) {
+    float sun_emission_scale, const vec3f& ground_albedo,
+    bool renormalize_sun) {
     auto wSun = vec3f{0, cos(theta_sun), sin(theta_sun)};
 
     // sunSpectralRad =  ComputeAttenuatedSunlight(thetaS, turbidity);
@@ -441,7 +442,9 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
         return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero_vec3f;
     };
 
+    // Make the sun sky image
     auto img = image<vec4f>{size, {0, 0, 0, 1}};
+    auto sky_integral = 0.0f, sun_integral = 0.0f;
     for (auto j = 0; j < img.height() / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.height());
         theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
@@ -450,8 +453,20 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
             auto w   = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma  = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
-            auto col    = sky(theta, gamma, theta_sun) + sun(theta, gamma);
+            auto sky_col = sky(theta, gamma, theta_sun);
+            auto sun_col = sun(theta, gamma);
+            sky_integral += mean(sky_col) * sin(theta);
+            sun_integral += mean(sun_col) * sin(theta);
+            auto col = sky_col + sun_col;
             img[{i, j}] = {col[0], col[1], col[2], 1};
+        }
+    }
+
+    if(renormalize_sun) {
+    for (auto j = 0; j < img.height() / 2; j++) {
+            for (int i = 0; i < img.width(); i++) {
+                img[{i, j}] *= sky_integral / (sun_integral + sky_integral);
+            }
         }
     }
 
