@@ -44,7 +44,7 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             imagename = filename.replace(f'.{format}',f'.png')
             imagename = imagename.replace(f'{dirname}/',f'{dirname}/ytrace-{mode}.')
-            imagename = imagename.replace(f'{dirname}',f'{directory}/yocto_{format}/_images')
+            imagename = imagename.replace(f'{dirname}',f'{directory}/_images')
             cmd = f'../yocto-gl/bin/ytrace -o {imagename} {options} {filename}'
             print(cmd)
             os.system(cmd)
