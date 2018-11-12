@@ -454,13 +454,11 @@ int main(int argc, char* argv[]) {
     app.trace_options.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
     auto no_parallel = parse_argument(
-        parser, "--noparallel", false, "Disable parallel execution.");
+        parser, "--parallel/--no-parallel", false, "Disable parallel execution.");
     app.bvh_options.use_embree = parse_argument(
-        parser, "--embree", false, "Use Embree ratracer");
+        parser, "--embree/--no-embree", false, "Use Embree ratracer");
     app.double_sided = parse_argument(
-        parser, "--double-sided", false, "Double-sided rendering.");
-    app.add_skyenv = parse_argument(
-        parser, "--add-skyenv", false, "Add missing environment map");
+        parser, "--double-sided/--no-double-sided", false, "Double-sided rendering.");
     app.imfilename = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     app.filename = parse_argument(

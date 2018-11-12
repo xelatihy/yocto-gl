@@ -208,7 +208,9 @@ inline void check_cmdline(cmdline_parser& parser);
 // Parse an int, float, string, vecXX and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
 // vecXX options use space-separated values but all in one argument
-// (use " or ' from the common line). Booleans are flags.
+// (use " or ' from the common line).
+// Boolean flags are indicated with a pair of names "--name/--no-name", so
+// that we have both options available.
 template <typename T>
 inline T parse_argument(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req = false);
@@ -716,8 +718,13 @@ inline cmdline_parser make_cmdline_parser(
 }
 
 // check if option or argument
-inline bool is_option(const string& name) {
+inline bool is_optional_argument(const string& name) {
     return name.size() > 1 && name.front() == '-';
+}
+
+// check if flag
+inline bool is_optional_flag(const string& name) {
+    return name.size() > 1 && name.front() == '-' && name.find('/') != name.npos;
 }
 
 // get names from string
@@ -729,6 +736,19 @@ inline vector<string> get_option_names(const string& name_) {
         name = name.substr(name.find(',') + 1);
     }
     names.push_back(name);
+    return names;
+}
+
+// get names from string
+inline vector<pair<string,string>> get_flag_names(const string& name) {
+    auto names = vector<pair<string, string>>();
+    for(auto& name : get_option_names(name)) {
+        if(name.find('/')) {
+            names.push_back({name.substr(0, name.find('/')),name.substr(name.find('/')+1)});
+        } else {
+            names.push_back({name, ""});
+        }
+    }
     return names;
 }
 
@@ -813,9 +833,19 @@ inline void check_cmdline(cmdline_parser& parser) {
         print_cmdline_usage(parser);
         exit(0);
     }
-    if (!parser.args.empty()) parser.error += "unmatched arguments remaining\n";
+    if (!parser.args.empty()) {
+        auto found = false;
+        for(auto& name : parser.args) {
+            if(is_optional_argument(name)) {
+                parser.error += "unknow option " + name + "\n";
+                found = true;
+                break;
+            }
+        }
+        if(!found) parser.error += "unmatched arguments remaining\n";
+    }
     if (!parser.error.empty()) {
-        printf("error:\n%s\n", parser.error.c_str());
+        printf("error: %s\n", parser.error.c_str());
         print_cmdline_usage(parser);
         exit(1);
     }
@@ -916,11 +946,23 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
     bool& value, const string& usage) {
     parser.usage_opt += get_option_usage(name, usage, false, false, {});
     if (parser.error != "") return false;
-    auto names = get_option_names(name);
+    auto names = get_flag_names(name);
     auto pos   = parser.args.end();
-    for (auto& name : names)
+    auto new_value = value;
+    for (auto& name : names) {
         pos = std::min(
-            pos, std::find(parser.args.begin(), parser.args.end(), name));
+            pos, std::find(parser.args.begin(), parser.args.end(), name.first));
+        if(pos != parser.args.end()) {
+            new_value = true;
+            break;
+        }
+        pos = std::min(
+            pos, std::find(parser.args.begin(), parser.args.end(), name.second));
+        if(pos != parser.args.end()) {
+            new_value = false;
+            break;
+        }
+    }
     if (pos == parser.args.end()) return false;
     parser.args.erase(pos);
     value = !value;
@@ -932,24 +974,35 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
 template <typename T>
 inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
     T& value, const string& usage, bool req) {
-    return is_option(name) ?
-               parse_option_argument(parser, name, value, usage, req, {}) :
-               parse_positional_argument(parser, name, value, usage, req, {});
+    if(is_optional_argument(name))  {
+        return parse_option_argument(parser, name, value, usage, req, {});
+    } else {
+        return parse_positional_argument(parser, name, value, usage, req, {});
+    }
+               
 }
 template <>
 inline bool parse_argument_ref<bool>(cmdline_parser& parser, const string& name,
     bool& value, const string& usage, bool req) {
-    return parse_flag_argument(parser, name, value, usage);
+    if(is_optional_flag(name)) {
+        return parse_flag_argument(parser, name, value, usage);
+    } else if(is_optional_argument(name)) {
+        return parse_option_argument(parser, name, value, usage, req, {});
+    } else {
+        return parse_positional_argument(parser, name, value, usage, req, {});
+    }
 }
 
 template <typename T>
 inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
     T& value, const string& usage, const vector<string>& labels, bool req) {
     auto values = labels.at((int)value);
-    auto parsed = is_option(name) ? parse_option_argument(parser, name, values,
-                                        usage, req, labels) :
-                                    parse_positional_argument(parser, name,
-                                        values, usage, req, labels);
+    auto parsed = false;
+    if(is_optional_argument(name)) {
+        parsed = parse_option_argument(parser, name, values, usage, req, labels);
+    } else {
+        parsed = parse_positional_argument(parser, name, values, usage, req, labels);
+    }
     if (!parsed) return false;
     auto pos = std::find(labels.begin(), labels.end(), values);
     if (pos == labels.end()) return false;
@@ -971,13 +1024,6 @@ inline T parse_argument(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
     auto value = def;
     if (!parse_argument_ref(parser, name, value, usage, req)) return def;
-    return value;
-}
-template <>
-inline bool parse_argument<bool>(cmdline_parser& parser, const string& name,
-    bool def, const string& usage, bool req) {
-    auto value = def;
-    if (!parse_flag_argument(parser, name, value, usage)) return def;
     return value;
 }
 

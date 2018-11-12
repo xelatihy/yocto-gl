@@ -1141,13 +1141,13 @@ int main(int argc, char* argv[]) {
     app.draw_options.image_size = {0, parse_argument(parser, "--resolution,-r",
                                           512, "Image vertical resolution.")};
     app.draw_options.eyelight   = parse_argument(
-        parser, "--eyelight,-c", false, "Eyelight rendering.");
+        parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
     app.double_sided = parse_argument(
-        parser, "--double-sided,-D", false, "Double-sided rendering.");
+        parser, "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
     auto highlight_filename = parse_argument(
         parser, "--highlights", ""s, "Highlight filename");
     auto no_parallel = parse_argument(
-        parser, "--noparallel", false, "Disable parallel execution.");
+        parser, "--parallel/--no-parallel", false, "Disable parallel execution.");
     app.imfilename = parse_argument(
         parser, "--output-image,-o", "out.png"s, "Image filename");
     app.filename = parse_argument(
