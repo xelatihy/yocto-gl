@@ -168,7 +168,13 @@ template <typename... Args>
 inline void log_fatal(const string& fmt, const Args&... args);
 
 // log levels
-enum struct log_level { fatal = 0, error = 1, warning = 2, info = 3, trace = 4 };
+enum struct log_level {
+    fatal   = 0,
+    error   = 1,
+    warning = 2,
+    info    = 3,
+    trace   = 4
+};
 
 // Setup logging
 inline void set_log_level(log_level level);
@@ -618,9 +624,7 @@ inline bool is_log_level_skipped(log_level level) {
 
 // Logs a message
 inline void log_message(log_level level, const char* msg) {
-    static const char* labels[] = {
-        "FATAL", "ERROR", "WARN ", "INFO ", "TRACE"
-    };
+    static const char* labels[] = {"FATAL", "ERROR", "WARN ", "INFO ", "TRACE"};
     if (_log_console()) {
         printf("%s\n", msg);
         fflush(stdout);
@@ -634,22 +638,22 @@ inline void log_message(log_level level, const char* msg) {
 // Log info/error/fatal/trace message
 template <typename... Args>
 inline void log_info(const string& fmt, const Args&... args) {
-    if(is_log_level_skipped(log_level::info)) return;
+    if (is_log_level_skipped(log_level::info)) return;
     log_message(log_level::info, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline void log_error(const string& fmt, const Args&... args) {
-    if(is_log_level_skipped(log_level::error)) return;
+    if (is_log_level_skipped(log_level::error)) return;
     log_message(log_level::error, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline void log_warning(const string& fmt, const Args&... args) {
-    if(is_log_level_skipped(log_level::warning)) return;
+    if (is_log_level_skipped(log_level::warning)) return;
     log_message(log_level::warning, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline void log_fatal(const string& fmt, const Args&... args) {
-    if(is_log_level_skipped(log_level::fatal)) return;
+    if (is_log_level_skipped(log_level::fatal)) return;
     log_message(log_level::fatal, format(fmt, args...).c_str());
     exit(1);
 }
@@ -663,19 +667,19 @@ struct log_scope {
 };
 template <typename... Args>
 inline void log_trace(const string& fmt, const Args&... args) {
-    if(is_log_level_skipped(log_level::trace)) return;
+    if (is_log_level_skipped(log_level::trace)) return;
     log_message(log_level::trace, format(fmt, args...).c_str());
 }
 template <typename... Args>
 inline log_scope log_trace_begin(const string& fmt, const Args&... args) {
-    if(is_log_level_skipped(log_level::trace)) return {"", -1, false};
+    if (is_log_level_skipped(log_level::trace)) return {"", -1, false};
     auto message = format(fmt, args...);
     log_trace(message + " [started]");
     return {message, get_time(), false};
 }
 template <typename... Args>
 inline void log_trace_end(log_scope& scope) {
-    if(is_log_level_skipped(log_level::trace)) return;
+    if (is_log_level_skipped(log_level::trace)) return;
     if (scope.start_time >= 0) {
         log_trace(scope.message + " [ended: " +
                   format_duration(get_time() - scope.start_time) + "]");
@@ -685,7 +689,7 @@ inline void log_trace_end(log_scope& scope) {
 }
 template <typename... Args>
 inline log_scope log_trace_scoped(const string& fmt, const Args&... args) {
-    if(is_log_level_skipped(log_level::trace)) return {"", -1, false};
+    if (is_log_level_skipped(log_level::trace)) return {"", -1, false};
     auto message = format(fmt, args...);
     log_trace(message + " [started]");
     return {message, get_time(), true};

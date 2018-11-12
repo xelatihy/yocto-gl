@@ -82,6 +82,7 @@ int main(int argc, char* argv[]) {
     }
 
     // scene loading
+    log_info("loading scene");
     auto scene = yocto_scene{};
     if (!load_scene(filename, scene, load_options))
         log_fatal("cannot load scene {}", filename);
@@ -95,6 +96,7 @@ int main(int argc, char* argv[]) {
     log_validation_errors(scene);
 
     // build bvh
+    log_info("building bvh");
     auto bvh = make_scene_bvh(scene, bvh_options);
 
     // init renderer
@@ -119,6 +121,8 @@ int main(int argc, char* argv[]) {
          sample += trace_options.samples_per_batch) {
         auto nsamples = min(trace_options.samples_per_batch,
             trace_options.num_samples - sample);
+        log_info("rendering samples {}-{} of {}", sample, sample + nsamples,
+            trace_options.num_samples);
         trace_image_samples(rendered_image, trace_pixels, scene, bvh, lights,
             sample, trace_options);
         if (save_batch) {
@@ -132,6 +136,7 @@ int main(int argc, char* argv[]) {
     log_trace_end(scope);
 
     // save image
+    log_info("saving image");
     if (!save_tonemapped_image(imfilename, rendered_image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);
 
