@@ -44,10 +44,10 @@ int main(int argc, char* argv[]) {
         argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    trace_options.image_resolution = parse_argument(parser, "--resolution,-R",
+    trace_options.image_size = parse_argument(parser, "--resolution,-R",
         vec2i{0, 512}, "Image resolution.");
-    if(trace_options.image_resolution == vec2i{0, 512}) {
-        trace_options.image_resolution[1] = parse_argument(parser, "--vresolution,-r",
+    if(trace_options.image_size == vec2i{0, 512}) {
+        trace_options.image_size[1] = parse_argument(parser, "--vresolution,-r",
             512, "Image vertical resolution.");
     }
     trace_options.num_samples = parse_argument(
@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
 
     // allocate buffers
     auto image_size = get_camera_image_size(
-        scene.cameras[trace_options.camera_id], trace_options.image_resolution);
+        scene.cameras[trace_options.camera_id], trace_options.image_size);
     auto rendered_image = image<vec4f>{image_size};
     auto trace_pixels = make_trace_pixels(image_size, trace_options.random_seed);
 

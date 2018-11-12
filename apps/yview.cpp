@@ -98,7 +98,7 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
 // Draw options
 struct drawgl_options {
     int   camera_id   = 0;
-    vec2i image_resolution  = {1280, 720};
+    vec2i image_size  = {1280, 720};
     bool  wireframe   = false;
     bool  edges       = false;
     float edge_offset = 0.01f;
@@ -926,7 +926,7 @@ void draw_widgets(const opengl_window& win) {
                     app.draw_options.camera_id, app.scene.cameras, false);
             }
             draw_slider_opengl_widget(
-                win, "resolution", app.draw_options.image_resolution, 0, 4096);
+                win, "resolution", app.draw_options.image_size, 0, 4096);
             draw_checkbox_opengl_widget(
                 win, "eyelight", app.draw_options.eyelight);
             continue_opengl_widget_line(win);
@@ -980,7 +980,7 @@ void draw(const opengl_window& win) {
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
     set_opengl_viewport(get_opengl_framebuffer_size(win));
     if (app.load_done) {
-        app.draw_options.image_resolution = {0, get_opengl_framebuffer_size(win)[1]};
+        app.draw_options.image_size = {0, get_opengl_framebuffer_size(win)[1]};
         draw_glscene(app.state, app.scene, get_opengl_framebuffer_size(win),
             app.selection, app.draw_options);
     }
@@ -1138,10 +1138,10 @@ int main(int argc, char* argv[]) {
         argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.draw_options.image_resolution = parse_argument(parser, "--resolution,-R", 
+    app.draw_options.image_size = parse_argument(parser, "--resolution,-R", 
         vec2i{0, 512}, "Image vertical resolution.");
-    if(app.draw_options.image_resolution == vec2i{0, 512}) {
-        app.draw_options.image_resolution[1] = parse_argument(parser, "--vresolution,-r",
+    if(app.draw_options.image_size == vec2i{0, 512}) {
+        app.draw_options.image_size[1] = parse_argument(parser, "--vresolution,-r",
             512, "Image vertical resolution.");
     }
     app.draw_options.eyelight   = parse_argument(

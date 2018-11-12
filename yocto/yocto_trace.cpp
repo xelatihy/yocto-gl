@@ -1745,7 +1745,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options) {
     auto scope      = log_trace_scoped("tracing image");
     auto image_size = get_camera_image_size(
-        scene.cameras.at(options.camera_id), options.image_resolution);
+        scene.cameras.at(options.camera_id), options.image_size);
     auto rendered_image = image<vec4f>{image_size};
     auto pixels         = make_trace_pixels(image_size, options.random_seed);
     auto regions        = make_image_regions(rendered_image.size());
@@ -1817,7 +1817,7 @@ void trace_image_async_start(image<vec4f>& rendered_image,
     const trace_image_options& options) {
     log_trace("start tracing async");
     auto& camera     = scene.cameras.at(options.camera_id);
-    auto  image_size = get_camera_image_size(camera, options.image_resolution);
+    auto  image_size = get_camera_image_size(camera, options.image_size);
     rendered_image   = {image_size, zero_vec4f};
     pixels           = make_trace_pixels(image_size, options.random_seed);
     auto regions     = make_image_regions(rendered_image.size());

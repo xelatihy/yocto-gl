@@ -97,14 +97,14 @@ void start_rendering_async(app_state& app) {
 
     app.image_size = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
-        app.trace_options.image_resolution);
+        app.trace_options.image_size);
     app.rendered_image = image<vec4f>{app.image_size};
     app.display_image  = image<vec4f>{app.image_size};
     app.trace_pixels   = make_trace_pixels(
         app.image_size, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
-    preview_options.image_resolution /= app.preview_ratio;
+    preview_options.image_size /= app.preview_ratio;
     preview_options.num_samples = 1;
     app.preview_image           = trace_image(
         app.scene, app.bvh, app.lights, preview_options);
@@ -219,7 +219,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "camera", app.trace_options.camera_id, cam_names);
             }
             edited += draw_slider_opengl_widget(
-                win, "resolution", app.trace_options.image_resolution, 0, 4096);
+                win, "resolution", app.trace_options.image_size, 0, 4096);
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.trace_options.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
@@ -441,10 +441,10 @@ int main(int argc, char* argv[]) {
         argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.trace_options.image_resolution = parse_argument(parser, "--resolution,-R",
+    app.trace_options.image_size = parse_argument(parser, "--resolution,-R",
         vec2i{0, 512}, "Image resolution.");
-    if(app.trace_options.image_resolution == vec2i{0, 512}) {
-        app.trace_options.image_resolution[1] = parse_argument(parser, "--vresolution,-r",
+    if(app.trace_options.image_size == vec2i{0, 512}) {
+        app.trace_options.image_size[1] = parse_argument(parser, "--vresolution,-r",
             512, "Image vertical resolution.");
     }
     app.trace_options.num_samples = parse_argument(
