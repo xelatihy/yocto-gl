@@ -67,10 +67,6 @@
 #ifndef _YOCTO_MATH_H_
 #define _YOCTO_MATH_H_
 
-#ifndef YOCTO_SPECIALIZATIONS
-#define YOCTO_SPECIALIZATIONS 1
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -150,51 +146,37 @@ constexpr const auto pif = 3.14159265f;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small-sized vectors
 template <typename T, int N>
-struct vec;
-
-template <typename T>
-struct vec<T, 1> {
-    T elements[1] = {0};
+struct vec {
+    T elements[N] = {0};
 
     constexpr vec() : elements{0} {}
-    constexpr vec(const T& x) : elements{x} {}
+    constexpr vec(const initializer_list<T>& vals) {
+        // static_assert(N == vals.size(), "wrong number of elements");
+        for (auto i = 0; i < N; i++) elements[i] = vals.begin()[i];
+    }
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
-template <typename T>
-struct vec<T, 2> {
-    T elements[2] = {0};
 
-    constexpr vec() : elements{0, 0} {}
-    constexpr vec(const T& x, const T& y) : elements{x, y} {}
-
-    constexpr T&       operator[](int idx) { return elements[idx]; }
-    constexpr const T& operator[](int idx) const { return elements[idx]; }
-};
-template <typename T>
-struct vec<T, 3> {
-    T elements[3] = {0};
-
-    constexpr vec() : elements{0, 0, 0} {}
-    constexpr vec(const T& x, const T& y, const T& z) : elements{x, y, z} {}
-
-    constexpr T&       operator[](int idx) { return elements[idx]; }
-    constexpr const T& operator[](int idx) const { return elements[idx]; }
-};
-template <typename T>
-struct vec<T, 4> {
-    T elements[4] = {0};
-
-    constexpr vec() : elements{0, 0, 0, 0} {}
-    constexpr vec(const T& x, const T& y, const T& z, const T& w)
-        : elements{x, y, z, w} {}
-
-    constexpr T&       operator[](int idx) { return elements[idx]; }
-    constexpr const T& operator[](int idx) const { return elements[idx]; }
-};
+// Vector constants
+template <typename T, int N>
+constexpr inline vec<T, N> make_zero_vec() {
+    return vec<T, N>{};
+}
+template <typename T, int N>
+constexpr inline vec<T, N> make_one_vec() {
+    auto v = vec<T, N>{};
+    for (auto i = 0; i < N; i++) v[i] = 1;
+    return v;
+}
+template <typename T, int N>
+constexpr inline vec<T, N> make_uniform_vec(T value) {
+    auto v = vec<T, N>{};
+    for (auto i = 0; i < N; i++) v[i] = value;
+    return v;
+}
 
 // Zero vector constants.
 template <typename T, int N>
@@ -221,14 +203,6 @@ constexpr const auto zero_vec2i = zero_vec<int, 2>;
 constexpr const auto zero_vec3i = zero_vec<int, 3>;
 constexpr const auto zero_vec4i = zero_vec<int, 4>;
 constexpr const auto zero_vec4b = zero_vec<byte, 4>;
-
-// Vector constants
-template <typename T, int N>
-constexpr inline vec<T, N> make_zero_vec();
-template <typename T, int N>
-constexpr inline vec<T, N> make_one_vec();
-template <typename T, int N>
-constexpr inline vec<T, N> make_uniform_vec(T value);
 
 // Element access
 template <typename T, int N>
@@ -375,89 +349,56 @@ struct hash<yocto::vec<T, N>> {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small fixed-size matrices stored in column major format.
 template <typename T, int N, int M>
-struct mat;
+struct mat {
+    vec<T, N> columns[M] = {};
 
-template <typename T, int N>
-struct mat<T, N, 1> {
-    vec<T, N> columns[1] = {};
-
-    constexpr mat() : columns{} {}
-    constexpr mat(const vec<T, N>& c0) : columns{c0} {}
+    constexpr mat() {}
+    constexpr mat(const initializer_list<vec<T, N>>& vals) {
+        // static_assert(M == vals.size(), "wrong number of elements");
+        for (auto j = 0; j < N; j++) columns[j] = vals.begin()[j];
+    }
 
     constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
     constexpr const vec<T, N>& operator[](int idx) const {
         return columns[idx];
     }
 };
+
+// Matrix contants
 template <typename T, int N>
-struct mat<T, N, 2> {
-    vec<T, N> columns[2] = {};
-
-    constexpr mat() : columns{} {}
-    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1) : columns{c0, c1} {}
-
-    constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
-    constexpr const vec<T, N>& operator[](int idx) const {
-        return columns[idx];
-    }
-};
+constexpr inline mat<T, N, N> make_identity_mat() {
+    auto c = mat<T, N, N>{};
+    for (auto j = 0; j < N; j++)
+        for (auto i = 0; i < N; i++) c[j][i] = j == i ? 1 : 0;
+    return c;
+}
 template <typename T, int N>
-struct mat<T, N, 3> {
-    vec<T, N> columns[3] = {};
-
-    constexpr mat() : columns{} {}
-    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1, const vec<T, N>& c2)
-        : columns{c0, c1, c2} {}
-
-    constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
-    constexpr const vec<T, N>& operator[](int idx) const {
-        return columns[idx];
-    }
-};
-template <typename T, int N>
-struct mat<T, N, 4> {
-    vec<T, N> columns[4] = {};
-
-    constexpr mat() : columns{} {}
-    constexpr mat(const vec<T, N>& c0, const vec<T, N>& c1, const vec<T, N>& c2,
-        const vec<T, N>& c3)
-        : columns{c0, c1, c2, c3} {}
-
-    constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
-    constexpr const vec<T, N>& operator[](int idx) const {
-        return columns[idx];
-    }
-};
+constexpr inline mat<T, N, N> make_diagonal_mat(const vec<T, N>& diagonal) {
+    auto c = mat<T, N, N>{};
+    for (auto j = 0; j < N; j++)
+        for (auto i = 0; i < N; i++) c[j][i] = j == i ? diagonal[i] : 0;
+    return c;
+}
 
 // Matrix constants.
 template <typename T, int N, int M>
 constexpr const auto zero_mat = mat<T, N, N>{};
+template <typename T, int N, int M>
+constexpr const auto identity_mat = make_identity_mat<T, N>();
 
 // Type aliases.
-using mat1f = mat<float, 1, 1>;
 using mat2f = mat<float, 2, 2>;
 using mat3f = mat<float, 3, 3>;
 using mat4f = mat<float, 4, 4>;
 
 // Matrix constants.
-constexpr const auto zero_mat1f     = zero_mat<float, 1, 1>;
 constexpr const auto zero_mat2f     = zero_mat<float, 2, 2>;
 constexpr const auto zero_mat3f     = zero_mat<float, 3, 3>;
 constexpr const auto zero_mat4f     = zero_mat<float, 4, 4>;
-constexpr const auto identity_mat1f = mat<float, 1, 1>{{1}};
-constexpr const auto identity_mat2f = mat<float, 2, 2>{{1, 0}, {0, 1}};
-constexpr const auto identity_mat3f = mat<float, 3, 3>{
-    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
-constexpr const auto identity_mat4f = mat<float, 4, 4>{
-    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
-
-// Matrix contants
-template <typename T, int N>
-constexpr inline mat<T, N, N> make_identity_mat();
-template <typename T, int N>
-constexpr inline mat<T, N, N> make_diagonal_mat(const vec<T, N>& diagonal);
+constexpr const auto identity_mat2f = identity_mat<float, 2, 2>;
+constexpr const auto identity_mat3f = identity_mat<float, 3, 3>;
+constexpr const auto identity_mat4f = identity_mat<float, 4, 4>;
 
 // Matrix comparisons.
 template <typename T, int N, int M>
@@ -576,18 +517,12 @@ template <typename T, int N>
 struct bbox {
     using V = vec<T, N>;
 
-    vec<T, N> min = {};
-    vec<T, N> max = {};
+    vec<T, N> min = make_uniform_vec<T, N>(type_max<T>);
+    vec<T, N> max = make_uniform_vec<T, N>(type_min<T>);
 
-    constexpr bbox() {
-        for (auto i = 0; i < N; i++) {
-            min[i] = type_max<T>;
-            max[i] = type_min<T>;
-        }
-    }
+    constexpr bbox() {}
     constexpr bbox(const vec<T, N>& min_, const vec<T, N>& max_)
         : min{min_}, max{max_} {}
-    constexpr bbox(const bbox&) = default;
 
     constexpr vec<T, N>& operator[](int idx) { return idx == 0 ? min : max; }
     constexpr const vec<T, N>& operator[](int idx) const {
@@ -861,24 +796,6 @@ inline T lerp(const T& a, const T& b, T1 u) {
 // IMPLEMENTATION OF VECTORS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Vector constants
-template <typename T, int N>
-constexpr inline vec<T, N> make_zero_vec() {
-    return vec<T, N>{};
-}
-template <typename T, int N>
-constexpr inline vec<T, N> make_one_vec() {
-    auto v = vec<T, N>{};
-    for (auto i = 0; i < N; i++) v[i] = 1;
-    return v;
-}
-template <typename T, int N>
-constexpr inline vec<T, N> make_uniform_vec(T value) {
-    auto v = vec<T, N>{};
-    for (auto i = 0; i < N; i++) v[i] = value;
-    return v;
-}
 
 // Element access
 template <typename T, int N>
@@ -1207,22 +1124,6 @@ inline size_t hash<yocto::vec<T, N>>::operator()(const yocto::vec<T, N>& v) cons
 // IMPLEMENTATION OF MATRICES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Matrix contants
-template <typename T, int N>
-constexpr inline mat<T, N, N> make_identity_mat() {
-    auto c = mat<T, N, N>{};
-    for (auto j = 0; j < N; j++)
-        for (auto i = 0; i < N; i++) c[j][i] = j == i ? 1 : 0;
-    return c;
-}
-template <typename T, int N>
-constexpr inline mat<T, N, N> make_diagonal_mat(const vec<T, N>& diagonal) {
-    auto c = mat<T, N, N>{};
-    for (auto j = 0; j < N; j++)
-        for (auto i = 0; i < N; i++) c[j][i] = j == i ? diagonal[i] : 0;
-    return c;
-}
 
 // Matrix comparisons.
 template <typename T, int N, int M>

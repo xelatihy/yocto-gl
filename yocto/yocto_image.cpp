@@ -293,21 +293,21 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale,
     float sun_emission_scale, const vec3f& ground_albedo, bool renormalize_sun) {
     auto zenith_xyY = vec3f{
-        (+0.00165f * pow(theta_sun, 3) - 0.00374f * pow(theta_sun, 2) +
+        (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
             0.00208f * theta_sun + 0) *
-                pow(turbidity, 2) +
-            (-0.02902f * pow(theta_sun, 3) + 0.06377f * pow(theta_sun, 2) -
+                pow(turbidity, 2.f) +
+            (-0.02902f * pow(theta_sun, 3.f) + 0.06377f * pow(theta_sun, 2.f) -
                 0.03202f * theta_sun + 0.00394f) *
                 turbidity +
-            (+0.11693f * pow(theta_sun, 3) - 0.21196f * pow(theta_sun, 2) +
+            (+0.11693f * pow(theta_sun, 3.f) - 0.21196f * pow(theta_sun, 2.f) +
                 0.06052f * theta_sun + 0.25885f),
-        (+0.00275f * pow(theta_sun, 3) - 0.00610f * pow(theta_sun, 2) +
+        (+0.00275f * pow(theta_sun, 3.f) - 0.00610f * pow(theta_sun, 2.f) +
             0.00316f * theta_sun + 0) *
-                pow(turbidity, 2) +
-            (-0.04214f * pow(theta_sun, 3) + 0.08970f * pow(theta_sun, 2) -
+                pow(turbidity, 2.f) +
+            (-0.04214f * pow(theta_sun, 3.f) + 0.08970f * pow(theta_sun, 2.f) -
                 0.04153f * theta_sun + 0.00515f) *
                 turbidity +
-            (+0.15346f * pow(theta_sun, 3) - 0.26756f * pow(theta_sun, 2) +
+            (+0.15346f * pow(theta_sun, 3.f) - 0.26756f * pow(theta_sun, 2.f) +
                 0.06669f * theta_sun + 0.26688f),
         1000 * (4.0453f * turbidity - 4.9710f) *
                 tan((4.0f / 9.0f - turbidity / 120.0f) * (pif - 2 * theta_sun)) -
