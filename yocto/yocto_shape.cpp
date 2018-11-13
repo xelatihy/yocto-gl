@@ -243,6 +243,12 @@ vector<vec2i> get_boundary(const edge_map& emap) {
         if (kv.second[2] == -1) boundary.push_back(kv.first);
     return boundary;
 }
+vector<vec2i> get_edges(const vector<vec3i>& triangles) {
+    return get_edges(make_edge_map(triangles));
+}
+vector<vec2i> get_edges(const vector<vec4i>& quads) {
+    return get_edges(make_edge_map(quads));
+}
 
 // Convert quads to triangles
 vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
@@ -384,7 +390,7 @@ vector<vector<vec4i>> ungroup_quads(
 
 // Subdivide lines.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines(
+tuple<vector<vec2i>, vector<T>> subdivide_lines_impl(
     const vector<vec2i>& lines, const vector<T>& vert) {
     // early exit
     if (lines.empty() || vert.empty()) return {lines, vert};
@@ -408,18 +414,26 @@ tuple<vector<vec2i>, vector<T>> subdivide_lines(
     return {tlines, tvert};
 }
 
-template tuple<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>&, const vector<float>&);
-template tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>&, const vector<vec2f>&);
-template tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>&, const vector<vec3f>&);
-template tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>&, const vector<vec4f>&);
+tuple<vector<vec2i>, vector<float>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<float>& vert) {
+    return subdivide_lines_impl(lines, vert);
+}
+tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec2f>& vert) {
+    return subdivide_lines_impl(lines, vert);
+}
+tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec3f>& vert) {
+    return subdivide_lines_impl(lines, vert);
+}
+tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec4f>& vert) {
+    return subdivide_lines_impl(lines, vert);
+}
 
 // Subdivide triangle.
 template <typename T>
-tuple<vector<vec3i>, vector<T>> subdivide_triangles(
+tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     const vector<vec3i>& triangles, const vector<T>& vert) {
     // early exit
     if (triangles.empty() || vert.empty()) return {triangles, vert};
@@ -457,18 +471,26 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles(
     return {ttriangles, tvert};
 }
 
-template tuple<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>&, const vector<float>&);
-template tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>&, const vector<vec2f>&);
-template tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>&, const vector<vec3f>&);
-template tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>&, const vector<vec4f>&);
+tuple<vector<vec3i>, vector<float>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<float>& vert) {
+    return subdivide_triangles_impl(triangles, vert);
+}
+tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec2f>& vert) {
+    return subdivide_triangles_impl(triangles, vert);
+}
+tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& vert) {
+    return subdivide_triangles_impl(triangles, vert);
+}
+tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec4f>& vert) {
+    return subdivide_triangles_impl(triangles, vert);
+}
 
 // Subdivide quads.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(
+tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
     const vector<vec4i>& quads, const vector<T>& vert) {
     // early exit
     if (quads.empty() || vert.empty()) return {quads, vert};
@@ -525,18 +547,26 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads(
     return {tquads, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>&, const vector<float>&);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>&, const vector<vec2f>&);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>&, const vector<vec3f>&);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>&, const vector<vec4f>&);
+tuple<vector<vec4i>, vector<float>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<float>& vert) {
+    return subdivide_quads_impl(quads, vert);
+}
+tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec2f>& vert) {
+    return subdivide_quads_impl(quads, vert);
+}
+tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec3f>& vert) {
+    return subdivide_quads_impl(quads, vert);
+}
+tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec4f>& vert) {
+    return subdivide_quads_impl(quads, vert);
+}
 
 // Subdivide beziers.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_beziers(
+tuple<vector<vec4i>, vector<T>> subdivide_beziers_impl(
     const vector<vec4i>& beziers, const vector<T>& vert) {
     // early exit
     if (beziers.empty() || vert.empty()) return {beziers, vert};
@@ -568,18 +598,26 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     return {tbeziers, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>&, const vector<float>&);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>&, const vector<vec2f>&);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>&, const vector<vec3f>&);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>&, const vector<vec4f>&);
+tuple<vector<vec4i>, vector<float>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<float>& vert) {
+    return subdivide_beziers_impl(beziers, vert);
+}
+tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec2f>& vert) {
+    return subdivide_beziers_impl(beziers, vert);
+}
+tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec3f>& vert) {
+    return subdivide_beziers_impl(beziers, vert);
+}
+tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec4f>& vert) {
+    return subdivide_beziers_impl(beziers, vert);
+}
 
 // Subdivide catmullclark.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
+tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
     // early exit
     if (quads.empty() || vert.empty()) return {quads, vert};
@@ -702,14 +740,22 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
     return {tquads, tvert};
 }
 
-template tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<float>&, bool);
-template tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<vec2f>&, bool);
-template tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<vec3f>&, bool);
-template tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>&, const vector<vec4f>&, bool);
+tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<float>& vert, bool lock_boundary) {
+    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+}
+tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec2f>& vert, bool lock_boundary) {
+    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+}
+tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec3f>& vert, bool lock_boundary) {
+    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+}
+tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec4f>& vert, bool lock_boundary) {
+    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+}
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
