@@ -370,10 +370,6 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale, 
     float sun_emission_scale, const vec3f& ground_albedo,
     bool renormalize_sun) {
-    auto wSun = vec3f{0, cos(theta_sun), sin(theta_sun)};
-
-    // sunSpectralRad =  ComputeAttenuatedSunlight(thetaS, turbidity);
-    auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
 
     auto zenith_xyY = vec3f{
         (+0.00165f * pow(theta_sun, 3) - 0.00374f * pow(theta_sun, 2) + 0.00208f * theta_sun + 0) * pow(turbidity, 2) +
@@ -432,9 +428,17 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
                         pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
     auto sun_le  = sun_sol * tauR * tauA * tauO * tauG * tauWA;
 
-    // correction for sun values
-    sun_angular_radius *= sun_angle_scale;
+    // rescale by user
     sun_le *= sun_emission_scale;
+
+    // sun scale from Wikipedia scaled by user quantity and rescaled to at 
+    // the minimum 5 pixel diamater
+    auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
+    sun_angular_radius *= sun_angle_scale;
+    sun_angular_radius = max(sun_angular_radius, 5 * pif / size[1]);
+
+    // sun direction
+    auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
 
     auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
         // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
@@ -452,7 +456,7 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
             auto phi = 2 * pif * (float(i + 0.5f) / img.width());
             auto w   = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma  = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
+            auto gamma  = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
             auto sky_col = sky(theta, gamma, theta_sun);
             auto sun_col = sun(theta, gamma);
             sky_integral += mean(sky_col) * sin(theta);

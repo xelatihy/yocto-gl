@@ -23,11 +23,6 @@ def clean():
     os.system('rm -rf bin && rm -rf build')
 
 @cli.command()
-def test():
-    os.system('mkdir -p build && mkdir -p build/release && cd build/release && cmake ../.. -GNinja -DYOCTO_EMBREE=ON')
-    os.system('rm tests/run-tests/output/*.png && rm tests/run-tests/difference/*.png && ctest -j 4 --output-on-failure')    
-
-@cli.command()
 def tests():
     for ext in ['obj', 'gltf', 'json', 'ybin', 'pbrt']:
         os.system(f'rm -rf tests/{ext}; mkdir tests/{ext}')

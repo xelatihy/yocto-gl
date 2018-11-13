@@ -204,7 +204,9 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 // procedurally, so we include two variables to unrealistically customize it:
 // sun_size_scale and sun_emission_scale with good values in [20-] for both.
 // To make editing easier, we also renormalize the (sun+sky) integral to
-// the sky only integral if renormalize_sun is true.
+// the sky only integral if renormalize_sun is true. For the same reason,
+// we rescale the sun dimension such that it covers at least 5 pixels in 
+// diameter if has_sun is enabled.
 image<vec4f> make_sunsky_image(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_angle_scale = 1.0f,
     float sun_emission_scale = 1.0f, const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f},

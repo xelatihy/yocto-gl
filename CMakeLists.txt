@@ -127,7 +127,7 @@ foreach(filename "uvgrid.png")
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomis")
-    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json"  "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json")
+    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json"  "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json"  "simple-sl.json")
         get_filename_component(name ${filename} NAME_WE)
         add_test(NAME ytrace-${tracer}-${filename}
                 COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 360"
