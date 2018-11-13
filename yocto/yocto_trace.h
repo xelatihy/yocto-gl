@@ -105,9 +105,6 @@ struct trace_lights {
 
 // Initialize lights.
 trace_lights make_trace_lights(const yocto_scene& scene);
-inline bool  empty(const trace_lights& lights) {
-    return lights.instances.empty() && lights.environments.empty();
-}
 
 // State of a pixel during tracing
 struct trace_pixel {
