@@ -67,10 +67,6 @@
 #ifndef _YOCTO_MATH_H_
 #define _YOCTO_MATH_H_
 
-#ifndef YOCTO_INITIALIZER_LISTS
-#define YOCTO_INITIALIZER_LISTS 1
-#endif
-
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -155,23 +151,10 @@ struct vec {
     T elements[N] = {0};
 
     constexpr vec() : elements{0} {}
-#if YOCTO_INITIALIZER_LISTS
     constexpr vec(const initializer_list<T>& vals) {
         // static_assert(N == vals.size(), "wrong number of elements");
         for (auto i = 0; i < N; i++) elements[i] = vals.begin()[i];
     }
-#else
-    constexpr vec(const T& x, const T& y) : elements{x, y} {
-        static_assert(N == 2, "wrong number of elements");
-    }
-    constexpr vec(const T& x, const T& y, const T& z) : elements{x, y, z} {
-        static_assert(N == 3, "wrong number of elements");
-    }
-    constexpr vec(const T& x, const T& y, const T& z, const T& w)
-        : elements{x, y, z, w} {
-        static_assert(N == 4, "wrong number of elements");
-    }
-#endif
 
     constexpr T&       operator[](int idx) { return elements[idx]; }
     constexpr const T& operator[](int idx) const { return elements[idx]; }
@@ -371,25 +354,10 @@ struct mat {
     vec<T, N> columns[M] = {};
 
     constexpr mat() {}
-#if YOCTO_INITIALIZER_LISTS
     constexpr mat(const initializer_list<vec<T, N>>& vals) {
         // static_assert(M == vals.size(), "wrong number of elements");
         for (auto j = 0; j < N; j++) columns[j] = vals.begin()[j];
     }
-#else
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y) : columns{x, y} {
-        static_assert(M == 2, "wrong number of elements");
-    }
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z)
-        : columns{x, y, z} {
-        static_assert(M == 3, "wrong number of elements");
-    }
-    constexpr mat(const vec<T, N>& x, const vec<T, N>& y, const vec<T, N>& z,
-        const vec<T, N>& w)
-        : columns{x, y, z, w} {
-        static_assert(M == 4, "wrong number of elements");
-    }
-#endif
 
     constexpr vec<T, N>&       operator[](int idx) { return columns[idx]; }
     constexpr const vec<T, N>& operator[](int idx) const {
