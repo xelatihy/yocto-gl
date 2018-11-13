@@ -333,20 +333,17 @@ bool update(app_state& app) {
     stop_rendering_async(app);
 
     // update BVH
+    auto updated_instances = vector<int>{}, updated_shapes = vector<int>{},
+         updated_surfaces = vector<int>{};
     for (auto& sel : app.update_list) {
-        if (sel.first == "shape") {
-            refit_shape_bvh(
-                app.scene.shapes[sel.second], app.bvh.shape_bvhs[sel.second]);
-            refit_scene_bvh(app.scene, app.bvh);
-        }
-        if (sel.first == "instance") {
-            refit_scene_bvh(app.scene, app.bvh);
-        }
-        if (sel.first == "node") {
-            update_transforms(app.scene, 0);
-            refit_scene_bvh(app.scene, app.bvh);
-        }
+        if (sel.first == "shape") updated_shapes.push_back(sel.second);
+        if (sel.first == "instance") updated_surfaces.push_back(sel.second);
+        if (sel.first == "node") updated_instances.push_back(sel.second);
     }
+    if (!updated_instances.empty() || !updated_shapes.empty() ||
+        !updated_surfaces.empty())
+        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
+            updated_surfaces);
     app.update_list.clear();
 
     // start rendering

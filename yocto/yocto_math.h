@@ -675,7 +675,7 @@ constexpr inline bool operator==(const mat<T, N, M>& a, const mat<T, N, M>& b) {
     return true;
 }
 template <typename T, int N, int M>
-constexpr inline bool operator!=(const mat<T, N, 1>& a, const mat<T, N, 1>& b) {
+constexpr inline bool operator!=(const mat<T, N, M>& a, const mat<T, N, M>& b) {
     for (auto j = 0; j < M; j++)
         if (a[j] != b[j]) return true;
     return false;
