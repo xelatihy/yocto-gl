@@ -563,7 +563,8 @@ bvh_scene make_scene_bvh(
     for (auto& surface : scene.surfaces) {
         auto surface_bvh = bvh_shape{};
         if (!surface.quads_positions.empty()) {
-            surface_bvh = make_shape_bvh(surface.quads_positions, surface.positions);
+            surface_bvh = make_shape_bvh(
+                surface.quads_positions, surface.positions);
         } else {
             surface_bvh = {};
         }
@@ -584,10 +585,14 @@ bvh_scene make_scene_bvh(
 }
 
 // Refits a scene BVH
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh, 
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_shapes, const vector<int>& updated_surfaces) {
-    for(auto shape_id : updated_shapes) update_shape_bvh(get_shape_bvh(bvh, shape_id), scene.shapes[shape_id].positions, scene.shapes[shape_id].radius);
-    for(auto surface_id : updated_surfaces) update_shape_bvh(get_surface_bvh(bvh, surface_id), scene.surfaces[surface_id].positions);
+    for (auto shape_id : updated_shapes)
+        update_shape_bvh(get_shape_bvh(bvh, shape_id),
+            scene.shapes[shape_id].positions, scene.shapes[shape_id].radius);
+    for (auto surface_id : updated_surfaces)
+        update_shape_bvh(get_surface_bvh(bvh, surface_id),
+            scene.surfaces[surface_id].positions);
 
     auto bvh_instances = vector<bvh_instance>{};
     for (auto& instance : scene.instances) {

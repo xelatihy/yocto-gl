@@ -36,18 +36,18 @@
 //
 // 1. create shape/scene bvhs using `make_shape_bvh()`/`make_scene_bvh()`
 // 3. build the shape/scene BVH with `build_shape_bvh()`/`build_scene_bvh()`;
-//    for the scene build, we will build appropriately the shape bvhs 
-// 4. perform ray-shape intersection with `intersect_shape_bvh()` and 
+//    for the scene build, we will build appropriately the shape bvhs
+// 4. perform ray-shape intersection with `intersect_shape_bvh()` and
 //    ray-scene intersection with `intersect_scene_bvh()`
 // 5. perform point overlap queries in shapes with `overlap_shape_bvh()` and on
 //    scenes with `overlap_scene_bvh()`
-// 6. a shape bvh can be updated if change to its positions occurs; 
-//    to do so, update the bvh data with `update_shape_bvh()` and then call 
+// 6. a shape bvh can be updated if change to its positions occurs;
+//    to do so, update the bvh data with `update_shape_bvh()` and then call
 //    `refit_shape_bvh()`
-// 7. a scene bvh can be updated if changes to its instances or shapes occur; 
+// 7. a scene bvh can be updated if changes to its instances or shapes occur;
 //    to do so update the relevant shape bvhs with `update_shape_bvh()` and
-//    update the bvh data with `update_shape_bvh()` and then call 
-//    `refit_shape_bvh()`; you can retrive a shape bvh by index with 
+//    update the bvh data with `update_shape_bvh()` and then call
+//    `refit_shape_bvh()`; you can retrive a shape bvh by index with
 //    `get_shape_bvh()`/`get_surface_bvh()`
 //
 //
@@ -146,7 +146,7 @@ struct bvh_shape {
 
     // bvh internal nodes
     vector<bvh_node> nodes;
-    bool needs_update = true;
+    bool             needs_update = true;
 
     // Embree opaque data
     void* embree_bvh = nullptr;
@@ -174,7 +174,7 @@ struct bvh_scene {
 
     // bvh internal nodes
     vector<bvh_node> nodes;
-    bool needs_update = true;
+    bool             needs_update = true;
 
     // Embree opaque data
     void* embree_bvh = nullptr;
@@ -193,10 +193,10 @@ bvh_shape make_shape_bvh(const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius);
 bvh_shape make_shape_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
-bvh_shape make_shape_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
-bvh_shape make_shape_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& positions);
+bvh_shape make_shape_bvh(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+bvh_shape make_shape_bvh(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Build a BVH from the given set of instances.
 bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,

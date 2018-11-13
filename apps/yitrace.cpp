@@ -340,7 +340,8 @@ bool update(app_state& app) {
         if (sel.first == "instance") updated_surfaces.push_back(sel.second);
         if (sel.first == "node") updated_instances = true;
     }
-    if(updated_instances || !updated_shapes.empty() || !updated_surfaces.empty()) refit_scene_bvh(app.scene, app.bvh, updated_shapes, updated_surfaces);
+    if (updated_instances || !updated_shapes.empty() || !updated_surfaces.empty())
+        refit_scene_bvh(app.scene, app.bvh, updated_shapes, updated_surfaces);
     app.update_list.clear();
 
     // start rendering

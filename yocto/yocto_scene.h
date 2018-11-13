@@ -27,7 +27,7 @@
 // 3. can merge scene together with `merge_scene()`
 // 4. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
-// 5. for ray-intersection and closest point queries, create a BVH with 
+// 5. for ray-intersection and closest point queries, create a BVH with
 //    `make_scene_bvh()` and intersect with with `intersect_scene_bvh()`;
 //     you can also update the BVH with `refit_scene_bvh()`
 //
@@ -337,8 +337,9 @@ vector<vec3f> compute_shape_normals(const yocto_shape& shape);
 vector<vec3f> compute_surface_normals(const yocto_surface& surface);
 
 // Low level make/update bvh functions.
-bvh_scene make_scene_bvh(const yocto_scene& scene, const build_bvh_options& options = {});
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh, 
+bvh_scene make_scene_bvh(
+    const yocto_scene& scene, const build_bvh_options& options = {});
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_shapes, const vector<int>& updated_surfaces);
 
 // Scene intersection. Upron intersection we set the instance pointer,
