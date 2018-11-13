@@ -948,7 +948,8 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
-        if (!is_brdf_delta(point.brdf) && !empty(lights)) {
+        if (!is_brdf_delta(point.brdf) &&
+            !(lights.instances.empty() && lights.environments.empty())) {
             auto light_direction = sample_lights_or_brdf_direction(scene, lights,
                 bvh, point.brdf, point.position, point.normal, outgoing, rng);
             auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights,
@@ -1015,7 +1016,8 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces, bool environments_hidden) {
-    if (empty(lights)) return {zero_vec3f, false};
+    if (lights.instances.empty() && lights.environments.empty())
+        return {zero_vec3f, false};
 
     // initialize
     auto radiance = zero_vec3f;
@@ -1308,7 +1310,8 @@ pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bv
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
-        if (!is_brdf_delta(point.brdf) && !empty(lights)) {
+        if (!is_brdf_delta(point.brdf) &&
+            !(lights.instances.empty() && lights.environments.empty())) {
             auto light_point = sample_lights_point(
                 scene, lights, point.position, rng);
             auto light_pdf = sample_lights_point_pdf(
@@ -1380,7 +1383,8 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     auto outgoing = -direction;
 
     // direct
-    if (!is_brdf_delta(point.brdf) && !empty(lights)) {
+    if (!is_brdf_delta(point.brdf) &&
+        !(lights.instances.empty() && lights.environments.empty())) {
         auto light_direction = sample_lights_or_brdf_direction(scene, lights,
             bvh, point.brdf, point.position, point.normal, outgoing, rng);
         auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights, bvh,

@@ -128,100 +128,46 @@ using std::vector;
 namespace yocto {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
-    return normalize(p1 - p0);
-}
-inline float line_length(const vec3f& p0, const vec3f& p1) {
-    return length(p1 - p0);
-}
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
+inline float line_length(const vec3f& p0, const vec3f& p1);
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return normalize(cross(p1 - p0, p2 - p0));
-}
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return length(cross(p1 - p0, p2 - p0)) / 2;
-}
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Quad propeties.
 inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
-}
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
 inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
-}
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
 
 // Triangle tangent and bitangent from uv
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2) {
-    // Follows the definition in http://www.terathon.com/code/tangent.html and
-    // https://gist.github.com/aras-p/2843984
-    // normal points up from texture space
-    auto p   = p1 - p0;
-    auto q   = p2 - p0;
-    auto s   = vec2f{uv1[0] - uv0[0], uv2[0] - uv0[0]};
-    auto t   = vec2f{uv1[1] - uv0[1], uv2[1] - uv0[1]};
-    auto div = s[0] * t[1] - s[1] * t[0];
-
-    if (div != 0) {
-        auto tu = vec3f{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
-                      t[1] * p[2] - t[0] * q[2]} /
-                  div;
-        auto tv = vec3f{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
-                      s[0] * q[2] - s[1] * p[2]} /
-                  div;
-        return {tu, tv};
-    } else {
-        return {{1, 0, 0}, {0, 1, 0}};
-    }
-}
+    const vec2f& uv2);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
-inline T interpolate_line(const T& p0, const T& p1, float u) {
-    return p0 * (1 - u) + p1 * u;
-}
+inline T interpolate_line(const T& p0, const T& p1, float u);
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
-    return p0 * (1 - uv[0] - uv[1]) + p1 * uv[0] + p2 * uv[1];
-}
+    const T& p0, const T& p1, const T& p2, const vec2f& uv);
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
 inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-#if YOCTO_QUADS_AS_TRIANGLES
-    if (uv[0] + uv[1] <= 1) {
-        return interpolate_triangle(p0, p1, p3, uv);
-    } else {
-        return interpolate_triangle(p2, p3, p1, 1 - uv);
-    }
-#else
-    return p0 * (1 - uv[0]) * (1 - uv[1]) + p1 * uv[0] * (1 - uv[1]) +
-           p2 * uv[0] * uv[1] + p3 * (1 - uv[0]) * uv[1];
-#endif
-}
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv);
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
-           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
-}
+    const T& p0, const T& p1, const T& p2, const T& p3, float u);
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-           (p3 - p2) * 3 * u * u;
-}
+    const T& p0, const T& p1, const T& p2, const T& p3, float u);
 
 }  // namespace yocto
 
@@ -276,14 +222,10 @@ int insert_edge(edge_map& emap, const vec2i& edge, int face);
 int get_edge_index(const edge_map& emap, const vec2i& edge);
 int get_edge_count(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
-vector<vec2i>        get_edges(const edge_map& emap);
-vector<vec2i>        get_boundary(const edge_map& emap);
-inline vector<vec2i> get_edges(const vector<vec3i>& triangles) {
-    return get_edges(make_edge_map(triangles));
-}
-inline vector<vec2i> get_edges(const vector<vec4i>& quads) {
-    return get_edges(make_edge_map(quads));
-}
+vector<vec2i> get_edges(const edge_map& emap);
+vector<vec2i> get_boundary(const edge_map& emap);
+vector<vec2i> get_edges(const vector<vec3i>& triangles);
+vector<vec2i> get_edges(const vector<vec4i>& quads);
 
 // Convert quads to triangles
 vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
@@ -314,27 +256,56 @@ vector<vector<vec4i>> ungroup_quads(
     const vector<vec4i>& quads, const vector<int>& ids);
 
 // Subdivide lines by splitting each line in half.
-template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<T>& vert);
+tuple<vector<vec2i>, vector<float>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<float>& vert);
+tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec2f>& vert);
+tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec3f>& vert);
+tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<vec4f>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-template <typename T>
-tuple<vector<vec3i>, vector<T>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<T>& vert);
+tuple<vector<vec3i>, vector<float>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<float>& vert);
+tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec2f>& vert);
+tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& vert);
+tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<vec4f>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<T>& vert);
+tuple<vector<vec4i>, vector<float>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<float>& vert);
+tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec2f>& vert);
+tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec3f>& vert);
+tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<vec4f>& vert);
 // Subdivide beziers by splitting each segment in two.
-template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<T>& vert);
+tuple<vector<vec4i>, vector<float>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<float>& vert);
+tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec2f>& vert);
+tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec3f>& vert);
+tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<vec4f>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
-template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
-    const vector<T>& vert, bool lock_boundary = false);
+tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<float>& vert,
+    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec2f>& vert,
+    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec3f>& vert,
+    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec4f>& vert,
+    bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
@@ -487,6 +458,115 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
     const vec2f& noise = zero_vec2f, const vec2f& clump = zero_vec2f,
     const vec2f& rotation = zero_vec2f, int seed = 7);
+
+}  // namespace yocto
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF GEOMETRY UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Line properties.
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+    return normalize(p1 - p0);
+}
+inline float line_length(const vec3f& p0, const vec3f& p1) {
+    return length(p1 - p0);
+}
+
+// Triangle properties.
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return normalize(cross(p1 - p0, p2 - p0));
+}
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return length(cross(p1 - p0, p2 - p0)) / 2;
+}
+
+// Quad propeties.
+inline vec3f quad_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
+}
+inline float quad_area(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
+}
+
+// Triangle tangent and bitangent from uv
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2) {
+    // Follows the definition in http://www.terathon.com/code/tangent.html and
+    // https://gist.github.com/aras-p/2843984
+    // normal points up from texture space
+    auto p   = p1 - p0;
+    auto q   = p2 - p0;
+    auto s   = vec2f{uv1[0] - uv0[0], uv2[0] - uv0[0]};
+    auto t   = vec2f{uv1[1] - uv0[1], uv2[1] - uv0[1]};
+    auto div = s[0] * t[1] - s[1] * t[0];
+
+    if (div != 0) {
+        auto tu = vec3f{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
+                      t[1] * p[2] - t[0] * q[2]} /
+                  div;
+        auto tv = vec3f{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
+                      s[0] * q[2] - s[1] * p[2]} /
+                  div;
+        return {tu, tv};
+    } else {
+        return {{1, 0, 0}, {0, 1, 0}};
+    }
+}
+
+// Interpolates values over a line parameterized from a to b by u. Same as lerp.
+template <typename T>
+inline T interpolate_line(const T& p0, const T& p1, float u) {
+    return p0 * (1 - u) + p1 * u;
+}
+// Interpolates values over a triangle parameterized by u and v along the
+// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
+template <typename T>
+inline T interpolate_triangle(
+    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+    return p0 * (1 - uv[0] - uv[1]) + p1 * uv[0] + p2 * uv[1];
+}
+// Interpolates values over a quad parameterized by u and v along the
+// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
+template <typename T>
+inline T interpolate_quad(
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+#if YOCTO_QUADS_AS_TRIANGLES
+    if (uv[0] + uv[1] <= 1) {
+        return interpolate_triangle(p0, p1, p3, uv);
+    } else {
+        return interpolate_triangle(p2, p3, p1, 1 - uv);
+    }
+#else
+    return p0 * (1 - uv[0]) * (1 - uv[1]) + p1 * uv[0] * (1 - uv[1]) +
+           p2 * uv[0] * uv[1] + p3 * (1 - uv[0]) * uv[1];
+#endif
+}
+
+// Interpolates values along a cubic Bezier segment parametrized by u.
+template <typename T>
+inline T interpolate_bezier(
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
+}
+// Computes the derivative of a cubic Bezier segment parametrized by u.
+template <typename T>
+inline T interpolate_bezier_derivative(
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+           (p3 - p2) * 3 * u * u;
+}
 
 }  // namespace yocto
 

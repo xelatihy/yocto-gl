@@ -132,9 +132,7 @@ inline string to_string(const T& value);
 template <typename... Args>
 inline bool print(FILE* fs, const string& fmt, const Args&... args);
 template <typename... Args>
-inline bool print(const string& fmt, const Args&... args) {
-    return print(stdout, fmt, args...);
-}
+inline bool print(const string& fmt, const Args&... args);
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
@@ -146,9 +144,7 @@ template <typename... Args>
 inline bool parse(const string& str, Args&... args);
 
 // get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
+inline int64_t get_time();
 
 }  // namespace yocto
 
@@ -306,36 +302,16 @@ namespace yocto {
 // a simple concurrent queue that locks at every call
 template <typename T>
 struct concurrent_queue {
-    concurrent_queue() {}
-    concurrent_queue(const concurrent_queue& other) {
-        if (!other._queue.empty()) log_error("cannot copy full queue");
-        clear();
-    }
-    concurrent_queue& operator=(const concurrent_queue& other) {
-        if (!other._queue.empty()) log_error("cannot copy full queue");
-        clear();
-    }
+    concurrent_queue();
+    concurrent_queue(const concurrent_queue& other);
+    concurrent_queue& operator=(const concurrent_queue& other);
 
-    bool empty() {
-        lock_guard<mutex> lock(_mutex);
-        return _queue.empty();
-    }
-    void clear() {
-        lock_guard<mutex> lock(_mutex);
-        _queue.clear();
-    }
-    void push(const T& value) {
-        lock_guard<mutex> lock(_mutex);
-        _queue.push_back(value);
-    }
-    bool try_pop(T& value) {
-        lock_guard<mutex> lock(_mutex);
-        if (_queue.empty()) return false;
-        value = _queue.front();
-        _queue.pop_front();
-        return true;
-    }
+    bool empty();
+    void clear();
+    void push(const T& value);
+    bool try_pop(T& value);
 
+   private:
     mutex    _mutex;
     deque<T> _queue;
 };
@@ -367,6 +343,12 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 }
 
 }  // namespace yocto
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
@@ -469,6 +451,10 @@ template <typename... Args>
 inline bool print(FILE* fs, const string& fmt, const Args&... args) {
     auto str = format(fmt, args...);
     return fprintf(fs, "%s", str.c_str()) >= 0;
+}
+template <typename... Args>
+inline bool print(const string& fmt, const Args&... args) {
+    return print(stdout, fmt, args...);
 }
 
 // Converts to string.
@@ -596,6 +582,11 @@ inline bool parse(const string& str, Args&... args) {
     auto view = parse_string_view{str.c_str()};
     if (!parse_next(view, args...)) return false;
     return is_whitespace(view);
+}
+
+// get time in nanoseconds - useful only to compute difference of times
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
 }
 
 }  // namespace yocto
@@ -1396,6 +1387,45 @@ inline bool save_binary(const string& filename, const vector<byte>& data) {
 // IMPLEMENTATION FOR CONCURRENCY UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// a simple concurrent queue that locks at every call
+template <typename T>
+inline concurrent_queue<T>::concurrent_queue() {}
+template <typename T>
+inline concurrent_queue<T>::concurrent_queue(const concurrent_queue<T>& other) {
+    if (!other._queue.empty()) log_error("cannot copy full queue");
+    clear();
+}
+template <typename T>
+inline concurrent_queue<T>& concurrent_queue<T>::operator=(
+    const concurrent_queue<T>& other) {
+    if (!other._queue.empty()) log_error("cannot copy full queue");
+    clear();
+}
+
+template <typename T>
+inline bool concurrent_queue<T>::empty() {
+    lock_guard<mutex> lock(_mutex);
+    return _queue.empty();
+}
+template <typename T>
+inline void concurrent_queue<T>::clear() {
+    lock_guard<mutex> lock(_mutex);
+    _queue.clear();
+}
+template <typename T>
+inline void concurrent_queue<T>::push(const T& value) {
+    lock_guard<mutex> lock(_mutex);
+    _queue.push_back(value);
+}
+template <typename T>
+inline bool concurrent_queue<T>::try_pop(T& value) {
+    lock_guard<mutex> lock(_mutex);
+    if (_queue.empty()) return false;
+    value = _queue.front();
+    _queue.pop_front();
+    return true;
+}
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms.
