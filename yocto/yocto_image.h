@@ -77,30 +77,38 @@ namespace yocto {
 // Image container.
 template <typename T>
 struct image {
-    image();
-    image(const vec2i& size, const T& value = {});
-    image(const vec2i& size, const T* values);
+    image() : _size{0, 0}, _pixels{} {}
+    image(const vec2i& size, const T& value = {})
+        : _size{size}, _pixels((size_t)(size[0] * size[1]), value) {}
+    image(const vec2i& size, const T* values)
+        : _size{size}, _pixels(values, values + size[0] * size[1]) {}
 
-    bool  empty() const;
-    vec2i size() const;
-    int   width() const;
-    int   height() const;
+    bool  empty() const { return _pixels.empty(); }
+    vec2i size() const { return _size; }
+    int   width() const { return _size[0]; }
+    int   height() const { return _size[1]; }
 
-    void clear();
+    void clear() {
+        _size = {0, 0};
+        _pixels.clear();
+    }
     void resize(const vec2i& size, const T& value = {});
 
-    T&       operator[](const vec2i& ij);
-    const T& operator[](const vec2i& ij) const;
-    T&       at(const vec2i& ij);
-    const T& at(const vec2i& ij) const;
+    T& operator[](const vec2i& ij) { return _pixels[ij[1] * _size[0] + ij[0]]; }
+    const T& operator[](const vec2i& ij) const {
+        return _pixels[ij[1] * _size[0] + ij[0]];
+    }
+    T&       at(const vec2i& ij) { return operator[](ij); }
+    const T& at(const vec2i& ij) const { return operator[](ij); }
 
-    T*       data();
-    const T* data() const;
+    T*       data() { return _pixels.data(); }
+    const T* data() const { return _pixels.data(); }
 
-    T*       begin();
-    T*       end();
-    const T* begin() const;
-    const T* end() const;
+    T*       begin() { return _pixels.data(); }
+    T*       end() { return _pixels.data() + _pixels.size(); }
+    const T* begin() const { return _pixels.data(); }
+
+    const T* end() const { return _pixels.data() + _pixels.size(); }
 
    private:
     vec2i     _size   = {0, 0};
@@ -210,26 +218,35 @@ namespace yocto {
 // Volume container.
 template <typename T>
 struct volume {
-    volume();
-    volume(const vec3i& size, const T& value = {});
-    volume(const vec3i& size, const T* values);
+    volume() : _size{0, 0, 0}, _voxels{} {}
+    volume(const vec3i& size, const T& value = {})
+        : _size{size}, _voxels((size_t)(size[0] * size[1] * size[2]), value) {}
+    volume(const vec3i& size, const T* values)
+        : _size{size}, _voxels(values, values + size[0] * size[1] + size[2]) {}
 
-    bool  empty() const;
-    vec3i size() const;
-    int   width() const;
-    int   height() const;
-    int   depth() const;
+    bool empty() const { return _voxels.empty(); }
+    vec3i size() const { return _size; }
+    int   width() const { return _size[0]; }
+    int   height() const { return _size[1]; }
+    int   depth() const { return _size[2]; }
 
-    void clear();
+    void clear() {
+        _size = {0, 0, 0};
+        _voxels.clear();
+    }
     void resize(const vec3i& size, const T& value = {});
 
-    T&       operator[](const vec3i& ijk);
-    const T& operator[](const vec3i& ijk) const;
-    T&       at(const vec3i& ijk);
-    const T& at(const vec3i& ijk) const;
+    T& operator[](const vec3i& ijk) {
+        return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
+    }
+    const T& operator[](const vec3i& ijk) const {
+        return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
+    }
+    T& at(const vec3i& ijk) { return operator[](ijk); }
+    const T& at(const vec3i& ijk) const { return operator[](ijk); }
 
-    T*       data();
-    const T* data() const;
+    T*       data() { return _voxels.data(); }
+    const T* data() const { return _voxels.data(); }
 
    private:
     vec3i     _size   = {0, 0, 0};
@@ -304,38 +321,6 @@ inline vec3f rgb_to_xyz(const vec3f& rgb);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Image container.
-template <typename T>
-inline image<T>::image() : _size{0, 0}, _pixels{} {}
-template <typename T>
-inline image<T>::image(const vec2i& size, const T& value)
-    : _size{size}, _pixels((size_t)(size[0] * size[1]), value) {}
-template <typename T>
-inline image<T>::image(const vec2i& size, const T* values)
-    : _size{size}, _pixels(values, values + size[0] * size[1]) {}
-
-template <typename T>
-inline bool image<T>::empty() const {
-    return _size[0] == 0 && _size[1] == 0;
-}
-template <typename T>
-inline vec2i image<T>::size() const {
-    return _size;
-}
-template <typename T>
-inline int image<T>::width() const {
-    return _size[0];
-}
-template <typename T>
-inline int image<T>::height() const {
-    return _size[1];
-}
-
-template <typename T>
-inline void image<T>::clear() {
-    _size = {0, 0};
-    _pixels.clear();
-}
 template <typename T>
 inline void image<T>::resize(const vec2i& size, const T& value) {
     if (size == _size) return;
@@ -353,49 +338,6 @@ inline void image<T>::resize(const vec2i& size, const T& value) {
         _size = size;
         swap(_pixels, img._pixels);
     }
-}
-
-template <typename T>
-inline T& image<T>::operator[](const vec2i& ij) {
-    return _pixels[ij[1] * _size[0] + ij[0]];
-}
-template <typename T>
-inline const T& image<T>::operator[](const vec2i& ij) const {
-    return _pixels[ij[1] * _size[0] + ij[0]];
-}
-template <typename T>
-inline T& image<T>::at(const vec2i& ij) {
-    return _pixels[ij[1] * _size[0] + ij[0]];
-}
-template <typename T>
-inline const T& image<T>::at(const vec2i& ij) const {
-    return _pixels[ij[1] * _size[0] + ij[0]];
-}
-
-template <typename T>
-inline T* image<T>::data() {
-    return _pixels.data();
-}
-template <typename T>
-inline const T* image<T>::data() const {
-    return _pixels.data();
-}
-
-template <typename T>
-inline T* image<T>::begin() {
-    return _pixels.data();
-}
-template <typename T>
-inline T* image<T>::end() {
-    return _pixels.data() + _pixels.size();
-}
-template <typename T>
-inline const T* image<T>::begin() const {
-    return _pixels.data();
-}
-template <typename T>
-inline const T* image<T>::end() const {
-    return _pixels.data() + _pixels.size();
 }
 
 // Size
@@ -433,42 +375,6 @@ inline image<T> get_image_region(const image<T>& img, const bbox2i& region) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Volume container.
-template <typename T>
-inline volume<T>::volume() : _size{0, 0, 0}, _voxels{} {}
-template <typename T>
-inline volume<T>::volume(const vec3i& size, const T& value)
-    : _size{size}, _voxels((size_t)(size[0] * size[1] * size[2]), value) {}
-template <typename T>
-inline volume<T>::volume(const vec3i& size, const T* values)
-    : _size{size}, _voxels(values, values + size[0] * size[1] + size[2]) {}
-
-template <typename T>
-inline bool volume<T>::empty() const {
-    return _size[0] == 0 && _size[1] == 0 && _size[2] == 0;
-}
-template <typename T>
-inline vec3i volume<T>::size() const {
-    return _size;
-}
-template <typename T>
-inline int volume<T>::width() const {
-    return _size[0];
-}
-template <typename T>
-inline int volume<T>::height() const {
-    return _size[1];
-}
-template <typename T>
-inline int volume<T>::depth() const {
-    return _size[2];
-}
-
-template <typename T>
-inline void volume<T>::clear() {
-    _size = {0, 0, 0};
-    _voxels.clear();
-}
 template <typename T>
 inline void volume<T>::resize(const vec3i& size, const T& value) {
     if (size == _size) return;
@@ -488,32 +394,6 @@ inline void volume<T>::resize(const vec3i& size, const T& value) {
         _size = size;
         swap(_voxels, vol._voxels);
     }
-}
-
-template <typename T>
-inline T& volume<T>::operator[](const vec3i& ijk) {
-    return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
-}
-template <typename T>
-inline const T& volume<T>::operator[](const vec3i& ijk) const {
-    return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
-}
-template <typename T>
-inline T& volume<T>::at(const vec3i& ijk) {
-    return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
-}
-template <typename T>
-inline const T& volume<T>::at(const vec3i& ijk) const {
-    return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
-}
-
-template <typename T>
-inline T* volume<T>::data() {
-    return _voxels.data();
-}
-template <typename T>
-inline const T* volume<T>::data() const {
-    return _voxels.data();
 }
 
 }  // namespace yocto
