@@ -544,6 +544,20 @@ constexpr inline vec<T, 4> quat_inverse(const vec<T, 4>& a) {
     return quat_conjugate(a) / dot(a, a);
 }
 
+// Functions applied on vector elements
+template <typename T, int N>
+inline vec<T, N> pow(const vec<T, N>& a, T b) {
+    auto c = vec<T, N>{};
+    for (auto i = 0; i < N; i++) c[i] = pow(a[i], b);
+    return c;
+}
+template <typename T, int N>
+inline vec<T, N> exp(const vec<T, N>& a) {
+    auto c = vec<T, N>{};
+    for (auto i = 0; i < N; i++) c[i] = exp(a[i]);
+    return c;
+}
+
 }  // namespace yocto
 
 namespace std {

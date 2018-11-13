@@ -890,8 +890,10 @@ bool apply_json_procedural(
         value.hdr_image = make_uvgrid_image(size);
     } else if (type == "sky") {
         if (size[0] < size[1] * 2) size[0] = size[1] * 2;
-        value.hdr_image = make_sunsky_image(size, js.value("sun_angle", pif / 4),
-            js.value("turbidity", 3.0f), js.value("has_sun", false),
+        value.hdr_image = make_sunsky_image(size,
+            js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
+            js.value("has_sun", false), js.value("sun_angle_scale", 1.0f),
+            js.value("sun_emission_scale", 1.0f),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr          = true;
     } else if (type == "noise") {
