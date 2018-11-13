@@ -69,7 +69,7 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
             print(cmd)
             os.system(cmd)
 
-@click.command()
+@cli.command()
 def sync():
     os.system('rsync -avc --delete ./ ../yocto-scenes')
 

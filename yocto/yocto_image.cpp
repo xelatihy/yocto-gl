@@ -366,59 +366,57 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
 }
 
 // Implementation of sunsky modified heavily from pbrt
-image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
-    float turbidity, bool has_sun, const vec3f& ground_albedo) {
-    auto wSun = vec3f{0, cos(thetaSun), sin(thetaSun)};
-
-    // sunSpectralRad =  ComputeAttenuatedSunlight(thetaS, turbidity);
-    auto sunAngularRadius = 9.35e-03f / 2;  // Wikipedia
-    auto thetaS           = thetaSun;
-
-    auto t1 = thetaSun, t2 = thetaSun * thetaSun,
-         t3 = thetaSun * thetaSun * thetaSun;
-    auto T  = turbidity;
-    auto T2 = turbidity * turbidity;
-
+image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
+    float turbidity, bool has_sun, float sun_angle_scale,
+    float sun_emission_scale, const vec3f& ground_albedo, bool renormalize_sun) {
     auto zenith_xyY = vec3f{
-        (+0.00165f * t3 - 0.00374f * t2 + 0.00208f * t1 + 0) * T2 +
-            (-0.02902f * t3 + 0.06377f * t2 - 0.03202f * t1 + 0.00394f) * T +
-            (+0.11693f * t3 - 0.21196f * t2 + 0.06052f * t1 + 0.25885f),
-        (+0.00275f * t3 - 0.00610f * t2 + 0.00316f * t1 + 0) * T2 +
-            (-0.04214f * t3 + 0.08970f * t2 - 0.04153f * t1 + 0.00515f) * T +
-            (+0.15346f * t3 - 0.26756f * t2 + 0.06669f * t1 + 0.26688f),
-        1000 * (4.0453f * T - 4.9710f) *
-                tan((4.0f / 9.0f - T / 120.0f) * (pif - 2 * t1)) -
-            .2155f * T + 2.4192f};
+        (+0.00165f * pow(theta_sun, 3) - 0.00374f * pow(theta_sun, 2) +
+            0.00208f * theta_sun + 0) *
+                pow(turbidity, 2) +
+            (-0.02902f * pow(theta_sun, 3) + 0.06377f * pow(theta_sun, 2) -
+                0.03202f * theta_sun + 0.00394f) *
+                turbidity +
+            (+0.11693f * pow(theta_sun, 3) - 0.21196f * pow(theta_sun, 2) +
+                0.06052f * theta_sun + 0.25885f),
+        (+0.00275f * pow(theta_sun, 3) - 0.00610f * pow(theta_sun, 2) +
+            0.00316f * theta_sun + 0) *
+                pow(turbidity, 2) +
+            (-0.04214f * pow(theta_sun, 3) + 0.08970f * pow(theta_sun, 2) -
+                0.04153f * theta_sun + 0.00515f) *
+                turbidity +
+            (+0.15346f * pow(theta_sun, 3) - 0.26756f * pow(theta_sun, 2) +
+                0.06669f * theta_sun + 0.26688f),
+        1000 * (4.0453f * turbidity - 4.9710f) *
+                tan((4.0f / 9.0f - turbidity / 120.0f) * (pif - 2 * theta_sun)) -
+            .2155f * turbidity + 2.4192f};
 
-    auto perez_A_xyY = vec3f{-0.01925f * T - 0.25922f, -0.01669f * T - 0.26078f,
-        +0.17872f * T - 1.46303f};
-    auto perez_B_xyY = vec3f{-0.06651f * T + 0.00081f, -0.09495f * T + 0.00921f,
-        -0.35540f * T + 0.42749f};
-    auto perez_C_xyY = vec3f{-0.00041f * T + 0.21247f, -0.00792f * T + 0.21023f,
-        -0.02266f * T + 5.32505f};
-    auto perez_D_xyY = vec3f{-0.06409f * T - 0.89887f, -0.04405f * T - 1.65369f,
-        +0.12064f * T - 2.57705f};
-    auto perez_E_xyY = vec3f{-0.00325f * T + 0.04517f, -0.01092f * T + 0.05291f,
-        -0.06696f * T + 0.37027f};
+    auto perez_A_xyY = vec3f{-0.01925f * turbidity - 0.25922f,
+        -0.01669f * turbidity - 0.26078f, +0.17872f * turbidity - 1.46303f};
+    auto perez_B_xyY = vec3f{-0.06651f * turbidity + 0.00081f,
+        -0.09495f * turbidity + 0.00921f, -0.35540f * turbidity + 0.42749f};
+    auto perez_C_xyY = vec3f{-0.00041f * turbidity + 0.21247f,
+        -0.00792f * turbidity + 0.21023f, -0.02266f * turbidity + 5.32505f};
+    auto perez_D_xyY = vec3f{-0.06409f * turbidity - 0.89887f,
+        -0.04405f * turbidity - 1.65369f, +0.12064f * turbidity - 2.57705f};
+    auto perez_E_xyY = vec3f{-0.00325f * turbidity + 0.04517f,
+        -0.01092f * turbidity + 0.05291f, -0.06696f * turbidity + 0.37027f};
 
-    auto perez_f = [thetaS](float A, float B, float C, float D, float E,
-                       float theta, float gamma, float zenith) -> float {
-        auto den = ((1 + A * exp(B)) *
-                    (1 + C * exp(D * thetaS) + E * cos(thetaS) * cos(thetaS)));
+    auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
+                       float gamma, float theta_sun, vec3f zenith) -> vec3f {
+        auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
+                                           E * cos(theta_sun) * cos(theta_sun)));
         auto num = ((1 + A * exp(B / cos(theta))) *
                     (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
         return zenith * num / den;
     };
 
     auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
-                   perez_E_xyY, zenith_xyY](auto theta, auto gamma) -> vec3f {
-        auto x = perez_f(perez_A_xyY[0], perez_B_xyY[0], perez_C_xyY[0],
-            perez_D_xyY[0], perez_E_xyY[0], theta, gamma, zenith_xyY[0]);
-        auto y = perez_f(perez_A_xyY[1], perez_B_xyY[1], perez_C_xyY[1],
-            perez_D_xyY[1], perez_E_xyY[1], theta, gamma, zenith_xyY[1]);
-        auto Y = perez_f(perez_A_xyY[2], perez_B_xyY[2], perez_C_xyY[2],
-            perez_D_xyY[2], perez_E_xyY[2], theta, gamma, zenith_xyY[2]);
-        return xyz_to_rgb(xyY_to_xyz({x, y, Y})) / 10000.0f;
+                   perez_E_xyY, zenith_xyY](
+                   float theta, float gamma, float theta_sun) -> vec3f {
+        return xyz_to_rgb(xyY_to_xyz(
+                   perez_f(perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
+                       perez_E_xyY, theta, gamma, theta_sun, zenith_xyY))) /
+               10000;
     };
 
     // compute sun luminance
@@ -429,27 +427,40 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
     auto sun_sol    = vec3f{20000.0f, 27000.0f, 30000.0f};
     auto sun_lambda = vec3f{680, 530, 480};
     auto sun_beta   = 0.04608365822050f * turbidity - 0.04586025928522f;
-    auto sun_m      = 1.0f /
-                 (cos(thetaSun) + 0.000940f * pow(1.6386f - thetaSun, -1.253f));
+    auto sun_m      = 1.0f / (cos(theta_sun) +
+                            0.000940f * pow(1.6386f - theta_sun, -1.253f));
 
-    auto sun_le = zero_vec3f;
-    for (auto i = 0; i < 3; i++) {
-        auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda[i] / 1000, -4.08f));
-        auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda[i] / 1000, -1.3f));
-        auto tauO = exp(-sun_m * sun_ko[i] * .35f);
-        auto tauG = exp(-1.41f * sun_kg[i] * sun_m /
-                        pow(1 + 118.93f * sun_kg[i] * sun_m, 0.45f));
-        auto tauWA = exp(-0.2385f * sun_kwa[i] * 2.0f * sun_m /
-                         pow(1 + 20.07f * sun_kwa[i] * 2.0f * sun_m, 0.45f));
-        sun_le[i]  = sun_sol[i] * tauR * tauA * tauO * tauG * tauWA;
-    }
+    auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda / 1000, -4.08f));
+    auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, -1.3f));
+    auto tauO = exp(-sun_m * sun_ko * .35f);
+    auto tauG = exp(
+        -1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
+    auto tauWA  = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
+                     pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
+    auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA;
 
-    auto sun = [has_sun, sunAngularRadius, sun_le](auto theta, auto gamma) {
-        return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
-                                                       zero_vec3f;
+    // rescale by user
+    sun_le *= sun_emission_scale;
+
+    // sun scale from Wikipedia scaled by user quantity and rescaled to at
+    // the minimum 5 pixel diamater
+    auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
+    sun_angular_radius *= sun_angle_scale;
+    sun_angular_radius = max(sun_angular_radius, 5 * pif / size[1]);
+
+    // sun direction
+    auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
+
+    auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
+        // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
+        //                                                zero_vec3f;
+        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 :
+                                                         zero_vec3f;
     };
 
-    auto img = image<vec4f>{size, {0, 0, 0, 1}};
+    // Make the sun sky image
+    auto img          = image<vec4f>{size, {0, 0, 0, 1}};
+    auto sky_integral = 0.0f, sun_integral = 0.0f;
     for (auto j = 0; j < img.height() / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.height());
         theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
@@ -457,9 +468,21 @@ image<vec4f> make_sunsky_image(const vec2i& size, float thetaSun,
             auto phi = 2 * pif * (float(i + 0.5f) / img.width());
             auto w   = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma  = acos(clamp(dot(w, wSun), -1.0f, 1.0f));
-            auto col    = sky(theta, gamma) + sun(theta, gamma);
+            auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
+            auto sky_col = sky(theta, gamma, theta_sun);
+            auto sun_col = sun(theta, gamma);
+            sky_integral += mean(sky_col) * sin(theta);
+            sun_integral += mean(sun_col) * sin(theta);
+            auto col    = sky_col + sun_col;
             img[{i, j}] = {col[0], col[1], col[2], 1};
+        }
+    }
+
+    if (renormalize_sun) {
+        for (auto j = 0; j < img.height() / 2; j++) {
+            for (int i = 0; i < img.width(); i++) {
+                img[{i, j}] *= sky_integral / (sun_integral + sky_integral);
+            }
         }
     }
 
