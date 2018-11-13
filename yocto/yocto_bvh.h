@@ -31,11 +31,24 @@
 // represent triangles correctly, an this convention is used throught the
 // library. This is equivalent to Intel's Embree.
 //
-// 1. fill the shape or instance data
-// 2. build the BVH with `build_scene_bvh()`
-// 3. perform ray-element intersection with `intersect_scene_bvh()`
-// 4. perform point overlap queries with `overlap_scene_bvh()`
-// 5. refit the BVH with `refit_scene_bvh()` after updating internal data
+// We support working either on the whole scene or on a single shape. In the
+// description below yoi will see this dual API defined.
+//
+// 1. create shape/scene bvhs using `make_shape_bvh()`/`make_scene_bvh()`
+// 3. build the shape/scene BVH with `build_shape_bvh()`/`build_scene_bvh()`;
+//    for the scene build, we will build appropriately the shape bvhs
+// 4. perform ray-shape intersection with `intersect_shape_bvh()` and
+//    ray-scene intersection with `intersect_scene_bvh()`
+// 5. perform point overlap queries in shapes with `overlap_shape_bvh()` and on
+//    scenes with `overlap_scene_bvh()`
+// 6. a shape bvh can be updated if change to its positions occurs;
+//    to do so, update the bvh data with `update_shape_bvh()` and then call
+//    `refit_shape_bvh()`
+// 7. a scene bvh can be updated if changes to its instances or shapes occur;
+//    to do so update the relevant shape bvhs with `update_shape_bvh()` and
+//    update the bvh data with `update_shape_bvh()` and then call
+//    `refit_shape_bvh()`; you can retrive a shape bvh by index with
+//    `get_shape_bvh()`/`get_surface_bvh()`
 //
 //
 
@@ -162,39 +175,49 @@ struct bvh_scene {
     vector<bvh_node> nodes;
 
     // Embree opaque data
-    void* embree_bvh = nullptr;
+    void* embree_bvh       = nullptr;
+    bool  embree_flattened = false;
 };
 
 // Options for build bvh
 struct build_bvh_options {
-    bool          high_quality = true;
-    bool          use_embree   = false;
-    bool          run_serially = false;
-    atomic<bool>* cancel_flag  = nullptr;
+    bool          high_quality   = true;
+    bool          use_embree     = false;
+    bool          flatten_embree = true;
+    bool          run_serially   = false;
+    atomic<bool>* cancel_flag    = nullptr;
 };
 
 // Build a BVH from the given set of shape primitives.
 bvh_shape make_shape_bvh(const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const build_bvh_options& options = {});
+    const vector<vec3f>& positions, const vector<float>& radius);
 bvh_shape make_shape_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const build_bvh_options& options = {});
-bvh_shape make_shape_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const build_bvh_options& options = {});
-bvh_shape make_shape_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const build_bvh_options& options = {});
+    const vector<vec3f>& positions, const vector<float>& radius);
+bvh_shape make_shape_bvh(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+bvh_shape make_shape_bvh(
+    const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Build a BVH from the given set of instances.
 bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs,
-    const build_bvh_options& options = {});
+    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs);
 
-// Update the node bounds for a shape bvh.
-void refit_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions);
-void refit_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
+// Build the bvh acceleration structure.
+void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
+void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
+
+// Update the node data for shape and scene bvhs.
+void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions);
+void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
     const vector<float>& radius);
-void refit_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances);
+void update_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances);
+bvh_shape& get_shape_bvh(bvh_scene& bvh, int shape_id);
+bvh_shape& get_surface_bvh(bvh_scene& bvh, int surface_id);
+
+// Refit bvh data
+void refit_shape_bvh(bvh_shape& bvh);
+void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const vector<int>& updated_surfaces);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,

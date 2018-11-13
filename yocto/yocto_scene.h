@@ -25,11 +25,11 @@
 // 1. load a scene with Yocto/SceneIO,
 // 2. use `compute_shape_box()/compute_scene_box()` to compute element bounds
 // 3. can merge scene together with `merge_scene()`
-// 4. for ray-intersection and closest point queries, a BVH can be created with
-//    `build_shape_bvh()/build_scene_bvh()` and refit with
-//    `refit_shape_bvh()/refit_scene_bvh()`
-// 5. compute interpolated values over scene elements with `evaluate_XXX()`
+// 4. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
+// 5. for ray-intersection and closest point queries, create a BVH with
+//    `make_scene_bvh()` and intersect with with `intersect_scene_bvh()`;
+//     you can also update the BVH with `refit_scene_bvh()`
 //
 //
 
@@ -336,16 +336,28 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 vector<vec3f> compute_shape_normals(const yocto_shape& shape);
 vector<vec3f> compute_surface_normals(const yocto_surface& surface);
 
-// Updates/refits bvh.
-bvh_shape make_shape_bvh(
-    const yocto_shape& shape, const build_bvh_options& options = {});
-bvh_shape make_surface_bvh(
-    const yocto_surface& surface, const build_bvh_options& options = {});
+// Low level make/update bvh functions.
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, const build_bvh_options& options = {});
-void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh);
-void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh);
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh);
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const vector<int>& updated_surfaces);
+
+// Scene intersection. Upron intersection we set the instance pointer,
+// the shape element_id and element_uv and the inetrsection distance.
+struct scene_intersection {
+    int   instance_id = -1;
+    int   element_id  = -1;
+    vec2f element_uv  = zero_vec2f;
+    float distance    = float_max;
+};
+
+// Intersects a ray with the scene.
+scene_intersection intersect_scene(const yocto_scene& scene,
+    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
+// Intersects a ray with a scene instance.
+scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
+    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
 
 // Apply subdivision and displacement rules.
 void tesselate_shapes_and_surfaces(yocto_scene& scene);
@@ -365,22 +377,6 @@ void log_validation_errors(const yocto_scene& scene, bool skip_textures = false)
 
 // Queries on objects
 bool is_shape_face_varying(const yocto_shape& shape);
-
-// Scene intersection. Upron intersection we set the instance pointer,
-// the shape element_id and element_uv and the inetrsection distance.
-struct scene_intersection {
-    int   instance_id = -1;
-    int   element_id  = -1;
-    vec2f element_uv  = zero_vec2f;
-    float distance    = float_max;
-};
-
-// Intersects a ray with the scene.
-scene_intersection intersect_scene(const yocto_scene& scene,
-    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
-// Intersects a ray with a scene instance.
-scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
-    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
 
 // Shape values interpolated using barycentric coordinates.
 vec3f evaluate_shape_position(

@@ -534,47 +534,41 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     }
 }
 
-// Build a shape BVH
-bvh_shape make_shape_bvh(
-    const yocto_shape& shape, const build_bvh_options& options) {
-    if (!shape.points.empty()) {
-        return make_shape_bvh(
-            shape.points, shape.positions, shape.radius, options);
-    } else if (!shape.lines.empty()) {
-        return make_shape_bvh(
-            shape.lines, shape.positions, shape.radius, options);
-    } else if (!shape.triangles.empty()) {
-        return make_shape_bvh(shape.triangles, shape.positions, options);
-    } else if (!shape.quads.empty()) {
-        return make_shape_bvh(shape.quads, shape.positions, options);
-    } else {
-        return {};
-    }
-}
-
-// Build a shape BVH
-bvh_shape make_surface_bvh(
-    const yocto_surface& surface, const build_bvh_options& options) {
-    return make_shape_bvh(surface.quads_positions, surface.positions, options);
-}
-
 // Build a scene BVH
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
-    // create bvh
-    auto bvh = bvh_scene{};
-
     // shapes
     auto shape_bvhs = vector<bvh_shape>();
     for (auto& shape : scene.shapes) {
-        shape_bvhs.push_back(make_shape_bvh(shape, options));
+        auto shape_bvh = bvh_shape{};
+        if (!shape.points.empty()) {
+            shape_bvh = make_shape_bvh(
+                shape.points, shape.positions, shape.radius);
+        } else if (!shape.lines.empty()) {
+            shape_bvh = make_shape_bvh(
+                shape.lines, shape.positions, shape.radius);
+        } else if (!shape.triangles.empty()) {
+            shape_bvh = make_shape_bvh(shape.triangles, shape.positions);
+        } else if (!shape.quads.empty()) {
+            shape_bvh = make_shape_bvh(shape.quads, shape.positions);
+        } else {
+            shape_bvh = {};
+        }
+        shape_bvhs.push_back(shape_bvh);
     }
 
     // surfaces
     auto surface_bvhs = vector<bvh_shape>();
     for (auto& surface : scene.surfaces) {
-        surface_bvhs.push_back(make_surface_bvh(surface, options));
+        auto surface_bvh = bvh_shape{};
+        if (!surface.quads_positions.empty()) {
+            surface_bvh = make_shape_bvh(
+                surface.quads_positions, surface.positions);
+        } else {
+            surface_bvh = {};
+        }
+        surface_bvhs.push_back(surface_bvh);
     }
 
     // instances
@@ -585,27 +579,30 @@ bvh_scene make_scene_bvh(
     }
 
     // build bvh
-    return make_scene_bvh(bvh_instances, shape_bvhs, surface_bvhs, options);
-}
-
-// Refits a shape BVH
-void refit_shape_bvh(const yocto_shape& shape, bvh_shape& bvh) {
-    refit_shape_bvh(bvh, shape.positions, shape.radius);
-}
-
-// Refits a surface BVH
-void refit_surface_bvh(const yocto_surface& surface, bvh_shape& bvh) {
-    refit_shape_bvh(bvh, surface.positions);
+    auto bvh = make_scene_bvh(bvh_instances, shape_bvhs, surface_bvhs);
+    build_scene_bvh(bvh, options);
+    return bvh;
 }
 
 // Refits a scene BVH
-void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh) {
+void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const vector<int>& updated_surfaces) {
+    for (auto shape_id : updated_shapes)
+        update_shape_bvh(get_shape_bvh(bvh, shape_id),
+            scene.shapes[shape_id].positions, scene.shapes[shape_id].radius);
+    for (auto surface_id : updated_surfaces)
+        update_shape_bvh(get_surface_bvh(bvh, surface_id),
+            scene.surfaces[surface_id].positions);
+
     auto bvh_instances = vector<bvh_instance>{};
     for (auto& instance : scene.instances) {
         bvh_instances.push_back({instance.frame, inverse(instance.frame),
             instance.shape, instance.surface});
     }
-    refit_scene_bvh(bvh, bvh_instances);
+    update_scene_bvh(bvh, bvh_instances);
+
+    refit_scene_bvh(bvh, updated_instances, updated_shapes, updated_surfaces);
 }
 
 // Add missing names and resolve duplicated names.
