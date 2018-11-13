@@ -498,7 +498,7 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
-    bvh.embree_bvh     = embree_scene;
+    bvh.embree_bvh = embree_scene;
     if (bvh.instances.empty()) {
         rtcCommitScene(embree_scene);
         return;
@@ -607,10 +607,10 @@ bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     rtcInitIntersectContext(&embree_ctx);
     rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
     if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-    distance    = embree_ray.ray.tfar;
-    uv          = {embree_ray.hit.u, embree_ray.hit.v};
-    element_id  = embree_ray.hit.primID;
-    if(bvh.embree_flattened) {
+    distance   = embree_ray.ray.tfar;
+    uv         = {embree_ray.hit.u, embree_ray.hit.v};
+    element_id = embree_ray.hit.primID;
+    if (bvh.embree_flattened) {
         instance_id = embree_ray.hit.geomID;
     } else {
         instance_id = embree_ray.hit.instID[0];
