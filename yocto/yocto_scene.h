@@ -570,7 +570,7 @@ inline int evaluate_keyframed_index(
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
 inline T evaluate_keyframed_step(
-    const vector<float>& times, const vector<T>& vals, float time) ;
+    const vector<float>& times, const vector<T>& vals, float time);
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>

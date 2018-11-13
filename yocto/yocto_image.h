@@ -214,7 +214,7 @@ struct volume {
     volume(const vec3i& size, const T& value = {});
     volume(const vec3i& size, const T* values);
 
-    bool empty() const;
+    bool  empty() const;
     vec3i size() const;
     int   width() const;
     int   height() const;
@@ -223,9 +223,9 @@ struct volume {
     void clear();
     void resize(const vec3i& size, const T& value = {});
 
-    T& operator[](const vec3i& ijk);
+    T&       operator[](const vec3i& ijk);
     const T& operator[](const vec3i& ijk) const;
-    T& at(const vec3i& ijk);
+    T&       at(const vec3i& ijk);
     const T& at(const vec3i& ijk) const;
 
     T*       data();
@@ -262,7 +262,7 @@ inline float srgb_to_linear(float srgb);
 inline float linear_to_srgb(float lin);
 
 // Conversion between linear and srgb colors.
-inline vec3f srgb_to_linear(const vec3f& srgb) ;
+inline vec3f srgb_to_linear(const vec3f& srgb);
 inline vec3f linear_to_srgb(const vec3f& lin);
 inline vec4f srgb_to_linear(const vec4f& srgb);
 inline vec4f linear_to_srgb(const vec4f& lin);

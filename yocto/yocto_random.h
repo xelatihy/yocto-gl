@@ -128,7 +128,7 @@ struct rng_state {
 inline rng_state make_rng(uint64_t seed, uint64_t seq = 1);
 
 // Next random numbers: floats in [0,1), ints in [0,n).
-inline int get_random_int(rng_state& rng, int n);
+inline int   get_random_int(rng_state& rng, int n);
 inline float get_random_float(rng_state& rng);
 inline vec2f get_random_vec2f(rng_state& rng);
 inline vec3f get_random_vec3f(rng_state& rng);
@@ -145,25 +145,25 @@ inline vec3f sample_hemisphere_direction(const vec2f& ruv);
 inline float sample_hemisphere_direction_pdf(const vec3f& direction);
 
 // Sample a spherical direction with uniform distribution.
-inline vec3f sample_sphere_direction(const vec2f& ruv) ;
+inline vec3f sample_sphere_direction(const vec2f& ruv);
 inline float sample_sphere_direction_pdf(const vec3f& w);
 
 // Sample an hemispherical direction with cosine distribution.
 inline vec3f sample_hemisphere_direction_cosine(const vec2f& ruv);
-inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction) ;
+inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction);
 
 // Sample an hemispherical direction with cosine power distribution.
 inline vec3f sample_hemisphere_direction_cospower(
     float exponent, const vec2f& ruv);
 inline float sample_hemisphere_direction_cospower_pdf(
-    float exponent, const vec3f& direction) ;
+    float exponent, const vec3f& direction);
 
 // Sample a point uniformly on a disk.
-inline vec3f sample_disk_point(const vec2f& ruv) ;
+inline vec3f sample_disk_point(const vec2f& ruv);
 inline float sample_disk_point_pdf();
 
 // Sample a point uniformly on a cylinder, without caps.
-inline vec3f sample_cylinder_point(const vec2f& ruv) ;
+inline vec3f sample_cylinder_point(const vec2f& ruv);
 inline float sample_cylinder_point_pdf();
 
 // Sample a point uniformly on a triangle returning the baricentric coordinates.
@@ -177,7 +177,7 @@ inline float sample_triangle_point_pdf(
     const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Sample an index with uniform distribution.
-inline int sample_uniform_index(int size, float r);
+inline int   sample_uniform_index(int size, float r);
 inline float sample_uniform_index_pdf(int size);
 
 // Sample an index with uniform distribution.
@@ -189,7 +189,7 @@ inline float sample_uniform_element_pdf(const vector<T>& elements);
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete_distribution(const vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_distribution_pdf(const vector<float>& cdf, int idx) ;
+inline float sample_discrete_distribution_pdf(const vector<float>& cdf, int idx);
 
 }  // namespace yocto
 

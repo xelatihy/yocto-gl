@@ -129,11 +129,11 @@ namespace yocto {
 
 // Line properties.
 inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
-inline float line_length(const vec3f& p0, const vec3f& p1) ;
+inline float line_length(const vec3f& p0, const vec3f& p1);
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) ;
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) ;
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Quad propeties.
 inline vec3f quad_normal(
@@ -222,8 +222,8 @@ int insert_edge(edge_map& emap, const vec2i& edge, int face);
 int get_edge_index(const edge_map& emap, const vec2i& edge);
 int get_edge_count(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
-vector<vec2i>        get_edges(const edge_map& emap);
-vector<vec2i>        get_boundary(const edge_map& emap);
+vector<vec2i> get_edges(const edge_map& emap);
+vector<vec2i> get_boundary(const edge_map& emap);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
 
@@ -294,14 +294,18 @@ tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
 tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<vec4f>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
-tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(const vector<vec4i>& quads,
-    const vector<float>& vert, bool lock_boundary = false);
-tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(const vector<vec4i>& quads,
-    const vector<vec2f>& vert, bool lock_boundary = false);
-tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(const vector<vec4i>& quads,
-    const vector<vec3f>& vert, bool lock_boundary = false);
-tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(const vector<vec4i>& quads,
-    const vector<vec4f>& vert, bool lock_boundary = false);
+tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<float>& vert,
+    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec2f>& vert,
+    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec3f>& vert,
+    bool lock_boundary = false);
+tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<vec4f>& vert,
+    bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
 tuple<vector<vec3f>, vector<int>> weld_vertices(
