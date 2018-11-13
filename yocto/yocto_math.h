@@ -196,27 +196,9 @@ struct vec<T, 4> {
     constexpr const T& operator[](int idx) const { return elements[idx]; }
 };
 
-// Vector constants
-template <typename T, int N>
-constexpr inline vec<T, N> make_zero_vec() {
-    return vec<T, N>{};
-}
-template <typename T, int N>
-constexpr inline vec<T, N> make_one_vec() {
-    auto v = vec<T, N>{};
-    for (auto i = 0; i < N; i++) v[i] = 1;
-    return v;
-}
-template <typename T, int N>
-constexpr inline vec<T, N> make_uniform_vec(T value) {
-    auto v = vec<T, N>{};
-    for (auto i = 0; i < N; i++) v[i] = value;
-    return v;
-}
-template <typename T, int N>
-constexpr const vec<T, N> zero_vec = make_zero_vec<T, N>();
-template <typename T, int N>
-constexpr const vec<T, N> one_vec = make_one_vec<T, N>();
+// Zero vector constants.
+template<typename T, int N>
+constexpr const auto zero_vec = vec<T, N>{};
 
 // Type aliases.
 using vec1f = vec<float, 1>;
@@ -239,6 +221,14 @@ constexpr const auto zero_vec2i = zero_vec<int, 2>;
 constexpr const auto zero_vec3i = zero_vec<int, 3>;
 constexpr const auto zero_vec4i = zero_vec<int, 4>;
 constexpr const auto zero_vec4b = zero_vec<byte, 4>;
+
+// Vector constants
+template <typename T, int N>
+constexpr inline vec<T, N> make_zero_vec();
+template <typename T, int N>
+constexpr inline vec<T, N> make_one_vec() ;
+template <typename T, int N>
+constexpr inline vec<T, N> make_uniform_vec(T value);
 
 // Element access
 template <typename T, int N>
@@ -441,23 +431,9 @@ struct mat<T, N, 4> {
     }
 };
 
-// Matrix contants
-template <typename T, int N>
-constexpr inline mat<T, N, N> make_identity_mat() {
-    auto c = mat<T, N, N>{};
-    for (auto j = 0; j < N; j++)
-        for (auto i = 0; i < N; i++) c[j][i] = j == i ? 1 : 0;
-    return c;
-}
-template <typename T, int N>
-constexpr inline mat<T, N, N> make_diagonal_mat(const vec<T, N>& diagonal) {
-    auto c = mat<T, N, N>{};
-    for (auto j = 0; j < N; j++)
-        for (auto i = 0; i < N; i++) c[j][i] = j == i ? diagonal[i] : 0;
-    return c;
-}
-template <typename T, int N>
-constexpr const mat<T, N, N> identity_mat = make_identity_mat<T, N>();
+// Matrix constants.
+template<typename T, int N, int M>
+constexpr const auto zero_mat = mat<T, N, N>{};
 
 // Type aliases.
 using mat1f = mat<float, 1, 1>;
@@ -465,11 +441,21 @@ using mat2f = mat<float, 2, 2>;
 using mat3f = mat<float, 3, 3>;
 using mat4f = mat<float, 4, 4>;
 
-// Identity matrices constants.
-constexpr const auto identity_mat1f = identity_mat<float, 1>;
-constexpr const auto identity_mat2f = identity_mat<float, 2>;
-constexpr const auto identity_mat3f = identity_mat<float, 3>;
-constexpr const auto identity_mat4f = identity_mat<float, 4>;
+// Matrix constants.
+constexpr const auto zero_mat1f = zero_mat<float, 1, 1>;
+constexpr const auto zero_mat2f = zero_mat<float, 2, 2>;
+constexpr const auto zero_mat3f = zero_mat<float, 3, 3>;
+constexpr const auto zero_mat4f = zero_mat<float, 4, 4>;
+constexpr const auto identity_mat1f = mat<float, 1, 1>{{1}};
+constexpr const auto identity_mat2f = mat<float, 2, 2>{{1,0},{0,1}};
+constexpr const auto identity_mat3f = mat<float, 3, 3>{{1,0,0},{0,1,0},{0,0,1}};
+constexpr const auto identity_mat4f = mat<float, 4, 4>{{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+
+// Matrix contants
+template <typename T, int N>
+constexpr inline mat<T, N, N> make_identity_mat();
+template <typename T, int N>
+constexpr inline mat<T, N, N> make_diagonal_mat(const vec<T, N>& diagonal);
 
 // Matrix comparisons.
 template <typename T, int N, int M>
@@ -520,7 +506,11 @@ struct frame {
     mat<T, N, N> axes   = {};
     vec<T, N>    origin = {};
 
-    constexpr frame() : axes{identity_mat<T, N>}, origin{zero_vec<T, N>} {}
+    constexpr frame() {
+        for (auto j = 0; j < N; j++)
+            for (auto i = 0; i < N; i++) axes[j][i] = j == i ? 1 : 0;
+        for (auto i = 0; i < N; i++) origin[i] = 0;
+    }
     constexpr frame(const mat<T, N, N>& axes_, const vec<T, N>& origin_)
         : axes{axes_}, origin{origin_} {}
 
@@ -532,12 +522,9 @@ struct frame {
     }
 };
 
+// Indentity frames.
 template <typename T, int N>
-constexpr inline frame<T, N> make_identity_frame() {
-    return {make_identity_mat<T, N>(), make_zero_vec<T, N>()};
-}
-template <typename T, int N>
-constexpr const frame<T, N> identity_frame = make_identity_frame<T, N>();
+constexpr const frame<T, N> identity_frame = {};
 
 // Type aliases.
 using frame2f = frame<float, 2>;
@@ -587,12 +574,15 @@ template <typename T, int N>
 struct bbox {
     using V = vec<T, N>;
 
-    vec<T, N> min = make_uniform_vec<T, N>(type_max<T>);
-    vec<T, N> max = make_uniform_vec<T, N>(type_min<T>);
+    vec<T, N> min = {};
+    vec<T, N> max = {};
 
-    constexpr bbox()
-        : min{make_uniform_vec<T, N>(type_max<T>)}
-        , max{make_uniform_vec<T, N>(type_min<T>)} {}
+    constexpr bbox() {
+        for(auto i = 0; i < N; i ++) {
+            min[i] = type_max<T>;
+            max[i] = type_min<T>;
+        }
+    }
     constexpr bbox(const vec<T, N>& min_, const vec<T, N>& max_)
         : min{min_}, max{max_} {}
     constexpr bbox(const bbox&) = default;
@@ -605,12 +595,7 @@ struct bbox {
 
 // Bbox constants
 template <typename T, int N>
-constexpr inline bbox<T, N> make_invalid_bbox() {
-    return {make_uniform_vec<T, N>(type_max<T>),
-        make_uniform_vec<T, N>(type_min<T>)};
-}
-template <typename T, int N>
-constexpr const bbox<T, N> invalid_bbox = make_invalid_bbox<T, N>();
+constexpr const bbox<T, N> invalid_bbox = bbox<T, N>{};
 
 // Type aliases
 using bbox1f = bbox<float, 1>;
@@ -875,9 +860,23 @@ inline T lerp(const T& a, const T& b, T1 u) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Small-sized vectors
+// Vector constants
 template <typename T, int N>
-struct vec;
+constexpr inline vec<T, N> make_zero_vec() {
+    return vec<T, N>{};
+}
+template <typename T, int N>
+constexpr inline vec<T, N> make_one_vec() {
+    auto v = vec<T, N>{};
+    for (auto i = 0; i < N; i++) v[i] = 1;
+    return v;
+}
+template <typename T, int N>
+constexpr inline vec<T, N> make_uniform_vec(T value) {
+    auto v = vec<T, N>{};
+    for (auto i = 0; i < N; i++) v[i] = value;
+    return v;
+}
 
 // Element access
 template <typename T, int N>
@@ -1206,6 +1205,22 @@ inline size_t hash<yocto::vec<T, N>>::operator()(const yocto::vec<T, N>& v) cons
 // IMPLEMENTATION OF MATRICES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Matrix contants
+template <typename T, int N>
+constexpr inline mat<T, N, N> make_identity_mat() {
+    auto c = mat<T, N, N>{};
+    for (auto j = 0; j < N; j++)
+        for (auto i = 0; i < N; i++) c[j][i] = j == i ? 1 : 0;
+    return c;
+}
+template <typename T, int N>
+constexpr inline mat<T, N, N> make_diagonal_mat(const vec<T, N>& diagonal) {
+    auto c = mat<T, N, N>{};
+    for (auto j = 0; j < N; j++)
+        for (auto i = 0; i < N; i++) c[j][i] = j == i ? diagonal[i] : 0;
+    return c;
+}
 
 // Matrix comparisons.
 template <typename T, int N, int M>
@@ -1760,7 +1775,7 @@ constexpr inline bbox<T, N> transform_bbox_inverse(
 // Translation, scaling and rotations transforms.
 template <typename T, int N>
 constexpr inline frame<T, N> make_translation_frame(const vec<T, N>& a) {
-    return {identity_mat<T, N>, a};
+    return {make_identity_mat<T, N>(), a};
 }
 template <typename T, int N>
 constexpr inline frame<T, N> make_scaling_frame(const vec<T, N>& a) {
