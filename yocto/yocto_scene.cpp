@@ -586,7 +586,8 @@ bvh_scene make_scene_bvh(
 
 // Refits a scene BVH
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_shapes, const vector<int>& updated_surfaces) {
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const vector<int>& updated_surfaces) {
     for (auto shape_id : updated_shapes)
         update_shape_bvh(get_shape_bvh(bvh, shape_id),
             scene.shapes[shape_id].positions, scene.shapes[shape_id].radius);
@@ -601,7 +602,7 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     }
     update_scene_bvh(bvh, bvh_instances);
 
-    refit_scene_bvh(bvh);
+    refit_scene_bvh(bvh, updated_instances, updated_shapes, updated_surfaces);
 }
 
 // Add missing names and resolve duplicated names.

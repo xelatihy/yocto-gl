@@ -340,7 +340,8 @@ vector<vec3f> compute_surface_normals(const yocto_surface& surface);
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, const build_bvh_options& options = {});
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-    const vector<int>& updated_shapes, const vector<int>& updated_surfaces);
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const vector<int>& updated_surfaces);
 
 // Scene intersection. Upron intersection we set the instance pointer,
 // the shape element_id and element_uv and the inetrsection distance.

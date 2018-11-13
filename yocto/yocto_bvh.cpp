@@ -414,9 +414,10 @@ RTCDevice get_embree_device() {
 }
 
 // Build a BVH using Embree.
-void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
+void build_shape_embree_bvh(bvh_shape& bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
+    bvh.embree_bvh     = embree_scene;
     if (!bvh.points.empty()) {
         log_error("embree does not support points");
     } else if (!bvh.lines.empty()) {
@@ -425,71 +426,141 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
-            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
-        auto triangles = rtcSetNewGeometryBuffer(embree_geom,
+        auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+            bvh.positions.size());
+        auto embree_triangles = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
             bvh.triangles.size());
-        memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
-        memcpy(triangles, bvh.triangles.data(), bvh.triangles.size() * 12);
+        memcpy(embree_positions, bvh.positions.data(), bvh.positions.size() * 12);
+        memcpy(embree_triangles, bvh.triangles.data(), bvh.triangles.size() * 12);
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!bvh.quads.empty()) {
         auto embree_geom = rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
-        auto vert = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_VERTEX,
-            0, RTC_FORMAT_FLOAT3, 3 * 4, bvh.positions.size());
-        auto quads = rtcSetNewGeometryBuffer(embree_geom, RTC_BUFFER_TYPE_INDEX,
-            0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
-        memcpy(vert, bvh.positions.data(), bvh.positions.size() * 12);
-        memcpy(quads, bvh.quads.data(), bvh.quads.size() * 16);
+        auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+            bvh.positions.size());
+        auto embree_quads     = rtcSetNewGeometryBuffer(embree_geom,
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
+        memcpy(embree_positions, bvh.positions.data(), bvh.positions.size() * 12);
+        memcpy(embree_quads, bvh.quads.data(), bvh.quads.size() * 16);
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else {
         log_error("empty bvh");
     }
     rtcCommitScene(embree_scene);
-    bvh.embree_bvh = embree_scene;
 }
-void build_scene_embree_bvh(bvh_scene& bvh, const build_bvh_options& options) {
+void build_scene_embree_instanced_bvh(bvh_scene& bvh) {
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs)
-        build_shape_embree_bvh(shape_bvh, options);
+    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh);
     for (auto& surface_bvh : bvh.surface_bvhs)
-        build_shape_embree_bvh(surface_bvh, options);
+        build_shape_embree_bvh(surface_bvh);
 
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
-    if (!bvh.instances.empty()) {
-        for (auto instance_id = 0; instance_id < bvh.instances.size();
-             instance_id++) {
-            auto& instance = bvh.instances[instance_id];
-            if (instance.shape_id < 0 && instance.surface_id < 0) continue;
-            if (instance.shape_id >= 0 &&
-                bvh.shape_bvhs[instance.shape_id].positions.empty())
-                continue;
-            if (instance.surface_id >= 0 &&
-                bvh.surface_bvhs[instance.surface_id].positions.empty())
-                continue;
+    bvh.embree_bvh     = embree_scene;
+    if (bvh.instances.empty()) {
+        rtcCommitScene(embree_scene);
+        return;
+    }
+    for (auto instance_id = 0; instance_id < bvh.instances.size(); instance_id++) {
+        auto& instance = bvh.instances[instance_id];
+        if (instance.shape_id < 0 && instance.surface_id < 0) continue;
+        if (instance.shape_id >= 0 &&
+            bvh.shape_bvhs[instance.shape_id].positions.empty())
+            continue;
+        if (instance.surface_id >= 0 &&
+            bvh.surface_bvhs[instance.surface_id].positions.empty())
+            continue;
+        auto embree_geom = rtcNewGeometry(
+            embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
+        if (instance.shape_id >= 0) {
+            rtcSetGeometryInstancedScene(embree_geom,
+                (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
+        } else if (instance.surface_id >= 0) {
+            rtcSetGeometryInstancedScene(embree_geom,
+                (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
+        } else {
+            log_error("empty instance");
+        }
+        rtcSetGeometryTransform(
+            embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+        rtcCommitGeometry(embree_geom);
+        rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
+    }
+    rtcCommitScene(embree_scene);
+    bvh.embree_flattened = false;
+}
+void build_scene_embree_flattened_bvh(bvh_scene& bvh) {
+    auto embree_device = get_embree_device();
+    auto embree_scene  = rtcNewScene(embree_device);
+    bvh.embree_bvh     = embree_scene;
+    if (bvh.instances.empty()) {
+        rtcCommitScene(embree_scene);
+        return;
+    }
+    for (auto instance_id = 0; instance_id < bvh.instances.size(); instance_id++) {
+        auto& instance = bvh.instances[instance_id];
+        if (instance.shape_id < 0 && instance.surface_id < 0) continue;
+        if (instance.shape_id >= 0 &&
+            bvh.shape_bvhs[instance.shape_id].positions.empty())
+            continue;
+        if (instance.surface_id >= 0 &&
+            bvh.surface_bvhs[instance.surface_id].positions.empty())
+            continue;
+        auto& shape_bvh = instance.shape_id >= 0 ?
+                              bvh.shape_bvhs.at(instance.shape_id) :
+                              bvh.surface_bvhs.at(instance.surface_id);
+        auto transformed_positions = shape_bvh.positions;
+        if (instance.frame != identity_frame3f) {
+            for (auto& p : transformed_positions)
+                p = transform_point(instance.frame, p);
+        }
+        if (!shape_bvh.points.empty()) {
+            log_error("embree does not support points");
+        } else if (!shape_bvh.lines.empty()) {
+            log_error("not yet implemented");
+        } else if (!shape_bvh.triangles.empty()) {
             auto embree_geom = rtcNewGeometry(
-                embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
-            if (instance.shape_id >= 0) {
-                rtcSetGeometryInstancedScene(embree_geom,
-                    (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
-            } else if (instance.surface_id >= 0) {
-                rtcSetGeometryInstancedScene(embree_geom,
-                    (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
-            } else {
-                log_error("empty instance");
-            }
-            rtcSetGeometryTransform(embree_geom, 0,
-                RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
+                embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
+            rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+            auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
+                RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+                shape_bvh.positions.size());
+            auto embree_triangles = rtcSetNewGeometryBuffer(embree_geom,
+                RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
+                shape_bvh.triangles.size());
+            memcpy(embree_positions, transformed_positions.data(),
+                transformed_positions.size() * 12);
+            memcpy(embree_triangles, shape_bvh.triangles.data(),
+                shape_bvh.triangles.size() * 12);
             rtcCommitGeometry(embree_geom);
             rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
+        } else if (!shape_bvh.quads.empty()) {
+            auto embree_geom = rtcNewGeometry(
+                embree_device, RTC_GEOMETRY_TYPE_QUAD);
+            rtcSetGeometryVertexAttributeCount(embree_geom, 1);
+            auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
+                RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
+                shape_bvh.positions.size());
+            auto embree_quads     = rtcSetNewGeometryBuffer(embree_geom,
+                RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
+                shape_bvh.quads.size());
+            memcpy(embree_positions, transformed_positions.data(),
+                transformed_positions.size() * 12);
+            memcpy(embree_quads, shape_bvh.quads.data(),
+                shape_bvh.quads.size() * 16);
+            rtcCommitGeometry(embree_geom);
+            rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
+        } else {
+            log_error("empty bvh");
         }
     }
     rtcCommitScene(embree_scene);
-    bvh.embree_bvh = embree_scene;
+    bvh.embree_flattened = true;
 }
 // Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
 void refit_embree_bvh(bvh_shape& bvh) { log_error("not yet implemented"); }
@@ -538,7 +609,11 @@ bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     distance    = embree_ray.ray.tfar;
     uv          = {embree_ray.hit.u, embree_ray.hit.v};
     element_id  = embree_ray.hit.primID;
-    instance_id = embree_ray.hit.instID[0];
+    if(bvh.embree_flattened) {
+        instance_id = embree_ray.hit.geomID;
+    } else {
+        instance_id = embree_ray.hit.instID[0];
+    }
     return true;
 }
 #endif
@@ -884,7 +959,7 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 // Build a BVH from a set of primitives.
 void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 #if YOCTO_EMBREE
-    if (options.use_embree) return build_shape_embree_bvh(bvh, options);
+    if (options.use_embree) return build_shape_embree_bvh(bvh);
 #endif
 
     // get the number of primitives and the primitive type
@@ -922,9 +997,6 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     } else {
         build_bvh_nodes_parallel(bvh.nodes, prims, options);
     }
-
-    // done
-    bvh.needs_update = false;
 }
 
 // Build a BVH from the given set of shape primitives.
@@ -962,7 +1034,13 @@ bvh_shape make_shape_bvh(
 // Build a BVH from a set of primitives.
 void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 #if YOCTO_EMBREE
-    if (options.use_embree) return build_scene_embree_bvh(bvh, options);
+    if (options.use_embree) {
+        if (options.flatten_embree) {
+            build_scene_embree_flattened_bvh(bvh);
+        } else {
+            build_scene_embree_instanced_bvh(bvh);
+        }
+    }
 #endif
 
     // build shape and surface bvhs
@@ -1008,9 +1086,6 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
     } else {
         build_bvh_nodes_parallel(bvh.nodes, prims, options);
     }
-
-    // done
-    bvh.needs_update = false;
 }
 
 // Build a BVH from the given set of instances.
@@ -1083,36 +1158,27 @@ void refit_scene_bvh_rec(bvh_scene& bvh, int nodeid) {
 }
 
 // Recursively recomputes the node bounds for a shape bvh
-void refit_shape_bvh(bvh_shape& bvh) {
-    if (bvh.needs_update) {
-        refit_shape_bvh_rec(bvh, 0);
-        bvh.needs_update = false;
-    }
-}
-void refit_scene_bvh(bvh_scene& bvh) {
-    for (auto& shape_bvh : bvh.shape_bvhs) refit_shape_bvh(shape_bvh);
-    for (auto& surface_bvh : bvh.surface_bvhs) refit_shape_bvh(surface_bvh);
-
-    if (bvh.needs_update) {
-        refit_scene_bvh_rec(bvh, 0);
-        bvh.needs_update = false;
-    }
+void refit_shape_bvh(bvh_shape& bvh) { refit_shape_bvh_rec(bvh, 0); }
+void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const vector<int>& updated_surfaces) {
+    for (auto shape_id : updated_shapes)
+        refit_shape_bvh(bvh.shape_bvhs[shape_id]);
+    for (auto surface_di : updated_surfaces)
+        refit_shape_bvh(bvh.surface_bvhs[surface_di]);
+    if (!updated_instances.empty()) refit_scene_bvh_rec(bvh, 0);
 }
 
 // Recursively recomputes the node bounds for a shape bvh
 void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions) {
-    bvh.positions    = positions;
-    bvh.needs_update = true;
+    bvh.positions = positions;
 }
 void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
     const vector<float>& radius) {
-    bvh.positions    = positions;
-    bvh.radius       = radius;
-    bvh.needs_update = true;
+    bvh.positions = positions;
+    bvh.radius    = radius;
 }
 void update_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances) {
-    bvh.instances    = instances;
-    bvh.needs_update = true;
+    bvh.instances = instances;
 }
 bvh_shape& get_shape_bvh(bvh_scene& bvh, int shape_id) {
     return bvh.shape_bvhs[shape_id];

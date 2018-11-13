@@ -146,7 +146,6 @@ struct bvh_shape {
 
     // bvh internal nodes
     vector<bvh_node> nodes;
-    bool             needs_update = true;
 
     // Embree opaque data
     void* embree_bvh = nullptr;
@@ -174,18 +173,19 @@ struct bvh_scene {
 
     // bvh internal nodes
     vector<bvh_node> nodes;
-    bool             needs_update = true;
 
     // Embree opaque data
-    void* embree_bvh = nullptr;
+    void* embree_bvh       = nullptr;
+    bool  embree_flattened = false;
 };
 
 // Options for build bvh
 struct build_bvh_options {
-    bool          high_quality = true;
-    bool          use_embree   = false;
-    bool          run_serially = false;
-    atomic<bool>* cancel_flag  = nullptr;
+    bool          high_quality   = true;
+    bool          use_embree     = false;
+    bool          flatten_embree = true;
+    bool          run_serially   = false;
+    atomic<bool>* cancel_flag    = nullptr;
 };
 
 // Build a BVH from the given set of shape primitives.
@@ -216,7 +216,8 @@ bvh_shape& get_surface_bvh(bvh_scene& bvh, int surface_id);
 
 // Refit bvh data
 void refit_shape_bvh(bvh_shape& bvh);
-void refit_scene_bvh(bvh_scene& bvh);
+void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
+    const vector<int>& updated_shapes, const vector<int>& updated_surfaces);
 
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
