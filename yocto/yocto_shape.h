@@ -128,100 +128,46 @@ using std::vector;
 namespace yocto {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
-    return normalize(p1 - p0);
-}
-inline float line_length(const vec3f& p0, const vec3f& p1) {
-    return length(p1 - p0);
-}
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
+inline float line_length(const vec3f& p0, const vec3f& p1) ;
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return normalize(cross(p1 - p0, p2 - p0));
-}
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return length(cross(p1 - p0, p2 - p0)) / 2;
-}
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) ;
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) ;
 
 // Quad propeties.
 inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
-}
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
 inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
-}
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
 
 // Triangle tangent and bitangent from uv
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
-    const vec2f& uv2) {
-    // Follows the definition in http://www.terathon.com/code/tangent.html and
-    // https://gist.github.com/aras-p/2843984
-    // normal points up from texture space
-    auto p   = p1 - p0;
-    auto q   = p2 - p0;
-    auto s   = vec2f{uv1[0] - uv0[0], uv2[0] - uv0[0]};
-    auto t   = vec2f{uv1[1] - uv0[1], uv2[1] - uv0[1]};
-    auto div = s[0] * t[1] - s[1] * t[0];
-
-    if (div != 0) {
-        auto tu = vec3f{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
-                      t[1] * p[2] - t[0] * q[2]} /
-                  div;
-        auto tv = vec3f{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
-                      s[0] * q[2] - s[1] * p[2]} /
-                  div;
-        return {tu, tv};
-    } else {
-        return {{1, 0, 0}, {0, 1, 0}};
-    }
-}
+    const vec2f& uv2);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
-inline T interpolate_line(const T& p0, const T& p1, float u) {
-    return p0 * (1 - u) + p1 * u;
-}
+inline T interpolate_line(const T& p0, const T& p1, float u);
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
-    return p0 * (1 - uv[0] - uv[1]) + p1 * uv[0] + p2 * uv[1];
-}
+    const T& p0, const T& p1, const T& p2, const vec2f& uv);
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
 inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-#if YOCTO_QUADS_AS_TRIANGLES
-    if (uv[0] + uv[1] <= 1) {
-        return interpolate_triangle(p0, p1, p3, uv);
-    } else {
-        return interpolate_triangle(p2, p3, p1, 1 - uv);
-    }
-#else
-    return p0 * (1 - uv[0]) * (1 - uv[1]) + p1 * uv[0] * (1 - uv[1]) +
-           p2 * uv[0] * uv[1] + p3 * (1 - uv[0]) * uv[1];
-#endif
-}
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv);
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
-           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
-}
+    const T& p0, const T& p1, const T& p2, const T& p3, float u);
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-           (p3 - p2) * 3 * u * u;
-}
+    const T& p0, const T& p1, const T& p2, const T& p3, float u);
 
 }  // namespace yocto
 
@@ -278,12 +224,8 @@ int get_edge_count(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
 vector<vec2i>        get_edges(const edge_map& emap);
 vector<vec2i>        get_boundary(const edge_map& emap);
-inline vector<vec2i> get_edges(const vector<vec3i>& triangles) {
-    return get_edges(make_edge_map(triangles));
-}
-inline vector<vec2i> get_edges(const vector<vec4i>& quads) {
-    return get_edges(make_edge_map(quads));
-}
+vector<vec2i> get_edges(const vector<vec3i>& triangles);
+vector<vec2i> get_edges(const vector<vec4i>& quads);
 
 // Convert quads to triangles
 vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
@@ -315,25 +257,25 @@ vector<vector<vec4i>> ungroup_quads(
 
 // Subdivide lines by splitting each line in half.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines(
+inline tuple<vector<vec2i>, vector<T>> subdivide_lines(
     const vector<vec2i>& lines, const vector<T>& vert);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
 template <typename T>
-tuple<vector<vec3i>, vector<T>> subdivide_triangles(
+inline tuple<vector<vec3i>, vector<T>> subdivide_triangles(
     const vector<vec3i>& triangles, const vector<T>& vert);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads(
+inline tuple<vector<vec4i>, vector<T>> subdivide_quads(
     const vector<vec4i>& quads, const vector<T>& vert);
 // Subdivide beziers by splitting each segment in two.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_beziers(
+inline tuple<vector<vec4i>, vector<T>> subdivide_beziers(
     const vector<vec4i>& beziers, const vector<T>& vert);
 // Subdivide quads using Carmull-Clark subdivision rules.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
+inline tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(const vector<vec4i>& quads,
     const vector<T>& vert, bool lock_boundary = false);
 
 // Weld vertices within a threshold. For noe the implementation is O(n^2).
@@ -487,6 +429,400 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
     const vec2f& noise = zero_vec2f, const vec2f& clump = zero_vec2f,
     const vec2f& rotation = zero_vec2f, int seed = 7);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF GEOMETRY UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Line properties.
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+    return normalize(p1 - p0);
+}
+inline float line_length(const vec3f& p0, const vec3f& p1) {
+    return length(p1 - p0);
+}
+
+// Triangle properties.
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return normalize(cross(p1 - p0, p2 - p0));
+}
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return length(cross(p1 - p0, p2 - p0)) / 2;
+}
+
+// Quad propeties.
+inline vec3f quad_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
+}
+inline float quad_area(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
+}
+
+// Triangle tangent and bitangent from uv
+inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2) {
+    // Follows the definition in http://www.terathon.com/code/tangent.html and
+    // https://gist.github.com/aras-p/2843984
+    // normal points up from texture space
+    auto p   = p1 - p0;
+    auto q   = p2 - p0;
+    auto s   = vec2f{uv1[0] - uv0[0], uv2[0] - uv0[0]};
+    auto t   = vec2f{uv1[1] - uv0[1], uv2[1] - uv0[1]};
+    auto div = s[0] * t[1] - s[1] * t[0];
+
+    if (div != 0) {
+        auto tu = vec3f{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
+                      t[1] * p[2] - t[0] * q[2]} /
+                  div;
+        auto tv = vec3f{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
+                      s[0] * q[2] - s[1] * p[2]} /
+                  div;
+        return {tu, tv};
+    } else {
+        return {{1, 0, 0}, {0, 1, 0}};
+    }
+}
+
+// Interpolates values over a line parameterized from a to b by u. Same as lerp.
+template <typename T>
+inline T interpolate_line(const T& p0, const T& p1, float u) {
+    return p0 * (1 - u) + p1 * u;
+}
+// Interpolates values over a triangle parameterized by u and v along the
+// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
+template <typename T>
+inline T interpolate_triangle(
+    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+    return p0 * (1 - uv[0] - uv[1]) + p1 * uv[0] + p2 * uv[1];
+}
+// Interpolates values over a quad parameterized by u and v along the
+// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
+template <typename T>
+inline T interpolate_quad(
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+#if YOCTO_QUADS_AS_TRIANGLES
+    if (uv[0] + uv[1] <= 1) {
+        return interpolate_triangle(p0, p1, p3, uv);
+    } else {
+        return interpolate_triangle(p2, p3, p1, 1 - uv);
+    }
+#else
+    return p0 * (1 - uv[0]) * (1 - uv[1]) + p1 * uv[0] * (1 - uv[1]) +
+           p2 * uv[0] * uv[1] + p3 * (1 - uv[0]) * uv[1];
+#endif
+}
+
+// Interpolates values along a cubic Bezier segment parametrized by u.
+template <typename T>
+inline T interpolate_bezier(
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
+}
+// Computes the derivative of a cubic Bezier segment parametrized by u.
+template <typename T>
+inline T interpolate_bezier_derivative(
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+           (p3 - p2) * 3 * u * u;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Subdivide lines.
+template <typename T>
+inline tuple<vector<vec2i>, vector<T>> subdivide_lines(
+    const vector<vec2i>& lines, const vector<T>& vert) {
+    // early exit
+    if (lines.empty() || vert.empty()) return {lines, vert};
+    // sizes
+    auto nverts = (int)vert.size();
+    auto nlines = (int)lines.size();
+    // create vertices
+    auto tvert = vector<T>(nverts + nlines);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nlines; i++) {
+        auto l            = lines[i];
+        tvert[nverts + i] = (vert[l[0]] + vert[l[1]]) / 2;
+    }
+    // create lines
+    auto tlines = vector<vec2i>(nlines * 2);
+    for (auto i = 0; i < nlines; i++) {
+        auto l            = lines[i];
+        tlines[i * 2 + 0] = {l[0], nverts + i};
+        tlines[i * 2 + 0] = {nverts + i, l[1]};
+    }
+    return {tlines, tvert};
+}
+
+// Subdivide triangle.
+template <typename T>
+inline tuple<vector<vec3i>, vector<T>> subdivide_triangles(
+    const vector<vec3i>& triangles, const vector<T>& vert) {
+    // early exit
+    if (triangles.empty() || vert.empty()) return {triangles, vert};
+    // get edges
+    auto emap  = make_edge_map(triangles);
+    auto edges = get_edges(emap);
+    // number of elements
+    auto nverts = (int)vert.size();
+    auto nedges = (int)edges.size();
+    auto nfaces = (int)triangles.size();
+    // create vertices
+    auto tvert = vector<T>(nverts + nedges);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
+        auto e            = edges[i];
+        tvert[nverts + i] = (vert[e[0]] + vert[e[1]]) / 2;
+    }
+    // create triangles
+    auto ttriangles = vector<vec3i>(nfaces * 4);
+    for (auto i = 0; i < nfaces; i++) {
+        auto t                = triangles[i];
+        ttriangles[i * 4 + 0] = {t[0],
+            nverts + get_edge_index(emap, {t[0], t[1]}),
+            nverts + get_edge_index(emap, {t[2], t[0]})};
+        ttriangles[i * 4 + 1] = {t[1],
+            nverts + get_edge_index(emap, {t[1], t[2]}),
+            nverts + get_edge_index(emap, {t[0], t[1]})};
+        ttriangles[i * 4 + 2] = {t[2],
+            nverts + get_edge_index(emap, {t[2], t[0]}),
+            nverts + get_edge_index(emap, {t[1], t[2]})};
+        ttriangles[i * 4 + 3] = {nverts + get_edge_index(emap, {t[0], t[1]}),
+            nverts + get_edge_index(emap, {t[1], t[2]}),
+            nverts + get_edge_index(emap, {t[2], t[0]})};
+    }
+    return {ttriangles, tvert};
+}
+
+// Subdivide quads.
+template <typename T>
+inline tuple<vector<vec4i>, vector<T>> subdivide_quads(
+    const vector<vec4i>& quads, const vector<T>& vert) {
+    // early exit
+    if (quads.empty() || vert.empty()) return {quads, vert};
+    // get edges
+    auto emap  = make_edge_map(quads);
+    auto edges = get_edges(emap);
+    // number of elements
+    auto nverts = (int)vert.size();
+    auto nedges = (int)edges.size();
+    auto nfaces = (int)quads.size();
+    // create vertices
+    auto tvert = vector<T>(nverts + nedges + nfaces);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
+        auto e            = edges[i];
+        tvert[nverts + i] = (vert[e[0]] + vert[e[1]]) / 2;
+    }
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q[2] != q[3]) {
+            tvert[nverts + nedges + i] = (vert[q[0]] + vert[q[1]] + vert[q[2]] +
+                                             vert[q[3]]) /
+                                         4;
+        } else {
+            tvert[nverts + nedges + i] = (vert[q[0]] + vert[q[1]] + vert[q[1]]) /
+                                         3;
+        }
+    }
+    // create quads
+    auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
+    auto qi     = 0;
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q[2] != q[3]) {
+            tquads[qi++] = {q[0], nverts + get_edge_index(emap, {q[0], q[1]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[3], q[0]})};
+            tquads[qi++] = {q[1], nverts + get_edge_index(emap, {q[1], q[2]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[0], q[1]})};
+            tquads[qi++] = {q[2], nverts + get_edge_index(emap, {q[2], q[3]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[1], q[2]})};
+            tquads[qi++] = {q[3], nverts + get_edge_index(emap, {q[3], q[0]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[2], q[3]})};
+        } else {
+            tquads[qi++] = {q[0], nverts + get_edge_index(emap, {q[0], q[1]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[2], q[0]})};
+            tquads[qi++] = {q[1], nverts + get_edge_index(emap, {q[1], q[2]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[0], q[1]})};
+            tquads[qi++] = {q[2], nverts + get_edge_index(emap, {q[2], q[0]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[1], q[2]})};
+        }
+    }
+    tquads.resize(qi);
+    // done
+    return {tquads, tvert};
+}
+
+// Subdivide beziers.
+template <typename T>
+inline tuple<vector<vec4i>, vector<T>> subdivide_beziers(
+    const vector<vec4i>& beziers, const vector<T>& vert) {
+    // early exit
+    if (beziers.empty() || vert.empty()) return {beziers, vert};
+    // get edges
+    auto vmap     = unordered_map<int, int>();
+    auto tvert    = vector<T>();
+    auto tbeziers = vector<vec4i>();
+    for (auto b : beziers) {
+        if (vmap.find(b[0]) == vmap.end()) {
+            vmap[b[0]] = (int)tvert.size();
+            tvert.push_back(vert[b[0]]);
+        }
+        if (vmap.find(b[3]) == vmap.end()) {
+            vmap[b[3]] = (int)tvert.size();
+            tvert.push_back(vert[b[3]]);
+        }
+        auto bo = (int)tvert.size();
+        tbeziers.push_back({vmap.at(b[0]), bo + 0, bo + 1, bo + 2});
+        tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b[3])});
+        tvert.push_back(vert[b[0]] / 2 + vert[b[1]] / 2);
+        tvert.push_back(vert[b[0]] / 4 + vert[b[1]] / 2 + vert[b[2]] / 4);
+        tvert.push_back(vert[b[0]] / 8 + 3 * vert[b[1]] / 8 +
+                        3 * vert[b[2]] / 8 + vert[b[3]] / 8);
+        tvert.push_back(vert[b[1]] / 4 + vert[b[2]] / 2 + vert[b[3]] / 4);
+        tvert.push_back(vert[b[2]] / 2 + vert[b[3]] / 2);
+    }
+
+    // done
+    return {tbeziers, tvert};
+}
+
+// Subdivide catmullclark.
+template <typename T>
+inline tuple<vector<vec4i>, vector<T>> subdivide_catmullclark(
+    const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
+    // early exit
+    if (quads.empty() || vert.empty()) return {quads, vert};
+    // get edges
+    auto emap     = make_edge_map(quads);
+    auto edges    = get_edges(emap);
+    auto boundary = get_boundary(emap);
+    // number of elements
+    auto nverts    = (int)vert.size();
+    auto nedges    = (int)edges.size();
+    auto nboundary = (int)boundary.size();
+    auto nfaces    = (int)quads.size();
+
+    // split elements ------------------------------------
+    // create vertices
+    auto tvert = vector<T>(nverts + nedges + nfaces);
+    for (auto i = 0; i < nverts; i++) tvert[i] = vert[i];
+    for (auto i = 0; i < nedges; i++) {
+        auto e            = edges[i];
+        tvert[nverts + i] = (vert[e[0]] + vert[e[1]]) / 2;
+    }
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q[2] != q[3]) {
+            tvert[nverts + nedges + i] = (vert[q[0]] + vert[q[1]] + vert[q[2]] +
+                                             vert[q[3]]) /
+                                         4;
+        } else {
+            tvert[nverts + nedges + i] = (vert[q[0]] + vert[q[1]] + vert[q[1]]) /
+                                         3;
+        }
+    }
+    // create quads
+    auto tquads = vector<vec4i>(nfaces * 4);  // conservative allocation
+    auto qi     = 0;
+    for (auto i = 0; i < nfaces; i++) {
+        auto q = quads[i];
+        if (q[2] != q[3]) {
+            tquads[qi++] = {q[0], nverts + get_edge_index(emap, {q[0], q[1]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[3], q[0]})};
+            tquads[qi++] = {q[1], nverts + get_edge_index(emap, {q[1], q[2]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[0], q[1]})};
+            tquads[qi++] = {q[2], nverts + get_edge_index(emap, {q[2], q[3]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[1], q[2]})};
+            tquads[qi++] = {q[3], nverts + get_edge_index(emap, {q[3], q[0]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[2], q[3]})};
+        } else {
+            tquads[qi++] = {q[0], nverts + get_edge_index(emap, {q[0], q[1]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[2], q[0]})};
+            tquads[qi++] = {q[1], nverts + get_edge_index(emap, {q[1], q[2]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[0], q[1]})};
+            tquads[qi++] = {q[2], nverts + get_edge_index(emap, {q[2], q[0]}),
+                nverts + nedges + i, nverts + get_edge_index(emap, {q[1], q[2]})};
+        }
+    }
+    tquads.resize(qi);
+
+    // split boundary
+    auto tboundary = vector<vec2i>(nboundary * 2);
+    for (auto i = 0; i < nboundary; i++) {
+        auto e = boundary[i];
+        tboundary.push_back({e[0], nverts + get_edge_index(emap, e)});
+        tboundary.push_back({nverts + get_edge_index(emap, e), e[1]});
+    }
+
+    // setup creases -----------------------------------
+    auto tcrease_edges = vector<vec2i>();
+    auto tcrease_verts = vector<int>();
+    if (lock_boundary) {
+        for (auto& b : tboundary) {
+            tcrease_verts.push_back(b[0]);
+            tcrease_verts.push_back(b[1]);
+        }
+    } else {
+        for (auto& b : tboundary) tcrease_edges.push_back(b);
+    }
+
+    // define vertex valence ---------------------------
+    auto tvert_val = vector<int>(tvert.size(), 2);
+    for (auto& e : tboundary) {
+        tvert_val[e[0]] = (lock_boundary) ? 0 : 1;
+        tvert_val[e[1]] = (lock_boundary) ? 0 : 1;
+    }
+
+    // averaging pass ----------------------------------
+    auto avert  = vector<T>(tvert.size(), T());
+    auto acount = vector<int>(tvert.size(), 0);
+    for (auto p : tcrease_verts) {
+        if (tvert_val[p] != 0) continue;
+        avert[p] += tvert[p];
+        acount[p] += 1;
+    }
+    for (auto& e : tcrease_edges) {
+        auto c = (tvert[e[0]] + tvert[e[1]]) / 2.0f;
+        for (auto vid : {e[0], e[1]}) {
+            if (tvert_val[vid] != 1) continue;
+            avert[vid] += c;
+            acount[vid] += 1;
+        }
+    }
+    for (auto& q : tquads) {
+        auto c = (tvert[q[0]] + tvert[q[1]] + tvert[q[2]] + tvert[q[3]]) / 4.0f;
+        for (auto vid : {q[0], q[1], q[2], q[3]}) {
+            if (tvert_val[vid] != 2) continue;
+            avert[vid] += c;
+            acount[vid] += 1;
+        }
+    }
+    for (auto i = 0; i < tvert.size(); i++) avert[i] /= (float)acount[i];
+
+    // correction pass ----------------------------------
+    // p = p + (avg_p - p) * (4/avg_count)
+    for (auto i = 0; i < tvert.size(); i++) {
+        if (tvert_val[i] != 2) continue;
+        avert[i] = tvert[i] + (avert[i] - tvert[i]) * (4.0f / acount[i]);
+    }
+    tvert = avert;
+
+    // done
+    return {tquads, tvert};
+}
 
 }  // namespace yocto
 
