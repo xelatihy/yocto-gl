@@ -197,7 +197,7 @@ struct vec<T, 4> {
 };
 
 // Zero vector constants.
-template<typename T, int N>
+template <typename T, int N>
 constexpr const auto zero_vec = vec<T, N>{};
 
 // Type aliases.
@@ -226,7 +226,7 @@ constexpr const auto zero_vec4b = zero_vec<byte, 4>;
 template <typename T, int N>
 constexpr inline vec<T, N> make_zero_vec();
 template <typename T, int N>
-constexpr inline vec<T, N> make_one_vec() ;
+constexpr inline vec<T, N> make_one_vec();
 template <typename T, int N>
 constexpr inline vec<T, N> make_uniform_vec(T value);
 
@@ -432,7 +432,7 @@ struct mat<T, N, 4> {
 };
 
 // Matrix constants.
-template<typename T, int N, int M>
+template <typename T, int N, int M>
 constexpr const auto zero_mat = mat<T, N, N>{};
 
 // Type aliases.
@@ -442,14 +442,16 @@ using mat3f = mat<float, 3, 3>;
 using mat4f = mat<float, 4, 4>;
 
 // Matrix constants.
-constexpr const auto zero_mat1f = zero_mat<float, 1, 1>;
-constexpr const auto zero_mat2f = zero_mat<float, 2, 2>;
-constexpr const auto zero_mat3f = zero_mat<float, 3, 3>;
-constexpr const auto zero_mat4f = zero_mat<float, 4, 4>;
+constexpr const auto zero_mat1f     = zero_mat<float, 1, 1>;
+constexpr const auto zero_mat2f     = zero_mat<float, 2, 2>;
+constexpr const auto zero_mat3f     = zero_mat<float, 3, 3>;
+constexpr const auto zero_mat4f     = zero_mat<float, 4, 4>;
 constexpr const auto identity_mat1f = mat<float, 1, 1>{{1}};
-constexpr const auto identity_mat2f = mat<float, 2, 2>{{1,0},{0,1}};
-constexpr const auto identity_mat3f = mat<float, 3, 3>{{1,0,0},{0,1,0},{0,0,1}};
-constexpr const auto identity_mat4f = mat<float, 4, 4>{{1,0,0,0},{0,1,0,0},{0,0,1,0},{0,0,0,1}};
+constexpr const auto identity_mat2f = mat<float, 2, 2>{{1, 0}, {0, 1}};
+constexpr const auto identity_mat3f = mat<float, 3, 3>{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+constexpr const auto identity_mat4f = mat<float, 4, 4>{
+    {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix contants
 template <typename T, int N>
@@ -578,7 +580,7 @@ struct bbox {
     vec<T, N> max = {};
 
     constexpr bbox() {
-        for(auto i = 0; i < N; i ++) {
+        for (auto i = 0; i < N; i++) {
             min[i] = type_max<T>;
             max[i] = type_min<T>;
         }

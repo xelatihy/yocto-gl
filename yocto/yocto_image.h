@@ -224,7 +224,7 @@ struct volume {
     volume(const vec3i& size, const T* values)
         : _size{size}, _voxels(values, values + size[0] * size[1] + size[2]) {}
 
-    bool empty() const { return _voxels.empty(); }
+    bool  empty() const { return _voxels.empty(); }
     vec3i size() const { return _size; }
     int   width() const { return _size[0]; }
     int   height() const { return _size[1]; }
@@ -242,7 +242,7 @@ struct volume {
     const T& operator[](const vec3i& ijk) const {
         return _voxels[ijk[2] * _size[0] * _size[1] + ijk[1] * _size[0] + ijk[0]];
     }
-    T& at(const vec3i& ijk) { return operator[](ijk); }
+    T&       at(const vec3i& ijk) { return operator[](ijk); }
     const T& at(const vec3i& ijk) const { return operator[](ijk); }
 
     T*       data() { return _voxels.data(); }
