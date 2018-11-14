@@ -72,8 +72,8 @@ struct app_state {
     float                     image_scale  = 1;
     bool                      zoom_to_fit  = true;
     bool                      widgets_open = false;
-    pair<string, int>         selection    = {"", -1};
-    vector<pair<string, int>> update_list;
+    pair<type_index, int>         selection    = {typeid(void), -1};
+    vector<pair<type_index, int>> update_list;
     bool                      navigation_fps  = false;
     bool                      quiet           = false;
     int64_t                   trace_start     = 0;
@@ -230,7 +230,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 win, "seed", (int&)app.trace_options.random_seed, 0, 1000000);
             edited += draw_slider_opengl_widget(
                 win, "pratio", app.preview_ratio, 1, 64);
-            if (edited) app.update_list.push_back({"app", -1});
+            if (edited) app.update_list.push_back({typeid(app_state), -1});
             draw_label_opengl_widget(win, "time/sample", "%0.3lf",
                 (app.trace_sample) ? (get_time() - app.trace_start) /
                                          (1000000000.0 * app.trace_sample) :
@@ -336,9 +336,9 @@ bool update(app_state& app) {
     auto updated_instances = vector<int>{}, updated_shapes = vector<int>{},
          updated_surfaces = vector<int>{};
     for (auto [type, index] : app.update_list) {
-        if (type == "shape") updated_shapes.push_back(index);
-        if (type == "instance") updated_surfaces.push_back(index);
-        if (type == "node") updated_instances.push_back(index);
+        if (type == typeid(yocto_shape)) updated_shapes.push_back(index);
+        if (type == typeid(yocto_instance)) updated_surfaces.push_back(index);
+        if (type == typeid(yocto_scene_node)) updated_instances.push_back(index);
     }
     if (!updated_instances.empty() || !updated_shapes.empty() ||
         !updated_surfaces.empty())
@@ -397,7 +397,7 @@ void run_ui(app_state& app) {
             pan[0] = -pan[0];
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({"camera", app.trace_options.camera_id});
+            app.update_list.push_back({typeid(yocto_camera), app.trace_options.camera_id});
         }
 
         // selection
@@ -412,7 +412,7 @@ void run_ui(app_state& app) {
                     app.rendered_image.size(), {0.5f, 0.5f}, zero_vec2f);
                 auto  isec   = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
-                    app.selection = {"instance", isec.instance_id};
+                    app.selection = {typeid(yocto_instance), isec.instance_id};
             }
         }
 

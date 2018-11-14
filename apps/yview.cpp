@@ -133,8 +133,8 @@ struct app_state {
     // view image
     bool                      widgets_open   = false;
     bool                      navigation_fps = false;
-    pair<string, int>         selection      = {"", -1};
-    vector<pair<string, int>> update_list;
+    pair<type_index, int>         selection      = {typeid(void), -1};
+    vector<pair<type_index, int>> update_list;
     float                     time       = 0;
     string                    anim_group = "";
     vec2f                     time_range = zero_vec2f;
@@ -718,7 +718,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const vec2i& viewport_size, const pair<string, int>& highlighted,
+    const vec2i& viewport_size, const pair<type_index, int>& highlighted,
     const drawgl_options& options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = frame_to_mat(inverse(camera.frame));
@@ -788,7 +788,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         // auto& shape     = scene.shapes[instance.shape];
         // auto& material  = scene.materials[shape.material];
         auto highlight = highlighted ==
-                         pair<string, int>{"instance", instance_id};
+                         pair<type_index, int>{typeid(yocto_instance), instance_id};
         draw_glinstance(state, scene, instance, highlight, options);
     }
 
@@ -993,20 +993,20 @@ void update(app_state& app) {
     if (!app.state.program) init_drawgl_state(app.state, app.scene);
 
     static auto last_time = 0.0f;
-    for (auto& sel : app.update_list) {
-        if (sel.first == "texture") {
+    for (auto& [type, index] : app.update_list) {
+        if (type == typeid(yocto_texture)) {
             // TODO: update texture
             printf("texture update not supported\n");
         }
-        if (sel.first == "subdiv") {
+        if (type == typeid(yocto_surface)) {
             // TODO: update subdiv
             printf("subdiv update not supported\n");
         }
-        if (sel.first == "shape") {
+        if (type == typeid(yocto_shape)) {
             // TODO: update shape
             printf("shape update not supported\n");
         }
-        if (sel.first == "node" || sel.first == "animation" ||
+        if (type == typeid(yocto_scene_node) || type == typeid(yocto_animation) ||
             app.time != last_time) {
             update_transforms(app.scene, app.time, app.anim_group);
             last_time = app.time;
@@ -1059,7 +1059,7 @@ void run_ui(app_state& app) {
             auto& camera = app.scene.cameras.at(app.draw_options.camera_id);
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({"camera", app.draw_options.camera_id});
+            app.update_list.push_back({typeid(yocto_camera), app.draw_options.camera_id});
         }
 
         // animation
