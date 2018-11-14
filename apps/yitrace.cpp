@@ -68,16 +68,16 @@ struct app_state {
     concurrent_queue<bbox2i> trace_queue   = {};
 
     // view image
-    vec2f                     image_center = zero_vec2f;
-    float                     image_scale  = 1;
-    bool                      zoom_to_fit  = true;
-    bool                      widgets_open = false;
+    vec2f                         image_center = zero_vec2f;
+    float                         image_scale  = 1;
+    bool                          zoom_to_fit  = true;
+    bool                          widgets_open = false;
     pair<type_index, int>         selection    = {typeid(void), -1};
     vector<pair<type_index, int>> update_list;
-    bool                      navigation_fps  = false;
-    bool                      quiet           = false;
-    int64_t                   trace_start     = 0;
-    opengl_texture            display_texture = {};
+    bool                          navigation_fps  = false;
+    bool                          quiet           = false;
+    int64_t                       trace_start     = 0;
+    opengl_texture                display_texture = {};
 
     // app status
     atomic<bool> load_done, load_running;
@@ -338,7 +338,8 @@ bool update(app_state& app) {
     for (auto [type, index] : app.update_list) {
         if (type == typeid(yocto_shape)) updated_shapes.push_back(index);
         if (type == typeid(yocto_instance)) updated_surfaces.push_back(index);
-        if (type == typeid(yocto_scene_node)) updated_instances.push_back(index);
+        if (type == typeid(yocto_scene_node))
+            updated_instances.push_back(index);
     }
     if (!updated_instances.empty() || !updated_shapes.empty() ||
         !updated_surfaces.empty())
@@ -397,7 +398,8 @@ void run_ui(app_state& app) {
             pan[0] = -pan[0];
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({typeid(yocto_camera), app.trace_options.camera_id});
+            app.update_list.push_back(
+                {typeid(yocto_camera), app.trace_options.camera_id});
         }
 
         // selection

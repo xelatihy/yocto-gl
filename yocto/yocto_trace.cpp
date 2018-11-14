@@ -445,12 +445,14 @@ trace_point sample_instance_point(const yocto_scene& scene,
     if (instance.shape >= 0) {
         auto& shape        = scene.shapes[instance.shape];
         auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        auto [element_id, element_uv] = sample_shape_element(shape, elements_cdf, rel, ruv);
+        auto [element_id, element_uv] = sample_shape_element(
+            shape, elements_cdf, rel, ruv);
         return make_trace_point(scene, instance_id, element_id, element_uv);
     } else if (instance.surface >= 0) {
         auto& surface      = scene.surfaces[instance.surface];
         auto& elements_cdf = lights.surface_elements_cdf[instance.shape];
-        auto [element_id, element_uv] = sample_surface_element(surface, elements_cdf, rel, ruv);
+        auto [element_id, element_uv] = sample_surface_element(
+            surface, elements_cdf, rel, ruv);
         return make_trace_point(scene, instance_id, element_id, element_uv);
     } else {
         log_error("empty instance");
@@ -566,17 +568,19 @@ vec3f sample_instance_direction(const yocto_scene& scene,
     if (instance.shape >= 0) {
         auto& shape        = scene.shapes[instance.shape];
         auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        auto [element_id, element_uv] = sample_shape_element(shape, elements_cdf, rel, ruv);
-    return normalize(
-        evaluate_instance_position(scene, instance, element_id, element_uv) -
-        p);
+        auto [element_id, element_uv] = sample_shape_element(
+            shape, elements_cdf, rel, ruv);
+        return normalize(
+            evaluate_instance_position(scene, instance, element_id, element_uv) -
+            p);
     } else if (instance.surface >= 0) {
         auto& surface      = scene.surfaces[instance.surface];
         auto& elements_cdf = lights.surface_elements_cdf[instance.surface];
-        auto [element_id, element_uv] = sample_surface_element(surface, elements_cdf, rel, ruv);
-    return normalize(
-        evaluate_instance_position(scene, instance, element_id, element_uv) -
-        p);
+        auto [element_id, element_uv] = sample_surface_element(
+            surface, elements_cdf, rel, ruv);
+        return normalize(
+            evaluate_instance_position(scene, instance, element_id, element_uv) -
+            p);
     } else {
         log_error("empty instance");
         return zero_vec3f;

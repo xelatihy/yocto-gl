@@ -787,8 +787,9 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     // split into two children
     if (end - start > bvh_max_prims) {
         // get split
-        auto [mid, split_axis] = (high_quality) ? split_bvh_node_sah(prims, start, end) :
-                                      split_bvh_node_balanced(prims, start, end);
+        auto [mid, split_axis] = (high_quality) ?
+                                     split_bvh_node_sah(prims, start, end) :
+                                     split_bvh_node_balanced(prims, start, end);
 
         // make an internal node
         node.is_internal      = true;
@@ -841,8 +842,9 @@ void build_bvh_nodes_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
         if (end - start > bvh_max_prims) {
             // get split
             auto [mid, split_axis] = (options.high_quality) ?
-                             split_bvh_node_sah(prims, start, end) :
-                             split_bvh_node_balanced(prims, start, end);
+                                         split_bvh_node_sah(prims, start, end) :
+                                         split_bvh_node_balanced(
+                                             prims, start, end);
 
             // make an internal node
             node.is_internal      = true;
@@ -921,8 +923,10 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                 if (end - start > bvh_max_prims) {
                     // get split
                     auto [mid, split_axis] = (options.high_quality) ?
-                                     split_bvh_node_sah(prims, start, end) :
-                                     split_bvh_node_balanced(prims, start, end);
+                                                 split_bvh_node_sah(
+                                                     prims, start, end) :
+                                                 split_bvh_node_balanced(
+                                                     prims, start, end);
 
                     // make an internal node
                     {

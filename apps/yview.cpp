@@ -131,14 +131,14 @@ struct app_state {
     drawgl_lights lights = {};
 
     // view image
-    bool                      widgets_open   = false;
-    bool                      navigation_fps = false;
+    bool                          widgets_open   = false;
+    bool                          navigation_fps = false;
     pair<type_index, int>         selection      = {typeid(void), -1};
     vector<pair<type_index, int>> update_list;
-    float                     time       = 0;
-    string                    anim_group = "";
-    vec2f                     time_range = zero_vec2f;
-    bool                      animate    = false;
+    float                         time       = 0;
+    string                        anim_group = "";
+    vec2f                         time_range = zero_vec2f;
+    bool                          animate    = false;
 
     // app status
     bool   load_done = false, load_running = false;
@@ -787,8 +787,8 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         auto& instance = scene.instances[instance_id];
         // auto& shape     = scene.shapes[instance.shape];
         // auto& material  = scene.materials[shape.material];
-        auto highlight = highlighted ==
-                         pair<type_index, int>{typeid(yocto_instance), instance_id};
+        auto highlight = highlighted == pair<type_index, int>{
+                                            typeid(yocto_instance), instance_id};
         draw_glinstance(state, scene, instance, highlight, options);
     }
 
@@ -844,8 +844,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     }
     state.surfaces.resize(scene.surfaces.size());
     for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
-        auto& surface       = scene.surfaces[surface_id];
-        auto  vbos          = drawgl_shape();
+        auto& surface = scene.surfaces[surface_id];
+        auto  vbos    = drawgl_shape();
         auto [quads, positions, normals, texturecoords] = convert_face_varying(
             surface.quads_positions, surface.quads_normals,
             surface.quads_texturecoords, surface.positions, surface.normals,
@@ -1006,8 +1006,8 @@ void update(app_state& app) {
             // TODO: update shape
             printf("shape update not supported\n");
         }
-        if (type == typeid(yocto_scene_node) || type == typeid(yocto_animation) ||
-            app.time != last_time) {
+        if (type == typeid(yocto_scene_node) ||
+            type == typeid(yocto_animation) || app.time != last_time) {
             update_transforms(app.scene, app.time, app.anim_group);
             last_time = app.time;
         }
@@ -1059,7 +1059,8 @@ void run_ui(app_state& app) {
             auto& camera = app.scene.cameras.at(app.draw_options.camera_id);
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
-            app.update_list.push_back({typeid(yocto_camera), app.draw_options.camera_id});
+            app.update_list.push_back(
+                {typeid(yocto_camera), app.draw_options.camera_id});
         }
 
         // animation
