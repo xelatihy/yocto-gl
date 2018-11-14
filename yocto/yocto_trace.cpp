@@ -442,19 +442,22 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 trace_point sample_instance_point(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, float rel, const vec2f& ruv) {
     auto& instance = scene.instances[instance_id];
-    auto  sample   = pair<int, vec2f>();
     if (instance.shape >= 0) {
         auto& shape        = scene.shapes[instance.shape];
         auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        sample = sample_shape_element(shape, elements_cdf, rel, ruv);
+        auto [element_id, element_uv] = sample_shape_element(
+            shape, elements_cdf, rel, ruv);
+        return make_trace_point(scene, instance_id, element_id, element_uv);
     } else if (instance.surface >= 0) {
         auto& surface      = scene.surfaces[instance.surface];
         auto& elements_cdf = lights.surface_elements_cdf[instance.shape];
-        sample = sample_surface_element(surface, elements_cdf, rel, ruv);
+        auto [element_id, element_uv] = sample_surface_element(
+            surface, elements_cdf, rel, ruv);
+        return make_trace_point(scene, instance_id, element_id, element_uv);
     } else {
         log_error("empty instance");
+        return {};
     }
-    return make_trace_point(scene, instance_id, sample.first, sample.second);
 }
 
 // Sample pdf for a light point.
@@ -562,20 +565,26 @@ vec3f sample_instance_direction(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const vec3f& p, float rel,
     const vec2f& ruv) {
     auto& instance = scene.instances[instance_id];
-    auto  sample   = pair<int, vec2f>();
     if (instance.shape >= 0) {
         auto& shape        = scene.shapes[instance.shape];
         auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        sample = sample_shape_element(shape, elements_cdf, rel, ruv);
+        auto [element_id, element_uv] = sample_shape_element(
+            shape, elements_cdf, rel, ruv);
+        return normalize(
+            evaluate_instance_position(scene, instance, element_id, element_uv) -
+            p);
     } else if (instance.surface >= 0) {
         auto& surface      = scene.surfaces[instance.surface];
         auto& elements_cdf = lights.surface_elements_cdf[instance.surface];
-        sample = sample_surface_element(surface, elements_cdf, rel, ruv);
+        auto [element_id, element_uv] = sample_surface_element(
+            surface, elements_cdf, rel, ruv);
+        return normalize(
+            evaluate_instance_position(scene, instance, element_id, element_uv) -
+            p);
     } else {
+        log_error("empty instance");
+        return zero_vec3f;
     }
-    return normalize(
-        evaluate_instance_position(scene, instance, sample.first, sample.second) -
-        p);
 }
 
 // Sample pdf for a light point.
@@ -1693,11 +1702,9 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(
                     camera, {i, j}, rendered_image.size(), pixel.rng);
-                auto radiance_hit = sampler(scene, bvh, lights, ray.origin,
+                auto [radiance, hit] = sampler(scene, bvh, lights, ray.origin,
                     ray.direction, pixel.rng, options.max_bounces,
                     options.environments_hidden);
-                auto radiance     = radiance_hit.first;
-                auto hit          = radiance_hit.second;
                 if (!isfinite(radiance[0]) || !isfinite(radiance[1]) ||
                     !isfinite(radiance[2])) {
                     log_error("NaN detected");

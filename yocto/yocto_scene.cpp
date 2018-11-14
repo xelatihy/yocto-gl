@@ -707,11 +707,11 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
     auto check_names = [&errs](const auto& vals, const string& base) {
         auto used = unordered_map<string, int>();
         for (auto& value : vals) used[value.name] += 1;
-        for (auto& kv : used) {
-            if (kv.first == "") {
+        for (auto& [name, used] : used) {
+            if (name == "") {
                 errs.push_back("empty " + base + " name");
-            } else if (kv.second > 1) {
-                errs.push_back("duplicated " + base + " name " + kv.first);
+            } else if (used > 1) {
+                errs.push_back("duplicated " + base + " name " + name);
             }
         }
     };

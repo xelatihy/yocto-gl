@@ -1189,12 +1189,8 @@ bool apply_json_procedural(
                                                          vec2i{64, 32}),
             js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
     } else if (type == "hairball") {
-        auto base_quads         = vector<vec4i>{};
-        auto base_positions     = vector<vec3f>{};
-        auto base_normals       = vector<vec3f>{};
-        auto base_texturecoords = vector<vec2f>{};
-        tie(base_quads, base_positions, base_normals,
-            base_texturecoords) = make_sphere_cube_shape(32,
+        auto [base_quads, base_positions, base_normals,
+            base_texturecoords] = make_sphere_cube_shape(32,
             js.value("size", 2.0f) * 0.8f, 1);
         tie(value.lines, value.positions, value.normals, value.texturecoords,
             value.radius) = make_hair_shape(js.value("steps", vec2i{4, 65536}),
@@ -1668,10 +1664,7 @@ bool apply_json_procedural(
             num_shapes++;
         }
 
-        auto pos                 = vector<vec3f>();
-        auto norm                = vector<vec3f>();
-        auto texcoord            = vector<vec2f>();
-        tie(pos, norm, texcoord) = sample_triangles_points(base.triangles,
+        auto [pos, norm, texcoord] = sample_triangles_points(base.triangles,
             base.positions, base.normals, base.texturecoords, num, seed);
 
         auto rng = make_rng(seed, 17);
