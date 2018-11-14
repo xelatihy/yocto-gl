@@ -1850,18 +1850,18 @@ struct obj_vertex_hash {
     }
 };
 
-inline bool parse_value(parse_string_view& view, obj_vertex& value) {
+inline bool parse_value(string_view& view, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
     if (!parse_value(view, value.position)) return false;
-    if (*view.str == '/') {
-        view.str++;
-        if (*view.str == '/') {
-            view.str++;
+    if (view.front() == '/') {
+        view.remove_prefix(1);
+        if (view.front() == '/') {
+            view.remove_prefix(1);
             if (!parse_value(view, value.normal)) return false;
         } else {
             if (!parse_value(view, value.texturecoord)) return false;
-            if (*view.str == '/') {
-                view.str++;
+            if (view.front() == '/') {
+                view.remove_prefix(1);
                 if (!parse_value(view, value.normal)) return false;
             }
         }
@@ -1870,7 +1870,7 @@ inline bool parse_value(parse_string_view& view, obj_vertex& value) {
 }
 
 // Input for OBJ textures
-inline bool parse_value(parse_string_view& view, obj_texture_info& info) {
+inline bool parse_value(string_view& view, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
@@ -1913,7 +1913,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
     while (read_line(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = parse_string_view{line.c_str()};
+        auto view = string_view{line};
 
         // get command
         auto cmd = ""s;
@@ -2009,7 +2009,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
     while (read_line(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = parse_string_view{line.c_str()};
+        auto view = string_view{line.c_str()};
 
         // get command
         auto cmd = ""s;
@@ -2059,7 +2059,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
     while (read_line(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = parse_string_view{line.c_str()};
+        auto view = string_view{line.c_str()};
 
         // get command
         auto cmd = ""s;
@@ -5509,7 +5509,7 @@ bool load_ply(const string& filename, ply_data& ply) {
     auto ascii = false;
     auto line  = ""s;
     while (read_line(fs, line)) {
-        auto view = parse_string_view{line.c_str()};
+        auto view = string_view{line};
         auto cmd  = ""s;
         parse_value(view, cmd);
         if (cmd == "") continue;
@@ -5564,7 +5564,7 @@ bool load_ply(const string& filename, ply_data& ply) {
         for (auto& elem : ply.elements) {
             for (auto vid = 0; vid < elem.count; vid++) {
                 if (!read_line(fs, line)) return false;
-                auto view = parse_string_view{line.c_str()};
+                auto view = string_view{line};
                 for (auto pid = 0; pid < elem.properties.size(); pid++) {
                     auto& prop = elem.properties[pid];
                     if (prop.type == ply_type::ply_float) {
