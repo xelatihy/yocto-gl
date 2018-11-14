@@ -997,15 +997,15 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
     auto names     = get_flag_names(name);
     auto pos       = parser.args.end();
     auto new_value = value;
-    for (auto& name : names) {
+    for (auto& [name_on, name_off] : names) {
         pos = std::min(
-            pos, std::find(parser.args.begin(), parser.args.end(), name.first));
+            pos, std::find(parser.args.begin(), parser.args.end(), name_on));
         if (pos != parser.args.end()) {
             new_value = true;
             break;
         }
         pos = std::min(pos,
-            std::find(parser.args.begin(), parser.args.end(), name.second));
+            std::find(parser.args.begin(), parser.args.end(), name_off));
         if (pos != parser.args.end()) {
             new_value = false;
             break;

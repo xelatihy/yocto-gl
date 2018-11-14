@@ -97,12 +97,13 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     auto tangu = vector<vec3f>(positions.size(), zero_vec3f);
     auto tangv = vector<vec3f>(positions.size(), zero_vec3f);
     for (auto t : triangles) {
-        auto tutv = triangle_tangents_fromuv(positions[t[0]], positions[t[1]],
+        auto [tu, tv] = triangle_tangents_fromuv(positions[t[0]], positions[t[1]],
             positions[t[2]], texturecoords[t[0]], texturecoords[t[1]],
             texturecoords[t[2]]);
-        tutv      = {normalize(tutv.first), normalize(tutv.second)};
-        for (auto vid : {t[0], t[1], t[2]}) tangu[vid] += tutv.first;
-        for (auto vid : {t[0], t[1], t[2]}) tangv[vid] += tutv.second;
+        tu      = normalize(tu); 
+        tv = normalize(tv);
+        for (auto vid : {t[0], t[1], t[2]}) tangu[vid] += tu;
+        for (auto vid : {t[0], t[1], t[2]}) tangv[vid] += tv;
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
@@ -234,13 +235,13 @@ int get_edge_count(const edge_map& emap, const vec2i& e) {
 // Get a list of edges, boundary edges, boundary vertices
 vector<vec2i> get_edges(const edge_map& emap) {
     auto edges = vector<vec2i>(emap.size());
-    for (auto& kv : emap) edges[kv.second[0]] = kv.first;
+    for (auto& [edge, counts] : emap) edges[counts[0]] = edge;
     return edges;
 }
 vector<vec2i> get_boundary(const edge_map& emap) {
     auto boundary = vector<vec2i>();
-    for (auto& kv : emap)
-        if (kv.second[2] == -1) boundary.push_back(kv.first);
+    for (auto& [edge, counts] : emap)
+        if (counts[2] == -1) boundary.push_back(edge);
     return boundary;
 }
 vector<vec2i> get_edges(const vector<vec3i>& triangles) {
@@ -343,22 +344,22 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_v
     auto split_positions = vector<vec3f>{};
     if (!positions.empty()) {
         split_positions.resize(vert_map.size());
-        for (auto kv : vert_map) {
-            split_positions[kv.second] = positions[kv.first[0]];
+        for (auto& [vert, index] : vert_map) {
+            split_positions[index] = positions[vert[0]];
         }
     }
     auto split_normals = vector<vec3f>{};
     if (!normals.empty()) {
         split_normals.resize(vert_map.size());
-        for (auto kv : vert_map) {
-            split_normals[kv.second] = normals[kv.first[1]];
+        for (auto& [vert, index] : vert_map) {
+            split_normals[index] = normals[vert[1]];
         }
     }
     auto split_texcturecoords = vector<vec2f>{};
     if (!texturecoords.empty()) {
         split_texcturecoords.resize(vert_map.size());
-        for (auto kv : vert_map) {
-            split_texcturecoords[kv.second] = texturecoords[kv.first[2]];
+        for (auto& [vert, index] : vert_map) {
+            split_texcturecoords[index] = texturecoords[vert[2]];
         }
     }
 
@@ -885,21 +886,21 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     auto cdf = sample_triangles_element_cdf(triangles, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto sample = sample_triangles_element(cdf, get_random_float(rng),
+        auto [triangle_id, triangle_uv] = sample_triangles_element(cdf, get_random_float(rng),
             {get_random_float(rng), get_random_float(rng)});
-        auto t      = triangles[sample.first];
+        auto t      = triangles[triangle_id];
         sampled_positions[i] = interpolate_triangle(
-            positions[t[0]], positions[t[1]], positions[t[2]], sample.second);
+            positions[t[0]], positions[t[1]], positions[t[2]], triangle_uv);
         if (!sampled_normals.empty()) {
             sampled_normals[i] = normalize(interpolate_triangle(
-                normals[t[0]], normals[t[1]], normals[t[2]], sample.second));
+                normals[t[0]], normals[t[1]], normals[t[2]], triangle_uv));
         } else {
             sampled_normals[i] = triangle_normal(
                 positions[t[0]], positions[t[1]], positions[t[2]]);
         }
         if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_triangle(texturecoords[t[0]],
-                texturecoords[t[1]], texturecoords[t[2]], sample.second);
+                texturecoords[t[1]], texturecoords[t[2]], triangle_uv);
         } else {
             sampled_texturecoords[i] = zero_vec2f;
         }
@@ -920,14 +921,14 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     auto cdf                   = sample_quads_element_cdf(quads, positions);
     auto rng                   = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
-        auto sample          = sample_quads_element(cdf, get_random_float(rng),
+        auto [quad_id, quad_uv]          = sample_quads_element(cdf, get_random_float(rng),
             {get_random_float(rng), get_random_float(rng)});
-        auto q               = quads[sample.first];
+        auto q               = quads[quad_id];
         sampled_positions[i] = interpolate_quad(positions[q[0]],
-            positions[q[1]], positions[q[2]], positions[q[3]], sample.second);
+            positions[q[1]], positions[q[2]], positions[q[3]], quad_uv);
         if (!sampled_normals.empty()) {
             sampled_normals[i] = normalize(interpolate_quad(normals[q[0]],
-                normals[q[1]], normals[q[2]], normals[q[3]], sample.second));
+                normals[q[1]], normals[q[2]], normals[q[3]], quad_uv));
         } else {
             sampled_normals[i] = quad_normal(positions[q[0]], positions[q[1]],
                 positions[q[2]], positions[q[3]]);
@@ -935,7 +936,7 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
         if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_quad(texturecoords[q[0]],
                 texturecoords[q[1]], texturecoords[q[2]], texturecoords[q[3]],
-                sample.second);
+                quad_uv);
         } else {
             sampled_texturecoords[i] = zero_vec2f;
         }
