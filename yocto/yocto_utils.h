@@ -94,6 +94,7 @@
 #include <deque>
 #include <mutex>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -107,6 +108,7 @@ using std::deque;
 using std::lock_guard;
 using std::mutex;
 using std::string;
+using std::string_view;
 using std::thread;
 using std::vector;
 using namespace std::string_literals;
@@ -465,59 +467,52 @@ inline string to_string(const T& value) {
     return str;
 }
 
-// Trivial wrapper used for simplicity
-struct parse_string_view {
-    const char* str = nullptr;
-};
-
 // Prints basic types to string
-inline bool parse_value(parse_string_view& str, string& value) {
-    while (*str.str && std::isspace((unsigned char)*str.str)) str.str++;
-    if (!*str.str) return false;
-    auto pos = 0;
-    char buffer[4096];
-    while (*str.str && !std::isspace((unsigned char)*str.str) &&
-           pos < sizeof(buffer)) {
-        buffer[pos] = *str.str;
-        str.str++;
-        pos++;
+inline bool parse_value(string_view& str, string& value) {
+    auto pos = str.find_first_not_of(" \t\r\n");
+    if(pos == string_view::npos) return false;
+    str.remove_prefix(pos);
+    pos = str.find_first_of(" \t\r\n");
+    if(pos == string_view::npos) {
+        value = str;
+        str.remove_prefix(str.length());
+    } else {
+        value = str.substr(0, pos);
+        str.remove_prefix(pos);
     }
-    if (pos >= sizeof(buffer)) return false;
-    buffer[pos] = 0;
-    value       = buffer;
     return true;
 }
-inline bool parse_value(parse_string_view& str, int& value) {
+inline bool parse_value(string_view& str, int& value) {
     char* end = nullptr;
-    value     = (int)strtol(str.str, &end, 10);
-    if (str.str == end) return false;
-    str.str = end;
+    value     = (int)strtol(str.data(), &end, 10);
+    if (str.data() == end) return false;
+    str.remove_prefix(end - str.data());
     // auto n = 0;
     // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
     // str.str += n;
     return true;
 }
-inline bool parse_value(parse_string_view& str, float& value) {
+inline bool parse_value(string_view& str, float& value) {
     char* end = nullptr;
-    value     = strtof(str.str, &end);
-    if (str.str == end) return false;
-    str.str = end;
+    value     = strtof(str.data(), &end);
+    if (str.data() == end) return false;
+    str.remove_prefix(end - str.data());
     // auto n = 0;
     // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
     // str.str += n;
     return true;
 }
-inline bool parse_value(parse_string_view& str, double& value) {
+inline bool parse_value(string_view& str, double& value) {
     char* end = nullptr;
-    value     = strtod(str.str, &end);
-    if (str.str == end) return false;
-    str.str = end;
+    value     = strtod(str.data(), &end);
+    if (str.data() == end) return false;
+    str.remove_prefix(end - str.data());
     // auto n = 0;
     // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
     // str.str += n;
     return true;
 }
-inline bool parse_value(parse_string_view& str, bool& value) {
+inline bool parse_value(string_view& str, bool& value) {
     auto ivalue = 0;
     if (!parse_value(str, ivalue)) return false;
     value = (bool)ivalue;
@@ -526,14 +521,14 @@ inline bool parse_value(parse_string_view& str, bool& value) {
 
 // Print compound types
 template <typename T, size_t N>
-inline bool parse_value(parse_string_view& str, array<T, N>& value) {
+inline bool parse_value(string_view& str, array<T, N>& value) {
     for (auto i = 0; i < N; i++) {
         if (!parse_value(str, value[i])) return false;
     }
     return true;
 }
 template <typename T>
-inline bool parse_values(parse_string_view& str, T* values, int N) {
+inline bool parse_values(string_view& str, T* values, int N) {
     for (auto i = 0; i < N; i++) {
         if (!parse_value(str, values[i])) return false;
     }
@@ -542,44 +537,43 @@ inline bool parse_values(parse_string_view& str, T* values, int N) {
 
 // Data acess
 template <typename T, int N>
-inline bool parse_value(parse_string_view& str, vec<T, N>& v) {
+inline bool parse_value(string_view& str, vec<T, N>& v) {
     return parse_values(str, &v[0], N);
 }
 template <typename T, int N, int M>
-inline bool parse_value(parse_string_view& str, mat<T, N, M>& v) {
+inline bool parse_value(string_view& str, mat<T, N, M>& v) {
     return parse_values(str, &v[0][0], N * M);
 }
 template <typename T, int N>
-inline bool parse_value(parse_string_view& str, frame<T, N>& v) {
+inline bool parse_value(string_view& str, frame<T, N>& v) {
     return parse_values(str, &v[0][0], N * (N + 1));
 }
 template <typename T, int N>
-inline bool parse_value(parse_string_view& str, bbox<T, N>& v) {
+inline bool parse_value(string_view& str, bbox<T, N>& v) {
     return parse_values(str, &v[0][0], N * 2);
 }
 template <typename T, int N>
-inline bool parse_value(parse_string_view& str, ray<T, N>& v) {
+inline bool parse_value(string_view& str, ray<T, N>& v) {
     return parse_values(str, &v.origin[0], N * 2 + 2);
 }
 
 // Prints a string.
-inline bool parse_next(parse_string_view& str) { return true; }
+inline bool parse_next(string_view& str) { return true; }
 template <typename Arg, typename... Args>
-inline bool parse_next(parse_string_view& str, Arg& arg, Args&... args) {
+inline bool parse_next(string_view& str, Arg& arg, Args&... args) {
     if (!parse_value(str, arg)) return false;
     return parse_next(str, args...);
 }
 
 // Returns trus if this is white space
-inline bool is_whitespace(parse_string_view str) {
-    while (*str.str && isspace((unsigned char)*str.str)) str.str++;
-    return *str.str == 0;
+inline bool is_whitespace(string_view str) {
+    return str.find_first_not_of(" \t\r\n") == string_view::npos;
 }
 
 // Parse a list of space separated values.
 template <typename... Args>
 inline bool parse(const string& str, Args&... args) {
-    auto view = parse_string_view{str.c_str()};
+    auto view = string_view{str.c_str()};
     if (!parse_next(view, args...)) return false;
     return is_whitespace(view);
 }
