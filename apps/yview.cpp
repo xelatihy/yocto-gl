@@ -846,11 +846,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
         auto& surface       = scene.surfaces[surface_id];
         auto  vbos          = drawgl_shape();
-        auto  quads         = vector<vec4i>();
-        auto  positions     = vector<vec3f>();
-        auto  normals       = vector<vec3f>();
-        auto  texturecoords = vector<vec2f>();
-        tie(quads, positions, normals, texturecoords) = convert_face_varying(
+        auto [quads, positions, normals, texturecoords] = convert_face_varying(
             surface.quads_positions, surface.quads_normals,
             surface.quads_texturecoords, surface.positions, surface.normals,
             surface.texturecoords);
