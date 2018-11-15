@@ -615,7 +615,7 @@ void add_missing_names(yocto_scene& scene) {
                 nmap[value.name] = 0;
             } else {
                 nmap[value.name] += 1;
-                value.name = value.name + "_" + std::to_string(nmap[value.name]);
+                value.name = value.name + "[" + std::to_string(nmap[value.name]) + "]";
             }
         }
     };
