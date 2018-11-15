@@ -211,7 +211,7 @@ inline void to_json(json& js, const volume1f& value) {
 inline void from_json(const json& js, volume1f& value) {
     auto size   = js.at("size").get<vec3i>();
     auto voxels = js.at("voxels").get<vector<float>>();
-    value       = volume1f{size, data(voxels)};
+    value       = make_volume(size, data(voxels));
 }
 
 }  // namespace yocto
