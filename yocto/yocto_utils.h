@@ -704,12 +704,14 @@ inline bool parse_value(string_view& str, mat4f& v) {
 inline bool parse_value(string_view& str, frame2f& v) {
     if(!parse_value(str, v.x)) return false;
     if(!parse_value(str, v.y)) return false;
+    if(!parse_value(str, v.o)) return false;
     return true;
 }
 inline bool parse_value(string_view& str, frame3f& v) {
     if(!parse_value(str, v.x)) return false;
     if(!parse_value(str, v.y)) return false;
     if(!parse_value(str, v.z)) return false;
+    if(!parse_value(str, v.o)) return false;
     return true;
 }
 inline bool parse_value(string_view& str, bbox1f& v) {
