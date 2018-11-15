@@ -182,36 +182,44 @@ inline void from_json(const json& js, bbox3f& val) {
 
 inline void to_json(json& js, const image4f& value) {
     js           = json::object();
-    js["size"]   = value.size;
+    js["width"]   = value.size.x;
+    js["height"]   = value.size.y;
     js["pixels"] = vector<vec4f>{
         data(value), data(value) + value.size.x * value.size.y};
 }
 inline void to_json(json& js, const image4b& value) {
     js           = json::object();
-    js["size"]   = value.size;
+    js["width"]   = value.size.x;
+    js["height"]   = value.size.y;
     js["pixels"] = vector<vec4b>{
         data(value), data(value) + value.size.x * value.size.y};
 }
 inline void from_json(const json& js, image4f& value) {
-    auto size   = js.at("size").get<vec2i>();
+    auto width   = js.at("width").get<int>();
+    auto height   = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<vec4f>>();
-    value       = make_image(size, data(pixels));
+    value       = make_image(width, height, data(pixels));
 }
 inline void from_json(const json& js, image4b& value) {
-    auto size   = js.at("size").get<vec2i>();
+    auto width   = js.at("width").get<int>();
+    auto height   = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<vec4b>>();
-    value       = make_image(size, data(pixels));
+    value       = make_image(width, height, data(pixels));
 }
 inline void to_json(json& js, const volume1f& value) {
     js           = json::object();
-    js["size"]   = value.size;
+    js["width"]   = value.size.x;
+    js["height"]   = value.size.y;
+    js["depth"]   = value.size.x;
     js["voxels"] = vector<float>{data(value),
         data(value) + value.size.x * value.size.y * value.size.z};
 }
 inline void from_json(const json& js, volume1f& value) {
-    auto size   = js.at("size").get<vec3i>();
+    auto width   = js.at("width").get<int>();
+    auto height   = js.at("height").get<int>();
+    auto depth   = js.at("depth").get<int>();
     auto voxels = js.at("voxels").get<vector<float>>();
-    value       = make_volume(size, data(voxels));
+    value       = make_volume(width, height, depth, data(voxels));
 }
 
 }  // namespace yocto
@@ -722,33 +730,41 @@ bool serialize_json_values(
 }
 
 bool serialize_json_value(json& js, image4f& value, bool save) {
-    auto size = value.size;
-    if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save))
+    auto width = 0, height = 0;
+    if (!serialize_json_value(js, width, "width", -1, save))
         return false;
-    if (!save) value = make_image(size, zero4f);
+    if (!serialize_json_value(js, height, "height", -1, save))
+        return false;
+    if (!save) value = make_image(width, height, zero4f);
     if (!serialize_json_values(
-            js, data(value), size.x * size.y, "pixels", save))
+            js, data(value), width * height, "pixels", save))
         return false;
     return true;
 }
 bool serialize_json_value(json& js, image4b& value, bool save) {
-    auto size = value.size;
-    if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save))
+    auto width = 0, height = 0;
+    if (!serialize_json_value(js, width, "width", -1, save))
         return false;
-    if (!save) value = make_image(size, zero4b);
+    if (!serialize_json_value(js, height, "height", -1, save))
+        return false;
+    if (!save) value = make_image(width, height, zero4b);
     if (!serialize_json_values(
-            js, data(value), size.x * size.y, "pixels", save))
+            js, data(value), width * height, "pixels", save))
         return false;
     return true;
 }
 template <typename T>
 bool serialize_json_value(json& js, volume1f& value, bool save) {
-    auto size = value.size;
-    if (!serialize_json_value(js, size, "size", vec3i{-1, -1, -1}, save))
+    auto width = 0, height = 0, depth = 0;
+    if (!serialize_json_value(js, width, "width", -1, save))
         return false;
-    if (!save) value = volume1f{size};
+    if (!serialize_json_value(js, height, "height", -1, save))
+        return false;
+    if (!serialize_json_value(js, depth, "heidepthght", -1, save))
+        return false;
+    if (!save) value = make_volume(width, height, depth, 0.0f);
     if (!serialize_json_values(
-            js, data(value), size.x * size.y, "voxels", save))
+            js, data(value), width * height * depth, "voxels", save))
         return false;
     return true;
 }
@@ -934,24 +950,25 @@ bool apply_json_procedural(
     auto type = js.value("type", ""s);
     if (type == "") return true;
     auto is_hdr = false;
-    auto size   = js.value("size", vec2i{512, 512});
+    auto width   = js.value("width", 512);
+    auto height   = js.value("height", 512);
     if (type == "grid") {
-        value.hdr_image = make_grid_image(size, js.value("tile", 8),
+        value.hdr_image = make_grid_image(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        value.hdr_image = make_checker_image(size, js.value("tile", 8),
+        value.hdr_image = make_checker_image(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        value.hdr_image = make_bumpdimple_image(size, js.value("tile", 8));
+        value.hdr_image = make_bumpdimple_image(width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
-        value.hdr_image = make_uvramp_image(size);
+        value.hdr_image = make_uvramp_image(width, height);
     } else if (type == "uvgrid") {
-        value.hdr_image = make_uvgrid_image(size);
+        value.hdr_image = make_uvgrid_image(width, height);
     } else if (type == "sky") {
-        if (size.x < size.y * 2) size.x = size.y * 2;
-        value.hdr_image = make_sunsky_image(size,
+        if (width < height * 2) width = height * 2;
+        value.hdr_image = make_sunsky_image(width, height,
             js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
             js.value("has_sun", false), js.value("sun_angle_scale", 1.0f),
             js.value("sun_emission_scale", 1.0f),
@@ -959,18 +976,18 @@ bool apply_json_procedural(
         is_hdr          = true;
     } else if (type == "noise") {
         value.hdr_image = make_noise_image(
-            size, js.value("scale", 1.0f), js.value("wrap", true));
+            width, height, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
-        value.hdr_image = make_fbm_image(size, js.value("scale", 1.0f),
+        value.hdr_image = make_fbm_image(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        value.hdr_image = make_ridge_image(size, js.value("scale", 1.0f),
+        value.hdr_image = make_ridge_image(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("offset", 1.0f), js.value("octaves", 6),
             js.value("wrap", true));
     } else if (type == "turbulence") {
-        value.hdr_image = make_turbulence_image(size, js.value("scale", 1.0f),
+        value.hdr_image = make_turbulence_image(width, height, js.value("scale", 1.0f),
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else {
@@ -1037,10 +1054,12 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
-    auto size = js.value("width", vec3i{512, 512, 512});
+    auto width   = js.value("width", 512);
+    auto height   = js.value("height", 512);
+    auto depth   = js.value("depth", 512);
     if (type == "test_volume") {
         value.volume_data = make_test_volume(
-            size, js.value("scale", 10.0f), js.value("exponent", 6.0f));
+            width, height, depth, js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);
         return false;

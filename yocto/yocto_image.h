@@ -76,17 +76,17 @@ struct image4b {
 };
 
 // Image creation
-inline image4f make_image(const vec2i& size, const vec4f& value) {
-    return {size, {(size_t)(size.x * size.y), value}};
+inline image4f make_image(int width, int height, const vec4f& value) {
+    return {{width, height}, {(size_t)(width * height), value}};
 }
-inline image4b make_image(const vec2i& size, const vec4b& value) {
-    return {size, {(size_t)(size.x * size.y), value}};
+inline image4b make_image(int width, int height, const vec4b& value) {
+    return {{width, height}, {(size_t)(width * height), value}};
 }
-inline image4f make_image(const vec2i& size, const vec4f* values) {
-    return {size, {values, values + (size_t)(size.x * size.y)}};
+inline image4f make_image(int width, int height, const vec4f* values) {
+    return {{width, height}, {values, values + (size_t)(width * height)}};
 }
-inline image4b make_image(const vec2i& size, const vec4b* values) {
-    return {size, {values, values + (size_t)(size.x * size.y)}};
+inline image4b make_image(int width, int height, const vec4b* values) {
+    return {{width, height}, {values, values + (size_t)(width * height)}};
 }
 
 // Pixel access
@@ -120,7 +120,7 @@ inline const vec4f* data(const image4f& img) { return data(img.pixels); }
 inline const vec4b* data(const image4b& img) { return data(img.pixels); }
 
 // Splits an image into an array of regions
-vector<bbox2i> make_image_regions(const vec2i& size, int region_size = 32);
+vector<bbox2i> make_image_regions(int width, int height, int region_size = 32);
 
 // Gets pixels in an image region
 image4f get_image_region(const image4f& img, const bbox2i& region);
@@ -155,19 +155,19 @@ image4f resize_image(const image4f& img, int width, int height);
 namespace yocto {
 
 // Make example images.
-image4f make_grid_image(const vec2i& size, int tile = 8,
+image4f make_grid_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_checker_image(const vec2i& size, int tile = 8,
+image4f make_checker_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image4f make_bumpdimple_image(const vec2i& size, int tile = 8);
+image4f make_bumpdimple_image(int width, int height, int tile = 8);
 image4f make_ramp_image(
-    const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
-image4f make_gammaramp_image(const vec2i& size);
-image4f make_uvramp_image(const vec2i& size);
+    int width, int height, const vec4f& c0, const vec4f& c1, float srgb = false);
+image4f make_gammaramp_image(int width, int height);
+image4f make_uvramp_image(int width, int height);
 image4f make_uvgrid_image(
-    const vec2i& size, int tile = 8, bool colored = true);
+    int width, int height, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
@@ -180,24 +180,24 @@ image4f bump_to_normal_map(const image4f& img, float scale = 1);
 // the sky only integral if renormalize_sun is true. For the same reason,
 // we rescale the sun dimension such that it covers at least 5 pixels in
 // diameter if has_sun is enabled.
-image4f make_sunsky_image(const vec2i& size, float sun_angle,
+image4f make_sunsky_image(int width, int height, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_angle_scale = 1.0f,
     float        sun_emission_scale = 1.0f,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f}, bool renormalize_sun = true);
 // Make an image of multiple lights.
-image4f make_lights_image(const vec2i& size, const vec3f& le = {1, 1, 1},
+image4f make_lights_image(int width, int height, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 image4f make_noise_image(
-    const vec2i& size, float scale = 1, bool wrap = true);
-image4f make_fbm_image(const vec2i& size, float scale = 1,
+    int width, int height, float scale = 1, bool wrap = true);
+image4f make_fbm_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image4f make_ridge_image(const vec2i& size, float scale = 1,
+image4f make_ridge_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image4f make_turbulence_image(const vec2i& size, float scale = 1,
+image4f make_turbulence_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace yocto
@@ -221,11 +221,11 @@ struct volume1f {
 };
 
 // Image creation
-inline volume1f make_volume(const vec3i& size, float value) {
-    return {size, vector<float>((size_t)(size.x * size.y * size.z), value)};
+inline volume1f make_volume(int width, int height, int depth, float value) {
+    return {{width, height, depth}, vector<float>((size_t)(width * height * depth), value)};
 }
-inline volume1f make_volume(const vec3i& size, const float* values) {
-    return {size, vector<float>(values, values + (size_t)(size.x * size.y * size.z))};
+inline volume1f make_volume(int width, int height, int depth, const float* values) {
+    return {{width, height, depth}, vector<float>(values, values + (size_t)(width * height * depth))};
 }
 
 // Functions to query volume data
@@ -235,8 +235,8 @@ inline float* data(volume1f& vol) { return data(vol.voxels); }
 inline const float* data(const volume1f& vol) { return data(vol.voxels); }
 
 // make a simple example volume
-volume1f make_test_volume(
-    const vec3i& size, float scale = 10, float exponent = 6);
+volume1f make_test_volume(int width, int height, int depth,
+    float scale = 10, float exponent = 6);
 
 }  // namespace yocto
 

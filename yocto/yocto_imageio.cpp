@@ -230,7 +230,7 @@ bool load_pfm_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image({width, height}, (vec4f*)data(pixels));
+    img = make_image(width, height, (vec4f*)data(pixels));
     return true;
 }
 bool save_pfm_image(const string& filename, const image4f& img) {
@@ -255,7 +255,7 @@ bool load_exr_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image({width, height}, pixels);
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
@@ -276,7 +276,7 @@ bool load_stb_image(const string& filename, image4b& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image({width, height}, pixels);
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
@@ -288,7 +288,7 @@ bool load_stb_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image({width, height}, pixels);
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
@@ -345,7 +345,7 @@ bool load_stb_image_from_memory(
         log_io_error("error loading in-memory image");
         return false;
     }
-    img = make_image({width, height}, pixels);
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
@@ -358,7 +358,7 @@ bool load_stbi_image_from_memory(
         log_io_error("error loading in-memory image {}");
         return false;
     }
-    img = make_image({width, height}, pixels);
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
@@ -541,7 +541,7 @@ image4f resize_image(const image4f& img, int width, int height) {
     } else if (width == 0) {
         width = (int)round(height * (float)img.size.x / (float)img.size.y);
     }
-    auto res_img = make_image({width, height}, zero4f);
+    auto res_img = make_image(width, height, zero4f);
     stbir_resize_float_generic((float*)data(img), img.size.x, img.size.y,
         sizeof(vec4f) * img.size.x, (float*)data(res_img), res_img.size.x,
         res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,

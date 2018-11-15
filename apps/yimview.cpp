@@ -100,7 +100,7 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = make_image_regions(img.img.size);
+    auto regions     = make_image_regions(img.img.size.x, img.img.size.y);
     parallel_foreach(regions,
         [&img](const bbox2i& region) {
             tonemap_image_region(img.display, region, img.img, img.exposure,
