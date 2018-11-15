@@ -110,6 +110,7 @@ using std::sin;
 using std::sqrt;
 using std::swap;
 using std::tan;
+using std::round;
 
 using std::pair;
 using std::array;

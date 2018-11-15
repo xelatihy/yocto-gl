@@ -1787,7 +1787,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options) {
     auto scope      = log_trace_scoped("tracing image");
     auto image_size = get_camera_image_size(
-        scene.cameras.at(options.camera_id), options.image_size);
+        scene.cameras.at(options.camera_id), options.vertical_resolution);
     auto rendered_image = make_image(image_size, zero4f);
     auto pixels         = make_trace_pixels(image_size, options.random_seed);
     auto regions        = make_image_regions(rendered_image.size);
@@ -1859,7 +1859,7 @@ void trace_image_async_start(image4f& rendered_image,
     const trace_image_options& options) {
     log_trace("start tracing async");
     auto& camera     = scene.cameras.at(options.camera_id);
-    auto  image_size = get_camera_image_size(camera, options.image_size);
+    auto  image_size = get_camera_image_size(camera, options.vertical_resolution);
     rendered_image   = make_image(image_size, zero4f);
     pixels           = make_trace_pixels(image_size, options.random_seed);
     auto regions     = make_image_regions(rendered_image.size);

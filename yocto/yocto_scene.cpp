@@ -1348,8 +1348,8 @@ float get_camera_fovy(const yocto_camera& camera) {
 float get_camera_aspect(const yocto_camera& camera) {
     return camera.film_size.x / camera.film_size.y;
 }
-vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size) {
-    return get_image_size(size, camera.film_size.x / camera.film_size.y);
+vec2i get_camera_image_size(const yocto_camera& camera, int yresolution) {
+    return {(int)round(yresolution * camera.film_size.x / camera.film_size.y), yresolution};
 }
 void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
     camera.film_size    = {width, width / aspect};
