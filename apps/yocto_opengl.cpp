@@ -148,21 +148,22 @@ void delete_opengl_program(opengl_program& program) {
     program = {};
 }
 
-bool init_opengl_texture(opengl_texture& texture, const vec2i& size,
+bool init_opengl_texture(opengl_texture& texture, int width, int height,
     bool as_float, bool as_srgb, bool linear, bool mipmap) {
     texture = opengl_texture();
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.texture_id);
-    texture.size = size;
+    texture.width = width;
+    texture.height = height;
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     if (as_float) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, size.x, size.y, 0, GL_RGBA,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA,
             GL_FLOAT, nullptr);
     } else if (as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, size.x, size.y, 0,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width, height, 0,
             GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
     } else {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA,
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
             GL_FLOAT, nullptr);
     }
     if (mipmap) {

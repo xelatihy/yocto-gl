@@ -258,7 +258,7 @@ void update(app_state& app) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
             init_opengl_texture(
-                img.gl_txt, {img.display.width, img.display.height}, false, false, false, false);
+                img.gl_txt, img.display.width, img.display.height, false, false, false, false);
         } else {
             auto region = bbox2i{};
             while (img.display_queue.try_pop(region)) {

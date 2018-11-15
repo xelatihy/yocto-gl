@@ -291,7 +291,7 @@ void draw(const opengl_window& win) {
             {app.rendered_image.width, app.rendered_image.height}, win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_size != zero2i) {
-                init_opengl_texture(app.display_texture, app.image_size, false,
+                init_opengl_texture(app.display_texture, app.image_size.x, app.image_size.y, false,
                     false, false, false);
             }
         } else {
