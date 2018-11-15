@@ -111,8 +111,8 @@ void start_rendering_async(app_state& app) {
     auto display_preview = tonemap_image(app.preview_image,
         app.display_exposure, app.display_filmic, app.display_srgb);
     auto large_preview   = make_image(app.image_size, zero4f);
-    for (auto j = 0; j < app.image_size[1]; j++) {
-        for (auto i = 0; i < app.image_size[0]; i++) {
+    for (auto j = 0; j < app.image_size.y; j++) {
+        for (auto i = 0; i < app.image_size.x; i++) {
             auto pi = clamp(
                      i / app.preview_ratio, 0, display_preview.size.x - 1),
                  pj = clamp(
@@ -256,8 +256,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto ij        = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale, app.rendered_image.size);
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij[0] >= 0 && ij[0] < app.rendered_image.size.x &&
-                ij[1] >= 0 && ij[1] < app.rendered_image.size.y) {
+            if (ij.x >= 0 && ij.x < app.rendered_image.size.x &&
+                ij.y >= 0 && ij.y < app.rendered_image.size.y) {
                 draw_coloredit_opengl_widget(
                     win, "pixel", app.rendered_image[ij]);
             } else {
@@ -307,7 +307,7 @@ void draw(const opengl_window& win) {
                         app.display_filmic, app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
-                    size += bbox_size(region)[0] * bbox_size(region)[1];
+                    size += bbox_size(region).x * bbox_size(region).y;
                     if (size >= app.rendered_image.size.x *
                                     app.rendered_image.size.y)
                         break;
@@ -392,10 +392,10 @@ void run_ui(app_state& app) {
             auto  rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
-            if (mouse_right) dolly = (mouse_pos[0] - last_pos[0]) / 100.0f;
+            if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down)
                 pan = (mouse_pos - last_pos) * camera.focus_distance / 200.0f;
-            pan[0] = -pan[0];
+            pan.x = -pan.x;
             update_camera_turntable(
                 camera.frame, camera.focus_distance, rotate, dolly, pan);
             app.update_list.push_back(
@@ -407,8 +407,8 @@ void run_ui(app_state& app) {
             !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
                 app.image_scale, app.rendered_image.size);
-            if (ij[0] < 0 || ij[0] >= app.rendered_image.size.x || ij[1] < 0 ||
-                ij[1] >= app.rendered_image.size.y) {
+            if (ij.x < 0 || ij.x >= app.rendered_image.size.x || ij.y < 0 ||
+                ij.y >= app.rendered_image.size.y) {
                 auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
                     app.rendered_image.size, {0.5f, 0.5f}, zero2f);
@@ -445,7 +445,7 @@ int main(int argc, char* argv[]) {
     app.trace_options.image_size = parse_argument(
         parser, "--resolution,-R", vec2i{0, 512}, "Image resolution.");
     if (app.trace_options.image_size == vec2i{0, 512}) {
-        app.trace_options.image_size[1] = parse_argument(
+        app.trace_options.image_size.y = parse_argument(
             parser, "--vresolution,-r", 512, "Image vertical resolution.");
     }
     app.trace_options.num_samples = parse_argument(

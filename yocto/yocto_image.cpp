@@ -280,7 +280,7 @@ image4f make_uvgrid_image(const vec2i& size, int tiles, bool colored) {
                 ps = 0.2f;
             }
             auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
-            img[{i, img.size.y - j - 1}] = {rgb.x, rgb.y, rgb[2], 1};
+            img[{i, img.size.y - j - 1}] = {rgb.x, rgb.y, rgb.z, 1};
         }
     }
     return img;
@@ -294,15 +294,15 @@ image4f bump_to_normal_map(const image4f& img, float scale) {
         for (int i = 0; i < img.size.x; i++) {
             auto i1 = (i + 1) % img.size.x, j1 = (j + 1) % img.size.y;
             auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
-            auto g00    = (p00.x + p00.y + p00[2]) / 3;
-            auto g01    = (p01.x + p01.y + p01[2]) / 3;
-            auto g10    = (p10.x + p10.y + p10[2]) / 3;
+            auto g00    = (p00.x + p00.y + p00.z) / 3;
+            auto g01    = (p01.x + p01.y + p01.z) / 3;
+            auto g10    = (p10.x + p10.y + p10.z) / 3;
             auto normal = vec3f{
                 scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
             normal.y = -normal.y;  // make green pointing up, even if y axis
                                      // points down
             normal       = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            norm[{i, j}] = {normal.x, normal.y, normal[2], 1};
+            norm[{i, j}] = {normal.x, normal.y, normal.z, 1};
         }
     }
     return img;
@@ -417,7 +417,7 @@ image4f make_sunsky_image(const vec2i& size, float theta_sun,
             sky_integral += mean(sky_col) * sin(theta);
             sun_integral += mean(sun_col) * sin(theta);
             auto col    = sky_col + sun_col;
-            img[{i, j}] = {col.x, col.y, col[2], 1};
+            img[{i, j}] = {col.x, col.y, col.z, 1};
         }
     }
 
@@ -435,14 +435,14 @@ image4f make_sunsky_image(const vec2i& size, float theta_sun,
             auto theta = pif * ((j + 0.5f) / img.size.y);
             for (int i = 0; i < img.size.x; i++) {
                 auto pxl   = img[{i, j}];
-                auto le    = vec3f{pxl.x, pxl.y, pxl[2]};
+                auto le    = vec3f{pxl.x, pxl.y, pxl.z};
                 auto angle = sin(theta) * 4 * pif / (img.size.x * img.size.y);
                 ground += le * (ground_albedo / pif) * cos(theta) * angle;
             }
         }
         for (auto j = img.size.y / 2; j < img.size.y; j++) {
             for (int i = 0; i < img.size.x; i++) {
-                img[{i, j}] = {ground.x, ground.y, ground[2], 1};
+                img[{i, j}] = {ground.x, ground.y, ground.z, 1};
             }
         }
     }
@@ -464,7 +464,7 @@ image4f make_lights_image(const vec2i& size, const vec3f& le, int nlights,
                 auto lphi = 2 * pif * (l + 0.5f) / nlights;
                 inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
             }
-            img[{i, j}] = {le.x, le.y, le[2], 1};
+            img[{i, j}] = {le.x, le.y, le.z, 1};
         }
     }
     return img;
@@ -553,7 +553,7 @@ volume1f make_test_volume(const vec3i& size, float scale, float exponent) {
         for (auto j = 0; j < vol.size.y; j++) {
             for (auto i = 0; i < vol.size.x; i++) {
                 auto p = vec3f{
-                    i / (float)size.x, j / (float)size.y, k / (float)size[2]};
+                    i / (float)size.x, j / (float)size.y, k / (float)size.z};
                 float value = pow(
                     max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
                     exponent);

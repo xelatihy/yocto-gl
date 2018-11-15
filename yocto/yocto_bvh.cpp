@@ -651,7 +651,7 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     auto min_left = 0, min_right = 0;
     for (auto axis = 0; axis < 3; axis++) {
         for (auto b = 1; b < nbins; b++) {
-            auto split     = (&cbbox.min.x)[axis] + b * csize[axis] / nbins;
+            auto split     = (&cbbox.min.x)[axis] + b * at(csize, axis) / nbins;
             auto left_bbox = invalid_bbox3f, right_bbox = invalid_bbox3f;
             auto left_nprims = 0, right_nprims = 0;
             for (auto i = start; i < end; i++) {
@@ -678,7 +678,7 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     // split
     mid = (int)(std::partition(data(prims) + start, data(prims) + end,
                     [split_axis, middle](
-                        auto& a) { return a.center[split_axis] < middle; }) -
+                        auto& a) { return at(a.center, split_axis) < middle; }) -
                 data(prims));
 
     // if we were not able to split, just break the primitives in half
@@ -716,7 +716,7 @@ pair<int, int> split_bvh_node_balanced(
     mid        = (start + end) / 2;
     std::nth_element(data(prims) + start, data(prims) + mid,
         data(prims) + end, [split_axis](auto& a, auto& b) {
-            return a.center[split_axis] < b.center[split_axis];
+            return at(a.center, split_axis) < at(b.center, split_axis);
         });
 
     // if we were not able to split, just break the primitives in half
@@ -750,10 +750,10 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
     // split the space in the middle along the largest axis
     split_axis   = largest_axis;
     auto cmiddle = (cbbox.max + cbbox.min) / 2;
-    auto middle  = cmiddle[largest_axis];
+    auto middle  = at(cmiddle, largest_axis);
     mid = (int)(std::partition(data(prims) + start, data(prims) + end,
                     [split_axis, middle](
-                        auto& a) { return a.center[split_axis] < middle; }) -
+                        auto& a) { return at(a.center, split_axis) < middle; }) -
                 data(prims));
 
     // if we were not able to split, just break the primitives in half
@@ -1233,7 +1233,7 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         if (node.is_internal) {
             // for internal nodes, attempts to proceed along the
             // split axis from smallest to largest nodes
-            if (ray_dsign[node.split_axis]) {
+            if (at(ray_dsign, node.split_axis)) {
                 node_stack[node_cur++] = node.primitive_ids[0];
                 node_stack[node_cur++] = node.primitive_ids[1];
             } else {
@@ -1335,7 +1335,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
         if (node.is_internal) {
             // for internal nodes, attempts to proceed along the
             // split axis from smallest to largest nodes
-            if (ray_dsign[node.split_axis]) {
+            if (at(ray_dsign, node.split_axis)) {
                 node_stack[node_cur++] = node.primitive_ids[0];
                 node_stack[node_cur++] = node.primitive_ids[1];
             } else {

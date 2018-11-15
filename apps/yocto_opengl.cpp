@@ -48,7 +48,7 @@ void check_opengl_error() {
 }
 
 void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
-    glClearColor(color.x, color.y, color[2], color[3]);
+    glClearColor(color.x, color.y, color.z, color.w);
     if (clear_depth) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
@@ -325,13 +325,13 @@ void set_opengl_uniform(int locatiom, const vec2i& value) {
 
 void set_opengl_uniform(int locatiom, const vec3i& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform3i(locatiom, value.x, value.y, value[2]);
+    glUniform3i(locatiom, value.x, value.y, value.z);
     assert(glGetError() == GL_NO_ERROR);
 }
 
 void set_opengl_uniform(int locatiom, const vec4i& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform4i(locatiom, value.x, value.y, value[2], value[3]);
+    glUniform4i(locatiom, value.x, value.y, value.z, value.w);
     assert(glGetError() == GL_NO_ERROR);
 }
 
@@ -349,13 +349,13 @@ void set_opengl_uniform(int locatiom, const vec2f& value) {
 
 void set_opengl_uniform(int locatiom, const vec3f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform3f(locatiom, value.x, value.y, value[2]);
+    glUniform3f(locatiom, value.x, value.y, value.z);
     assert(glGetError() == GL_NO_ERROR);
 }
 
 void set_opengl_uniform(int locatiom, const vec4f& value) {
     assert(glGetError() == GL_NO_ERROR);
-    glUniform4f(locatiom, value.x, value.y, value[2], value[3]);
+    glUniform4f(locatiom, value.x, value.y, value.z, value.w);
     assert(glGetError() == GL_NO_ERROR);
 }
 
@@ -445,7 +445,7 @@ void set_opengl_vertexattrib(
         glEnableVertexAttribArray(locatiom);
         glVertexAttribPointer(locatiom, 3, GL_FLOAT, false, 0, nullptr);
     } else {
-        glVertexAttrib3f(locatiom, value.x, value.y, value[2]);
+        glVertexAttrib3f(locatiom, value.x, value.y, value.z);
     }
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -458,7 +458,7 @@ void set_opengl_vertexattrib(
         glEnableVertexAttribArray(locatiom);
         glVertexAttribPointer(locatiom, 4, GL_FLOAT, false, 0, nullptr);
     } else {
-        glVertexAttrib4f(locatiom, value.x, value.y, value[2], value[3]);
+        glVertexAttrib4f(locatiom, value.x, value.y, value.z, value.w);
     }
     assert(glGetError() == GL_NO_ERROR);
 }

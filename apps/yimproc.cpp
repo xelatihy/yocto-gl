@@ -169,7 +169,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < img.size.y; j++)
             for (auto i = 0; i < img.size.x; i++)
-                img[{i, j}][3] = alpha[{i, j}][3];
+                img[{i, j}].w = alpha[{i, j}].w;
     }
 
     // set alpha
@@ -183,7 +183,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < img.size.y; j++)
             for (auto i = 0; i < img.size.x; i++)
-                img[{i, j}][3] = mean(alpha[{i, j}]);
+                img[{i, j}].w = mean(alpha[{i, j}]);
     }
 
     // resize

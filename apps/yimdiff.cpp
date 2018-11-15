@@ -40,10 +40,10 @@ image4f compute_diff_image(
     auto diff = make_image(a.size, zero4f);
     for (auto j = 0; j < a.size.y; j++) {
         for (auto i = 0; i < a.size.x; i++) {
-            diff[{i, j}] = {abs(a[{i, j}][0] - b[{i, j}][0]),
-                abs(a[{i, j}][1] - b[{i, j}][1]),
-                abs(a[{i, j}][2] - b[{i, j}][2]),
-                abs(a[{i, j}][3] - b[{i, j}][3])};
+            diff[{i, j}] = {abs(a[{i, j}].x - b[{i, j}].x),
+                abs(a[{i, j}].y - b[{i, j}].y),
+                abs(a[{i, j}].z - b[{i, j}].z),
+                abs(a[{i, j}].w - b[{i, j}].w)};
         }
     }
     return diff;
@@ -52,8 +52,8 @@ image4f compute_diff_image(
 vec4f max_diff_value(const image4f& diff) {
     auto max_value = vec4f{0, 0, 0, 0};
     for (auto& c : diff) {
-        max_value = {max(c[0], max_value[0]), max(c[1], max_value[1]),
-            max(c[2], max_value[2]), max(c[3], max_value[3])};
+        max_value = {max(c.x, max_value.x), max(c.y, max_value.y),
+            max(c.z, max_value.z), max(c.w, max_value.w)};
     }
     return max_value;
 }

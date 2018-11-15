@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     trace_options.image_size = parse_argument(
         parser, "--resolution,-R", vec2i{0, 512}, "Image resolution.");
     if (trace_options.image_size == vec2i{0, 512}) {
-        trace_options.image_size[1] = parse_argument(
+        trace_options.image_size.y = parse_argument(
             parser, "--vresolution,-r", 512, "Image vertical resolution.");
     }
     trace_options.num_samples = parse_argument(

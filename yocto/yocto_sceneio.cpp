@@ -322,13 +322,13 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
                 auto& texture           = scene.textures[texture_id];
                 has_opacity[texture_id] = 0;
                 for (auto& p : texture.hdr_image) {
-                    if (p[3] < 0.999f) {
+                    if (p.w < 0.999f) {
                         has_opacity[texture_id] = 1;
                         break;
                     }
                 }
                 for (auto& p : texture.ldr_image) {
-                    if (p[3] < 255) {
+                    if (p.w < 255) {
                         has_opacity[texture_id] = 1;
                         break;
                     }
@@ -747,7 +747,7 @@ bool serialize_json_value(json& js, image4f& value, bool save) {
         return false;
     if (!save) value = make_image(size, zero4f);
     if (!serialize_json_values(
-            js, data(value), size[0] * size[1], "pixels", save))
+            js, data(value), size.x * size.y, "pixels", save))
         return false;
     return true;
 }
@@ -757,7 +757,7 @@ bool serialize_json_value(json& js, image4b& value, bool save) {
         return false;
     if (!save) value = make_image(size, zero4b);
     if (!serialize_json_values(
-            js, data(value), size[0] * size[1], "pixels", save))
+            js, data(value), size.x * size.y, "pixels", save))
         return false;
     return true;
 }
@@ -768,7 +768,7 @@ bool serialize_json_value(json& js, volume1f& value, bool save) {
         return false;
     if (!save) value = volume1f{size};
     if (!serialize_json_values(
-            js, data(value), size[0] * size[1], "voxels", save))
+            js, data(value), size.x * size.y, "voxels", save))
         return false;
     return true;
 }
@@ -970,7 +970,7 @@ bool apply_json_procedural(
     } else if (type == "uvgrid") {
         value.hdr_image = make_uvgrid_image(size);
     } else if (type == "sky") {
-        if (size[0] < size[1] * 2) size[0] = size[1] * 2;
+        if (size.x < size.y * 2) size.x = size.y * 2;
         value.hdr_image = make_sunsky_image(size,
             js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
             js.value("has_sun", false), js.value("sun_angle_scale", 1.0f),
@@ -1295,8 +1295,8 @@ bool apply_json_procedural(
         return false;
     }
     if (js.value("flipyz", false)) {
-        for (auto& p : value.positions) p = {p[0], p[2], p[1]};
-        for (auto& n : value.normals) n = {n[0], n[2], n[1]};
+        for (auto& p : value.positions) p = {p.x, p.z, p.y};
+        for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }
     return true;
 }
@@ -1479,8 +1479,8 @@ bool apply_json_procedural(
     if (empty(value.quads_texturecoords) && !empty(value.texturecoords))
         value.quads_texturecoords = value.quads_positions;
     if (js.value("flipyz", false)) {
-        for (auto& p : value.positions) p = {p[0], p[2], p[1]};
-        for (auto& n : value.normals) n = {n[0], n[2], n[1]};
+        for (auto& p : value.positions) p = {p.x, p.z, p.y};
+        for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }
     return true;
 }
@@ -1550,7 +1550,7 @@ bool apply_json_procedural(
         value.frame      = make_translation_frame(translation) *
                       make_scaling_frame(scaling) *
                       make_rotation_frame(
-                          xyz(rotation), rotation[3]);
+                          xyz(rotation), rotation.w);
     }
     return true;
 }
@@ -1580,7 +1580,7 @@ bool apply_json_procedural(
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
         value.frame   = make_rotation_frame(
-            xyz(rotation), rotation[3]);
+            xyz(rotation), rotation.w);
     }
     return true;
 }
@@ -2013,14 +2013,14 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
         } else if (cmd == "Tf") {
             material.kt = {-1, -1, -1};
             parse_value(view, material.kt);
-            if (material.kt[1] < 0)
-                material.kt = {material.kt[0], material.kt[0], material.kt[0]};
+            if (material.kt.y < 0)
+                material.kt = {material.kt.x, material.kt.x, material.kt.x};
             if (options.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
             auto tr = vec3f{-1, -1, -1};
             parse_value(view, tr);
-            if (tr[1] < 0) tr = {tr[0], tr[0], tr[0]};
-            material.op = (tr[0] + tr[1] + tr[2]) / 3;
+            if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
+            material.op = (tr.x + tr.y + tr.z) / 3;
             if (options.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
             parse_value(view, material.ns);
@@ -2154,7 +2154,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
         } else if (cmd == "vt") {
             auto vert = zero2f;
             parse_value(view, vert);
-            if (options.flip_texcoord) vert[1] = 1 - vert[1];
+            if (options.flip_texcoord) vert.y = 1 - vert.y;
             if (cb.texcoord) cb.texcoord(vert);
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
@@ -2725,7 +2725,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                 for (auto& n : surface.normals) print(fs, "vn {}\n", n);
                 for (auto& t : surface.texturecoords)
                     print(fs, "vt {}\n",
-                        vec2f{t[0], (flip_texcoord) ? 1 - t[1] : t[1]});
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
                 for (auto& pp : surface.positions) {
                     print(fs, "v {}\n", transform_point(instance.frame, pp));
@@ -2735,7 +2735,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                 }
                 for (auto& t : surface.texturecoords)
                     print(fs, "vt {}\n",
-                        vec2f{t[0], (flip_texcoord) ? 1 - t[1] : t[1]});
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
             auto last_material_id = -1;
             for (auto i = 0; i < surface.quads_positions.size(); i++) {
@@ -2752,16 +2752,16 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                     };
                     auto qp = surface.quads_positions[i];
                     auto qt = surface.quads_texturecoords[i];
-                    if (qp[2] == qp[3]) {
-                        print(fs, "f {} {} {}\n", to_string(vert(qp[0], qt[0])),
-                            to_string(vert(qp[1], qt[1])),
-                            to_string(vert(qp[2], qt[2])));
+                    if (qp.z == qp.w) {
+                        print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x)),
+                            to_string(vert(qp.y, qt.y)),
+                            to_string(vert(qp.z, qt.z)));
                     } else {
                         print(fs, "f {} {} {} {}\n",
-                            to_string(vert(qp[0], qt[0])),
-                            to_string(vert(qp[1], qt[1])),
-                            to_string(vert(qp[2], qt[2])),
-                            to_string(vert(qp[3], qt[3])));
+                            to_string(vert(qp.x, qt.x)),
+                            to_string(vert(qp.y, qt.y)),
+                            to_string(vert(qp.z, qt.z)),
+                            to_string(vert(qp.w, qt.w)));
                     }
                 } else if (!empty(surface.texturecoords) &&
                            !empty(surface.normals)) {
@@ -2772,17 +2772,17 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                     auto qp = surface.quads_positions[i];
                     auto qt = surface.quads_texturecoords[i];
                     auto qn = surface.quads_normals[i];
-                    if (qp[2] == qp[3]) {
+                    if (qp.z == qp.w) {
                         print(fs, "f {} {} {}\n",
-                            to_string(vert(qp[0], qt[0], qn[0])),
-                            to_string(vert(qp[1], qt[1], qn[1])),
-                            to_string(vert(qp[2], qt[2], qn[2])));
+                            to_string(vert(qp.x, qt.x, qn.x)),
+                            to_string(vert(qp.y, qt.y, qn.y)),
+                            to_string(vert(qp.z, qt.z, qn.z)));
                     } else {
                         print(fs, "f {} {} {} {}\n",
-                            to_string(vert(qp[0], qt[0], qn[0])),
-                            to_string(vert(qp[1], qt[1], qn[1])),
-                            to_string(vert(qp[2], qt[2], qn[2])),
-                            to_string(vert(qp[3], qt[3], qn[3])));
+                            to_string(vert(qp.x, qt.x, qn.x)),
+                            to_string(vert(qp.y, qt.y, qn.y)),
+                            to_string(vert(qp.z, qt.z, qn.z)),
+                            to_string(vert(qp.w, qt.w, qn.w)));
                     }
                 } else if (!empty(surface.normals)) {
                     auto vert = [offset](int ip, int in) {
@@ -2791,29 +2791,29 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                     };
                     auto qp = surface.quads_positions[i];
                     auto qn = surface.quads_normals[i];
-                    if (qp[2] == qp[3]) {
-                        print(fs, "f {} {} {}\n", to_string(vert(qp[0], qn[0])),
-                            to_string(vert(qp[1], qn[1])),
-                            to_string(vert(qp[2], qn[2])));
+                    if (qp.z == qp.w) {
+                        print(fs, "f {} {} {}\n", to_string(vert(qp.x, qn.x)),
+                            to_string(vert(qp.y, qn.y)),
+                            to_string(vert(qp.z, qn.z)));
                     } else {
                         print(fs, "f {} {} {} {}\n",
-                            to_string(vert(qp[0], qn[0])),
-                            to_string(vert(qp[1], qn[1])),
-                            to_string(vert(qp[2], qn[2])),
-                            to_string(vert(qp[3], qn[3])));
+                            to_string(vert(qp.x, qn.x)),
+                            to_string(vert(qp.y, qn.y)),
+                            to_string(vert(qp.z, qn.z)),
+                            to_string(vert(qp.w, qn.w)));
                     }
                 } else {
                     auto vert = [offset](int ip) {
                         return obj_vertex{ip + offset.position + 1, 0, 0};
                     };
                     auto q = surface.quads_positions[i];
-                    if (q[2] == q[3]) {
-                        print(fs, "f {} {} {}\n", to_string(vert(q[0])),
-                            to_string(vert(q[1])), to_string(vert(q[2])));
+                    if (q.z == q.w) {
+                        print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                            to_string(vert(q.y)), to_string(vert(q.z)));
                     } else {
-                        print(fs, "f {} {} {} {}\n", to_string(vert(q[0])),
-                            to_string(vert(q[1])), to_string(vert(q[2])),
-                            to_string(vert(q[3])));
+                        print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                            to_string(vert(q.y)), to_string(vert(q.z)),
+                            to_string(vert(q.w)));
                     }
                 }
             }
@@ -2830,7 +2830,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                 for (auto& n : shape.normals) print(fs, "vn {}\n", n);
                 for (auto& t : shape.texturecoords)
                     print(fs, "vt {}\n",
-                        vec2f{t[0], (flip_texcoord) ? 1 - t[1] : t[1]});
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             } else {
                 for (auto& pp : shape.positions) {
                     print(fs, "v {}\n", transform_point(instance.frame, pp));
@@ -2840,7 +2840,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                 }
                 for (auto& t : shape.texturecoords)
                     print(fs, "vt {}\n",
-                        vec2f{t[0], (flip_texcoord) ? 1 - t[1] : t[1]});
+                        vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
             }
             auto mask = obj_vertex{1, empty(shape.texturecoords) ? 0 : 1,
                 empty(shape.normals) ? 0 : 1};
@@ -2853,21 +2853,21 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                 print(fs, "p {}\n", to_string(vert(p)));
             }
             for (auto& l : shape.lines) {
-                print(fs, "l {} {}\n", to_string(vert(l[0])),
-                    to_string(vert(l[1])));
+                print(fs, "l {} {}\n", to_string(vert(l.x)),
+                    to_string(vert(l.y)));
             }
             for (auto& t : shape.triangles) {
-                print(fs, "f {} {} {}\n", to_string(vert(t[0])),
-                    to_string(vert(t[1])), to_string(vert(t[2])));
+                print(fs, "f {} {} {}\n", to_string(vert(t.x)),
+                    to_string(vert(t.y)), to_string(vert(t.z)));
             }
             for (auto& q : shape.quads) {
-                if (q[2] == q[3]) {
-                    print(fs, "f {} {} {}\n", to_string(vert(q[0])),
-                        to_string(vert(q[1])), to_string(vert(q[2])));
+                if (q.z == q.w) {
+                    print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                        to_string(vert(q.y)), to_string(vert(q.z)));
                 } else {
-                    print(fs, "f {} {} {} {}\n", to_string(vert(q[0])),
-                        to_string(vert(q[1])), to_string(vert(q[2])),
-                        to_string(vert(q[3])));
+                    print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                        to_string(vert(q.y)), to_string(vert(q.z)),
+                        to_string(vert(q.w)));
                 }
             }
             offset.position += shape.positions.size();
@@ -3000,8 +3000,8 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                 auto& gsg              = gmat.at("extensions")
                                 .at("KHR_materials_pbrSpecularGlossiness");
                 auto kb = gsg.value("diffuseFactor", vec4f{1, 1, 1, 1});
-                material.diffuse  = {kb[0], kb[1], kb[2]};
-                material.opacity  = kb[3];
+                material.diffuse  = {kb.x, kb.y, kb.z};
+                material.opacity  = kb.w;
                 material.specular = gsg.value("specularFactor", vec3f{1, 1, 1});
                 material.roughness = 1 - gsg.value("glossinessFactor", 1.0f);
                 if (gsg.count("diffuseTexture"))
@@ -3016,8 +3016,8 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                 material.gltf_textures = true;
                 auto& gmr              = gmat.at("pbrMetallicRoughness");
                 auto  kb = gmr.value("baseColorFactor", vec4f{1, 1, 1, 1});
-                material.diffuse   = {kb[0], kb[1], kb[2]};
-                material.opacity   = kb[3];
+                material.diffuse   = {kb.x, kb.y, kb.z};
+                material.opacity   = kb.w;
                 auto km            = gmr.value("metallicFactor", 1.0f);
                 material.specular  = {km, km, km};
                 material.roughness = gmr.value("roughnessFactor", 1.0f);
@@ -3142,7 +3142,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                             shape.tangentspaces.push_back(
                                 {(float)vals[i][0], (float)vals[i][1],
                                     (float)vals[i][2], (float)vals[i][3]});
-                        for (auto& t : shape.tangentspaces) t[3] = -t[3];
+                        for (auto& t : shape.tangentspaces) t.w = -t.w;
                     } else if (semantic == "RADIUS") {
                         shape.radius.reserve(vals.size());
                         for (auto i = 0; i < vals.size(); i++)
@@ -3504,13 +3504,13 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
         cjs["name"] = camera.name;
         if (!camera.orthographic) {
             cjs["type"]                       = "perspective";
-            cjs["perspective"]["aspectRatio"] = camera.film_size[0] /
-                                                camera.film_size[1];
+            cjs["perspective"]["aspectRatio"] = camera.film_size.x /
+                                                camera.film_size.y;
             cjs["perspective"]["znear"] = 0.01f;
         } else {
             cjs["type"]                  = "orthographic";
-            cjs["orthographic"]["xmag"]  = camera.film_size[0] / 2;
-            cjs["orthographic"]["ymag"]  = camera.film_size[1] / 2;
+            cjs["orthographic"]["xmag"]  = camera.film_size.x / 2;
+            cjs["orthographic"]["ymag"]  = camera.film_size.y / 2;
             cjs["orthographic"]["znear"] = 0.01f;
         }
         js["cameras"].push_back(cjs);
@@ -3534,12 +3534,12 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
             mjs["emissiveFactor"] = material.emission;
         if (material.emission_texture >= 0)
             mjs["emissiveTexture"]["index"] = material.emission_texture;
-        auto kd = vec4f{material.diffuse[0], material.diffuse[1],
-            material.diffuse[2], material.opacity};
+        auto kd = vec4f{material.diffuse.x, material.diffuse.y,
+            material.diffuse.z, material.opacity};
         if (material.base_metallic) {
             auto mmjs               = json();
             mmjs["baseColorFactor"] = kd;
-            mmjs["metallicFactor"]  = material.specular[0];
+            mmjs["metallicFactor"]  = material.specular.x;
             mmjs["roughnessFactor"] = material.roughness;
             if (material.diffuse_texture >= 0)
                 mmjs["baseColorTexture"]["index"] = material.diffuse_texture;
@@ -3902,10 +3902,10 @@ vec3f pbrt_fresnel_dielectric(float cosw, const vec3f& eta_) {
     auto eta2 = eta * eta;
 
     auto cos2t = vec3f{1, 1, 1} - vec3f{sin2, sin2, sin2} / eta2;
-    if (cos2t[0] < 0 || cos2t[1] < 0 || cos2t[2] < 0)
+    if (cos2t.x < 0 || cos2t.y < 0 || cos2t.z < 0)
         return vec3f{1, 1, 1};  // tir
 
-    auto t0 = vec3f{sqrt(cos2t[0]), sqrt(cos2t[1]), sqrt(cos2t[2])};
+    auto t0 = vec3f{sqrt(cos2t.x), sqrt(cos2t.y), sqrt(cos2t.z)};
     auto t1 = eta * t0;
     auto t2 = eta * cosw;
 
@@ -3929,10 +3929,10 @@ vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
     auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
     auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
     auto a2plusb2   = vec3f{
-        sqrt(a2plusb2_2[0]), sqrt(a2plusb2_2[1]), sqrt(a2plusb2_2[2])};
+        sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
     auto t1  = a2plusb2 + vec3f{cos2, cos2, cos2};
     auto a_2 = (a2plusb2 + t0) / 2.0f;
-    auto a   = vec3f{sqrt(a_2[0]), sqrt(a_2[1]), sqrt(a_2[2])};
+    auto a   = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
     auto t2  = 2.0f * a * cosw;
     auto rs  = (t1 - t2) / (t1 + t2);
 
@@ -4027,9 +4027,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
         auto vals = vector<vec3i>(js.size() / 3);
         for (auto i = 0; i < vals.size(); i++) {
-            vals[i][0] = (int)std::round(js.at(i * 3 + 0).get<float>());
-            vals[i][1] = (int)std::round(js.at(i * 3 + 1).get<float>());
-            vals[i][2] = (int)std::round(js.at(i * 3 + 2).get<float>());
+            vals[i].x = (int)std::round(js.at(i * 3 + 0).get<float>());
+            vals[i].y = (int)std::round(js.at(i * 3 + 1).get<float>());
+            vals[i].z = (int)std::round(js.at(i * 3 + 2).get<float>());
         }
         return vals;
     };
@@ -4041,9 +4041,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
         auto vals = vector<vec3f>(js.size() / 3);
         for (auto i = 0; i < vals.size(); i++) {
-            vals[i][0] = js.at(i * 3 + 0).get<float>();
-            vals[i][1] = js.at(i * 3 + 1).get<float>();
-            vals[i][2] = js.at(i * 3 + 2).get<float>();
+            vals[i].x = js.at(i * 3 + 0).get<float>();
+            vals[i].y = js.at(i * 3 + 1).get<float>();
+            vals[i].z = js.at(i * 3 + 2).get<float>();
         }
         return vals;
     };
@@ -4055,8 +4055,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
         auto vals = vector<vec2f>(js.size() / 2);
         for (auto i = 0; i < vals.size(); i++) {
-            vals[i][0] = js.at(i * 2 + 0).get<float>();
-            vals[i][1] = js.at(i * 2 + 1).get<float>();
+            vals[i].x = js.at(i * 2 + 0).get<float>();
+            vals[i].y = js.at(i * 2 + 1).get<float>();
         }
         return vals;
     };
@@ -4103,7 +4103,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto v             = get_vec4f(jcmd.at("values"));
             stack.back().frame = stack.back().frame *
                                  make_rotation_frame(
-                                     vec3f{v[1], v[2], v[3]}, v[0] * pif / 180);
+                                     vec3f{v.y, v.z, v.w}, v.x * pif / 180);
         } else if (cmd == "LookAt") {
             auto m             = get_mat3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame *
@@ -4193,7 +4193,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                         auto op     = vec3f{0, 0, 0};
                         auto op_txt = -1;
                         get_scaled_texture(jcmd.at("opacity"), op, op_txt);
-                        material.opacity         = (op[0] + op[1] + op[2]) / 3;
+                        material.opacity         = (op.x + op.y + op.z) / 3;
                         material.opacity_texture = op_txt;
                     }
                     material.roughness = 0;
@@ -4329,7 +4329,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                          normalize(frame.z),
                 frame.o};
             if (stack.back().reverse) {
-                for (auto& t : shape.triangles) swap(t[1], t[2]);
+                for (auto& t : shape.triangles) swap(t.y, t.z);
             }
             shape.material = stack.back().material;
             scene.shapes.push_back(shape);
@@ -4526,7 +4526,7 @@ WorldEnd
     print(fs,
         "Film \"image\" \"string filename\" [\"{}\"] "
         "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), res[0], res[1]);
+        replace_extension(filename, "exr"), res.x, res.y);
 
     // start world
     print(fs, "WorldBegin\n");
@@ -4610,8 +4610,8 @@ bool save_pbrt_scene(const string& filename, const yocto_scene& scene,
 void pbrt_flipyz_scene(yocto_scene& scene) {
     // flip meshes
     for (auto& shape : scene.shapes) {
-        for (auto& p : shape.positions) swap(p[1], p[2]);
-        for (auto& n : shape.normals) swap(n[1], n[2]);
+        for (auto& p : shape.positions) swap(p.y, p.z);
+        for (auto& n : shape.normals) swap(n.y, n.z);
     }
     for (auto& instance : scene.instances) {
         instance.frame = instance.frame *
@@ -5176,8 +5176,8 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         // write face data
         for (auto& t : triangles) print(fs, "3 {}\n", t);
         for (auto& q : quads) {
-            if (q[2] == q[3])
-                print(fs, "3 {}\n", vec3i{q[0], q[1], q[2]});
+            if (q.z == q.w)
+                print(fs, "3 {}\n", vec3i{q.x, q.y, q.z});
             else
                 print(fs, "4 {}\n", q);
         }
@@ -5199,10 +5199,10 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
             write_value(fs, t);
         }
         for (auto& q : quads) {
-            if (q[2] == q[3]) {
+            if (q.z == q.w) {
                 auto n = (byte)3;
                 write_value(fs, n);
-                write_value(fs, vec3i{q[0], q[1], q[2]});
+                write_value(fs, vec3i{q.x, q.y, q.z});
             } else {
                 auto n = (byte)4;
                 write_value(fs, n);
@@ -5306,7 +5306,7 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
     for (auto& t : texturecoords)
-        print(fs, "vt {}\n", vec2f{t[0], (flip_texcoord) ? 1 - t[1] : t[1]});
+        print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
 
     auto mask = obj_vertex{
         1, empty(texturecoords) ? 0 : 1, empty(normals) ? 0 : 1};
@@ -5319,20 +5319,20 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
         print(fs, "p {}\n", to_string(vert(p)));
     }
     for (auto& l : lines) {
-        print(fs, "l {} {}\n", to_string(vert(l[0])), to_string(vert(l[1])));
+        print(fs, "l {} {}\n", to_string(vert(l.x)), to_string(vert(l.y)));
     }
     for (auto& t : triangles) {
-        print(fs, "f {} {} {}\n", to_string(vert(t[0])), to_string(vert(t[1])),
-            to_string(vert(t[2])));
+        print(fs, "f {} {} {}\n", to_string(vert(t.x)), to_string(vert(t.y)),
+            to_string(vert(t.z)));
     }
     for (auto& q : quads) {
-        if (q[2] == q[3]) {
-            print(fs, "f {} {} {}\n", to_string(vert(q[0])),
-                to_string(vert(q[1])), to_string(vert(q[2])));
+        if (q.z == q.w) {
+            print(fs, "f {} {} {}\n", to_string(vert(q.x)),
+                to_string(vert(q.y)), to_string(vert(q.z)));
         } else {
-            print(fs, "f {} {} {} {}\n", to_string(vert(q[0])),
-                to_string(vert(q[1])), to_string(vert(q[2])),
-                to_string(vert(q[3])));
+            print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
+                to_string(vert(q.y)), to_string(vert(q.z)),
+                to_string(vert(q.w)));
         }
     }
 
@@ -5535,7 +5535,7 @@ bool save_obj_facevarying_mesh(const string& filename,
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
     for (auto& t : texturecoords)
-        print(fs, "vt {}\n", vec2f{t[0], (flip_texcoord) ? 1 - t[1] : t[1]});
+        print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
 
     auto fvmask = obj_vertex{
         1, empty(texturecoords) ? 0 : 1, empty(normals) ? 0 : 1};
@@ -5554,15 +5554,15 @@ bool save_obj_facevarying_mesh(const string& filename,
                                                  vec4i{-1, -1, -1, -1};
         auto qn = !empty(quads_normals) ? quads_normals.at(i) :
                                            vec4i{-1, -1, -1, -1};
-        if (qp[2] != qp[3]) {
-            print(fs, "f {} {} {} {}\n", to_string(fvvert(qp[0], qt[0], qn[0])),
-                to_string(fvvert(qp[1], qt[1], qn[1])),
-                to_string(fvvert(qp[2], qt[2], qn[2])),
-                to_string(fvvert(qp[3], qt[3], qn[3])));
+        if (qp.z != qp.w) {
+            print(fs, "f {} {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
+                to_string(fvvert(qp.y, qt.y, qn.y)),
+                to_string(fvvert(qp.z, qt.z, qn.z)),
+                to_string(fvvert(qp.w, qt.w, qn.w)));
         } else {
-            print(fs, "f {} {} {}\n", to_string(fvvert(qp[0], qt[0], qn[0])),
-                to_string(fvvert(qp[1], qt[1], qn[1])),
-                to_string(fvvert(qp[2], qt[2], qn[2])));
+            print(fs, "f {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
+                to_string(fvvert(qp.y, qt.y, qn.y)),
+                to_string(fvvert(qp.z, qt.z, qn.z)));
         }
     }
 
@@ -5840,7 +5840,7 @@ bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_position
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
     for (auto& t : texturecoords)
-        print(fs, "vt {}\n", vec2f{t[0], (flip_texcoord) ? 1 - t[1] : t[1]});
+        print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
     auto mask = obj_vertex{
         1, empty(texturecoords) ? 0 : 1, empty(normals) ? 0 : 1};
     auto vert = [mask](int pif, int ti, int ni) {
@@ -5853,16 +5853,16 @@ bool save_obj_fvmesh(const string& filename, const vector<vec4i>& quads_position
                                                  vec4i{-1, -1, -1, -1};
         auto qn = !empty(quads_normals) ? quads_normals.at(i) :
                                            vec4i{-1, -1, -1, -1};
-        if (qp[2] != qp[3])
+        if (qp.z != qp.w)
             print(fs, "f {} {} {} {}\n",
-                to_string(vert(qp[0], qt[0], qn[0])).c_str(),
-                to_string(vert(qp[1], qt[1], qn[1])).c_str(),
-                to_string(vert(qp[2], qt[2], qn[2])).c_str(),
-                to_string(vert(qp[3], qt[3], qn[3])).c_str());
+                to_string(vert(qp.x, qt.x, qn.x)).c_str(),
+                to_string(vert(qp.y, qt.y, qn.y)).c_str(),
+                to_string(vert(qp.z, qt.z, qn.z)).c_str(),
+                to_string(vert(qp.w, qt.w, qn.w)).c_str());
         else
-            print(fs, "f {} {} {}\n", to_string(vert(qp[0], qt[0], qn[0])).c_str(),
-                to_string(vert(qp[1], qt[1], qn[1])).c_str(),
-                to_string(vert(qp[2], qt[2], qn[2])).c_str());
+            print(fs, "f {} {} {}\n", to_string(vert(qp.x, qt.x, qn.x)).c_str(),
+                to_string(vert(qp.y, qt.y, qn.y)).c_str(),
+                to_string(vert(qp.z, qt.z, qn.z)).c_str());
     }
 
     return true;

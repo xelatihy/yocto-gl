@@ -163,33 +163,21 @@ namespace yocto {
 // Small size vectors.
 struct vec1f {
     float x = 0;
-
-    float&       operator[](int idx) { return (&x)[idx]; }
-    const float& operator[](int idx) const { return (&x)[idx]; }
 };
 struct vec2f {
     float x = 0;
     float y = 0;
-
-    float&       operator[](int idx) { return (&x)[idx]; }
-    const float& operator[](int idx) const { return (&x)[idx]; }
 };
 struct vec3f {
     float x = 0;
     float y = 0;
     float z = 0;
-
-    float&       operator[](int idx) { return (&x)[idx]; }
-    const float& operator[](int idx) const { return (&x)[idx]; }
 };
 struct vec4f {
     float x = 0;
     float y = 0;
     float z = 0;
     float w = 0;
-
-    float&       operator[](int idx) { return (&x)[idx]; }
-    const float& operator[](int idx) const { return (&x)[idx]; }
 };
 
 // Zero vector constants.
@@ -198,8 +186,12 @@ const auto zero3f = vec3f{0, 0, 0};
 const auto zero4f = vec4f{0, 0, 0, 0};
 
 // Access component by index.
+inline float  at(const vec2f& v, int i) { return *(&v.x + i); }
+inline float& at(vec2f& v, int i) { return *(&v.x + i); }
 inline float  at(const vec3f& v, int i) { return *(&v.x + i); }
 inline float& at(vec3f& v, int i) { return *(&v.x + i); }
+inline float  at(const vec4f& v, int i) { return *(&v.x + i); }
+inline float& at(vec4f& v, int i) { return *(&v.x + i); }
 
 // Access xyz component of a vec4 typically used for color operation.
 inline vec3f& xyz(const vec4f& a) { return (vec3f&)a; }
@@ -521,35 +513,23 @@ namespace yocto {
 struct vec2i {
     int x = 0;
     int y = 0;
-
-    int&       operator[](int idx) { return (&x)[idx]; }
-    const int& operator[](int idx) const { return (&x)[idx]; }
 };
 struct vec3i {
     int x = 0;
     int y = 0;
     int z = 0;
-
-    int&       operator[](int idx) { return (&x)[idx]; }
-    const int& operator[](int idx) const { return (&x)[idx]; }
 };
 struct vec4i {
     int x = 0;
     int y = 0;
     int z = 0;
     int w = 0;
-
-    int&       operator[](int idx) { return (&x)[idx]; }
-    const int& operator[](int idx) const { return (&x)[idx]; }
 };
 struct vec4b {
     byte x = 0;
     byte y = 0;
     byte z = 0;
     byte w = 0;
-
-    byte&       operator[](int idx) { return (&x)[idx]; }
-    const byte& operator[](int idx) const { return (&x)[idx]; }
 };
 
 // Zero vector constants.
@@ -557,6 +537,18 @@ const auto zero2i = vec2i{0, 0};
 const auto zero3i = vec3i{0, 0, 0};
 const auto zero4i = vec4i{0, 0, 0, 0};
 const auto zero4b = vec4b{0, 0, 0, 0};
+
+// Access component by index.
+inline int  at(const vec2i& v, int i) { return *(&v.x + i); }
+inline int& at(vec2i& v, int i) { return *(&v.x + i); }
+inline int  at(const vec3i& v, int i) { return *(&v.x + i); }
+inline int& at(vec3i& v, int i) { return *(&v.x + i); }
+inline int  at(const vec4i& v, int i) { return *(&v.x + i); }
+inline int& at(vec4i& v, int i) { return *(&v.x + i); }
+
+// Access xyz component of a vec4 typically used for color operation.
+inline vec3i& xyz(const vec4i& a) { return (vec3i&)a; }
+inline vec3i& xyz(vec4i& a) { return (vec3i&)a; }
 
 // Vector comparison operations.
 inline bool operator==(const vec2i& a, const vec2i& b) {

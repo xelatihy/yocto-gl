@@ -556,7 +556,7 @@ bool load_volume_nolog(const string& filename, volume1f& vol) {
     if (!fs) return false;
     if (!read_value(fs, vol.size)) return false;
     vol.voxels.resize(vol.size.x * vol.size.y * vol.size.z);
-    if (!read_values(fs, vol.size[0] * vol.size[1] * vol.size[2], data(vol))) return false;
+    if (!read_values(fs, vol.size.x * vol.size.y * vol.size.z, data(vol))) return false;
     return true;
 }
 bool load_volume(const string& filename, volume1f& vol) {
@@ -570,7 +570,7 @@ bool save_volume_nolog(const string& filename, const volume1f& vol) {
     if (!fs) return false;
     auto size = vol.size;
     if (!write_value(fs, size)) return false;
-    if (!write_values(fs, size[0] * size[1] * size[2], data(vol)))
+    if (!write_values(fs, size.x * size.y * size.z, data(vol)))
         return false;
     return true;
 }

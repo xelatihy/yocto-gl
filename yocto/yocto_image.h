@@ -216,9 +216,9 @@ namespace yocto {
 struct volume1f {
     volume1f() : size{0, 0, 0}, voxels{} {}
     volume1f(const vec3i& size, float value = 0)
-        : size{size}, voxels((size_t)(size.x * size.y * size[2]), value) {}
+        : size{size}, voxels((size_t)(size.x * size.y * size.z), value) {}
     volume1f(const vec3i& size, const float* values)
-        : size{size}, voxels(values, values + size.x * size.y + size[2]) {}
+        : size{size}, voxels(values, values + size.x * size.y + size.z) {}
 
     float& operator[](const vec3i& ijk) {
         return voxels[ijk.z * size.x * size.y + ijk.y * size.x + ijk.x];
@@ -309,28 +309,28 @@ namespace yocto {
 inline vec4b float_to_byte(const vec4f& a) {
     return {(byte)clamp(int(a.x * 256), 0, 255),
         (byte)clamp(int(a.y * 256), 0, 255),
-        (byte)clamp(int(a[2] * 256), 0, 255),
-        (byte)clamp(int(a[3] * 256), 0, 255)};
+        (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.w * 256), 0, 255)};
 }
 inline vec4f byte_to_float(const vec4b& a) {
-    return {a.x / 255.0f, a.y / 255.0f, a[2] / 255.0f, a[3] / 255.0f};
+    return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
 }
 
 // Conversion between linear and gamma-encoded colors.
 inline vec3f gamma_to_linear(const vec3f& srgb, float gamma) {
-    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb[2], gamma)};
+    return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
 }
 inline vec3f linear_to_gamma(const vec3f& lin, float gamma) {
     return {
-        pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin[2], 1 / gamma)};
+        pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
 }
 inline vec4f gamma_to_linear(const vec4f& srgb, float gamma) {
     return {
-        pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb[2], gamma), srgb[3]};
+        pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
 }
 inline vec4f linear_to_gamma(const vec4f& lin, float gamma) {
     return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma),
-        pow(lin[2], 1 / gamma), lin[3]};
+        pow(lin.z, 1 / gamma), lin.w};
 }
 
 // sRGB non-linear curve
@@ -352,27 +352,27 @@ inline float linear_to_srgb(float lin) {
 // Conversion between linear and srgb colors.
 inline vec3f srgb_to_linear(const vec3f& srgb) {
     return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-        srgb_to_linear(srgb[2])};
+        srgb_to_linear(srgb.z)};
 }
 inline vec3f linear_to_srgb(const vec3f& lin) {
     return {
-        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin[2])};
+        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
     return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-        srgb_to_linear(srgb[2]), srgb[3]};
+        srgb_to_linear(srgb.z), srgb.w};
 }
 inline vec4f linear_to_srgb(const vec4f& lin) {
     return {linear_to_srgb(lin.x), linear_to_srgb(lin.y),
-        linear_to_srgb(lin[2]), lin[3]};
+        linear_to_srgb(lin.z), lin.w};
 }
 
 // Approximate luminance estimate for sRGB primaries (better relative luminance)
 inline float luminance(const vec3f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a[2]);
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
 }
 inline float luminance(const vec4f& a) {
-    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a[2]);
+    return (0.2126f * a.x + 0.7152f * a.y + 0.0722 * a.z);
 }
 
 // Fitted ACES tonemapping curve.
@@ -385,7 +385,7 @@ inline float tonemap_filmic(float hdr) {
 // Apply ACES fitted curve.
 inline vec4f tonemap_filmic(const vec4f& hdr) {
     return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y),
-        tonemap_filmic(hdr[2]), hdr[3]};
+        tonemap_filmic(hdr.z), hdr.w};
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
@@ -393,7 +393,7 @@ inline vec4f tonemap_filmic(const vec4f& hdr) {
 inline vec4f tonemap_filmic(
     const vec4f& hdr, float exposure, bool filmic, bool srgb) {
     auto scale = pow(2.0f, exposure);
-    auto ldr   = vec4f{hdr.x * scale, hdr.y * scale, hdr[2] * scale, hdr[3]};
+    auto ldr   = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
     if (filmic) ldr = tonemap_filmic(ldr);
     if (srgb) ldr = linear_to_srgb(ldr);
     return ldr;
@@ -402,36 +402,36 @@ inline vec4f tonemap_filmic(
 // Convert between CIE XYZ and xyY
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
     if (xyz == zero3f) return zero3f;
-    return {xyz.x / (xyz.x + xyz.y + xyz[2]),
-        xyz.y / (xyz.x + xyz.y + xyz[2]), xyz.y};
+    return {xyz.x / (xyz.x + xyz.y + xyz.z),
+        xyz.y / (xyz.x + xyz.y + xyz.z), xyz.y};
 }
 // Convert between CIE XYZ and xyY
 inline vec3f xyY_to_xyz(const vec3f& xyY) {
     if (xyY.y == 0) return zero3f;
-    return {xyY.x * xyY[2] / xyY.y, xyY[2],
-        (1 - xyY.x - xyY.y) * xyY[2] / xyY.y};
+    return {xyY.x * xyY.z / xyY.y, xyY.z,
+        (1 - xyY.x - xyY.y) * xyY.z / xyY.y};
 }
 // Convert between CIE XYZ and RGB
 inline vec3f xyz_to_rgb(const vec3f& xyz) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     if (xyz == zero3f) return zero3f;
-    return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz[2],
-        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz[2],
-        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz[2]};
+    return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
+        -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
+        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z};
 }
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
     if (rgb == zero3f) return zero3f;
-    return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb[2],
-        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb[2],
-        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb[2]};
+    return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
+        0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
+        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
 }
 
 // Convert HSV to RGB
 inline vec3f hsv_to_rgb(const vec3f& hsv) {
     // from Imgui.cpp
-    auto h = hsv.x, s = hsv.y, v = hsv[2];
+    auto h = hsv.x, s = hsv.y, v = hsv.z;
     if (hsv.y == 0.0f) return {v, v, v};
 
     h       = fmodf(h, 1.0f) / (60.0f / 360.0f);
@@ -453,7 +453,7 @@ inline vec3f hsv_to_rgb(const vec3f& hsv) {
 }
 inline vec3f rgb_to_hsv(const vec3f& rgb) {
     // from Imgui.cpp
-    auto  r = rgb.x, g = rgb.y, b = rgb[2];
+    auto  r = rgb.x, g = rgb.y, b = rgb.z;
     float K = 0.f;
     if (g < b) {
         swap(g, b);
