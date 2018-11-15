@@ -65,82 +65,74 @@ namespace yocto {
 
 // Image container.
 struct image4f {
-    image4f() : _size{0, 0}, _pixels{} {}
+    image4f() : size{0, 0}, pixels{} {}
     image4f(const vec2i& size, const vec4f& value = {})
-        : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
+        : size{size}, pixels((size_t)(size.x * size.y), value) {}
     image4f(const vec2i& size, const vec4f* values)
-        : _size{size}, _pixels(values, values + size.x * size.y) {}
+        : size{size}, pixels(values, values + size.x * size.y) {}
 
-    bool  empty() const { return _pixels.empty(); }
-    vec2i size() const { return _size; }
-    int   width() const { return _size.x; }
-    int   height() const { return _size.y; }
+    bool  empty() const { return pixels.empty(); }
 
     void clear() {
-        _size = {0, 0};
-        _pixels.clear();
+        size = {0, 0};
+        pixels.clear();
     }
     void resize(const vec2i& size, const vec4f& value = {});
 
-    vec4f& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    vec4f& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4f& operator[](const vec2i& ij) const {
-        return _pixels[ij.y * _size.x + ij.x];
+        return pixels[ij.y * size.x + ij.x];
     }
     vec4f&       at(const vec2i& ij) { return operator[](ij); }
     const vec4f& at(const vec2i& ij) const { return operator[](ij); }
 
-    vec4f*       data() { return _pixels.data(); }
-    const vec4f* data() const { return _pixels.data(); }
+    vec4f*       data() { return pixels.data(); }
+    const vec4f* data() const { return pixels.data(); }
 
-    vec4f*       begin() { return _pixels.data(); }
-    vec4f*       end() { return _pixels.data() + _pixels.size(); }
-    const vec4f* begin() const { return _pixels.data(); }
+    vec4f*       begin() { return pixels.data(); }
+    vec4f*       end() { return pixels.data() + pixels.size(); }
+    const vec4f* begin() const { return pixels.data(); }
 
-    const vec4f* end() const { return _pixels.data() + _pixels.size(); }
+    const vec4f* end() const { return pixels.data() + pixels.size(); }
 
-   private:
-    vec2i     _size   = {0, 0};
-    vector<vec4f> _pixels = {};
+    vec2i     size   = {0, 0};
+    vector<vec4f> pixels = {};
 };
 
 // Image container.
 struct image4b {
-    image4b() : _size{0, 0}, _pixels{} {}
+    image4b() : size{0, 0}, pixels{} {}
     image4b(const vec2i& size, const vec4b& value = {})
-        : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
+        : size{size}, pixels((size_t)(size.x * size.y), value) {}
     image4b(const vec2i& size, const vec4b* values)
-        : _size{size}, _pixels(values, values + size.x * size.y) {}
+        : size{size}, pixels(values, values + size.x * size.y) {}
 
-    bool  empty() const { return _pixels.empty(); }
-    vec2i size() const { return _size; }
-    int   width() const { return _size.x; }
-    int   height() const { return _size.y; }
+    bool  empty() const { return pixels.empty(); }
 
     void clear() {
-        _size = {0, 0};
-        _pixels.clear();
+        size = {0, 0};
+        pixels.clear();
     }
     void resize(const vec2i& size, const vec4b& value = {});
 
-    vec4b& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    vec4b& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4b& operator[](const vec2i& ij) const {
-        return _pixels[ij.y * _size.x + ij.x];
+        return pixels[ij.y * size.x + ij.x];
     }
     vec4b&       at(const vec2i& ij) { return operator[](ij); }
     const vec4b& at(const vec2i& ij) const { return operator[](ij); }
 
-    vec4b*       data() { return _pixels.data(); }
-    const vec4b* data() const { return _pixels.data(); }
+    vec4b*       data() { return pixels.data(); }
+    const vec4b* data() const { return pixels.data(); }
 
-    vec4b*       begin() { return _pixels.data(); }
-    vec4b*       end() { return _pixels.data() + _pixels.size(); }
-    const vec4b* begin() const { return _pixels.data(); }
+    vec4b*       begin() { return pixels.data(); }
+    vec4b*       end() { return pixels.data() + pixels.size(); }
+    const vec4b* begin() const { return pixels.data(); }
 
-    const vec4b* end() const { return _pixels.data() + _pixels.size(); }
+    const vec4b* end() const { return pixels.data() + pixels.size(); }
 
-   private:
-    vec2i     _size   = {0, 0};
-    vector<vec4b> _pixels = {};
+    vec2i     size   = {0, 0};
+    vector<vec4b> pixels = {};
 };
 
 // Size
@@ -241,45 +233,37 @@ image4f make_turbulence_image(const vec2i& size, float scale = 1,
 namespace yocto {
 
 // Volume container.
-template <typename T>
-struct volume {
-    volume() : _size{0, 0, 0}, _voxels{} {}
-    volume(const vec3i& size, const T& value = {})
-        : _size{size}, _voxels((size_t)(size.x * size.y * size[2]), value) {}
-    volume(const vec3i& size, const T* values)
-        : _size{size}, _voxels(values, values + size.x * size.y + size[2]) {}
+struct volume1f {
+    volume1f() : size{0, 0, 0}, voxels{} {}
+    volume1f(const vec3i& size, float value = 0)
+        : size{size}, voxels((size_t)(size.x * size.y * size[2]), value) {}
+    volume1f(const vec3i& size, const float* values)
+        : size{size}, voxels(values, values + size.x * size.y + size[2]) {}
 
-    bool  empty() const { return _voxels.empty(); }
-    vec3i size() const { return _size; }
-    int   width() const { return _size.x; }
-    int   height() const { return _size.y; }
-    int   depth() const { return _size[2]; }
+    bool  empty() const { return voxels.empty(); }
 
     void clear() {
-        _size = {0, 0, 0};
-        _voxels.clear();
+        size = {0, 0, 0};
+        voxels.clear();
     }
-    void resize(const vec3i& size, const T& value = {});
+    void resize(const vec3i& size, float value = 0);
 
-    T& operator[](const vec3i& ijk) {
-        return _voxels[ijk[2] * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    float& operator[](const vec3i& ijk) {
+        return voxels[ijk[2] * size.x * size.y + ijk.y * size.x + ijk.x];
     }
-    const T& operator[](const vec3i& ijk) const {
-        return _voxels[ijk[2] * _size.x * _size.y + ijk.y * _size.x + ijk.x];
+    const float& operator[](const vec3i& ijk) const {
+        return voxels[ijk[2] * size.x * size.y + ijk.y * size.x + ijk.x];
     }
-    T&       at(const vec3i& ijk) { return operator[](ijk); }
-    const T& at(const vec3i& ijk) const { return operator[](ijk); }
 
-    T*       data() { return _voxels.data(); }
-    const T* data() const { return _voxels.data(); }
+    float*       data() { return voxels.data(); }
+    const float* data() const { return voxels.data(); }
 
-   private:
-    vec3i     _size   = {0, 0, 0};
-    vector<T> _voxels = {};
+    vec3i     size   = {0, 0, 0};
+    vector<float> voxels = {};
 };
 
 // make a simple example volume
-volume<float> make_test_volume(
+volume1f make_test_volume(
     const vec3i& size, float scale = 10, float exponent = 6);
 
 }  // namespace yocto
@@ -346,48 +330,48 @@ inline vec3f rgb_to_xyz(const vec3f& rgb);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline void image4f::resize(const vec2i& size, const vec4f& value) {
-    if (size == _size) return;
-    if (_size == zero2i) {
-        *this = image4f{size, value};
-    } else if (size == zero2i) {
+inline void image4f::resize(const vec2i& size_, const vec4f& value) {
+    if (size == size_) return;
+    if (size == zero2i) {
+        *this = image4f{size_, value};
+    } else if (size_ == zero2i) {
         clear();
     } else {
-        auto img = image4f{size, value};
-        for (auto j = 0; j < min(size.y, _size.y); j++) {
-            for (auto i = 0; i < min(size.x, _size.x); i++) {
+        auto img = image4f{size_, value};
+        for (auto j = 0; j < min(size_.y, size_.y); j++) {
+            for (auto i = 0; i < min(size_.x, size_.x); i++) {
                 img[{i, j}] = (*this)[{i, j}];
             }
         }
-        _size = size;
-        swap(_pixels, img._pixels);
+        size = size_;
+        swap(pixels, img.pixels);
     }
 }
 
-inline void image4b::resize(const vec2i& size, const vec4b& value) {
-    if (size == _size) return;
-    if (_size == zero2i) {
-        *this = image4b{size, value};
-    } else if (size == zero2i) {
+inline void image4b::resize(const vec2i& size_, const vec4b& value) {
+    if (size == size_) return;
+    if (size == zero2i) {
+        *this = image4b{size_, value};
+    } else if (size_ == zero2i) {
         clear();
     } else {
         auto img = image4b{size, value};
-        for (auto j = 0; j < min(size.y, _size.y); j++) {
-            for (auto i = 0; i < min(size.x, _size.x); i++) {
+        for (auto j = 0; j < min(size_.y, size_.y); j++) {
+            for (auto i = 0; i < min(size_.x, size_.x); i++) {
                 img[{i, j}] = (*this)[{i, j}];
             }
         }
-        _size = size;
-        swap(_pixels, img._pixels);
+        size = size_;
+        swap(pixels, img.pixels);
     }
 }
 
 // Size
 inline float get_image_aspect(const image4f& img) {
-    return (float)img.width() / (float)img.height();
+    return (float)img.size.x / (float)img.size.y;
 }
 inline float get_image_aspect(const image4b& img) {
-    return (float)img.width() / (float)img.height();
+    return (float)img.size.x / (float)img.size.y;
 }
 
 // Gets pixels in an image region
@@ -417,24 +401,23 @@ inline image4b get_image_region(const image4b& img, const bbox2i& region) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename T>
-inline void volume<T>::resize(const vec3i& size, const T& value) {
-    if (size == _size) return;
-    if (_size == zero3i) {
-        *this = volume{size, value};
-    } else if (size == zero3i) {
+inline void volume1f::resize(const vec3i& size_, float value) {
+    if (size == size_) return;
+    if (size == zero3i) {
+        *this = volume1f{size_, value};
+    } else if (size_ == zero3i) {
         clear();
     } else {
-        auto vol = volume{size, value};
-        for (auto k = 0; k < min(size[2], _size[2]); k++) {
-            for (auto j = 0; j < min(size.y, _size.y); j++) {
-                for (auto i = 0; i < min(size.x, _size.x); i++) {
+        auto vol = volume1f{size_, value};
+        for (auto k = 0; k < min(size_[2], size_[2]); k++) {
+            for (auto j = 0; j < min(size_.y, size_.y); j++) {
+                for (auto i = 0; i < min(size_.x, size_.x); i++) {
                     vol[{i, j, k}] = (*this)[{i, j, k}];
                 }
             }
         }
-        _size = size;
-        swap(_voxels, vol._voxels);
+        size = size_;
+        swap(voxels, vol.voxels);
     }
 }
 

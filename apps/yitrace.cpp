@@ -114,9 +114,9 @@ void start_rendering_async(app_state& app) {
     for (auto j = 0; j < app.image_size[1]; j++) {
         for (auto i = 0; i < app.image_size[0]; i++) {
             auto pi = clamp(
-                     i / app.preview_ratio, 0, display_preview.width() - 1),
+                     i / app.preview_ratio, 0, display_preview.size.x - 1),
                  pj = clamp(
-                     j / app.preview_ratio, 0, display_preview.height() - 1);
+                     j / app.preview_ratio, 0, display_preview.size.y - 1);
             large_preview[{i, j}] = display_preview[{pi, pj}];
         }
     }
@@ -208,7 +208,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                app.rendered_image.width(), app.rendered_image.height(),
+                app.rendered_image.size.x, app.rendered_image.size.y,
                 (int)app.trace_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
@@ -254,10 +254,10 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale, app.rendered_image.size());
+                app.image_scale, app.rendered_image.size);
             draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij[0] >= 0 && ij[0] < app.rendered_image.width() &&
-                ij[1] >= 0 && ij[1] < app.rendered_image.height()) {
+            if (ij[0] >= 0 && ij[0] < app.rendered_image.size.x &&
+                ij[1] >= 0 && ij[1] < app.rendered_image.size.y) {
                 draw_coloredit_opengl_widget(
                     win, "pixel", app.rendered_image[ij]);
             } else {
@@ -287,7 +287,7 @@ void draw(const opengl_window& win) {
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
         update_image_view(app.image_center, app.image_scale,
-            app.display_image.size(), win_size, app.zoom_to_fit);
+            app.display_image.size, win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_size != zero2i) {
                 init_opengl_texture(app.display_texture, app.image_size, false,
@@ -308,16 +308,16 @@ void draw(const opengl_window& win) {
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
                     size += bbox_size(region)[0] * bbox_size(region)[1];
-                    if (size >= app.rendered_image.width() *
-                                    app.rendered_image.height())
+                    if (size >= app.rendered_image.size.x *
+                                    app.rendered_image.size.y)
                         break;
                 }
             }
         }
         set_opengl_blending(true);
-        draw_glimage_background(app.display_image.size(), win_size,
+        draw_glimage_background(app.display_image.size, win_size,
             app.image_center, app.image_scale);
-        draw_glimage(app.display_texture, app.display_image.size(), win_size,
+        draw_glimage(app.display_texture, app.display_image.size, win_size,
             app.image_center, app.image_scale);
         set_opengl_blending(false);
     }
@@ -406,12 +406,12 @@ void run_ui(app_state& app) {
         if (app.load_done && (mouse_left || mouse_right) && alt_down &&
             !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale, app.rendered_image.size());
-            if (ij[0] < 0 || ij[0] >= app.rendered_image.width() || ij[1] < 0 ||
-                ij[1] >= app.rendered_image.height()) {
+                app.image_scale, app.rendered_image.size);
+            if (ij[0] < 0 || ij[0] >= app.rendered_image.size.x || ij[1] < 0 ||
+                ij[1] >= app.rendered_image.size.y) {
                 auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
-                    app.rendered_image.size(), {0.5f, 0.5f}, zero2f);
+                    app.rendered_image.size, {0.5f, 0.5f}, zero2f);
                 auto  isec   = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {typeid(yocto_instance), isec.instance_id};

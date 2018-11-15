@@ -234,7 +234,7 @@ bool load_pfm_image(const string& filename, image4f& img) {
     return true;
 }
 bool save_pfm_image(const string& filename, const image4f& img) {
-    if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
+    if (!save_pfm(filename.c_str(), img.size.x, img.size.y, 4,
             (float*)img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -260,7 +260,7 @@ bool load_exr_image(const string& filename, image4f& img) {
     return true;
 }
 bool save_exr_image(const string& filename, const image4f& img) {
-    if (!SaveEXR((float*)img.data(), img.width(), img.height(), 4,
+    if (!SaveEXR((float*)img.data(), img.size.x, img.size.y, 4,
             filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -295,8 +295,8 @@ bool load_stb_image(const string& filename, image4f& img) {
 
 // save an image with stbi
 bool save_png_image(const string& filename, const image4b& img) {
-    if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
-            img.data(), img.width() * 4)) {
+    if (!stbi_write_png(filename.c_str(), img.size.x, img.size.y, 4,
+            img.data(), img.size.x * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -304,7 +304,7 @@ bool save_png_image(const string& filename, const image4b& img) {
 }
 bool save_jpg_image(const string& filename, const image4b& img) {
     if (!stbi_write_jpg(
-            filename.c_str(), img.width(), img.height(), 4, img.data(), 75)) {
+            filename.c_str(), img.size.x, img.size.y, 4, img.data(), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -312,7 +312,7 @@ bool save_jpg_image(const string& filename, const image4b& img) {
 }
 bool save_tga_image(const string& filename, const image4b& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.width(), img.height(), 4, img.data())) {
+            filename.c_str(), img.size.x, img.size.y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -320,14 +320,14 @@ bool save_tga_image(const string& filename, const image4b& img) {
 }
 bool save_bmp_image(const string& filename, const image4b& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.width(), img.height(), 4, img.data())) {
+            filename.c_str(), img.size.x, img.size.y, 4, img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
 bool save_hdr_image(const string& filename, const image4f& img) {
-    if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
+    if (!stbi_write_hdr(filename.c_str(), img.size.x, img.size.y, 4,
             (float*)img.data())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -536,9 +536,9 @@ image4f resize_image(const image4f& img, const vec2i& size) {
         log_error("bad image size in resize_image");
     }
     auto res_img = image4f{get_image_size(size, get_image_aspect(img))};
-    stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
-        sizeof(vec4f) * img.width(), (float*)res_img.data(), res_img.width(),
-        res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3, 0,
+    stbir_resize_float_generic((float*)img.data(), img.size.x, img.size.y,
+        sizeof(vec4f) * img.size.x, (float*)res_img.data(), res_img.size.x,
+        res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return img;
 }
@@ -551,7 +551,7 @@ image4f resize_image(const image4f& img, const vec2i& size) {
 namespace yocto {
 
 // Loads volume data from binary format.
-bool load_volume_nolog(const string& filename, volume<float>& vol) {
+bool load_volume_nolog(const string& filename, volume1f& vol) {
     auto fs = open(filename, "r");
     if (!fs) return false;
     auto size = zero3i;
@@ -560,22 +560,22 @@ bool load_volume_nolog(const string& filename, volume<float>& vol) {
     if (!read_values(fs, size[0] * size[1] * size[2], vol.data())) return false;
     return true;
 }
-bool load_volume(const string& filename, volume<float>& vol) {
+bool load_volume(const string& filename, volume1f& vol) {
     auto scope = log_trace_scoped("loading volume {}", filename);
     return load_volume_nolog(filename, vol);
 }
 
 // Saves volume data in binary format.
-bool save_volume_nolog(const string& filename, const volume<float>& vol) {
+bool save_volume_nolog(const string& filename, const volume1f& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
-    auto size = vol.size();
+    auto size = vol.size;
     if (!write_value(fs, size)) return false;
     if (!write_values(fs, size[0] * size[1] * size[2], vol.data()))
         return false;
     return true;
 }
-bool save_volume(const string& filename, const volume<float>& vol) {
+bool save_volume(const string& filename, const volume1f& vol) {
     auto scope = log_trace_scoped("saving volume {}", filename);
     return save_volume_nolog(filename, vol);
 }

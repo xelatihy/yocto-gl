@@ -81,8 +81,8 @@ bool save_tonemapped_image(const string& filename, const image4f& hdr,
 namespace yocto {
 
 // Loads/saves a 1 channel volume.
-bool load_volume(const string& filename, volume<float>& vol);
-bool save_volume(const string& filename, const volume<float>& vol);
+bool load_volume(const string& filename, volume1f& vol);
+bool save_volume(const string& filename, const volume1f& vol);
 
 }  // namespace yocto
 

@@ -111,7 +111,7 @@ struct yocto_texture {
 struct yocto_voltexture {
     string        name             = "";
     string        filename         = "";
-    volume<float> volume_data      = {};
+    volume1f volume_data      = {};
     bool          clamp_to_edge    = false;
     bool          no_interpolation = false;
 };

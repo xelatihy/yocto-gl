@@ -101,25 +101,21 @@ struct trace_pixel {
     rng_state rng      = {};
 };
 struct trace_pixels {
-    trace_pixels() : _size{0, 0}, _pixels{} {}
+    trace_pixels() : size{0, 0}, pixels{} {}
     trace_pixels(const vec2i& size, const trace_pixel& value = {})
-        : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
+        : size{size}, pixels((size_t)(size.x * size.y), value) {}
     trace_pixels(const vec2i& size, const trace_pixel* values)
-        : _size{size}, _pixels(values, values + size.x * size.y) {}
+        : size{size}, pixels(values, values + size.x * size.y) {}
 
-    bool  empty() const { return _pixels.empty(); }
-    vec2i size() const { return _size; }
-    int   width() const { return _size.x; }
-    int   height() const { return _size.y; }
+    bool  empty() const { return pixels.empty(); }
 
-    trace_pixel& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    trace_pixel& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const trace_pixel& operator[](const vec2i& ij) const {
-        return _pixels[ij.y * _size.x + ij.x];
+        return pixels[ij.y * size.x + ij.x];
     }
 
-   private:
-    vec2i     _size   = {0, 0};
-    vector<trace_pixel> _pixels = {};
+    vec2i     size   = {0, 0};
+    vector<trace_pixel> pixels = {};
 };
 
 // Initialize state of the renderer.
