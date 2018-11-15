@@ -37,9 +37,9 @@ using namespace yocto;
 
 image4f compute_diff_image(
     const image4f& a, const image4f& b) {
-    auto diff = make_image(a.size.x, a.size.y, zero4f);
-    for (auto j = 0; j < a.size.y; j++) {
-        for (auto i = 0; i < a.size.x; i++) {
+    auto diff = make_image(a.width, a.height, zero4f);
+    for (auto j = 0; j < a.height; j++) {
+        for (auto i = 0; i < a.width; i++) {
             at(diff, i, j) = {abs(at(a, i, j).x - at(b, i, j).x),
                 abs(at(a, i, j).y - at(b, i, j).y),
                 abs(at(a, i, j).z - at(b, i, j).z),
@@ -59,9 +59,9 @@ vec4f max_diff_value(const image4f& diff) {
 }
 
 image4f display_diff(const image4f& diff) {
-    auto display = make_image(diff.size.x, diff.size.y, zero4f);
-    for (auto j = 0; j < diff.size.y; j++) {
-        for (auto i = 0; i < diff.size.x; i++) {
+    auto display = make_image(diff.width, diff.height, zero4f);
+    for (auto j = 0; j < diff.height; j++) {
+        for (auto i = 0; i < diff.width; i++) {
             auto diff_value = max(at(diff, i, j));
             at(display, i, j) = {diff_value, diff_value, diff_value, 1};
         }
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))
             log_fatal("cannot open image {}", filename2);
-        if (img1.size != img2.size) log_fatal("image size differs");
+        if (img1.width != img2.width || img1.height != img2.height) log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!empty(output)) {

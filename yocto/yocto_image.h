@@ -65,43 +65,45 @@ namespace yocto {
 
 // Image container.
 struct image4f {
-    vec2i     size   = {0, 0};
+    int width = 0;
+    int height = 0;
     vector<vec4f> pixels = {};
 };
 
 // Image container.
 struct image4b {
-    vec2i     size   = {0, 0};
+    int width = 0;
+    int height = 0;
     vector<vec4b> pixels = {};
 };
 
 // Image creation
 inline image4f make_image(int width, int height, const vec4f& value) {
-    return {{width, height}, {(size_t)(width * height), value}};
+    return {width, height, {(size_t)(width * height), value}};
 }
 inline image4b make_image(int width, int height, const vec4b& value) {
-    return {{width, height}, {(size_t)(width * height), value}};
+    return {width, height, {(size_t)(width * height), value}};
 }
 inline image4f make_image(int width, int height, const vec4f* values) {
-    return {{width, height}, {values, values + (size_t)(width * height)}};
+    return {width, height, {values, values + (size_t)(width * height)}};
 }
 inline image4b make_image(int width, int height, const vec4b* values) {
-    return {{width, height}, {values, values + (size_t)(width * height)}};
+    return {width, height, {values, values + (size_t)(width * height)}};
 }
 
 // Pixel access
-inline vec4f& at(image4f& img, const vec2i& ij) { return img.pixels[ij.y * img.size.x + ij.x]; }
-inline const vec4f& at(const image4f& img, const vec2i& ij) { return img.pixels[ij.y * img.size.x + ij.x]; }
-inline vec4b& at(image4b& img, const vec2i& ij) { return img.pixels[ij.y * img.size.x + ij.x]; }
-inline const vec4b& at(const image4b& img, const vec2i& ij) { return img.pixels[ij.y * img.size.x + ij.x]; }
-inline vec4f& at(image4f& img, int i, int j) { return img.pixels[j * img.size.x + i]; }
-inline const vec4f& at(const image4f& img, int i, int j) { return img.pixels[j * img.size.x + i]; }
-inline vec4b& at(image4b& img, int i, int j) { return img.pixels[j * img.size.x + i]; }
-inline const vec4b& at(const image4b& img, int i, int j) { return img.pixels[j * img.size.x + i]; }
+inline vec4f& at(image4f& img, const vec2i& ij) { return img.pixels[ij.y * img.width + ij.x]; }
+inline const vec4f& at(const image4f& img, const vec2i& ij) { return img.pixels[ij.y * img.width + ij.x]; }
+inline vec4b& at(image4b& img, const vec2i& ij) { return img.pixels[ij.y * img.width + ij.x]; }
+inline const vec4b& at(const image4b& img, const vec2i& ij) { return img.pixels[ij.y * img.width + ij.x]; }
+inline vec4f& at(image4f& img, int i, int j) { return img.pixels[j * img.width + i]; }
+inline const vec4f& at(const image4f& img, int i, int j) { return img.pixels[j * img.width + i]; }
+inline vec4b& at(image4b& img, int i, int j) { return img.pixels[j * img.width + i]; }
+inline const vec4b& at(const image4b& img, int i, int j) { return img.pixels[j * img.width + i]; }
 
 // Functions to query image data
-inline vec2i image_size(const image4f& img) { return img.size; }
-inline vec2i image_size(const image4b& img) { return img.size; }
+inline vec2i imsize(const image4f& img) { return {img.width, img.height}; }
+inline vec2i imsize(const image4b& img) { return {img.width, img.height}; }
 inline bool empty(const image4f& img) { return empty(img.pixels); }
 inline bool empty(const image4b& img) { return empty(img.pixels); }
 inline size_t size(const image4f& img) { return img.pixels.size(); }
@@ -209,28 +211,34 @@ namespace yocto {
 
 // Volume container.
 struct volume1f {
-    vec3i     size   = {0, 0, 0};
+    int width = 0;
+    int height = 0;
+    int depth = 0;
     vector<float> voxels = {};
-
-    float& operator[](const vec3i& ijk) {
-        return voxels[ijk.z * size.x * size.y + ijk.y * size.x + ijk.x];
-    }
-    const float& operator[](const vec3i& ijk) const {
-        return voxels[ijk.z * size.x * size.y + ijk.y * size.x + ijk.x];
-    }
 };
 
 // Image creation
 inline volume1f make_volume(int width, int height, int depth, float value) {
-    return {{width, height, depth}, vector<float>((size_t)(width * height * depth), value)};
+    return {width, height, depth, vector<float>((size_t)(width * height * depth), value)};
 }
 inline volume1f make_volume(int width, int height, int depth, const float* values) {
-    return {{width, height, depth}, vector<float>(values, values + (size_t)(width * height * depth))};
+    return {width, height, depth, vector<float>(values, values + (size_t)(width * height * depth))};
 }
 
+// Pixel access
+inline float& at(volume1f& vol, const vec3i& ijk) { return vol.voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x]; }
+inline const float& at(const volume1f& vol, const vec3i& ijk) { return vol.voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x]; }
+inline float& at(volume1f& vol, int i, int j, int k) { return vol.voxels[k * vol.width * vol.height + j * vol.width + i]; }
+inline const float& at(const volume1f& vol, int i, int j, int k) { return vol.voxels[k * vol.width * vol.height + j * vol.width + i]; }
+
 // Functions to query volume data
-inline vec3i volume_size(const volume1f& vol) { return vol.size; }
+inline vec3i volsize(const volume1f& vol) { return {vol.width, vol.height, vol.depth}; }
 inline bool empty(const volume1f& vol) { return empty(vol.voxels); }
+inline size_t size(const volume1f& vol) { return vol.voxels.size(); }
+inline float* begin(volume1f& vol) { return data(vol.voxels); }
+inline float* end(volume1f& vol) { return data(vol.voxels) + vol.voxels.size(); }
+inline const float* begin(const volume1f& vol) { return data(vol.voxels); }
+inline const float* end(const volume1f& vol) { return data(vol.voxels) + vol.voxels.size(); }
 inline float* data(volume1f& vol) { return data(vol.voxels); }
 inline const float* data(const volume1f& vol) { return data(vol.voxels); }
 

@@ -100,7 +100,7 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = make_image_regions(img.img.size.x, img.img.size.y);
+    auto regions     = make_image_regions(img.img.width, img.img.height);
     parallel_foreach(regions,
         [&img](const bbox2i& region) {
             tonemap_image_region(img.display, region, img.img, img.exposure,
@@ -188,7 +188,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 status = "done";
             draw_label_opengl_widget(win, "status", status.c_str());
             draw_label_opengl_widget(
-                win, "size", "%d x %d ", img.img.size.x, img.img.size.y);
+                win, "size", "%d x %d ", img.img.width, img.img.height);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             end_header_opengl_widget(win);
@@ -203,11 +203,11 @@ void draw_opengl_widgets(const opengl_window& win) {
         if (begin_header_opengl_widget(win, "inspect")) {
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(
-                mouse_pos, img.image_center, img.image_scale, img.img.size);
+                mouse_pos, img.image_center, img.image_scale, {img.img.width, img.img.height});
             draw_dragger_opengl_widget(win, "mouse", ij);
             auto pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img.img.size.x && ij.y >= 0 &&
-                ij.y < img.img.size.y) {
+            if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
+                ij.y < img.img.height) {
                 pixel = at(img.img, ij.x, ij.y);
             }
             draw_coloredit_opengl_widget(win, "pixel", pixel);
@@ -240,12 +240,12 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        update_image_view(img.image_center, img.image_scale, img.display.size,
+        update_image_view(img.image_center, img.image_scale, {img.display.width, img.display.height},
             win_size, img.zoom_to_fit);
         draw_glimage_background(
-            img.display.size, win_size, img.image_center, img.image_scale);
+            {img.display.width, img.display.height}, win_size, img.image_center, img.image_scale);
         set_opengl_blending(true);
-        draw_glimage(img.gl_txt, img.display.size, win_size, img.image_center,
+        draw_glimage(img.gl_txt, {img.display.width, img.display.height}, win_size, img.image_center,
             img.image_scale);
         set_opengl_blending(false);
     }
@@ -258,7 +258,7 @@ void update(app_state& app) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
             init_opengl_texture(
-                img.gl_txt, img.display.size, false, false, false, false);
+                img.gl_txt, {img.display.width, img.display.height}, false, false, false, false);
         } else {
             auto region = bbox2i{};
             while (img.display_queue.try_pop(region)) {

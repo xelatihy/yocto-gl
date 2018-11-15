@@ -182,17 +182,17 @@ inline void from_json(const json& js, bbox3f& val) {
 
 inline void to_json(json& js, const image4f& value) {
     js           = json::object();
-    js["width"]   = value.size.x;
-    js["height"]   = value.size.y;
+    js["width"]   = value.width;
+    js["height"]   = value.height;
     js["pixels"] = vector<vec4f>{
-        data(value), data(value) + value.size.x * value.size.y};
+        data(value), data(value) + value.width * value.height};
 }
 inline void to_json(json& js, const image4b& value) {
     js           = json::object();
-    js["width"]   = value.size.x;
-    js["height"]   = value.size.y;
+    js["width"]   = value.width;
+    js["height"]   = value.height;
     js["pixels"] = vector<vec4b>{
-        data(value), data(value) + value.size.x * value.size.y};
+        data(value), data(value) + value.width * value.height};
 }
 inline void from_json(const json& js, image4f& value) {
     auto width   = js.at("width").get<int>();
@@ -208,11 +208,11 @@ inline void from_json(const json& js, image4b& value) {
 }
 inline void to_json(json& js, const volume1f& value) {
     js           = json::object();
-    js["width"]   = value.size.x;
-    js["height"]   = value.size.y;
-    js["depth"]   = value.size.x;
+    js["width"]   = value.width;
+    js["height"]   = value.height;
+    js["depth"]   = value.width;
     js["voxels"] = vector<float>{data(value),
-        data(value) + value.size.x * value.size.y * value.size.z};
+        data(value) + value.width * value.height * value.depth};
 }
 inline void from_json(const json& js, volume1f& value) {
     auto width   = js.at("width").get<int>();
@@ -555,13 +555,13 @@ string base64_decode(string const& encoded_string) {
 namespace yocto {
 
 bool operator==(const image4f& a, const image4f& b) {
-    return a.size == b.size && a.pixels == b.pixels;
+    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
 }
 bool operator==(const image4b& a, const image4b& b) {
-    return a.size == b.size && a.pixels == b.pixels;
+    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
 }
 bool operator==(const volume1f& a, const volume1f& b) {
-    return a.size == b.size && a.voxels == b.voxels;
+    return a.width == b.width && a.height == b.height && a.depth == b.depth && a.voxels == b.voxels;
 }
 
 // Dumps a json value
@@ -4678,28 +4678,32 @@ bool serialize_bin_value(string& str, file_stream& fs, bool save) {
 // Serialize image
 bool serialize_bin_value(image4f& img, file_stream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, img.size)) return false;
-        if (!write_values(fs, img.size.x * img.size.y, data(img)))
+        if (!write_value(fs, img.width)) return false;
+        if (!write_value(fs, img.height)) return false;
+        if (!write_values(fs, img.width * img.height, data(img)))
             return false;
         return true;
     } else {
-        if (!read_value(fs, img.size)) return false;
-        img.pixels.resize(img.size.x * img.size.y);
-        if (!read_values(fs, img.size.x * img.size.y, data(img)))
+        if (!read_value(fs, img.width)) return false;
+        if (!read_value(fs, img.height)) return false;
+        img.pixels.resize(img.width * img.height);
+        if (!read_values(fs, img.width * img.height, data(img)))
             return false;
         return true;
     }
 }
 bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, img.size)) return false;
-        if (!write_values(fs, img.size.x * img.size.y, data(img)))
+        if (!write_value(fs, img.width)) return false;
+        if (!write_value(fs, img.height)) return false;
+        if (!write_values(fs, img.width * img.height, data(img)))
             return false;
         return true;
     } else {
-        if (!read_value(fs, img.size)) return false;
-        img.pixels.resize(img.size.x * img.size.y);
-        if (!read_values(fs, img.size.x * img.size.y, data(img)))
+        if (!read_value(fs, img.width)) return false;
+        if (!read_value(fs, img.height)) return false;
+        img.pixels.resize(img.width * img.height);
+        if (!read_values(fs, img.width * img.height, data(img)))
             return false;
         return true;
     }
@@ -4708,15 +4712,19 @@ bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
 // Serialize image
 bool serialize_bin_value(volume1f& vol, file_stream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, vol.size)) return false;
+        if (!write_value(fs, vol.width)) return false;
+        if (!write_value(fs, vol.height)) return false;
+        if (!write_value(fs, vol.depth)) return false;
         if (!write_values(
-                fs, vol.size.x * vol.size.y * vol.size.z, data(vol)))
+                fs, vol.width * vol.height * vol.depth, data(vol)))
             return false;
         return true;
     } else {
-        if (!read_value(fs, vol.size)) return false;
-        vol.voxels.resize(vol.size.x * vol.size.y * vol.size.z);
-        if (!read_values(fs, vol.size.x * vol.size.y * vol.size.z, data(vol)))
+        if (!read_value(fs, vol.width)) return false;
+        if (!read_value(fs, vol.height)) return false;
+        if (!read_value(fs, vol.depth)) return false;
+        vol.voxels.resize(vol.width * vol.height * vol.depth);
+        if (!read_values(fs, vol.width * vol.height * vol.depth, data(vol)))
             return false;
         return true;
     }

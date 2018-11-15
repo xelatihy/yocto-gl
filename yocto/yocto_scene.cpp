@@ -1228,9 +1228,9 @@ vec3f evaluate_environment_emission(
 // Check texture size
 vec2i evaluate_texture_size(const yocto_texture& texture) {
     if (!empty(texture.hdr_image)) {
-        return texture.hdr_image.size;
+        return {texture.hdr_image.width, texture.hdr_image.height};
     } else if (!empty(texture.ldr_image)) {
-        return texture.ldr_image.size;
+        return {texture.ldr_image.width, texture.ldr_image.height};
     } else {
         return zero2i;
     }
@@ -1290,9 +1290,9 @@ vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord) {
 }
 
 // Lookup a texture value
-float lookup_voltexture(const yocto_voltexture& texture, const vec3i& ijk) {
+float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k) {
     if (!empty(texture.volume_data)) {
-        return texture.volume_data[ijk];
+        return at(texture.volume_data, i, j, k);
     } else {
         return 0;
     }
@@ -1303,9 +1303,9 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
     if (empty(texture.volume_data)) return 1;
 
     // get image width/height
-    auto width  = texture.volume_data.size.x;
-    auto height = texture.volume_data.size.y;
-    auto depth  = texture.volume_data.size.z;
+    auto width  = texture.volume_data.width;
+    auto height = texture.volume_data.height;
+    auto depth  = texture.volume_data.depth;
 
     // get coordinates normalized for tiling
     auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
@@ -1324,18 +1324,18 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
         k = w < 0.5 ? k : min(k + 1, depth - 1);
-        return lookup_voltexture(texture, {i, j, k});
+        return lookup_voltexture(texture, i, j, k);
     }
 
     // trilinear interpolation
-    return lookup_voltexture(texture, {i, j, k}) * (1 - u) * (1 - v) * (1 - w) +
-           lookup_voltexture(texture, {ii, j, k}) * u * (1 - v) * (1 - w) +
-           lookup_voltexture(texture, {i, jj, k}) * (1 - u) * v * (1 - w) +
-           lookup_voltexture(texture, {i, j, kk}) * (1 - u) * (1 - v) * w +
-           lookup_voltexture(texture, {i, jj, kk}) * (1 - u) * v * w +
-           lookup_voltexture(texture, {ii, j, kk}) * u * (1 - v) * w +
-           lookup_voltexture(texture, {ii, jj, k}) * u * v * (1 - w) +
-           lookup_voltexture(texture, {ii, jj, kk}) * u * v * w;
+    return lookup_voltexture(texture, i, j, k) * (1 - u) * (1 - v) * (1 - w) +
+           lookup_voltexture(texture, ii, j, k) * u * (1 - v) * (1 - w) +
+           lookup_voltexture(texture, i, jj, k) * (1 - u) * v * (1 - w) +
+           lookup_voltexture(texture, i, j, kk) * (1 - u) * (1 - v) * w +
+           lookup_voltexture(texture, i, jj, kk) * (1 - u) * v * w +
+           lookup_voltexture(texture, ii, j, kk) * u * (1 - v) * w +
+           lookup_voltexture(texture, ii, jj, k) * u * v * (1 - w) +
+           lookup_voltexture(texture, ii, jj, kk) * u * v * w;
 }
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
@@ -1687,15 +1687,15 @@ void print_stats(const yocto_scene& scene) {
                      vert_quads_texcoord * sizeof(vec2f);
 
     for (auto& texture : scene.textures) {
-        texel_hdr += texture.hdr_image.size.x * texture.hdr_image.size.y;
-        texel_ldr += texture.ldr_image.size.x * texture.ldr_image.size.y;
+        texel_hdr += texture.hdr_image.width * texture.hdr_image.height;
+        texel_ldr += texture.ldr_image.width * texture.ldr_image.height;
     }
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
     for (auto& voltexture : scene.voltextures) {
-        voxel_hdr += voltexture.volume_data.size.x *
-                     voltexture.volume_data.size.y *
-                     voltexture.volume_data.size.z;
+        voxel_hdr += voltexture.volume_data.width *
+                     voltexture.volume_data.height *
+                     voltexture.volume_data.depth;
     }
     memory_vols = voxel_hdr * sizeof(float);
 

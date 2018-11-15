@@ -101,24 +101,19 @@ struct trace_pixel {
     rng_state rng      = {};
 };
 struct trace_pixels {
-    trace_pixels() : size{0, 0}, pixels{} {}
-    trace_pixels(const vec2i& size, const trace_pixel& value = {})
-        : size{size}, pixels((size_t)(size.x * size.y), value) {}
-    trace_pixels(const vec2i& size, const trace_pixel* values)
-        : size{size}, pixels(values, values + size.x * size.y) {}
-
-    trace_pixel& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
-    const trace_pixel& operator[](const vec2i& ij) const {
-        return pixels[ij.y * size.x + ij.x];
-    }
-
-    vec2i     size   = {0, 0};
+    int width = 0;
+    int height = 0;
     vector<trace_pixel> pixels = {};
+
+    trace_pixel& operator[](const vec2i& ij) { return pixels[ij.y * width + ij.x]; }
+    const trace_pixel& operator[](const vec2i& ij) const {
+        return pixels[ij.y * width + ij.x];
+    }
 };
 
 // Initialize state of the renderer.
-trace_pixels make_trace_pixels(
-    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
+trace_pixels make_trace_pixels(int width, int height,
+    uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {

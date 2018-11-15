@@ -1701,7 +1701,7 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(
-                    camera, {i, j}, rendered_image.size, pixel.rng);
+                    camera, {i, j}, {rendered_image.width, rendered_image.height}, pixel.rng);
                 auto [radiance, hit] = sampler(scene, bvh, lights, ray.o,
                     ray.d, pixel.rng, options.max_bounces,
                     options.environments_hidden);
@@ -1725,11 +1725,11 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
 }
 
 // Init a sequence of random number generators.
-trace_pixels make_trace_pixels(const vec2i& image_size, uint64_t seed) {
-    auto pixels = trace_pixels{image_size};
+trace_pixels make_trace_pixels(int width, int height, uint64_t seed) {
+    auto pixels = trace_pixels{width, height, vector<trace_pixel>(width*height,trace_pixel{})};
     auto rng    = make_rng(1301081);
-    for (auto j = 0; j < pixels.size.y; j++) {
-        for (auto i = 0; i < pixels.size.x; i++) {
+    for (auto j = 0; j < pixels.height; j++) {
+        for (auto i = 0; i < pixels.width; i++) {
             auto& pixel = pixels[{i, j}];
             pixel.rng   = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
@@ -1789,8 +1789,8 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto image_size = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.vertical_resolution);
     auto rendered_image = make_image(image_size.x, image_size.y, zero4f);
-    auto pixels         = make_trace_pixels(image_size, options.random_seed);
-    auto regions        = make_image_regions(rendered_image.size.x, rendered_image.size.y);
+    auto pixels         = make_trace_pixels(image_size.x, image_size.y, options.random_seed);
+    auto regions        = make_image_regions(rendered_image.width, rendered_image.height);
 
     if (options.run_serially) {
         for (auto& region : regions) {
@@ -1821,7 +1821,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
-    auto regions = make_image_regions(rendered_image.size.x, rendered_image.size.y);
+    auto regions = make_image_regions(rendered_image.width, rendered_image.height);
     auto scope   = log_trace_scoped(
         "tracing samples {}-{}", current_sample, options.num_samples);
     auto num_samples = min(
@@ -1861,8 +1861,8 @@ void trace_image_async_start(image4f& rendered_image,
     auto& camera     = scene.cameras.at(options.camera_id);
     auto  image_size = get_camera_image_size(camera, options.vertical_resolution);
     rendered_image   = make_image(image_size.x, image_size.y, zero4f);
-    pixels           = make_trace_pixels(image_size, options.random_seed);
-    auto regions     = make_image_regions(rendered_image.size.x, rendered_image.size.y);
+    pixels           = make_trace_pixels(image_size.x, image_size.y, options.random_seed);
+    auto regions     = make_image_regions(rendered_image.width, rendered_image.height);
     if (options.cancel_flag) *options.cancel_flag = false;
 
 #if 0
