@@ -38,12 +38,12 @@ namespace yocto {
 // size may have zeros in either components. In which case, we use the aspect
 // ration to compute the other.
 vec2i get_image_size(const vec2i& size, float aspect) {
-    if (size == zero_vec2i) {
+    if (size == zero2i) {
         return {(int)round(720 * aspect), 720};
-    } else if (size[1] == 0) {
-        return {size[0], (int)round(size[0] / aspect)};
-    } else if (size[0] == 0) {
-        return {(int)round(size[1] * aspect), size[1]};
+    } else if (size.y == 0) {
+        return {size.x, (int)round(size.x / aspect)};
+    } else if (size.x == 0) {
+        return {(int)round(size.y * aspect), size.y};
     } else {
         return size;
     }
@@ -52,10 +52,10 @@ vec2i get_image_size(const vec2i& size, float aspect) {
 // Splits an image into an array of regions
 vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size) {
     auto regions = vector<bbox2i>{};
-    for (auto y = 0; y < image_size[1]; y += region_size) {
-        for (auto x = 0; x < image_size[0]; x += region_size) {
-            regions.push_back({{x, y}, {min(x + region_size, image_size[0]),
-                                           min(y + region_size, image_size[1])}});
+    for (auto y = 0; y < image_size.y; y += region_size) {
+        for (auto x = 0; x < image_size.x; x += region_size) {
+            regions.push_back({{x, y}, {min(x + region_size, image_size.x),
+                                           min(y + region_size, image_size.y)}});
         }
     }
     return regions;
@@ -136,8 +136,8 @@ image<vec4f> tonemap_image(
 // Tonemap image
 void tonemap_image_region(image<vec4f>& ldr, const bbox2i& region,
     const image<vec4f>& hdr, float exposure, bool filmic, bool srgb) {
-    for (auto j = region.min[1]; j < region.max[1]; j++) {
-        for (auto i = region.min[0]; i < region.max[0]; i++) {
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
             ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
         }
     }
@@ -260,7 +260,7 @@ image<vec4f> make_uvgrid_image(const vec2i& size, int tiles, bool colored) {
                 ps = 0.2f;
             }
             auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
-            img[{i, img.height() - j - 1}] = {rgb[0], rgb[1], rgb[2], 1};
+            img[{i, img.height() - j - 1}] = {rgb.x, rgb.y, rgb[2], 1};
         }
     }
     return img;
@@ -274,15 +274,15 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale) {
         for (int i = 0; i < img.width(); i++) {
             auto i1 = (i + 1) % img.width(), j1 = (j + 1) % img.height();
             auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
-            auto g00    = (p00[0] + p00[1] + p00[2]) / 3;
-            auto g01    = (p01[0] + p01[1] + p01[2]) / 3;
-            auto g10    = (p10[0] + p10[1] + p10[2]) / 3;
+            auto g00    = (p00.x + p00.y + p00[2]) / 3;
+            auto g01    = (p01.x + p01.y + p01[2]) / 3;
+            auto g10    = (p10.x + p10.y + p10[2]) / 3;
             auto normal = vec3f{
                 scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
-            normal[1] = -normal[1];  // make green pointing up, even if y axis
+            normal.y = -normal.y;  // make green pointing up, even if y axis
                                      // points down
             normal       = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
-            norm[{i, j}] = {normal[0], normal[1], normal[2], 1};
+            norm[{i, j}] = {normal.x, normal.y, normal[2], 1};
         }
     }
     return img;
@@ -369,16 +369,16 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
     // the minimum 5 pixel diamater
     auto sun_angular_radius = 9.35e-03f / 2;  // Wikipedia
     sun_angular_radius *= sun_angle_scale;
-    sun_angular_radius = max(sun_angular_radius, 5 * pif / size[1]);
+    sun_angular_radius = max(sun_angular_radius, 5 * pif / size.y);
 
     // sun direction
     auto sun_direction = vec3f{0, cos(theta_sun), sin(theta_sun)};
 
     auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
         // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
-        //                                                zero_vec3f;
+        //                                                zero3f;
         return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 :
-                                                         zero_vec3f;
+                                                         zero3f;
     };
 
     // Make the sun sky image
@@ -397,7 +397,7 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
             sky_integral += mean(sky_col) * sin(theta);
             sun_integral += mean(sun_col) * sin(theta);
             auto col    = sky_col + sun_col;
-            img[{i, j}] = {col[0], col[1], col[2], 1};
+            img[{i, j}] = {col.x, col.y, col[2], 1};
         }
     }
 
@@ -409,20 +409,20 @@ image<vec4f> make_sunsky_image(const vec2i& size, float theta_sun,
         }
     }
 
-    if (ground_albedo != zero_vec3f) {
-        auto ground = zero_vec3f;
+    if (ground_albedo != zero3f) {
+        auto ground = zero3f;
         for (auto j = 0; j < img.height() / 2; j++) {
             auto theta = pif * ((j + 0.5f) / img.height());
             for (int i = 0; i < img.width(); i++) {
                 auto pxl   = img[{i, j}];
-                auto le    = vec3f{pxl[0], pxl[1], pxl[2]};
+                auto le    = vec3f{pxl.x, pxl.y, pxl[2]};
                 auto angle = sin(theta) * 4 * pif / (img.width() * img.height());
                 ground += le * (ground_albedo / pif) * cos(theta) * angle;
             }
         }
         for (auto j = img.height() / 2; j < img.height(); j++) {
             for (int i = 0; i < img.width(); i++) {
-                img[{i, j}] = {ground[0], ground[1], ground[2], 1};
+                img[{i, j}] = {ground.x, ground.y, ground[2], 1};
             }
         }
     }
@@ -444,7 +444,7 @@ image<vec4f> make_lights_image(const vec2i& size, const vec3f& le, int nlights,
                 auto lphi = 2 * pif * (l + 0.5f) / nlights;
                 inlight   = inlight || fabs(phi - lphi) < lwidth / 2;
             }
-            img[{i, j}] = {le[0], le[1], le[2], 1};
+            img[{i, j}] = {le.x, le.y, le[2], 1};
         }
     }
     return img;
@@ -453,7 +453,7 @@ image<vec4f> make_lights_image(const vec2i& size, const vec3f& le, int nlights,
 // Make a noise image. Wrap works only if size is a power of two.
 image<vec4f> make_noise_image(const vec2i& size, float scale, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
@@ -470,7 +470,7 @@ image<vec4f> make_noise_image(const vec2i& size, float scale, bool wrap) {
 image<vec4f> make_fbm_image(const vec2i& size, float scale, float lacunarity,
     float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
@@ -487,7 +487,7 @@ image<vec4f> make_fbm_image(const vec2i& size, float scale, float lacunarity,
 image<vec4f> make_ridge_image(const vec2i& size, float scale, float lacunarity,
     float gain, float offset, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
@@ -505,7 +505,7 @@ image<vec4f> make_ridge_image(const vec2i& size, float scale, float lacunarity,
 image<vec4f> make_turbulence_image(const vec2i& size, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
     auto img    = image<vec4f>{size};
-    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero_vec3i;
+    auto wrap3i = (wrap) ? vec3i{img.width(), img.height(), 2} : zero3i;
     for (auto j = 0; j < img.height(); j++) {
         for (auto i = 0; i < img.width(); i++) {
             auto p = vec3f{i / (float)img.width(), j / (float)img.height(), 0.5f} *
@@ -533,9 +533,9 @@ volume<float> make_test_volume(const vec3i& size, float scale, float exponent) {
         for (auto j = 0; j < vol.height(); j++) {
             for (auto i = 0; i < vol.width(); i++) {
                 auto p = vec3f{
-                    i / (float)size[0], j / (float)size[1], k / (float)size[2]};
+                    i / (float)size.x, j / (float)size.y, k / (float)size[2]};
                 float value = pow(
-                    max(max(cos(scale * p[0]), cos(scale * p[1])), 0.0f),
+                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
                     exponent);
                 vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
             }

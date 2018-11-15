@@ -108,7 +108,7 @@ trace_lights make_trace_lights(const yocto_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
-    vec3f     radiance = zero_vec3f;
+    vec3f     radiance = zero3f;
     int       hits     = 0;
     int       samples  = 0;
     rng_state rng      = {};

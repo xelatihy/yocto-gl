@@ -35,24 +35,22 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
-template <typename T>
-image<vec<T, 4>> compute_diff_image(
-    const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
-    auto diff = image<vec<T, 4>>{a.size()};
+image<vec4f> compute_diff_image(
+    const image<vec4f>& a, const image<vec4f>& b) {
+    auto diff = image<vec4f>{a.size()};
     for (auto j = 0; j < a.height(); j++) {
         for (auto i = 0; i < a.width(); i++) {
-            diff[{i, j}] = {(T)abs(a[{i, j}][0] - b[{i, j}][0]),
-                (T)abs(a[{i, j}][1] - b[{i, j}][1]),
-                (T)abs(a[{i, j}][2] - b[{i, j}][2]),
-                (T)abs(a[{i, j}][3] - b[{i, j}][3])};
+            diff[{i, j}] = {abs(a[{i, j}][0] - b[{i, j}][0]),
+                abs(a[{i, j}][1] - b[{i, j}][1]),
+                abs(a[{i, j}][2] - b[{i, j}][2]),
+                abs(a[{i, j}][3] - b[{i, j}][3])};
         }
     }
     return diff;
 }
 
-template <typename T>
-vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
-    auto max_value = vec<T, 4>{0, 0, 0, 0};
+vec4f max_diff_value(const image<vec4f>& diff) {
+    auto max_value = vec4f{0, 0, 0, 0};
     for (auto& c : diff) {
         max_value = {max(c[0], max_value[0]), max(c[1], max_value[1]),
             max(c[2], max_value[2]), max(c[3], max_value[3])};
@@ -60,13 +58,12 @@ vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
     return max_value;
 }
 
-template <typename T>
-image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
-    auto display = image<vec<T, 4>>{diff.size()};
+image<vec4f> display_diff(const image<vec4f>& diff) {
+    auto display = image<vec4f>{diff.size()};
     for (auto j = 0; j < diff.height(); j++) {
         for (auto i = 0; i < diff.width(); i++) {
             auto diff_value = max(diff[{i, j}]);
-            display[{i, j}] = {diff_value, diff_value, diff_value, alpha};
+            display[{i, j}] = {diff_value, diff_value, diff_value, 1};
         }
     }
     return display;
@@ -87,7 +84,6 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // check image type
-    if (is_hdr_filename(filename1) && is_hdr_filename(filename2)) {
         auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
         if (!load_image(filename1, img1))
             log_fatal("cannot open image {}", filename1);
@@ -97,7 +93,7 @@ int main(int argc, char* argv[]) {
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
         if (!output.empty()) {
-            auto display = display_diff(diff, 1.0f);
+            auto display = display_diff(diff);
             if (!save_image(output, display))
                 log_fatal("cannot save image {}", output);
         }
@@ -105,27 +101,6 @@ int main(int argc, char* argv[]) {
             log_info("image max difference: {}", max_diff);
             log_fatal("image content differs");
         }
-    } else if (!is_hdr_filename(filename1) && !is_hdr_filename(filename2)) {
-        auto img1 = image<vec4b>{}, img2 = image<vec4b>{};
-        if (!load_image(filename1, img1))
-            log_fatal("cannot open image {}", filename1);
-        if (!load_image(filename2, img2))
-            log_fatal("cannot open image {}", filename2);
-        if (img1.size() != img2.size()) log_fatal("image size differs");
-        auto diff     = compute_diff_image(img1, img2);
-        auto max_diff = max_diff_value(diff);
-        if (!output.empty()) {
-            auto display = display_diff(diff, (byte)255);
-            if (!save_image(output, display))
-                log_fatal("cannot save image {}", output);
-        }
-        if (max(max_diff) > threshold) {
-            log_info("image max difference: {}", max_diff);
-            log_fatal("image content differs");
-        }
-    } else {
-        log_fatal("different image types");
-    }
 
     // done
     return 0;

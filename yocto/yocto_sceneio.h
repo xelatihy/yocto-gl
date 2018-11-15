@@ -285,7 +285,7 @@ struct obj_camera {
 struct obj_environment {
     string           name;                      // name
     frame3f          frame = identity_frame3f;  // transform
-    vec3f            ke    = zero_vec3f;        // emission color
+    vec3f            ke    = zero3f;        // emission color
     obj_texture_info ke_txt;                    // emission texture
 };
 

@@ -532,7 +532,7 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 
 // Resize image.
 image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
-    if (size == zero_vec2i) {
+    if (size == zero2i) {
         log_error("bad image size in resize_image");
     }
     auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
@@ -554,7 +554,7 @@ namespace yocto {
 bool load_volume_nolog(const string& filename, volume<float>& vol) {
     auto fs = open(filename, "r");
     if (!fs) return false;
-    auto size = zero_vec3i;
+    auto size = zero3i;
     if (!read_value(fs, size)) return false;
     vol.resize(size);
     if (!read_values(fs, size[0] * size[1] * size[2], vol.data())) return false;

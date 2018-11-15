@@ -50,7 +50,7 @@ struct app_state {
     bool                display_filmic   = false;
     bool                display_srgb     = true;
     int                 preview_ratio    = 8;
-    vec2i               image_size       = zero_vec2i;
+    vec2i               image_size       = zero2i;
 
     // scene
     yocto_scene scene = {};
@@ -68,7 +68,7 @@ struct app_state {
     concurrent_queue<bbox2i> trace_queue   = {};
 
     // view image
-    vec2f                         image_center = zero_vec2f;
+    vec2f                         image_center = zero2f;
     float                         image_scale  = 1;
     bool                          zoom_to_fit  = true;
     bool                          widgets_open = false;
@@ -121,7 +121,7 @@ void start_rendering_async(app_state& app) {
         }
     }
     app.preview_image = large_preview;
-    app.trace_queue.push({zero_vec2i, zero_vec2i});
+    app.trace_queue.push({zero2i, zero2i});
 
     app.trace_options.cancel_flag = &app.trace_stop;
     trace_image_async_start(app.rendered_image, app.trace_pixels, app.scene,
@@ -261,7 +261,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 draw_coloredit_opengl_widget(
                     win, "pixel", app.rendered_image[ij]);
             } else {
-                auto zero4f_ = zero_vec4f;
+                auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);
             }
             end_header_opengl_widget(win);
@@ -289,7 +289,7 @@ void draw(const opengl_window& win) {
         update_image_view(app.image_center, app.image_scale,
             app.display_image.size(), win_size, app.zoom_to_fit);
         if (!app.display_texture) {
-            if (app.image_size != zero_vec2i) {
+            if (app.image_size != zero2i) {
                 init_opengl_texture(app.display_texture, app.image_size, false,
                     false, false, false);
             }
@@ -297,7 +297,7 @@ void draw(const opengl_window& win) {
             auto region = bbox2i{};
             auto size   = 0;
             while (app.trace_queue.try_pop(region)) {
-                if (bbox_size(region) == zero_vec2i) {
+                if (bbox_size(region) == zero2i) {
                     update_opengl_texture(
                         app.display_texture, app.preview_image, false);
                     break;
@@ -373,7 +373,7 @@ void run_ui(app_state& app) {
     init_opengl_widgets(win);
 
     // loop
-    auto mouse_pos = zero_vec2f, last_pos = zero_vec2f;
+    auto mouse_pos = zero2f, last_pos = zero2f;
     while (!should_opengl_window_close(win)) {
         last_pos            = mouse_pos;
         mouse_pos           = get_opengl_mouse_pos(win);
@@ -388,8 +388,8 @@ void run_ui(app_state& app) {
             !widgets_active) {
             auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
             auto  dolly  = 0.0f;
-            auto  pan    = zero_vec2f;
-            auto  rotate = zero_vec2f;
+            auto  pan    = zero2f;
+            auto  rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos[0] - last_pos[0]) / 100.0f;
@@ -411,7 +411,7 @@ void run_ui(app_state& app) {
                 ij[1] >= app.rendered_image.height()) {
                 auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
-                    app.rendered_image.size(), {0.5f, 0.5f}, zero_vec2f);
+                    app.rendered_image.size(), {0.5f, 0.5f}, zero2f);
                 auto  isec   = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {typeid(yocto_instance), isec.instance_id};

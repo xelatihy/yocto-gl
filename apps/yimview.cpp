@@ -33,8 +33,8 @@
 using namespace yocto;
 
 struct image_stats {
-    bbox4f pxl_bounds = {zero_vec4f, zero_vec4f};
-    bbox1f lum_bounds = {zero_vec1f, zero_vec1f};
+    bbox4f pxl_bounds = {zero4f, zero4f};
+    bbox1f lum_bounds = {0, 0};
 };
 
 struct app_image {
@@ -64,7 +64,7 @@ struct app_image {
     string                   error_msg = "";
 
     // viewing properties
-    vec2f image_center = zero_vec2f;
+    vec2f image_center = zero2f;
     float image_scale  = 1;
     bool  zoom_to_fit  = false;
 
@@ -91,7 +91,7 @@ void update_stats_async(app_image& img) {
     img.stats.lum_bounds = invalid_bbox1f;
     for (auto& p : img.img) {
         img.stats.pxl_bounds += p;
-        img.stats.lum_bounds += luminance(make_shorter_vec(p));
+        img.stats.lum_bounds += luminance(xyz(p));
     }
     img.stats_done = true;
 }
@@ -205,7 +205,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto ij        = get_image_coords(
                 mouse_pos, img.image_center, img.image_scale, img.img.size());
             draw_dragger_opengl_widget(win, "mouse", ij);
-            auto pixel = zero_vec4f;
+            auto pixel = zero4f;
             if (ij[0] >= 0 && ij[0] < img.img.width() && ij[1] >= 0 &&
                 ij[1] < img.img.height()) {
                 pixel = img.img[ij];
@@ -286,7 +286,7 @@ void run_ui(app_state& app) {
     init_opengl_widgets(win);
 
     // window values
-    auto mouse_pos = zero_vec2f, last_pos = zero_vec2f;
+    auto mouse_pos = zero2f, last_pos = zero2f;
     while (!should_opengl_window_close(win)) {
         last_pos            = mouse_pos;
         mouse_pos           = get_opengl_mouse_pos(win);

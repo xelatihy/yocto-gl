@@ -68,7 +68,7 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
         if (instance.shape < 0) continue;
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[shape.material];
-        if (material.emission == zero_vec3f) continue;
+        if (material.emission == zero3f) continue;
         if (lights.positions.size() >= 16) break;
         auto bbox = compute_shape_bounds(shape);
         auto pos  = (bbox.max + bbox.min) / 2;
@@ -137,7 +137,7 @@ struct app_state {
     vector<pair<type_index, int>> update_list;
     float                         time       = 0;
     string                        anim_group = "";
-    vec2f                         time_range = zero_vec2f;
+    vec2f                         time_range = zero2f;
     bool                          animate    = false;
 
     // app status
@@ -568,11 +568,11 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         set_opengl_uniform(
             state.program, "elem_faceted", (int)shape.normals.empty());
         set_opengl_vertexattrib(
-            state.program, "vert_pos", vbos.positions_buffer, zero_vec3f);
+            state.program, "vert_pos", vbos.positions_buffer, zero3f);
         set_opengl_vertexattrib(
-            state.program, "vert_norm", vbos.normals_buffer, zero_vec3f);
+            state.program, "vert_norm", vbos.normals_buffer, zero3f);
         set_opengl_vertexattrib(state.program, "vert_texcoord",
-            vbos.texturecoords_buffer, zero_vec2f);
+            vbos.texturecoords_buffer, zero2f);
         set_opengl_vertexattrib(
             state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
         set_opengl_vertexattrib(state.program, "vert_tangsp",
@@ -678,11 +678,11 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             set_opengl_uniform(
                 state.program, "elem_faceted", (int)surface.normals.empty());
             set_opengl_vertexattrib(
-                state.program, "vert_pos", vbos.positions_buffer, zero_vec3f);
+                state.program, "vert_pos", vbos.positions_buffer, zero3f);
             set_opengl_vertexattrib(
-                state.program, "vert_norm", vbos.normals_buffer, zero_vec3f);
+                state.program, "vert_norm", vbos.normals_buffer, zero3f);
             set_opengl_vertexattrib(state.program, "vert_texcoord",
-                vbos.texturecoords_buffer, zero_vec2f);
+                vbos.texturecoords_buffer, zero2f);
             set_opengl_vertexattrib(state.program, "vert_color",
                 vbos.colors_buffer, vec4f{1, 1, 1, 1});
             set_opengl_vertexattrib(state.program, "vert_tangsp",
@@ -727,7 +727,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         options.far_plane);
 
     bind_opengl_program(state.program);
-    set_opengl_uniform(state.program, "cam_pos", camera.frame.origin);
+    set_opengl_uniform(state.program, "cam_pos", camera.frame.o);
     set_opengl_uniform(state.program, "cam_xform_inv", camera_view);
     set_opengl_uniform(state.program, "cam_proj", camera_proj);
     set_opengl_uniform(state.program, "eyelight", (int)options.eyelight);
@@ -742,7 +742,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             if (instance.shape < 0) continue;
             auto& shape    = scene.shapes[instance.shape];
             auto& material = scene.materials[shape.material];
-            if (material.emission == zero_vec3f) continue;
+            if (material.emission == zero3f) continue;
             if (lights_pos.size() >= 16) break;
             auto bbox = compute_shape_bounds(shape);
             auto pos  = (bbox.max + bbox.min) / 2;
@@ -768,7 +768,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             lights_ke.push_back(ke);
             lights_type.push_back(0);
         }
-        set_opengl_uniform(state.program, "lamb", zero_vec3f);
+        set_opengl_uniform(state.program, "lamb", zero3f);
         set_opengl_uniform(state.program, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = to_string(i);
@@ -930,7 +930,7 @@ void draw_widgets(const opengl_window& win) {
                 win, "wireframe", app.draw_options.wireframe);
             continue_opengl_widget_line(win);
             draw_checkbox_opengl_widget(win, "edges", app.draw_options.edges);
-            if (app.time_range != zero_vec2f) {
+            if (app.time_range != zero2f) {
                 draw_slider_opengl_widget(win, "time", app.time,
                     app.time_range[0], app.time_range[1]);
                 draw_textinput_opengl_widget(win, "anim group", app.anim_group);
@@ -1036,7 +1036,7 @@ void run_ui(app_state& app) {
     update_transforms(app.scene, app.time);
 
     // loop
-    auto mouse_pos = zero_vec2f, last_pos = zero_vec2f;
+    auto mouse_pos = zero2f, last_pos = zero2f;
     while (!should_opengl_window_close(win)) {
         last_pos            = mouse_pos;
         mouse_pos           = get_opengl_mouse_pos(win);
@@ -1050,8 +1050,8 @@ void run_ui(app_state& app) {
         if (app.load_done && (mouse_left || mouse_right) && !alt_down &&
             !widgets_active) {
             auto dolly  = 0.0f;
-            auto pan    = zero_vec2f;
-            auto rotate = zero_vec2f;
+            auto pan    = zero2f;
+            auto rotate = zero2f;
             if (mouse_left && !shift_down)
                 rotate = (mouse_pos - last_pos) / 100.0f;
             if (mouse_right) dolly = (mouse_pos[0] - last_pos[0]) / 100.0f;
