@@ -927,7 +927,10 @@ bool serialize_json_object(
             js, value.orthographic, "orthographic", def.orthographic, save))
         return false;
     if (!serialize_json_value(
-            js, value.film_size, "film_size", def.film_size, save))
+            js, value.film_width, "film_width", def.film_width, save))
+        return false;
+    if (!serialize_json_value(
+            js, value.film_height, "film_height", def.film_height, save))
         return false;
     if (!serialize_json_value(
             js, value.focal_length, "focal_length", def.focal_length, save))
@@ -2094,7 +2097,8 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
             auto camera = obj_camera();
             parse_value(view, camera.name);
             parse_value(view, camera.ortho);
-            parse_value(view, camera.film);
+            parse_value(view, camera.width);
+            parse_value(view, camera.height);
             parse_value(view, camera.focal);
             parse_value(view, camera.focus);
             parse_value(view, camera.aperture);
@@ -2536,7 +2540,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         auto camera           = yocto_camera();
         camera.name           = ocam.name;
         camera.orthographic   = ocam.ortho;
-        camera.film_size      = ocam.film;
+        camera.film_width     = ocam.width;
+        camera.film_height    = ocam.height;
         camera.focal_length   = ocam.focal;
         camera.focus_distance = ocam.focus;
         camera.lens_aperture  = ocam.aperture;
@@ -2666,8 +2671,8 @@ bool save_objx(const string& filename, const yocto_scene& scene) {
 
     // cameras
     for (auto& camera : scene.cameras) {
-        print(fs, "c {} {} {} {} {} {} {}\n", camera.name,
-            (int)camera.orthographic, camera.film_size, camera.focal_length,
+        print(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
+            (int)camera.orthographic, camera.film_width, camera.film_height, camera.focal_length,
             camera.focus_distance, camera.lens_aperture, camera.frame);
     }
 
@@ -3503,13 +3508,13 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
         cjs["name"] = camera.name;
         if (!camera.orthographic) {
             cjs["type"]                       = "perspective";
-            cjs["perspective"]["aspectRatio"] = camera.film_size.x /
-                                                camera.film_size.y;
+            cjs["perspective"]["aspectRatio"] = camera.film_width /
+                                                camera.film_height;
             cjs["perspective"]["znear"] = 0.01f;
         } else {
             cjs["type"]                  = "orthographic";
-            cjs["orthographic"]["xmag"]  = camera.film_size.x / 2;
-            cjs["orthographic"]["ymag"]  = camera.film_size.y / 2;
+            cjs["orthographic"]["xmag"]  = camera.film_width / 2;
+            cjs["orthographic"]["ymag"]  = camera.film_height / 2;
             cjs["orthographic"]["znear"] = 0.01f;
         }
         js["cameras"].push_back(cjs);
@@ -4802,7 +4807,8 @@ bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
     if (!serialize_bin_value(camera.name, fs, save)) return false;
     if (!serialize_bin_value(camera.frame, fs, save)) return false;
     if (!serialize_bin_value(camera.orthographic, fs, save)) return false;
-    if (!serialize_bin_value(camera.film_size, fs, save)) return false;
+    if (!serialize_bin_value(camera.film_width, fs, save)) return false;
+    if (!serialize_bin_value(camera.film_height, fs, save)) return false;
     if (!serialize_bin_value(camera.focal_length, fs, save)) return false;
     if (!serialize_bin_value(camera.focus_distance, fs, save)) return false;
     if (!serialize_bin_value(camera.lens_aperture, fs, save)) return false;

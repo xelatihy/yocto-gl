@@ -226,13 +226,14 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_slider_opengl_widget(
         win, "frame.o", value.frame.o, -10, 10);
     edited += draw_checkbox_opengl_widget(win, "ortho", value.orthographic);
-    edited += draw_slider_opengl_widget(win, "film", value.film_size, 0.01f, 1);
+    edited += draw_slider_opengl_widget(win, "film width", value.film_width, 0.01f, 1);
+    edited += draw_slider_opengl_widget(win, "film height", value.film_height, 0.01f, 1);
     edited += draw_slider_opengl_widget(
-        win, "focal", value.focal_length, 0.01f, 1);
+        win, "focal length", value.focal_length, 0.01f, 1);
     edited += draw_slider_opengl_widget(
-        win, "focus", value.focus_distance, 0.01f, 1000);
+        win, "focus distance", value.focus_distance, 0.01f, 1000);
     edited += draw_slider_opengl_widget(
-        win, "aperture", value.lens_aperture, 0, 5);
+        win, "lens aperture", value.lens_aperture, 0, 5);
     return edited;
 }
 

@@ -1340,27 +1340,29 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float get_camera_fovx(const yocto_camera& camera) {
-    return 2 * atan(camera.film_size.x / (2 * camera.focal_length));
+    return 2 * atan(camera.film_width / (2 * camera.focal_length));
 }
 float get_camera_fovy(const yocto_camera& camera) {
-    return 2 * atan(camera.film_size.y / (2 * camera.focal_length));
+    return 2 * atan(camera.film_height / (2 * camera.focal_length));
 }
 float get_camera_aspect(const yocto_camera& camera) {
-    return camera.film_size.x / camera.film_size.y;
+    return camera.film_width / camera.film_height;
 }
 vec2i get_camera_image_size(const yocto_camera& camera, int yresolution) {
-    return {(int)round(yresolution * camera.film_size.x / camera.film_size.y), yresolution};
+    return {(int)round(yresolution * camera.film_width / camera.film_height), yresolution};
 }
 void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
-    camera.film_size    = {width, width / aspect};
-    camera.focal_length = camera.film_size.y / (2 * tan(fovy / 2));
+    camera.film_width    = width;
+    camera.film_height    = width / aspect;
+    camera.focal_length = camera.film_height / (2 * tan(fovy / 2));
 }
 
 // add missing camera
 void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction, const vec2f& film, float focal) {
+    const vec3f& view_direction, float width, float height, float focal) {
     camera.orthographic = false;
-    if (film != zero2f) camera.film_size = film;
+    if (width != 0) camera.film_width = width;
+    if (height != 0) camera.film_height = height;
     if (focal != 0) camera.focal_length = focal;
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
     auto bbox_radius = length(bbox.max - bbox.min) / 2;
@@ -1390,8 +1392,8 @@ ray3f evaluate_camera_ray(
     }
     auto e   = vec3f{lens_uv.x * camera.lens_aperture,
         lens_uv.y * camera.lens_aperture, 0};
-    auto q   = vec3f{camera.film_size.x * (0.5f - image_uv.x),
-        camera.film_size.y * (image_uv.y - 0.5f), distance};
+    auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
+        camera.film_height * (image_uv.y - 0.5f), distance};
     auto ray = make_ray(transform_point(camera.frame, e),
         transform_direction(camera.frame, normalize(e - q)));
     return ray;

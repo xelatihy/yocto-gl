@@ -82,7 +82,8 @@ struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;
     bool    orthographic   = false;
-    vec2f   film_size      = {0.036f, 0.024f};
+    float   film_width      = 0.036f;
+    float   film_height      = 0.024f;
     float   focal_length   = 0.050f;
     float   focus_distance = float_max;
     float   lens_aperture  = 0;
@@ -428,7 +429,7 @@ void  set_camera_fovy(
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction = zero3f, const vec2f& film = zero2f,
+    const vec3f& view_direction = zero3f, float width = 0, float height = 0,
     float focal = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.

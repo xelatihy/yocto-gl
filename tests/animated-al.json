@@ -17,10 +17,8 @@
                     0
                 ]
             },
-            "film_size": [
-                0.036,
-                0.015
-            ]
+            "film_width": 0.036,
+            "film_height": 0.015
         }
     ],
     "textures": [
