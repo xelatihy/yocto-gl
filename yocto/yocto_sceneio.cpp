@@ -4684,9 +4684,8 @@ bool serialize_bin_value(image4f& img, file_stream& fs, bool save) {
             return false;
         return true;
     } else {
-        auto size = zero2i;
-        if (!read_value(fs, size)) return false;
-        img.resize(size);
+        if (!read_value(fs, img.size)) return false;
+        img.pixels.resize(img.size.x * img.size.y);
         if (!read_values(fs, img.size.x * img.size.y, img.data()))
             return false;
         return true;
@@ -4699,9 +4698,8 @@ bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
             return false;
         return true;
     } else {
-        auto size = zero2i;
-        if (!read_value(fs, size)) return false;
-        img.resize(size);
+        if (!read_value(fs, img.size)) return false;
+        img.pixels.resize(img.size.x * img.size.y);
         if (!read_values(fs, img.size.x * img.size.y, img.data()))
             return false;
         return true;
@@ -4717,9 +4715,8 @@ bool serialize_bin_value(volume1f& vol, file_stream& fs, bool save) {
             return false;
         return true;
     } else {
-        auto size = zero3i;
-        if (!read_value(fs, size)) return false;
-        vol.resize(size);
+        if (!read_value(fs, vol.size)) return false;
+        vol.voxels.resize(vol.size.x * vol.size.y * vol.size.z);
         if (!read_values(fs, vol.size.x * vol.size.y * vol.size.z, vol.data()))
             return false;
         return true;

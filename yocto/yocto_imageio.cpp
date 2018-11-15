@@ -535,7 +535,7 @@ image4f resize_image(const image4f& img, const vec2i& size) {
     if (size == zero2i) {
         log_error("bad image size in resize_image");
     }
-    auto res_img = image4f{get_image_size(size, get_image_aspect(img))};
+    auto res_img = image4f{get_image_size(size, (float)img.size.x / (float)img.size.y)};
     stbir_resize_float_generic((float*)img.data(), img.size.x, img.size.y,
         sizeof(vec4f) * img.size.x, (float*)res_img.data(), res_img.size.x,
         res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,
@@ -554,10 +554,9 @@ namespace yocto {
 bool load_volume_nolog(const string& filename, volume1f& vol) {
     auto fs = open(filename, "r");
     if (!fs) return false;
-    auto size = zero3i;
-    if (!read_value(fs, size)) return false;
-    vol.resize(size);
-    if (!read_values(fs, size[0] * size[1] * size[2], vol.data())) return false;
+    if (!read_value(fs, vol.size)) return false;
+    vol.voxels.resize(vol.size.x * vol.size.y * vol.size.z);
+    if (!read_values(fs, vol.size[0] * vol.size[1] * vol.size[2], vol.data())) return false;
     return true;
 }
 bool load_volume(const string& filename, volume1f& vol) {

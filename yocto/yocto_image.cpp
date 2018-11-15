@@ -49,6 +49,26 @@ vec2i get_image_size(const vec2i& size, float aspect) {
     }
 }
 
+// Gets pixels in an image region
+image4f get_image_region(const image4f& img, const bbox2i& region) {
+    auto clipped = image4f{bbox_size(region)};
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+        }
+    }
+    return clipped;
+}
+image4b get_image_region(const image4b& img, const bbox2i& region) {
+    auto clipped = image4b{bbox_size(region)};
+    for (auto j = 0; j < bbox_size(region).y; j++) {
+        for (auto i = 0; i < bbox_size(region).x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
+        }
+    }
+    return clipped;
+}
+
 // Splits an image into an array of regions
 vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size) {
     auto regions = vector<bbox2i>{};

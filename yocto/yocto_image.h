@@ -73,18 +73,10 @@ struct image4f {
 
     bool  empty() const { return pixels.empty(); }
 
-    void clear() {
-        size = {0, 0};
-        pixels.clear();
-    }
-    void resize(const vec2i& size, const vec4f& value = {});
-
     vec4f& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4f& operator[](const vec2i& ij) const {
         return pixels[ij.y * size.x + ij.x];
     }
-    vec4f&       at(const vec2i& ij) { return operator[](ij); }
-    const vec4f& at(const vec2i& ij) const { return operator[](ij); }
 
     vec4f*       data() { return pixels.data(); }
     const vec4f* data() const { return pixels.data(); }
@@ -109,18 +101,10 @@ struct image4b {
 
     bool  empty() const { return pixels.empty(); }
 
-    void clear() {
-        size = {0, 0};
-        pixels.clear();
-    }
-    void resize(const vec2i& size, const vec4b& value = {});
-
     vec4b& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4b& operator[](const vec2i& ij) const {
         return pixels[ij.y * size.x + ij.x];
     }
-    vec4b&       at(const vec2i& ij) { return operator[](ij); }
-    const vec4b& at(const vec2i& ij) const { return operator[](ij); }
 
     vec4b*       data() { return pixels.data(); }
     const vec4b* data() const { return pixels.data(); }
@@ -135,16 +119,12 @@ struct image4b {
     vector<vec4b> pixels = {};
 };
 
-// Size
-inline float get_image_aspect(const image4f& img);
-inline float get_image_aspect(const image4b& img);
-
 // Splits an image into an array of regions
 vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size = 32);
 
 // Gets pixels in an image region
-inline image4f get_image_region(const image4f& img, const bbox2i& region);
-inline image4b get_image_region(const image4b& img, const bbox2i& region);
+image4f get_image_region(const image4f& img, const bbox2i& region);
+image4b get_image_region(const image4b& img, const bbox2i& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -242,17 +222,11 @@ struct volume1f {
 
     bool  empty() const { return voxels.empty(); }
 
-    void clear() {
-        size = {0, 0, 0};
-        voxels.clear();
-    }
-    void resize(const vec3i& size, float value = 0);
-
     float& operator[](const vec3i& ijk) {
-        return voxels[ijk[2] * size.x * size.y + ijk.y * size.x + ijk.x];
+        return voxels[ijk.z * size.x * size.y + ijk.y * size.x + ijk.x];
     }
     const float& operator[](const vec3i& ijk) const {
-        return voxels[ijk[2] * size.x * size.y + ijk.y * size.x + ijk.x];
+        return voxels[ijk.z * size.x * size.y + ijk.y * size.x + ijk.x];
     }
 
     float*       data() { return voxels.data(); }
@@ -324,104 +298,6 @@ inline vec3f rgb_to_xyz(const vec3f& rgb);
 //                             IMPLEMENTATION                                 //
 //                                                                            //
 // ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF IMAGE DATA AND UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-inline void image4f::resize(const vec2i& size_, const vec4f& value) {
-    if (size == size_) return;
-    if (size == zero2i) {
-        *this = image4f{size_, value};
-    } else if (size_ == zero2i) {
-        clear();
-    } else {
-        auto img = image4f{size_, value};
-        for (auto j = 0; j < min(size_.y, size_.y); j++) {
-            for (auto i = 0; i < min(size_.x, size_.x); i++) {
-                img[{i, j}] = (*this)[{i, j}];
-            }
-        }
-        size = size_;
-        swap(pixels, img.pixels);
-    }
-}
-
-inline void image4b::resize(const vec2i& size_, const vec4b& value) {
-    if (size == size_) return;
-    if (size == zero2i) {
-        *this = image4b{size_, value};
-    } else if (size_ == zero2i) {
-        clear();
-    } else {
-        auto img = image4b{size, value};
-        for (auto j = 0; j < min(size_.y, size_.y); j++) {
-            for (auto i = 0; i < min(size_.x, size_.x); i++) {
-                img[{i, j}] = (*this)[{i, j}];
-            }
-        }
-        size = size_;
-        swap(pixels, img.pixels);
-    }
-}
-
-// Size
-inline float get_image_aspect(const image4f& img) {
-    return (float)img.size.x / (float)img.size.y;
-}
-inline float get_image_aspect(const image4b& img) {
-    return (float)img.size.x / (float)img.size.y;
-}
-
-// Gets pixels in an image region
-inline image4f get_image_region(const image4f& img, const bbox2i& region) {
-    auto clipped = image4f{bbox_size(region)};
-    for (auto j = 0; j < bbox_size(region).y; j++) {
-        for (auto i = 0; i < bbox_size(region).x; i++) {
-            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-        }
-    }
-    return clipped;
-}
-inline image4b get_image_region(const image4b& img, const bbox2i& region) {
-    auto clipped = image4b{bbox_size(region)};
-    for (auto j = 0; j < bbox_size(region).y; j++) {
-        for (auto i = 0; i < bbox_size(region).x; i++) {
-            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
-        }
-    }
-    return clipped;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF VOLUME TYPE AND UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-inline void volume1f::resize(const vec3i& size_, float value) {
-    if (size == size_) return;
-    if (size == zero3i) {
-        *this = volume1f{size_, value};
-    } else if (size_ == zero3i) {
-        clear();
-    } else {
-        auto vol = volume1f{size_, value};
-        for (auto k = 0; k < min(size_[2], size_[2]); k++) {
-            for (auto j = 0; j < min(size_.y, size_.y); j++) {
-                for (auto i = 0; i < min(size_.x, size_.x); i++) {
-                    vol[{i, j, k}] = (*this)[{i, j, k}];
-                }
-            }
-        }
-        size = size_;
-        swap(voxels, vol.voxels);
-    }
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COLOR CONVERSION UTILITIES
