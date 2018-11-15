@@ -2179,9 +2179,9 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
             return scene.surfaces[instance.surface].positions.empty();
         return true;
     };
-    auto add_instance = [&](yocto_scene& scene, const string& objname) {
+    auto add_instance = [&](yocto_scene& scene, const string& objname, const string& groupname) {
         auto instance = yocto_instance();
-        instance.name = objname;
+        instance.name = !objname.empty() ? objname : groupname;
         scene.instances.push_back(instance);
         vertex_map.clear();
         pos_map.clear();
@@ -2290,7 +2290,7 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     cb.norm     = [&](vec3f v) { onorm.push_back(v); };
     cb.texcoord = [&](vec2f v) { otexcoord.push_back(v); };
     cb.face     = [&](const vector<obj_vertex>& verts) {
-        if (scene.instances.empty()) add_instance(scene, oname);
+        if (scene.instances.empty()) add_instance(scene, oname, gname);
         if (scene.instances.back().shape < 0 &&
             scene.instances.back().surface < 0) {
             if (options.obj_preserve_face_varying ||
@@ -2372,8 +2372,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
-        if (scene.instances.empty()) add_instance(scene, oname);
-        if (scene.instances.back().surface >= 0) add_instance(scene, oname);
+        if (scene.instances.empty()) add_instance(scene, oname, gname);
+        if (scene.instances.back().surface >= 0) add_instance(scene, oname, gname);
         if (scene.instances.back().shape < 0) {
             scene.shapes.push_back({});
             scene.shapes.back().name     = scene.instances.back().name;
@@ -2387,8 +2387,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
                 {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
     };
     cb.point = [&](const vector<obj_vertex>& verts) {
-        if (scene.instances.empty()) add_instance(scene, oname);
-        if (scene.instances.back().surface >= 0) add_instance(scene, oname);
+        if (scene.instances.empty()) add_instance(scene, oname, gname);
+        if (scene.instances.back().surface >= 0) add_instance(scene, oname, gname);
         if (scene.instances.back().shape < 0) {
             scene.shapes.push_back({});
             scene.shapes.back().name     = scene.instances.back().name;
@@ -2405,24 +2405,24 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         gname     = "";
         matname   = "";
         smoothing = true;
-        add_instance(scene, oname);
+        add_instance(scene, oname, gname);
     };
     cb.group = [&](const string& name) {
         gname = name;
         if (split_group) {
-            add_instance(scene, oname);
+            add_instance(scene, oname, gname);
         }
     };
     cb.smoothing = [&](const string& name) {
         smoothing = (name == "on");
         if (split_smoothing) {
-            add_instance(scene, oname);
+            add_instance(scene, oname, gname);
         }
     };
     cb.usemtl = [&](const string& name) {
         matname = name;
         if (split_material) {
-            add_instance(scene, oname);
+            add_instance(scene, oname, gname);
         }
     };
     cb.material = [&](const obj_material& omat) {

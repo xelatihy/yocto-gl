@@ -98,17 +98,18 @@ int main(int argc, char** argv) {
     if(mesh_filenames && get_extension(output) == "json") {
         for(auto& shape : scene.shapes) {
             if(shape.filename.empty() && shape.positions.size() > 16) 
-                shape.filename = shape.name + ".ply";
+                shape.filename = "meshes/" + shape.name + ".ply";
         } 
         for(auto& surface : scene.surfaces) {
             if(surface.filename.empty() && surface.positions.size() > 16) 
-                surface.filename = surface.name + ".obj";
+                surface.filename = "surfaces/" + surface.name + ".obj";
         } 
     }
 
     // make a directory if needed
-    if (!mkdir(get_dirname(output)))
+    if (!mkdir(get_dirname(output))) {
         log_fatal("cannot create directory {}", get_dirname(output));
+    }
 
     // save scene
     if (!save_scene(output, scene, save_options))
