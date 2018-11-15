@@ -49,6 +49,8 @@ int main(int argc, char** argv) {
     auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
     auto skip_textures = parse_argument(parser,
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
+    auto mesh_filenames = parse_argument(parser,
+        "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
     auto uniform_txt   = parse_argument(parser,
         "--uniform-texture/--no-uniform-textures", false,
         "uniform texture formats");
@@ -68,6 +70,9 @@ int main(int argc, char** argv) {
     auto scene = yocto_scene{};
     if (!load_scene(filename, scene, load_options))
         log_fatal("cannot load scene {}", filename);
+    
+    // validate scene
+    log_validation_errors(scene, true);
 
     // change texture names
     if (uniform_txt) {
@@ -89,9 +94,22 @@ int main(int argc, char** argv) {
         }
     }
 
+    // add missing mesh names if necessary
+    if(mesh_filenames && get_extension(output) == "json") {
+        for(auto& shape : scene.shapes) {
+            if(shape.filename.empty() && shape.positions.size() > 16) 
+                shape.filename = "meshes/" + shape.name + ".ply";
+        } 
+        for(auto& surface : scene.surfaces) {
+            if(surface.filename.empty() && surface.positions.size() > 16) 
+                surface.filename = "surfaces/" + surface.name + ".obj";
+        } 
+    }
+
     // make a directory if needed
-    if (!mkdir(get_dirname(output)))
+    if (!mkdir(get_dirname(output))) {
         log_fatal("cannot create directory {}", get_dirname(output));
+    }
 
     // save scene
     if (!save_scene(output, scene, save_options))
