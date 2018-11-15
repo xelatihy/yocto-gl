@@ -8,26 +8,28 @@
 // ## Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
 //
 // We provide common operations for small vectors and matrices typically used
-// in graphics. In particular, we support 1-4 dimensional vectors `vec<T, 1>`,
-// `vec<T, 2>`, `vec<T, 3>`, `vec<T, 4>`. The one dimensional version is mostly
-// for completeness.
+// in graphics. In particular, we support 1-4 dimensional vectors of float 
+// coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`) and int coordinates
+// (`vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
-// We support 1-4 dimensional generic matrices `mat<T, N, 1>`, `mat<T, N, 2>`,
-// `mat<T, N, 3>`, `mat<T, N, 4>`, with matrix-matrix and matrix-vector
-// products, transposes and inverses. Matrices are stored in column-major
-// order and are accessed and constructed by column. The one dimensional version
-// is for completeness only.
+// We support 2-4 dimensional float matrices (`mat2f`, `mat3f`, `mat4f`) with 
+// matrix-matrix and matrix-vector products, transposes and inverses. 
+// Matrices are stored in column-major order and are accessed and constructed 
+// by column. The one dimensional version is for completeness only.
 //
 // To represent transformations, most of the library facilities prefer the use
-// coordinate frames, aka rigid transforms, represented as `frame<T, 2>`,
-// `frame<T, 3>`. The structure store three coordinate axes and the origin.
+// coordinate frames, aka rigid transforms, represented as `frame2f` and
+// `frame3f`. The structure store three coordinate axes and the origin.
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are better behaved with this representation.
 //
-// We represent coordinate bounds with axis-aligned bounding boxes with
-// `bbox<T, 1>`, `bbox<T, 2>`, `bbox<T, 3>`, `bbox<T, 4>`, with support for
-// expansion operations for points and other bounding boxes. We provide
-// operations to compute bounds for points, lines, triangles and quads.
+// We represent ranges of values in 1-4 dimensions with `bbox1f`, `bbox2f`, 
+// `bbox3f`, `bbox4f`, and `bbox1i`, `bbox2i`, `bbox3i`, `bbox4i`. Each range
+// support construction from points and other ranges.
+// These can be used to represent generic ranges and axis-aligned bounding
+// boxes, for which we define the aliases `bbox1f`, `bbox2f`, `bbox3f`,`bbox4f`.
+// We provide operations to compute bounds for points, lines, triangles and 
+// quads.
 //
 // For both matrices and frames we support transform operations for points,
 // vectors and directions (`transform_point()`, `transform_vector()`,
