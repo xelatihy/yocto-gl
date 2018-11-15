@@ -299,67 +299,13 @@ volume1f make_test_volume(
 namespace yocto {
 
 // Element-wise float to byte conversion.
-inline vec4b float_to_byte(const vec4f& a);
-inline vec4f byte_to_float(const vec4b& a);
-
-// Conversion between linear and gamma-encoded colors.
-inline vec3f gamma_to_linear(const vec3f& srgb, float gamma = 2.2f);
-inline vec3f linear_to_gamma(const vec3f& lin, float gamma = 2.2f);
-inline vec4f gamma_to_linear(const vec4f& srgb, float gamma = 2.2f);
-inline vec4f linear_to_gamma(const vec4f& lin, float gamma = 2.2f);
-
-// sRGB non-linear curve
-inline float srgb_to_linear(float srgb);
-inline float linear_to_srgb(float lin);
-
-// Conversion between linear and srgb colors.
-inline vec3f srgb_to_linear(const vec3f& srgb);
-inline vec3f linear_to_srgb(const vec3f& lin);
-inline vec4f srgb_to_linear(const vec4f& srgb);
-inline vec4f linear_to_srgb(const vec4f& lin);
-
-// Approximate luminance estimate for sRGB primaries (better relative luminance)
-inline float luminance(const vec3f& a);
-inline float luminance(const vec4f& a);
-
-// Fitted ACES tonemapping curve.
-inline float tonemap_filmic(float hdr);
-// Apply ACES fitted curve.
-inline vec4f tonemap_filmic(const vec4f& hdr);
-
-// Tonemap a color value according to an exposure-gamma tone mapper, with
-// an optional filmic curve.
-inline vec4f tonemap_filmic(
-    const vec4f& hdr, float exposure, bool filmic, bool srgb);
-
-// Converts HSV to RGB.
-inline vec3f hsv_to_rgb(const vec3f& hsv);
-inline vec3f rgb_to_hsv(const vec3f& rgb);
-// Convert between CIE XYZ and xyY
-inline vec3f xyz_to_xyY(const vec3f& xyz);
-inline vec3f xyY_to_xyz(const vec3f& xyY);
-// Convert between CIE XYZ and RGB
-inline vec3f xyz_to_rgb(const vec3f& xyz);
-inline vec3f rgb_to_xyz(const vec3f& rgb);
-
-}  // namespace yocto
-
-// ---------------------------------------------------------------------------//
-//                                                                            //
-//                             IMPLEMENTATION                                 //
-//                                                                            //
-// ---------------------------------------------------------------------------//
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF COLOR CONVERSION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Element-wise float to byte conversion.
 inline vec4b float_to_byte(const vec4f& a) {
-    return {(byte)clamp(int(a.x * 256), 0, 255),
-        (byte)clamp(int(a.y * 256), 0, 255), (byte)clamp(int(a.z * 256), 0, 255),
-        (byte)clamp(int(a.w * 256), 0, 255)};
+    return {
+        (byte)clamp(int(a.x * 256), 0, 255),
+        (byte)clamp(int(a.y * 256), 0, 255),
+        (byte)clamp(int(a.z * 256), 0, 255),
+        (byte)clamp(int(a.w * 256), 0, 255),
+    };
 }
 inline vec4f byte_to_float(const vec4b& a) {
     return {a.x / 255.0f, a.y / 255.0f, a.z / 255.0f, a.w / 255.0f};
@@ -459,19 +405,38 @@ inline vec3f xyY_to_xyz(const vec3f& xyY) {
 // Convert between CIE XYZ and RGB
 inline vec3f xyz_to_rgb(const vec3f& xyz) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (xyz == zero3f) return zero3f;
-    return {+3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
+    return {
+        +3.2404542f * xyz.x - 1.5371385f * xyz.y - 0.4985314f * xyz.z,
         -0.9692660f * xyz.x + 1.8760108f * xyz.y + 0.0415560f * xyz.z,
-        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z};
+        +0.0556434f * xyz.x - 0.2040259f * xyz.y + 1.0572252f * xyz.z,
+    };
 }
 // Convert between CIE XYZ and RGB
 inline vec3f rgb_to_xyz(const vec3f& rgb) {
     // from http://www.brucelindbloom.com/index.html?Eqn_RGB_to_XYZ.html
-    if (rgb == zero3f) return zero3f;
-    return {0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
+    return {
+        0.4124564f * rgb.x + 0.3575761f * rgb.y + 0.1804375f * rgb.z,
         0.2126729f * rgb.x + 0.7151522f * rgb.y + 0.0721750f * rgb.z,
-        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z};
+        0.0193339f * rgb.x + 0.1191920f * rgb.y + 0.9503041f * rgb.z,
+    };
 }
+
+// Converts HSV to RGB.
+inline vec3f hsv_to_rgb(const vec3f& hsv);
+inline vec3f rgb_to_hsv(const vec3f& rgb);
+
+}  // namespace yocto
+
+// ---------------------------------------------------------------------------//
+//                                                                            //
+//                             IMPLEMENTATION                                 //
+//                                                                            //
+// ---------------------------------------------------------------------------//
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF COLOR CONVERSION UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Convert HSV to RGB
 inline vec3f hsv_to_rgb(const vec3f& hsv) {
