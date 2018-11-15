@@ -153,15 +153,15 @@ bool init_opengl_texture(opengl_texture& texture, int width, int height,
     texture = opengl_texture();
     assert(glGetError() == GL_NO_ERROR);
     glGenTextures(1, &texture.texture_id);
-    texture.width = width;
+    texture.width  = width;
     texture.height = height;
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     if (as_float) {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA,
             GL_FLOAT, nullptr);
     } else if (as_srgb) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width, height, 0,
-            GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width, height, 0, GL_RGBA,
+            GL_UNSIGNED_BYTE, nullptr);
     } else {
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,
             GL_FLOAT, nullptr);
@@ -191,14 +191,13 @@ void update_opengl_texture(
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void update_opengl_texture_region(opengl_texture& texture,
-    const image4f& img, const image_region& region, bool mipmap) {
+void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
+    const image_region& region, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     auto clipped = get_image_region(img, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.offsetx, region.offsety,
-        region.width, region.height, GL_RGBA, GL_FLOAT,
-        data(clipped));
+        region.width, region.height, GL_RGBA, GL_FLOAT, data(clipped));
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -213,14 +212,13 @@ void update_opengl_texture(
     assert(glGetError() == GL_NO_ERROR);
 }
 
-void update_opengl_texture_region(opengl_texture& texture,
-    const image4b& img, const image_region& region, bool mipmap) {
+void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
+    const image_region& region, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     auto clipped = get_image_region(img, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.offsetx, region.offsety,
-        region.width, region.height, GL_RGBA, GL_UNSIGNED_BYTE,
-        data(clipped));
+        region.width, region.height, GL_RGBA, GL_UNSIGNED_BYTE, data(clipped));
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -479,8 +477,8 @@ void draw_opengl_triangles(const opengl_elementbuffer& buffer, int num) {
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(const opengl_texture& texture, 
-    int win_width, int win_height, const vec2f& image_center, float image_scale) {
+void draw_glimage(const opengl_texture& texture, int win_width, int win_height,
+    const vec2f& image_center, float image_scale) {
     static opengl_program       gl_prog      = {};
     static opengl_array_buffer  gl_texcoord  = {};
     static opengl_elementbuffer gl_triangles = {};
@@ -520,8 +518,8 @@ void draw_glimage(const opengl_texture& texture,
     check_opengl_error();
     bind_opengl_program(gl_prog);
     set_opengl_uniform_texture(gl_prog, "txt", texture, 0);
-    set_opengl_uniform(gl_prog, "window_size",
-        vec2f{(float)win_width, (float)win_height});
+    set_opengl_uniform(
+        gl_prog, "window_size", vec2f{(float)win_width, (float)win_height});
     set_opengl_uniform(gl_prog, "image_size",
         vec2f{(float)texture.width, (float)texture.height});
     set_opengl_uniform(gl_prog, "image_center", image_center);
@@ -532,8 +530,9 @@ void draw_glimage(const opengl_texture& texture,
     check_opengl_error();
 }
 
-void draw_glimage_background(const opengl_texture& texture, int win_width, int win_height, 
-    const vec2f& image_center, float image_scale, float border_size) {
+void draw_glimage_background(const opengl_texture& texture, int win_width,
+    int win_height, const vec2f& image_center, float image_scale,
+    float border_size) {
     static opengl_program       gl_prog      = {};
     static opengl_array_buffer  gl_texcoord  = {};
     static opengl_elementbuffer gl_triangles = {};
@@ -578,8 +577,8 @@ void draw_glimage_background(const opengl_texture& texture, int win_width, int w
 
     // draw
     bind_opengl_program(gl_prog);
-    set_opengl_uniform(gl_prog, "window_size",
-        vec2f{(float)win_width, (float)win_height});
+    set_opengl_uniform(
+        gl_prog, "window_size", vec2f{(float)win_width, (float)win_height});
     set_opengl_uniform(gl_prog, "image_size",
         vec2f{(float)texture.width, (float)texture.height});
     set_opengl_uniform(

@@ -101,19 +101,21 @@ struct trace_pixel {
     rng_state rng      = {};
 };
 struct trace_pixels {
-    int width = 0;
-    int height = 0;
+    int                 width  = 0;
+    int                 height = 0;
     vector<trace_pixel> pixels = {};
 
-    trace_pixel& operator[](const vec2i& ij) { return pixels[ij.y * width + ij.x]; }
+    trace_pixel& operator[](const vec2i& ij) {
+        return pixels[ij.y * width + ij.x];
+    }
     const trace_pixel& operator[](const vec2i& ij) const {
         return pixels[ij.y * width + ij.x];
     }
 };
 
 // Initialize state of the renderer.
-trace_pixels make_trace_pixels(int width, int height,
-    uint64_t random_seed = trace_default_seed);
+trace_pixels make_trace_pixels(
+    int width, int height, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
@@ -173,11 +175,10 @@ int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
-void trace_image_async_start(image4f& rendered_image,
-    trace_pixels& pixels, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, vector<thread>& threads,
-    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
-    const trace_image_options& options);
+void trace_image_async_start(image4f& rendered_image, trace_pixels& pixels,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    vector<thread>& threads, atomic<int>& current_sample,
+    concurrent_queue<image_region>& queue, const trace_image_options& options);
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
     concurrent_queue<image_region>& queue, const trace_image_options& options);

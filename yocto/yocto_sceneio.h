@@ -261,8 +261,8 @@ struct obj_camera {
     string  name;                         // name
     frame3f frame    = identity_frame3f;  // transform
     bool    ortho    = false;             // orthographic
-    float   width     = 0.036f;  // film size (default to 35mm)
-    float   height     = 0.024f;  // film size (default to 35mm)
+    float   width    = 0.036f;            // film size (default to 35mm)
+    float   height   = 0.024f;            // film size (default to 35mm)
     float   focal    = 0.050f;            // focal length
     float   aspect   = 16.0f / 9.0f;      // aspect ratio
     float   aperture = 0;                 // lens aperture
@@ -273,7 +273,7 @@ struct obj_camera {
 struct obj_environment {
     string           name;                      // name
     frame3f          frame = identity_frame3f;  // transform
-    vec3f            ke    = zero3f;        // emission color
+    vec3f            ke    = zero3f;            // emission color
     obj_texture_info ke_txt;                    // emission texture
 };
 

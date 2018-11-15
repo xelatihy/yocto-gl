@@ -8,13 +8,13 @@
 // ## Small Vectors and Matrices, Frames, Bounding Boxes and Transforms
 //
 // We provide common operations for small vectors and matrices typically used
-// in graphics. In particular, we support 1-4 dimensional vectors of float 
+// in graphics. In particular, we support 1-4 dimensional vectors of float
 // coordinates (`vec1f`, `vec2f`, `vec3f`, `vec4f`) and int coordinates
 // (`vec1i`, `vec2i`, `vec3i`, `vec4i`).
 //
-// We support 2-4 dimensional float matrices (`mat2f`, `mat3f`, `mat4f`) with 
-// matrix-matrix and matrix-vector products, transposes and inverses. 
-// Matrices are stored in column-major order and are accessed and constructed 
+// We support 2-4 dimensional float matrices (`mat2f`, `mat3f`, `mat4f`) with
+// matrix-matrix and matrix-vector products, transposes and inverses.
+// Matrices are stored in column-major order and are accessed and constructed
 // by column. The one dimensional version is for completeness only.
 //
 // To represent transformations, most of the library facilities prefer the use
@@ -23,12 +23,12 @@
 // This is equivalent to a rigid transform written as a column-major affine
 // matrix. Transform operations are better behaved with this representation.
 //
-// We represent ranges of values in 1-4 dimensions with `bbox1f`, `bbox2f`, 
+// We represent ranges of values in 1-4 dimensions with `bbox1f`, `bbox2f`,
 // `bbox3f`, `bbox4f`, and `bbox1i`, `bbox2i`, `bbox3i`, `bbox4i`. Each range
 // support construction from points and other ranges.
 // These can be used to represent generic ranges and axis-aligned bounding
 // boxes, for which we define the aliases `bbox1f`, `bbox2f`, `bbox3f`,`bbox4f`.
-// We provide operations to compute bounds for points, lines, triangles and 
+// We provide operations to compute bounds for points, lines, triangles and
 // quads.
 //
 // For both matrices and frames we support transform operations for points,
@@ -74,17 +74,17 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
+#include <array>
+#include <atomic>
 #include <cfloat>
 #include <climits>
 #include <cmath>
-#include <functional>
-#include <vector>
-#include <array>
-#include <string>
-#include <atomic>
 #include <cstdint>
-#include <unordered_map>
+#include <functional>
+#include <string>
 #include <tuple>
+#include <unordered_map>
+#include <vector>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -110,19 +110,18 @@ using std::sin;
 using std::sqrt;
 using std::swap;
 using std::tan;
-using std::round;
 
-using std::pair;
 using std::array;
-using std::vector;
-using std::string;
-using std::function;
-using std::unordered_map;
 using std::atomic;
+using std::function;
 using std::get;
 using std::ignore;
+using std::pair;
+using std::string;
 using std::tie;
 using std::tuple;
+using std::unordered_map;
+using std::vector;
 using namespace std::string_literals;
 
 }  // namespace yocto
@@ -1436,8 +1435,8 @@ inline vec2i get_image_coords(const vec2f& mouse_pos, const vec2f& center,
 }
 
 // Center image and autofit.
-inline void update_image_view(vec2f& center, float& scale,
-    const vec2i& imsize, const vec2i& winsize, bool zoom_to_fit) {
+inline void update_image_view(vec2f& center, float& scale, const vec2i& imsize,
+    const vec2i& winsize, bool zoom_to_fit) {
     if (zoom_to_fit) {
         scale  = min(winsize.x / (float)imsize.x, winsize.y / (float)imsize.y);
         center = {(float)winsize.x / 2, (float)winsize.y / 2};

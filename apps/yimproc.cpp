@@ -87,7 +87,8 @@ image4f filter_bilateral(const image4f& img, float spatial_sigma,
                     auto w   = (float)exp(-dot(uv, uv) * sw) *
                              (float)exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat = at(features[fi], i, j) - at(features[fi], i, j);
+                        auto feat = at(features[fi], i, j) -
+                                    at(features[fi], i, j);
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
                     av += w * at(img, ii, jj);

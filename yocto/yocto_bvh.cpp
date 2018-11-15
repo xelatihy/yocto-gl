@@ -191,7 +191,7 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox) {
 // Intersect a ray with a axis-aligned bounding box
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox_) {
-    auto bbox = &bbox_.min; 
+    auto bbox  = &bbox_.min;
     auto txmin = (bbox[ray_dsign.x].x - ray.o.x) * ray_dinv.x;
     auto txmax = (bbox[1 - ray_dsign.x].x - ray.o.x) * ray_dinv.x;
     auto tymin = (bbox[ray_dsign.y].y - ray.o.y) * ray_dinv.y;
@@ -328,18 +328,12 @@ bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
     auto dd = 0.0f;
 
     // For each axis count any excess distance outside box extents
-    if (pos.x < bbox.min.x)
-        dd += (bbox.min.x - pos.x) * (bbox.min.x - pos.x);
-    if (pos.x > bbox.max.x)
-        dd += (pos.x - bbox.max.x) * (pos.x - bbox.max.x);
-    if (pos.y < bbox.min.y)
-        dd += (bbox.min.y - pos.y) * (bbox.min.y - pos.y);
-    if (pos.y > bbox.max.y)
-        dd += (pos.y - bbox.max.y) * (pos.y - bbox.max.y);
-    if (pos.z < bbox.min.z)
-        dd += (bbox.min.z - pos.z) * (bbox.min.z - pos.z);
-    if (pos.z > bbox.max.z)
-        dd += (pos.z - bbox.max.z) * (pos.z - bbox.max.z);
+    if (pos.x < bbox.min.x) dd += (bbox.min.x - pos.x) * (bbox.min.x - pos.x);
+    if (pos.x > bbox.max.x) dd += (pos.x - bbox.max.x) * (pos.x - bbox.max.x);
+    if (pos.y < bbox.min.y) dd += (bbox.min.y - pos.y) * (bbox.min.y - pos.y);
+    if (pos.y > bbox.max.y) dd += (pos.y - bbox.max.y) * (pos.y - bbox.max.y);
+    if (pos.z < bbox.min.z) dd += (bbox.min.z - pos.z) * (bbox.min.z - pos.z);
+    if (pos.z > bbox.max.z) dd += (pos.z - bbox.max.z) * (pos.z - bbox.max.z);
 
     // check distance
     return dd < dist_max * dist_max;
@@ -347,12 +341,9 @@ bool distance_check_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox) {
 
 // TODO: doc
 bool overlap_bbox(const bbox3f& bbox1, const bbox3f& bbox2) {
-    if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x)
-        return false;
-    if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y)
-        return false;
-    if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z)
-        return false;
+    if (bbox1.max.x < bbox2.min.x || bbox1.min.x > bbox2.max.x) return false;
+    if (bbox1.max.y < bbox2.min.y || bbox1.min.y > bbox2.max.y) return false;
+    if (bbox1.max.z < bbox2.min.z || bbox1.min.z > bbox2.max.z) return false;
     return true;
 }
 
@@ -677,8 +668,9 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     }
     // split
     mid = (int)(std::partition(data(prims) + start, data(prims) + end,
-                    [split_axis, middle](
-                        auto& a) { return at(a.center, split_axis) < middle; }) -
+                    [split_axis, middle](auto& a) {
+                        return at(a.center, split_axis) < middle;
+                    }) -
                 data(prims));
 
     // if we were not able to split, just break the primitives in half
@@ -714,8 +706,8 @@ pair<int, int> split_bvh_node_balanced(
     // bounding box and split along this one right in the middle
     split_axis = largest_axis;
     mid        = (start + end) / 2;
-    std::nth_element(data(prims) + start, data(prims) + mid,
-        data(prims) + end, [split_axis](auto& a, auto& b) {
+    std::nth_element(data(prims) + start, data(prims) + mid, data(prims) + end,
+        [split_axis](auto& a, auto& b) {
             return at(a.center, split_axis) < at(b.center, split_axis);
         });
 
@@ -751,9 +743,10 @@ pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end
     split_axis   = largest_axis;
     auto cmiddle = (cbbox.max + cbbox.min) / 2;
     auto middle  = at(cmiddle, largest_axis);
-    mid = (int)(std::partition(data(prims) + start, data(prims) + end,
-                    [split_axis, middle](
-                        auto& a) { return at(a.center, split_axis) < middle; }) -
+    mid          = (int)(std::partition(data(prims) + start, data(prims) + end,
+                    [split_axis, middle](auto& a) {
+                        return at(a.center, split_axis) < middle;
+                    }) -
                 data(prims));
 
     // if we were not able to split, just break the primitives in half
@@ -973,18 +966,18 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         }
     } else if (!empty(bvh.lines)) {
         for (auto& l : bvh.lines) {
-            prims.push_back({line_bounds(bvh.positions[l.x],
-                bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y])});
+            prims.push_back({line_bounds(bvh.positions[l.x], bvh.positions[l.y],
+                bvh.radius[l.x], bvh.radius[l.y])});
         }
     } else if (!empty(bvh.triangles)) {
         for (auto& t : bvh.triangles) {
-            prims.push_back({triangle_bounds(bvh.positions[t.x],
-                bvh.positions[t.y], bvh.positions[t.z])});
+            prims.push_back({triangle_bounds(
+                bvh.positions[t.x], bvh.positions[t.y], bvh.positions[t.z])});
         }
     } else if (!empty(bvh.quads)) {
         for (auto& q : bvh.quads) {
-            prims.push_back({quad_bounds(bvh.positions[q.x],
-                bvh.positions[q.y], bvh.positions[q.z], bvh.positions[q.w])});
+            prims.push_back({quad_bounds(bvh.positions[q.x], bvh.positions[q.y],
+                bvh.positions[q.z], bvh.positions[q.w])});
         }
     }
 
@@ -1215,8 +1208,7 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv = vec3f{
-        1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
+    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
     auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
         (ray_dinv.z < 0) ? 1 : 0};
 
@@ -1243,9 +1235,8 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!empty(bvh.triangles)) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (intersect_triangle(ray, bvh.positions[t.x],
-                        bvh.positions[t.y], bvh.positions[t.z], distance,
-                        element_uv)) {
+                if (intersect_triangle(ray, bvh.positions[t.x], bvh.positions[t.y],
+                        bvh.positions[t.z], distance, element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1254,9 +1245,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!empty(bvh.quads)) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.quads[node.primitive_ids[i]];
-                if (intersect_quad(ray, bvh.positions[t.x],
-                        bvh.positions[t.y], bvh.positions[t.z],
-                        bvh.positions[t.w], distance, element_uv)) {
+                if (intersect_quad(ray, bvh.positions[t.x], bvh.positions[t.y],
+                        bvh.positions[t.z], bvh.positions[t.w], distance,
+                        element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1265,9 +1256,8 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
         } else if (!empty(bvh.lines)) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& l = bvh.lines[node.primitive_ids[i]];
-                if (intersect_line(ray, bvh.positions[l.x],
-                        bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y],
-                        distance, element_uv)) {
+                if (intersect_line(ray, bvh.positions[l.x], bvh.positions[l.y],
+                        bvh.radius[l.x], bvh.radius[l.y], distance, element_uv)) {
                     hit        = true;
                     ray.tmax   = distance;
                     element_id = node.primitive_ids[i];
@@ -1317,8 +1307,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     auto ray = ray_;
 
     // prepare ray for fast queries
-    auto ray_dinv = vec3f{
-        1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
+    auto ray_dinv  = vec3f{1 / ray.d.x, 1 / ray.d.y, 1 / ray.d.z};
     auto ray_dsign = vec3i{(ray_dinv.x < 0) ? 1 : 0, (ray_dinv.y < 0) ? 1 : 0,
         (ray_dinv.z < 0) ? 1 : 0};
 
@@ -1404,9 +1393,8 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& t = bvh.triangles[node.primitive_ids[i]];
                 if (overlap_triangle(pos, max_distance, bvh.positions[t.x],
-                        bvh.positions[t.y], bvh.positions[t.z],
-                        bvh.radius[t.x], bvh.radius[t.y], bvh.radius[t.z],
-                        distance, element_uv)) {
+                        bvh.positions[t.y], bvh.positions[t.z], bvh.radius[t.x],
+                        bvh.radius[t.y], bvh.radius[t.z], distance, element_uv)) {
                     hit          = true;
                     max_distance = distance;
                     element_id   = node.primitive_ids[i];
@@ -1418,8 +1406,7 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
                 if (overlap_quad(pos, max_distance, bvh.positions[q.x],
                         bvh.positions[q.y], bvh.positions[q.z],
                         bvh.positions[q.w], bvh.radius[q.x], bvh.radius[q.y],
-                        bvh.radius[q.z], bvh.radius[q.w], distance,
-                        element_uv)) {
+                        bvh.radius[q.z], bvh.radius[q.w], distance, element_uv)) {
                     hit          = true;
                     max_distance = distance;
                     element_id   = node.primitive_ids[i];

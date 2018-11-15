@@ -114,9 +114,11 @@ int main(int argc, char* argv[]) {
 
     // allocate buffers
     auto image_size = get_camera_image_size(
-        scene.cameras[trace_options.camera_id], trace_options.vertical_resolution);
+        scene.cameras[trace_options.camera_id],
+        trace_options.vertical_resolution);
     auto rendered_image = make_image(image_size.x, image_size.y, zero4f);
-    auto trace_pixels = make_trace_pixels(image_size.x, image_size.y, trace_options.random_seed);
+    auto trace_pixels   = make_trace_pixels(
+        image_size.x, image_size.y, trace_options.random_seed);
 
     // render
     auto scope = log_trace_begin("rendering image");

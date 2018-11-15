@@ -97,17 +97,17 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
 
 // Draw options
 struct drawgl_options {
-    int   camera_id   = 0;
-    int                vertical_resolution = 720;
-    bool  wireframe   = false;
-    bool  edges       = false;
-    float edge_offset = 0.01f;
-    bool  eyelight    = false;
-    float exposure    = 0;
-    float gamma       = 2.2f;
-    vec3f ambient     = {0, 0, 0};
-    float near_plane  = 0.01f;
-    float far_plane   = 10000.0f;
+    int   camera_id           = 0;
+    int   vertical_resolution = 720;
+    bool  wireframe           = false;
+    bool  edges               = false;
+    float edge_offset         = 0.01f;
+    bool  eyelight            = false;
+    float exposure            = 0;
+    float gamma               = 2.2f;
+    vec3f ambient             = {0, 0, 0};
+    float near_plane          = 0.01f;
+    float far_plane           = 10000.0f;
 };
 
 // Application state
@@ -571,8 +571,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             state.program, "vert_pos", vbos.positions_buffer, zero3f);
         set_opengl_vertexattrib(
             state.program, "vert_norm", vbos.normals_buffer, zero3f);
-        set_opengl_vertexattrib(state.program, "vert_texcoord",
-            vbos.texturecoords_buffer, zero2f);
+        set_opengl_vertexattrib(
+            state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
         set_opengl_vertexattrib(
             state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
         set_opengl_vertexattrib(state.program, "vert_tangsp",
@@ -753,9 +753,8 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
                         shape.positions[t.y], shape.positions[t.z]);
             } else if (!empty(shape.quads)) {
                 for (auto q : shape.quads)
-                    area += quad_area(shape.positions[q.x],
-                        shape.positions[q.y], shape.positions[q.z],
-                        shape.positions[q.w]);
+                    area += quad_area(shape.positions[q.x], shape.positions[q.y],
+                        shape.positions[q.z], shape.positions[q.w]);
             } else if (!empty(shape.lines)) {
                 for (auto l : shape.lines)
                     area += line_length(
@@ -921,8 +920,8 @@ void draw_widgets(const opengl_window& win) {
                 draw_combobox_opengl_widget(win, "camera",
                     app.draw_options.camera_id, app.scene.cameras, false);
             }
-            draw_slider_opengl_widget(
-                win, "resolution", app.draw_options.vertical_resolution, 360, 4096);
+            draw_slider_opengl_widget(win, "resolution",
+                app.draw_options.vertical_resolution, 360, 4096);
             draw_checkbox_opengl_widget(
                 win, "eyelight", app.draw_options.eyelight);
             continue_opengl_widget_line(win);
@@ -931,8 +930,8 @@ void draw_widgets(const opengl_window& win) {
             continue_opengl_widget_line(win);
             draw_checkbox_opengl_widget(win, "edges", app.draw_options.edges);
             if (app.time_range != zero2f) {
-                draw_slider_opengl_widget(win, "time", app.time,
-                    app.time_range.x, app.time_range.y);
+                draw_slider_opengl_widget(
+                    win, "time", app.time, app.time_range.x, app.time_range.y);
                 draw_textinput_opengl_widget(win, "anim group", app.anim_group);
                 draw_checkbox_opengl_widget(win, "animate", app.animate);
             }
@@ -948,9 +947,10 @@ void draw_widgets(const opengl_window& win) {
             if (draw_button_opengl_widget(win, "print cams")) {
                 for (auto& camera : app.scene.cameras) {
                     print("c {} {} {} {} {} {} {} {}\n", camera.name,
-                        (int)camera.orthographic, camera.film_width, camera.film_height,
-                        camera.focal_length, camera.focus_distance,
-                        camera.lens_aperture, camera.frame);
+                        (int)camera.orthographic, camera.film_width,
+                        camera.film_height, camera.focal_length,
+                        camera.focus_distance, camera.lens_aperture,
+                        camera.frame);
                 }
             }
             end_header_opengl_widget(win);
@@ -1136,7 +1136,7 @@ int main(int argc, char* argv[]) {
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
     app.draw_options.vertical_resolution = parse_argument(
-        parser, "--resolution,-r",  512, "Image vertical resolution.");
+        parser, "--resolution,-r", 512, "Image vertical resolution.");
     app.draw_options.eyelight = parse_argument(
         parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
     app.double_sided        = parse_argument(parser,

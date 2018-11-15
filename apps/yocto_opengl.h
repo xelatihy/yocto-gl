@@ -82,9 +82,9 @@ void bind_opengl_program(opengl_program& program);
 void unbind_opengl_program();
 
 struct opengl_texture {
-    uint  texture_id = 0;
-    int width = 0;
-    int height = 0;
+    uint texture_id = 0;
+    int  width      = 0;
+    int  height     = 0;
 
     operator bool() const { return (bool)texture_id; }
 };
@@ -94,12 +94,13 @@ bool init_opengl_texture(opengl_texture& texture, int width, int height,
 
 void update_opengl_texture(
     opengl_texture& texture, const image4f& img, bool mipmap);
-void update_opengl_texture_region(opengl_texture& texture,
-    const image4f& img, const image_region& region, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
+    const image_region& region, bool mipmap);
 
-inline bool init_opengl_texture(opengl_texture& texture,
-    const image4f& img, bool as_float, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.width, img.height, as_float, false, linear, mipmap))
+inline bool init_opengl_texture(opengl_texture& texture, const image4f& img,
+    bool as_float, bool linear, bool mipmap) {
+    if (!init_opengl_texture(
+            texture, img.width, img.height, as_float, false, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;
@@ -109,12 +110,13 @@ bool init_opengl_texture(opengl_texture& texture, const image4b& img,
     bool as_srgb, bool linear, bool mipmap);
 void update_opengl_texture(
     opengl_texture& texture, const image4b& img, bool mipmap);
-void update_opengl_texture_region(opengl_texture& texture,
-    const image4b& img, const image_region& region, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
+    const image_region& region, bool mipmap);
 
-inline bool init_opengl_texture(opengl_texture& texture,
-    const image4b& img, bool as_srgb, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.width, img.height, false, as_srgb, linear, mipmap))
+inline bool init_opengl_texture(opengl_texture& texture, const image4b& img,
+    bool as_srgb, bool linear, bool mipmap) {
+    if (!init_opengl_texture(
+            texture, img.width, img.height, false, as_srgb, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;
@@ -209,10 +211,11 @@ void draw_opengl_points(const opengl_elementbuffer& buffer, int num);
 void draw_opengl_lines(const opengl_elementbuffer& buffer, int num);
 void draw_opengl_triangles(const opengl_elementbuffer& buffer, int num);
 
-void draw_glimage(const opengl_texture& texture, 
-    int win_width, int win_height, const vec2f& image_center, float image_scale);
-void draw_glimage_background(const opengl_texture& texture, int win_width, int win_height, 
-    const vec2f& image_center, float image_scale, float border_size = 2);
+void draw_glimage(const opengl_texture& texture, int win_width, int win_height,
+    const vec2f& image_center, float image_scale);
+void draw_glimage_background(const opengl_texture& texture, int win_width,
+    int win_height, const vec2f& image_center, float image_scale,
+    float border_size = 2);
 
 struct opengl_window;
 using refresh_opengl_callback = function<void(const opengl_window&)>;

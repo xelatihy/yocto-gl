@@ -110,21 +110,21 @@ inline void to_json(json& js, const vec2f& val) {
 }
 inline void from_json(const json& js, vec2f& val) {
     auto vala = js.get<std::array<float, 2>>();
-    val = {vala[0], vala[1]};
+    val       = {vala[0], vala[1]};
 }
 inline void to_json(json& js, const vec3f& val) {
     js = std::array<float, 3>{{val.x, val.y, val.z}};
 }
 inline void from_json(const json& js, vec3f& val) {
     auto vala = js.get<std::array<float, 3>>();
-    val = {vala[0], vala[1], vala[2]};
+    val       = {vala[0], vala[1], vala[2]};
 }
 inline void to_json(json& js, const vec4f& val) {
     js = std::array<float, 4>{{val.x, val.y, val.z, val.w}};
 }
 inline void from_json(const json& js, vec4f& val) {
     auto vala = js.get<std::array<float, 4>>();
-    val = {vala[0], vala[1], vala[2], vala[3]};
+    val       = {vala[0], vala[1], vala[2], vala[3]};
 }
 
 inline void to_json(json& js, const vec2i& val) {
@@ -132,28 +132,28 @@ inline void to_json(json& js, const vec2i& val) {
 }
 inline void from_json(const json& js, vec2i& val) {
     auto vala = js.get<std::array<int, 2>>();
-    val = {vala[0], vala[1]};
+    val       = {vala[0], vala[1]};
 }
 inline void to_json(json& js, const vec3i& val) {
     js = std::array<int, 3>{{val.x, val.y, val.z}};
 }
 inline void from_json(const json& js, vec3i& val) {
     auto vala = js.get<std::array<int, 3>>();
-    val = {vala[0], vala[1], vala[2]};
+    val       = {vala[0], vala[1], vala[2]};
 }
 inline void to_json(json& js, const vec4i& val) {
     js = std::array<int, 4>{{val.x, val.y, val.z, val.w}};
 }
 inline void from_json(const json& js, vec4b& val) {
     auto vala = js.get<std::array<byte, 4>>();
-    val = {vala[0], vala[1], vala[2], vala[3]};
+    val       = {vala[0], vala[1], vala[2], vala[3]};
 }
 inline void to_json(json& js, const vec4b& val) {
     js = std::array<byte, 4>{{val.x, val.y, val.z, val.w}};
 }
 inline void from_json(const json& js, vec4i& val) {
     auto vala = js.get<std::array<int, 4>>();
-    val = {vala[0], vala[1], vala[2], vala[3]};
+    val       = {vala[0], vala[1], vala[2], vala[3]};
 }
 
 inline void to_json(json& js, const frame3f& val) {
@@ -161,7 +161,7 @@ inline void to_json(json& js, const frame3f& val) {
 }
 inline void from_json(const json& js, frame3f& val) {
     auto vala = js.get<std::array<vec3f, 4>>();
-    val = {vala[0], vala[1], vala[2], vala[3]};
+    val       = {vala[0], vala[1], vala[2], vala[3]};
 }
 
 inline void to_json(json& js, const mat4f& val) {
@@ -169,7 +169,7 @@ inline void to_json(json& js, const mat4f& val) {
 }
 inline void from_json(const json& js, mat4f& val) {
     auto vala = js.get<std::array<vec4f, 4>>();
-    val = {vala[0], vala[1], vala[2], vala[3]};
+    val       = {vala[0], vala[1], vala[2], vala[3]};
 }
 
 inline void to_json(json& js, const bbox3f& val) {
@@ -177,47 +177,47 @@ inline void to_json(json& js, const bbox3f& val) {
 }
 inline void from_json(const json& js, bbox3f& val) {
     auto vala = js.get<std::array<vec3f, 2>>();
-    val = {vala[0], vala[1]};
+    val       = {vala[0], vala[1]};
 }
 
 inline void to_json(json& js, const image4f& value) {
     js           = json::object();
-    js["width"]   = value.width;
-    js["height"]   = value.height;
+    js["width"]  = value.width;
+    js["height"] = value.height;
     js["pixels"] = vector<vec4f>{
         data(value), data(value) + value.width * value.height};
 }
 inline void to_json(json& js, const image4b& value) {
     js           = json::object();
-    js["width"]   = value.width;
-    js["height"]   = value.height;
+    js["width"]  = value.width;
+    js["height"] = value.height;
     js["pixels"] = vector<vec4b>{
         data(value), data(value) + value.width * value.height};
 }
 inline void from_json(const json& js, image4f& value) {
-    auto width   = js.at("width").get<int>();
-    auto height   = js.at("height").get<int>();
+    auto width  = js.at("width").get<int>();
+    auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<vec4f>>();
     value       = make_image(width, height, data(pixels));
 }
 inline void from_json(const json& js, image4b& value) {
-    auto width   = js.at("width").get<int>();
-    auto height   = js.at("height").get<int>();
+    auto width  = js.at("width").get<int>();
+    auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<vec4b>>();
     value       = make_image(width, height, data(pixels));
 }
 inline void to_json(json& js, const volume1f& value) {
     js           = json::object();
-    js["width"]   = value.width;
-    js["height"]   = value.height;
-    js["depth"]   = value.width;
-    js["voxels"] = vector<float>{data(value),
-        data(value) + value.width * value.height * value.depth};
+    js["width"]  = value.width;
+    js["height"] = value.height;
+    js["depth"]  = value.width;
+    js["voxels"] = vector<float>{
+        data(value), data(value) + value.width * value.height * value.depth};
 }
 inline void from_json(const json& js, volume1f& value) {
-    auto width   = js.at("width").get<int>();
-    auto height   = js.at("height").get<int>();
-    auto depth   = js.at("depth").get<int>();
+    auto width  = js.at("width").get<int>();
+    auto height = js.at("height").get<int>();
+    auto depth  = js.at("depth").get<int>();
     auto voxels = js.at("voxels").get<vector<float>>();
     value       = make_volume(width, height, depth, data(voxels));
 }
@@ -561,7 +561,8 @@ bool operator==(const image4b& a, const image4b& b) {
     return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
 }
 bool operator==(const volume1f& a, const volume1f& b) {
-    return a.width == b.width && a.height == b.height && a.depth == b.depth && a.voxels == b.voxels;
+    return a.width == b.width && a.height == b.height && a.depth == b.depth &&
+           a.voxels == b.voxels;
 }
 
 // Dumps a json value
@@ -731,37 +732,28 @@ bool serialize_json_values(
 
 bool serialize_json_value(json& js, image4f& value, bool save) {
     auto width = 0, height = 0;
-    if (!serialize_json_value(js, width, "width", -1, save))
-        return false;
-    if (!serialize_json_value(js, height, "height", -1, save))
-        return false;
+    if (!serialize_json_value(js, width, "width", -1, save)) return false;
+    if (!serialize_json_value(js, height, "height", -1, save)) return false;
     if (!save) value = make_image(width, height, zero4f);
-    if (!serialize_json_values(
-            js, data(value), width * height, "pixels", save))
+    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
         return false;
     return true;
 }
 bool serialize_json_value(json& js, image4b& value, bool save) {
     auto width = 0, height = 0;
-    if (!serialize_json_value(js, width, "width", -1, save))
-        return false;
-    if (!serialize_json_value(js, height, "height", -1, save))
-        return false;
+    if (!serialize_json_value(js, width, "width", -1, save)) return false;
+    if (!serialize_json_value(js, height, "height", -1, save)) return false;
     if (!save) value = make_image(width, height, zero4b);
-    if (!serialize_json_values(
-            js, data(value), width * height, "pixels", save))
+    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
         return false;
     return true;
 }
 template <typename T>
 bool serialize_json_value(json& js, volume1f& value, bool save) {
     auto width = 0, height = 0, depth = 0;
-    if (!serialize_json_value(js, width, "width", -1, save))
-        return false;
-    if (!serialize_json_value(js, height, "height", -1, save))
-        return false;
-    if (!serialize_json_value(js, depth, "heidepthght", -1, save))
-        return false;
+    if (!serialize_json_value(js, width, "width", -1, save)) return false;
+    if (!serialize_json_value(js, height, "height", -1, save)) return false;
+    if (!serialize_json_value(js, depth, "heidepthght", -1, save)) return false;
     if (!save) value = make_volume(width, height, depth, 0.0f);
     if (!serialize_json_values(
             js, data(value), width * height * depth, "voxels", save))
@@ -953,8 +945,8 @@ bool apply_json_procedural(
     auto type = js.value("type", ""s);
     if (type == "") return true;
     auto is_hdr = false;
-    auto width   = js.value("width", 512);
-    auto height   = js.value("height", 512);
+    auto width  = js.value("width", 512);
+    auto height = js.value("height", 512);
     if (type == "grid") {
         value.hdr_image = make_grid_image(width, height, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
@@ -964,7 +956,8 @@ bool apply_json_procedural(
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        value.hdr_image = make_bumpdimple_image(width, height, js.value("tile", 8));
+        value.hdr_image = make_bumpdimple_image(
+            width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
         value.hdr_image = make_uvramp_image(width, height);
     } else if (type == "uvgrid") {
@@ -985,14 +978,15 @@ bool apply_json_procedural(
             js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
             js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
-        value.hdr_image = make_ridge_image(width, height, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("offset", 1.0f), js.value("octaves", 6),
-            js.value("wrap", true));
-    } else if (type == "turbulence") {
-        value.hdr_image = make_turbulence_image(width, height, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+        value.hdr_image = make_ridge_image(width, height,
+            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f), js.value("offset", 1.0f),
             js.value("octaves", 6), js.value("wrap", true));
+    } else if (type == "turbulence") {
+        value.hdr_image = make_turbulence_image(width, height,
+            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f), js.value("octaves", 6),
+            js.value("wrap", true));
     } else {
         log_error("unknown texture type {}", type);
         return false;
@@ -1057,12 +1051,12 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     auto type = js.value("type", ""s);
     if (type == "") return true;
-    auto width   = js.value("width", 512);
-    auto height   = js.value("height", 512);
-    auto depth   = js.value("depth", 512);
+    auto width  = js.value("width", 512);
+    auto height = js.value("height", 512);
+    auto depth  = js.value("depth", 512);
     if (type == "test_volume") {
-        value.volume_data = make_test_volume(
-            width, height, depth, js.value("scale", 10.0f), js.value("exponent", 6.0f));
+        value.volume_data = make_test_volume(width, height, depth,
+            js.value("scale", 10.0f), js.value("exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);
         return false;
@@ -1551,8 +1545,7 @@ bool apply_json_procedural(
         auto scaling     = js.value("scale", vec3f{1, 1, 1});
         value.frame      = make_translation_frame(translation) *
                       make_scaling_frame(scaling) *
-                      make_rotation_frame(
-                          xyz(rotation), rotation.w);
+                      make_rotation_frame(xyz(rotation), rotation.w);
     }
     return true;
 }
@@ -1581,8 +1574,7 @@ bool apply_json_procedural(
     if (!serialize_json_objbegin((json&)js, false)) return false;
     if (js.count("rotation")) {
         auto rotation = js.value("rotation", zero4f);
-        value.frame   = make_rotation_frame(
-            xyz(rotation), rotation.w);
+        value.frame   = make_rotation_frame(xyz(rotation), rotation.w);
     }
     return true;
 }
@@ -2263,7 +2255,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
             return empty(scene.surfaces[instance.surface].positions);
         return true;
     };
-    auto add_instance = [&](yocto_scene& scene, const string& objname, const string& groupname) {
+    auto add_instance = [&](yocto_scene& scene, const string& objname,
+                            const string& groupname) {
         auto instance = yocto_instance();
         instance.name = !empty(objname) ? objname : groupname;
         scene.instances.push_back(instance);
@@ -2457,7 +2450,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
         if (empty(scene.instances)) add_instance(scene, oname, gname);
-        if (scene.instances.back().surface >= 0) add_instance(scene, oname, gname);
+        if (scene.instances.back().surface >= 0)
+            add_instance(scene, oname, gname);
         if (scene.instances.back().shape < 0) {
             scene.shapes.push_back({});
             scene.shapes.back().name     = scene.instances.back().name;
@@ -2472,7 +2466,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     };
     cb.point = [&](const vector<obj_vertex>& verts) {
         if (empty(scene.instances)) add_instance(scene, oname, gname);
-        if (scene.instances.back().surface >= 0) add_instance(scene, oname, gname);
+        if (scene.instances.back().surface >= 0)
+            add_instance(scene, oname, gname);
         if (scene.instances.back().shape < 0) {
             scene.shapes.push_back({});
             scene.shapes.back().name     = scene.instances.back().name;
@@ -2672,8 +2667,9 @@ bool save_objx(const string& filename, const yocto_scene& scene) {
     // cameras
     for (auto& camera : scene.cameras) {
         print(fs, "c {} {} {} {} {} {} {} {}\n", camera.name,
-            (int)camera.orthographic, camera.film_width, camera.film_height, camera.focal_length,
-            camera.focus_distance, camera.lens_aperture, camera.frame);
+            (int)camera.orthographic, camera.film_width, camera.film_height,
+            camera.focal_length, camera.focus_distance, camera.lens_aperture,
+            camera.frame);
     }
 
     // environments
@@ -2761,8 +2757,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                             to_string(vert(qp.y, qt.y)),
                             to_string(vert(qp.z, qt.z)));
                     } else {
-                        print(fs, "f {} {} {} {}\n",
-                            to_string(vert(qp.x, qt.x)),
+                        print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qt.x)),
                             to_string(vert(qp.y, qt.y)),
                             to_string(vert(qp.z, qt.z)),
                             to_string(vert(qp.w, qt.w)));
@@ -2800,8 +2795,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
                             to_string(vert(qp.y, qn.y)),
                             to_string(vert(qp.z, qn.z)));
                     } else {
-                        print(fs, "f {} {} {} {}\n",
-                            to_string(vert(qp.x, qn.x)),
+                        print(fs, "f {} {} {} {}\n", to_string(vert(qp.x, qn.x)),
                             to_string(vert(qp.y, qn.y)),
                             to_string(vert(qp.z, qn.z)),
                             to_string(vert(qp.w, qn.w)));
@@ -4111,8 +4105,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         } else if (cmd == "LookAt") {
             auto m             = get_mat3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame *
-                                 inverse(
-                                     make_lookat_frame(m.x, m.y, m.z, true));
+                                 inverse(make_lookat_frame(m.x, m.y, m.z, true));
             stack.back().focus = length(m.x - m.y);
         } else if (cmd == "ReverseOrientation") {
             stack.back().reverse = !stack.back().reverse;
@@ -4123,7 +4116,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto camera           = yocto_camera{};
             camera.name           = "camera" + std::to_string(cid++);
             camera.frame          = inverse(stack.back().frame);
-            camera.frame.z  = -camera.frame.z;
+            camera.frame.z        = -camera.frame.z;
             camera.focus_distance = stack.back().focus;
             auto aspect           = stack.back().aspect;
             auto fovy             = 1.0f;
@@ -4326,11 +4319,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 printf("%s shape not supported\n", type.c_str());
             }
             auto frame = stack.back().frame;
-            auto scl   = vec3f{length(frame.x), length(frame.y),
-                length(frame.z)};
+            auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
             for (auto& p : shape.positions) p *= scl;
-            frame = {normalize(frame.x), normalize(frame.y),
-                         normalize(frame.z),
+            frame = {normalize(frame.x), normalize(frame.y), normalize(frame.z),
                 frame.o};
             if (stack.back().reverse) {
                 for (auto& t : shape.triangles) swap(t.y, t.z);
@@ -4418,8 +4409,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 instance.name  = shape.name;
                 instance.shape = (int)scene.shapes.size() - 1;
                 instance.frame = stack.back().frame *
-                                 make_lookat_frame(dir * distant_dist,
-                                     zero3f, {0, 1, 0}, true);
+                                 make_lookat_frame(dir * distant_dist, zero3f,
+                                     {0, 1, 0}, true);
                 scene.instances.push_back(instance);
                 printf("%s light not properly supported\n", type.c_str());
             } else {
@@ -4685,15 +4676,13 @@ bool serialize_bin_value(image4f& img, file_stream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.width)) return false;
         if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.width * img.height, data(img)))
-            return false;
+        if (!write_values(fs, img.width * img.height, data(img))) return false;
         return true;
     } else {
         if (!read_value(fs, img.width)) return false;
         if (!read_value(fs, img.height)) return false;
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.width * img.height, data(img)))
-            return false;
+        if (!read_values(fs, img.width * img.height, data(img))) return false;
         return true;
     }
 }
@@ -4701,15 +4690,13 @@ bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.width)) return false;
         if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.width * img.height, data(img)))
-            return false;
+        if (!write_values(fs, img.width * img.height, data(img))) return false;
         return true;
     } else {
         if (!read_value(fs, img.width)) return false;
         if (!read_value(fs, img.height)) return false;
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.width * img.height, data(img)))
-            return false;
+        if (!read_values(fs, img.width * img.height, data(img))) return false;
         return true;
     }
 }
@@ -4720,8 +4707,7 @@ bool serialize_bin_value(volume1f& vol, file_stream& fs, bool save) {
         if (!write_value(fs, vol.width)) return false;
         if (!write_value(fs, vol.height)) return false;
         if (!write_value(fs, vol.depth)) return false;
-        if (!write_values(
-                fs, vol.width * vol.height * vol.depth, data(vol)))
+        if (!write_values(fs, vol.width * vol.height * vol.depth, data(vol)))
             return false;
         return true;
     } else {
@@ -5344,8 +5330,7 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
                 to_string(vert(q.y)), to_string(vert(q.z)));
         } else {
             print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
-                to_string(vert(q.y)), to_string(vert(q.z)),
-                to_string(vert(q.w)));
+                to_string(vert(q.y)), to_string(vert(q.z)), to_string(vert(q.w)));
         }
     }
 
@@ -5564,9 +5549,9 @@ bool save_obj_facevarying_mesh(const string& filename,
         }
         auto qp = quads_positions.at(i);
         auto qt = !empty(quads_texturecoords) ? quads_texturecoords.at(i) :
-                                                 vec4i{-1, -1, -1, -1};
+                                                vec4i{-1, -1, -1, -1};
         auto qn = !empty(quads_normals) ? quads_normals.at(i) :
-                                           vec4i{-1, -1, -1, -1};
+                                          vec4i{-1, -1, -1, -1};
         if (qp.z != qp.w) {
             print(fs, "f {} {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
                 to_string(fvvert(qp.y, qt.y, qn.y)),

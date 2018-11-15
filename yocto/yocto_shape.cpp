@@ -57,8 +57,7 @@ vector<vec3f> compute_vertex_normals(
     for (auto& t : triangles) {
         auto normal = triangle_normal(
             positions[t.x], positions[t.y], positions[t.z]);
-        auto area = triangle_area(
-            positions[t.x], positions[t.y], positions[t.z]);
+        auto area = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         normals[t.x] += normal * area;
         normals[t.y] += normal * area;
         normals[t.z] += normal * area;
@@ -97,9 +96,9 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     auto tangu = vector<vec3f>(positions.size(), zero3f);
     auto tangv = vector<vec3f>(positions.size(), zero3f);
     for (auto t : triangles) {
-        auto [tu, tv] = triangle_tangents_fromuv(positions[t.x],
-            positions[t.y], positions[t.z], texturecoords[t.x],
-            texturecoords[t.y], texturecoords[t.z]);
+        auto [tu, tv] = triangle_tangents_fromuv(positions[t.x], positions[t.y],
+            positions[t.z], texturecoords[t.x], texturecoords[t.y],
+            texturecoords[t.z]);
         tu            = normalize(tu);
         tv            = normalize(tv);
         for (auto vid : {t.x, t.y, t.z}) tangu[vid] += tu;
@@ -124,17 +123,13 @@ tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
     auto skinned_positions = vector<vec3f>{positions.size()};
     auto skinned_normals   = vector<vec3f>{normals};
     for (auto i = 0; i < positions.size(); i++) {
-        skinned_positions[i] = transform_point(
-                                   xforms[joints[i].x], positions[i]) *
+        skinned_positions[i] = transform_point(xforms[joints[i].x], positions[i]) *
                                    weights[i].x +
-                               transform_point(
-                                   xforms[joints[i].y], positions[i]) *
+                               transform_point(xforms[joints[i].y], positions[i]) *
                                    weights[i].y +
-                               transform_point(
-                                   xforms[joints[i].z], positions[i]) *
+                               transform_point(xforms[joints[i].z], positions[i]) *
                                    weights[i].z +
-                               transform_point(
-                                   xforms[joints[i].w], positions[i]) *
+                               transform_point(xforms[joints[i].w], positions[i]) *
                                    weights[i].w;
     }
     for (auto i = 0; i < positions.size(); i++) {
@@ -325,9 +320,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_v
             auto v = vec3i{
                 (&quads_positions[fid].x)[c],
                 (!empty(quads_normals)) ? (&quads_normals[fid].x)[c] : -1,
-                (!empty(quads_texturecoords)) ?
-                    (&quads_texturecoords[fid].x)[c] :
-                    -1,
+                (!empty(quads_texturecoords)) ? (&quads_texturecoords[fid].x)[c] :
+                                                -1,
             };
             auto it = vert_map.find(v);
             if (it == vert_map.end()) {
@@ -456,14 +450,11 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     auto ttriangles = vector<vec3i>(nfaces * 4);
     for (auto i = 0; i < nfaces; i++) {
         auto t                = triangles[i];
-        ttriangles[i * 4 + 0] = {t.x,
-            nverts + get_edge_index(emap, {t.x, t.y}),
+        ttriangles[i * 4 + 0] = {t.x, nverts + get_edge_index(emap, {t.x, t.y}),
             nverts + get_edge_index(emap, {t.z, t.x})};
-        ttriangles[i * 4 + 1] = {t.y,
-            nverts + get_edge_index(emap, {t.y, t.z}),
+        ttriangles[i * 4 + 1] = {t.y, nverts + get_edge_index(emap, {t.y, t.z}),
             nverts + get_edge_index(emap, {t.x, t.y})};
-        ttriangles[i * 4 + 2] = {t.z,
-            nverts + get_edge_index(emap, {t.z, t.x}),
+        ttriangles[i * 4 + 2] = {t.z, nverts + get_edge_index(emap, {t.z, t.x}),
             nverts + get_edge_index(emap, {t.y, t.z})};
         ttriangles[i * 4 + 3] = {nverts + get_edge_index(emap, {t.x, t.y}),
             nverts + get_edge_index(emap, {t.y, t.z}),
@@ -516,8 +507,7 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
                                              vert[q.w]) /
                                          4;
         } else {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) /
-                                         3;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
     }
     // create quads
@@ -589,8 +579,8 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers_impl(
         tbeziers.push_back({bo + 2, bo + 3, bo + 4, vmap.at(b.w)});
         tvert.push_back(vert[b.x] / 2 + vert[b.y] / 2);
         tvert.push_back(vert[b.x] / 4 + vert[b.y] / 2 + vert[b.z] / 4);
-        tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 +
-                        3 * vert[b.z] / 8 + vert[b.w] / 8);
+        tvert.push_back(vert[b.x] / 8 + 3 * vert[b.y] / 8 + 3 * vert[b.z] / 8 +
+                        vert[b.w] / 8);
         tvert.push_back(vert[b.y] / 4 + vert[b.z] / 2 + vert[b.w] / 4);
         tvert.push_back(vert[b.z] / 2 + vert[b.w] / 2);
     }
@@ -647,8 +637,7 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
                                              vert[q.w]) /
                                          4;
         } else {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) /
-                                         3;
+            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) / 3;
         }
     }
     // create quads
@@ -925,14 +914,14 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
         auto [quad_id, quad_uv] = sample_quads_element(cdf, get_random_float(rng),
             {get_random_float(rng), get_random_float(rng)});
         auto q                  = quads[quad_id];
-        sampled_positions[i]    = interpolate_quad(positions[q.x],
-            positions[q.y], positions[q.z], positions[q.w], quad_uv);
+        sampled_positions[i] = interpolate_quad(positions[q.x], positions[q.y],
+            positions[q.z], positions[q.w], quad_uv);
         if (!empty(sampled_normals)) {
             sampled_normals[i] = normalize(interpolate_quad(normals[q.x],
                 normals[q.y], normals[q.z], normals[q.w], quad_uv));
         } else {
-            sampled_normals[i] = quad_normal(positions[q.x], positions[q.y],
-                positions[q.z], positions[q.w]);
+            sampled_normals[i] = quad_normal(
+                positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         }
         if (!empty(sampled_texturecoords)) {
             sampled_texturecoords[i] = interpolate_quad(texturecoords[q.x],
@@ -954,8 +943,7 @@ void merge_lines(
 void merge_triangles(vector<vec3i>& triangles,
     const vector<vec3i>& merge_triangles, int num_verts) {
     for (auto& t : merge_triangles)
-        triangles.push_back(
-            {t.x + num_verts, t.y + num_verts, t.z + num_verts});
+        triangles.push_back({t.x + num_verts, t.y + num_verts, t.z + num_verts});
 }
 void merge_quads(
     vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
@@ -1071,8 +1059,7 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_stac
     for (auto i = 0; i <= steps.z; i++) {
         auto [qquads, qpositions, qnormals, qtexturecoords] = make_quad_shape(
             {steps.x, steps.y}, {size.x, size.y}, uvsize);
-        for (auto& p : qpositions)
-            p.z = (-0.5f + (float)i / steps.z) * size.z;
+        for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
         merge_quads(quads, positions, normals, texturecoords, qquads,
             qpositions, qnormals, qtexturecoords);
     }
@@ -1150,11 +1137,10 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_roun
         steps, size, uvsize);
     auto c = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
-        auto pc = vec3f{fabs(positions[i].x), fabs(positions[i].y),
-            fabs(positions[i].z)};
+        auto pc = vec3f{
+            fabs(positions[i].x), fabs(positions[i].y), fabs(positions[i].z)};
         auto ps = vec3f{positions[i].x < 0 ? -1.0f : 1.0f,
-            positions[i].y < 0 ? -1.0f : 1.0f,
-            positions[i].z < 0 ? -1.0f : 1.0f};
+            positions[i].y < 0 ? -1.0f : 1.0f, positions[i].z < 0 ? -1.0f : 1.0f};
         if (pc.x >= c.x && pc.y >= c.y && pc.z >= c.z) {
             auto pn      = normalize(pc - c);
             positions[i] = c + radius * pn;
@@ -1188,7 +1174,7 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_sh
     for (auto i = 0; i < positions.size(); i++) {
         auto uv = texturecoords[i];
         auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
-        auto p = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
+        auto p  = vec3f{cos(a.x) * sin(a.y), sin(a.x) * sin(a.y), cos(a.y)};
         positions[i]     = p * (size / 2);
         normals[i]       = normalize(p);
         texturecoords[i] = uv * uvsize;
@@ -1252,9 +1238,9 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_quad
     for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
-        auto xy      = vec2f{positions[i].x, positions[i].y};
-        auto uv      = vec2f{xy.x * sqrt(1 - xy.y * xy.y / 2),
-            xy.y * sqrt(1 - xy.x * xy.x / 2)};
+        auto xy = vec2f{positions[i].x, positions[i].y};
+        auto uv = vec2f{
+            xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
         positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
     return {quads, positions, normals, texturecoords};
@@ -1320,7 +1306,7 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_
         {uvsize.x, uvsize.z});
     for (auto i = 0; i < bottom_positions.size(); i++) {
         bottom_positions[i].z = -size.y / 2;
-        bottom_normals[i]      = -bottom_normals[i];
+        bottom_normals[i]     = -bottom_normals[i];
     }
     for (auto i = 0; i < bottom_quads.size(); i++)
         swap(bottom_quads[i].x, bottom_quads[i].z);
@@ -1388,8 +1374,7 @@ make_cube_facevarying_shape(
     auto quads_normals              = quads;
     auto quads_texturecoords        = quads;
     tie(quads_positions, positions) = weld_quads(quads_positions, positions,
-        min(0.1f * size /
-            vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
+        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     return {quads_positions, quads_normals, quads_texturecoords, positions,
         normals, texturecoords};
 }
@@ -1412,8 +1397,7 @@ tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         steps, size, uvsize);
     auto [wquads, wpositions] = weld_quads(quads, positions,
-        min(0.1f * size /
-            vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
+        min(0.1f * size / vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     return {wquads, wpositions};
 }
 

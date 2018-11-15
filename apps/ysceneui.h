@@ -217,17 +217,15 @@ inline bool draw_opengl_widgets_scene_inspector(
     const opengl_window& win, yocto_camera& value, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
-    edited += draw_slider_opengl_widget(
-        win, "frame.x", value.frame.x, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame.y", value.frame.y, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame.z", value.frame.z, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame.o", value.frame.o, -10, 10);
+    edited += draw_slider_opengl_widget(win, "frame.x", value.frame.x, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame.y", value.frame.y, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame.z", value.frame.z, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame.o", value.frame.o, -10, 10);
     edited += draw_checkbox_opengl_widget(win, "ortho", value.orthographic);
-    edited += draw_slider_opengl_widget(win, "film width", value.film_width, 0.01f, 1);
-    edited += draw_slider_opengl_widget(win, "film height", value.film_height, 0.01f, 1);
+    edited += draw_slider_opengl_widget(
+        win, "film width", value.film_width, 0.01f, 1);
+    edited += draw_slider_opengl_widget(
+        win, "film height", value.film_height, 0.01f, 1);
     edited += draw_slider_opengl_widget(
         win, "focal length", value.focal_length, 0.01f, 1);
     edited += draw_slider_opengl_widget(
@@ -248,10 +246,10 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_slider_opengl_widget(win, "scale", value.height_scale, 0, 1);
     edited += draw_checkbox_opengl_widget(
         win, "ldr_as_linear", value.ldr_as_linear);
-    draw_label_opengl_widget(win, "hdr_image", "%d x %d",
-        value.hdr_image.width, value.hdr_image.height);
-    draw_label_opengl_widget(win, "ldr_image", "%d x %d",
-        value.ldr_image.width, value.ldr_image.height);
+    draw_label_opengl_widget(win, "hdr_image", "%d x %d", value.hdr_image.width,
+        value.hdr_image.height);
+    draw_label_opengl_widget(win, "ldr_image", "%d x %d", value.ldr_image.width,
+        value.ldr_image.height);
     return edited;
 }
 
@@ -328,14 +326,10 @@ inline bool draw_opengl_widgets_scene_inspector(
     const opengl_window& win, yocto_instance& value, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
-    edited += draw_slider_opengl_widget(
-        win, "frame[0]", value.frame.x, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame[1]", value.frame.y, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame[2]", value.frame.z, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame.o", value.frame.o, -10, 10);
+    edited += draw_slider_opengl_widget(win, "frame[0]", value.frame.x, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame[1]", value.frame.y, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame[2]", value.frame.z, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame.o", value.frame.o, -10, 10);
     edited += draw_combobox_opengl_widget(
         win, "shape", value.shape, scene.shapes, true);
     return edited;
@@ -345,14 +339,10 @@ inline bool draw_opengl_widgets_scene_inspector(
     const opengl_window& win, yocto_environment& value, yocto_scene& scene) {
     auto edited = 0;
     edited += draw_textinput_opengl_widget(win, "name", value.name);
-    edited += draw_slider_opengl_widget(
-        win, "frame[0]", value.frame.x, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame[1]", value.frame.y, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame[2]", value.frame.z, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "frame.o", value.frame.o, -10, 10);
+    edited += draw_slider_opengl_widget(win, "frame[0]", value.frame.x, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame[1]", value.frame.y, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame[2]", value.frame.z, -1, 1);
+    edited += draw_slider_opengl_widget(win, "frame.o", value.frame.o, -10, 10);
     edited += draw_coloredit_opengl_widget(win, "ke", value.emission);  // TODO:
                                                                         // HDR
     edited += draw_combobox_opengl_widget(
@@ -366,14 +356,10 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_textinput_opengl_widget(win, "name", value.name);
     edited += draw_combobox_opengl_widget(
         win, "parent", value.parent, scene.nodes, true);
-    edited += draw_slider_opengl_widget(
-        win, "local[0]", value.local.x, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "local[1]", value.local.y, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "local[2]", value.local.z, -1, 1);
-    edited += draw_slider_opengl_widget(
-        win, "local.o", value.local.o, -10, 10);
+    edited += draw_slider_opengl_widget(win, "local[0]", value.local.x, -1, 1);
+    edited += draw_slider_opengl_widget(win, "local[1]", value.local.y, -1, 1);
+    edited += draw_slider_opengl_widget(win, "local[2]", value.local.z, -1, 1);
+    edited += draw_slider_opengl_widget(win, "local.o", value.local.o, -10, 10);
     edited += draw_slider_opengl_widget(
         win, "translation", value.translation, -10, 10);
     edited += draw_slider_opengl_widget(win, "rotation", value.rotation, -1, 1);

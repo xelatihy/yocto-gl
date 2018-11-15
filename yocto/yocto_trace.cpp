@@ -278,27 +278,23 @@ vec3f sample_smooth_brdf_direction(const microfacet_brdf& brdf,
     if (brdf.diffuse != zero3f && rnl < prob.x) {
         auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
         auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        auto fp = dot(normal, outgoing) >= 0 ?
-                      make_frame_fromz(zero3f, normal) :
-                      make_frame_fromz(zero3f, -normal);
+        auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero3f, normal) :
+                                               make_frame_fromz(zero3f, -normal);
         return transform_direction(fp, il);
     }
     // sample according to specular GGX
     else if (brdf.specular != zero3f && rnl < prob.x + prob.y) {
         auto hl = sample_ggx(brdf.roughness, rn);
-        auto fp = dot(normal, outgoing) >= 0 ?
-                      make_frame_fromz(zero3f, normal) :
-                      make_frame_fromz(zero3f, -normal);
+        auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero3f, normal) :
+                                               make_frame_fromz(zero3f, -normal);
         auto h = transform_direction(fp, hl);
         return reflect(outgoing, h);
     }
     // transmission hack
-    else if (brdf.transmission != zero3f &&
-             rnl < prob.x + prob.y + prob.z) {
+    else if (brdf.transmission != zero3f && rnl < prob.x + prob.y + prob.z) {
         auto hl = sample_ggx(brdf.roughness, rn);
-        auto fp = dot(normal, outgoing) >= 0 ?
-                      make_frame_fromz(zero3f, normal) :
-                      make_frame_fromz(zero3f, -normal);
+        auto fp = dot(normal, outgoing) >= 0 ? make_frame_fromz(zero3f, normal) :
+                                               make_frame_fromz(zero3f, -normal);
         auto h  = transform_direction(fp, hl);
         auto ir = reflect(outgoing, h);
         return dot(normal, outgoing) >= 0 ? reflect(-ir, -normal) :
@@ -766,7 +762,7 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
             auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
-        if (at(density,channel) / majorant >= get_random_float(rng))
+        if (at(density, channel) / majorant >= get_random_float(rng))
             return distance;
 
         // Escape from volume.
@@ -1072,7 +1068,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             at(weight, ch) *= 3;
             at(weight, (ch + 1) % 3) = 0;
             at(weight, (ch + 2) % 3) = 0;
-            single_channel       = true;
+            single_channel           = true;
         }
 
         // TODO: FIXME REMOVING BBOX
@@ -1093,7 +1089,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // nothing (the environment)
         //        or a medium interaction was sampled. Doing isec.distance ==
         //        maxf doesn't work, why??
-        auto scene_size = max(bvh.nodes.front().bbox.max - bvh.nodes.front().bbox.min);
+        auto scene_size = max(
+            bvh.nodes.front().bbox.max - bvh.nodes.front().bbox.min);
 
         // environment
         if (isec.instance_id < 0 && distance > scene_size) {
@@ -1181,8 +1178,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             if (pdf == 0) break;
             weight *= brdf_cosine / pdf;
             if (weight == zero3f) break;
-            ray.o       = p;
-            ray.d    = incoming;
+            ray.o            = p;
+            ray.d            = incoming;
             bool transmitted = (ndi > 0) != (ndo > 0);
 
             // transmission in medium
@@ -1691,7 +1688,8 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
 // Trace a block of samples
 void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const image_region& region, int num_samples, const trace_image_options& options) {
+    const image_region& region, int num_samples,
+    const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
     auto  sampler = get_trace_sampler_func(options.sampler_type);
     for (auto j = region.offsety; j < region.offsety + region.height; j++) {
@@ -1700,11 +1698,10 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
-                auto ray = sample_camera_ray(
-                    camera, {i, j}, {rendered_image.width, rendered_image.height}, pixel.rng);
-                auto [radiance, hit] = sampler(scene, bvh, lights, ray.o,
-                    ray.d, pixel.rng, options.max_bounces,
-                    options.environments_hidden);
+                auto ray             = sample_camera_ray(camera, {i, j},
+                    {rendered_image.width, rendered_image.height}, pixel.rng);
+                auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
+                    pixel.rng, options.max_bounces, options.environments_hidden);
                 if (!isfinite(radiance.x) || !isfinite(radiance.y) ||
                     !isfinite(radiance.z)) {
                     log_error("NaN detected");
@@ -1717,7 +1714,7 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
                 pixel.samples += 1;
             }
             auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
-            auto coverage          = (float)pixel.hits / (float)pixel.samples;
+            auto coverage = (float)pixel.hits / (float)pixel.samples;
             at(rendered_image, i, j) = {
                 radiance.x, radiance.y, radiance.z, coverage};
         }
@@ -1726,8 +1723,9 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
 
 // Init a sequence of random number generators.
 trace_pixels make_trace_pixels(int width, int height, uint64_t seed) {
-    auto pixels = trace_pixels{width, height, vector<trace_pixel>(width*height,trace_pixel{})};
-    auto rng    = make_rng(1301081);
+    auto pixels = trace_pixels{
+        width, height, vector<trace_pixel>(width * height, trace_pixel{})};
+    auto rng = make_rng(1301081);
     for (auto j = 0; j < pixels.height; j++) {
         for (auto i = 0; i < pixels.width; i++) {
             auto& pixel = pixels[{i, j}];
@@ -1789,8 +1787,10 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto image_size = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.vertical_resolution);
     auto rendered_image = make_image(image_size.x, image_size.y, zero4f);
-    auto pixels         = make_trace_pixels(image_size.x, image_size.y, options.random_seed);
-    auto regions        = make_image_regions(rendered_image.width, rendered_image.height);
+    auto pixels         = make_trace_pixels(
+        image_size.x, image_size.y, options.random_seed);
+    auto regions = make_image_regions(
+        rendered_image.width, rendered_image.height);
 
     if (options.run_serially) {
         for (auto& region : regions) {
@@ -1821,8 +1821,9 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
-    auto regions = make_image_regions(rendered_image.width, rendered_image.height);
-    auto scope   = log_trace_scoped(
+    auto regions = make_image_regions(
+        rendered_image.width, rendered_image.height);
+    auto scope = log_trace_scoped(
         "tracing samples {}-{}", current_sample, options.num_samples);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
@@ -1852,17 +1853,17 @@ int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_image_async_start(image4f& rendered_image,
-    trace_pixels& pixels, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, vector<thread>& threads,
-    atomic<int>& current_sample, concurrent_queue<image_region>& queue,
-    const trace_image_options& options) {
+void trace_image_async_start(image4f& rendered_image, trace_pixels& pixels,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    vector<thread>& threads, atomic<int>& current_sample,
+    concurrent_queue<image_region>& queue, const trace_image_options& options) {
     log_trace("start tracing async");
-    auto& camera     = scene.cameras.at(options.camera_id);
-    auto  image_size = get_camera_image_size(camera, options.vertical_resolution);
-    rendered_image   = make_image(image_size.x, image_size.y, zero4f);
-    pixels           = make_trace_pixels(image_size.x, image_size.y, options.random_seed);
-    auto regions     = make_image_regions(rendered_image.width, rendered_image.height);
+    auto& camera    = scene.cameras.at(options.camera_id);
+    auto image_size = get_camera_image_size(camera, options.vertical_resolution);
+    rendered_image  = make_image(image_size.x, image_size.y, zero4f);
+    pixels = make_trace_pixels(image_size.x, image_size.y, options.random_seed);
+    auto regions = make_image_regions(
+        rendered_image.width, rendered_image.height);
     if (options.cancel_flag) *options.cancel_flag = false;
 
 #if 0
@@ -1944,8 +1945,7 @@ float specular_exponent_to_roughness(float exponent) {
 // Specular to fresnel eta.
 void specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk) {
     es  = {(1 + sqrt(ks.x)) / (1 - sqrt(ks.x)),
-        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)),
-        (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
+        (1 + sqrt(ks.y)) / (1 - sqrt(ks.y)), (1 + sqrt(ks.z)) / (1 - sqrt(ks.z))};
     esk = {0, 0, 0};
 }
 

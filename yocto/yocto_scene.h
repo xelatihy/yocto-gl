@@ -82,8 +82,8 @@ struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;
     bool    orthographic   = false;
-    float   film_width      = 0.036f;
-    float   film_height      = 0.024f;
+    float   film_width     = 0.036f;
+    float   film_height    = 0.024f;
     float   focal_length   = 0.050f;
     float   focus_distance = float_max;
     float   lens_aperture  = 0;
@@ -96,25 +96,25 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string       name             = "";
-    string       filename         = "";
+    string  name             = "";
+    string  filename         = "";
     image4f hdr_image        = {};
     image4b ldr_image        = {};
-    bool         clamp_to_edge    = false;
-    bool         no_interpolation = false;
-    float        height_scale     = 1;
-    bool         ldr_as_linear    = false;
-    bool         has_opacity      = false;
+    bool    clamp_to_edge    = false;
+    bool    no_interpolation = false;
+    float   height_scale     = 1;
+    bool    ldr_as_linear    = false;
+    bool    has_opacity      = false;
 };
 
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-    string        name             = "";
-    string        filename         = "";
+    string   name             = "";
+    string   filename         = "";
     volume1f volume_data      = {};
-    bool          clamp_to_edge    = false;
-    bool          no_interpolation = false;
+    bool     clamp_to_edge    = false;
+    bool     no_interpolation = false;
 };
 
 // Material for surfaces, lines and triangles.

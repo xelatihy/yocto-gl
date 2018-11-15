@@ -39,13 +39,13 @@ struct image_stats {
 
 struct app_image {
     // original data
-    string       filename = "";
-    string       outname  = "";
-    string       name     = "";
+    string  filename = "";
+    string  outname  = "";
+    string  name     = "";
     image4f img      = {};
 
     // diplay image
-    image4f   display = {};
+    image4f        display = {};
     opengl_texture gl_txt  = {};
 
     // image stats
@@ -61,7 +61,7 @@ struct app_image {
     thread       load_thread, display_thread, stats_thread, save_thread;
     atomic<bool> display_stop;
     concurrent_queue<image_region> display_queue;
-    string                   error_msg = "";
+    string                         error_msg = "";
 
     // viewing properties
     vec2f image_center = zero2f;
@@ -202,8 +202,8 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "inspect")) {
             auto mouse_pos = get_opengl_mouse_pos(win);
-            auto ij        = get_image_coords(
-                mouse_pos, img.image_center, img.image_scale, {img.img.width, img.img.height});
+            auto ij        = get_image_coords(mouse_pos, img.image_center,
+                img.image_scale, {img.img.width, img.img.height});
             draw_dragger_opengl_widget(win, "mouse", ij);
             auto pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
@@ -240,9 +240,10 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        update_image_view(img.image_center, img.image_scale, {img.display.width, img.display.height},
-            win_size, img.zoom_to_fit);
-        draw_glimage_background(img.gl_txt, win_size.x, win_size.y, img.image_center, img.image_scale);
+        update_image_view(img.image_center, img.image_scale,
+            {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
+        draw_glimage_background(img.gl_txt, win_size.x, win_size.y,
+            img.image_center, img.image_scale);
         set_opengl_blending(true);
         draw_glimage(img.gl_txt, win_size.x, win_size.y, img.image_center,
             img.image_scale);
@@ -256,8 +257,8 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(
-                img.gl_txt, img.display.width, img.display.height, false, false, false, false);
+            init_opengl_texture(img.gl_txt, img.display.width,
+                img.display.height, false, false, false, false);
         } else {
             auto region = image_region{};
             while (img.display_queue.try_pop(region)) {

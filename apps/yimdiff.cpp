@@ -35,8 +35,7 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
-image4f compute_diff_image(
-    const image4f& a, const image4f& b) {
+image4f compute_diff_image(const image4f& a, const image4f& b) {
     auto diff = make_image(a.width, a.height, zero4f);
     for (auto j = 0; j < a.height; j++) {
         for (auto i = 0; i < a.width; i++) {
@@ -62,7 +61,7 @@ image4f display_diff(const image4f& diff) {
     auto display = make_image(diff.width, diff.height, zero4f);
     for (auto j = 0; j < diff.height; j++) {
         for (auto i = 0; i < diff.width; i++) {
-            auto diff_value = max(at(diff, i, j));
+            auto diff_value   = max(at(diff, i, j));
             at(display, i, j) = {diff_value, diff_value, diff_value, 1};
         }
     }
@@ -84,23 +83,24 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // check image type
-        auto img1 = image4f{}, img2 = image4f{};
-        if (!load_image(filename1, img1))
-            log_fatal("cannot open image {}", filename1);
-        if (!load_image(filename2, img2))
-            log_fatal("cannot open image {}", filename2);
-        if (img1.width != img2.width || img1.height != img2.height) log_fatal("image size differs");
-        auto diff     = compute_diff_image(img1, img2);
-        auto max_diff = max_diff_value(diff);
-        if (!empty(output)) {
-            auto display = display_diff(diff);
-            if (!save_image(output, display))
-                log_fatal("cannot save image {}", output);
-        }
-        if (max(max_diff) > threshold) {
-            log_info("image max difference: {}", max_diff);
-            log_fatal("image content differs");
-        }
+    auto img1 = image4f{}, img2 = image4f{};
+    if (!load_image(filename1, img1))
+        log_fatal("cannot open image {}", filename1);
+    if (!load_image(filename2, img2))
+        log_fatal("cannot open image {}", filename2);
+    if (img1.width != img2.width || img1.height != img2.height)
+        log_fatal("image size differs");
+    auto diff     = compute_diff_image(img1, img2);
+    auto max_diff = max_diff_value(diff);
+    if (!empty(output)) {
+        auto display = display_diff(diff);
+        if (!save_image(output, display))
+            log_fatal("cannot save image {}", output);
+    }
+    if (max(max_diff) > threshold) {
+        log_info("image max difference: {}", max_diff);
+        log_fatal("image content differs");
+    }
 
     // done
     return 0;

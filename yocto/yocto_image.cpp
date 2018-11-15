@@ -60,7 +60,7 @@ vector<image_region> make_image_regions(int width, int height, int region_size) 
     for (auto y = 0; y < height; y += region_size) {
         for (auto x = 0; x < width; x += region_size) {
             regions.push_back({x, y, min(region_size, width - x),
-                                           min(region_size, height - y)});
+                min(region_size, height - y)});
         }
     }
     return regions;
@@ -127,8 +127,7 @@ image4b float_to_byte(const image4f& fl) {
 }
 
 // Tonemap image
-image4f tonemap_image(
-    const image4f& hdr, float exposure, bool filmic, bool srgb) {
+image4f tonemap_image(const image4f& hdr, float exposure, bool filmic, bool srgb) {
     auto ldr = make_image(hdr.width, hdr.height, zero4f);
     for (auto j = 0; j < hdr.height; j++) {
         for (auto i = 0; i < hdr.width; i++) {
@@ -177,7 +176,7 @@ image4f make_checker_image(
     auto tile = img.width / tiles;
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto c      = (i / tile + j / tile) % 2 == 0;
+            auto c        = (i / tile + j / tile) % 2 == 0;
             at(img, i, j) = (c) ? c0 : c1;
         }
     }
@@ -209,7 +208,7 @@ image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1)
     auto img = make_image(width, height, zero4f);
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto u      = (float)i / (float)img.width;
+            auto u        = (float)i / (float)img.width;
             at(img, i, j) = c0 * (1 - u) + c1 * u;
         }
     }
@@ -236,8 +235,8 @@ image4f make_uvramp_image(int width, int height) {
     auto img = make_image(width, height, zero4f);
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            at(img, i, j) = {i / (float)(img.width - 1),
-                j / (float)(img.height - 1), 0, 1};
+            at(img, i, j) = {
+                i / (float)(img.width - 1), j / (float)(img.height - 1), 0, 1};
         }
     }
     return img;
@@ -285,8 +284,8 @@ image4f bump_to_normal_map(const image4f& img, float scale) {
             auto normal = vec3f{
                 scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
             normal.y = -normal.y;  // make green pointing up, even if y axis
-                                     // points down
-            normal       = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
+                                   // points down
+            normal         = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
             at(norm, i, j) = {normal.x, normal.y, normal.z, 1};
         }
     }
@@ -382,8 +381,7 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
     auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
         // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
         //                                                zero3f;
-        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 :
-                                                         zero3f;
+        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
     };
 
     // Make the sun sky image
@@ -401,7 +399,7 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
             auto sun_col = sun(theta, gamma);
             sky_integral += mean(sky_col) * sin(theta);
             sun_integral += mean(sun_col) * sin(theta);
-            auto col    = sky_col + sun_col;
+            auto col      = sky_col + sun_col;
             at(img, i, j) = {col.x, col.y, col.z, 1};
         }
     }
@@ -463,8 +461,8 @@ image4f make_noise_image(int width, int height, float scale, bool wrap) {
         for (auto i = 0; i < img.width; i++) {
             auto p = vec3f{i / (float)img.width, j / (float)img.height, 0.5f} *
                      scale;
-            auto g      = perlin_noise(p, wrap3i);
-            g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
+            auto g        = perlin_noise(p, wrap3i);
+            g             = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -499,7 +497,7 @@ image4f make_ridge_image(int width, int height, float scale, float lacunarity,
                      scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
-            g           = clamp(g, 0.0f, 1.0f);
+            g             = clamp(g, 0.0f, 1.0f);
             at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -517,7 +515,7 @@ image4f make_turbulence_image(int width, int height, float scale,
                      scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
-            g           = clamp(g, 0.0f, 1.0f);
+            g             = clamp(g, 0.0f, 1.0f);
             at(img, i, j) = {g, g, g, 1};
         }
     }
@@ -532,7 +530,8 @@ image4f make_turbulence_image(int width, int height, float scale,
 namespace yocto {
 
 // make a simple example volume
-volume1f make_test_volume(int width, int height, int depth, float scale, float exponent) {
+volume1f make_test_volume(
+    int width, int height, int depth, float scale, float exponent) {
     auto vol = make_volume(width, height, depth, 0.0f);
     for (auto k = 0; k < vol.depth; k++) {
         for (auto j = 0; j < vol.height; j++) {
@@ -540,8 +539,7 @@ volume1f make_test_volume(int width, int height, int depth, float scale, float e
                 auto p = vec3f{
                     i / (float)width, j / (float)height, k / (float)depth};
                 float value = pow(
-                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
-                    exponent);
+                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
                 at(vol, i, j, k) = clamp(value, 0.0f, 1.0f);
             }
         }
