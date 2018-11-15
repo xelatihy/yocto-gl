@@ -138,8 +138,10 @@ int main(int argc, char* argv[]) {
     auto srgb   = parse_argument(parser, "--srgb", true, "Tonemap to sRGB.");
     auto filmic = parse_argument(
         parser, "--filmic/--no-filmic,-f", false, "Tonemap uses filmic curve");
-    auto resize_size = parse_argument(
-        parser, "--resize", zero2i, "resize size (0 to maintain aspect)");
+    auto resize_width = parse_argument(
+        parser, "--resize-width", 0, "resize size (0 to maintain aspect)");
+    auto resize_height = parse_argument(
+        parser, "--resize-height", 0, "resize size (0 to maintain aspect)");
     auto spatial_sigma = parse_argument(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
     auto range_sigma = parse_argument(
@@ -187,8 +189,8 @@ int main(int argc, char* argv[]) {
     }
 
     // resize
-    if (resize_size != zero2i) {
-        img = resize_image(img, resize_size);
+    if (resize_width != 0 || resize_height != 0) {
+        img = resize_image(img, resize_width, resize_height);
     }
 
     // bilateral

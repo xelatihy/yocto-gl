@@ -531,11 +531,17 @@ bool save_tonemapped_image(const string& filename, const image4f& hdr,
 }
 
 // Resize image.
-image4f resize_image(const image4f& img, const vec2i& size) {
-    if (size == zero2i) {
+image4f resize_image(const image4f& img, int width, int height) {
+    if (width == 0 && height == 0) {
         log_error("bad image size in resize_image");
+        return {};
     }
-    auto res_img = image4f{get_image_size(size, (float)img.size.x / (float)img.size.y)};
+    if (height == 0) {
+        height = (int)round(width * (float)img.size.y / (float)img.size.x);
+    } else if (width == 0) {
+        width = (int)round(height * (float)img.size.x / (float)img.size.y);
+    }
+    auto res_img = make_image({width, height}, zero4f);
     stbir_resize_float_generic((float*)data(img), img.size.x, img.size.y,
         sizeof(vec4f) * img.size.x, (float*)data(res_img), res_img.size.x,
         res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,

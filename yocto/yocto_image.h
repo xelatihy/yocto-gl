@@ -126,11 +126,6 @@ vector<bbox2i> make_image_regions(const vec2i& size, int region_size = 32);
 image4f get_image_region(const image4f& img, const bbox2i& region);
 image4b get_image_region(const image4b& img, const bbox2i& region);
 
-// Gets an image size from a suggested size and an aspect ratio. The suggested
-// size may have zeros in either components. In which case, we use the aspect
-// ration to compute the other.
-vec2i get_image_size(const vec2i& size, float aspect);
-
 // Conversion from/to floats.
 image4f byte_to_float(const image4b& bt);
 image4b float_to_byte(const image4f& fl);
@@ -150,7 +145,7 @@ void tonemap_image_region(image4f& ldr, const bbox2i& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image4f resize_image(const image4f& img, const vec2i& size);
+image4f resize_image(const image4f& img, int width, int height);
 
 }  // namespace yocto
 

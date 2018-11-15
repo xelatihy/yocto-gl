@@ -4494,7 +4494,7 @@ WorldEnd
     auto  from   = camera.frame.o;
     auto  to     = camera.frame.o - camera.frame.z;
     auto  up     = camera.frame.y;
-    auto  res    = get_image_size({0, 512}, get_camera_aspect(camera));
+    auto  res    = get_camera_image_size(camera, 720);
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         get_camera_fovy(camera) * 180 / pif);

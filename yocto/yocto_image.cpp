@@ -34,21 +34,6 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Gets an image size from a suggested size and an aspect ratio. The suggested
-// size may have zeros in either components. In which case, we use the aspect
-// ration to compute the other.
-vec2i get_image_size(const vec2i& size, float aspect) {
-    if (size == zero2i) {
-        return {(int)round(720 * aspect), 720};
-    } else if (size.y == 0) {
-        return {size.x, (int)round(size.x / aspect)};
-    } else if (size.x == 0) {
-        return {(int)round(size.y * aspect), size.y};
-    } else {
-        return size;
-    }
-}
-
 // Gets pixels in an image region
 image4f get_image_region(const image4f& img, const bbox2i& region) {
     auto clipped = make_image(bbox_size(region), zero4f);
