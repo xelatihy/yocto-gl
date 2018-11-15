@@ -1685,8 +1685,13 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
     return {};
 }
 
+// Get trace pixel
+trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
+    return state.pixels[j * state.width + i];
+}
+
 // Trace a block of samples
-void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
+void trace_image_region(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const image_region& region, int num_samples,
     const trace_image_options& options) {
@@ -1694,12 +1699,12 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
     auto  sampler = get_trace_sampler_func(options.sampler_type);
     for (auto j = region.offsety; j < region.offsety + region.height; j++) {
         for (auto i = region.offsetx; i < region.offsetx + region.width; i++) {
-            auto& pixel = pixels[{i, j}];
+            auto& pixel = get_trace_pixel(state, i, j);
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray             = sample_camera_ray(camera, {i, j},
-                    {rendered_image.width, rendered_image.height}, pixel.rng);
+                    {image.width, image.height}, pixel.rng);
                 auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
                     pixel.rng, options.max_bounces, options.environments_hidden);
                 if (!isfinite(radiance.x) || !isfinite(radiance.y) ||
@@ -1715,24 +1720,24 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
             }
             auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
             auto coverage = (float)pixel.hits / (float)pixel.samples;
-            at(rendered_image, i, j) = {
+            at(image, i, j) = {
                 radiance.x, radiance.y, radiance.z, coverage};
         }
     }
 }
 
 // Init a sequence of random number generators.
-trace_pixels make_trace_pixels(int width, int height, uint64_t seed) {
-    auto pixels = trace_pixels{
+trace_state make_trace_state(int width, int height, uint64_t seed) {
+    auto state = trace_state{
         width, height, vector<trace_pixel>(width * height, trace_pixel{})};
     auto rng = make_rng(1301081);
-    for (auto j = 0; j < pixels.height; j++) {
-        for (auto i = 0; i < pixels.width; i++) {
-            auto& pixel = pixels[{i, j}];
+    for (auto j = 0; j < state.height; j++) {
+        for (auto i = 0; i < state.width; i++) {
+            auto& pixel = get_trace_pixel(state, i, j);
             pixel.rng   = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
-    return pixels;
+    return state;
 }
 
 // Init trace lights
@@ -1786,16 +1791,16 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto scope      = log_trace_scoped("tracing image");
     auto image_size = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.vertical_resolution);
-    auto rendered_image = make_image(image_size.x, image_size.y, zero4f);
-    auto pixels         = make_trace_pixels(
+    auto image = make_image(image_size.x, image_size.y, zero4f);
+    auto pixels         = make_trace_state(
         image_size.x, image_size.y, options.random_seed);
     auto regions = make_image_regions(
-        rendered_image.width, rendered_image.height);
+        image.width, image.height);
 
     if (options.run_serially) {
         for (auto& region : regions) {
             if (options.cancel_flag && *options.cancel_flag) break;
-            trace_image_region(rendered_image, pixels, scene, bvh, lights,
+            trace_image_region(image, pixels, scene, bvh, lights,
                 region, options.num_samples, options);
         }
     } else {
@@ -1807,22 +1812,22 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
                      region_id += nthreads) {
                     if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, pixels, scene, bvh,
+                    trace_image_region(image, pixels, scene, bvh,
                         lights, region, options.num_samples, options);
                 }
             }));
         }
         for (auto& t : threads) t.join();
     }
-    return rendered_image;
+    return image;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
+int trace_image_samples(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
     auto regions = make_image_regions(
-        rendered_image.width, rendered_image.height);
+        image.width, image.height);
     auto scope = log_trace_scoped(
         "tracing samples {}-{}", current_sample, options.num_samples);
     auto num_samples = min(
@@ -1830,7 +1835,7 @@ int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
     if (options.run_serially) {
         for (auto& region : regions) {
             if (options.cancel_flag && *options.cancel_flag) break;
-            trace_image_region(rendered_image, pixels, scene, bvh, lights,
+            trace_image_region(image, state, scene, bvh, lights,
                 region, num_samples, options);
         }
     } else {
@@ -1842,7 +1847,7 @@ int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
                      region_id += nthreads) {
                     if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, pixels, scene, bvh,
+                    trace_image_region(image, state, scene, bvh,
                         lights, region, num_samples, options);
                 }
             }));
@@ -1853,24 +1858,24 @@ int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
 }
 
 // Starts an anyncrhounous renderer.
-void trace_image_async_start(image4f& rendered_image, trace_pixels& pixels,
+void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<thread>& threads, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_image_options& options) {
     log_trace("start tracing async");
     auto& camera    = scene.cameras.at(options.camera_id);
     auto image_size = get_camera_image_size(camera, options.vertical_resolution);
-    rendered_image  = make_image(image_size.x, image_size.y, zero4f);
-    pixels = make_trace_pixels(image_size.x, image_size.y, options.random_seed);
+    image  = make_image(image_size.x, image_size.y, zero4f);
+    state = make_trace_state(image_size.x, image_size.y, options.random_seed);
     auto regions = make_image_regions(
-        rendered_image.width, rendered_image.height);
+        image.width, image.height);
     if (options.cancel_flag) *options.cancel_flag = false;
 
 #if 0
     auto nthreads = thread::hardware_concurrency();
     threads.clear();
     for (auto tid = 0; tid < nthreads; tid++) {
-        threads.push_back(thread([options, tid, nthreads, regions, &current_sample, &queue, &lights, &scene, &rendered_image, &pixels, &bvh]() {
+        threads.push_back(thread([options, tid, nthreads, regions, &current_sample, &queue, &lights, &scene, &image, &pixels, &bvh]() {
             for (auto s = 0; s < options.num_samples;
                  s += options.samples_per_batch) {
                 if (!tid) current_sample = s;
@@ -1880,7 +1885,7 @@ void trace_image_async_start(image4f& rendered_image, trace_pixels& pixels,
                      region_id += nthreads) {
                     if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
-                    trace_image_region(rendered_image, pixels, scene, bvh,
+                    trace_image_region(image, pixels, scene, bvh,
                         lights, region, num_samples, options);
                     queue.push(region);
                 }
@@ -1890,8 +1895,8 @@ void trace_image_async_start(image4f& rendered_image, trace_pixels& pixels,
     }
 #else
     threads.clear();
-    threads.emplace_back([options, regions, &current_sample, &rendered_image,
-                             &scene, &lights, &bvh, &pixels, &queue]() {
+    threads.emplace_back([options, regions, &current_sample, &image,
+                             &scene, &lights, &bvh, &state, &queue]() {
         for (auto sample = 0; sample < options.num_samples;
              sample += options.samples_per_batch) {
             if (options.cancel_flag && *options.cancel_flag) return;
@@ -1899,9 +1904,9 @@ void trace_image_async_start(image4f& rendered_image, trace_pixels& pixels,
             auto num_samples = min(options.samples_per_batch,
                 options.num_samples - current_sample);
             parallel_foreach(regions,
-                [num_samples, &options, &rendered_image, &scene, &lights, &bvh,
-                    &pixels, &queue](const image_region& region) {
-                    trace_image_region(rendered_image, pixels, scene, bvh,
+                [num_samples, &options, &image, &scene, &lights, &bvh,
+                    &state, &queue](const image_region& region) {
+                    trace_image_region(image, state, scene, bvh,
                         lights, region, num_samples, options);
                     queue.push(region);
                 },

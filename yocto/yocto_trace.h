@@ -25,7 +25,7 @@
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
 // 2. prepare lights for rendering with `make_trace_lights()`
-// 3. create the random number generators with `make_trace_pixels()`
+// 3. create the random number generators with `make_trace_state()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -100,21 +100,14 @@ struct trace_pixel {
     int       samples  = 0;
     rng_state rng      = {};
 };
-struct trace_pixels {
+struct trace_state {
     int                 width  = 0;
     int                 height = 0;
     vector<trace_pixel> pixels = {};
-
-    trace_pixel& operator[](const vec2i& ij) {
-        return pixels[ij.y * width + ij.x];
-    }
-    const trace_pixel& operator[](const vec2i& ij) const {
-        return pixels[ij.y * width + ij.x];
-    }
 };
 
 // Initialize state of the renderer.
-trace_pixels make_trace_pixels(
+trace_state make_trace_state(
     int width, int height, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
@@ -169,13 +162,13 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
+int trace_image_samples(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
-void trace_image_async_start(image4f& rendered_image, trace_pixels& pixels,
+void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<thread>& threads, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_image_options& options);
