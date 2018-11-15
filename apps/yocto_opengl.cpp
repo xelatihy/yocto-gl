@@ -479,8 +479,8 @@ void draw_opengl_triangles(const opengl_elementbuffer& buffer, int num) {
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
-    const vec2i& window_size, const vec2f& image_center, float image_scale) {
+void draw_glimage(const opengl_texture& texture, 
+    int win_width, int win_height, const vec2f& image_center, float image_scale) {
     static opengl_program       gl_prog      = {};
     static opengl_array_buffer  gl_texcoord  = {};
     static opengl_elementbuffer gl_triangles = {};
@@ -519,11 +519,11 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
     // draw
     check_opengl_error();
     bind_opengl_program(gl_prog);
-    set_opengl_uniform_texture(gl_prog, "txt", gl_txt, 0);
+    set_opengl_uniform_texture(gl_prog, "txt", texture, 0);
     set_opengl_uniform(gl_prog, "window_size",
-        vec2f{(float)window_size.x, (float)window_size.y});
+        vec2f{(float)win_width, (float)win_height});
     set_opengl_uniform(gl_prog, "image_size",
-        vec2f{(float)image_size.x, (float)image_size.y});
+        vec2f{(float)texture.width, (float)texture.height});
     set_opengl_uniform(gl_prog, "image_center", image_center);
     set_opengl_uniform(gl_prog, "image_scale", image_scale);
     set_opengl_vertexattrib(gl_prog, "texcoord", gl_texcoord, zero2f);
@@ -532,7 +532,7 @@ void draw_glimage(const opengl_texture& gl_txt, const vec2i& image_size,
     check_opengl_error();
 }
 
-void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
+void draw_glimage_background(const opengl_texture& texture, int win_width, int win_height, 
     const vec2f& image_center, float image_scale, float border_size) {
     static opengl_program       gl_prog      = {};
     static opengl_array_buffer  gl_texcoord  = {};
@@ -579,9 +579,9 @@ void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
     // draw
     bind_opengl_program(gl_prog);
     set_opengl_uniform(gl_prog, "window_size",
-        vec2f{(float)window_size.x, (float)window_size.y});
+        vec2f{(float)win_width, (float)win_height});
     set_opengl_uniform(gl_prog, "image_size",
-        vec2f{(float)image_size.x, (float)image_size.y});
+        vec2f{(float)texture.width, (float)texture.height});
     set_opengl_uniform(
         gl_prog, "border_size", vec2f{(float)border_size, (float)border_size});
     set_opengl_uniform(gl_prog, "image_center", image_center);

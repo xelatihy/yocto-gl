@@ -209,9 +209,9 @@ void draw_opengl_points(const opengl_elementbuffer& buffer, int num);
 void draw_opengl_lines(const opengl_elementbuffer& buffer, int num);
 void draw_opengl_triangles(const opengl_elementbuffer& buffer, int num);
 
-void draw_glimage(const opengl_texture& texture, const vec2i& image_size,
-    const vec2i& window_size, const vec2f& image_center, float image_scale);
-void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
+void draw_glimage(const opengl_texture& texture, 
+    int win_width, int win_height, const vec2f& image_center, float image_scale);
+void draw_glimage_background(const opengl_texture& texture, int win_width, int win_height, 
     const vec2f& image_center, float image_scale, float border_size = 2);
 
 struct opengl_window;
