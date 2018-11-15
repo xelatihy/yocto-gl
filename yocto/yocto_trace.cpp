@@ -1718,7 +1718,7 @@ void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
             }
             auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
             auto coverage          = (float)pixel.hits / (float)pixel.samples;
-            rendered_image[{i, j}] = {
+            at(rendered_image, i, j) = {
                 radiance.x, radiance.y, radiance.z, coverage};
         }
     }

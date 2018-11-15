@@ -413,9 +413,9 @@ float            sample_surface_element_pdf(const yocto_surface& surface,
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
-vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij);
+vec4f lookup_texture(const yocto_texture& texture, int i, int j);
 vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
-float lookup_voltexture(const yocto_voltexture& texture, const vec3i& ijk);
+float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
 float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.

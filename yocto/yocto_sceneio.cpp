@@ -547,33 +547,13 @@ string base64_decode(string const& encoded_string) {
 namespace yocto {
 
 bool operator==(const image4f& a, const image4f& b) {
-    if (a.size != b.size) return false;
-    for (auto j = 0; j < a.size.y; j++) {
-        for (auto i = 0; i < a.size.x; i++) {
-            if (a[{i, j}] != b[{i, j}]) return false;
-        }
-    }
-    return true;
+    return a.size == b.size && a.pixels == b.pixels;
 }
 bool operator==(const image4b& a, const image4b& b) {
-    if (a.size != b.size) return false;
-    for (auto j = 0; j < a.size.y; j++) {
-        for (auto i = 0; i < a.size.x; i++) {
-            if (a[{i, j}] != b[{i, j}]) return false;
-        }
-    }
-    return true;
+    return a.size == b.size && a.pixels == b.pixels;
 }
 bool operator==(const volume1f& a, const volume1f& b) {
-    if (a.size != b.size) return false;
-    for (auto k = 0; k < a.size.z; k++) {
-        for (auto j = 0; j < a.size.y; j++) {
-            for (auto i = 0; i < a.size.x; i++) {
-                if (a[{i, j, k}] != b[{i, j, k}]) return false;
-            }
-        }
-    }
-    return true;
+    return a.size == b.size && a.voxels == b.voxels;
 }
 
 // Dumps a json value

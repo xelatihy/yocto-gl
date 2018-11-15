@@ -487,7 +487,7 @@ vector<float> compute_environment_texels_cdf(
         for (auto i = 0; i < elem_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
-            auto value  = lookup_texture(texture, ij);
+            auto value  = lookup_texture(texture, ij.x, ij.y);
             elem_cdf[i] = max(xyz(value)) * sin(th);
             if (i) elem_cdf[i] += elem_cdf[i - 1];
         }
@@ -1237,13 +1237,13 @@ vec2i evaluate_texture_size(const yocto_texture& texture) {
 }
 
 // Lookup a texture value
-vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij) {
+vec4f lookup_texture(const yocto_texture& texture, int i, int j) {
     if (!empty(texture.hdr_image)) {
-        return texture.hdr_image[ij];
+        return at(texture.hdr_image, i, j);
     } else if (!empty(texture.ldr_image) && !texture.ldr_as_linear) {
-        return srgb_to_linear(byte_to_float(texture.ldr_image[ij]));
+        return srgb_to_linear(byte_to_float(at(texture.ldr_image, i, j)));
     } else if (!empty(texture.ldr_image) && texture.ldr_as_linear) {
-        return byte_to_float(texture.ldr_image[ij]);
+        return byte_to_float(at(texture.ldr_image, i, j));
     } else {
         return zero4f;
     }
@@ -1279,14 +1279,14 @@ vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord) {
     if (texture.no_interpolation) {
         i = u < 0.5 ? i : min(i + 1, width - 1);
         j = v < 0.5 ? j : min(j + 1, height - 1);
-        return lookup_texture(texture, {i, j});
+        return lookup_texture(texture, i, j);
     }
 
     // handle interpolation
-    return lookup_texture(texture, {i, j}) * (1 - u) * (1 - v) +
-           lookup_texture(texture, {i, jj}) * (1 - u) * v +
-           lookup_texture(texture, {ii, j}) * u * (1 - v) +
-           lookup_texture(texture, {ii, jj}) * u * v;
+    return lookup_texture(texture, i, j) * (1 - u) * (1 - v) +
+           lookup_texture(texture, i, jj) * (1 - u) * v +
+           lookup_texture(texture, ii, j) * u * (1 - v) +
+           lookup_texture(texture, ii, jj) * u * v;
 }
 
 // Lookup a texture value

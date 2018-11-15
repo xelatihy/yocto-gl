@@ -117,7 +117,7 @@ void start_rendering_async(app_state& app) {
                      i / app.preview_ratio, 0, display_preview.size.x - 1),
                  pj = clamp(
                      j / app.preview_ratio, 0, display_preview.size.y - 1);
-            large_preview[{i, j}] = display_preview[{pi, pj}];
+            at(large_preview, i, j) = at(display_preview, pi, pj);
         }
     }
     app.preview_image = large_preview;
@@ -259,7 +259,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             if (ij.x >= 0 && ij.x < app.rendered_image.size.x &&
                 ij.y >= 0 && ij.y < app.rendered_image.size.y) {
                 draw_coloredit_opengl_widget(
-                    win, "pixel", app.rendered_image[ij]);
+                    win, "pixel", at(app.rendered_image, ij.x, ij.y));
             } else {
                 auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);
