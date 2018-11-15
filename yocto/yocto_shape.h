@@ -104,24 +104,6 @@
 
 #include "yocto_math.h"
 
-#include <tuple>
-#include <unordered_map>
-#include <vector>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::get;
-using std::ignore;
-using std::tie;
-using std::tuple;
-using std::unordered_map;
-using std::vector;
-
-}  // namespace yocto
-
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------

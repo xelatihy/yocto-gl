@@ -74,12 +74,17 @@
 // -----------------------------------------------------------------------------
 
 #include <algorithm>
-#include <array>
 #include <cfloat>
 #include <climits>
 #include <cmath>
 #include <functional>
-#include <initializer_list>
+#include <vector>
+#include <array>
+#include <string>
+#include <atomic>
+#include <cstdint>
+#include <unordered_map>
+#include <tuple>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -106,9 +111,18 @@ using std::sqrt;
 using std::swap;
 using std::tan;
 
-using std::array;
-using std::initializer_list;
 using std::pair;
+using std::array;
+using std::vector;
+using std::string;
+using std::function;
+using std::unordered_map;
+using std::atomic;
+using std::get;
+using std::ignore;
+using std::tie;
+using std::tuple;
+using namespace std::string_literals;
 
 }  // namespace yocto
 
