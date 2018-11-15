@@ -19,10 +19,8 @@
             ],
             "focal_length": 0.035,
             "lens_aperture": 0.0,
-            "film_size": [
-                0.024,
-                0.024
-            ]
+            "film_width": 0.024,
+            "film_height": 0.024
         }
     ],
     "textures": [],

@@ -82,38 +82,41 @@ void bind_opengl_program(opengl_program& program);
 void unbind_opengl_program();
 
 struct opengl_texture {
-    uint  texture_id = 0;
-    vec2i size       = {0, 0};
+    uint texture_id = 0;
+    int  width      = 0;
+    int  height     = 0;
 
     operator bool() const { return (bool)texture_id; }
 };
 
-bool init_opengl_texture(opengl_texture& texture, const vec2i& image_size,
+bool init_opengl_texture(opengl_texture& texture, int width, int height,
     bool as_float, bool as_srgb, bool linear, bool mipmap);
 
 void update_opengl_texture(
-    opengl_texture& texture, const image<vec4f>& img, bool mipmap);
-void update_opengl_texture_region(opengl_texture& texture,
-    const image<vec4f>& img, const bbox2i& region, bool mipmap);
+    opengl_texture& texture, const image4f& img, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
+    const image_region& region, bool mipmap);
 
-inline bool init_opengl_texture(opengl_texture& texture,
-    const image<vec4f>& img, bool as_float, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.size(), as_float, false, linear, mipmap))
+inline bool init_opengl_texture(opengl_texture& texture, const image4f& img,
+    bool as_float, bool linear, bool mipmap) {
+    if (!init_opengl_texture(
+            texture, img.width, img.height, as_float, false, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;
 }
 
-bool init_opengl_texture(opengl_texture& texture, const image<vec4b>& img,
+bool init_opengl_texture(opengl_texture& texture, const image4b& img,
     bool as_srgb, bool linear, bool mipmap);
 void update_opengl_texture(
-    opengl_texture& texture, const image<vec4b>& img, bool mipmap);
-void update_opengl_texture_region(opengl_texture& texture,
-    const image<vec4b>& img, const bbox2i& region, bool mipmap);
+    opengl_texture& texture, const image4b& img, bool mipmap);
+void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
+    const image_region& region, bool mipmap);
 
-inline bool init_opengl_texture(opengl_texture& texture,
-    const image<vec4b>& img, bool as_srgb, bool linear, bool mipmap) {
-    if (!init_opengl_texture(texture, img.size(), false, as_srgb, linear, mipmap))
+inline bool init_opengl_texture(opengl_texture& texture, const image4b& img,
+    bool as_srgb, bool linear, bool mipmap) {
+    if (!init_opengl_texture(
+            texture, img.width, img.height, false, as_srgb, linear, mipmap))
         return false;
     update_opengl_texture(texture, img, mipmap);
     return true;
@@ -208,10 +211,11 @@ void draw_opengl_points(const opengl_elementbuffer& buffer, int num);
 void draw_opengl_lines(const opengl_elementbuffer& buffer, int num);
 void draw_opengl_triangles(const opengl_elementbuffer& buffer, int num);
 
-void draw_glimage(const opengl_texture& texture, const vec2i& image_size,
-    const vec2i& window_size, const vec2f& image_center, float image_scale);
-void draw_glimage_background(const vec2i& image_size, const vec2i& window_size,
-    const vec2f& image_center, float image_scale, float border_size = 2);
+void draw_glimage(const opengl_texture& texture, int win_width, int win_height,
+    const vec2f& image_center, float image_scale);
+void draw_glimage_background(const opengl_texture& texture, int win_width,
+    int win_height, const vec2f& image_center, float image_scale,
+    float border_size = 2);
 
 struct opengl_window;
 using refresh_opengl_callback = function<void(const opengl_window&)>;
@@ -294,8 +298,6 @@ bool draw_slider_opengl_widget(
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
-    vec1f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec2f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec3f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
@@ -304,8 +306,6 @@ bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
 
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     int& value, float speed = 1, int min = 0, int max = 0);
-bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
-    vec1i& value, float speed = 1, int min = 0, int max = 0);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec2i& value, float speed = 1, int min = 0, int max = 0);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,

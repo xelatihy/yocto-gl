@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     auto parser = make_cmdline_parser(
         argc, argv, "Process obj files directly", "yobjproc");
     auto translation = parse_argument(
-        parser, "--translation,-t", zero_vec3f, "translation");
+        parser, "--translation,-t", zero3f, "translation");
     auto scale = parse_argument(parser, "--scale,-s", vec3f{1, 1, 1}, "scale");
     auto print_info = parse_argument(
         parser, "--print-info,-i", false, "print obj info");
@@ -75,17 +75,17 @@ int main(int argc, char* argv[]) {
     // vertex data
     cb.vert = [&](const vec3f& v) {
         auto tv = translation + scale * v;
-        fprintf(fs, "v  %6g %6g %6g\n", tv[0], tv[1], tv[2]);
+        fprintf(fs, "v  %6g %6g %6g\n", tv.x, tv.y, tv.z);
         bbox += v;
         tbox += tv;
         npos += 1;
     };
     cb.norm = [&](const vec3f& v) {
-        fprintf(fs, "vn %6g %6g %6g\n", v[0], v[1], v[2]);
+        fprintf(fs, "vn %6g %6g %6g\n", v.x, v.y, v.z);
         nnorm += 1;
     };
     cb.texcoord = [&](const vec2f& v) {
-        fprintf(fs, "vt %6g %6g\n", v[0], v[1]);
+        fprintf(fs, "vt %6g %6g\n", v.x, v.y);
         ntexcoord += 1;
     };
     cb.face = [&](const vector<obj_vertex>& verts) {
@@ -135,21 +135,19 @@ int main(int argc, char* argv[]) {
     if (print_info) {
         auto center = (bbox.max + bbox.min) / 2;
         auto size   = bbox.max - bbox.min;
-        printf("bbox min: % 6g % 6g % 6g\n", bbox.min[0], bbox.min[1],
-            bbox.min[2]);
-        printf("bbox max: % 6g % 6g % 6g\n", bbox.max[0], bbox.max[1],
-            bbox.max[2]);
-        printf("bbox cen: % 6g % 6g % 6g\n", center[0], center[1], center[2]);
-        printf("bbox siz: % 6g % 6g % 6g\n", size[0], size[1], size[2]);
-        if (translation != zero_vec3f || scale != vec3f{1, 1, 1}) {
+        printf("bbox min: % 6g % 6g % 6g\n", bbox.min.x, bbox.min.y, bbox.min.z);
+        printf("bbox max: % 6g % 6g % 6g\n", bbox.max.x, bbox.max.y, bbox.max.z);
+        printf("bbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
+        printf("bbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
+        if (translation != zero3f || scale != vec3f{1, 1, 1}) {
             auto center = (tbox.max + tbox.min) / 2;
             auto size   = tbox.max - tbox.min;
-            printf("tbox min: % 6g % 6g % 6g\n", tbox.min[0], tbox.min[1],
-                tbox.min[2]);
-            printf("tbox max: % 6g % 6g % 6g\n", tbox.max[0], tbox.max[1],
-                tbox.max[2]);
-            printf("tbox cen: % 6g % 6g % 6g\n", center[0], center[1], center[2]);
-            printf("tbox siz: % 6g % 6g % 6g\n", size[0], size[1], size[2]);
+            printf("tbox min: % 6g % 6g % 6g\n", tbox.min.x, tbox.min.y,
+                tbox.min.z);
+            printf("tbox max: % 6g % 6g % 6g\n", tbox.max.x, tbox.max.y,
+                tbox.max.z);
+            printf("tbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
+            printf("tbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
         }
         printf("faces:    % 6d % 6d % 6d % 6d\n", nfaces, ntriangles, nquads,
             npolys);

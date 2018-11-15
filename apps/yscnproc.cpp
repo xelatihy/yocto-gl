@@ -47,14 +47,14 @@ bool mkdir(const string& dir) {
 int main(int argc, char** argv) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
-    auto skip_textures = parse_argument(parser,
+    auto skip_textures  = parse_argument(parser,
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
     auto mesh_filenames = parse_argument(parser,
         "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
-    auto uniform_txt   = parse_argument(parser,
+    auto uniform_txt    = parse_argument(parser,
         "--uniform-texture/--no-uniform-textures", false,
         "uniform texture formats");
-    auto output        = parse_argument(
+    auto output         = parse_argument(
         parser, "--output,-o", "out.json"s, "output scene", true);
     auto filename = parse_argument(
         parser, "scene", "scene.json"s, "input scene", true);
@@ -70,7 +70,7 @@ int main(int argc, char** argv) {
     auto scene = yocto_scene{};
     if (!load_scene(filename, scene, load_options))
         log_fatal("cannot load scene {}", filename);
-    
+
     // validate scene
     log_validation_errors(scene, true);
 
@@ -95,15 +95,15 @@ int main(int argc, char** argv) {
     }
 
     // add missing mesh names if necessary
-    if(mesh_filenames && get_extension(output) == "json") {
-        for(auto& shape : scene.shapes) {
-            if(shape.filename.empty() && shape.positions.size() > 16) 
+    if (mesh_filenames && get_extension(output) == "json") {
+        for (auto& shape : scene.shapes) {
+            if (empty(shape.filename) && shape.positions.size() > 16)
                 shape.filename = "meshes/" + shape.name + ".ply";
-        } 
-        for(auto& surface : scene.surfaces) {
-            if(surface.filename.empty() && surface.positions.size() > 16) 
+        }
+        for (auto& surface : scene.surfaces) {
+            if (empty(surface.filename) && surface.positions.size() > 16)
                 surface.filename = "surfaces/" + surface.name + ".obj";
-        } 
+        }
     }
 
     // make a directory if needed

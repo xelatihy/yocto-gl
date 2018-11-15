@@ -69,19 +69,6 @@
 #include "yocto_image.h"
 #include "yocto_math.h"
 
-#include <string>
-#include <vector>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::string;
-using std::vector;
-
-}  // namespace yocto
-
 // -----------------------------------------------------------------------------
 // SCENE DATA
 // -----------------------------------------------------------------------------
@@ -95,7 +82,8 @@ struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;
     bool    orthographic   = false;
-    vec2f   film_size      = {0.036f, 0.024f};
+    float   film_width     = 0.036f;
+    float   film_height    = 0.024f;
     float   focal_length   = 0.050f;
     float   focus_distance = float_max;
     float   lens_aperture  = 0;
@@ -108,25 +96,25 @@ struct yocto_camera {
 // conversion can be disabled with `ldr_as_linear` for example to render
 // normal maps.
 struct yocto_texture {
-    string       name             = "";
-    string       filename         = "";
-    image<vec4f> hdr_image        = {};
-    image<vec4b> ldr_image        = {};
-    bool         clamp_to_edge    = false;
-    bool         no_interpolation = false;
-    float        height_scale     = 1;
-    bool         ldr_as_linear    = false;
-    bool         has_opacity      = false;
+    string  name             = "";
+    string  filename         = "";
+    image4f hdr_image        = {};
+    image4b ldr_image        = {};
+    bool    clamp_to_edge    = false;
+    bool    no_interpolation = false;
+    float   height_scale     = 1;
+    bool    ldr_as_linear    = false;
+    bool    has_opacity      = false;
 };
 
 // Volumetric texture containing a float only volume data. See texture
 // above for other propoerties.
 struct yocto_voltexture {
-    string        name             = "";
-    string        filename         = "";
-    volume<float> volume_data      = {};
-    bool          clamp_to_edge    = false;
-    bool          no_interpolation = false;
+    string   name             = "";
+    string   filename         = "";
+    volume1f volume_data      = {};
+    bool     clamp_to_edge    = false;
+    bool     no_interpolation = false;
 };
 
 // Material for surfaces, lines and triangles.
@@ -348,7 +336,7 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
 struct scene_intersection {
     int   instance_id = -1;
     int   element_id  = -1;
-    vec2f element_uv  = zero_vec2f;
+    vec2f element_uv  = zero2f;
     float distance    = float_max;
 };
 
@@ -426,22 +414,22 @@ float            sample_surface_element_pdf(const yocto_surface& surface,
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
-vec4f lookup_texture(const yocto_texture& texture, const vec2i& ij);
+vec4f lookup_texture(const yocto_texture& texture, int i, int j);
 vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
-float lookup_voltexture(const yocto_voltexture& texture, const vec3i& ijk);
+float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
 float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float get_camera_fovx(const yocto_camera& camera);
 float get_camera_fovy(const yocto_camera& camera);
 float get_camera_aspect(const yocto_camera& camera);
-vec2i get_camera_image_size(const yocto_camera& camera, const vec2i& size);
+vec2i get_camera_image_size(const yocto_camera& camera, int yresolution);
 void  set_camera_fovy(
      yocto_camera& camera, float fovy, float aspect, float width = 0.036f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
-    const vec3f& view_direction = zero_vec3f, const vec2f& film = zero_vec2f,
+    const vec3f& view_direction = zero3f, float width = 0, float height = 0,
     float focal = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
@@ -482,9 +470,9 @@ bool is_material_emissive(const yocto_material& material);
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
-    vec3f diffuse      = zero_vec3f;
-    vec3f specular     = zero_vec3f;
-    vec3f transmission = zero_vec3f;
+    vec3f diffuse      = zero3f;
+    vec3f specular     = zero3f;
+    vec3f transmission = zero3f;
     float roughness    = 1;
     bool  refract      = false;
 };

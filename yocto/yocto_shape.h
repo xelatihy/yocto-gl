@@ -104,42 +104,36 @@
 
 #include "yocto_math.h"
 
-#include <tuple>
-#include <unordered_map>
-#include <vector>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::get;
-using std::ignore;
-using std::tie;
-using std::tuple;
-using std::unordered_map;
-using std::vector;
-
-}  // namespace yocto
-
 // -----------------------------------------------------------------------------
 // GEOMETRY UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 // Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1);
-inline float line_length(const vec3f& p0, const vec3f& p1);
+inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
+    return normalize(p1 - p0);
+}
+inline float line_length(const vec3f& p0, const vec3f& p1) {
+    return length(p1 - p0);
+}
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2);
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2);
+inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return normalize(cross(p1 - p0, p2 - p0));
+}
+inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+    return length(cross(p1 - p0, p2 - p0)) / 2;
+}
 
 // Quad propeties.
 inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
+}
 inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3);
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
+    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
+}
 
 // Triangle tangent and bitangent from uv
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
@@ -148,27 +142,47 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
-inline T interpolate_line(const T& p0, const T& p1, float u);
+inline T interpolate_line(const T& p0, const T& p1, float u) {
+    return p0 * (1 - u) + p1 * u;
+}
 // Interpolates values over a triangle parameterized by u and v along the
 // (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
 template <typename T>
 inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv);
+    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
+    return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
+}
 // Interpolates values over a quad parameterized by u and v along the
 // (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
 template <typename T>
 inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv);
+    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
+#if YOCTO_QUADS_AS_TRIANGLES
+    if (uv.x + uv.y <= 1) {
+        return interpolate_triangle(p0, p1, p3, uv);
+    } else {
+        return interpolate_triangle(p2, p3, p1, 1 - uv);
+    }
+#else
+    return p0 * (1 - uv.x) * (1 - uv.y) + p1 * uv.x * (1 - uv.y) +
+           p2 * uv.x * uv.y + p3 * (1 - uv.x) * uv.y;
+#endif
+}
 
 // Interpolates values along a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u);
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
+           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
+}
 // Computes the derivative of a cubic Bezier segment parametrized by u.
 template <typename T>
 inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u);
-
+    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
+    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
+           (p3 - p2) * 3 * u * u;
+}
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -456,8 +470,8 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     const vector<vec4i>& squads, const vector<vec3f>& spos,
     const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
     const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero_vec2f, const vec2f& clump = zero_vec2f,
-    const vec2f& rotation = zero_vec2f, int seed = 7);
+    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
+    const vec2f& rotation = zero2f, int seed = 7);
 
 }  // namespace yocto
 
@@ -472,32 +486,6 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Line properties.
-inline vec3f line_tangent(const vec3f& p0, const vec3f& p1) {
-    return normalize(p1 - p0);
-}
-inline float line_length(const vec3f& p0, const vec3f& p1) {
-    return length(p1 - p0);
-}
-
-// Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return normalize(cross(p1 - p0, p2 - p0));
-}
-inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
-    return length(cross(p1 - p0, p2 - p0)) / 2;
-}
-
-// Quad propeties.
-inline vec3f quad_normal(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return normalize(triangle_normal(p0, p1, p3) + triangle_normal(p2, p3, p1));
-}
-inline float quad_area(
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3) {
-    return triangle_area(p0, p1, p3) + triangle_area(p2, p3, p1);
-}
-
 // Triangle tangent and bitangent from uv
 inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec2f& uv0, const vec2f& uv1,
@@ -507,65 +495,21 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
     // normal points up from texture space
     auto p   = p1 - p0;
     auto q   = p2 - p0;
-    auto s   = vec2f{uv1[0] - uv0[0], uv2[0] - uv0[0]};
-    auto t   = vec2f{uv1[1] - uv0[1], uv2[1] - uv0[1]};
-    auto div = s[0] * t[1] - s[1] * t[0];
+    auto s   = vec2f{uv1.x - uv0.x, uv2.x - uv0.x};
+    auto t   = vec2f{uv1.y - uv0.y, uv2.y - uv0.y};
+    auto div = s.x * t.y - s.y * t.x;
 
     if (div != 0) {
-        auto tu = vec3f{t[1] * p[0] - t[0] * q[0], t[1] * p[1] - t[0] * q[1],
-                      t[1] * p[2] - t[0] * q[2]} /
+        auto tu = vec3f{t.y * p.x - t.x * q.x, t.y * p.y - t.x * q.y,
+                      t.y * p.z - t.x * q.z} /
                   div;
-        auto tv = vec3f{s[0] * q[0] - s[1] * p[0], s[0] * q[1] - s[1] * p[1],
-                      s[0] * q[2] - s[1] * p[2]} /
+        auto tv = vec3f{s.x * q.x - s.y * p.x, s.x * q.y - s.y * p.y,
+                      s.x * q.z - s.y * p.z} /
                   div;
         return {tu, tv};
     } else {
         return {{1, 0, 0}, {0, 1, 0}};
     }
-}
-
-// Interpolates values over a line parameterized from a to b by u. Same as lerp.
-template <typename T>
-inline T interpolate_line(const T& p0, const T& p1, float u) {
-    return p0 * (1 - u) + p1 * u;
-}
-// Interpolates values over a triangle parameterized by u and v along the
-// (p1-p0) and (p2-p0) directions. Same as barycentric interpolation.
-template <typename T>
-inline T interpolate_triangle(
-    const T& p0, const T& p1, const T& p2, const vec2f& uv) {
-    return p0 * (1 - uv[0] - uv[1]) + p1 * uv[0] + p2 * uv[1];
-}
-// Interpolates values over a quad parameterized by u and v along the
-// (p1-p0) and (p2-p1) directions. Same as bilinear interpolation.
-template <typename T>
-inline T interpolate_quad(
-    const T& p0, const T& p1, const T& p2, const T& p3, const vec2f& uv) {
-#if YOCTO_QUADS_AS_TRIANGLES
-    if (uv[0] + uv[1] <= 1) {
-        return interpolate_triangle(p0, p1, p3, uv);
-    } else {
-        return interpolate_triangle(p2, p3, p1, 1 - uv);
-    }
-#else
-    return p0 * (1 - uv[0]) * (1 - uv[1]) + p1 * uv[0] * (1 - uv[1]) +
-           p2 * uv[0] * uv[1] + p3 * (1 - uv[0]) * uv[1];
-#endif
-}
-
-// Interpolates values along a cubic Bezier segment parametrized by u.
-template <typename T>
-inline T interpolate_bezier(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return p0 * (1 - u) * (1 - u) * (1 - u) + p1 * 3 * u * (1 - u) * (1 - u) +
-           p2 * 3 * u * u * (1 - u) + p3 * u * u * u;
-}
-// Computes the derivative of a cubic Bezier segment parametrized by u.
-template <typename T>
-inline T interpolate_bezier_derivative(
-    const T& p0, const T& p1, const T& p2, const T& p3, float u) {
-    return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
-           (p3 - p2) * 3 * u * u;
 }
 
 }  // namespace yocto
