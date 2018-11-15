@@ -65,7 +65,7 @@ struct app_state {
     atomic<bool>             trace_stop;
     atomic<int>              trace_sample;
     vector<thread>           trace_threads = {};
-    concurrent_queue<bbox2i> trace_queue   = {};
+    concurrent_queue<image_region> trace_queue   = {};
 
     // view image
     vec2f                         image_center = zero2f;
@@ -121,7 +121,7 @@ void start_rendering_async(app_state& app) {
         }
     }
     app.preview_image = large_preview;
-    app.trace_queue.push({zero2i, zero2i});
+    app.trace_queue.push({0, 0, 0, 0});
 
     app.trace_options.cancel_flag = &app.trace_stop;
     trace_image_async_start(app.rendered_image, app.trace_pixels, app.scene,
@@ -295,10 +295,10 @@ void draw(const opengl_window& win) {
                     false, false, false);
             }
         } else {
-            auto region = bbox2i{};
+            auto region = image_region{};
             auto size   = 0;
             while (app.trace_queue.try_pop(region)) {
-                if (bbox_size(region) == zero2i) {
+                if (region.width == 0) {
                     update_opengl_texture(
                         app.display_texture, app.preview_image, false);
                     break;
@@ -308,7 +308,7 @@ void draw(const opengl_window& win) {
                         app.display_filmic, app.display_srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display_image, region, false);
-                    size += bbox_size(region).x * bbox_size(region).y;
+                    size += region.width * region.height;
                     if (size >= app.rendered_image.width *
                                     app.rendered_image.height)
                         break;

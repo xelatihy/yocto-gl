@@ -121,12 +121,20 @@ inline vec4b* data(image4b& img) { return data(img.pixels); }
 inline const vec4f* data(const image4f& img) { return data(img.pixels); }
 inline const vec4b* data(const image4b& img) { return data(img.pixels); }
 
+// Image region
+struct image_region {
+    int offsetx = 0;
+    int offsety = 0;
+    int width = 0;
+    int height = 0;
+};
+
 // Splits an image into an array of regions
-vector<bbox2i> make_image_regions(int width, int height, int region_size = 32);
+vector<image_region> make_image_regions(int width, int height, int region_size = 32);
 
 // Gets pixels in an image region
-image4f get_image_region(const image4f& img, const bbox2i& region);
-image4b get_image_region(const image4b& img, const bbox2i& region);
+image4f get_image_region(const image4f& img, const image_region& region);
+image4b get_image_region(const image4b& img, const image_region& region);
 
 // Conversion from/to floats.
 image4f byte_to_float(const image4b& bt);
@@ -143,7 +151,7 @@ image4f linear_to_gamma(const image4f& lin, float gamma);
 // Apply exposure and filmic tone mapping
 image4f tonemap_image(
     const image4f& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image4f& ldr, const bbox2i& region,
+void tonemap_image_region(image4f& ldr, const image_region& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.

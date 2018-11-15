@@ -35,32 +35,32 @@
 namespace yocto {
 
 // Gets pixels in an image region
-image4f get_image_region(const image4f& img, const bbox2i& region) {
-    auto clipped = make_image(bbox_size(region).x, bbox_size(region).y, zero4f);
-    for (auto j = 0; j < bbox_size(region).y; j++) {
-        for (auto i = 0; i < bbox_size(region).x; i++) {
-            at(clipped, i, j) = at(img, i + region.min.x, j + region.min.y);
+image4f get_image_region(const image4f& img, const image_region& region) {
+    auto clipped = make_image(region.width, region.height, zero4f);
+    for (auto j = 0; j < region.height; j++) {
+        for (auto i = 0; i < region.width; i++) {
+            at(clipped, i, j) = at(img, i + region.offsetx, j + region.offsety);
         }
     }
     return clipped;
 }
-image4b get_image_region(const image4b& img, const bbox2i& region) {
-    auto clipped = make_image(bbox_size(region).x, bbox_size(region).y, zero4b);
-    for (auto j = 0; j < bbox_size(region).y; j++) {
-        for (auto i = 0; i < bbox_size(region).x; i++) {
-            at(clipped, i, j) = at(img, i + region.min.x, j + region.min.y);
+image4b get_image_region(const image4b& img, const image_region& region) {
+    auto clipped = make_image(region.width, region.height, zero4b);
+    for (auto j = 0; j < region.height; j++) {
+        for (auto i = 0; i < region.width; i++) {
+            at(clipped, i, j) = at(img, i + region.offsetx, j + region.offsety);
         }
     }
     return clipped;
 }
 
 // Splits an image into an array of regions
-vector<bbox2i> make_image_regions(int width, int height, int region_size) {
-    auto regions = vector<bbox2i>{};
+vector<image_region> make_image_regions(int width, int height, int region_size) {
+    auto regions = vector<image_region>{};
     for (auto y = 0; y < height; y += region_size) {
         for (auto x = 0; x < width; x += region_size) {
-            regions.push_back({{x, y}, {min(x + region_size, width),
-                                           min(y + region_size, height)}});
+            regions.push_back({x, y, min(region_size, width - x),
+                                           min(region_size, height - y)});
         }
     }
     return regions;
@@ -139,10 +139,10 @@ image4f tonemap_image(
 }
 
 // Tonemap image
-void tonemap_image_region(image4f& ldr, const bbox2i& region,
+void tonemap_image_region(image4f& ldr, const image_region& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb) {
-    for (auto j = region.min.y; j < region.max.y; j++) {
-        for (auto i = region.min.x; i < region.max.x; i++) {
+    for (auto j = region.offsety; j < region.offsety + region.height; j++) {
+        for (auto i = region.offsetx; i < region.offsetx + region.width; i++) {
             at(ldr, i, j) = tonemap_filmic(at(hdr, i, j), exposure, filmic, srgb);
         }
     }

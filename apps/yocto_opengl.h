@@ -95,7 +95,7 @@ bool init_opengl_texture(opengl_texture& texture, int width, int height,
 void update_opengl_texture(
     opengl_texture& texture, const image4f& img, bool mipmap);
 void update_opengl_texture_region(opengl_texture& texture,
-    const image4f& img, const bbox2i& region, bool mipmap);
+    const image4f& img, const image_region& region, bool mipmap);
 
 inline bool init_opengl_texture(opengl_texture& texture,
     const image4f& img, bool as_float, bool linear, bool mipmap) {
@@ -110,7 +110,7 @@ bool init_opengl_texture(opengl_texture& texture, const image4b& img,
 void update_opengl_texture(
     opengl_texture& texture, const image4b& img, bool mipmap);
 void update_opengl_texture_region(opengl_texture& texture,
-    const image4b& img, const bbox2i& region, bool mipmap);
+    const image4b& img, const image_region& region, bool mipmap);
 
 inline bool init_opengl_texture(opengl_texture& texture,
     const image4b& img, bool as_srgb, bool linear, bool mipmap) {
