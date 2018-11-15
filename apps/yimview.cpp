@@ -33,19 +33,19 @@
 using namespace yocto;
 
 struct image_stats {
-    bbox4f pxl_bounds = {zero_vec4f, zero_vec4f};
-    bbox1f lum_bounds = {zero_vec1f, zero_vec1f};
+    bbox4f pxl_bounds = {zero4f, zero4f};
+    bbox1f lum_bounds = {0, 0};
 };
 
 struct app_image {
     // original data
-    string       filename = "";
-    string       outname  = "";
-    string       name     = "";
-    image<vec4f> img      = {};
+    string  filename = "";
+    string  outname  = "";
+    string  name     = "";
+    image4f img      = {};
 
     // diplay image
-    image<vec4f>   display = {};
+    image4f        display = {};
     opengl_texture gl_txt  = {};
 
     // image stats
@@ -60,11 +60,11 @@ struct app_image {
     atomic<bool> load_done, display_done, stats_done, texture_done;
     thread       load_thread, display_thread, stats_thread, save_thread;
     atomic<bool> display_stop;
-    concurrent_queue<bbox2i> display_queue;
-    string                   error_msg = "";
+    concurrent_queue<image_region> display_queue;
+    string                         error_msg = "";
 
     // viewing properties
-    vec2f image_center = zero_vec2f;
+    vec2f image_center = zero2f;
     float image_scale  = 1;
     bool  zoom_to_fit  = false;
 
@@ -91,7 +91,7 @@ void update_stats_async(app_image& img) {
     img.stats.lum_bounds = invalid_bbox1f;
     for (auto& p : img.img) {
         img.stats.pxl_bounds += p;
-        img.stats.lum_bounds += luminance(make_shorter_vec(p));
+        img.stats.lum_bounds += luminance(xyz(p));
     }
     img.stats_done = true;
 }
@@ -100,9 +100,9 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = make_image_regions(img.img.size());
+    auto regions     = make_image_regions(img.img.width, img.img.height);
     parallel_foreach(regions,
-        [&img](const bbox2i& region) {
+        [&img](const image_region& region) {
             tonemap_image_region(img.display, region, img.img, img.exposure,
                 img.filmic, img.srgb);
             img.display_queue.push(region);
@@ -188,7 +188,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 status = "done";
             draw_label_opengl_widget(win, "status", status.c_str());
             draw_label_opengl_widget(
-                win, "size", "%d x %d ", img.img.width(), img.img.height());
+                win, "size", "%d x %d ", img.img.width, img.img.height);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
             end_header_opengl_widget(win);
@@ -202,13 +202,13 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "inspect")) {
             auto mouse_pos = get_opengl_mouse_pos(win);
-            auto ij        = get_image_coords(
-                mouse_pos, img.image_center, img.image_scale, img.img.size());
+            auto ij        = get_image_coords(mouse_pos, img.image_center,
+                img.image_scale, {img.img.width, img.img.height});
             draw_dragger_opengl_widget(win, "mouse", ij);
-            auto pixel = zero_vec4f;
-            if (ij[0] >= 0 && ij[0] < img.img.width() && ij[1] >= 0 &&
-                ij[1] < img.img.height()) {
-                pixel = img.img[ij];
+            auto pixel = zero4f;
+            if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
+                ij.y < img.img.height) {
+                pixel = at(img.img, ij.x, ij.y);
             }
             draw_coloredit_opengl_widget(win, "pixel", pixel);
             auto stats = (img.stats_done) ? img.stats : image_stats{};
@@ -240,12 +240,12 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        update_image_view(img.image_center, img.image_scale, img.display.size(),
-            win_size, img.zoom_to_fit);
-        draw_glimage_background(
-            img.display.size(), win_size, img.image_center, img.image_scale);
+        update_image_view(img.image_center, img.image_scale,
+            {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
+        draw_glimage_background(img.gl_txt, win_size.x, win_size.y,
+            img.image_center, img.image_scale);
         set_opengl_blending(true);
-        draw_glimage(img.gl_txt, img.display.size(), win_size, img.image_center,
+        draw_glimage(img.gl_txt, win_size.x, win_size.y, img.image_center,
             img.image_scale);
         set_opengl_blending(false);
     }
@@ -257,10 +257,10 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(
-                img.gl_txt, img.display.size(), false, false, false, false);
+            init_opengl_texture(img.gl_txt, img.display.width,
+                img.display.height, false, false, false, false);
         } else {
-            auto region = bbox2i{};
+            auto region = image_region{};
             while (img.display_queue.try_pop(region)) {
                 update_opengl_texture_region(
                     img.gl_txt, img.display, region, false);
@@ -286,7 +286,7 @@ void run_ui(app_state& app) {
     init_opengl_widgets(win);
 
     // window values
-    auto mouse_pos = zero_vec2f, last_pos = zero_vec2f;
+    auto mouse_pos = zero2f, last_pos = zero2f;
     while (!should_opengl_window_close(win)) {
         last_pos            = mouse_pos;
         mouse_pos           = get_opengl_mouse_pos(win);
@@ -298,7 +298,7 @@ void run_ui(app_state& app) {
         if (mouse_left && !widgets_active)
             img.image_center += mouse_pos - last_pos;
         if (mouse_right && !widgets_active)
-            img.image_scale *= powf(2, (mouse_pos[0] - last_pos[0]) * 0.001f);
+            img.image_scale *= powf(2, (mouse_pos.x - last_pos.x) * 0.001f);
 
         // update
         update(app);

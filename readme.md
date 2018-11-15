@@ -119,27 +119,33 @@ defined at build time.
 Yocto/GL follows a "data-driven programming model" that makes data explicit.
 Data is stored in simple structs and access with free functions or directly.
 All data is public, so we make no attempt at encapsulation.
-All objects is Yocto?GL have value semantic and we do not use pointers
+All objects is Yocto/GL have value semantic and we do not use pointers
 in data structure but indices. This means that everything can be trivially
 serialized and there is no need for memory management.
 
+In terms of code style we prefer a functional approach rather than an
+object oriented one, favoring free functions to class methods. All functions
+and data are defined in the `yocto` namespace so any library can call all
+others. We do this to make it as easy as possible to extend the library simply
+by extending the `yocto` namespace.
+
 We do this since this makes Yocto/GL easier to extend and quicker to learn,
-which a more explicit data flow that is easier whrn writing parallel code.
+with a more explicit data flow that is easier whrn writing parallel code.
 Since Yocto/GL is mainly used for research and teaching,
 explicit data is both more hackable and easier to understand.
 
 The use of templates in Yocto was the reason for many refactorings, going
 from no template to heavy template use. After many changes, we settled
-on using templates following the established convention in the C++ standard 
-library.
+on using as few templates as possibles in contrast the C++ STL. We do this
+since we find that writing correct generic code is remarkably hard and 
+even harder for a casual user to extend the library.
 
-We make use of exception for error reporting. This makes the code
-cleaner and more in line with the expectation of most other programming
-languages. At the same time, exception are not as easy to use in C++
-and are disabled in many libraries. For this reasons, this will likely 
-change in the future.
+We do not use exception for error reporting. While this makes the code 
+more verbose, it follows the stardard practice in many large codebases since
+writing exception-safe code remains very hard in C++, even harder if one
+wants to quickly extend the library.
 
 Finally, we import math symbols from the standard library rather than
-using the `std::name` pattern into the `ygl` namespace. This makes math code 
+using the `std::name` pattern into the `yocto` namespace. This makes math code 
 easier to read, and allows us to override come function implementation when
 desired.

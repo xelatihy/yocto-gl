@@ -25,7 +25,7 @@
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
 // 2. prepare lights for rendering with `make_trace_lights()`
-// 3. create the random number generators with `make_trace_pixels()`
+// 3. create the random number generators with `make_trace_state()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -73,19 +73,6 @@
 #include "yocto_scene.h"
 #include "yocto_utils.h"
 
-#include <functional>
-#include <vector>
-
-// -----------------------------------------------------------------------------
-// USING DIRECTIVES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-using std::function;
-using std::vector;
-
-}  // namespace yocto
-
 // -----------------------------------------------------------------------------
 // PATH TRACING
 // -----------------------------------------------------------------------------
@@ -108,15 +95,20 @@ trace_lights make_trace_lights(const yocto_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
-    vec3f     radiance = zero_vec3f;
+    vec3f     radiance = zero3f;
     int       hits     = 0;
     int       samples  = 0;
     rng_state rng      = {};
 };
+struct trace_state {
+    int                 width  = 0;
+    int                 height = 0;
+    vector<trace_pixel> pixels = {};
+};
 
 // Initialize state of the renderer.
-image<trace_pixel> make_trace_pixels(
-    const vec2i& image_size, uint64_t random_seed = trace_default_seed);
+trace_state make_trace_state(
+    int width, int height, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
@@ -150,7 +142,7 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 // Options for trace functions
 struct trace_image_options {
     int                camera_id           = 0;
-    vec2i              image_size          = {0, 512};
+    int                vertical_resolution = 720;
     trace_sampler_type sampler_type        = trace_sampler_type::path;
     trace_sampler_func custom_sampler      = {};
     int                num_samples         = 512;
@@ -164,26 +156,25 @@ struct trace_image_options {
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+int trace_image_samples(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
-void trace_image_async_start(image<vec4f>& rendered_image,
-    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, vector<thread>& threads,
-    atomic<int>& current_sample, concurrent_queue<bbox2i>& queue,
-    const trace_image_options& options);
+void trace_image_async_start(image4f& image, trace_state& state,
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    vector<thread>& threads, atomic<int>& current_sample,
+    concurrent_queue<image_region>& queue, const trace_image_options& options);
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
-    concurrent_queue<bbox2i>& queue, const trace_image_options& options);
+    concurrent_queue<image_region>& queue, const trace_image_options& options);
 
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.

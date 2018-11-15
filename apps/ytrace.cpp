@@ -44,12 +44,8 @@ int main(int argc, char* argv[]) {
         argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    trace_options.image_size = parse_argument(
-        parser, "--resolution,-R", vec2i{0, 512}, "Image resolution.");
-    if (trace_options.image_size == vec2i{0, 512}) {
-        trace_options.image_size[1] = parse_argument(
-            parser, "--vresolution,-r", 512, "Image vertical resolution.");
-    }
+    trace_options.vertical_resolution = parse_argument(
+        parser, "--resolution,-r", 720, "Image vertical resolution.");
     trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
     trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
@@ -110,7 +106,7 @@ int main(int argc, char* argv[]) {
     auto lights = make_trace_lights(scene);
 
     // fix renderer type if no lights
-    if ((lights.instances.empty() && lights.environments.empty()) &&
+    if ((empty(lights.instances) && empty(lights.environments)) &&
         trace_options.sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader");
         trace_options.sampler_type = trace_sampler_type::eyelight;
@@ -118,9 +114,11 @@ int main(int argc, char* argv[]) {
 
     // allocate buffers
     auto image_size = get_camera_image_size(
-        scene.cameras[trace_options.camera_id], trace_options.image_size);
-    auto rendered_image = image<vec4f>{image_size};
-    auto trace_pixels = make_trace_pixels(image_size, trace_options.random_seed);
+        scene.cameras[trace_options.camera_id],
+        trace_options.vertical_resolution);
+    auto image = make_image(image_size.x, image_size.y, zero4f);
+    auto trace_pixels   = make_trace_state(
+        image_size.x, image_size.y, trace_options.random_seed);
 
     // render
     auto scope = log_trace_begin("rendering image");
@@ -129,13 +127,13 @@ int main(int argc, char* argv[]) {
         auto nsamples = min(trace_options.samples_per_batch,
             trace_options.num_samples - sample);
         log_info("rendering image [{}/{}]", sample, trace_options.num_samples);
-        trace_image_samples(rendered_image, trace_pixels, scene, bvh, lights,
+        trace_image_samples(image, trace_pixels, scene, bvh, lights,
             sample, trace_options);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(sample + nsamples) + "." + get_extension(imfilename));
             if (!save_tonemapped_image(
-                    filename, rendered_image, exposure, filmic, srgb))
+                    filename, image, exposure, filmic, srgb))
                 log_fatal("cannot save image " + filename);
         }
     }
@@ -143,7 +141,7 @@ int main(int argc, char* argv[]) {
 
     // save image
     log_info("saving image");
-    if (!save_tonemapped_image(imfilename, rendered_image, exposure, filmic, srgb))
+    if (!save_tonemapped_image(imfilename, image, exposure, filmic, srgb))
         log_fatal("cannot save image " + imfilename);
 
     // done

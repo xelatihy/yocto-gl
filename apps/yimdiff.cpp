@@ -35,38 +35,34 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
-template <typename T>
-image<vec<T, 4>> compute_diff_image(
-    const image<vec<T, 4>>& a, const image<vec<T, 4>>& b) {
-    auto diff = image<vec<T, 4>>{a.size()};
-    for (auto j = 0; j < a.height(); j++) {
-        for (auto i = 0; i < a.width(); i++) {
-            diff[{i, j}] = {(T)abs(a[{i, j}][0] - b[{i, j}][0]),
-                (T)abs(a[{i, j}][1] - b[{i, j}][1]),
-                (T)abs(a[{i, j}][2] - b[{i, j}][2]),
-                (T)abs(a[{i, j}][3] - b[{i, j}][3])};
+image4f compute_diff_image(const image4f& a, const image4f& b) {
+    auto diff = make_image(a.width, a.height, zero4f);
+    for (auto j = 0; j < a.height; j++) {
+        for (auto i = 0; i < a.width; i++) {
+            at(diff, i, j) = {abs(at(a, i, j).x - at(b, i, j).x),
+                abs(at(a, i, j).y - at(b, i, j).y),
+                abs(at(a, i, j).z - at(b, i, j).z),
+                abs(at(a, i, j).w - at(b, i, j).w)};
         }
     }
     return diff;
 }
 
-template <typename T>
-vec<T, 4> max_diff_value(const image<vec<T, 4>>& diff) {
-    auto max_value = vec<T, 4>{0, 0, 0, 0};
+vec4f max_diff_value(const image4f& diff) {
+    auto max_value = vec4f{0, 0, 0, 0};
     for (auto& c : diff) {
-        max_value = {max(c[0], max_value[0]), max(c[1], max_value[1]),
-            max(c[2], max_value[2]), max(c[3], max_value[3])};
+        max_value = {max(c.x, max_value.x), max(c.y, max_value.y),
+            max(c.z, max_value.z), max(c.w, max_value.w)};
     }
     return max_value;
 }
 
-template <typename T>
-image<vec<T, 4>> display_diff(const image<vec<T, 4>>& diff, T alpha) {
-    auto display = image<vec<T, 4>>{diff.size()};
-    for (auto j = 0; j < diff.height(); j++) {
-        for (auto i = 0; i < diff.width(); i++) {
-            auto diff_value = max(diff[{i, j}]);
-            display[{i, j}] = {diff_value, diff_value, diff_value, alpha};
+image4f display_diff(const image4f& diff) {
+    auto display = make_image(diff.width, diff.height, zero4f);
+    for (auto j = 0; j < diff.height; j++) {
+        for (auto i = 0; i < diff.width; i++) {
+            auto diff_value   = max(at(diff, i, j));
+            at(display, i, j) = {diff_value, diff_value, diff_value, 1};
         }
     }
     return display;
@@ -87,44 +83,23 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // check image type
-    if (is_hdr_filename(filename1) && is_hdr_filename(filename2)) {
-        auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
-        if (!load_image(filename1, img1))
-            log_fatal("cannot open image {}", filename1);
-        if (!load_image(filename2, img2))
-            log_fatal("cannot open image {}", filename2);
-        if (img1.size() != img2.size()) log_fatal("image size differs");
-        auto diff     = compute_diff_image(img1, img2);
-        auto max_diff = max_diff_value(diff);
-        if (!output.empty()) {
-            auto display = display_diff(diff, 1.0f);
-            if (!save_image(output, display))
-                log_fatal("cannot save image {}", output);
-        }
-        if (max(max_diff) > threshold) {
-            log_info("image max difference: {}", max_diff);
-            log_fatal("image content differs");
-        }
-    } else if (!is_hdr_filename(filename1) && !is_hdr_filename(filename2)) {
-        auto img1 = image<vec4b>{}, img2 = image<vec4b>{};
-        if (!load_image(filename1, img1))
-            log_fatal("cannot open image {}", filename1);
-        if (!load_image(filename2, img2))
-            log_fatal("cannot open image {}", filename2);
-        if (img1.size() != img2.size()) log_fatal("image size differs");
-        auto diff     = compute_diff_image(img1, img2);
-        auto max_diff = max_diff_value(diff);
-        if (!output.empty()) {
-            auto display = display_diff(diff, (byte)255);
-            if (!save_image(output, display))
-                log_fatal("cannot save image {}", output);
-        }
-        if (max(max_diff) > threshold) {
-            log_info("image max difference: {}", max_diff);
-            log_fatal("image content differs");
-        }
-    } else {
-        log_fatal("different image types");
+    auto img1 = image4f{}, img2 = image4f{};
+    if (!load_image(filename1, img1))
+        log_fatal("cannot open image {}", filename1);
+    if (!load_image(filename2, img2))
+        log_fatal("cannot open image {}", filename2);
+    if (img1.width != img2.width || img1.height != img2.height)
+        log_fatal("image size differs");
+    auto diff     = compute_diff_image(img1, img2);
+    auto max_diff = max_diff_value(diff);
+    if (!empty(output)) {
+        auto display = display_diff(diff);
+        if (!save_image(output, display))
+            log_fatal("cannot save image {}", output);
+    }
+    if (max(max_diff) > threshold) {
+        log_info("image max difference: {}", max_diff);
+        log_fatal("image content differs");
     }
 
     // done

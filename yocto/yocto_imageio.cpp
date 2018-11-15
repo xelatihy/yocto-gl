@@ -69,7 +69,7 @@ namespace yocto {
 // Split a string
 vector<string> split_string(const string& str) {
     auto ret = vector<string>();
-    if (str.empty()) return ret;
+    if (empty(str)) return ret;
     auto lpos = (size_t)0;
     while (lpos != str.npos) {
         auto pos = str.find_first_of(" \t\n\r", lpos);
@@ -120,7 +120,7 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto nrow    = w * nc;
     auto pixels  = vector<float>(nvalues);
     for (auto j = h - 1; j >= 0; j--) {
-        if (fread(pixels.data() + j * nrow, sizeof(float), nrow, fs.fs) != nrow) {
+        if (fread(data(pixels) + j * nrow, sizeof(float), nrow, fs.fs) != nrow) {
             return {};
         }
     }
@@ -128,7 +128,7 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     // endian conversion
     if (s > 0) {
         for (auto i = 0; i < nvalues; ++i) {
-            auto dta = (uint8_t*)(pixels.data() + i);
+            auto dta = (uint8_t*)(data(pixels) + i);
             swap(dta[0], dta[3]);
             swap(dta[1], dta[2]);
         }
@@ -149,8 +149,8 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     }
     auto cpixels = vector<float>(req * npixels);
     for (auto i = 0; i < npixels; i++) {
-        auto vp = pixels.data() + i * nc;
-        auto cp = cpixels.data() + i * req;
+        auto vp = data(pixels) + i * nc;
+        auto cp = data(cpixels) + i * req;
         if (nc == 1) {
             switch (req) {
                 case 1: cp[0] = vp[0]; break;
@@ -223,19 +223,18 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 }
 
 // load pfm image
-bool load_pfm_image(const string& filename, image<vec4f>& img) {
+bool load_pfm_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
-    if (pixels.empty()) {
+    if (empty(pixels)) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, (vec4f*)pixels.data()};
+    img = make_image(width, height, (vec4f*)data(pixels));
     return true;
 }
-bool save_pfm_image(const string& filename, const image<vec4f>& img) {
-    if (!save_pfm(filename.c_str(), img.width(), img.height(), 4,
-            (float*)img.data())) {
+bool save_pfm_image(const string& filename, const image4f& img) {
+    if (!save_pfm(filename.c_str(), img.width, img.height, 4, (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -243,7 +242,7 @@ bool save_pfm_image(const string& filename, const image<vec4f>& img) {
 }
 
 // load exr image weith tiny exr
-bool load_exr_image(const string& filename, image<vec4f>& img) {
+bool load_exr_image(const string& filename, image4f& img) {
     auto width = 0, height = 0;
     auto pixels = (vec4f*)nullptr;
     if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(), nullptr) <
@@ -255,13 +254,12 @@ bool load_exr_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
-bool save_exr_image(const string& filename, const image<vec4f>& img) {
-    if (!SaveEXR((float*)img.data(), img.width(), img.height(), 4,
-            filename.c_str())) {
+bool save_exr_image(const string& filename, const image4f& img) {
+    if (!SaveEXR((float*)data(img), img.width, img.height, 4, filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -269,18 +267,18 @@ bool save_exr_image(const string& filename, const image<vec4f>& img) {
 }
 
 // load an image using stbi library
-bool load_stb_image(const string& filename, image<vec4b>& img) {
+bool load_stb_image(const string& filename, image4b& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4b*)stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
-bool load_stb_image(const string& filename, image<vec4f>& img) {
+bool load_stb_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf(
         filename.c_str(), &width, &height, &ncomp, 4);
@@ -288,47 +286,45 @@ bool load_stb_image(const string& filename, image<vec4f>& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
 
 // save an image with stbi
-bool save_png_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4,
-            img.data(), img.width() * 4)) {
+bool save_png_image(const string& filename, const image4b& img) {
+    if (!stbi_write_png(filename.c_str(), img.width, img.height, 4, data(img),
+            img.width * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
-bool save_jpg_image(const string& filename, const image<vec4b>& img) {
+bool save_jpg_image(const string& filename, const image4b& img) {
     if (!stbi_write_jpg(
-            filename.c_str(), img.width(), img.height(), 4, img.data(), 75)) {
+            filename.c_str(), img.width, img.height, 4, data(img), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
-bool save_tga_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_tga(
-            filename.c_str(), img.width(), img.height(), 4, img.data())) {
+bool save_tga_image(const string& filename, const image4b& img) {
+    if (!stbi_write_tga(filename.c_str(), img.width, img.height, 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
-bool save_bmp_image(const string& filename, const image<vec4b>& img) {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.width(), img.height(), 4, img.data())) {
+bool save_bmp_image(const string& filename, const image4b& img) {
+    if (!stbi_write_bmp(filename.c_str(), img.width, img.height, 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
     return true;
 }
-bool save_hdr_image(const string& filename, const image<vec4f>& img) {
-    if (!stbi_write_hdr(filename.c_str(), img.width(), img.height(), 4,
-            (float*)img.data())) {
+bool save_hdr_image(const string& filename, const image4f& img) {
+    if (!stbi_write_hdr(
+            filename.c_str(), img.width, img.height, 4, (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -336,8 +332,7 @@ bool save_hdr_image(const string& filename, const image<vec4f>& img) {
 }
 
 // load an image using stbi library
-bool load_stb_image_from_memory(
-    const byte* data, int data_size, image<vec4b>& img) {
+bool load_stb_image_from_memory(const byte* data, int data_size, image4b& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4b*)stbi_load_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
@@ -345,12 +340,11 @@ bool load_stb_image_from_memory(
         log_io_error("error loading in-memory image");
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
-bool load_stbi_image_from_memory(
-    const byte* data, int data_size, image<vec4f>& img) {
+bool load_stbi_image_from_memory(const byte* data, int data_size, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = (vec4f*)stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
@@ -358,7 +352,7 @@ bool load_stbi_image_from_memory(
         log_io_error("error loading in-memory image {}");
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image(width, height, pixels);
     free(pixels);
     return true;
 }
@@ -370,7 +364,7 @@ bool is_hdr_filename(const string& filename) {
 }
 
 // Loads an hdr image.
-bool load_image_nolog(const string& filename, image<vec4f>& img) {
+bool load_image_nolog(const string& filename, image4f& img) {
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
         return load_exr_image(filename, img);
@@ -379,22 +373,22 @@ bool load_image_nolog(const string& filename, image<vec4f>& img) {
     } else if (ext == "hdr" || ext == "HDR") {
         return load_stb_image(filename, img);
     } else if (ext == "png" || ext == "PNG") {
-        auto img8 = image<vec4b>{};
+        auto img8 = image4b{};
         if (!load_stb_image(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "jpg" || ext == "JPG") {
-        auto img8 = image<vec4b>{};
+        auto img8 = image4b{};
         if (!load_stb_image(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "tga" || ext == "TGA") {
-        auto img8 = image<vec4b>{};
+        auto img8 = image4b{};
         if (!load_stb_image(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "bmp" || ext == "BMP") {
-        auto img8 = image<vec4b>{};
+        auto img8 = image4b{};
         if (!load_stb_image(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
@@ -403,13 +397,13 @@ bool load_image_nolog(const string& filename, image<vec4f>& img) {
         return false;
     }
 }
-bool load_image(const string& filename, image<vec4f>& img) {
+bool load_image(const string& filename, image4f& img) {
     auto scope = log_trace_scoped("loading image {}", filename);
     return load_image_nolog(filename, img);
 }
 
 // Saves an hdr image.
-bool save_image_nolog(const string& filename, const image<vec4f>& img) {
+bool save_image_nolog(const string& filename, const image4f& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         return save_png_image(filename, float_to_byte(linear_to_srgb(img)));
@@ -430,36 +424,35 @@ bool save_image_nolog(const string& filename, const image<vec4f>& img) {
         return false;
     }
 }
-bool save_image(const string& filename, const image<vec4f>& img) {
+bool save_image(const string& filename, const image4f& img) {
     auto scope = log_trace_scoped("saving image {}", filename);
     return save_image_nolog(filename, img);
 }
 
 // Loads an hdr image.
-bool load_image_from_memory_nolog(
-    const byte* data, int data_size, image<vec4f>& img) {
+bool load_image_from_memory_nolog(const byte* data, int data_size, image4f& img) {
     return load_stbi_image_from_memory(data, data_size, img);
 }
-bool load_image_from_memory(const byte* data, int data_size, image<vec4f>& img) {
+bool load_image_from_memory(const byte* data, int data_size, image4f& img) {
     auto scope = log_trace_scoped("loading image in memory");
     return load_image_from_memory_nolog(data, data_size, img);
 }
 
 // Loads an hdr image.
-bool load_image_nolog(const string& filename, image<vec4b>& img) {
+bool load_image_nolog(const string& filename, image4b& img) {
     auto ext = get_extension(filename);
     if (ext == "exr" || ext == "EXR") {
-        auto imgf = image<vec4f>{};
+        auto imgf = image4f{};
         if (!load_exr_image(filename, imgf)) return false;
         img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "pfm" || ext == "PFM") {
-        auto imgf = image<vec4f>{};
+        auto imgf = image4f{};
         if (!load_pfm_image(filename, imgf)) return false;
         img = float_to_byte(linear_to_srgb(imgf));
         return true;
     } else if (ext == "hdr" || ext == "HDR") {
-        auto imgf = image<vec4f>{};
+        auto imgf = image4f{};
         if (!load_stb_image(filename, imgf)) return false;
         img = float_to_byte(linear_to_srgb(imgf));
         return true;
@@ -476,13 +469,13 @@ bool load_image_nolog(const string& filename, image<vec4b>& img) {
         return false;
     }
 }
-bool load_image(const string& filename, image<vec4b>& img) {
+bool load_image(const string& filename, image4b& img) {
     auto scope = log_trace_scoped("loading image {}", filename);
     return load_image_nolog(filename, img);
 }
 
 // Saves an ldr image.
-bool save_image_nolog(const string& filename, const image<vec4b>& img) {
+bool save_image_nolog(const string& filename, const image4b& img) {
     auto ext = get_extension(filename);
     if (ext == "png" || ext == "PNG") {
         return save_png_image(filename, img);
@@ -503,24 +496,23 @@ bool save_image_nolog(const string& filename, const image<vec4b>& img) {
         return false;
     }
 }
-bool save_image(const string& filename, const image<vec4b>& img) {
+bool save_image(const string& filename, const image4b& img) {
     auto scope = log_trace_scoped("saving image {}", filename);
     return save_image_nolog(filename, img);
 }
 
 // Loads an ldr image.
-bool load_image_from_memory_nolog(
-    const byte* data, int data_size, image<vec4b>& img) {
+bool load_image_from_memory_nolog(const byte* data, int data_size, image4b& img) {
     return load_stb_image_from_memory(data, data_size, img);
 }
-bool load_image_from_memory(const byte* data, int data_size, image<vec4b>& img) {
+bool load_image_from_memory(const byte* data, int data_size, image4b& img) {
     auto scope = log_trace_scoped("loading image in memory");
     return load_image_from_memory_nolog(data, data_size, img);
 }
 
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
-bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
+bool save_tonemapped_image(const string& filename, const image4f& hdr,
     float exposure, bool filmic, bool srgb) {
     if (is_hdr_filename(filename)) {
         return save_image(filename, hdr);
@@ -531,15 +523,21 @@ bool save_tonemapped_image(const string& filename, const image<vec4f>& hdr,
 }
 
 // Resize image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
-    if (size == zero_vec2i) {
+image4f resize_image(const image4f& img, int width, int height) {
+    if (width == 0 && height == 0) {
         log_error("bad image size in resize_image");
+        return {};
     }
-    auto res_img = image<vec4f>{get_image_size(size, get_image_aspect(img))};
-    stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
-        sizeof(vec4f) * img.width(), (float*)res_img.data(), res_img.width(),
-        res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3, 0,
-        STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
+    if (height == 0) {
+        height = (int)round(width * (float)img.height / (float)img.width);
+    } else if (width == 0) {
+        width = (int)round(height * (float)img.width / (float)img.height);
+    }
+    auto res_img = make_image(width, height, zero4f);
+    stbir_resize_float_generic((float*)data(img), img.width, img.height,
+        sizeof(vec4f) * img.width, (float*)data(res_img), res_img.width,
+        res_img.height, sizeof(vec4f) * res_img.width, 4, 3, 0, STBIR_EDGE_CLAMP,
+        STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return img;
 }
 
@@ -551,31 +549,32 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size) {
 namespace yocto {
 
 // Loads volume data from binary format.
-bool load_volume_nolog(const string& filename, volume<float>& vol) {
+bool load_volume_nolog(const string& filename, volume1f& vol) {
     auto fs = open(filename, "r");
     if (!fs) return false;
-    auto size = zero_vec3i;
-    if (!read_value(fs, size)) return false;
-    vol.resize(size);
-    if (!read_values(fs, size[0] * size[1] * size[2], vol.data())) return false;
+    if (!read_value(fs, vol.width)) return false;
+    if (!read_value(fs, vol.height)) return false;
+    if (!read_value(fs, vol.depth)) return false;
+    vol.voxels.resize(vol.width * vol.height * vol.depth);
+    if (!read_values(fs, size(vol), data(vol))) return false;
     return true;
 }
-bool load_volume(const string& filename, volume<float>& vol) {
+bool load_volume(const string& filename, volume1f& vol) {
     auto scope = log_trace_scoped("loading volume {}", filename);
     return load_volume_nolog(filename, vol);
 }
 
 // Saves volume data in binary format.
-bool save_volume_nolog(const string& filename, const volume<float>& vol) {
+bool save_volume_nolog(const string& filename, const volume1f& vol) {
     auto fs = open(filename, "w");
     if (!fs) return false;
-    auto size = vol.size();
-    if (!write_value(fs, size)) return false;
-    if (!write_values(fs, size[0] * size[1] * size[2], vol.data()))
-        return false;
+    if (!write_value(fs, vol.width)) return false;
+    if (!write_value(fs, vol.height)) return false;
+    if (!write_value(fs, vol.depth)) return false;
+    if (!write_values(fs, size(vol), data(vol))) return false;
     return true;
 }
-bool save_volume(const string& filename, const volume<float>& vol) {
+bool save_volume(const string& filename, const volume1f& vol) {
     auto scope = log_trace_scoped("saving volume {}", filename);
     return save_volume_nolog(filename, vol);
 }

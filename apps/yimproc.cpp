@@ -35,26 +35,26 @@ using namespace yocto;
 template <typename Image>
 Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto nimgs = (int)imgs.size();
-    auto width = imgs[0].width() * tilex;
-    auto height = imgs[0].height() * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
+    auto width = imgs[0].width * tilex;
+    auto height = imgs[0].height * (nimgs / tilex + ((nimgs % tilex) ? 1 : 0));
     auto ret = init_image(width, height, (bool)imgs[0].hdr);
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (extents(img) != extents(imgs[0])) {
             log_fatal("images of different sizes are not accepted");
         }
-        auto ox = (img_idx % tilex) * img.width(),
-             oy = (img_idx / tilex) * img.height();
+        auto ox = (img_idx % tilex) * img.width,
+             oy = (img_idx / tilex) * img.height;
         if (ret.hdr) {
-            for (auto j = 0; j < img.height(); j++) {
-                for (auto i = 0; i < img.width(); i++) {
-                    ret.hdr[{i + ox, j + oy}] = img.hdr[{i, j}];
+            for (auto j = 0; j < img.height; j++) {
+                for (auto i = 0; i < img.width; i++) {
+                    ret.hdr[{i + ox, j + oy}] = img.at(hdr, i, j);
                 }
             }
         } else {
-            for (auto j = 0; j < img.height(); j++) {
-                for (auto i = 0; i < img.width(); i++) {
-                    ret.ldr[{i + ox, j + oy}] = img.ldr[{i, j}];
+            for (auto j = 0; j < img.height; j++) {
+                for (auto i = 0; i < img.width; i++) {
+                    ret.ldr[{i + ox, j + oy}] = img.at(ldr, i, j);
                 }
             }
         }
@@ -63,66 +63,67 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 }
 #endif
 
-image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
-    float range_sigma, const vector<image<vec4f>>& features,
+image4f filter_bilateral(const image4f& img, float spatial_sigma,
+    float range_sigma, const vector<image4f>& features,
     const vector<float>& features_sigma) {
-    auto filtered     = image<vec4f>{img.size()};
+    auto filtered     = make_image(img.width, img.height, zero4f);
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw           = 1 / (2.0f * range_sigma * range_sigma);
     auto fw           = vector<float>();
     for (auto feature_sigma : features_sigma)
         fw.push_back(1 / (2.0f * feature_sigma * feature_sigma));
-    for (auto j = 0; j < img.height(); j++) {
-        for (auto i = 0; i < img.width(); i++) {
-            auto av = zero_vec4f;
+    for (auto j = 0; j < img.height; j++) {
+        for (auto i = 0; i < img.width; i++) {
+            auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -filter_width; fj <= filter_width; fj++) {
                 for (auto fi = -filter_width; fi <= filter_width; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= img.width() || jj >= img.height()) continue;
+                    if (ii >= img.width || jj >= img.height) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img[{i, j}] - img[{i, j}];
+                    auto rgb = at(img, i, j) - at(img, i, j);
                     auto w   = (float)exp(-dot(uv, uv) * sw) *
                              (float)exp(-dot(rgb, rgb) * rw);
                     for (auto fi = 0; fi < features.size(); fi++) {
-                        auto feat = features[fi][{i, j}] - features[fi][{i, j}];
+                        auto feat = at(features[fi], i, j) -
+                                    at(features[fi], i, j);
                         w *= exp(-dot(feat, feat) * fw[fi]);
                     }
-                    av += w * img[{ii, jj}];
+                    av += w * at(img, ii, jj);
                     aw += w;
                 }
             }
-            filtered[{i, j}] = av / aw;
+            at(filtered, i, j) = av / aw;
         }
     }
     return filtered;
 }
 
-image<vec4f> filter_bilateral(
-    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-    auto filtered = image<vec4f>{img.size()};
+image4f filter_bilateral(
+    const image4f& img, float spatial_sigma, float range_sigma) {
+    auto filtered = make_image(img.width, img.height, zero4f);
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw       = 1 / (2.0f * range_sigma * range_sigma);
-    for (auto j = 0; j < img.height(); j++) {
-        for (auto i = 0; i < img.width(); i++) {
-            auto av = zero_vec4f;
+    for (auto j = 0; j < img.height; j++) {
+        for (auto i = 0; i < img.width; i++) {
+            auto av = zero4f;
             auto aw = 0.0f;
             for (auto fj = -fwidth; fj <= fwidth; fj++) {
                 for (auto fi = -fwidth; fi <= fwidth; fi++) {
                     auto ii = i + fi, jj = j + fj;
                     if (ii < 0 || jj < 0) continue;
-                    if (ii >= img.width() || jj >= img.height()) continue;
+                    if (ii >= img.width || jj >= img.height) continue;
                     auto uv  = vec2f{float(i - ii), float(j - jj)};
-                    auto rgb = img[{i, j}] - img[{ii, jj}];
+                    auto rgb = at(img, i, j) - at(img, ii, jj);
                     auto w = exp(-dot(uv, uv) * sw) * exp(-dot(rgb, rgb) * rw);
-                    av += w * img[{ii, jj}];
+                    av += w * at(img, ii, jj);
                     aw += w;
                 }
             }
-            filtered[{i, j}] = av / aw;
+            at(filtered, i, j) = av / aw;
         }
     }
     return filtered;
@@ -138,8 +139,10 @@ int main(int argc, char* argv[]) {
     auto srgb   = parse_argument(parser, "--srgb", true, "Tonemap to sRGB.");
     auto filmic = parse_argument(
         parser, "--filmic/--no-filmic,-f", false, "Tonemap uses filmic curve");
-    auto resize_size = parse_argument(
-        parser, "--resize", zero_vec2i, "resize size (0 to maintain aspect)");
+    auto resize_width = parse_argument(
+        parser, "--resize-width", 0, "resize size (0 to maintain aspect)");
+    auto resize_height = parse_argument(
+        parser, "--resize-height", 0, "resize size (0 to maintain aspect)");
     auto spatial_sigma = parse_argument(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
     auto range_sigma = parse_argument(
@@ -155,40 +158,40 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // load
-    auto img = image<vec4f>();
+    auto img = image4f();
     if (!load_image(filename, img)) log_fatal("cannot load image {}", filename);
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = image<vec4f>();
+        auto alpha = image4f();
         if (!load_image(alpha_filename, alpha))
             log_fatal("cannot load image {}", alpha_filename);
-        if (img.size() != alpha.size()) {
+        if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size");
             exit(1);
         }
-        for (auto j = 0; j < img.height(); j++)
-            for (auto i = 0; i < img.width(); i++)
-                img[{i, j}][3] = alpha[{i, j}][3];
+        for (auto j = 0; j < img.height; j++)
+            for (auto i = 0; i < img.width; i++)
+                at(img, i, j).w = at(alpha, i, j).w;
     }
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = image<vec4f>();
+        auto alpha = image4f();
         if (!load_image(alpha_filename, alpha))
             log_fatal("cannot load image {}", coloralpha_filename);
-        if (img.size() != alpha.size()) {
+        if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size");
             exit(1);
         }
-        for (auto j = 0; j < img.height(); j++)
-            for (auto i = 0; i < img.width(); i++)
-                img[{i, j}][3] = mean(alpha[{i, j}]);
+        for (auto j = 0; j < img.height; j++)
+            for (auto i = 0; i < img.width; i++)
+                at(img, i, j).w = mean(at(alpha, i, j));
     }
 
     // resize
-    if (resize_size != zero_vec2i) {
-        img = resize_image(img, resize_size);
+    if (resize_width != 0 || resize_height != 0) {
+        img = resize_image(img, resize_width, resize_height);
     }
 
     // bilateral
