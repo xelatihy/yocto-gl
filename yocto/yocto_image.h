@@ -9,18 +9,21 @@
 //
 // ## Image Utilities
 //
-// Yocto/GL supports a very small set is color and image utilities including
+// Yocto/Image supports a very small set is color and image utilities including
 // color utilities, example image creation, tone mapping, image resizing, and
 // sunsky procedural images. Yocto/Image is written to support the need of a
 // global illumination renderer, rather than the need of generic image editing.
+// We support 4-channels float images (assumed to be in linear color) and 
+// 4-channels byte images (assumed to be in sRGB).
+// 
 //
-// 0. load and save image with Yocto/GLIO
-// 1. create images with `image<T>` data structure
+// 1. create images with `make_image4f()`/`make_image4b()`
 // 2. resize images with `resize_image()`
-// 3. tonemap images with `tonemap_filmic()` that convert from linear HDR to
+// 3. tonemap images with `tonemap_image()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
 // 5. make various image examples with the `make_XXX_image()` functions
 // 6. create procedural sun-sky images with `make_sunsky_image()`
+// 0. load and save image with Yocto/ImageIO
 //
 //
 
