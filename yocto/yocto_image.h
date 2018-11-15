@@ -86,16 +86,16 @@ struct image4b {
 };
 
 // Image creation
-inline image4f make_image4f(const vec2i& size, const vec4f& value = {0,0,0,0}) {
+inline image4f make_image(const vec2i& size, const vec4f& value) {
     return {size, {(size_t)(size.x * size.y), value}};
 }
-inline image4b make_image4b(const vec2i& size, const vec4b& value = {0,0,0,0}) {
+inline image4b make_image(const vec2i& size, const vec4b& value) {
     return {size, {(size_t)(size.x * size.y), value}};
 }
-inline image4f make_image4f(const vec2i& size, const vec4f* values) {
+inline image4f make_image(const vec2i& size, const vec4f* values) {
     return {size, {values, values + (size_t)(size.x * size.y)}};
 }
-inline image4b make_image4b(const vec2i& size, const vec4b* values) {
+inline image4b make_image(const vec2i& size, const vec4b* values) {
     return {size, {values, values + (size_t)(size.x * size.y)}};
 }
 

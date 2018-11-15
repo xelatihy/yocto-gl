@@ -51,7 +51,7 @@ vec2i get_image_size(const vec2i& size, float aspect) {
 
 // Gets pixels in an image region
 image4f get_image_region(const image4f& img, const bbox2i& region) {
-    auto clipped = make_image4f(bbox_size(region));
+    auto clipped = make_image(bbox_size(region), zero4f);
     for (auto j = 0; j < bbox_size(region).y; j++) {
         for (auto i = 0; i < bbox_size(region).x; i++) {
             clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
@@ -60,7 +60,7 @@ image4f get_image_region(const image4f& img, const bbox2i& region) {
     return clipped;
 }
 image4b get_image_region(const image4b& img, const bbox2i& region) {
-    auto clipped = make_image4b(bbox_size(region));
+    auto clipped = make_image(bbox_size(region), zero4b);
     for (auto j = 0; j < bbox_size(region).y; j++) {
         for (auto i = 0; i < bbox_size(region).x; i++) {
             clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
@@ -83,7 +83,7 @@ vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size) {
 
 // Conversion between linear and gamma-encoded images.
 image4f gamma_to_linear(const image4f& srgb, float gamma) {
-    auto lin = make_image4f(srgb.size);
+    auto lin = make_image(srgb.size, zero4f);
     for (auto j = 0; j < srgb.size.y; j++) {
         for (auto i = 0; i < srgb.size.x; i++) {
             lin[{i, j}] = gamma_to_linear(srgb[{i, j}], gamma);
@@ -92,7 +92,7 @@ image4f gamma_to_linear(const image4f& srgb, float gamma) {
     return lin;
 }
 image4f linear_to_gamma(const image4f& lin, float gamma) {
-    auto srgb = make_image4f(lin.size);
+    auto srgb = make_image(lin.size, zero4f);
     for (auto j = 0; j < srgb.size.y; j++) {
         for (auto i = 0; i < srgb.size.x; i++) {
             srgb[{i, j}] = linear_to_gamma(lin[{i, j}], gamma);
@@ -103,7 +103,7 @@ image4f linear_to_gamma(const image4f& lin, float gamma) {
 
 // Conversion between linear and gamma-encoded images.
 image4f srgb_to_linear(const image4f& srgb) {
-    auto lin = make_image4f(srgb.size);
+    auto lin = make_image(srgb.size, zero4f);
     for (auto j = 0; j < srgb.size.y; j++) {
         for (auto i = 0; i < srgb.size.x; i++) {
             lin[{i, j}] = srgb_to_linear(srgb[{i, j}]);
@@ -112,7 +112,7 @@ image4f srgb_to_linear(const image4f& srgb) {
     return lin;
 }
 image4f linear_to_srgb(const image4f& lin) {
-    auto srgb = make_image4f(lin.size);
+    auto srgb = make_image(lin.size, zero4f);
     for (auto j = 0; j < srgb.size.y; j++) {
         for (auto i = 0; i < srgb.size.x; i++) {
             srgb[{i, j}] = linear_to_srgb(lin[{i, j}]);
@@ -123,7 +123,7 @@ image4f linear_to_srgb(const image4f& lin) {
 
 // Conversion from/to floats.
 image4f byte_to_float(const image4b& bt) {
-    auto fl = make_image4f(bt.size);
+    auto fl = make_image(bt.size, zero4f);
     for (auto j = 0; j < bt.size.y; j++) {
         for (auto i = 0; i < bt.size.x; i++) {
             fl[{i, j}] = byte_to_float(bt[{i, j}]);
@@ -132,7 +132,7 @@ image4f byte_to_float(const image4b& bt) {
     return fl;
 }
 image4b float_to_byte(const image4f& fl) {
-    auto bt = make_image4b(fl.size);
+    auto bt = make_image(fl.size, zero4b);
     for (auto j = 0; j < bt.size.y; j++) {
         for (auto i = 0; i < bt.size.x; i++) {
             bt[{i, j}] = float_to_byte(fl[{i, j}]);
@@ -144,7 +144,7 @@ image4b float_to_byte(const image4f& fl) {
 // Tonemap image
 image4f tonemap_image(
     const image4f& hdr, float exposure, bool filmic, bool srgb) {
-    auto ldr = make_image4f(hdr.size);
+    auto ldr = make_image(hdr.size, zero4f);
     for (auto j = 0; j < hdr.size.y; j++) {
         for (auto i = 0; i < hdr.size.x; i++) {
             ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
@@ -173,7 +173,7 @@ namespace yocto {
 // Make a grid image
 image4f make_grid_image(
     const vec2i& size, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img  = make_image4f(size);
+    auto img  = make_image(size, zero4f);
     auto tile = img.size.x / tiles;
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
@@ -188,7 +188,7 @@ image4f make_grid_image(
 // Make a checkerboard image
 image4f make_checker_image(
     const vec2i& size, int tiles, const vec4f& c0, const vec4f& c1) {
-    auto img  = make_image4f(size);
+    auto img  = make_image(size, zero4f);
     auto tile = img.size.x / tiles;
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
@@ -201,7 +201,7 @@ image4f make_checker_image(
 
 // Make an image with bumps and dimples.
 image4f make_bumpdimple_image(const vec2i& size, int tiles) {
-    auto img  = make_image4f(size);
+    auto img  = make_image(size, zero4f);
     auto tile = img.size.x / tiles;
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
@@ -221,7 +221,7 @@ image4f make_bumpdimple_image(const vec2i& size, int tiles) {
 
 // Make a uv colored grid
 image4f make_ramp_image(const vec2i& size, const vec4f& c0, const vec4f& c1) {
-    auto img = make_image4f(size);
+    auto img = make_image(size, zero4f);
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
             auto u      = (float)i / (float)img.size.x;
@@ -233,7 +233,7 @@ image4f make_ramp_image(const vec2i& size, const vec4f& c0, const vec4f& c1) {
 
 // Make a gamma ramp image
 image4f make_gammaramp_imagef(const vec2i& size) {
-    auto img = make_image4f(size);
+    auto img = make_image(size, zero4f);
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
             auto u = j / float(img.size.y - 1);
@@ -248,7 +248,7 @@ image4f make_gammaramp_imagef(const vec2i& size) {
 // Make an image color with red/green in the [0,1] range. Helpful to
 // visualize uv texture coordinate application.
 image4f make_uvramp_image(const vec2i& size) {
-    auto img = make_image4f(size);
+    auto img = make_image(size, zero4f);
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
             img[{i, j}] = {i / (float)(img.size.x - 1),
@@ -260,7 +260,7 @@ image4f make_uvramp_image(const vec2i& size) {
 
 // Make a uv colored grid
 image4f make_uvgrid_image(const vec2i& size, int tiles, bool colored) {
-    auto img  = make_image4f(size);
+    auto img  = make_image(size, zero4f);
     auto tile = img.size.x / tiles;
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
@@ -288,7 +288,7 @@ image4f make_uvgrid_image(const vec2i& size, int tiles, bool colored) {
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale) {
-    auto norm = make_image4f(img.size);
+    auto norm = make_image(img.size, zero4f);
     auto dx = 1.0f / img.size.x, dy = 1.0f / img.size.y;
     for (int j = 0; j < img.size.y; j++) {
         for (int i = 0; i < img.size.x; i++) {
@@ -402,7 +402,7 @@ image4f make_sunsky_image(const vec2i& size, float theta_sun,
     };
 
     // Make the sun sky image
-    auto img          = make_image4f(size, {0, 0, 0, 1});
+    auto img          = make_image(size, vec4f{0, 0, 0, 1});
     auto sky_integral = 0.0f, sun_integral = 0.0f;
     for (auto j = 0; j < img.size.y / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.size.y);
@@ -452,7 +452,7 @@ image4f make_sunsky_image(const vec2i& size, float theta_sun,
 // Make an image of multiple lights.
 image4f make_lights_image(const vec2i& size, const vec3f& le, int nlights,
     float langle, float lwidth, float lheight) {
-    auto img = make_image4f(size, {0, 0, 0, 1});
+    auto img = make_image(size, vec4f{0, 0, 0, 1});
     for (auto j = 0; j < img.size.y / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.size.y);
         theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
@@ -472,7 +472,7 @@ image4f make_lights_image(const vec2i& size, const vec3f& le, int nlights,
 
 // Make a noise image. Wrap works only if size is a power of two.
 image4f make_noise_image(const vec2i& size, float scale, bool wrap) {
-    auto img    = make_image4f(size);
+    auto img    = make_image(size, zero4f);
     auto wrap3i = (wrap) ? vec3i{img.size.x, img.size.y, 2} : zero3i;
     for (auto j = 0; j < img.size.y; j++) {
         for (auto i = 0; i < img.size.x; i++) {
@@ -489,7 +489,7 @@ image4f make_noise_image(const vec2i& size, float scale, bool wrap) {
 // Make a noise image. Wrap works only if size is a power of two.
 image4f make_fbm_image(const vec2i& size, float scale, float lacunarity,
     float gain, int octaves, bool wrap) {
-    auto img    = make_image4f(size);
+    auto img    = make_image(size, zero4f);
     auto wrap3i = (wrap) ? vec3i{img.size.x, img.size.y, 2} : zero3i;
     for (auto j = 0; j < img.size.y; j++) {
         for (auto i = 0; i < img.size.x; i++) {
@@ -506,7 +506,7 @@ image4f make_fbm_image(const vec2i& size, float scale, float lacunarity,
 // Make a noise image. Wrap works only if size is a power of two.
 image4f make_ridge_image(const vec2i& size, float scale, float lacunarity,
     float gain, float offset, int octaves, bool wrap) {
-    auto img    = make_image4f(size);
+    auto img    = make_image(size, zero4f);
     auto wrap3i = (wrap) ? vec3i{img.size.x, img.size.y, 2} : zero3i;
     for (auto j = 0; j < img.size.y; j++) {
         for (auto i = 0; i < img.size.x; i++) {
@@ -524,7 +524,7 @@ image4f make_ridge_image(const vec2i& size, float scale, float lacunarity,
 // Make a noise image. Wrap works only if size is a power of two.
 image4f make_turbulence_image(const vec2i& size, float scale,
     float lacunarity, float gain, int octaves, bool wrap) {
-    auto img    = make_image4f(size);
+    auto img    = make_image(size, zero4f);
     auto wrap3i = (wrap) ? vec3i{img.size.x, img.size.y, 2} : zero3i;
     for (auto j = 0; j < img.size.y; j++) {
         for (auto i = 0; i < img.size.x; i++) {
