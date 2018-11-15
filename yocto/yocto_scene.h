@@ -97,8 +97,8 @@ struct yocto_camera {
 struct yocto_texture {
     string       name             = "";
     string       filename         = "";
-    image<vec4f> hdr_image        = {};
-    image<vec4b> ldr_image        = {};
+    image4f hdr_image        = {};
+    image4b ldr_image        = {};
     bool         clamp_to_edge    = false;
     bool         no_interpolation = false;
     float        height_scale     = 1;

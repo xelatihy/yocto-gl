@@ -42,10 +42,10 @@ struct app_image {
     string       filename = "";
     string       outname  = "";
     string       name     = "";
-    image<vec4f> img      = {};
+    image4f img      = {};
 
     // diplay image
-    image<vec4f>   display = {};
+    image4f   display = {};
     opengl_texture gl_txt  = {};
 
     // image stats

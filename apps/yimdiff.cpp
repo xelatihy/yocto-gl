@@ -35,9 +35,9 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
-image<vec4f> compute_diff_image(
-    const image<vec4f>& a, const image<vec4f>& b) {
-    auto diff = image<vec4f>{a.size()};
+image4f compute_diff_image(
+    const image4f& a, const image4f& b) {
+    auto diff = image4f{a.size()};
     for (auto j = 0; j < a.height(); j++) {
         for (auto i = 0; i < a.width(); i++) {
             diff[{i, j}] = {abs(a[{i, j}][0] - b[{i, j}][0]),
@@ -49,7 +49,7 @@ image<vec4f> compute_diff_image(
     return diff;
 }
 
-vec4f max_diff_value(const image<vec4f>& diff) {
+vec4f max_diff_value(const image4f& diff) {
     auto max_value = vec4f{0, 0, 0, 0};
     for (auto& c : diff) {
         max_value = {max(c[0], max_value[0]), max(c[1], max_value[1]),
@@ -58,8 +58,8 @@ vec4f max_diff_value(const image<vec4f>& diff) {
     return max_value;
 }
 
-image<vec4f> display_diff(const image<vec4f>& diff) {
-    auto display = image<vec4f>{diff.size()};
+image4f display_diff(const image4f& diff) {
+    auto display = image4f{diff.size()};
     for (auto j = 0; j < diff.height(); j++) {
         for (auto i = 0; i < diff.width(); i++) {
             auto diff_value = max(diff[{i, j}]);
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // check image type
-        auto img1 = image<vec4f>{}, img2 = image<vec4f>{};
+        auto img1 = image4f{}, img2 = image4f{};
         if (!load_image(filename1, img1))
             log_fatal("cannot open image {}", filename1);
         if (!load_image(filename2, img2))

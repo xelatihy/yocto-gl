@@ -58,10 +58,10 @@ struct app_state {
 
     // rendering state
     trace_lights             lights         = {};
-    image<trace_pixel>       trace_pixels   = {};
-    image<vec4f>             rendered_image = {};
-    image<vec4f>             display_image  = {};
-    image<vec4f>             preview_image  = {};
+    trace_pixels             trace_pixels   = {};
+    image4f             rendered_image = {};
+    image4f             display_image  = {};
+    image4f             preview_image  = {};
     atomic<bool>             trace_stop;
     atomic<int>              trace_sample;
     vector<thread>           trace_threads = {};
@@ -98,8 +98,8 @@ void start_rendering_async(app_state& app) {
     app.image_size = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
         app.trace_options.image_size);
-    app.rendered_image = image<vec4f>{app.image_size};
-    app.display_image  = image<vec4f>{app.image_size};
+    app.rendered_image = image4f{app.image_size};
+    app.display_image  = image4f{app.image_size};
     app.trace_pixels   = make_trace_pixels(
         app.image_size, app.trace_options.random_seed);
 
@@ -110,7 +110,7 @@ void start_rendering_async(app_state& app) {
         app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = tonemap_image(app.preview_image,
         app.display_exposure, app.display_filmic, app.display_srgb);
-    auto large_preview   = image<vec4f>{app.image_size};
+    auto large_preview   = image4f{app.image_size};
     for (auto j = 0; j < app.image_size[1]; j++) {
         for (auto i = 0; i < app.image_size[0]; i++) {
             auto pi = clamp(

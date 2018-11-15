@@ -63,10 +63,10 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
 }
 #endif
 
-image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
-    float range_sigma, const vector<image<vec4f>>& features,
+image4f filter_bilateral(const image4f& img, float spatial_sigma,
+    float range_sigma, const vector<image4f>& features,
     const vector<float>& features_sigma) {
-    auto filtered     = image<vec4f>{img.size()};
+    auto filtered     = image4f{img.size()};
     auto filter_width = (int)ceil(2.57f * spatial_sigma);
     auto sw           = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw           = 1 / (2.0f * range_sigma * range_sigma);
@@ -100,9 +100,9 @@ image<vec4f> filter_bilateral(const image<vec4f>& img, float spatial_sigma,
     return filtered;
 }
 
-image<vec4f> filter_bilateral(
-    const image<vec4f>& img, float spatial_sigma, float range_sigma) {
-    auto filtered = image<vec4f>{img.size()};
+image4f filter_bilateral(
+    const image4f& img, float spatial_sigma, float range_sigma) {
+    auto filtered = image4f{img.size()};
     auto fwidth   = (int)ceil(2.57f * spatial_sigma);
     auto sw       = 1 / (2.0f * spatial_sigma * spatial_sigma);
     auto rw       = 1 / (2.0f * range_sigma * range_sigma);
@@ -155,12 +155,12 @@ int main(int argc, char* argv[]) {
     check_cmdline(parser);
 
     // load
-    auto img = image<vec4f>();
+    auto img = image4f();
     if (!load_image(filename, img)) log_fatal("cannot load image {}", filename);
 
     // set alpha
     if (alpha_filename != "") {
-        auto alpha = image<vec4f>();
+        auto alpha = image4f();
         if (!load_image(alpha_filename, alpha))
             log_fatal("cannot load image {}", alpha_filename);
         if (img.size() != alpha.size()) {
@@ -174,7 +174,7 @@ int main(int argc, char* argv[]) {
 
     // set alpha
     if (coloralpha_filename != "") {
-        auto alpha = image<vec4f>();
+        auto alpha = image4f();
         if (!load_image(alpha_filename, alpha))
             log_fatal("cannot load image {}", coloralpha_filename);
         if (img.size() != alpha.size()) {

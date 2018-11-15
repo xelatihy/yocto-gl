@@ -1689,7 +1689,7 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
 }
 
 // Trace a block of samples
-void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+void trace_image_region(image4f& rendered_image, trace_pixels& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     const bbox2i& region, int num_samples, const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
@@ -1725,8 +1725,8 @@ void trace_image_region(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 }
 
 // Init a sequence of random number generators.
-image<trace_pixel> make_trace_pixels(const vec2i& image_size, uint64_t seed) {
-    auto pixels = image<trace_pixel>{image_size};
+trace_pixels make_trace_pixels(const vec2i& image_size, uint64_t seed) {
+    auto pixels = trace_pixels{image_size};
     auto rng    = make_rng(1301081);
     for (auto j = 0; j < pixels.height(); j++) {
         for (auto i = 0; i < pixels.width(); i++) {
@@ -1783,12 +1783,12 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options) {
     auto scope      = log_trace_scoped("tracing image");
     auto image_size = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.image_size);
-    auto rendered_image = image<vec4f>{image_size};
+    auto rendered_image = image4f{image_size};
     auto pixels         = make_trace_pixels(image_size, options.random_seed);
     auto regions        = make_image_regions(rendered_image.size());
 
@@ -1818,7 +1818,7 @@ image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
-int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
     auto regions = make_image_regions(rendered_image.size());
@@ -1852,8 +1852,8 @@ int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels
 }
 
 // Starts an anyncrhounous renderer.
-void trace_image_async_start(image<vec4f>& rendered_image,
-    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+void trace_image_async_start(image4f& rendered_image,
+    trace_pixels& pixels, const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, vector<thread>& threads,
     atomic<int>& current_sample, concurrent_queue<bbox2i>& queue,
     const trace_image_options& options) {

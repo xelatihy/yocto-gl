@@ -144,6 +144,13 @@ inline void from_json(const json& js, vec3i& val) {
 inline void to_json(json& js, const vec4i& val) {
     js = std::array<int, 4>{{val.x, val.y, val.z, val.w}};
 }
+inline void from_json(const json& js, vec4b& val) {
+    auto vala = js.get<std::array<byte, 4>>();
+    val = {vala[0], vala[1], vala[2], vala[3]};
+}
+inline void to_json(json& js, const vec4b& val) {
+    js = std::array<byte, 4>{{val.x, val.y, val.z, val.w}};
+}
 inline void from_json(const json& js, vec4i& val) {
     auto vala = js.get<std::array<int, 4>>();
     val = {vala[0], vala[1], vala[2], vala[3]};
@@ -173,18 +180,27 @@ inline void from_json(const json& js, bbox3f& val) {
     val = {vala[0], vala[1]};
 }
 
-template <typename T>
-inline void to_json(json& js, const image<T>& value) {
+inline void to_json(json& js, const image4f& value) {
     js           = json::object();
     js["size"]   = value.size();
-    js["pixels"] = vector<T>{
+    js["pixels"] = vector<vec4f>{
         value.data(), value.data() + value.width() * value.height()};
 }
-template <typename T>
-inline void from_json(const json& js, image<T>& value) {
+inline void to_json(json& js, const image4b& value) {
+    js           = json::object();
+    js["size"]   = value.size();
+    js["pixels"] = vector<vec4b>{
+        value.data(), value.data() + value.width() * value.height()};
+}
+inline void from_json(const json& js, image4f& value) {
     auto size   = js.at("size").get<vec2i>();
-    auto pixels = js.at("pixels").get<vector<T>>();
-    value       = image<T>{size, pixels.data()};
+    auto pixels = js.at("pixels").get<vector<vec4f>>();
+    value       = image4f{size, pixels.data()};
+}
+inline void from_json(const json& js, image4b& value) {
+    auto size   = js.at("size").get<vec2i>();
+    auto pixels = js.at("pixels").get<vector<vec4b>>();
+    value       = image4b{size, pixels.data()};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
@@ -248,8 +264,8 @@ bool save_scene(const string& filename, const yocto_scene& scene,
     }
 }
 
-bool load_image_nolog(const string& filename, image<vec4f>& img);
-bool load_image_nolog(const string& filename, image<vec4b>& img);
+bool load_image_nolog(const string& filename, image4f& img);
+bool load_image_nolog(const string& filename, image4b& img);
 bool load_volume_nolog(const string& filename, volume<float>& vol);
 
 bool load_scene_textures(yocto_scene& scene, const string& dirname,
@@ -332,8 +348,8 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     return true;
 }
 
-bool save_image_nolog(const string& filename, const image<vec4f>& img);
-bool save_image_nolog(const string& filename, const image<vec4b>& img);
+bool save_image_nolog(const string& filename, const image4f& img);
+bool save_image_nolog(const string& filename, const image4b& img);
 bool save_volume_nolog(const string& filename, const volume<float>& vol);
 
 // helper to save textures
@@ -532,8 +548,16 @@ string base64_decode(string const& encoded_string) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename T>
-bool operator==(const image<T>& a, const image<T>& b) {
+bool operator==(const image4f& a, const image4f& b) {
+    if (a.size() != b.size()) return false;
+    for (auto j = 0; j < a.height(); j++) {
+        for (auto i = 0; i < a.width(); i++) {
+            if (a[{i, j}] != b[{i, j}]) return false;
+        }
+    }
+    return true;
+}
+bool operator==(const image4b& a, const image4b& b) {
     if (a.size() != b.size()) return false;
     for (auto j = 0; j < a.height(); j++) {
         for (auto i = 0; i < a.width(); i++) {
@@ -720,12 +744,21 @@ bool serialize_json_values(
     }
 }
 
-template <typename T>
-bool serialize_json_value(json& js, image<T>& value, bool save) {
+bool serialize_json_value(json& js, image4f& value, bool save) {
     auto size = value.size();
     if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save))
         return false;
-    if (!save) value = image<T>{size};
+    if (!save) value = image4f{size};
+    if (!serialize_json_values(
+            js, value.data(), size[0] * size[1], "pixels", save))
+        return false;
+    return true;
+}
+bool serialize_json_value(json& js, image4b& value, bool save) {
+    auto size = value.size();
+    if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save))
+        return false;
+    if (!save) value = image4b{size};
     if (!serialize_json_values(
             js, value.data(), size[0] * size[1], "pixels", save))
         return false;
@@ -4647,8 +4680,22 @@ bool serialize_bin_value(string& str, file_stream& fs, bool save) {
 }
 
 // Serialize image
-template <typename T>
-bool serialize_bin_value(image<T>& img, file_stream& fs, bool save) {
+bool serialize_bin_value(image4f& img, file_stream& fs, bool save) {
+    if (save) {
+        if (!write_value(fs, img.size())) return false;
+        if (!write_values(fs, img.width() * img.height(), img.data()))
+            return false;
+        return true;
+    } else {
+        auto size = zero2i;
+        if (!read_value(fs, size)) return false;
+        img.resize(size);
+        if (!read_values(fs, img.width() * img.height(), img.data()))
+            return false;
+        return true;
+    }
+}
+bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.size())) return false;
         if (!write_values(fs, img.width() * img.height(), img.data()))

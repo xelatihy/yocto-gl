@@ -64,12 +64,11 @@
 namespace yocto {
 
 // Image container.
-template <typename T>
-struct image {
-    image() : _size{0, 0}, _pixels{} {}
-    image(const vec2i& size, const T& value = {})
+struct image4f {
+    image4f() : _size{0, 0}, _pixels{} {}
+    image4f(const vec2i& size, const vec4f& value = {})
         : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
-    image(const vec2i& size, const T* values)
+    image4f(const vec2i& size, const vec4f* values)
         : _size{size}, _pixels(values, values + size.x * size.y) {}
 
     bool  empty() const { return _pixels.empty(); }
@@ -81,42 +80,79 @@ struct image {
         _size = {0, 0};
         _pixels.clear();
     }
-    void resize(const vec2i& size, const T& value = {});
+    void resize(const vec2i& size, const vec4f& value = {});
 
-    T& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
-    const T& operator[](const vec2i& ij) const {
+    vec4f& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    const vec4f& operator[](const vec2i& ij) const {
         return _pixels[ij.y * _size.x + ij.x];
     }
-    T&       at(const vec2i& ij) { return operator[](ij); }
-    const T& at(const vec2i& ij) const { return operator[](ij); }
+    vec4f&       at(const vec2i& ij) { return operator[](ij); }
+    const vec4f& at(const vec2i& ij) const { return operator[](ij); }
 
-    T*       data() { return _pixels.data(); }
-    const T* data() const { return _pixels.data(); }
+    vec4f*       data() { return _pixels.data(); }
+    const vec4f* data() const { return _pixels.data(); }
 
-    T*       begin() { return _pixels.data(); }
-    T*       end() { return _pixels.data() + _pixels.size(); }
-    const T* begin() const { return _pixels.data(); }
+    vec4f*       begin() { return _pixels.data(); }
+    vec4f*       end() { return _pixels.data() + _pixels.size(); }
+    const vec4f* begin() const { return _pixels.data(); }
 
-    const T* end() const { return _pixels.data() + _pixels.size(); }
+    const vec4f* end() const { return _pixels.data() + _pixels.size(); }
 
    private:
     vec2i     _size   = {0, 0};
-    vector<T> _pixels = {};
+    vector<vec4f> _pixels = {};
+};
+
+// Image container.
+struct image4b {
+    image4b() : _size{0, 0}, _pixels{} {}
+    image4b(const vec2i& size, const vec4b& value = {})
+        : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
+    image4b(const vec2i& size, const vec4b* values)
+        : _size{size}, _pixels(values, values + size.x * size.y) {}
+
+    bool  empty() const { return _pixels.empty(); }
+    vec2i size() const { return _size; }
+    int   width() const { return _size.x; }
+    int   height() const { return _size.y; }
+
+    void clear() {
+        _size = {0, 0};
+        _pixels.clear();
+    }
+    void resize(const vec2i& size, const vec4b& value = {});
+
+    vec4b& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    const vec4b& operator[](const vec2i& ij) const {
+        return _pixels[ij.y * _size.x + ij.x];
+    }
+    vec4b&       at(const vec2i& ij) { return operator[](ij); }
+    const vec4b& at(const vec2i& ij) const { return operator[](ij); }
+
+    vec4b*       data() { return _pixels.data(); }
+    const vec4b* data() const { return _pixels.data(); }
+
+    vec4b*       begin() { return _pixels.data(); }
+    vec4b*       end() { return _pixels.data() + _pixels.size(); }
+    const vec4b* begin() const { return _pixels.data(); }
+
+    const vec4b* end() const { return _pixels.data() + _pixels.size(); }
+
+   private:
+    vec2i     _size   = {0, 0};
+    vector<vec4b> _pixels = {};
 };
 
 // Size
-template <typename T>
-inline float get_image_aspect(const image<T>& img);
+inline float get_image_aspect(const image4f& img);
+inline float get_image_aspect(const image4b& img);
 
 // Splits an image into an array of regions
 vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size = 32);
 
 // Gets pixels in an image region
-template <typename T>
-inline void get_image_region(
-    image<T>& clipped, const image<T>& img, const bbox2i& region);
-template <typename T>
-inline image<T> get_image_region(const image<T>& img, const bbox2i& region);
+inline image4f get_image_region(const image4f& img, const bbox2i& region);
+inline image4b get_image_region(const image4b& img, const bbox2i& region);
 
 // Gets an image size from a suggested size and an aspect ratio. The suggested
 // size may have zeros in either components. In which case, we use the aspect
@@ -124,25 +160,25 @@ inline image<T> get_image_region(const image<T>& img, const bbox2i& region);
 vec2i get_image_size(const vec2i& size, float aspect);
 
 // Conversion from/to floats.
-image<vec4f> byte_to_float(const image<vec4b>& bt);
-image<vec4b> float_to_byte(const image<vec4f>& fl);
+image4f byte_to_float(const image4b& bt);
+image4b float_to_byte(const image4f& fl);
 
 // Conversion between linear and gamma-encoded images.
-image<vec4f> srgb_to_linear(const image<vec4f>& srgb);
-image<vec4f> linear_to_srgb(const image<vec4f>& lin);
+image4f srgb_to_linear(const image4f& srgb);
+image4f linear_to_srgb(const image4f& lin);
 
 // Conversion between linear and gamma-encoded images.
-image<vec4f> gamma_to_linear(const image<vec4f>& srgb, float gamma);
-image<vec4f> linear_to_gamma(const image<vec4f>& lin, float gamma);
+image4f gamma_to_linear(const image4f& srgb, float gamma);
+image4f linear_to_gamma(const image4f& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-image<vec4f> tonemap_image(
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image<vec4f>& ldr, const bbox2i& region,
-    const image<vec4f>& hdr, float exposure, bool filmic, bool srgb);
+image4f tonemap_image(
+    const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image_region(image4f& ldr, const bbox2i& region,
+    const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
+image4f resize_image(const image4f& img, const vec2i& size);
 
 }  // namespace yocto
 
@@ -152,22 +188,22 @@ image<vec4f> resize_image(const image<vec4f>& img, const vec2i& size);
 namespace yocto {
 
 // Make example images.
-image<vec4f> make_grid_image(const vec2i& size, int tile = 8,
+image4f make_grid_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_checker_image(const vec2i& size, int tile = 8,
+image4f make_checker_image(const vec2i& size, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
-image<vec4f> make_bumpdimple_image(const vec2i& size, int tile = 8);
-image<vec4f> make_ramp_image(
+image4f make_bumpdimple_image(const vec2i& size, int tile = 8);
+image4f make_ramp_image(
     const vec2i& size, const vec4f& c0, const vec4f& c1, float srgb = false);
-image<vec4f> make_gammaramp_image(const vec2i& size);
-image<vec4f> make_uvramp_image(const vec2i& size);
-image<vec4f> make_uvgrid_image(
+image4f make_gammaramp_image(const vec2i& size);
+image4f make_uvramp_image(const vec2i& size);
+image4f make_uvgrid_image(
     const vec2i& size, int tile = 8, bool colored = true);
 
 // Comvert a bump map to a normal map.
-image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
+image4f bump_to_normal_map(const image4f& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun is not simple to control
@@ -177,24 +213,24 @@ image<vec4f> bump_to_normal_map(const image<vec4f>& img, float scale = 1);
 // the sky only integral if renormalize_sun is true. For the same reason,
 // we rescale the sun dimension such that it covers at least 5 pixels in
 // diameter if has_sun is enabled.
-image<vec4f> make_sunsky_image(const vec2i& size, float sun_angle,
+image4f make_sunsky_image(const vec2i& size, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_angle_scale = 1.0f,
     float        sun_emission_scale = 1.0f,
     const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f}, bool renormalize_sun = true);
 // Make an image of multiple lights.
-image<vec4f> make_lights_image(const vec2i& size, const vec3f& le = {1, 1, 1},
+image4f make_lights_image(const vec2i& size, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image<vec4f> make_noise_image(
+image4f make_noise_image(
     const vec2i& size, float scale = 1, bool wrap = true);
-image<vec4f> make_fbm_image(const vec2i& size, float scale = 1,
+image4f make_fbm_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image<vec4f> make_ridge_image(const vec2i& size, float scale = 1,
+image4f make_ridge_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
     int octaves = 6, bool wrap = true);
-image<vec4f> make_turbulence_image(const vec2i& size, float scale = 1,
+image4f make_turbulence_image(const vec2i& size, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 }  // namespace yocto
@@ -310,15 +346,32 @@ inline vec3f rgb_to_xyz(const vec3f& rgb);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template <typename T>
-inline void image<T>::resize(const vec2i& size, const T& value) {
+inline void image4f::resize(const vec2i& size, const vec4f& value) {
     if (size == _size) return;
     if (_size == zero2i) {
-        *this = image{size, value};
+        *this = image4f{size, value};
     } else if (size == zero2i) {
         clear();
     } else {
-        auto img = image{size, value};
+        auto img = image4f{size, value};
+        for (auto j = 0; j < min(size.y, _size.y); j++) {
+            for (auto i = 0; i < min(size.x, _size.x); i++) {
+                img[{i, j}] = (*this)[{i, j}];
+            }
+        }
+        _size = size;
+        swap(_pixels, img._pixels);
+    }
+}
+
+inline void image4b::resize(const vec2i& size, const vec4b& value) {
+    if (size == _size) return;
+    if (_size == zero2i) {
+        *this = image4b{size, value};
+    } else if (size == zero2i) {
+        clear();
+    } else {
+        auto img = image4b{size, value};
         for (auto j = 0; j < min(size.y, _size.y); j++) {
             for (auto i = 0; i < min(size.x, _size.x); i++) {
                 img[{i, j}] = (*this)[{i, j}];
@@ -330,25 +383,25 @@ inline void image<T>::resize(const vec2i& size, const T& value) {
 }
 
 // Size
-template <typename T>
-inline float get_image_aspect(const image<T>& img) {
+inline float get_image_aspect(const image4f& img) {
+    return (float)img.width() / (float)img.height();
+}
+inline float get_image_aspect(const image4b& img) {
     return (float)img.width() / (float)img.height();
 }
 
 // Gets pixels in an image region
-template <typename T>
-inline void get_image_region(
-    image<T>& clipped, const image<T>& img, const bbox2i& region) {
-    clipped.resize(bbox_size(region));
+inline image4f get_image_region(const image4f& img, const bbox2i& region) {
+    auto clipped = image4f{bbox_size(region)};
     for (auto j = 0; j < bbox_size(region).y; j++) {
         for (auto i = 0; i < bbox_size(region).x; i++) {
             clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
         }
     }
+    return clipped;
 }
-template <typename T>
-inline image<T> get_image_region(const image<T>& img, const bbox2i& region) {
-    auto clipped = image<T>{bbox_size(region)};
+inline image4b get_image_region(const image4b& img, const bbox2i& region) {
+    auto clipped = image4b{bbox_size(region)};
     for (auto j = 0; j < bbox_size(region).y; j++) {
         for (auto i = 0; i < bbox_size(region).x; i++) {
             clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];

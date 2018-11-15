@@ -100,9 +100,30 @@ struct trace_pixel {
     int       samples  = 0;
     rng_state rng      = {};
 };
+struct trace_pixels {
+    trace_pixels() : _size{0, 0}, _pixels{} {}
+    trace_pixels(const vec2i& size, const trace_pixel& value = {})
+        : _size{size}, _pixels((size_t)(size.x * size.y), value) {}
+    trace_pixels(const vec2i& size, const trace_pixel* values)
+        : _size{size}, _pixels(values, values + size.x * size.y) {}
+
+    bool  empty() const { return _pixels.empty(); }
+    vec2i size() const { return _size; }
+    int   width() const { return _size.x; }
+    int   height() const { return _size.y; }
+
+    trace_pixel& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    const trace_pixel& operator[](const vec2i& ij) const {
+        return _pixels[ij.y * _size.x + ij.x];
+    }
+
+   private:
+    vec2i     _size   = {0, 0};
+    vector<trace_pixel> _pixels = {};
+};
 
 // Initialize state of the renderer.
-image<trace_pixel> make_trace_pixels(
+trace_pixels make_trace_pixels(
     const vec2i& image_size, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
@@ -151,20 +172,20 @@ struct trace_image_options {
 };
 
 // Progressively compute an image by calling trace_samples multiple times.
-image<vec4f> trace_image(const yocto_scene& scene, const bvh_scene& bvh,
+image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
-int trace_image_samples(image<vec4f>& rendered_image, image<trace_pixel>& pixels,
+int trace_image_samples(image4f& rendered_image, trace_pixels& pixels,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
-void trace_image_async_start(image<vec4f>& rendered_image,
-    image<trace_pixel>& pixels, const yocto_scene& scene, const bvh_scene& bvh,
+void trace_image_async_start(image4f& rendered_image,
+    trace_pixels& pixels, const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, vector<thread>& threads,
     atomic<int>& current_sample, concurrent_queue<bbox2i>& queue,
     const trace_image_options& options);
