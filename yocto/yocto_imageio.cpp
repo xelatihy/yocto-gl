@@ -230,7 +230,7 @@ bool load_pfm_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, (vec4f*)data(pixels)};
+    img = make_image4f({width, height}, (vec4f*)data(pixels));
     return true;
 }
 bool save_pfm_image(const string& filename, const image4f& img) {
@@ -255,7 +255,7 @@ bool load_exr_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image4f({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -276,7 +276,7 @@ bool load_stb_image(const string& filename, image4b& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image4b({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -288,7 +288,7 @@ bool load_stb_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image4f({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -345,7 +345,7 @@ bool load_stb_image_from_memory(
         log_io_error("error loading in-memory image");
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image4b({width, height}, pixels);
     free(pixels);
     return true;
 }
@@ -358,7 +358,7 @@ bool load_stbi_image_from_memory(
         log_io_error("error loading in-memory image {}");
         return false;
     }
-    img = {{width, height}, pixels};
+    img = make_image4f({width, height}, pixels);
     free(pixels);
     return true;
 }

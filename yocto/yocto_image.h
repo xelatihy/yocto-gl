@@ -65,37 +65,39 @@ namespace yocto {
 
 // Image container.
 struct image4f {
-    image4f() : size{0, 0}, pixels{} {}
-    image4f(const vec2i& size, const vec4f& value = {})
-        : size{size}, pixels((size_t)(size.x * size.y), value) {}
-    image4f(const vec2i& size, const vec4f* values)
-        : size{size}, pixels(values, values + size.x * size.y) {}
+    vec2i     size   = {0, 0};
+    vector<vec4f> pixels = {};
 
     vec4f& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4f& operator[](const vec2i& ij) const {
         return pixels[ij.y * size.x + ij.x];
     }
-
-    vec2i     size   = {0, 0};
-    vector<vec4f> pixels = {};
 };
 
 // Image container.
 struct image4b {
-    image4b() : size{0, 0}, pixels{} {}
-    image4b(const vec2i& size, const vec4b& value = {})
-        : size{size}, pixels((size_t)(size.x * size.y), value) {}
-    image4b(const vec2i& size, const vec4b* values)
-        : size{size}, pixels(values, values + size.x * size.y) {}
+    vec2i     size   = {0, 0};
+    vector<vec4b> pixels = {};
 
     vec4b& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4b& operator[](const vec2i& ij) const {
         return pixels[ij.y * size.x + ij.x];
     }
-
-    vec2i     size   = {0, 0};
-    vector<vec4b> pixels = {};
 };
+
+// Image creation
+inline image4f make_image4f(const vec2i& size, const vec4f& value = {0,0,0,0}) {
+    return {size, {(size_t)(size.x * size.y), value}};
+}
+inline image4b make_image4b(const vec2i& size, const vec4b& value = {0,0,0,0}) {
+    return {size, {(size_t)(size.x * size.y), value}};
+}
+inline image4f make_image4f(const vec2i& size, const vec4f* values) {
+    return {size, {values, values + (size_t)(size.x * size.y)}};
+}
+inline image4b make_image4b(const vec2i& size, const vec4b* values) {
+    return {size, {values, values + (size_t)(size.x * size.y)}};
+}
 
 // Functions to query image data
 inline vec2i image_size(const image4f& image) { return image.size; }

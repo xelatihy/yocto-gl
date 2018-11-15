@@ -195,12 +195,12 @@ inline void to_json(json& js, const image4b& value) {
 inline void from_json(const json& js, image4f& value) {
     auto size   = js.at("size").get<vec2i>();
     auto pixels = js.at("pixels").get<vector<vec4f>>();
-    value       = image4f{size, data(pixels)};
+    value       = make_image4f(size, data(pixels));
 }
 inline void from_json(const json& js, image4b& value) {
     auto size   = js.at("size").get<vec2i>();
     auto pixels = js.at("pixels").get<vector<vec4b>>();
-    value       = image4b{size, data(pixels)};
+    value       = make_image4b(size, data(pixels));
 }
 inline void to_json(json& js, const volume1f& value) {
     js           = json::object();
@@ -745,7 +745,7 @@ bool serialize_json_value(json& js, image4f& value, bool save) {
     auto size = value.size;
     if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save))
         return false;
-    if (!save) value = image4f{size};
+    if (!save) value = make_image4f(size);
     if (!serialize_json_values(
             js, data(value), size[0] * size[1], "pixels", save))
         return false;
@@ -755,7 +755,7 @@ bool serialize_json_value(json& js, image4b& value, bool save) {
     auto size = value.size;
     if (!serialize_json_value(js, size, "size", vec2i{-1, -1}, save))
         return false;
-    if (!save) value = image4b{size};
+    if (!save) value = make_image4b(size);
     if (!serialize_json_values(
             js, data(value), size[0] * size[1], "pixels", save))
         return false;
