@@ -190,7 +190,7 @@ inline void to_json(json& js, const image4b& value) {
     js           = json::object();
     js["size"]   = value.size;
     js["pixels"] = vector<vec4b>{
-        value.data(), value.data() + value.size.x * value.size.y};
+        data(value), data(value) + value.size.x * value.size.y};
 }
 inline void from_json(const json& js, image4f& value) {
     auto size   = js.at("size").get<vec2i>();
@@ -757,7 +757,7 @@ bool serialize_json_value(json& js, image4b& value, bool save) {
         return false;
     if (!save) value = image4b{size};
     if (!serialize_json_values(
-            js, value.data(), size[0] * size[1], "pixels", save))
+            js, data(value), size[0] * size[1], "pixels", save))
         return false;
     return true;
 }
@@ -768,7 +768,7 @@ bool serialize_json_value(json& js, volume1f& value, bool save) {
         return false;
     if (!save) value = volume1f{size};
     if (!serialize_json_values(
-            js, value.data(), size[0] * size[1], "voxels", save))
+            js, data(value), size[0] * size[1], "voxels", save))
         return false;
     return true;
 }
@@ -4694,13 +4694,13 @@ bool serialize_bin_value(image4f& img, file_stream& fs, bool save) {
 bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.size)) return false;
-        if (!write_values(fs, img.size.x * img.size.y, img.data()))
+        if (!write_values(fs, img.size.x * img.size.y, data(img)))
             return false;
         return true;
     } else {
         if (!read_value(fs, img.size)) return false;
         img.pixels.resize(img.size.x * img.size.y);
-        if (!read_values(fs, img.size.x * img.size.y, img.data()))
+        if (!read_values(fs, img.size.x * img.size.y, data(img)))
             return false;
         return true;
     }

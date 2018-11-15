@@ -296,7 +296,7 @@ bool load_stb_image(const string& filename, image4f& img) {
 // save an image with stbi
 bool save_png_image(const string& filename, const image4b& img) {
     if (!stbi_write_png(filename.c_str(), img.size.x, img.size.y, 4,
-            img.data(), img.size.x * 4)) {
+            data(img), img.size.x * 4)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -304,7 +304,7 @@ bool save_png_image(const string& filename, const image4b& img) {
 }
 bool save_jpg_image(const string& filename, const image4b& img) {
     if (!stbi_write_jpg(
-            filename.c_str(), img.size.x, img.size.y, 4, img.data(), 75)) {
+            filename.c_str(), img.size.x, img.size.y, 4, data(img), 75)) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -312,7 +312,7 @@ bool save_jpg_image(const string& filename, const image4b& img) {
 }
 bool save_tga_image(const string& filename, const image4b& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.size.x, img.size.y, 4, img.data())) {
+            filename.c_str(), img.size.x, img.size.y, 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -320,7 +320,7 @@ bool save_tga_image(const string& filename, const image4b& img) {
 }
 bool save_bmp_image(const string& filename, const image4b& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.size.x, img.size.y, 4, img.data())) {
+            filename.c_str(), img.size.x, img.size.y, 4, data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
