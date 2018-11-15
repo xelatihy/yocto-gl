@@ -107,8 +107,6 @@ struct trace_pixels {
     trace_pixels(const vec2i& size, const trace_pixel* values)
         : size{size}, pixels(values, values + size.x * size.y) {}
 
-    bool  empty() const { return pixels.empty(); }
-
     trace_pixel& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const trace_pixel& operator[](const vec2i& ij) const {
         return pixels[ij.y * size.x + ij.x];

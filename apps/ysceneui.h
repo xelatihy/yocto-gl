@@ -135,7 +135,7 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     pair<type_index, int>& sel) {
     if (index < 0) return;
     auto lbl = vals[index].name;
-    if (!lbl_.empty()) lbl = lbl_ + ": " + vals[index].name;
+    if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index].name;
     auto selected = sel == pair<type_index, int>{type_index(typeid(T)), index};
     if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
         draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
@@ -150,7 +150,7 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
     pair<type_index, int>& sel) {
     if (index < 0) return;
     auto lbl = vals[index]->name;
-    if (!lbl_.empty()) lbl = lbl_ + ": " + vals[index]->name;
+    if (!empty(lbl_)) lbl = lbl_ + ": " + vals[index]->name;
     auto selected = sel == pair<type_index, int>{type_index(typeid(T)), index};
     if (begin_selectabletreenode_opengl_widget(win, lbl.c_str(), selected)) {
         draw_scene_tree_opengl_widgets_rec(win, lbl_, scene, vals[index], sel);
@@ -161,49 +161,49 @@ inline void draw_opengl_widgets_scene_tree(const opengl_window& win,
 
 inline void draw_opengl_widgets_scene_tree(
     const opengl_window& win, yocto_scene& scene, pair<type_index, int>& sel) {
-    if (!scene.cameras.empty() && begin_treenode_opengl_widget(win, "cameras")) {
+    if (!empty(scene.cameras) && begin_treenode_opengl_widget(win, "cameras")) {
         for (auto v = 0; v < scene.cameras.size(); v++)
             draw_opengl_widgets_scene_tree(win, "", scene, v, scene.cameras, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!scene.shapes.empty() && begin_treenode_opengl_widget(win, "shapes")) {
+    if (!empty(scene.shapes) && begin_treenode_opengl_widget(win, "shapes")) {
         for (auto v = 0; v < scene.shapes.size(); v++)
             draw_opengl_widgets_scene_tree(win, "", scene, v, scene.shapes, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!scene.instances.empty() &&
+    if (!empty(scene.instances) &&
         begin_treenode_opengl_widget(win, "instances")) {
         for (auto v = 0; v < scene.instances.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.instances, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!scene.materials.empty() &&
+    if (!empty(scene.materials) &&
         begin_treenode_opengl_widget(win, "materials")) {
         for (auto v = 0; v < scene.materials.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.materials, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!scene.textures.empty() && begin_treenode_opengl_widget(win, "textures")) {
+    if (!empty(scene.textures) && begin_treenode_opengl_widget(win, "textures")) {
         for (auto v = 0; v < scene.textures.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.textures, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!scene.environments.empty() &&
+    if (!empty(scene.environments) &&
         begin_treenode_opengl_widget(win, "environments")) {
         for (auto v = 0; v < scene.environments.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.environments, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!scene.nodes.empty() && begin_treenode_opengl_widget(win, "nodes")) {
+    if (!empty(scene.nodes) && begin_treenode_opengl_widget(win, "nodes")) {
         for (auto v = 0; v < scene.nodes.size(); v++)
             draw_opengl_widgets_scene_tree(win, "", scene, v, scene.nodes, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!scene.animations.empty() &&
+    if (!empty(scene.animations) &&
         begin_treenode_opengl_widget(win, "animations")) {
         for (auto v = 0; v < scene.animations.size(); v++)
             draw_opengl_widgets_scene_tree(

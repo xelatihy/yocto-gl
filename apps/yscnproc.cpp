@@ -97,11 +97,11 @@ int main(int argc, char** argv) {
     // add missing mesh names if necessary
     if(mesh_filenames && get_extension(output) == "json") {
         for(auto& shape : scene.shapes) {
-            if(shape.filename.empty() && shape.positions.size() > 16) 
+            if(empty(shape.filename) && shape.positions.size() > 16) 
                 shape.filename = "meshes/" + shape.name + ".ply";
         } 
         for(auto& surface : scene.surfaces) {
-            if(surface.filename.empty() && surface.positions.size() > 16) 
+            if(empty(surface.filename) && surface.positions.size() > 16) 
                 surface.filename = "surfaces/" + surface.name + ".obj";
         } 
     }

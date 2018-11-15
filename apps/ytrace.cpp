@@ -110,7 +110,7 @@ int main(int argc, char* argv[]) {
     auto lights = make_trace_lights(scene);
 
     // fix renderer type if no lights
-    if ((lights.instances.empty() && lights.environments.empty()) &&
+    if ((empty(lights.instances) && empty(lights.environments)) &&
         trace_options.sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader");
         trace_options.sampler_type = trace_sampler_type::eyelight;

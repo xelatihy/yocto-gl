@@ -142,7 +142,7 @@ bool load_scene_sync(app_state& app) {
     tesselate_shapes_and_surfaces(app.scene);
 
     // add components
-    if (app.add_skyenv && app.scene.environments.empty())
+    if (app.add_skyenv && empty(app.scene.environments))
         add_sky_environment(app.scene);
     if (app.double_sided)
         for (auto& material : app.scene.materials) material.double_sided = true;
@@ -159,7 +159,7 @@ bool load_scene_sync(app_state& app) {
     app.lights = make_trace_lights(app.scene);
 
     // fix renderer type if no lights
-    if (app.lights.instances.empty() && app.lights.environments.empty() &&
+    if (empty(app.lights.instances) && empty(app.lights.environments) &&
         app.trace_options.sampler_type != trace_sampler_type::eyelight) {
         log_info("no lights presents, switching to eyelight shader\n");
         app.trace_options.sampler_type = trace_sampler_type::eyelight;
@@ -327,7 +327,7 @@ void draw(const opengl_window& win) {
 
 bool update(app_state& app) {
     // exit if no updated
-    if (!app.load_done || app.update_list.empty()) return false;
+    if (!app.load_done || empty(app.update_list)) return false;
 
     // stop renderer
     stop_rendering_async(app);
@@ -341,8 +341,8 @@ bool update(app_state& app) {
         if (type == typeid(yocto_scene_node))
             updated_instances.push_back(index);
     }
-    if (!updated_instances.empty() || !updated_shapes.empty() ||
-        !updated_surfaces.empty())
+    if (!empty(updated_instances) || !empty(updated_shapes) ||
+        !empty(updated_surfaces))
         refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
             updated_surfaces);
     app.update_list.clear();

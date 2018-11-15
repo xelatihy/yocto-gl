@@ -69,7 +69,7 @@ namespace yocto {
 // Split a string
 vector<string> split_string(const string& str) {
     auto ret = vector<string>();
-    if (str.empty()) return ret;
+    if (empty(str)) return ret;
     auto lpos = (size_t)0;
     while (lpos != str.npos) {
         auto pos = str.find_first_of(" \t\n\r", lpos);
@@ -120,7 +120,7 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto nrow    = w * nc;
     auto pixels  = vector<float>(nvalues);
     for (auto j = h - 1; j >= 0; j--) {
-        if (fread(pixels.data() + j * nrow, sizeof(float), nrow, fs.fs) != nrow) {
+        if (fread(data(pixels) + j * nrow, sizeof(float), nrow, fs.fs) != nrow) {
             return {};
         }
     }
@@ -128,7 +128,7 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     // endian conversion
     if (s > 0) {
         for (auto i = 0; i < nvalues; ++i) {
-            auto dta = (uint8_t*)(pixels.data() + i);
+            auto dta = (uint8_t*)(data(pixels) + i);
             swap(dta[0], dta[3]);
             swap(dta[1], dta[2]);
         }
@@ -149,8 +149,8 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     }
     auto cpixels = vector<float>(req * npixels);
     for (auto i = 0; i < npixels; i++) {
-        auto vp = pixels.data() + i * nc;
-        auto cp = cpixels.data() + i * req;
+        auto vp = data(pixels) + i * nc;
+        auto cp = data(cpixels) + i * req;
         if (nc == 1) {
             switch (req) {
                 case 1: cp[0] = vp[0]; break;
@@ -226,16 +226,16 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 bool load_pfm_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
-    if (pixels.empty()) {
+    if (empty(pixels)) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = {{width, height}, (vec4f*)pixels.data()};
+    img = {{width, height}, (vec4f*)data(pixels)};
     return true;
 }
 bool save_pfm_image(const string& filename, const image4f& img) {
     if (!save_pfm(filename.c_str(), img.size.x, img.size.y, 4,
-            (float*)img.data())) {
+            (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -260,7 +260,7 @@ bool load_exr_image(const string& filename, image4f& img) {
     return true;
 }
 bool save_exr_image(const string& filename, const image4f& img) {
-    if (!SaveEXR((float*)img.data(), img.size.x, img.size.y, 4,
+    if (!SaveEXR((float*)data(img), img.size.x, img.size.y, 4,
             filename.c_str())) {
         log_io_error("error saving image {}", filename);
         return false;
@@ -328,7 +328,7 @@ bool save_bmp_image(const string& filename, const image4b& img) {
 }
 bool save_hdr_image(const string& filename, const image4f& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size.x, img.size.y, 4,
-            (float*)img.data())) {
+            (float*)data(img))) {
         log_io_error("error saving image {}", filename);
         return false;
     }
@@ -536,8 +536,8 @@ image4f resize_image(const image4f& img, const vec2i& size) {
         log_error("bad image size in resize_image");
     }
     auto res_img = image4f{get_image_size(size, (float)img.size.x / (float)img.size.y)};
-    stbir_resize_float_generic((float*)img.data(), img.size.x, img.size.y,
-        sizeof(vec4f) * img.size.x, (float*)res_img.data(), res_img.size.x,
+    stbir_resize_float_generic((float*)data(img), img.size.x, img.size.y,
+        sizeof(vec4f) * img.size.x, (float*)data(res_img), res_img.size.x,
         res_img.size.y, sizeof(vec4f) * res_img.size.x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, nullptr);
     return img;
@@ -556,7 +556,7 @@ bool load_volume_nolog(const string& filename, volume1f& vol) {
     if (!fs) return false;
     if (!read_value(fs, vol.size)) return false;
     vol.voxels.resize(vol.size.x * vol.size.y * vol.size.z);
-    if (!read_values(fs, vol.size[0] * vol.size[1] * vol.size[2], vol.data())) return false;
+    if (!read_values(fs, vol.size[0] * vol.size[1] * vol.size[2], data(vol))) return false;
     return true;
 }
 bool load_volume(const string& filename, volume1f& vol) {
@@ -570,7 +570,7 @@ bool save_volume_nolog(const string& filename, const volume1f& vol) {
     if (!fs) return false;
     auto size = vol.size;
     if (!write_value(fs, size)) return false;
-    if (!write_values(fs, size[0] * size[1] * size[2], vol.data()))
+    if (!write_values(fs, size[0] * size[1] * size[2], data(vol)))
         return false;
     return true;
 }

@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
         if (img1.size != img2.size) log_fatal("image size differs");
         auto diff     = compute_diff_image(img1, img2);
         auto max_diff = max_diff_value(diff);
-        if (!output.empty()) {
+        if (!empty(output)) {
             auto display = display_diff(diff);
             if (!save_image(output, display))
                 log_fatal("cannot save image {}", output);

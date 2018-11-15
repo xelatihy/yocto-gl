@@ -324,8 +324,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_v
         for (auto c = 0; c < 4; c++) {
             auto v = vec3i{
                 (&quads_positions[fid].x)[c],
-                (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
-                (!quads_texturecoords.empty()) ?
+                (!empty(quads_normals)) ? (&quads_normals[fid].x)[c] : -1,
+                (!empty(quads_texturecoords)) ?
                     (&quads_texturecoords[fid].x)[c] :
                     -1,
             };
@@ -342,21 +342,21 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_v
 
     // fill vert data
     auto split_positions = vector<vec3f>{};
-    if (!positions.empty()) {
+    if (!empty(positions)) {
         split_positions.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_positions[index] = positions[vert.x];
         }
     }
     auto split_normals = vector<vec3f>{};
-    if (!normals.empty()) {
+    if (!empty(normals)) {
         split_normals.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_normals[index] = normals[vert.y];
         }
     }
     auto split_texcturecoords = vector<vec2f>{};
-    if (!texturecoords.empty()) {
+    if (!empty(texturecoords)) {
         split_texcturecoords.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_texcturecoords[index] = texturecoords[vert.z];
@@ -394,7 +394,7 @@ template <typename T>
 tuple<vector<vec2i>, vector<T>> subdivide_lines_impl(
     const vector<vec2i>& lines, const vector<T>& vert) {
     // early exit
-    if (lines.empty() || vert.empty()) return {lines, vert};
+    if (empty(lines) || empty(vert)) return {lines, vert};
     // sizes
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
@@ -437,7 +437,7 @@ template <typename T>
 tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     const vector<vec3i>& triangles, const vector<T>& vert) {
     // early exit
-    if (triangles.empty() || vert.empty()) return {triangles, vert};
+    if (empty(triangles) || empty(vert)) return {triangles, vert};
     // get edges
     auto emap  = make_edge_map(triangles);
     auto edges = get_edges(emap);
@@ -494,7 +494,7 @@ template <typename T>
 tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
     const vector<vec4i>& quads, const vector<T>& vert) {
     // early exit
-    if (quads.empty() || vert.empty()) return {quads, vert};
+    if (empty(quads) || empty(vert)) return {quads, vert};
     // get edges
     auto emap  = make_edge_map(quads);
     auto edges = get_edges(emap);
@@ -570,7 +570,7 @@ template <typename T>
 tuple<vector<vec4i>, vector<T>> subdivide_beziers_impl(
     const vector<vec4i>& beziers, const vector<T>& vert) {
     // early exit
-    if (beziers.empty() || vert.empty()) return {beziers, vert};
+    if (empty(beziers) || empty(vert)) return {beziers, vert};
     // get edges
     auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
@@ -621,7 +621,7 @@ template <typename T>
 tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
     // early exit
-    if (quads.empty() || vert.empty()) return {quads, vert};
+    if (empty(quads) || empty(vert)) return {quads, vert};
     // get edges
     auto emap     = make_edge_map(quads);
     auto edges    = get_edges(emap);
@@ -892,14 +892,14 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
         auto t                          = triangles[triangle_id];
         sampled_positions[i]            = interpolate_triangle(
             positions[t.x], positions[t.y], positions[t.z], triangle_uv);
-        if (!sampled_normals.empty()) {
+        if (!empty(sampled_normals)) {
             sampled_normals[i] = normalize(interpolate_triangle(
                 normals[t.x], normals[t.y], normals[t.z], triangle_uv));
         } else {
             sampled_normals[i] = triangle_normal(
                 positions[t.x], positions[t.y], positions[t.z]);
         }
-        if (!sampled_texturecoords.empty()) {
+        if (!empty(sampled_texturecoords)) {
             sampled_texturecoords[i] = interpolate_triangle(texturecoords[t.x],
                 texturecoords[t.y], texturecoords[t.z], triangle_uv);
         } else {
@@ -927,14 +927,14 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
         auto q                  = quads[quad_id];
         sampled_positions[i]    = interpolate_quad(positions[q.x],
             positions[q.y], positions[q.z], positions[q.w], quad_uv);
-        if (!sampled_normals.empty()) {
+        if (!empty(sampled_normals)) {
             sampled_normals[i] = normalize(interpolate_quad(normals[q.x],
                 normals[q.y], normals[q.z], normals[q.w], quad_uv));
         } else {
             sampled_normals[i] = quad_normal(positions[q.x], positions[q.y],
                 positions[q.z], positions[q.w]);
         }
-        if (!sampled_texturecoords.empty()) {
+        if (!empty(sampled_texturecoords)) {
             sampled_texturecoords[i] = interpolate_quad(texturecoords[q.x],
                 texturecoords[q.y], texturecoords[q.z], texturecoords[q.w],
                 quad_uv);

@@ -185,7 +185,7 @@ void update_opengl_texture(
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.size.x, img.size.y, GL_RGBA,
-        GL_FLOAT, img.data());
+        GL_FLOAT, data(img));
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -197,7 +197,7 @@ void update_opengl_texture_region(opengl_texture& texture,
     auto clipped = get_image_region(img, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.min.x, region.min.y,
         bbox_size(region).x, bbox_size(region).y, GL_RGBA, GL_FLOAT,
-        clipped.data());
+        data(clipped));
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -232,14 +232,14 @@ void delete_opengl_texture(opengl_texture& texture) {
 
 template <typename T>
 bool init_opengl_array_buffer_impl(
-    opengl_array_buffer& buffer, const vector<T>& data, bool dynamic) {
+    opengl_array_buffer& buffer, const vector<T>& array, bool dynamic) {
     buffer           = opengl_array_buffer{};
-    buffer.num       = data.size();
+    buffer.num       = size(array);
     buffer.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &buffer.buffer_id);
     glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
-    glBufferData(GL_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
+    glBufferData(GL_ARRAY_BUFFER, size(array) * sizeof(T), data(array),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
     return true;
@@ -270,14 +270,14 @@ void delete_opengl_array_buffer(opengl_array_buffer& buffer) {
 
 template <typename T>
 bool init_opengl_elementbuffer_impl(
-    opengl_elementbuffer& buffer, const vector<T>& data, bool dynamic) {
+    opengl_elementbuffer& buffer, const vector<T>& array, bool dynamic) {
     buffer           = opengl_elementbuffer{};
-    buffer.num       = data.size();
+    buffer.num       = size(array);
     buffer.elem_size = sizeof(T);
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &buffer.buffer_id);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, data.size() * sizeof(T), data.data(),
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size(array) * sizeof(T), data(array),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
     return true;

@@ -71,21 +71,10 @@ struct image4f {
     image4f(const vec2i& size, const vec4f* values)
         : size{size}, pixels(values, values + size.x * size.y) {}
 
-    bool  empty() const { return pixels.empty(); }
-
     vec4f& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4f& operator[](const vec2i& ij) const {
         return pixels[ij.y * size.x + ij.x];
     }
-
-    vec4f*       data() { return pixels.data(); }
-    const vec4f* data() const { return pixels.data(); }
-
-    vec4f*       begin() { return pixels.data(); }
-    vec4f*       end() { return pixels.data() + pixels.size(); }
-    const vec4f* begin() const { return pixels.data(); }
-
-    const vec4f* end() const { return pixels.data() + pixels.size(); }
 
     vec2i     size   = {0, 0};
     vector<vec4f> pixels = {};
@@ -99,30 +88,34 @@ struct image4b {
     image4b(const vec2i& size, const vec4b* values)
         : size{size}, pixels(values, values + size.x * size.y) {}
 
-    bool  empty() const { return pixels.empty(); }
-
     vec4b& operator[](const vec2i& ij) { return pixels[ij.y * size.x + ij.x]; }
     const vec4b& operator[](const vec2i& ij) const {
         return pixels[ij.y * size.x + ij.x];
     }
-
-    vec4b*       begin() { return pixels.data(); }
-    vec4b*       end() { return pixels.data() + pixels.size(); }
-    const vec4b* begin() const { return pixels.data(); }
-
-    const vec4b* end() const { return pixels.data() + pixels.size(); }
 
     vec2i     size   = {0, 0};
     vector<vec4b> pixels = {};
 };
 
 // Functions to query image data
-inline bool empty(const image4f& image) { return image.pixels.empty(); }
-inline bool empty(const image4b& image) { return image.pixels.empty(); }
-inline vec4f* data(image4f& image) { return image.pixels.data(); }
-inline vec4b* data(image4b& image) { return image.pixels.data(); }
-inline const vec4f* data(const image4f& image) { return image.pixels.data(); }
-inline const vec4b* data(const image4b& image) { return image.pixels.data(); }
+inline vec2i image_size(const image4f& image) { return image.size; }
+inline vec2i image_size(const image4b& image) { return image.size; }
+inline bool empty(const image4f& image) { return empty(image.pixels); }
+inline bool empty(const image4b& image) { return empty(image.pixels); }
+inline size_t size(const image4f& image) { return image.pixels.size(); }
+inline size_t size(const image4b& image) { return image.pixels.size(); }
+inline vec4f* begin(image4f& image) { return data(image.pixels); }
+inline vec4f* end(image4f& image) { return data(image.pixels) + image.pixels.size(); }
+inline const vec4f* begin(const image4f& image) { return data(image.pixels); }
+inline const vec4f* end(const image4f& image) { return data(image.pixels) + image.pixels.size(); }
+inline vec4b* begin(image4b& image) { return data(image.pixels); }
+inline vec4b* end(image4b& image) { return data(image.pixels) + image.pixels.size(); }
+inline const vec4b* begin(const image4b& image) { return data(image.pixels); }
+inline const vec4b* end(const image4b& image) { return data(image.pixels) + image.pixels.size(); }
+inline vec4f* data(image4f& image) { return data(image.pixels); }
+inline vec4b* data(image4b& image) { return data(image.pixels); }
+inline const vec4f* data(const image4f& image) { return data(image.pixels); }
+inline const vec4b* data(const image4b& image) { return data(image.pixels); }
 
 // Splits an image into an array of regions
 vector<bbox2i> make_image_regions(const vec2i& image_size, int region_size = 32);
@@ -225,8 +218,6 @@ struct volume1f {
     volume1f(const vec3i& size, const float* values)
         : size{size}, voxels(values, values + size.x * size.y + size[2]) {}
 
-    bool  empty() const { return voxels.empty(); }
-
     float& operator[](const vec3i& ijk) {
         return voxels[ijk.z * size.x * size.y + ijk.y * size.x + ijk.x];
     }
@@ -234,17 +225,14 @@ struct volume1f {
         return voxels[ijk.z * size.x * size.y + ijk.y * size.x + ijk.x];
     }
 
-    float*       data() { return voxels.data(); }
-    const float* data() const { return voxels.data(); }
-
     vec3i     size   = {0, 0, 0};
     vector<float> voxels = {};
 };
 
 // Functions to query volume data
-inline bool empty(const volume1f& volume) { return volume.voxels.empty(); }
-inline float* data(volume1f& volume) { return volume.voxels.data(); }
-inline const float* data(const volume1f& volume) { return volume.voxels.data(); }
+inline bool empty(const volume1f& volume) { return empty(volume.voxels); }
+inline float* data(volume1f& volume) { return data(volume.voxels); }
+inline const float* data(const volume1f& volume) { return data(volume.voxels); }
 
 
 // make a simple example volume

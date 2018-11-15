@@ -484,7 +484,7 @@ float sample_instance_point_pdf(const yocto_scene& scene,
 // Sample a point from all shape lights.
 trace_point sample_lights_point(const yocto_scene& scene,
     const trace_lights& lights, const vec3f& position, rng_state& rng) {
-    if (lights.instances.empty()) return {};
+    if (empty(lights.instances)) return {};
     auto light_id = sample_uniform_index(
         lights.instances.size(), get_random_float(rng));
     auto instance_id = lights.instances[light_id];
@@ -505,7 +505,7 @@ float sample_lights_point_pdf(const yocto_scene& scene,
     auto& instance = scene.instances[light_point.instance_id];
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[shape.material];
-    if (lights.instances.empty()) return 0;
+    if (empty(lights.instances)) return 0;
     if (material.emission == zero3f) return 0;
     return sample_instance_point_pdf(scene, lights, light_point.instance_id,
                light_point.element_id, light_point.element_uv) *
@@ -944,7 +944,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) {
-        if (environments_hidden || scene.environments.empty())
+        if (environments_hidden || empty(scene.environments))
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -958,7 +958,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
         if (!is_brdf_delta(point.brdf) &&
-            !(lights.instances.empty() && lights.environments.empty())) {
+            !(empty(lights.instances) && empty(lights.environments))) {
             auto light_direction = sample_lights_or_brdf_direction(scene, lights,
                 bvh, point.brdf, point.position, point.normal, outgoing, rng);
             auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights,
@@ -1025,7 +1025,7 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces, bool environments_hidden) {
-    if (lights.instances.empty() && lights.environments.empty())
+    if (empty(lights.instances) && empty(lights.environments))
         return {zero3f, false};
 
     // initialize
@@ -1255,7 +1255,7 @@ pair<vec3f, bool> trace_path_naive(const yocto_scene& scene, const bvh_scene& bv
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) {
-        if (environments_hidden || scene.environments.empty())
+        if (environments_hidden || empty(scene.environments))
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1306,7 +1306,7 @@ pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bv
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) {
-        if (environments_hidden || scene.environments.empty())
+        if (environments_hidden || empty(scene.environments))
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1320,7 +1320,7 @@ pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bv
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // direct
         if (!is_brdf_delta(point.brdf) &&
-            !(lights.instances.empty() && lights.environments.empty())) {
+            !(empty(lights.instances) && empty(lights.environments))) {
             auto light_point = sample_lights_point(
                 scene, lights, point.position, rng);
             auto light_pdf = sample_lights_point_pdf(
@@ -1382,7 +1382,7 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) {
-        if (environments_hidden || scene.environments.empty())
+        if (environments_hidden || empty(scene.environments))
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1393,7 +1393,7 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
 
     // direct
     if (!is_brdf_delta(point.brdf) &&
-        !(lights.instances.empty() && lights.environments.empty())) {
+        !(empty(lights.instances) && empty(lights.environments))) {
         auto light_direction = sample_lights_or_brdf_direction(scene, lights,
             bvh, point.brdf, point.position, point.normal, outgoing, rng);
         auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights, bvh,
@@ -1433,7 +1433,7 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) {
-        if (environments_hidden || scene.environments.empty())
+        if (environments_hidden || empty(scene.environments))
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1443,7 +1443,7 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
     auto outgoing = -direction;
 
     // direct
-    if (!is_brdf_delta(point.brdf) && !lights.instances.empty()) {
+    if (!is_brdf_delta(point.brdf) && !empty(lights.instances)) {
         auto light_point = sample_lights_point(
             scene, lights, point.position, rng);
         auto light_pdf = sample_lights_point_pdf(
@@ -1464,7 +1464,7 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
     }
 
     // environments
-    if (!is_brdf_delta(point.brdf) && !lights.environments.empty()) {
+    if (!is_brdf_delta(point.brdf) && !empty(lights.environments)) {
         auto next_direction = sample_brdf_direction(
             point.brdf, point.normal, outgoing, rng);
         auto brdf_cosine = evaluate_brdf_cosine(
@@ -1506,7 +1506,7 @@ pair<vec3f, bool> trace_environment(const yocto_scene& scene,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) {
-        if (environments_hidden || scene.environments.empty())
+        if (environments_hidden || empty(scene.environments))
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1541,7 +1541,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (point.instance_id < 0) {
-        if (environments_hidden || scene.environments.empty())
+        if (environments_hidden || empty(scene.environments))
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1752,13 +1752,13 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
         if (!is_instance_emissive(scene, instance)) continue;
         if (instance.shape >= 0) {
             auto& shape = scene.shapes[instance.shape];
-            if (shape.triangles.empty() && shape.quads.empty()) continue;
+            if (empty(shape.triangles) && empty(shape.quads)) continue;
             lights.instances.push_back(instance_id);
             lights.shape_elements_cdf[instance.shape] = compute_shape_elements_cdf(
                 shape);
         } else if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
-            if (surface.quads_positions.empty()) continue;
+            if (empty(surface.quads_positions)) continue;
             lights.instances.push_back(instance_id);
             lights.surface_elements_cdf[instance.surface] = compute_surface_elements_cdf(
                 surface);
@@ -1778,7 +1778,7 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
         }
     }
 
-    if (lights.instances.empty() && lights.environments.empty()) return {};
+    if (empty(lights.instances) && empty(lights.environments)) return {};
     return lights;
 }
 

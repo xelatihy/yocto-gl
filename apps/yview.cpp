@@ -60,7 +60,7 @@ struct drawgl_lights {
     vector<int>   types     = {};
 };
 
-bool empty(const drawgl_lights& lights) { return lights.positions.empty(); }
+bool empty(const drawgl_lights& lights) { return empty(lights.positions); }
 
 drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
     auto lights = drawgl_lights{};
@@ -73,15 +73,15 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
         auto bbox = compute_shape_bounds(shape);
         auto pos  = (bbox.max + bbox.min) / 2;
         auto area = 0.0f;
-        if (!shape.triangles.empty()) {
+        if (!empty(shape.triangles)) {
             for (auto t : shape.triangles)
                 area += triangle_area(shape.positions[t[0]],
                     shape.positions[t[1]], shape.positions[t[2]]);
-        } else if (!shape.quads.empty()) {
+        } else if (!empty(shape.quads)) {
             for (auto q : shape.quads)
                 area += quad_area(shape.positions[q[0]], shape.positions[q[1]],
                     shape.positions[q[2]], shape.positions[q[3]]);
-        } else if (!shape.lines.empty()) {
+        } else if (!empty(shape.lines)) {
             for (auto l : shape.lines)
                 area += line_length(shape.positions[l[0]], shape.positions[l[1]]);
         } else {
@@ -566,7 +566,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             5);
 
         set_opengl_uniform(
-            state.program, "elem_faceted", (int)shape.normals.empty());
+            state.program, "elem_faceted", (int)empty(shape.normals));
         set_opengl_vertexattrib(
             state.program, "vert_pos", vbos.positions_buffer, zero3f);
         set_opengl_vertexattrib(
@@ -676,7 +676,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
                 5);
 
             set_opengl_uniform(
-                state.program, "elem_faceted", (int)surface.normals.empty());
+                state.program, "elem_faceted", (int)empty(surface.normals));
             set_opengl_vertexattrib(
                 state.program, "vert_pos", vbos.positions_buffer, zero3f);
             set_opengl_vertexattrib(
@@ -747,16 +747,16 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             auto bbox = compute_shape_bounds(shape);
             auto pos  = (bbox.max + bbox.min) / 2;
             auto area = 0.0f;
-            if (!shape.triangles.empty()) {
+            if (!empty(shape.triangles)) {
                 for (auto t : shape.triangles)
                     area += triangle_area(shape.positions[t[0]],
                         shape.positions[t[1]], shape.positions[t[2]]);
-            } else if (!shape.quads.empty()) {
+            } else if (!empty(shape.quads)) {
                 for (auto q : shape.quads)
                     area += quad_area(shape.positions[q[0]],
                         shape.positions[q[1]], shape.positions[q[2]],
                         shape.positions[q[3]]);
-            } else if (!shape.lines.empty()) {
+            } else if (!empty(shape.lines)) {
                 for (auto l : shape.lines)
                     area += line_length(
                         shape.positions[l[0]], shape.positions[l[1]]);
@@ -802,10 +802,10 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     state.textures.resize(scene.textures.size());
     for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
         auto texture = scene.textures[texture_id];
-        if (!texture.hdr_image.empty()) {
+        if (!empty(texture.hdr_image)) {
             init_opengl_texture(state.textures[texture_id], texture.hdr_image,
                 true, true, true);
-        } else if (!texture.ldr_image.empty()) {
+        } else if (!empty(texture.ldr_image)) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
                 !texture.ldr_as_linear, true, true);
         } else {
@@ -816,27 +816,27 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
         auto& shape = scene.shapes[shape_id];
         auto  vbos  = drawgl_shape();
-        if (!shape.positions.empty())
+        if (!empty(shape.positions))
             init_opengl_array_buffer(
                 vbos.positions_buffer, shape.positions, false);
-        if (!shape.normals.empty())
+        if (!empty(shape.normals))
             init_opengl_array_buffer(vbos.normals_buffer, shape.normals, false);
-        if (!shape.texturecoords.empty())
+        if (!empty(shape.texturecoords))
             init_opengl_array_buffer(
                 vbos.texturecoords_buffer, shape.texturecoords, false);
-        if (!shape.colors.empty())
+        if (!empty(shape.colors))
             init_opengl_array_buffer(vbos.colors_buffer, shape.colors, false);
-        if (!shape.tangentspaces.empty())
+        if (!empty(shape.tangentspaces))
             init_opengl_array_buffer(
                 vbos.tangentspaces_buffer, shape.tangentspaces, false);
-        if (!shape.points.empty())
+        if (!empty(shape.points))
             init_opengl_elementbuffer(vbos.points_buffer, shape.points, false);
-        if (!shape.lines.empty())
+        if (!empty(shape.lines))
             init_opengl_elementbuffer(vbos.lines_buffer, shape.lines, false);
-        if (!shape.triangles.empty())
+        if (!empty(shape.triangles))
             init_opengl_elementbuffer(
                 vbos.triangles_buffer, shape.triangles, false);
-        if (!shape.quads.empty()) {
+        if (!empty(shape.quads)) {
             auto triangles = convert_quads_to_triangles(shape.quads);
             init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
         }
@@ -851,21 +851,21 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             surface.quads_texturecoords, surface.positions, surface.normals,
             surface.texturecoords);
         auto split_quads = vector<vector<vec4i>>();
-        if (surface.materials.size() > 1 && !surface.quads_materials.empty()) {
+        if (surface.materials.size() > 1 && !empty(surface.quads_materials)) {
             split_quads = ungroup_quads(quads, surface.quads_materials);
         } else {
             split_quads = {quads};
         }
-        if (!positions.empty())
+        if (!empty(positions))
             init_opengl_array_buffer(vbos.positions_buffer, positions, false);
-        if (!normals.empty())
+        if (!empty(normals))
             init_opengl_array_buffer(vbos.normals_buffer, normals, false);
-        if (!texturecoords.empty())
+        if (!empty(texturecoords))
             init_opengl_array_buffer(
                 vbos.texturecoords_buffer, texturecoords, false);
         vbos.split_quads_buffer = {};
         for (auto& quads : split_quads) {
-            if (!quads.empty()) vbos.split_quads_buffer.push_back({});
+            if (!empty(quads)) vbos.split_quads_buffer.push_back({});
             auto triangles = convert_quads_to_triangles(quads);
             init_opengl_elementbuffer(
                 vbos.split_quads_buffer.back(), triangles, false);
@@ -1101,7 +1101,7 @@ unordered_map<string, unordered_map<string, string>> load_ini(
     char buffer[4096];
     while (fgets(buffer, 4096, f)) {
         auto line = string(buffer);
-        if (line.empty()) continue;
+        if (empty(line)) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
         if (line.front() == '[') {
