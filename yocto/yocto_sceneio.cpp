@@ -1808,6 +1808,53 @@ bool serialize_json_object(json& js, yocto_scene& value, bool save) {
     return serialize_json_object(js, value, value, save);
 }
 
+// Load json meshes
+bool load_json_meshes(yocto_scene& scene, const string& dirname,
+    const load_scene_options& options) {
+    if (options.skip_meshes) return true;
+
+    // load shapes
+    atomic<bool> exit_error(false);
+    parallel_foreach(scene.shapes,
+        [&exit_error, &options, &dirname](yocto_shape& shape) {
+            if (exit_error) return;
+            if (shape.filename == "" || !empty(shape.positions)) return;
+            auto filename = normalize_path(dirname + "/" + shape.filename);
+            if (!load_mesh(filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.positions, shape.normals,
+            shape.texturecoords, shape.colors, shape.radius, false)) {
+                if (options.exit_on_error) {
+                    exit_error = true;
+                    return;
+                }
+            }
+        },
+        options.cancel_flag, options.run_serially);
+    if (exit_error) return false;
+
+    // load surfaces
+    parallel_foreach(scene.surfaces,
+        [&exit_error, &options, &dirname](yocto_surface& surface) {
+            if (exit_error) return;
+            if (surface.filename == "" || !empty(surface.positions)) return;
+            auto filename = normalize_path(dirname + "/" + surface.filename);
+            if (!load_facevarying_mesh(filename, surface.quads_positions,
+                surface.quads_normals, surface.quads_texturecoords,
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials)) {
+                if (options.exit_on_error) {
+                    exit_error = true;
+                    return;
+                }
+            }
+        },
+        options.cancel_flag, options.run_serially);
+    if (exit_error) return false;
+
+    // done
+    return true;
+}
+
 // Load a scene in the builtin JSON format.
 bool load_json_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
@@ -1830,29 +1877,9 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
         return false;
     }
 
-    // load meshes
+    // load meshes and textures
     auto dirname = get_dirname(filename);
-    for (auto& shape : scene.shapes) {
-        if (shape.filename == "" || !empty(shape.positions)) continue;
-        auto filename = normalize_path(dirname + "/" + shape.filename);
-        if (!load_mesh(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius, false)) {
-            if (options.exit_on_error) return false;
-        }
-    }
-    for (auto& surface : scene.surfaces) {
-        if (surface.filename == "" || !empty(surface.positions)) continue;
-        auto filename = normalize_path(dirname + "/" + surface.filename);
-        if (!load_facevarying_mesh(filename, surface.quads_positions,
-                surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords,
-                surface.quads_materials)) {
-            if (options.exit_on_error) return false;
-        }
-    }
-
-    // process textures
+    if(!load_json_meshes(scene, dirname, options)) return false;
     if (!load_scene_textures(scene, dirname, options)) return false;
 
     // fix scene
@@ -1861,6 +1888,53 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
     add_missing_materials(scene);
     add_missing_names(scene);
     update_transforms(scene);
+
+    // done
+    return true;
+}
+
+// Save json meshes
+bool save_json_meshes(const yocto_scene& scene, const string& dirname,
+    const save_scene_options& options) {
+    if (options.skip_meshes) return true;
+
+    // save shapes
+    atomic<bool> exit_error(false);
+    parallel_foreach(scene.shapes,
+        [&exit_error, &options, &dirname](const yocto_shape& shape) {
+            if (exit_error) return;
+            if (shape.filename == "") return;
+            auto filename = normalize_path(dirname + "/" + shape.filename);
+            if (!save_mesh(filename, shape.points, shape.lines, shape.triangles,
+                    shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius)) {
+                if (options.exit_on_error)  {
+                        exit_error = true;
+                        return;
+                    }
+            }
+        },
+        options.cancel_flag, options.run_serially);
+    if (exit_error) return false;
+
+    // save surfaces
+    parallel_foreach(scene.surfaces,
+        [&exit_error, &options, &dirname](const yocto_surface& surface) {
+            if (exit_error) return;
+            if (surface.filename == "") return;
+            auto filename = normalize_path(dirname + "/" + surface.filename);
+            if (!save_facevarying_mesh(filename, surface.quads_positions,
+                surface.quads_normals, surface.quads_texturecoords,
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials)) {
+                if (options.exit_on_error)  {
+                        exit_error = true;
+                        return;
+                    }
+            }
+        },
+        options.cancel_flag, options.run_serially);
+    if (exit_error) return false;
 
     // done
     return true;
@@ -1883,29 +1957,9 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
     }
     if (!save_json(filename, js)) return false;
 
-    // save meshes
+    // save meshes and textures
     auto dirname = get_dirname(filename);
-    for (auto& shape : scene.shapes) {
-        if (shape.filename == "") continue;
-        auto filename = normalize_path(dirname + "/" + shape.filename);
-        if (!save_mesh(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius)) {
-            if (options.exit_on_error) return false;
-        }
-    }
-    for (auto& surface : scene.surfaces) {
-        if (surface.filename == "") continue;
-        auto filename = normalize_path(dirname + "/" + surface.filename);
-        if (!save_facevarying_mesh(filename, surface.quads_positions,
-                surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords,
-                surface.quads_materials)) {
-            if (options.exit_on_error) return false;
-        }
-    }
-
-    // skip textures
+    if (!save_json_meshes(scene, dirname, options)) return false;
     if (!save_scene_textures(scene, dirname, options)) return false;
 
     // done
