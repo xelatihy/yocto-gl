@@ -13,9 +13,9 @@
 // color utilities, example image creation, tone mapping, image resizing, and
 // sunsky procedural images. Yocto/Image is written to support the need of a
 // global illumination renderer, rather than the need of generic image editing.
-// We support 4-channels float images (assumed to be in linear color) and 
+// We support 4-channels float images (assumed to be in linear color) and
 // 4-channels byte images (assumed to be in sRGB).
-// 
+//
 //
 // 1. create images with `make_image4f()`/`make_image4b()`
 // 2. resize images with `resize_image()`

@@ -1347,12 +1347,14 @@ vec2i get_camera_image_size(const yocto_camera& camera, int yresolution) {
     return {(int)round(yresolution * camera.film_width / camera.film_height),
         yresolution};
 }
-void set_camera_view_from_fov(yocto_camera& camera, float fovy, float aspect, float width, float focus) {
-    camera.film_width   = width;
-    camera.film_height  = width / aspect;
-    if(focus) camera.focus_distance = focus;
-    auto distance = camera.film_height / (2 * tan(fovy / 2));
-    camera.focal_length = camera.focus_distance * distance / (camera.focus_distance + distance);
+void set_camera_view_from_fov(
+    yocto_camera& camera, float fovy, float aspect, float width, float focus) {
+    camera.film_width  = width;
+    camera.film_height = width / aspect;
+    if (focus) camera.focus_distance = focus;
+    auto distance       = camera.film_height / (2 * tan(fovy / 2));
+    camera.focal_length = camera.focus_distance * distance /
+                          (camera.focus_distance + distance);
 }
 
 // add missing camera

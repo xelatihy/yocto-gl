@@ -1298,12 +1298,13 @@ bool apply_json_procedural(
     }
     if (!value.quads.empty() && js.value("shell_thickness", 0.0f) > 0) {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_shell_shape(value.quads, value.positions, value.normals,
-            value.texturecoords, js.value("shell_thickness", 0.0f));
+            value.texturecoords) = make_shell_shape(value.quads,
+            value.positions, value.normals, value.texturecoords,
+            js.value("shell_thickness", 0.0f));
     }
     if (!value.quads.empty() && js.value("as_triangles", false)) {
         value.triangles = convert_quads_to_triangles(value.quads);
-        value.quads = {};
+        value.quads     = {};
     }
     if (js.value("flipyz", false)) {
         for (auto& p : value.positions) p = {p.x, p.z, p.y};

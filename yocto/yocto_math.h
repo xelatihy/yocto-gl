@@ -487,8 +487,12 @@ inline vec3f pow(const vec3f& a, float b) { return apply(pow, a, b); };
 inline vec4f pow(const vec4f& a, float b) { return apply(pow, a, b); };
 
 inline bool isfinite(const vec2f& a) { return isfinite(a.x) && isfinite(a.x); };
-inline bool isfinite(const vec3f& a) { return isfinite(a.x) && isfinite(a.x) && isfinite(a.z); };
-inline bool isfinite(const vec4f& a) { return isfinite(a.x) && isfinite(a.x) && isfinite(a.z) && isfinite(a.w); };
+inline bool isfinite(const vec3f& a) {
+    return isfinite(a.x) && isfinite(a.x) && isfinite(a.z);
+};
+inline bool isfinite(const vec4f& a) {
+    return isfinite(a.x) && isfinite(a.x) && isfinite(a.z) && isfinite(a.w);
+};
 
 // Quaternion operatons represented as xi + yj + zk + w
 const auto   identity_quat4f = vec4f{0, 0, 0, 1};
@@ -1097,23 +1101,23 @@ inline bbox4f& operator+=(bbox4f& a, const bbox4f& b) {
 // Create bounding boxes from arrays
 inline bbox1f make_bbox(const vector<float>& values) {
     auto bbox = bbox1f{};
-    for(auto& value : values) bbox += value;
-    return bbox;    
+    for (auto& value : values) bbox += value;
+    return bbox;
 }
 inline bbox2f make_bbox(const vector<vec2f>& values) {
     auto bbox = bbox2f{};
-    for(auto& value : values) bbox += value;
-    return bbox;    
+    for (auto& value : values) bbox += value;
+    return bbox;
 }
 inline bbox3f make_bbox(const vector<vec3f>& values) {
     auto bbox = bbox3f{};
-    for(auto& value : values) bbox += value;
-    return bbox;    
+    for (auto& value : values) bbox += value;
+    return bbox;
 }
 inline bbox4f make_bbox(const vector<vec4f>& values) {
     auto bbox = bbox4f{};
-    for(auto& value : values) bbox += value;
-    return bbox;    
+    for (auto& value : values) bbox += value;
+    return bbox;
 }
 
 // Primitive bounds.
