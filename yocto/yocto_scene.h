@@ -78,6 +78,8 @@ namespace yocto {
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the focal lengthm the focus
 // distance and the lens_aperture. All values are in meters.
+// 3:2  on 35 mm:  0.036 x 0.024
+// 16:9 on 35 mm:  0.036 x 0.020
 struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;

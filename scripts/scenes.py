@@ -74,7 +74,8 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--format','-f', default='obj')
 @click.option('--outformat','-F', default='json')
 @click.option('--mode','-m', default='default')
-def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path'):
+@click.option('--clean-models/--no-clean-models','-C', default=False)
+def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path',clean_models=True):
     modes = {
         'default': '--skip-textures --mesh-filenames'
     }
@@ -82,8 +83,9 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
-        os.system(f'mkdir -p {dirname}/meshes')
-        os.system(f'rm {dirname}/meshes/*.ply')
+        os.system(f'rm -rf {dirname}/meshes')
+        if clean_models: os.system(f'rm -rf {dirname}/meshes')
+        os.system(f'mkdir -p {dirname}/models')
         for filename in sorted(glob.glob(f'{dirname}/*.{format}')):
             outname = filename.replace(f'.{format}',f'.{outformat}')
             filedir = os.path.dirname(filename)

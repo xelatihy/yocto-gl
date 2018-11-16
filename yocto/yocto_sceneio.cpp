@@ -4135,15 +4135,17 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             camera.name           = "camera" + std::to_string(cid++);
             camera.frame          = inverse(stack.back().frame);
             camera.frame.z        = -camera.frame.z;
-            camera.focus_distance = stack.back().focus;
+            auto focus            = stack.back().focus;
             auto aspect           = stack.back().aspect;
             auto fovy             = 1.0f;
             auto type             = jcmd.at("type").get<string>();
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pif / 180;
+                if (aspect < 1) fovy = atan(tan(fovy) / aspect);
             } else {
                 log_error("{} camera not supported", type);
             }
+            camera.focus_distance = focus;
             set_camera_view_from_fov(camera, fovy, aspect);
             scene.cameras.push_back(camera);
         } else if (cmd == "Texture") {
@@ -4389,8 +4391,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                                     frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0},
                                         {0, 0, 0}};
                 environment.emission = {1, 1, 1};
-                log_info("stack frame: {}", stack.back().frame);
-                log_info("env   frame: {}", environment.frame);
+                // log_info("stack frame: {}", stack.back().frame);
+                // log_info("env   frame: {}", environment.frame);
                 if (jcmd.count("scale"))
                     environment.emission *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {
