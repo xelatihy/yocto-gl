@@ -13,9 +13,9 @@ def cli():
 @click.option('--mode','-m', default='path')
 def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
-        'path': '',
-        'embree': '--embree',
-        'eyelight': '-t eyelight'
+        'path': '--double-sided',
+        'embree': '--embree --double-sided',
+        'eyelight': '-t eyelight --double-sided'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):
@@ -33,7 +33,7 @@ def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--mode','-m', default='default')
 def yview(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
-        'default': '',
+        'default': '--double-sided',
         'double-sided': '--double-sided',
         'eyelight': '--double-sided --eyelight'
     }
