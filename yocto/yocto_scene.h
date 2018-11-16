@@ -425,7 +425,7 @@ float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord
 float get_camera_fovx(const yocto_camera& camera);
 float get_camera_fovy(const yocto_camera& camera);
 float get_camera_aspect(const yocto_camera& camera);
-vec2i get_camera_image_size(const yocto_camera& camera, int yresolution);
+pair<int,int> get_camera_image_size(const yocto_camera& camera, int width, int height);
 void  set_camera_view_from_fov(yocto_camera& camera, float fovy, float aspect,
      float width = 0.036f, float focus = 0);
 // Sets camera field of view to enclose all the bbox. Camera view direction

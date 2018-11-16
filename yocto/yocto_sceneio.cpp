@@ -4585,7 +4585,7 @@ WorldEnd
     auto  from   = camera.frame.o;
     auto  to     = camera.frame.o - camera.frame.z;
     auto  up     = camera.frame.y;
-    auto  res    = get_camera_image_size(camera, 720);
+    auto  [width, height]    = get_camera_image_size(camera, 0, 720);
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         get_camera_fovy(camera) * 180 / pif);
@@ -4597,7 +4597,7 @@ WorldEnd
     print(fs,
         "Film \"image\" \"string filename\" [\"{}\"] "
         "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), res.x, res.y);
+        replace_extension(filename, "exr"), width, height);
 
     // start world
     print(fs, "WorldBegin\n");

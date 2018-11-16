@@ -142,7 +142,8 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 // Options for trace functions
 struct trace_image_options {
     int                camera_id           = 0;
-    int                vertical_resolution = 720;
+    int                image_width         = 1280;
+    int                image_height        = 720;
     trace_sampler_type sampler_type        = trace_sampler_type::path;
     trace_sampler_func custom_sampler      = {};
     int                num_samples         = 512;
