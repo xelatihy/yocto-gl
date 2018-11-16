@@ -4126,7 +4126,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pif / 180;
             } else {
-                printf("%s camera not supported\n", type.c_str());
+                log_error("{} camera not supported", type);
             }
             set_camera_view_from_fov(camera, fovy, aspect);
             scene.cameras.push_back(camera);
