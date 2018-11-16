@@ -127,7 +127,7 @@
     "shapes": [
         {
             "name": "floor",
-            "filename": "meshes/floor.ply",
+            "filename": "models/floor.ply",
             "material": "floor",
             "!!proc": {
                 "type": "floor"
@@ -135,7 +135,7 @@
         },
         {
             "name": "obj1",
-            "filename": "meshes/obj1.ply",
+            "filename": "models/obj1.ply",
             "material": "obj1",
             "subdivision_level": 6,
             "catmull_clark": false,
@@ -146,7 +146,7 @@
         },
         {
             "name": "obj2",
-            "filename": "meshes/obj2.ply",
+            "filename": "models/obj2.ply",
             "material": "obj2",
             "subdivision_level": 6,
             "catmull_clark": false,
@@ -157,7 +157,7 @@
         },
         {
             "name": "obj3",
-            "filename": "meshes/obj3.ply",
+            "filename": "models/obj3.ply",
             "material": "obj3",
             "subdivision_level": 6,
             "catmull_clark": true,

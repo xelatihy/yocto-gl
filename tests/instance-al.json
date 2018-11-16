@@ -51,7 +51,7 @@
     "shapes": [
         {
             "name": "floor",
-            "filename": "meshes/floor.ply",
+            "filename": "models/floor.ply",
             "material": "floor",
             "!!proc": {
                 "type": "floor"
