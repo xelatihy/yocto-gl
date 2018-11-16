@@ -1703,12 +1703,11 @@ void trace_image_region(image4f& image, trace_state& state,
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
-                auto ray             = sample_camera_ray(camera, {i, j},
-                    {image.width, image.height}, pixel.rng);
+               auto ray             = sample_camera_ray(camera, {i, j},
+                   {image.width, image.height}, pixel.rng);
                 auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
                     pixel.rng, options.max_bounces, options.environments_hidden);
-                if (!isfinite(radiance.x) || !isfinite(radiance.y) ||
-                    !isfinite(radiance.z)) {
+                if (!isfinite(radiance)) {
                     log_error("NaN detected");
                     radiance = zero3f;
                 }
@@ -1910,7 +1909,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
                         lights, region, num_samples, options);
                     queue.push(region);
                 },
-                options.cancel_flag);
+                options.cancel_flag, options.run_serially);
         }
         current_sample = options.num_samples;
     });

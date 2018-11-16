@@ -80,6 +80,12 @@ namespace yocto {
 // Json alias
 using json = nlohmann::json;
 
+// Helper for printing JSON values
+bool print_value(string& str, const json& js) {
+    str += js.dump();
+    return true;
+}
+
 // Load a JSON object
 bool load_json(const string& filename, json& js) {
     auto text = ""s;
@@ -1289,6 +1295,15 @@ bool apply_json_procedural(
     } else {
         log_error("unknown shape type {}", type);
         return false;
+    }
+    if (!value.quads.empty() && js.value("shell_thickness", 0.0f) > 0) {
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_shell_shape(value.quads, value.positions, value.normals,
+            value.texturecoords, js.value("shell_thickness", 0.0f));
+    }
+    if (!value.quads.empty() && js.value("as_triangles", false)) {
+        value.triangles = convert_quads_to_triangles(value.quads);
+        value.quads = {};
     }
     if (js.value("flipyz", false)) {
         for (auto& p : value.positions) p = {p.x, p.z, p.y};

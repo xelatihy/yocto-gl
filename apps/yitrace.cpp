@@ -452,7 +452,7 @@ int main(int argc, char* argv[]) {
     app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
         trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
     app.trace_options.max_bounces  = parse_argument(
-        parser, "--nbounces", 4, "Maximum number of bounces.");
+        parser, "--nbounces", 8, "Maximum number of bounces.");
     app.trace_options.pixel_clamp = parse_argument(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.trace_options.random_seed = parse_argument(
