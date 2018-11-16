@@ -3261,16 +3261,16 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             if (camera.orthographic) {
                 printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
-                set_camera_fovy(camera, ortho.value("ymag", 0.0f),
-                    ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
                 camera.focus_distance = float_max;
                 camera.lens_aperture  = 0;
+                set_camera_view_from_fov(camera, ortho.value("ymag", 0.0f),
+                    ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
             } else {
                 auto persp = gcam.value("perspective", json::object());
-                set_camera_fovy(camera, persp.value("yfov", 1.0f),
-                    persp.value("aspectRatio", 1.0f));
                 camera.focus_distance = float_max;
                 camera.lens_aperture  = 0;
+                set_camera_view_from_fov(camera, persp.value("yfov", 1.0f),
+                    persp.value("aspectRatio", 1.0f));
             }
             scene.cameras.push_back(camera);
         }
@@ -4128,7 +4128,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             } else {
                 printf("%s camera not supported\n", type.c_str());
             }
-            set_camera_fovy(camera, fovy, aspect);
+            set_camera_view_from_fov(camera, fovy, aspect);
             scene.cameras.push_back(camera);
         } else if (cmd == "Texture") {
             auto found = false;
