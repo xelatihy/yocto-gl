@@ -2003,4 +2003,28 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     return {lines, positions, normals, texturecoords, radius};
 }
 
+// Thickens a shape by copy9ing the shape content, rescaling it and flipping its
+// normals. Note that this is very much not robust and only useful for trivial
+// cases.
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_shell_shape(
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    float thickness) {
+    auto shell_quads         = quads;
+    auto shell_positions     = positions;
+    auto shell_normals       = normals;
+    auto shell_texturecoords = texturecoords;
+    auto bbox                = make_bbox(positions);
+    auto center              = bbox_center(bbox);
+    auto inner_quads         = quads;
+    auto inner_positions     = positions;
+    auto inner_normals       = normals;
+    auto inner_texturecoords = texturecoords;
+    for (auto& p : inner_positions) p = (1 - thickness) * (p - center) + center;
+    for (auto& n : inner_normals) n = -n;
+    merge_quads(shell_quads, shell_positions, shell_normals, shell_texturecoords,
+        inner_quads, inner_positions, inner_normals, inner_texturecoords);
+    return {shell_quads, shell_positions, shell_normals, shell_texturecoords};
+}
+
 }  // namespace yocto

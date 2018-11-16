@@ -681,7 +681,7 @@ void add_missing_cameras(yocto_scene& scene) {
     if (empty(scene.cameras)) {
         auto camera = yocto_camera{};
         camera.name = "<view>";
-        set_camera_view(camera, compute_scene_bounds(scene), {0, 0, 1});
+        set_camera_view_from_bbox(camera, compute_scene_bounds(scene), {0, 0, 1});
         scene.cameras.push_back(camera);
     }
 }
@@ -1347,14 +1347,18 @@ vec2i get_camera_image_size(const yocto_camera& camera, int yresolution) {
     return {(int)round(yresolution * camera.film_width / camera.film_height),
         yresolution};
 }
-void set_camera_fovy(yocto_camera& camera, float fovy, float aspect, float width) {
-    camera.film_width   = width;
-    camera.film_height  = width / aspect;
-    camera.focal_length = camera.film_height / (2 * tan(fovy / 2));
+void set_camera_view_from_fov(
+    yocto_camera& camera, float fovy, float aspect, float width, float focus) {
+    camera.film_width  = width;
+    camera.film_height = width / aspect;
+    if (focus) camera.focus_distance = focus;
+    auto distance       = camera.film_height / (2 * tan(fovy / 2));
+    camera.focal_length = camera.focus_distance * distance /
+                          (camera.focus_distance + distance);
 }
 
 // add missing camera
-void set_camera_view(yocto_camera& camera, const bbox3f& bbox,
+void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,
     const vec3f& view_direction, float width, float height, float focal) {
     camera.orthographic = false;
     if (width != 0) camera.film_width = width;

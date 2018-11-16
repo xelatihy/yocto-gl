@@ -473,6 +473,14 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
     const vec2f& noise = zero2f, const vec2f& clump = zero2f,
     const vec2f& rotation = zero2f, int seed = 7);
 
+// Thickens a shape by copy9ing the shape content, rescaling it and flipping its
+// normals. Note that this is very much not robust and only useful for trivial
+// cases.
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_shell_shape(
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    float thickness);
+
 }  // namespace yocto
 
 // ---------------------------------------------------------------------------//

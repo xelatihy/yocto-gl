@@ -43,25 +43,25 @@ struct app_state {
     bool   add_skyenv   = false;
 
     // options
-    load_scene_options  load_options     = {};
-    build_bvh_options   bvh_options      = {};
-    trace_image_options trace_options    = {};
-    float               exposure = 0;
-    bool                filmic   = false;
-    bool                srgb     = true;
-    int                 preview_ratio    = 8;
-    vec2i               image_size       = zero2i;
+    load_scene_options  load_options  = {};
+    build_bvh_options   bvh_options   = {};
+    trace_image_options trace_options = {};
+    float               exposure      = 0;
+    bool                filmic        = false;
+    bool                srgb          = true;
+    int                 preview_ratio = 8;
+    vec2i               image_size    = zero2i;
 
     // scene
     yocto_scene scene = {};
     bvh_scene   bvh   = {};
 
     // rendering state
-    trace_lights                   lights         = {};
-    trace_state                    state          = {};
-    image4f                        image = {};
-    image4f                        display  = {};
-    image4f                        preview  = {};
+    trace_lights                   lights  = {};
+    trace_state                    state   = {};
+    image4f                        image   = {};
+    image4f                        display = {};
+    image4f                        preview = {};
     atomic<bool>                   trace_stop;
     atomic<int>                    trace_sample;
     vector<thread>                 trace_threads = {};
@@ -98,18 +98,17 @@ void start_rendering_async(app_state& app) {
     app.image_size = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
         app.trace_options.vertical_resolution);
-    app.image = make_image(app.image_size.x, app.image_size.y, zero4f);
-    app.display  = make_image(app.image_size.x, app.image_size.y, zero4f);
+    app.image   = make_image(app.image_size.x, app.image_size.y, zero4f);
+    app.display = make_image(app.image_size.x, app.image_size.y, zero4f);
     app.state   = make_trace_state(
         app.image_size.x, app.image_size.y, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
     preview_options.vertical_resolution /= app.preview_ratio;
     preview_options.num_samples = 1;
-    app.preview           = trace_image(
-        app.scene, app.bvh, app.lights, preview_options);
-    auto display_preview = tonemap_image(app.preview,
-        app.exposure, app.filmic, app.srgb);
+    app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
+    auto display_preview = tonemap_image(
+        app.preview, app.exposure, app.filmic, app.srgb);
     auto large_preview = make_image(app.image_size.x, app.image_size.y, zero4f);
     for (auto j = 0; j < app.image_size.y; j++) {
         for (auto i = 0; i < app.image_size.x; i++) {
@@ -122,9 +121,8 @@ void start_rendering_async(app_state& app) {
     app.trace_queue.push({0, 0, 0, 0});
 
     app.trace_options.cancel_flag = &app.trace_stop;
-    trace_image_async_start(app.image, app.state, app.scene,
-        app.bvh, app.lights, app.trace_threads, app.trace_sample,
-        app.trace_queue, app.trace_options);
+    trace_image_async_start(app.image, app.state, app.scene, app.bvh, app.lights,
+        app.trace_threads, app.trace_sample, app.trace_queue, app.trace_options);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -206,8 +204,7 @@ void draw_opengl_widgets(const opengl_window& win) {
         }
         if (begin_header_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                app.image.width, app.image.height,
-                (int)app.trace_sample);
+                app.image.width, app.image.height, (int)app.trace_sample);
             auto cam_names = vector<string>();
             for (auto& camera : app.scene.cameras)
                 cam_names.push_back(camera.name);
@@ -233,8 +230,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 (app.trace_sample) ? (get_time() - app.trace_start) /
                                          (1000000000.0 * app.trace_sample) :
                                      0.0);
-            draw_slider_opengl_widget(
-                win, "exposure", app.exposure, -5, 5);
+            draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
             draw_checkbox_opengl_widget(win, "filmic", app.filmic);
             draw_checkbox_opengl_widget(win, "srgb", app.srgb);
             draw_slider_opengl_widget(win, "zoom", app.image_scale, 0.1, 10);
@@ -253,8 +249,7 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale,
-                {app.image.width, app.image.height});
+                app.image_scale, {app.image.width, app.image.height});
             draw_dragger_opengl_widget(win, "mouse", ij);
             if (ij.x >= 0 && ij.x < app.image.width && ij.y >= 0 &&
                 ij.y < app.image.height) {
@@ -287,8 +282,7 @@ void draw(const opengl_window& win) {
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
         update_image_view(app.image_center, app.image_scale,
-            {app.image.width, app.image.height}, win_size,
-            app.zoom_to_fit);
+            {app.image.width, app.image.height}, win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_size != zero2i) {
                 init_opengl_texture(app.display_texture, app.image_size.x,
@@ -303,15 +297,12 @@ void draw(const opengl_window& win) {
                         app.display_texture, app.preview, false);
                     break;
                 } else {
-                    tonemap_image_region(app.display, region,
-                        app.image, app.exposure,
-                        app.filmic, app.srgb);
+                    tonemap_image_region(app.display, region, app.image,
+                        app.exposure, app.filmic, app.srgb);
                     update_opengl_texture_region(
                         app.display_texture, app.display, region, false);
                     size += region.width * region.height;
-                    if (size >=
-                        app.image.width * app.image.height)
-                        break;
+                    if (size >= app.image.width * app.image.height) break;
                 }
             }
         }
@@ -407,14 +398,12 @@ void run_ui(app_state& app) {
         if (app.load_done && (mouse_left || mouse_right) && alt_down &&
             !widgets_active) {
             auto ij = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale,
-                {app.image.width, app.image.height});
+                app.image_scale, {app.image.width, app.image.height});
             if (ij.x < 0 || ij.x >= app.image.width || ij.y < 0 ||
                 ij.y >= app.image.height) {
                 auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
-                    {app.image.width, app.image.height},
-                    {0.5f, 0.5f}, zero2f);
+                    {app.image.width, app.image.height}, {0.5f, 0.5f}, zero2f);
                 auto  isec   = intersect_scene(app.scene, app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {typeid(yocto_instance), isec.instance_id};
@@ -452,7 +441,7 @@ int main(int argc, char* argv[]) {
     app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
         trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
     app.trace_options.max_bounces  = parse_argument(
-        parser, "--nbounces", 4, "Maximum number of bounces.");
+        parser, "--nbounces", 8, "Maximum number of bounces.");
     app.trace_options.pixel_clamp = parse_argument(
         parser, "--pixel-clamp", 100, "Final pixel clamping.");
     app.trace_options.random_seed = parse_argument(

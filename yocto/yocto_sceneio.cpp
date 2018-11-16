@@ -80,6 +80,12 @@ namespace yocto {
 // Json alias
 using json = nlohmann::json;
 
+// Helper for printing JSON values
+bool print_value(string& str, const json& js) {
+    str += js.dump();
+    return true;
+}
+
 // Load a JSON object
 bool load_json(const string& filename, json& js) {
     auto text = ""s;
@@ -1290,6 +1296,16 @@ bool apply_json_procedural(
         log_error("unknown shape type {}", type);
         return false;
     }
+    if (!value.quads.empty() && js.value("shell_thickness", 0.0f) > 0) {
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_shell_shape(value.quads,
+            value.positions, value.normals, value.texturecoords,
+            js.value("shell_thickness", 0.0f));
+    }
+    if (!value.quads.empty() && js.value("as_triangles", false)) {
+        value.triangles = convert_quads_to_triangles(value.quads);
+        value.quads     = {};
+    }
     if (js.value("flipyz", false)) {
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
         for (auto& n : value.normals) n = {n.x, n.z, n.y};
@@ -2101,6 +2117,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
             parse_value(view, environment.name);
             parse_value(view, environment.ke);
             parse_value(view, environment.ke_txt.path);
+            parse_value(view, environment.frame);
             if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
             if (cb.environmnet) cb.environmnet(environment);
         } else {
@@ -2534,18 +2551,19 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     cb.camera = [&](const obj_camera& ocam) {
         auto camera           = yocto_camera();
         camera.name           = ocam.name;
+        camera.frame          = ocam.frame;
         camera.orthographic   = ocam.ortho;
         camera.film_width     = ocam.width;
         camera.film_height    = ocam.height;
         camera.focal_length   = ocam.focal;
         camera.focus_distance = ocam.focus;
         camera.lens_aperture  = ocam.aperture;
-        camera.frame          = ocam.frame;
         scene.cameras.push_back(camera);
     };
     cb.environmnet = [&](const obj_environment& oenv) {
         auto environment             = yocto_environment();
         environment.name             = oenv.name;
+        environment.frame            = oenv.frame;
         environment.emission         = oenv.ke;
         environment.emission_texture = add_texture(oenv.ke_txt, true);
         scene.environments.push_back(environment);
@@ -3259,16 +3277,16 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             if (camera.orthographic) {
                 printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
-                set_camera_fovy(camera, ortho.value("ymag", 0.0f),
-                    ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
                 camera.focus_distance = float_max;
                 camera.lens_aperture  = 0;
+                set_camera_view_from_fov(camera, ortho.value("ymag", 0.0f),
+                    ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f));
             } else {
                 auto persp = gcam.value("perspective", json::object());
-                set_camera_fovy(camera, persp.value("yfov", 1.0f),
-                    persp.value("aspectRatio", 1.0f));
                 camera.focus_distance = float_max;
                 camera.lens_aperture  = 0;
+                set_camera_view_from_fov(camera, persp.value("yfov", 1.0f),
+                    persp.value("aspectRatio", 1.0f));
             }
             scene.cameras.push_back(camera);
         }
@@ -4124,9 +4142,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pif / 180;
             } else {
-                printf("%s camera not supported\n", type.c_str());
+                log_error("{} camera not supported", type);
             }
-            set_camera_fovy(camera, fovy, aspect);
+            set_camera_view_from_fov(camera, fovy, aspect);
             scene.cameras.push_back(camera);
         } else if (cmd == "Texture") {
             auto found = false;
@@ -4368,9 +4386,11 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
                 // * stack.back().frame;
                 environment.frame = stack.back().frame *
-                                    frame3f{{0, 0, 1}, {0, 1, 0}, {1, 0, 0},
+                                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0},
                                         {0, 0, 0}};
                 environment.emission = {1, 1, 1};
+                log_info("stack frame: {}", stack.back().frame);
+                log_info("env   frame: {}", environment.frame);
                 if (jcmd.count("scale"))
                     environment.emission *= get_vec3f(jcmd.at("scale"));
                 if (jcmd.count("mapname")) {

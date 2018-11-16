@@ -33,7 +33,7 @@ def yitrace(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--mode','-m', default='default')
 def yview(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
-        'default': '',
+        'default': '--double-sided',
         'double-sided': '--double-sided',
         'eyelight': '--double-sided --eyelight'
     }

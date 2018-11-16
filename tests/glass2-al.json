@@ -1,0 +1,250 @@
+{
+    "name": "metal-al",
+    "cameras": [
+        {
+            "name": "cam",
+            "focal_length": 0.06,
+            "lens_aperture": 0.0,
+            "!!proc": {
+                "from": [
+                    0,
+                    5,
+                    14
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            },
+            "film_width": 0.036,
+            "film_height": 0.015
+        }
+    ],
+    "textures": [
+        {
+            "name": "floor",
+            "filename": "textures/floor.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "grid"
+            }
+        }
+    ],
+    "materials": [
+        {
+            "name": "floor",
+            "diffuse": [
+                0.7,
+                0.7,
+                0.7
+            ],
+            "diffuse_texture": "floor"
+        },
+        {
+            "name": "obj1",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                1,
+                1
+            ],
+            "roughness": 0
+        },
+        {
+            "name": "obj2",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                0.7,
+                0.7
+            ],
+            "roughness": 0
+        },
+        {
+            "name": "obj3",
+            "diffuse": [
+                0,
+                0,
+                0
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "transmission": [
+                1,
+                1,
+                1
+            ],
+            "roughness": 0.1
+        },
+        {
+            "name": "light1",
+            "emission": [
+                20,
+                20,
+                20
+            ]
+        },
+        {
+            "name": "light2",
+            "emission": [
+                20,
+                20,
+                20
+            ]
+        }
+    ],
+    "shapes": [
+        {
+            "name": "floor",
+            "filename": "meshes/floor.ply",
+            "material": "floor",
+            "!!proc": {
+                "type": "floor",
+                "as_triangles": true
+            }
+        },
+        {
+            "name": "obj1",
+            "filename": "meshes/obj1.ply",
+            "material": "obj1",
+            "!!proc": {
+                "type": "quad",
+                "as_triangles": true
+            }
+        },
+        {
+            "name": "obj2",
+            "filename": "meshes/obj2.ply",
+            "material": "obj2",
+            "!!proc": {
+                "type": "matball",
+                "shell_thickness": 0.1,
+                "as_triangles": true
+            }
+        },
+        {
+            "name": "obj3",
+            "filename": "meshes/obj3.ply",
+            "material": "obj3",
+            "!!proc": {
+                "type": "quad_stack"
+            }
+        },
+        {
+            "name": "light1",
+            "material": "light1",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "material": "light2",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        }
+    ],
+    "instances": [
+        {
+            "name": "floor",
+            "shape": "floor"
+        },
+        {
+            "name": "obj1",
+            "shape": "obj1",
+            "!!proc": {
+                "translation": [
+                    -2.5,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "obj2",
+            "shape": "obj2",
+            "!!proc": {
+                "translation": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "obj3",
+            "shape": "obj3",
+            "!!proc": {
+                "translation": [
+                    2.5,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "light1",
+            "shape": "light1",
+            "!!proc": {
+                "from": [
+                    -4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "shape": "light2",
+            "!!proc": {
+                "from": [
+                    4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        }
+    ],
+    "environments": []
+}
