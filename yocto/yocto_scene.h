@@ -78,8 +78,11 @@ namespace yocto {
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the focal lengthm the focus
 // distance and the lens_aperture. All values are in meters.
-// 3:2  on 35 mm:  0.036 x 0.024
-// 16:9 on 35 mm:  0.036 x 0.020
+// Here are some common aspect ratios used in video and still photography.
+// 3:2    on 35 mm:  0.036 x 0.024
+// 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
+// 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
+// 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
 struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;
