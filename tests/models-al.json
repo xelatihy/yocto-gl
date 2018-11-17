@@ -3,7 +3,7 @@
     "cameras": [
         {
             "name": "cam",
-            "focal_length": 0.06,
+            "focal_length": 0.100,
             "lens_aperture": 0.0,
             "!!proc": {
                 "from": [
@@ -17,8 +17,8 @@
                     0
                 ]
             },
-            "film_width": 0.036,
-            "film_height": 0.015
+            "film_width": 0.05760,
+            "film_height": 0.024
         }
     ],
     "textures": [
@@ -114,7 +114,7 @@
     "shapes": [
         {
             "name": "floor",
-            "filename": "meshes/floor.ply",
+            "filename": "models/floor.ply",
             "material": "floor",
             "!!proc": {
                 "type": "floor"

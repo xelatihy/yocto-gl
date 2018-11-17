@@ -50,7 +50,8 @@ struct app_state {
     bool                filmic        = false;
     bool                srgb          = true;
     int                 preview_ratio = 8;
-    vec2i               image_size    = zero2i;
+    int                 image_width   = 0;
+    int                 image_height  = 0;
 
     // scene
     yocto_scene scene = {};
@@ -95,23 +96,23 @@ void start_rendering_async(app_state& app) {
     app.trace_stop   = false;
     app.trace_sample = 0;
 
-    app.image_size = get_camera_image_size(
+    tie(app.image_width, app.image_height) = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
-        app.trace_options.vertical_resolution);
-    app.image   = make_image(app.image_size.x, app.image_size.y, zero4f);
-    app.display = make_image(app.image_size.x, app.image_size.y, zero4f);
+        app.trace_options.image_width, app.trace_options.image_height);
+    app.image   = make_image(app.image_width, app.image_height, zero4f);
+    app.display = make_image(app.image_width, app.image_height, zero4f);
     app.state   = make_trace_state(
-        app.image_size.x, app.image_size.y, app.trace_options.random_seed);
+        app.image_width, app.image_height, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
-    preview_options.vertical_resolution /= app.preview_ratio;
+    preview_options.image_height /= app.preview_ratio;
     preview_options.num_samples = 1;
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = tonemap_image(
         app.preview, app.exposure, app.filmic, app.srgb);
-    auto large_preview = make_image(app.image_size.x, app.image_size.y, zero4f);
-    for (auto j = 0; j < app.image_size.y; j++) {
-        for (auto i = 0; i < app.image_size.x; i++) {
+    auto large_preview = make_image(app.image_width, app.image_height, zero4f);
+    for (auto j = 0; j < app.image_height; j++) {
+        for (auto i = 0; i < app.image_width; i++) {
             auto pi = clamp(i / app.preview_ratio, 0, display_preview.width - 1),
                  pj = clamp(j / app.preview_ratio, 0, display_preview.height - 1);
             at(large_preview, i, j) = at(display_preview, pi, pj);
@@ -213,8 +214,10 @@ void draw_opengl_widgets(const opengl_window& win) {
                 edited += draw_combobox_opengl_widget(
                     win, "camera", app.trace_options.camera_id, cam_names);
             }
-            edited += draw_slider_opengl_widget(win, "resolution",
-                app.trace_options.vertical_resolution, 360, 4096);
+            edited += draw_slider_opengl_widget(
+                win, "width", app.trace_options.image_width, 0, 4096);
+            edited += draw_slider_opengl_widget(
+                win, "height", app.trace_options.image_height, 0, 4096);
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.trace_options.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",
@@ -284,9 +287,9 @@ void draw(const opengl_window& win) {
         update_image_view(app.image_center, app.image_scale,
             {app.image.width, app.image.height}, win_size, app.zoom_to_fit);
         if (!app.display_texture) {
-            if (app.image_size != zero2i) {
-                init_opengl_texture(app.display_texture, app.image_size.x,
-                    app.image_size.y, false, false, false, false);
+            if (app.image_width != 0 || app.image_height != 0) {
+                init_opengl_texture(app.display_texture, app.image_width,
+                    app.image_height, false, false, false, false);
             }
         } else {
             auto region = image_region{};
@@ -434,8 +437,10 @@ int main(int argc, char* argv[]) {
         argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.trace_options.vertical_resolution = parse_argument(
-        parser, "--resolution,-r", 720, "Image rvertical esolution.");
+    app.trace_options.image_width = parse_argument(
+        parser, "--hres,-R", 1280, "Image horizontal resolution.");
+    app.trace_options.image_height = parse_argument(
+        parser, "--vres,-r", 720, "Image vertical resolution.");
     app.trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",

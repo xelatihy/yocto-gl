@@ -78,6 +78,12 @@ namespace yocto {
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the focal lengthm the focus
 // distance and the lens_aperture. All values are in meters.
+// Here are some common aspect ratios used in video and still photography.
+// 3:2    on 35 mm:  0.036 x 0.024
+// 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
+// 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
+// 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
+// 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;
@@ -420,12 +426,13 @@ float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
 float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
-float get_camera_fovx(const yocto_camera& camera);
-float get_camera_fovy(const yocto_camera& camera);
-float get_camera_aspect(const yocto_camera& camera);
-vec2i get_camera_image_size(const yocto_camera& camera, int yresolution);
-void  set_camera_view_from_fov(yocto_camera& camera, float fovy, float aspect,
-     float width = 0.036f, float focus = 0);
+float          get_camera_fovx(const yocto_camera& camera);
+float          get_camera_fovy(const yocto_camera& camera);
+float          get_camera_aspect(const yocto_camera& camera);
+pair<int, int> get_camera_image_size(
+    const yocto_camera& camera, int width, int height);
+void set_camera_perspective(yocto_camera& camera, float fovy, float aspect,
+    float focus, float height = 0.024f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,

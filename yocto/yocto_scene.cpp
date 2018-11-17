@@ -1343,18 +1343,39 @@ float get_camera_fovy(const yocto_camera& camera) {
 float get_camera_aspect(const yocto_camera& camera) {
     return camera.film_width / camera.film_height;
 }
-vec2i get_camera_image_size(const yocto_camera& camera, int yresolution) {
-    return {(int)round(yresolution * camera.film_width / camera.film_height),
-        yresolution};
+pair<int, int> get_camera_image_size(
+    const yocto_camera& camera, int width, int height) {
+    if (width == 0 && height == 0) {
+        width  = 1280;
+        height = 720;
+    }
+    if (width != 0 && height != 0) {
+        if (width * camera.film_height / camera.film_width > height) {
+            width = 0;
+        } else {
+            height = 0;
+        }
+    }
+    if (width == 0) {
+        width = (int)round(height * camera.film_width / camera.film_height);
+    }
+    if (height == 0) {
+        height = (int)round(width * camera.film_height / camera.film_width);
+    }
+    return {width, height};
 }
-void set_camera_view_from_fov(
-    yocto_camera& camera, float fovy, float aspect, float width, float focus) {
-    camera.film_width  = width;
-    camera.film_height = width / aspect;
-    if (focus) camera.focus_distance = focus;
-    auto distance       = camera.film_height / (2 * tan(fovy / 2));
-    camera.focal_length = camera.focus_distance * distance /
-                          (camera.focus_distance + distance);
+void set_camera_perspective(
+    yocto_camera& camera, float fovy, float aspect, float focus, float height) {
+    camera.film_width     = height * aspect;
+    camera.film_height    = height;
+    camera.focus_distance = focus;
+    auto distance         = camera.film_height / (2 * tan(fovy / 2));
+    if (focus < float_max) {
+        camera.focal_length = camera.focus_distance * distance /
+                              (camera.focus_distance + distance);
+    } else {
+        camera.focal_length = distance;
+    }
 }
 
 // add missing camera
