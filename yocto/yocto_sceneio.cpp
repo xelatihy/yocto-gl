@@ -3331,12 +3331,13 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             if (camera.orthographic) {
                 printf("orthographic not supported well\n");
                 auto ortho = gcam.value("orthographic", json::object());
-                camera.lens_aperture  = 0;
+                camera.lens_aperture = 0;
                 set_camera_perspective(camera, ortho.value("ymag", 0.0f),
-                    ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f), float_max);
+                    ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f),
+                    float_max);
             } else {
                 auto persp = gcam.value("perspective", json::object());
-                camera.lens_aperture  = 0;
+                camera.lens_aperture = 0;
                 set_camera_perspective(camera, persp.value("yfov", 1.0f),
                     persp.value("aspectRatio", 1.0f), float_max);
             }

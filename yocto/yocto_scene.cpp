@@ -1366,13 +1366,13 @@ pair<int, int> get_camera_image_size(
 }
 void set_camera_perspective(
     yocto_camera& camera, float fovy, float aspect, float focus, float height) {
-    camera.film_width = height * aspect;
-    camera.film_height  = height;
+    camera.film_width     = height * aspect;
+    camera.film_height    = height;
     camera.focus_distance = focus;
-    auto distance       = camera.film_height / (2 * tan(fovy / 2));
-    if(focus < float_max) {
+    auto distance         = camera.film_height / (2 * tan(fovy / 2));
+    if (focus < float_max) {
         camera.focal_length = camera.focus_distance * distance /
-                            (camera.focus_distance + distance);
+                              (camera.focus_distance + distance);
     } else {
         camera.focal_length = distance;
     }
