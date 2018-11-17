@@ -83,6 +83,7 @@ namespace yocto {
 // 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
 // 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
 // 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
+// 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
 struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;
