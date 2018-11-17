@@ -3,7 +3,7 @@
     "cameras": [
         {
             "name": "cam",
-            "focal_length": 0.06,
+            "focal_length": 0.100,
             "lens_aperture": 0.0,
             "!!proc": {
                 "from": [
@@ -17,8 +17,8 @@
                     0
                 ]
             },
-            "film_width": 0.036,
-            "film_height": 0.015
+            "film_width": 0.05760,
+            "film_height": 0.024
         }
     ],
     "textures": [
@@ -113,7 +113,7 @@
     "shapes": [
         {
             "name": "floor",
-            "filename": "meshes/floor.ply",
+            "filename": "models/floor.ply",
             "material": "floor",
             "!!proc": {
                 "type": "floor"
@@ -145,7 +145,7 @@
     "surfaces": [
         {
             "name": "obj1",
-            "filename": "meshes/obj1.obj",
+            "filename": "models/obj1.obj",
             "materials": [ "obj1" ],
             "subdivision_level": 4,
             "catmull_clark": true,
@@ -156,7 +156,7 @@
         },
         {
             "name": "obj2",
-            "filename": "meshes/obj2.obj",
+            "filename": "models/obj2.obj",
             "materials": [ "obj2" ],
             "subdivision_level": 2,
             "catmull_clark": true,
@@ -167,7 +167,7 @@
         },
         {
             "name": "obj3",
-            "filename": "meshes/obj3.obj",
+            "filename": "models/obj3.obj",
             "materials": [ "obj3" ],
             "subdivision_level": 4,
             "catmull_clark": true,

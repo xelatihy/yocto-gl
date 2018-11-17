@@ -1786,12 +1786,12 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
 // Progressively compute an image by calling trace_samples multiple times.
 image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options) {
-    auto scope      = log_trace_scoped("tracing image");
-    auto image_size = get_camera_image_size(
-        scene.cameras.at(options.camera_id), options.vertical_resolution);
-    auto image  = make_image(image_size.x, image_size.y, zero4f);
-    auto pixels = make_trace_state(
-        image_size.x, image_size.y, options.random_seed);
+    auto scope           = log_trace_scoped("tracing image");
+    auto [width, height] = get_camera_image_size(
+        scene.cameras.at(options.camera_id), options.image_width,
+        options.image_height);
+    auto image   = make_image(width, height, zero4f);
+    auto pixels  = make_trace_state(width, height, options.random_seed);
     auto regions = make_image_regions(image.width, image.height);
 
     if (options.run_serially) {
@@ -1859,10 +1859,11 @@ void trace_image_async_start(image4f& image, trace_state& state,
     vector<thread>& threads, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_image_options& options) {
     log_trace("start tracing async");
-    auto& camera    = scene.cameras.at(options.camera_id);
-    auto image_size = get_camera_image_size(camera, options.vertical_resolution);
-    image           = make_image(image_size.x, image_size.y, zero4f);
-    state = make_trace_state(image_size.x, image_size.y, options.random_seed);
+    auto& camera         = scene.cameras.at(options.camera_id);
+    auto [width, height] = get_camera_image_size(
+        camera, options.image_width, options.image_height);
+    image        = make_image(width, height, zero4f);
+    state        = make_trace_state(width, height, options.random_seed);
     auto regions = make_image_regions(image.width, image.height);
     if (options.cancel_flag) *options.cancel_flag = false;
 

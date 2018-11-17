@@ -3,7 +3,7 @@
     "cameras": [
         {
             "name": "cam",
-            "focal_length": 0.06,
+            "focal_length": 0.100,
             "lens_aperture": 0.0,
             "!!proc": {
                 "from": [
@@ -17,8 +17,8 @@
                     0
                 ]
             },
-            "film_width": 0.036,
-            "film_height": 0.015
+            "film_width": 0.05760,
+            "film_height": 0.024
         }
     ],
     "textures": [
@@ -114,7 +114,7 @@
     "shapes": [
         {
             "name": "floor",
-            "filename": "meshes/floor.ply",
+            "filename": "models/floor.ply",
             "material": "floor",
             "!!proc": {
                 "type": "floor"
@@ -122,7 +122,7 @@
         },
         {
             "name": "obj1",
-            "filename": "meshes/obj1.ply",
+            "filename": "models/obj1.ply",
             "material": "obj1",
             "!!proc": {
                 "type": "sphere_flipcap"
@@ -130,7 +130,7 @@
         },
         {
             "name": "obj2",
-            "filename": "meshes/obj2.ply",
+            "filename": "models/obj2.ply",
             "material": "obj2",
             "!!proc": {
                 "type": "sphere_cube"
@@ -138,7 +138,7 @@
         },
         {
             "name": "obj3",
-            "filename": "meshes/obj3.ply",
+            "filename": "models/obj3.ply",
             "material": "obj3",
             "!!proc": {
                 "type": "cube_rounded"

@@ -261,7 +261,7 @@ namespace yocto {
 
 // Normalize path delimiters.
 inline string normalize_path(const string& filename);
-// Get directory name (not including '/').
+// Get directory name (including '/').
 inline string get_dirname(const string& filename);
 // Get extension (not including '.').
 inline string get_extension(const string& filename);
@@ -1343,12 +1343,12 @@ string normalize_path(const string& filename_) {
     return filename;
 }
 
-// Get directory name (not including '/').
+// Get directory name (including '/').
 string get_dirname(const string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos      = filename.rfind('/');
     if (pos == string::npos) return "";
-    return filename.substr(0, pos);
+    return filename.substr(0, pos+1);
 }
 
 // Get extension (not including '.').

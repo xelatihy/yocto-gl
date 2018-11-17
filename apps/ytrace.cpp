@@ -44,8 +44,10 @@ int main(int argc, char* argv[]) {
         argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    trace_options.vertical_resolution = parse_argument(
-        parser, "--resolution,-r", 720, "Image vertical resolution.");
+    trace_options.image_width = parse_argument(
+        parser, "--hres,-R", 1280, "Image horizontal resolution.");
+    trace_options.image_height = parse_argument(
+        parser, "--vres,-r", 720, "Image vertical resolution.");
     trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
     trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
@@ -113,12 +115,11 @@ int main(int argc, char* argv[]) {
     }
 
     // allocate buffers
-    auto image_size = get_camera_image_size(
-        scene.cameras[trace_options.camera_id],
-        trace_options.vertical_resolution);
-    auto image        = make_image(image_size.x, image_size.y, zero4f);
-    auto trace_pixels = make_trace_state(
-        image_size.x, image_size.y, trace_options.random_seed);
+    auto [width, height] = get_camera_image_size(
+        scene.cameras[trace_options.camera_id], trace_options.image_width,
+        trace_options.image_height);
+    auto image = make_image(width, height, zero4f);
+    auto state = make_trace_state(width, height, trace_options.random_seed);
 
     // render
     auto scope = log_trace_begin("rendering image");
@@ -128,7 +129,7 @@ int main(int argc, char* argv[]) {
             trace_options.num_samples - sample);
         log_info("rendering image [{}/{}]", sample, trace_options.num_samples);
         trace_image_samples(
-            image, trace_pixels, scene, bvh, lights, sample, trace_options);
+            image, state, scene, bvh, lights, sample, trace_options);
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(sample + nsamples) + "." + get_extension(imfilename));

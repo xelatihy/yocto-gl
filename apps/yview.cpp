@@ -97,17 +97,18 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
 
 // Draw options
 struct drawgl_options {
-    int   camera_id           = 0;
-    int   vertical_resolution = 720;
-    bool  wireframe           = false;
-    bool  edges               = false;
-    float edge_offset         = 0.01f;
-    bool  eyelight            = false;
-    float exposure            = 0;
-    float gamma               = 2.2f;
-    vec3f ambient             = {0, 0, 0};
-    float near_plane          = 0.01f;
-    float far_plane           = 10000.0f;
+    int   camera_id    = 0;
+    int   image_width  = 1280;
+    int   image_height = 720;
+    bool  wireframe    = false;
+    bool  edges        = false;
+    float edge_offset  = 0.01f;
+    bool  eyelight     = false;
+    float exposure     = 0;
+    float gamma        = 2.2f;
+    vec3f ambient      = {0, 0, 0};
+    float near_plane   = 0.01f;
+    float far_plane    = 10000.0f;
 };
 
 // Application state
@@ -920,8 +921,10 @@ void draw_widgets(const opengl_window& win) {
                 draw_combobox_opengl_widget(win, "camera",
                     app.draw_options.camera_id, app.scene.cameras, false);
             }
-            draw_slider_opengl_widget(win, "resolution",
-                app.draw_options.vertical_resolution, 360, 4096);
+            draw_slider_opengl_widget(
+                win, "width", app.draw_options.image_width, 0, 4096);
+            draw_slider_opengl_widget(
+                win, "height", app.draw_options.image_height, 0, 4096);
             draw_checkbox_opengl_widget(
                 win, "eyelight", app.draw_options.eyelight);
             continue_opengl_widget_line(win);
@@ -976,7 +979,6 @@ void draw(const opengl_window& win) {
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.15f});
     set_opengl_viewport(get_opengl_framebuffer_size(win));
     if (app.load_done) {
-        app.draw_options.vertical_resolution = get_opengl_framebuffer_size(win).y;
         draw_glscene(app.state, app.scene, get_opengl_framebuffer_size(win),
             app.selection, app.draw_options);
     }
@@ -1135,8 +1137,10 @@ int main(int argc, char* argv[]) {
         argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
-    app.draw_options.vertical_resolution = parse_argument(
-        parser, "--resolution,-r", 512, "Image vertical resolution.");
+    app.draw_options.image_width = parse_argument(
+        parser, "--hres,-R", 1280, "Image horizontal resolution.");
+    app.draw_options.image_height = parse_argument(
+        parser, "--vres,-r", 720, "Image vertical resolution.");
     app.draw_options.eyelight = parse_argument(
         parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
     app.double_sided        = parse_argument(parser,
