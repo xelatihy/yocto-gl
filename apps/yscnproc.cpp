@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
     auto mesh_filenames = parse_argument(parser,
         "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
-    auto mesh_directiry = parse_argument(parser, "--mesh-directory", "models"s,
+    auto mesh_directory = parse_argument(parser, "--mesh-directory", "models/"s,
         "Mesh directory when adding names.");
     auto uniform_txt    = parse_argument(parser,
         "--uniform-texture/--no-uniform-textures", false,
@@ -97,14 +97,16 @@ int main(int argc, char** argv) {
     }
 
     // add missing mesh names if necessary
+    if (!mesh_directory.empty() && mesh_directory.back() != '/') 
+        mesh_directory += '/';
     if (mesh_filenames && get_extension(output) == "json") {
         for (auto& shape : scene.shapes) {
             if (empty(shape.filename) && shape.positions.size() > 16)
-                shape.filename = mesh_directiry + "/" + shape.name + ".ply";
+                shape.filename = mesh_directory + shape.name + ".ply";
         }
         for (auto& surface : scene.surfaces) {
             if (empty(surface.filename) && surface.positions.size() > 16)
-                surface.filename = mesh_directiry + "/" + surface.name + ".obj";
+                surface.filename = mesh_directory + surface.name + ".obj";
         }
     }
 
