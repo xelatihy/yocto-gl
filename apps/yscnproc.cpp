@@ -51,8 +51,8 @@ int main(int argc, char** argv) {
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
     auto mesh_filenames = parse_argument(parser,
         "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
-    auto mesh_directiry = parse_argument(parser,
-        "--mesh-directory", "models"s, "Mesh directory when adding names.");
+    auto mesh_directiry = parse_argument(parser, "--mesh-directory", "models"s,
+        "Mesh directory when adding names.");
     auto uniform_txt    = parse_argument(parser,
         "--uniform-texture/--no-uniform-textures", false,
         "uniform texture formats");

@@ -118,9 +118,8 @@ int main(int argc, char* argv[]) {
     auto [width, height] = get_camera_image_size(
         scene.cameras[trace_options.camera_id], trace_options.image_width,
         trace_options.image_height);
-    auto image        = make_image(width, height, zero4f);
-    auto state = make_trace_state(
-        width, height, trace_options.random_seed);
+    auto image = make_image(width, height, zero4f);
+    auto state = make_trace_state(width, height, trace_options.random_seed);
 
     // render
     auto scope = log_trace_begin("rendering image");

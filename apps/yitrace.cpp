@@ -50,8 +50,8 @@ struct app_state {
     bool                filmic        = false;
     bool                srgb          = true;
     int                 preview_ratio = 8;
-    int                 image_width = 0;
-    int                 image_height = 0;
+    int                 image_width   = 0;
+    int                 image_height  = 0;
 
     // scene
     yocto_scene scene = {};
@@ -98,8 +98,7 @@ void start_rendering_async(app_state& app) {
 
     tie(app.image_width, app.image_height) = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
-        app.trace_options.image_width,
-        app.trace_options.image_height);
+        app.trace_options.image_width, app.trace_options.image_height);
     app.image   = make_image(app.image_width, app.image_height, zero4f);
     app.display = make_image(app.image_width, app.image_height, zero4f);
     app.state   = make_trace_state(
@@ -215,10 +214,10 @@ void draw_opengl_widgets(const opengl_window& win) {
                 edited += draw_combobox_opengl_widget(
                     win, "camera", app.trace_options.camera_id, cam_names);
             }
-            edited += draw_slider_opengl_widget(win, "width",
-                app.trace_options.image_width, 0, 4096);
-            edited += draw_slider_opengl_widget(win, "height",
-                app.trace_options.image_height, 0, 4096);
+            edited += draw_slider_opengl_widget(
+                win, "width", app.trace_options.image_width, 0, 4096);
+            edited += draw_slider_opengl_widget(
+                win, "height", app.trace_options.image_height, 0, 4096);
             edited += draw_slider_opengl_widget(
                 win, "nsamples", app.trace_options.num_samples, 16, 4096);
             edited += draw_combobox_opengl_widget(win, "tracer",

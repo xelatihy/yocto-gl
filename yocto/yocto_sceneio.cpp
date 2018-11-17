@@ -1821,8 +1821,8 @@ bool load_json_meshes(yocto_scene& scene, const string& dirname,
             if (shape.filename == "" || !empty(shape.positions)) return;
             auto filename = normalize_path(dirname + "/" + shape.filename);
             if (!load_mesh(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.positions, shape.normals,
-            shape.texturecoords, shape.colors, shape.radius, false)) {
+                    shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius, false)) {
                 if (options.exit_on_error) {
                     exit_error = true;
                     return;
@@ -1839,9 +1839,9 @@ bool load_json_meshes(yocto_scene& scene, const string& dirname,
             if (surface.filename == "" || !empty(surface.positions)) return;
             auto filename = normalize_path(dirname + "/" + surface.filename);
             if (!load_facevarying_mesh(filename, surface.quads_positions,
-                surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords,
-                surface.quads_materials)) {
+                    surface.quads_normals, surface.quads_texturecoords,
+                    surface.positions, surface.normals, surface.texturecoords,
+                    surface.quads_materials)) {
                 if (options.exit_on_error) {
                     exit_error = true;
                     return;
@@ -1879,7 +1879,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
 
     // load meshes and textures
     auto dirname = get_dirname(filename);
-    if(!load_json_meshes(scene, dirname, options)) return false;
+    if (!load_json_meshes(scene, dirname, options)) return false;
     if (!load_scene_textures(scene, dirname, options)) return false;
 
     // fix scene
@@ -1908,10 +1908,10 @@ bool save_json_meshes(const yocto_scene& scene, const string& dirname,
             if (!save_mesh(filename, shape.points, shape.lines, shape.triangles,
                     shape.quads, shape.positions, shape.normals,
                     shape.texturecoords, shape.colors, shape.radius)) {
-                if (options.exit_on_error)  {
-                        exit_error = true;
-                        return;
-                    }
+                if (options.exit_on_error) {
+                    exit_error = true;
+                    return;
+                }
             }
         },
         options.cancel_flag, options.run_serially);
@@ -1924,13 +1924,13 @@ bool save_json_meshes(const yocto_scene& scene, const string& dirname,
             if (surface.filename == "") return;
             auto filename = normalize_path(dirname + "/" + surface.filename);
             if (!save_facevarying_mesh(filename, surface.quads_positions,
-                surface.quads_normals, surface.quads_texturecoords,
-                surface.positions, surface.normals, surface.texturecoords,
-                surface.quads_materials)) {
-                if (options.exit_on_error)  {
-                        exit_error = true;
-                        return;
-                    }
+                    surface.quads_normals, surface.quads_texturecoords,
+                    surface.positions, surface.normals, surface.texturecoords,
+                    surface.quads_materials)) {
+                if (options.exit_on_error) {
+                    exit_error = true;
+                    return;
+                }
             }
         },
         options.cancel_flag, options.run_serially);
@@ -4185,14 +4185,14 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             stack.back().aspect = jcmd.at("xresolution").get<float>() /
                                   jcmd.at("yresolution").get<float>();
         } else if (cmd == "Camera") {
-            auto camera           = yocto_camera{};
-            camera.name           = "camera" + std::to_string(cid++);
-            camera.frame          = inverse(stack.back().frame);
-            camera.frame.z        = -camera.frame.z;
-            auto focus            = stack.back().focus;
-            auto aspect           = stack.back().aspect;
-            auto fovy             = 1.0f;
-            auto type             = jcmd.at("type").get<string>();
+            auto camera    = yocto_camera{};
+            camera.name    = "camera" + std::to_string(cid++);
+            camera.frame   = inverse(stack.back().frame);
+            camera.frame.z = -camera.frame.z;
+            auto focus     = stack.back().focus;
+            auto aspect    = stack.back().aspect;
+            auto fovy      = 1.0f;
+            auto type      = jcmd.at("type").get<string>();
             if (type == "perspective") {
                 fovy = jcmd.at("fov").get<float>() * pif / 180;
                 if (aspect < 1) fovy = atan(tan(fovy) / aspect);
@@ -4581,11 +4581,11 @@ WorldEnd
 #endif
 
     // convert camera and settings
-    auto& camera = scene.cameras.front();
-    auto  from   = camera.frame.o;
-    auto  to     = camera.frame.o - camera.frame.z;
-    auto  up     = camera.frame.y;
-    auto  [width, height]    = get_camera_image_size(camera, 0, 720);
+    auto& camera         = scene.cameras.front();
+    auto  from           = camera.frame.o;
+    auto  to             = camera.frame.o - camera.frame.z;
+    auto  up             = camera.frame.y;
+    auto [width, height] = get_camera_image_size(camera, 0, 720);
     print(fs, "LookAt {} {} {}\n", from, to, up);
     print(fs, "Camera \"perspective\" \"float fov\" {}\n",
         get_camera_fovy(camera) * 180 / pif);

@@ -97,18 +97,18 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
 
 // Draw options
 struct drawgl_options {
-    int   camera_id           = 0;
-    int   image_width = 1280;
+    int   camera_id    = 0;
+    int   image_width  = 1280;
     int   image_height = 720;
-    bool  wireframe           = false;
-    bool  edges               = false;
-    float edge_offset         = 0.01f;
-    bool  eyelight            = false;
-    float exposure            = 0;
-    float gamma               = 2.2f;
-    vec3f ambient             = {0, 0, 0};
-    float near_plane          = 0.01f;
-    float far_plane           = 10000.0f;
+    bool  wireframe    = false;
+    bool  edges        = false;
+    float edge_offset  = 0.01f;
+    bool  eyelight     = false;
+    float exposure     = 0;
+    float gamma        = 2.2f;
+    vec3f ambient      = {0, 0, 0};
+    float near_plane   = 0.01f;
+    float far_plane    = 10000.0f;
 };
 
 // Application state
@@ -921,10 +921,10 @@ void draw_widgets(const opengl_window& win) {
                 draw_combobox_opengl_widget(win, "camera",
                     app.draw_options.camera_id, app.scene.cameras, false);
             }
-            draw_slider_opengl_widget(win, "width",
-                app.draw_options.image_width, 0, 4096);
-            draw_slider_opengl_widget(win, "height",
-                app.draw_options.image_height, 0, 4096);
+            draw_slider_opengl_widget(
+                win, "width", app.draw_options.image_width, 0, 4096);
+            draw_slider_opengl_widget(
+                win, "height", app.draw_options.image_height, 0, 4096);
             draw_checkbox_opengl_widget(
                 win, "eyelight", app.draw_options.eyelight);
             continue_opengl_widget_line(win);
