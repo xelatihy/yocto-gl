@@ -438,10 +438,10 @@ int main(int argc, char* argv[]) {
         argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_argument(
         parser, "--camera", 0, "Camera index.");
+    app.trace_options.image_width = parse_argument(
+        parser, "--hres,-R", 1280, "Image horizontal resolution.");
     app.trace_options.image_height = parse_argument(
         parser, "--vres,-r", 720, "Image vertical resolution.");
-    app.trace_options.image_width = parse_argument(
-        parser, "--hres,-R", 0, "Image horizontal resolution.");
     app.trace_options.num_samples = parse_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
     app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",

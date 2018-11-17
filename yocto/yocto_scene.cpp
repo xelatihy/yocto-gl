@@ -1344,7 +1344,17 @@ float get_camera_aspect(const yocto_camera& camera) {
     return camera.film_width / camera.film_height;
 }
 pair<int,int> get_camera_image_size(const yocto_camera& camera, int width, int height) {
-    if(width == 0 && height == 0) height = 720;
+    if(width == 0 && height == 0) {
+        width = 1280;
+        height = 720;
+    }
+    if(width != 0 && height != 0) {
+        if(width * camera.film_height / camera.film_width > height) {
+            width = 0;
+        } else {
+            height = 0;
+        }
+    }
     if(width == 0) {
         width = (int)round(height * camera.film_width / camera.film_height);
     }
