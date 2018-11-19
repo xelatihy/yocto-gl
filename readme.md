@@ -60,8 +60,6 @@ See each header file for documentation.
 
 - `yocto/yocto_math.{h}`: fixed size vectors, matrices, frames, rays, 
    bounding boxes, transforms
-- `yocto/yocto_utils.{h}`: printing and parsing values, path utlities, file io,
-   command line parsing
 - `yocto/yocto_random.{h}`: random number generation, Perlin noise, Monte Carlo
    utilities
 - `yocto/yocto_shape.{h,cpp}`: geometry utilities, shape manipulation, 
@@ -73,6 +71,9 @@ See each header file for documentation.
 - `yocto/yocto_scene.{h,cpp}`: simple scene storage, evaluation of scene 
    properties
 - `yocto/yocto_trace.{h,cpp}`: path tracing
+- `yocto/yocto_utils.{h}`: printing and parsing values, path utlities, file io,
+   command line parsing
+- `yocto/yocto_json.{h}`: utilities for reading and writing json files
 - `yocto/yocto_imageio.{h,cpp}`: image loading and saving
 - `yocto/yocto_sceneio.{h,cpp}`: scene loading and saving
 

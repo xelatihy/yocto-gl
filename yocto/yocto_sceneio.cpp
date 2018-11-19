@@ -59,6 +59,7 @@
 #include "yocto_random.h"
 #include "yocto_shape.h"
 #include "yocto_utils.h"
+#include "yocto_json.h"
 
 #include <cstdlib>
 #include <regex>
@@ -66,125 +67,10 @@
 #include <array>
 #include <climits>
 
-#include "ext/json.hpp"
-
-#if YGL_HAPPLY
-#include "ext/happly.h"
-#endif
-
 // -----------------------------------------------------------------------------
-// JSON UTILITIES
+// IMPLEMENTATION OF CONVERSION TO/FROM JSON
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Json alias
-using json = nlohmann::json;
-
-// Helper for printing JSON values
-bool print_value(string& str, const json& js) {
-    str += js.dump();
-    return true;
-}
-
-// Load a JSON object
-bool load_json(const string& filename, json& js) {
-    auto text = ""s;
-    if (!load_text(filename, text)) return false;
-    try {
-        js = json::parse(text.begin(), text.end());
-    } catch (...) {
-        log_io_error("could not parse json {}", filename);
-        return false;
-    }
-    return true;
-}
-
-// Save a JSON object
-bool save_json(const string& filename, const json& js) {
-    auto str = ""s;
-    try {
-        str = js.dump(4);
-    } catch (...) {
-        log_io_error("could not dump json {}", filename);
-        return false;
-    }
-    return save_text(filename, str);
-}
-
-inline void to_json(json& js, const vec2f& val) {
-    js = std::array<float, 2>{{val.x, val.y}};
-}
-inline void from_json(const json& js, vec2f& val) {
-    auto vala = js.get<std::array<float, 2>>();
-    val       = {vala[0], vala[1]};
-}
-inline void to_json(json& js, const vec3f& val) {
-    js = std::array<float, 3>{{val.x, val.y, val.z}};
-}
-inline void from_json(const json& js, vec3f& val) {
-    auto vala = js.get<std::array<float, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-inline void to_json(json& js, const vec4f& val) {
-    js = std::array<float, 4>{{val.x, val.y, val.z, val.w}};
-}
-inline void from_json(const json& js, vec4f& val) {
-    auto vala = js.get<std::array<float, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-inline void to_json(json& js, const vec2i& val) {
-    js = std::array<int, 2>{{val.x, val.y}};
-}
-inline void from_json(const json& js, vec2i& val) {
-    auto vala = js.get<std::array<int, 2>>();
-    val       = {vala[0], vala[1]};
-}
-inline void to_json(json& js, const vec3i& val) {
-    js = std::array<int, 3>{{val.x, val.y, val.z}};
-}
-inline void from_json(const json& js, vec3i& val) {
-    auto vala = js.get<std::array<int, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
-}
-inline void to_json(json& js, const vec4i& val) {
-    js = std::array<int, 4>{{val.x, val.y, val.z, val.w}};
-}
-inline void from_json(const json& js, vec4b& val) {
-    auto vala = js.get<std::array<byte, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-inline void to_json(json& js, const vec4b& val) {
-    js = std::array<byte, 4>{{val.x, val.y, val.z, val.w}};
-}
-inline void from_json(const json& js, vec4i& val) {
-    auto vala = js.get<std::array<int, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-inline void to_json(json& js, const frame3f& val) {
-    js = std::array<vec3f, 4>{{val.x, val.y, val.z, val.o}};
-}
-inline void from_json(const json& js, frame3f& val) {
-    auto vala = js.get<std::array<vec3f, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-inline void to_json(json& js, const mat4f& val) {
-    js = std::array<vec4f, 4>{{val.x, val.y, val.z, val.w}};
-}
-inline void from_json(const json& js, mat4f& val) {
-    auto vala = js.get<std::array<vec4f, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-
-inline void to_json(json& js, const bbox3f& val) {
-    js = std::array<vec3f, 2>{{val.min, val.max}};
-}
-inline void from_json(const json& js, bbox3f& val) {
-    auto vala = js.get<std::array<vec3f, 2>>();
-    val       = {vala[0], vala[1]};
-}
 
 inline void to_json(json& js, const image4f& value) {
     js           = json::object();
@@ -228,7 +114,51 @@ inline void from_json(const json& js, volume1f& value) {
     value       = make_volume(width, height, depth, data(voxels));
 }
 
-}  // namespace yocto
+// Dumps a json value
+template <typename T>
+inline bool serialize_json_values(
+    json& js, T* values, int num, const char* name, bool save) {
+    if (save) {
+        if (!values || num == 0) return true;
+        return serialize_json_values(js[name], values, num, save);
+    } else {
+        if (!js.count(name)) return true;
+        return serialize_json_values(js.at(name), values, num, save);
+    }
+}
+
+inline bool serialize_json_value(json& js, image4f& value, bool save) {
+    auto width = 0, height = 0;
+    if (!serialize_json_value(js, width, "width", -1, save)) return false;
+    if (!serialize_json_value(js, height, "height", -1, save)) return false;
+    if (!save) value = make_image(width, height, zero4f);
+    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
+        return false;
+    return true;
+}
+inline bool serialize_json_value(json& js, image4b& value, bool save) {
+    auto width = 0, height = 0;
+    if (!serialize_json_value(js, width, "width", -1, save)) return false;
+    if (!serialize_json_value(js, height, "height", -1, save)) return false;
+    if (!save) value = make_image(width, height, zero4b);
+    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
+        return false;
+    return true;
+}
+template <typename T>
+inline bool serialize_json_value(json& js, volume1f& value, bool save) {
+    auto width = 0, height = 0, depth = 0;
+    if (!serialize_json_value(js, width, "width", -1, save)) return false;
+    if (!serialize_json_value(js, height, "height", -1, save)) return false;
+    if (!serialize_json_value(js, depth, "heidepthght", -1, save)) return false;
+    if (!save) value = make_volume(width, height, depth, 0.0f);
+    if (!serialize_json_values(
+            js, data(value), width * height * depth, "voxels", save))
+        return false;
+    return true;
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
@@ -569,218 +499,6 @@ bool operator==(const image4b& a, const image4b& b) {
 bool operator==(const volume1f& a, const volume1f& b) {
     return a.width == b.width && a.height == b.height && a.depth == b.depth &&
            a.voxels == b.voxels;
-}
-
-// Dumps a json value
-bool serialize_json_value(json& js, int& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number_integer()) return false;
-        value = js.get<int>();
-        return true;
-    }
-}
-bool serialize_json_value(json& js, bool& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_boolean()) return false;
-        value = js.get<bool>();
-        return true;
-    }
-}
-bool serialize_json_value(json& js, unsigned char& value, bool save) {
-    if (save) {
-        js = (int)value;
-        return true;
-    } else {
-        if (!js.is_number_integer()) return false;
-        value = (unsigned char)js.get<int>();
-        return true;
-    }
-}
-bool serialize_json_value(json& js, float& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number()) return false;
-        value = js.get<float>();
-        return true;
-    }
-}
-bool serialize_json_value(json& js, double& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number()) return false;
-        value = js.get<float>();
-        return true;
-    }
-}
-bool serialize_json_value(json& js, string& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_string()) return false;
-        value = js.get<string>();
-        return true;
-    }
-}
-
-template <typename T>
-bool serialize_json_values(json& js, T* values, int num, bool save) {
-    if (save) {
-        js = json::array();
-        for (auto i = 0; i < num; i++) {
-            js.push_back({});
-            if (!serialize_json_value(js.back(), values[i], save)) return false;
-        }
-        return true;
-    } else {
-        if (!js.is_array()) return false;
-        if (js.size() != num) return false;
-        for (auto i = 0; i < num; i++)
-            if (!serialize_json_value(js.at(i), values[i], save)) return false;
-        return true;
-    }
-}
-
-template <typename T>
-bool serialize_json_value(json& js, vector<T>& value, bool save) {
-    if (save) {
-        js = json::array();
-        for (auto i = 0; i < value.size(); i++) {
-            js.push_back({});
-            if (!serialize_json_value(js.back(), value[i], save)) return false;
-        }
-        return true;
-    } else {
-        if (!js.is_array()) return false;
-        value.resize(js.size());
-        for (auto i = 0; i < value.size(); i++)
-            if (!serialize_json_value(js.at(i), value[i], save)) return false;
-        return true;
-    }
-}
-
-bool serialize_json_value(json& js, vec2f& value, bool save) {
-    return serialize_json_values(js, &value.x, 2, save);
-}
-bool serialize_json_value(json& js, vec3f& value, bool save) {
-    return serialize_json_values(js, &value.x, 3, save);
-}
-bool serialize_json_value(json& js, vec4f& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-bool serialize_json_value(json& js, vec2i& value, bool save) {
-    return serialize_json_values(js, &value.x, 2, save);
-}
-bool serialize_json_value(json& js, vec3i& value, bool save) {
-    return serialize_json_values(js, &value.x, 3, save);
-}
-bool serialize_json_value(json& js, vec4i& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-bool serialize_json_value(json& js, vec4b& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-bool serialize_json_value(json& js, mat2f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 4, save);
-}
-bool serialize_json_value(json& js, mat3f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 9, save);
-}
-bool serialize_json_value(json& js, mat4f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 16, save);
-}
-bool serialize_json_value(json& js, frame2f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 6, save);
-}
-bool serialize_json_value(json& js, frame3f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 12, save);
-}
-bool serialize_json_value(json& js, bbox3f& value, bool save) {
-    return serialize_json_values(js, &value.min.x, 6, save);
-}
-
-// Dumps a json value
-template <typename T>
-bool serialize_json_value(
-    json& js, T& value, const char* name, const T& def, bool save) {
-    if (save) {
-        if (value == def) return true;
-        return serialize_json_value(js[name], value, save);
-    } else {
-        if (!js.count(name)) return true;
-        value = def;
-        return serialize_json_value(js.at(name), value, save);
-    }
-}
-
-// Dumps a json value
-template <typename T>
-bool serialize_json_values(
-    json& js, T* values, int num, const char* name, bool save) {
-    if (save) {
-        if (!values || num == 0) return true;
-        return serialize_json_values(js[name], values, num, save);
-    } else {
-        if (!js.count(name)) return true;
-        return serialize_json_values(js.at(name), values, num, save);
-    }
-}
-
-bool serialize_json_value(json& js, image4f& value, bool save) {
-    auto width = 0, height = 0;
-    if (!serialize_json_value(js, width, "width", -1, save)) return false;
-    if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!save) value = make_image(width, height, zero4f);
-    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
-        return false;
-    return true;
-}
-bool serialize_json_value(json& js, image4b& value, bool save) {
-    auto width = 0, height = 0;
-    if (!serialize_json_value(js, width, "width", -1, save)) return false;
-    if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!save) value = make_image(width, height, zero4b);
-    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
-        return false;
-    return true;
-}
-template <typename T>
-bool serialize_json_value(json& js, volume1f& value, bool save) {
-    auto width = 0, height = 0, depth = 0;
-    if (!serialize_json_value(js, width, "width", -1, save)) return false;
-    if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!serialize_json_value(js, depth, "heidepthght", -1, save)) return false;
-    if (!save) value = make_volume(width, height, depth, 0.0f);
-    if (!serialize_json_values(
-            js, data(value), width * height * depth, "voxels", save))
-        return false;
-    return true;
-}
-
-// Check if a JSON value has a key
-bool has_json_key(const json& js, const char* key) {
-    return js.is_object() && js.count(key) > 0;
-}
-
-// Get a value from a JSON key or a default value if any error occurs
-template <typename T>
-T get_json_value(const json& js, const char* key, const T& default_value) {
-    if (!js.is_object()) return default_value;
-    if (js.count(key) <= 0) return default_value;
-    auto value = default_value;
-    if (!serialize_json_value((json&)js.at(key), value, false))
-        return default_value;
-    return value;
 }
 
 // Dumps a json value
