@@ -132,9 +132,11 @@ inline string to_string(const T& value);
 
 // Prints a formatted string to stdout or file.
 template <typename... Args>
+inline bool print(const string& fmt, const Args&... args);
+template <typename... Args>
 inline bool print(FILE* fs, const string& fmt, const Args&... args);
 template <typename... Args>
-inline bool print(const string& fmt, const Args&... args);
+inline bool print(ostream& stream, const string& fmt, const Args&... args);
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
@@ -144,6 +146,8 @@ inline string format_num(uint64_t num);
 // Parse a list of space separated values.
 template <typename... Args>
 inline bool parse(const string& str, Args&... args);
+template <typename... Args>
+inline bool parse(const istream& stream, Args&... args);
 
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time();
@@ -434,13 +438,19 @@ inline string format(const string& fmt, const Args&... args) {
 
 // Prints a string.
 template <typename... Args>
+inline bool print(const string& fmt, const Args&... args) {
+    return print(stdout, fmt, args...);
+}
+template <typename... Args>
 inline bool print(FILE* fs, const string& fmt, const Args&... args) {
     auto str = format(fmt, args...);
     return fprintf(fs, "%s", str.c_str()) >= 0;
 }
 template <typename... Args>
-inline bool print(const string& fmt, const Args&... args) {
-    return print(stdout, fmt, args...);
+inline bool print(ostream& stream, const string& fmt, const Args&... args) {
+    auto str = format(fmt, args...);
+    stream << str;
+    return (bool)stream;
 }
 
 // Converts to string.
