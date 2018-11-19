@@ -98,6 +98,7 @@
 #include <ostream>
 #include <istream>
 #include <sstream>
+#include <fstream>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -112,6 +113,8 @@ using std::thread;
 using std::ostream;
 using std::istream;
 using std::stringstream;
+using std::ifstream;
+using std::ofstream;
 using namespace std::chrono_literals;
 
 }  // namespace yocto
@@ -1400,6 +1403,40 @@ inline void log_io_error(const string& fmt, const Args&... args) {
     log_error(fmt, args...);
 }
 
+// open a stream
+inline bool open_text_stream(const string& filename, ifstream& stream) {
+    stream.open(filename, std::ios::in);
+    if(!stream) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
+    return true;
+}
+inline bool open_binary_stream(const string& filename, ifstream& stream) {
+    stream.open(filename, std::ios::in | std::ios::binary);
+    if(!stream) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
+    return true;
+}
+inline bool open_text_stream(const string& filename, ofstream& stream) {
+    stream.open(filename, std::ios::out);
+    if(!stream) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
+    return true;
+}
+inline bool open_binary_stream(const string& filename, ofstream& stream) {
+    stream.open(filename, std::ios::out | std::ios::binary);
+    if(!stream) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
+    return true;
+}
+
 // File stream wrapper
 struct file_stream {
     string filename = "";
@@ -1549,11 +1586,15 @@ inline bool read_values(file_stream& fs, size_t num, T* vals) {
 // Load a text file
 inline bool load_text(const string& filename, string& str) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
-    auto buffer = vector<char>(get_length(fs));
-    if (!read_values(fs, buffer)) return false;
-    str = string{buffer.begin(), buffer.end()};
+    auto stream = ifstream{};
+    if(!open_text_stream(filename, stream)) return false;
+    stringstream buffer;
+    buffer << stream.rdbuf();
+    if(stream.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
+    str = buffer.str();
     return true;
 }
 
@@ -1568,10 +1609,16 @@ inline bool save_text(const string& filename, const string& str) {
 // Load a binary file
 inline bool load_binary(const string& filename, vector<byte>& data) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
-    data = vector<byte>(get_length(fs));
-    if (!read_values(fs, data)) return false;
+    auto stream = ifstream{};
+    if(!open_text_stream(filename, stream)) return false;
+    stringstream buffer;
+    buffer << stream.rdbuf();
+    if(stream.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
+    auto str = buffer.str();
+    data = vector<byte>((byte*)str.data(), (byte*)str.data() + str.size());
     return true;
 }
 
