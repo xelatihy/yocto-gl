@@ -1842,8 +1842,11 @@ inline bool parse_value(string_view& view, obj_texture_info& info) {
 bool load_mtl(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // currently parsed material
     auto material = obj_material();
@@ -1851,7 +1854,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = string_view{line};
@@ -1942,12 +1945,15 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
 bool load_objx(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // read the file line by line
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = string_view{line.c_str()};
@@ -1990,8 +1996,11 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
 bool load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -1999,7 +2008,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = string_view{line.c_str()};

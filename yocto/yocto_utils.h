@@ -117,6 +117,8 @@ using std::ifstream;
 using std::ofstream;
 using namespace std::chrono_literals;
 
+using std::getline;
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1401,40 +1403,6 @@ namespace yocto {
 template <typename... Args>
 inline void log_io_error(const string& fmt, const Args&... args) {
     log_error(fmt, args...);
-}
-
-// open a stream
-inline bool open_text_stream(const string& filename, ifstream& stream) {
-    stream.open(filename, std::ios::in);
-    if(!stream) {
-        log_io_error("cannot open {}", filename);
-        return false;
-    }
-    return true;
-}
-inline bool open_binary_stream(const string& filename, ifstream& stream) {
-    stream.open(filename, std::ios::in | std::ios::binary);
-    if(!stream) {
-        log_io_error("cannot open {}", filename);
-        return false;
-    }
-    return true;
-}
-inline bool open_text_stream(const string& filename, ofstream& stream) {
-    stream.open(filename, std::ios::out);
-    if(!stream) {
-        log_io_error("cannot open {}", filename);
-        return false;
-    }
-    return true;
-}
-inline bool open_binary_stream(const string& filename, ofstream& stream) {
-    stream.open(filename, std::ios::out | std::ios::binary);
-    if(!stream) {
-        log_io_error("cannot open {}", filename);
-        return false;
-    }
-    return true;
 }
 
 // File stream wrapper
