@@ -471,44 +471,6 @@ inline vec3f rgb_to_hsv(const vec3f& rgb);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Blackbody radiation from wavelength in nm
-inline float blackbody_radiation(float temperature, float wavelength) {
-    // https://en.wikipedia.org/wiki/Planck%27s_law
-    const float c  = 299792458.0f;        // speed of light
-    const float h  = 6.62606957e-34f;     // Planck constant
-    const float kb = 1.3806488e-23f;      // Boltzman constant
-    const auto  l  = wavelength * 1e-9f;  // convert to meters
-    const auto  T  = temperature;
-    return (2 * h * pow(c, 2)) / (pow(l, 5) * (exp((h * c) / (l * kb * T)) - 1));
-}
-
-// XYZ color matching functions
-inline vec3f xyz_color_matching(float wavelength) {
-    // http://jcgt.org/published/0002/02/01/
-    float x_dParam1 = (wavelength - 442.0f) *
-                      ((wavelength < 442.0f) ? 0.0624f : 0.0374f);
-    float x_dParam2 = (wavelength - 599.8f) *
-                      ((wavelength < 599.8f) ? 0.0264f : 0.0323f);
-    float x_dParam3 = (wavelength - 501.1f) *
-                      ((wavelength < 501.1f) ? 0.0490f : 0.0382f);
-    auto x = 0.362f * expf(-0.5f * x_dParam1 * x_dParam1) +
-             1.056f * expf(-0.5f * x_dParam2 * x_dParam2) -
-             0.065f * expf(-0.5f * x_dParam3 * x_dParam3);
-    float y_dParam1 = (wavelength - 568.8f) *
-                      ((wavelength < 568.8f) ? 0.0213f : 0.0247f);
-    float y_dParam2 = (wavelength - 530.9f) *
-                      ((wavelength < 530.9f) ? 0.0613f : 0.0322f);
-    auto y = 0.821f * expf(-0.5f * y_dParam1 * y_dParam1) +
-             0.286f * expf(-0.5f * y_dParam2 * y_dParam2);
-    float z_dParam1 = (wavelength - 437.0f) *
-                      ((wavelength < 437.0f) ? 0.0845f : 0.0278f);
-    float z_dParam2 = (wavelength - 459.0f) *
-                      ((wavelength < 459.0f) ? 0.0385f : 0.0725f);
-    auto z = 1.217f * expf(-0.5f * z_dParam1 * z_dParam1) +
-             0.681f * expf(-0.5f * z_dParam2 * z_dParam2);
-    return {x, y, z};
-}
-
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature) {
     // https://github.com/neilbartlett/color-temperature
