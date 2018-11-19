@@ -966,6 +966,10 @@ bool apply_json_procedural(
             width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
         value.hdr_image = make_uvramp_image(width, height);
+    } else if (type == "gammaramp") {
+        value.hdr_image = make_gammaramp_image(width, height);
+    } else if (type == "blackbodyramp") {
+        value.hdr_image = make_blackbodyramp_image(width, height);
     } else if (type == "uvgrid") {
         value.hdr_image = make_uvgrid_image(width, height);
     } else if (type == "sky") {

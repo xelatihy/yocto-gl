@@ -201,6 +201,7 @@ image4f make_gammaramp_image(int width, int height);
 image4f make_uvramp_image(int width, int height);
 image4f make_uvgrid_image(
     int width, int height, int tile = 8, bool colored = true);
+image4f make_blackbodyramp_image(int width, int height);
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
