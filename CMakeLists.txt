@@ -127,7 +127,7 @@ foreach(filename "uvgrid.png")
              COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
-foreach(filename "image-grid.json" "image-uvgrid.json" "image-checker.json" "image-gammaramp.json" "image-noise.json" "image-fbm.json" "image-turbulence.json" "image-ridge.json")
+foreach(filename "image-grid.json" "image-uvgrid.json" "image-checker.json" "image-gammaramp.json" "image-noise.json" "image-fbm.json" "image-turbulence.json" "image-ridge.json" "image-sky.json" "image-blackbodyramp.json")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
              COMMAND ${test-yimproc} ${testdir}/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
