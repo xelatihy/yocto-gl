@@ -1603,9 +1603,16 @@ inline bool load_text(const string& filename, string& str) {
 
 // Save a text file
 inline bool save_text(const string& filename, const string& str) {
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
-    if (!write_text(fs, str)) return false;
+    auto stream = ofstream(filename);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    stream << str;
+    if(!stream) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 
@@ -1630,9 +1637,16 @@ inline bool load_binary(const string& filename, vector<byte>& data) {
 
 // Save a binary file
 inline bool save_binary(const string& filename, const vector<byte>& data) {
-    auto fs = open(filename.c_str(), "wb");
-    if (!fs) return false;
-    if (!write_values(fs, data)) return false;
+    auto stream = ofstream(filename, std::ios::binary);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    stream.write((char*)data.data(), data.size());
+    if(!stream) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 
