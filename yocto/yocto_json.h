@@ -50,7 +50,6 @@
 
 #include "yocto_math.h"
 #include "yocto_utils.h"
-#include "yocto_image.h"
 
 #include "ext/json.hpp"
 
@@ -236,48 +235,6 @@ inline void from_json(const json& js, bbox3f& val) {
     val       = {vala[0], vala[1]};
 }
 
-inline void to_json(json& js, const image4f& value) {
-    js           = json::object();
-    js["width"]  = value.width;
-    js["height"] = value.height;
-    js["pixels"] = vector<vec4f>{
-        data(value), data(value) + value.width * value.height};
-}
-inline void to_json(json& js, const image4b& value) {
-    js           = json::object();
-    js["width"]  = value.width;
-    js["height"] = value.height;
-    js["pixels"] = vector<vec4b>{
-        data(value), data(value) + value.width * value.height};
-}
-inline void from_json(const json& js, image4f& value) {
-    auto width  = js.at("width").get<int>();
-    auto height = js.at("height").get<int>();
-    auto pixels = js.at("pixels").get<vector<vec4f>>();
-    value       = make_image(width, height, data(pixels));
-}
-inline void from_json(const json& js, image4b& value) {
-    auto width  = js.at("width").get<int>();
-    auto height = js.at("height").get<int>();
-    auto pixels = js.at("pixels").get<vector<vec4b>>();
-    value       = make_image(width, height, data(pixels));
-}
-inline void to_json(json& js, const volume1f& value) {
-    js           = json::object();
-    js["width"]  = value.width;
-    js["height"] = value.height;
-    js["depth"]  = value.width;
-    js["voxels"] = vector<float>{
-        data(value), data(value) + value.width * value.height * value.depth};
-}
-inline void from_json(const json& js, volume1f& value) {
-    auto width  = js.at("width").get<int>();
-    auto height = js.at("height").get<int>();
-    auto depth  = js.at("depth").get<int>();
-    auto voxels = js.at("voxels").get<vector<float>>();
-    value       = make_volume(width, height, depth, data(voxels));
-}
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -435,50 +392,6 @@ inline bool serialize_json_value(
         value = def;
         return serialize_json_value(js.at(name), value, save);
     }
-}
-
-// Dumps a json value
-template <typename T>
-inline bool serialize_json_values(
-    json& js, T* values, int num, const char* name, bool save) {
-    if (save) {
-        if (!values || num == 0) return true;
-        return serialize_json_values(js[name], values, num, save);
-    } else {
-        if (!js.count(name)) return true;
-        return serialize_json_values(js.at(name), values, num, save);
-    }
-}
-
-inline bool serialize_json_value(json& js, image4f& value, bool save) {
-    auto width = 0, height = 0;
-    if (!serialize_json_value(js, width, "width", -1, save)) return false;
-    if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!save) value = make_image(width, height, zero4f);
-    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
-        return false;
-    return true;
-}
-inline bool serialize_json_value(json& js, image4b& value, bool save) {
-    auto width = 0, height = 0;
-    if (!serialize_json_value(js, width, "width", -1, save)) return false;
-    if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!save) value = make_image(width, height, zero4b);
-    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
-        return false;
-    return true;
-}
-template <typename T>
-inline bool serialize_json_value(json& js, volume1f& value, bool save) {
-    auto width = 0, height = 0, depth = 0;
-    if (!serialize_json_value(js, width, "width", -1, save)) return false;
-    if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!serialize_json_value(js, depth, "heidepthght", -1, save)) return false;
-    if (!save) value = make_volume(width, height, depth, 0.0f);
-    if (!serialize_json_values(
-            js, data(value), width * height * depth, "voxels", save))
-        return false;
-    return true;
 }
 
 // Check if a JSON value has a key
