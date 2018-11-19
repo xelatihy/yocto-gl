@@ -1586,8 +1586,11 @@ inline bool read_values(file_stream& fs, size_t num, T* vals) {
 // Load a text file
 inline bool load_text(const string& filename, string& str) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto stream = ifstream{};
-    if(!open_text_stream(filename, stream)) return false;
+    auto stream = ifstream(filename);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
     stringstream buffer;
     buffer << stream.rdbuf();
     if(stream.fail()) {
@@ -1609,8 +1612,11 @@ inline bool save_text(const string& filename, const string& str) {
 // Load a binary file
 inline bool load_binary(const string& filename, vector<byte>& data) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto stream = ifstream{};
-    if(!open_text_stream(filename, stream)) return false;
+    auto stream = ifstream(filename, std::ios::binary);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
     stringstream buffer;
     buffer << stream.rdbuf();
     if(stream.fail()) {
