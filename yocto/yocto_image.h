@@ -23,7 +23,8 @@
 //    sRGB LDR with exposure and an optional filmic curve
 // 5. make various image examples with the `make_XXX_image()` functions
 // 6. create procedural sun-sky images with `make_sunsky_image()`
-// 0. load and save image with Yocto/ImageIO
+// 7. load and save image with Yocto/ImageIO
+// 8. many color conversion functions are available in the code below
 //
 //
 
@@ -49,6 +50,30 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//
+//
+//
+//  LICENSE for blackbody code
+//
+// Copyright (c) 2015 Neil Bartlett
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 //
 
@@ -201,6 +226,8 @@ image4f make_gammaramp_image(int width, int height);
 image4f make_uvramp_image(int width, int height);
 image4f make_uvgrid_image(
     int width, int height, int tile = 8, bool colored = true);
+image4f make_blackbodyramp_image(int width, int height,
+    float start_temperature = 1000, float end_temperature = 12000);
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
@@ -424,6 +451,9 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
     };
 }
 
+// Approximate color of blackbody radiation from wavelength in nm.
+inline vec3f blackbody_to_rgb(float temperature);
+
 // Converts HSV to RGB.
 inline vec3f hsv_to_rgb(const vec3f& hsv);
 inline vec3f rgb_to_hsv(const vec3f& rgb);
@@ -440,6 +470,71 @@ inline vec3f rgb_to_hsv(const vec3f& rgb);
 // IMPLEMENTATION OF COLOR CONVERSION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Approximate color of blackbody radiation from wavelength in nm.
+inline vec3f blackbody_to_rgb(float temperature) {
+    // https://github.com/neilbartlett/color-temperature
+    auto rgb = zero3f;
+    if ((temperature / 100) < 66.0) {
+        rgb.x = 255;
+    } else {
+        // a + b x + c Log[x] /.
+        // {a -> 351.97690566805693`,
+        // b -> 0.114206453784165`,
+        // c -> -40.25366309332127
+        // x -> (kelvin/100) - 55}
+        rgb.x = (temperature / 100) - 55;
+        rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
+                40.25366309332127f * log(rgb.x);
+        if (rgb.x < 0) rgb.x = 0;
+        if (rgb.x > 255) rgb.x = 255;
+    }
+
+    if ((temperature / 100) < 66.0) {
+        // a + b x + c Log[x] /.
+        // {a -> -155.25485562709179`,
+        // b -> -0.44596950469579133`,
+        // c -> 104.49216199393888`,
+        // x -> (kelvin/100) - 2}
+        rgb.y = (temperature / 100) - 2;
+        rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
+                104.49216199393888f * log(rgb.y);
+        if (rgb.y < 0) rgb.y = 0;
+        if (rgb.y > 255) rgb.y = 255;
+    } else {
+        // a + b x + c Log[x] /.
+        // {a -> 325.4494125711974`,
+        // b -> 0.07943456536662342`,
+        // c -> -28.0852963507957`,
+        // x -> (kelvin/100) - 50}
+        rgb.y = (temperature / 100) - 50;
+        rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
+                28.0852963507957f * log(rgb.y);
+        if (rgb.y < 0) rgb.y = 0;
+        if (rgb.y > 255) rgb.y = 255;
+    }
+
+    if ((temperature / 100) >= 66) {
+        rgb.z = 255;
+    } else {
+        if ((temperature / 100) <= 20) {
+            rgb.z = 0;
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> -254.76935184120902`,
+            // b -> 0.8274096064007395`,
+            // c -> 115.67994401066147`,
+            // x -> kelvin/100 - 10}
+            rgb.z = (temperature / 100) - 10;
+            rgb.z = -254.76935184120902 + 0.8274096064007395 * rgb.z +
+                    115.67994401066147 * log(rgb.z);
+            if (rgb.z < 0) rgb.z = 0;
+            if (rgb.z > 255) rgb.z = 255;
+        }
+    }
+
+    return srgb_to_linear(rgb / 255);
+}
 
 // Convert HSV to RGB
 inline vec3f hsv_to_rgb(const vec3f& hsv) {

@@ -47,8 +47,10 @@ bool mkdir(const string& dir) {
 int main(int argc, char** argv) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
-    auto skip_textures  = parse_argument(parser,
+    auto skip_textures = parse_argument(parser,
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
+    auto skip_meshes   = parse_argument(
+        parser, "--skip-meshes/--no-skip-meshes", false, "Disable meshes.");
     auto mesh_filenames = parse_argument(parser,
         "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
     auto mesh_directory = parse_argument(parser, "--mesh-directory", "models/"s,
@@ -67,6 +69,8 @@ int main(int argc, char** argv) {
     auto save_options          = save_scene_options();
     load_options.skip_textures = skip_textures;
     save_options.skip_textures = skip_textures;
+    load_options.skip_meshes   = skip_meshes;
+    save_options.skip_meshes   = skip_meshes;
 
     // load scene
     auto scene = yocto_scene{};
@@ -101,12 +105,14 @@ int main(int argc, char** argv) {
         mesh_directory += '/';
     if (mesh_filenames && get_extension(output) == "json") {
         for (auto& shape : scene.shapes) {
-            if (empty(shape.filename) && shape.positions.size() > 16)
-                shape.filename = mesh_directory + shape.name + ".ply";
+            shape.filename = "";
+            if (shape.positions.size() <= 16) continue;
+            shape.filename = mesh_directory + shape.name + ".ply";
         }
         for (auto& surface : scene.surfaces) {
-            if (empty(surface.filename) && surface.positions.size() > 16)
-                surface.filename = mesh_directory + surface.name + ".obj";
+            surface.filename = "";
+            if (surface.positions.size() <= 16) continue;
+            surface.filename = mesh_directory + surface.name + ".obj";
         }
     }
 
