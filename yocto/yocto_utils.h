@@ -95,6 +95,9 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <ostream>
+#include <istream>
+#include <sstream>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -106,6 +109,9 @@ using std::lock_guard;
 using std::mutex;
 using std::string_view;
 using std::thread;
+using std::ostream;
+using std::istream;
+using std::stringstream;
 using namespace std::chrono_literals;
 
 }  // namespace yocto
@@ -185,6 +191,51 @@ template <typename... Args>
 inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IOSTREAM UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Iostream utilities for basic types
+inline ostream& operator<<(ostream& os, const vec2f& value);
+inline ostream& operator<<(ostream& os, const vec3f& value);
+inline ostream& operator<<(ostream& os, const vec4f& value);
+inline ostream& operator<<(ostream& os, const vec2i& value);
+inline ostream& operator<<(ostream& os, const vec3i& value);
+inline ostream& operator<<(ostream& os, const vec4i& value);
+inline ostream& operator<<(ostream& os, const mat2f& value);
+inline ostream& operator<<(ostream& os, const mat3f& value);
+inline ostream& operator<<(ostream& os, const mat4f& value);
+inline ostream& operator<<(ostream& os, const frame2f& value);
+inline ostream& operator<<(ostream& os, const frame3f& value);
+inline ostream& operator<<(ostream& os, const ray2f& value);
+inline ostream& operator<<(ostream& os, const ray3f& value);
+inline ostream& operator<<(ostream& os, const bbox1f& value);
+inline ostream& operator<<(ostream& os, const bbox2f& value);
+inline ostream& operator<<(ostream& os, const bbox3f& value);
+inline ostream& operator<<(ostream& os, const bbox4f& value);
+
+// Iostream utilities for basic types
+inline istream& operator>>(istream& is, vec2f& value);
+inline istream& operator>>(istream& is, vec3f& value);
+inline istream& operator>>(istream& is, vec4f& value);
+inline istream& operator>>(istream& is, vec2i& value);
+inline istream& operator>>(istream& is, vec3i& value);
+inline istream& operator>>(istream& is, vec4i& value);
+inline istream& operator>>(istream& is, mat2f& value);
+inline istream& operator>>(istream& is, mat3f& value);
+inline istream& operator>>(istream& is, mat4f& value);
+inline istream& operator>>(istream& is, frame2f& value);
+inline istream& operator>>(istream& is, frame3f& value);
+inline istream& operator>>(istream& is, ray2f& value);
+inline istream& operator>>(istream& is, ray3f& value);
+inline istream& operator>>(istream& is, bbox1f& value);
+inline istream& operator>>(istream& is, bbox2f& value);
+inline istream& operator>>(istream& is, bbox3f& value);
+inline istream& operator>>(istream& is, bbox4f& value);
+
+}
 
 // -----------------------------------------------------------------------------
 // IMMEDIATE-MODE COMMAND LINE PARSING
@@ -351,206 +402,34 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Prints basic types
-inline bool print_value(string& str, const string& value) {
-    str += value;
-    return true;
-}
-inline bool print_value(string& str, const char* value) {
-    str += value;
-    return true;
-}
-inline bool print_value(string& str, int value) {
-    str += std::to_string(value);
-    return true;
-}
-inline bool print_value(string& str, float value) {
-    str += std::to_string(value);
-    return true;
-}
-inline bool print_value(string& str, double value) {
-    str += std::to_string(value);
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const T* value) {
-    char buffer[512];
-    sprintf(buffer, "%p", value);
-    str += buffer;
-    return true;
-}
-
-// Print compound types.
-inline bool print_value(string& str, const vec2f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    return true;
-}
-inline bool print_value(string& str, const vec3f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    return true;
-}
-inline bool print_value(string& str, const vec4f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.w);
-    return true;
-}
-inline bool print_value(string& str, const vec2i& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    return true;
-}
-inline bool print_value(string& str, const vec3i& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    return true;
-}
-inline bool print_value(string& str, const vec4i& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.w);
-    return true;
-}
-inline bool print_value(string& str, const mat2f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    return true;
-}
-inline bool print_value(string& str, const mat3f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    return true;
-}
-inline bool print_value(string& str, const mat4f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.w);
-    return true;
-}
-inline bool print_value(string& str, const frame2f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.o);
-    return true;
-}
-inline bool print_value(string& str, const frame3f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.o);
-    return true;
-}
-inline bool print_value(string& str, const bbox1f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox2f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox3f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox4f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox1i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox2i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox3i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox4i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const ray2f& v) {
-    print_value(str, v.o);
-    print_value(str, " ");
-    print_value(str, v.d);
-    print_value(str, " ");
-    print_value(str, v.tmin);
-    print_value(str, " ");
-    print_value(str, v.tmax);
-    return true;
+// Print a value
+template<typename T>
+inline bool print_value(stringstream& stream, const T& value) {
+    stream << value;
+    return (bool)stream;
 }
 
 // Prints a string.
-inline bool print_next(string& str, const string& fmt) {
-    return print_value(str, fmt);
+inline bool print_next(stringstream& stream, const string& fmt) {
+    return print_value(stream, fmt);
 }
 template <typename Arg, typename... Args>
 inline bool print_next(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+    stringstream& stream, const string& fmt, const Arg& arg, const Args&... args) {
     auto pos = fmt.find("{}");
-    if (pos == string::npos) return print_value(str, fmt);
-    if (!print_value(str, fmt.substr(0, pos))) return false;
-    if (!print_value(str, arg)) return false;
-    return print_next(str, fmt.substr(pos + 2), args...);
+    if (pos == string::npos) return print_value(stream, fmt);
+    if (!print_value(stream, fmt.substr(0, pos))) return false;
+    if (!print_value(stream, arg)) return false;
+    return print_next(stream, fmt.substr(pos + 2), args...);
 }
 
 // Formats a string `fmt` with values taken from `args`. Uses `{}` as
 // placeholder.
 template <typename... Args>
 inline string format(const string& fmt, const Args&... args) {
-    auto str = string();
-    print_next(str, fmt, args...);
-    return str;
+    auto stream = stringstream();
+    print_next(stream, fmt, args...);
+    return stream.str();
 }
 
 // Prints a string.
@@ -567,9 +446,9 @@ inline bool print(const string& fmt, const Args&... args) {
 // Converts to string.
 template <typename T>
 inline string to_string(const T& value) {
-    auto str = string();
-    print_value(str, value);
-    return str;
+    auto stream = stringstream();
+    stream << value;
+    return stream.str();
 }
 
 // Prints basic types to string
@@ -902,6 +781,119 @@ inline void set_log_file(const string& filename, bool append) {
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IOSTREAM UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Iostream utilities for basic types
+inline ostream& operator<<(ostream& os, const vec2f& value) {
+    return os << value.x << " " << value.y;
+}
+inline ostream& operator<<(ostream& os, const vec3f& value) {
+    return os << value.x << " " << value.y << " " << value.z;
+}
+inline ostream& operator<<(ostream& os, const vec4f& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
+}
+inline ostream& operator<<(ostream& os, const vec2i& value) {
+    return os << value.x << " " << value.y;
+}
+inline ostream& operator<<(ostream& os, const vec3i& value) {
+    return os << value.x << " " << value.y << " " << value.z;
+}
+inline ostream& operator<<(ostream& os, const vec4i& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
+}
+inline ostream& operator<<(ostream& os, const mat2f& value) {
+    return os << value.x << " " << value.y;
+}
+inline ostream& operator<<(ostream& os, const mat3f& value) {
+    return os << value.x << " " << value.y << " " << value.z;
+}
+inline ostream& operator<<(ostream& os, const mat4f& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
+}
+inline ostream& operator<<(ostream& os, const frame2f& value) {
+    return os << value.x << " " << value.y << " " << value.o;
+}
+inline ostream& operator<<(ostream& os, const frame3f& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.o;
+}
+inline ostream& operator<<(ostream& os, const ray2f& value) {
+    return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
+}
+inline ostream& operator<<(ostream& os, const ray3f& value) {
+    return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
+}
+inline ostream& operator<<(ostream& os, const bbox1f& value) {
+    return os << value.min << " " << value.max;
+}
+inline ostream& operator<<(ostream& os, const bbox2f& value) {
+    return os << value.min << " " << value.max;
+}
+inline ostream& operator<<(ostream& os, const bbox3f& value) {
+    return os << value.min << " " << value.max;
+}
+inline ostream& operator<<(ostream& os, const bbox4f& value) {
+    return os << value.min << " " << value.max;
+}
+
+// Iostream utilities for basic types
+inline istream& operator>>(istream& is, vec2f& value) {
+    return is >> value.x >> value.y;
+}
+inline istream& operator>>(istream& is, vec3f& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline istream& operator>>(istream& is, vec4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline istream& operator>>(istream& is, vec2i& value) {
+    return is >> value.x >> value.y;
+}
+inline istream& operator>>(istream& is, vec3i& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline istream& operator>>(istream& is, vec4i& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline istream& operator>>(istream& is, mat2f& value) {
+    return is >> value.x >> value.y;
+}
+inline istream& operator>>(istream& is, mat3f& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline istream& operator>>(istream& is, mat4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline istream& operator>>(istream& is, frame2f& value) {
+    return is >> value.x >> value.y >> value.o;
+}
+inline istream& operator>>(istream& is, frame3f& value) {
+    return is >> value.x >> value.y >> value.z >> value.o;
+}
+inline istream& operator>>(istream& is, ray2f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
+}
+inline istream& operator>>(istream& is, ray3f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
+}
+inline istream& operator>>(istream& is, bbox1f& value) {
+    return is >> value.min >> value.max;
+}
+inline istream& operator>>(istream& is, bbox2f& value) {
+    return is >> value.min >> value.max;
+}
+inline istream& operator>>(istream& is, bbox3f& value) {
+    return is >> value.min >> value.max;
+}
+inline istream& operator>>(istream& is, bbox4f& value) {
+    return is >> value.min >> value.max;
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
