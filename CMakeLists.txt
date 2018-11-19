@@ -45,7 +45,8 @@ if(MSVC)
 endif(MSVC)
 
 add_library(yocto 
-    yocto/yocto_math.h yocto/yocto_utils.h yocto/yocto_random.h
+    yocto/yocto_math.h yocto/yocto_random.h
+    yocto/yocto_utils.h yocto/yocto_json.h 
     yocto/yocto_shape.h yocto/yocto_shape.cpp
     yocto/yocto_bvh.h yocto/yocto_bvh.cpp
     yocto/yocto_image.h yocto/yocto_image.cpp
@@ -124,6 +125,12 @@ foreach(filename "uvgrid.png")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
              COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
+             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
+endforeach()
+foreach(filename "image-grid.json" "image-uvgrid.json" "image-checker.json" "image-gammaramp.json" "image-noise.json" "image-fbm.json" "image-turbulence.json" "image-ridge.json" "image-sky.json" "image-blackbodyramp.json")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yimproc-${filename}
+             COMMAND ${test-yimproc} ${testdir}/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomis")

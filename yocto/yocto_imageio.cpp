@@ -28,6 +28,7 @@
 
 #include "yocto_imageio.h"
 #include "yocto_utils.h"
+#include "yocto_json.h"
 
 #include <climits>
 #include <cstdlib>
@@ -357,6 +358,97 @@ bool load_stbi_image_from_memory(const byte* data, int data_size, image4f& img) 
     return true;
 }
 
+bool apply_json_procedural(const json& js, image4f& img) {
+    auto type = get_json_value(js, "type", ""s);
+    auto width = get_json_value(js, "width", 512);
+    auto height = get_json_value(js, "height", 512);
+    if(type == "") {
+        img = make_image(width, height, zero4f);
+    } else if (type == "grid") {
+        img = make_grid_image(width, height,
+            get_json_value(js, "tile", 8),
+            get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+            get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
+    } else if (type == "checker") {
+        img = make_checker_image(width, height,
+            get_json_value(js, "tile", 8),
+            get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+            get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
+    } else if (type == "bump") {
+        img = make_bumpdimple_image(
+            width, height, get_json_value(js, "tile", 8));
+    } else if (type == "uvramp") {
+        img = make_uvramp_image(width, height);
+    } else if (type == "gammaramp") {
+        img = make_gammaramp_image(width, height);
+    } else if (type == "blackbodyramp") {
+        img = make_blackbodyramp_image(width, height);
+    } else if (type == "uvgrid") {
+        img = make_uvgrid_image(width, height);
+    } else if (type == "sky") {
+        if (width < height * 2) width = height * 2;
+        img = make_sunsky_image(width, height,
+            get_json_value(js, "sun_angle", pif / 4),
+            get_json_value(js, "turbidity", 3.0f),
+            get_json_value(js, "has_sun", false),
+            get_json_value(js, "sun_angle_scale", 1.0f),
+            get_json_value(js, "sun_emission_scale", 1.0f),
+            get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
+    } else if (type == "noise") {
+        img = make_noise_image(width, height,
+            get_json_value(js, "scale", 1.0f), get_json_value(js, "wrap", true));
+    } else if (type == "fbm") {
+        img = make_fbm_image(width, height,
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
+            get_json_value(js, "wrap", true));
+    } else if (type == "ridge") {
+        img = make_ridge_image(width, height,
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "gain", 0.5f), get_json_value(js, "offset", 1.0f),
+            get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
+    } else if (type == "turbulence") {
+        img = make_turbulence_image(width, height,
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
+            get_json_value(js, "wrap", true));
+    } else {
+        log_error("unknown image type {}", type);
+        return false;
+    }
+    if (get_json_value(js, "bump_to_normal", false)) {
+        img = bump_to_normal_map(
+            img, get_json_value(js, "bump_scale", 1.0f));
+    }
+    return true;
+}
+
+bool apply_json_procedural(const json& js, image4b& img) {
+    auto imgf = image4f{};
+    if(!apply_json_procedural(js, imgf)) return false;
+    auto srgb = get_json_value(js, "srgb", true);
+    if(srgb) imgf = linear_to_srgb(imgf);
+    img = float_to_byte(imgf);
+    return true;
+}
+
+// load a JSON image
+bool load_json_image(const string& filename, image4f& img) {
+    auto js = json();
+    if(!load_json(filename, js)) return false;
+    if(!apply_json_procedural(js, img)) return false;
+    return true;
+}
+bool load_json_image(const string& filename, image4b& img) {
+    auto js = json();
+    if(!load_json(filename, js)) return false;
+    if(!apply_json_procedural(js, img)) return false;
+    return true;
+}
+
 // check hdr extensions
 bool is_hdr_filename(const string& filename) {
     auto ext = get_extension(filename);
@@ -392,6 +484,8 @@ bool load_image_nolog(const string& filename, image4f& img) {
         if (!load_stb_image(filename, img8)) return false;
         img = srgb_to_linear(byte_to_float(img8));
         return true;
+    } else if (ext == "json" || ext == "JSON") {
+        return load_json_image(filename, img);
     } else {
         log_io_error("unsupported image format {}", ext);
         return false;
@@ -464,6 +558,8 @@ bool load_image_nolog(const string& filename, image4b& img) {
         return load_stb_image(filename, img);
     } else if (ext == "bmp" || ext == "BMP") {
         return load_stb_image(filename, img);
+    } else if (ext == "json" || ext == "JSON") {
+        return load_json_image(filename, img);
     } else {
         log_io_error("unsupported image format {}", ext);
         return false;

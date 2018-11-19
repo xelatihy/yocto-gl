@@ -51,7 +51,8 @@
         "iosfwd": "cpp",
         "istream": "cpp",
         "cassert": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "atomic": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "cmake.buildDirectory": "${workspaceRoot}/build/vscode",
