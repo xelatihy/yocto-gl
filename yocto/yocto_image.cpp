@@ -271,12 +271,15 @@ image4f make_uvgrid_image(int width, int height, int tiles, bool colored) {
 }
 
 // Makes a blackbody ramp
-image4f make_blackbodyramp_image(int width, int height) {
-    auto img  = make_image(width, height, zero4f);
+image4f make_blackbodyramp_image(
+    int width, int height, float start_temperature, float end_temperature) {
+    auto img = make_image(width, height, zero4f);
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
-            auto temperature = 400.0f + (700.0f - 400.0f) * (float)i / (float)(img.width - 1);
-            auto rgb = xyz_to_rgb(blackbody_to_xyz(temperature));
+            auto temperature = start_temperature +
+                               (end_temperature - start_temperature) *
+                                   (float)i / (float)(img.width - 1);
+            auto rgb      = blackbody_to_rgb(temperature);
             at(img, i, j) = {rgb.x, rgb.y, rgb.z, 1};
         }
     }

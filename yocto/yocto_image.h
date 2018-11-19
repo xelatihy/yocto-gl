@@ -201,7 +201,8 @@ image4f make_gammaramp_image(int width, int height);
 image4f make_uvramp_image(int width, int height);
 image4f make_uvgrid_image(
     int width, int height, int tile = 8, bool colored = true);
-image4f make_blackbodyramp_image(int width, int height);
+image4f make_blackbodyramp_image(int width, int height,
+    float start_temperature = 1000, float end_temperature = 12000);
 
 // Comvert a bump map to a normal map.
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
@@ -426,7 +427,7 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
 }
 
 // Blackbody radiation from wavelength in nm
-inline vec3f blackbody_to_xyz(float temperature, int nsamples = 9);
+inline vec3f blackbody_to_rgb(float temperature);
 
 // Converts HSV to RGB.
 inline vec3f hsv_to_rgb(const vec3f& hsv);
@@ -483,11 +484,14 @@ inline vec3f xyz_color_matching(float wavelength) {
     return {x, y, z};
 }
 
-// Blackbody radiation from wavelength in nm
-inline vec3f blackbody_to_xyz(float temperature, int nsamples) {
+#if 0
+
+// Blackbody radiation from wavelength in nm. The values are normalized to the maximum channel value.
+inline vec3f blackbody_to_rgb(float temperature) {
     auto xyz              = zero3f;
     auto start_wavelength = 400.0f;
     auto end_wavelength   = 700.0f;
+    auto nsamples = 9;
     for (auto i = 0; i < nsamples; i++) {
         auto wavelength = start_wavelength +
                           (end_wavelength - start_wavelength) / (nsamples - 1);
@@ -495,8 +499,82 @@ inline vec3f blackbody_to_xyz(float temperature, int nsamples) {
                blackbody_radiation(temperature, wavelength);
     }
     xyz /= nsamples;
-    return xyz;
+    auto rgb = xyz_to_rgb(xyz);
+    rgb /= max(rgb);
+    return rgb;
 }
+
+#else
+
+// Approximate color of blackbody radiation from wavelength in nm.
+inline vec3f blackbody_to_rgb(float temperature) {
+    auto rgb = zero3f;
+    if ((temperature / 100) < 66.0) {
+        rgb.x = 255;
+    } else {
+        // a + b x + c Log[x] /.
+        // {a -> 351.97690566805693`,
+        // b -> 0.114206453784165`,
+        // c -> -40.25366309332127
+        // x -> (kelvin/100) - 55}
+        rgb.x = (temperature / 100) - 55;
+        rgb.x = 351.97690566805693f + 0.114206453784165f * rgb.x -
+                40.25366309332127f * log(rgb.x);
+        if (rgb.x < 0) rgb.x = 0;
+        if (rgb.x > 255) rgb.x = 255;
+    }
+
+    /* Calculate rgb.y */
+
+    if ((temperature / 100) < 66.0) {
+        // a + b x + c Log[x] /.
+        // {a -> -155.25485562709179`,
+        // b -> -0.44596950469579133`,
+        // c -> 104.49216199393888`,
+        // x -> (kelvin/100) - 2}
+        rgb.y = (temperature / 100) - 2;
+        rgb.y = -155.25485562709179f - 0.44596950469579133f * rgb.y +
+                104.49216199393888f * log(rgb.y);
+        if (rgb.y < 0) rgb.y = 0;
+        if (rgb.y > 255) rgb.y = 255;
+    } else {
+        // a + b x + c Log[x] /.
+        // {a -> 325.4494125711974`,
+        // b -> 0.07943456536662342`,
+        // c -> -28.0852963507957`,
+        // x -> (kelvin/100) - 50}
+        rgb.y = (temperature / 100) - 50;
+        rgb.y = 325.4494125711974f + 0.07943456536662342f * rgb.y -
+                28.0852963507957f * log(rgb.y);
+        if (rgb.y < 0) rgb.y = 0;
+        if (rgb.y > 255) rgb.y = 255;
+    }
+
+    /* Calculate rgb.z */
+
+    if ((temperature / 100) >= 66) {
+        rgb.z = 255;
+    } else {
+        if ((temperature / 100) <= 20) {
+            rgb.z = 0;
+        } else {
+            // a + b x + c Log[x] /.
+            // {a -> -254.76935184120902`,
+            // b -> 0.8274096064007395`,
+            // c -> 115.67994401066147`,
+            // x -> kelvin/100 - 10}
+            rgb.z = (temperature / 100) - 10;
+            rgb.z = -254.76935184120902 + 0.8274096064007395 * rgb.z +
+                    115.67994401066147 * log(rgb.z);
+            if (rgb.z < 0) rgb.z = 0;
+            if (rgb.z > 255) rgb.z = 255;
+        }
+    }
+
+    return srgb_to_linear(rgb / 255);
+}
+
+#endif
 
 // Convert HSV to RGB
 inline vec3f hsv_to_rgb(const vec3f& hsv) {

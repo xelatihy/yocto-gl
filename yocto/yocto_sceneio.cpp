@@ -4063,10 +4063,11 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_emission_vec3f = [&get_vec3f](const json& js) -> vec3f {
         if (js.is_array() && js.size() == 2)
-            return xyz_to_rgb(blackbody_to_xyz(js.at(0).get<float>())) * js.at(1).get<float>();
+            return blackbody_to_rgb(js.at(0).get<float>()) *
+                   js.at(1).get<float>();
         return get_vec3f(js);
     };
-    
+
     auto get_vec4f = [](const json& js) -> vec4f {
         if (js.is_number())
             return {js.get<float>(), js.get<float>(), js.get<float>(),
@@ -4077,7 +4078,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         log_error("cannot handle vec4f");
         return zero4f;
     };
-    
+
     auto get_mat4f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 16) {
             log_error("cannot handle vec4f");
@@ -4170,7 +4171,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         } else if (cmd == "Transform") {
             stack.back().frame = get_mat4f(jcmd.at("values"));
         } else if (cmd == "ConcatTransform") {
-            stack.back().frame = stack.back().frame * get_mat4f(jcmd.at("values"));
+            stack.back().frame = stack.back().frame *
+                                 get_mat4f(jcmd.at("values"));
         } else if (cmd == "Scale") {
             auto v             = get_vec3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame * make_scaling_frame(v);
@@ -4292,8 +4294,12 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
-                    auto matname1 = (jcmd.count("namedmaterial1")) ? jcmd.at("namedmaterial1").get<string>() : ""s;
-                    auto matname2 = (jcmd.count("namedmaterial2")) ? jcmd.at("namedmaterial2").get<string>() : ""s;
+                    auto matname1 = (jcmd.count("namedmaterial1")) ?
+                                        jcmd.at("namedmaterial1").get<string>() :
+                                        ""s;
+                    auto matname2 = (jcmd.count("namedmaterial2")) ?
+                                        jcmd.at("namedmaterial2").get<string>() :
+                                        ""s;
                     // auto amount = get_vec3f(jcmd.at("amount"));
                     auto matname = (!matname1.empty()) ? matname1 : matname2;
                     for (auto& mat : scene.materials) {
@@ -4301,7 +4307,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                             material = mat;
                             break;
                         }
-                    }                    
+                    }
                 } else if (type == "matte") {
                     material.diffuse = {1, 1, 1};
                     if (jcmd.count("Kd"))
@@ -4389,7 +4395,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto filename  = jcmd.at("filename").get<string>();
                 shape.name     = get_filename(filename);
                 shape.filename = filename;
-                if(!options.skip_meshes) {
+                if (!options.skip_meshes) {
                     if (!load_ply_mesh(dirname_ + filename, shape.points,
                             shape.lines, shape.triangles, shape.quads,
                             shape.positions, shape.normals, shape.texturecoords,
@@ -4407,7 +4413,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     shape.normals = get_vector_vec3f(jcmd.at("N"));
                 if (jcmd.count("uv")) {
                     shape.texturecoords = get_vector_vec2f(jcmd.at("uv"));
-                    for(auto& uv : shape.texturecoords) uv.y = 1 - uv.y;
+                    for (auto& uv : shape.texturecoords) uv.y = 1 - uv.y;
                 }
             } else if (type == "sphere") {
                 shape.name     = "sphere" + std::to_string(sid++);
@@ -5197,8 +5203,8 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     }
 
     // fix texture coordinated
-    if(flip_texcoord && !empty(texturecoords)) {
-        for(auto& uv : texturecoords) uv.y = 1 - uv.y;
+    if (flip_texcoord && !empty(texturecoords)) {
+        for (auto& uv : texturecoords) uv.y = 1 - uv.y;
     }
 
     // copy face data
@@ -5248,7 +5254,7 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii, 
+    const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
     auto fs = open(filename, "wb");
     if (!fs) return false;
@@ -5286,7 +5292,11 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         for (auto i = 0; i < positions.size(); i++) {
             if (!empty(positions)) print(fs, "{} ", positions[i]);
             if (!empty(normals)) print(fs, "{} ", normals[i]);
-            if (!empty(texturecoords)) print(fs, "{} ", (!flip_texcoord) ? texturecoords[i] : vec2f{texturecoords[i].x, 1 - texturecoords[i].y});
+            if (!empty(texturecoords))
+                print(fs, "{} ",
+                    (!flip_texcoord) ?
+                        texturecoords[i] :
+                        vec2f{texturecoords[i].x, 1 - texturecoords[i].y});
             if (!empty(colors)) print(fs, "{} ", colors[i]);
             if (!empty(radius)) print(fs, "{} ", radius[i]);
             print(fs, "\n");
@@ -5306,8 +5316,10 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         for (auto i = 0; i < positions.size(); i++) {
             if (!empty(positions)) write_value(fs, positions[i]);
             if (!empty(normals)) write_value(fs, normals[i]);
-            if (!empty(texturecoords)) 
-                write_value(fs, (!flip_texcoord) ? texturecoords[i] :  vec2f{texturecoords[i].x, 1 - texturecoords[i].y});
+            if (!empty(texturecoords))
+                write_value(fs, (!flip_texcoord) ? texturecoords[i] :
+                                                   vec2f{texturecoords[i].x,
+                                                       1 - texturecoords[i].y});
             if (!empty(colors)) write_value(fs, colors[i]);
             if (!empty(radius)) write_value(fs, radius[i]);
         }
@@ -5739,7 +5751,8 @@ bool load_ply(const string& filename, ply_data& ply) {
                 parse_value(view, elem_type);
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
-                if (elem_type != "int" && elem_type != "uint") log_error("unsupported ply list type");
+                if (elem_type != "int" && elem_type != "uint")
+                    log_error("unsupported ply list type");
                 prop.type = ply_type::ply_int_list;
             } else if (type == "float") {
                 prop.type = ply_type::ply_float;
