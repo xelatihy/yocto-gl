@@ -5189,8 +5189,10 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
             if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
             if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
             if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
-            if (prop.name == "u") copy_floats(texturecoords, zero2f, 2, 0);
-            if (prop.name == "v") copy_floats(texturecoords, zero2f, 2, 1);
+            if (prop.name == "u" || prop.name == "s")
+                copy_floats(texturecoords, zero2f, 2, 0);
+            if (prop.name == "v" || prop.name == "t")
+                copy_floats(texturecoords, zero2f, 2, 1);
             if (prop.name == "red") copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
             if (prop.name == "green")
                 copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);
