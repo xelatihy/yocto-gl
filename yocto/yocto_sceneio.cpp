@@ -767,6 +767,22 @@ bool serialize_json_value(json& js, volume1f& value, bool save) {
     return true;
 }
 
+// Check if a JSON value has a key
+bool has_json_key(const json& js, const char* key) {
+    return js.is_object() && js.count(key) > 0;
+}
+
+// Get a value from a JSON key or a default value if any error occurs
+template <typename T>
+T get_json_value(const json& js, const char* key, const T& default_value) {
+    if (!js.is_object()) return default_value;
+    if (js.count(key) <= 0) return default_value;
+    auto value = default_value;
+    if (!serialize_json_value((json&)js.at(key), value, false))
+        return default_value;
+    return value;
+}
+
 // Dumps a json value
 template <typename T>
 bool serialize_json_objref(
@@ -820,7 +836,7 @@ bool serialize_json_objref(
         if (value < 0) return true;
         return serialize_json_objref(js[name], value, refs, save);
     } else {
-        if (!js.count(name)) return true;
+        if (!has_json_key(js, name)) return true;
         value = -1;
         return serialize_json_objref(js.at(name), value, refs, save);
     }
@@ -834,7 +850,7 @@ bool serialize_json_objref(json& js, vector<int>& value, const char* name,
         if (empty(value)) return true;
         return serialize_json_objref(js[name], value, refs, save);
     } else {
-        if (!js.count(name)) return true;
+        if (!has_json_key(js, name)) return true;
         value = {};
         return serialize_json_objref(js.at(name), value, refs, save);
     }
@@ -880,7 +896,7 @@ bool serialize_json_objarray(json& js, vector<T>& value, const char* name,
         if (empty(value)) return true;
         return serialize_json_objarray(js[name], value, scene, save);
     } else {
-        if (!js.count(name)) return true;
+        if (!has_json_key(js, name)) return true;
         value = {};
         return serialize_json_objarray(js.at(name), value, scene, save);
     }
@@ -893,7 +909,7 @@ bool serialize_json_procedural(const json& js, T& value, const char* name,
     if (save) {
         return true;
     } else {
-        if (!js.count(name)) return true;
+        if (!has_json_key(js, name)) return true;
         return apply_json_procedural(js.at(name), value, scene);
     }
 }
@@ -902,10 +918,10 @@ bool serialize_json_procedural(const json& js, T& value, const char* name,
 bool apply_json_procedural(
     const json& js, yocto_camera& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    if (js.count("from") || js.count("to")) {
-        auto from            = js.value("from", zero3f);
-        auto to              = js.value("to", zero3f);
-        auto up              = js.value("up", vec3f{0, 1, 0});
+    if (has_json_key(js, "from") || has_json_key(js, "to")) {
+        auto from            = get_json_value(js, "from", zero3f);
+        auto to              = get_json_value(js, "to", zero3f);
+        auto up              = get_json_value(js, "up", vec3f{0, 1, 0});
         value.frame          = make_lookat_frame(from, to, up);
         value.focus_distance = length(from - to);
     }
@@ -948,22 +964,24 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_texture& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    auto type = js.value("type", ""s);
+    auto type = get_json_value(js, "type", ""s);
     if (type == "") return true;
     auto is_hdr = false;
-    auto width  = js.value("width", 512);
-    auto height = js.value("height", 512);
+    auto width  = get_json_value(js, "width", 512);
+    auto height = get_json_value(js, "height", 512);
     if (type == "grid") {
-        value.hdr_image = make_grid_image(width, height, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
+        value.hdr_image = make_grid_image(width, height,
+            get_json_value(js, "tile", 8),
+            get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+            get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        value.hdr_image = make_checker_image(width, height, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
+        value.hdr_image = make_checker_image(width, height,
+            get_json_value(js, "tile", 8),
+            get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+            get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
         value.hdr_image = make_bumpdimple_image(
-            width, height, js.value("tile", 8));
+            width, height, get_json_value(js, "tile", 8));
     } else if (type == "uvramp") {
         value.hdr_image = make_uvramp_image(width, height);
     } else if (type == "gammaramp") {
@@ -975,35 +993,41 @@ bool apply_json_procedural(
     } else if (type == "sky") {
         if (width < height * 2) width = height * 2;
         value.hdr_image = make_sunsky_image(width, height,
-            js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
-            js.value("has_sun", false), js.value("sun_angle_scale", 1.0f),
-            js.value("sun_emission_scale", 1.0f),
-            js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
+            get_json_value(js, "sun_angle", pif / 4),
+            get_json_value(js, "turbidity", 3.0f),
+            get_json_value(js, "has_sun", false),
+            get_json_value(js, "sun_angle_scale", 1.0f),
+            get_json_value(js, "sun_emission_scale", 1.0f),
+            get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr          = true;
     } else if (type == "noise") {
-        value.hdr_image = make_noise_image(
-            width, height, js.value("scale", 1.0f), js.value("wrap", true));
+        value.hdr_image = make_noise_image(width, height,
+            get_json_value(js, "scale", 1.0f), get_json_value(js, "wrap", true));
     } else if (type == "fbm") {
-        value.hdr_image = make_fbm_image(width, height, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
+        value.hdr_image = make_fbm_image(width, height,
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
+            get_json_value(js, "wrap", true));
     } else if (type == "ridge") {
         value.hdr_image = make_ridge_image(width, height,
-            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
-            js.value("gain", 0.5f), js.value("offset", 1.0f),
-            js.value("octaves", 6), js.value("wrap", true));
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "gain", 0.5f), get_json_value(js, "offset", 1.0f),
+            get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
     } else if (type == "turbulence") {
         value.hdr_image = make_turbulence_image(width, height,
-            js.value("scale", 1.0f), js.value("lacunarity", 2.0f),
-            js.value("gain", 0.5f), js.value("octaves", 6),
-            js.value("wrap", true));
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
+            get_json_value(js, "wrap", true));
     } else {
         log_error("unknown texture type {}", type);
         return false;
     }
-    if (js.value("bump_to_normal", false)) {
+    if (get_json_value(js, "bump_to_normal", false)) {
         value.hdr_image = bump_to_normal_map(
-            value.hdr_image, js.value("bump_scale", 1.0f));
+            value.hdr_image, get_json_value(js, "bump_scale", 1.0f));
         value.ldr_as_linear = true;
     }
     if (!is_hdr) {
@@ -1059,14 +1083,15 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_voltexture& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    auto type = js.value("type", ""s);
+    auto type = get_json_value(js, "type", ""s);
     if (type == "") return true;
-    auto width  = js.value("width", 512);
-    auto height = js.value("height", 512);
-    auto depth  = js.value("depth", 512);
+    auto width  = get_json_value(js, "width", 512);
+    auto height = get_json_value(js, "height", 512);
+    auto depth  = get_json_value(js, "depth", 512);
     if (type == "test_volume") {
         value.volume_data = make_test_volume(width, height, depth,
-            js.value("scale", 10.0f), js.value("exponent", 6.0f));
+            get_json_value(js, "scale", 10.0f),
+            get_json_value(js, "exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);
         return false;
@@ -1181,7 +1206,7 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_shape& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    auto type = js.value("type", ""s);
+    auto type = get_json_value(js, "type", ""s);
     if (type == "") return true;
     value.points        = {};
     value.lines         = {};
@@ -1193,124 +1218,151 @@ bool apply_json_procedural(
     value.radius        = {};
     if (type == "quad") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quady") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quad_stack") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_quad_stack_shape(js.value("steps",
+            value.texturecoords) = make_quad_stack_shape(get_json_value(js,
+                                                             "steps",
                                                              vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cube") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cube_shape(js.value("steps",
+            value.texturecoords) = make_cube_shape(get_json_value(js, "steps",
                                                        vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cube_rounded_shape(js.value("steps",
+            value.texturecoords) = make_cube_rounded_shape(get_json_value(js,
+                                                               "steps",
                                                                vec3i{32, 32, 32}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.3f));
     } else if (type == "sphere") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(js.value("steps",
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
                                                          vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere_cube") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_cube_shape(js.value("steps", 32),
-            js.value("size", 2.0f), js.value("uvsize", 1.0f));
+            value.texturecoords) = make_sphere_cube_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "sphere_flipcap") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_flipcap_shape(js.value("steps",
+            value.texturecoords) = make_sphere_flipcap_shape(get_json_value(js,
+                                                                 "steps",
                                                                  vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}),
             js.value("zflip", vec2f{-0.75f, +0.75f}));
     } else if (type == "disk") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_disk_shape(js.value("steps",
+            value.texturecoords) = make_disk_shape(get_json_value(js, "steps",
                                                        vec2i{32, 16}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "disk_quad") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_disk_quad_shape(js.value("steps", 32),
-            js.value("size", 2.0f), js.value("uvsize", 1.0f));
+            value.texturecoords) = make_disk_quad_shape(get_json_value(js,
+                                                            "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "disk_bulged") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_disk_bulged_shape(js.value("steps", 32),
-            js.value("size", 2.0f), js.value("uvsize", 1.0f),
-            js.value("height", 0.25f));
+            value.texturecoords) = make_disk_bulged_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f),
+            get_json_value(js, "height", 0.25f));
     } else if (type == "cylinder_side") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_side_shape(js.value("steps",
+            value.texturecoords) = make_cylinder_side_shape(get_json_value(js,
+                                                                "steps",
                                                                 vec2i{64, 32}),
-            js.value("size", vec2f{2.0f, 2.0f}), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cylinder") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_shape(js.value("steps",
+            value.texturecoords) = make_cylinder_shape(get_json_value(js, "steps",
                                                            vec3i{64, 32, 16}),
-            js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cylinder_rounded") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_rounded_shape(js.value("steps",
+            value.texturecoords) = make_cylinder_rounded_shape(get_json_value(js,
+                                                                   "steps",
                                                                    vec3i{64, 32,
                                                                        16}),
-            js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f));
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.15f));
     } else if (type == "sphere_geodesic") {
         tie(value.triangles, value.positions,
-            value.normals) = make_geodesic_sphere_shape(js.value("tesselation", 4),
-            js.value("size", 2.0f));
+            value.normals) = make_geodesic_sphere_shape(get_json_value(js,
+                                                            "tesselation", 4),
+            get_json_value(js, "size", 2.0f));
     } else if (type == "floor") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_floor_shape(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}));
+            value.texturecoords) = make_floor_shape(get_json_value(js, "steps",
+                                                        vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{40, 40}),
+            get_json_value(js, "uvsize", vec2f{20, 20}));
     } else if (type == "matball") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(js.value("steps",
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
                                                          vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "hairball") {
         auto [base_quads, base_positions, base_normals,
             base_texturecoords] = make_sphere_cube_shape(32,
-            js.value("size", 2.0f) * 0.8f, 1);
+            get_json_value(js, "size", 2.0f) * 0.8f, 1);
         tie(value.lines, value.positions, value.normals, value.texturecoords,
-            value.radius) = make_hair_shape(js.value("steps", vec2i{4, 65536}),
+            value.radius)       = make_hair_shape(get_json_value(js, "steps",
+                                                vec2i{4, 65536}),
             {}, base_quads, base_positions, base_normals, base_texturecoords,
-            js.value("length", vec2f{0.2f, 0.2f}),
-            js.value("radius", vec2f{0.001f, 0.001f}),
-            js.value("noise", vec2f{0, 0}), js.value("clump", vec2f{0, 0}));
+            get_json_value(js, "length", vec2f{0.2f, 0.2f}),
+            get_json_value(js, "radius", vec2f{0.001f, 0.001f}),
+            get_json_value(js, "noise", vec2f{0, 0}),
+            get_json_value(js, "clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
         tie(value.quads, value.positions, value.normals,
             value.texturecoords) = make_sphere_cube_shape(32,
-            js.value("size", 2.0f) * 0.8f, 1);
+            get_json_value(js, "size", 2.0f) * 0.8f, 1);
     } else if (type == "suzanne") {
         tie(value.quads, value.positions) = make_suzanne_shape(
-            js.value("size", 2.0f));
+            get_json_value(js, "size", 2.0f));
     } else if (type == "cube_posonly") {
         tie(value.quads, value.positions) = make_cube_posonly_shape(
-            js.value("steps", vec3i{1, 1, 1}), js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "steps", vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
         return false;
     }
-    if (!value.quads.empty() && js.value("shell_thickness", 0.0f) > 0) {
+    if (!value.quads.empty() && get_json_value(js, "shell_thickness", 0.0f) > 0) {
         tie(value.quads, value.positions, value.normals,
             value.texturecoords) = make_shell_shape(value.quads,
             value.positions, value.normals, value.texturecoords,
-            js.value("shell_thickness", 0.0f));
+            get_json_value(js, "shell_thickness", 0.0f));
     }
-    if (!value.quads.empty() && js.value("as_triangles", false)) {
+    if (!value.quads.empty() && get_json_value(js, "as_triangles", false)) {
         value.triangles = convert_quads_to_triangles(value.quads);
         value.quads     = {};
     }
-    if (js.value("flipyz", false)) {
+    if (get_json_value(js, "flipyz", false)) {
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
         for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }
@@ -1373,7 +1425,7 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_surface& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    auto type = js.value("type", ""s);
+    auto type = get_json_value(js, "type", ""s);
     if (type == "") return true;
     value.quads_positions     = {};
     value.quads_normals       = {};
@@ -1384,108 +1436,136 @@ bool apply_json_procedural(
     value.texturecoords       = {};
     if (type == "quad") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quady") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{2, 2}), js.value("uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quad_stack") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_quad_stack_shape(js.value("steps",
+            value.texturecoords) = make_quad_stack_shape(get_json_value(js,
+                                                             "steps",
                                                              vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cube") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cube_shape(js.value("steps",
+            value.texturecoords) = make_cube_shape(get_json_value(js, "steps",
                                                        vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cube_rounded_shape(js.value("steps",
+            value.texturecoords) = make_cube_rounded_shape(get_json_value(js,
+                                                               "steps",
                                                                vec3i{32, 32, 32}),
-            js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.3f));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.3f));
     } else if (type == "sphere") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(js.value("steps",
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
                                                          vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere_cube") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_cube_shape(js.value("steps", 32),
-            js.value("size", 2.0f), js.value("uvsize", 1.0f));
+            value.texturecoords) = make_sphere_cube_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "sphere_flipcap") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_flipcap_shape(js.value("steps",
+            value.texturecoords) = make_sphere_flipcap_shape(get_json_value(js,
+                                                                 "steps",
                                                                  vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}),
             js.value("zflip", vec2f{-0.75f, +0.75f}));
     } else if (type == "disk") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_disk_shape(js.value("steps",
+            value.texturecoords) = make_disk_shape(get_json_value(js, "steps",
                                                        vec2i{32, 16}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "disk_quad") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_disk_quad_shape(js.value("steps", 32),
-            js.value("size", 2.0f), js.value("uvsize", 1.0f));
+            value.texturecoords) = make_disk_quad_shape(get_json_value(js,
+                                                            "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "disk_bulged") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_disk_bulged_shape(js.value("steps", 32),
-            js.value("size", 2.0f), js.value("uvsize", 1.0f),
-            js.value("height", 0.25f));
+            value.texturecoords) = make_disk_bulged_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f),
+            get_json_value(js, "height", 0.25f));
     } else if (type == "cylinder_side") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_side_shape(js.value("steps",
+            value.texturecoords) = make_cylinder_side_shape(get_json_value(js,
+                                                                "steps",
                                                                 vec2i{64, 32}),
-            js.value("size", vec2f{2.0f, 2.0f}), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cylinder") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_shape(js.value("steps",
+            value.texturecoords) = make_cylinder_shape(get_json_value(js, "steps",
                                                            vec3i{64, 32, 16}),
-            js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cylinder_rounded") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_rounded_shape(js.value("steps",
+            value.texturecoords) = make_cylinder_rounded_shape(get_json_value(js,
+                                                                   "steps",
                                                                    vec3i{64, 32,
                                                                        16}),
-            js.value("size", vec2f{2.0f, 2.0f}),
-            js.value("uvsize", vec3f{1, 1, 1}), js.value("radius", 0.15f));
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.15f));
     } else if (type == "floor") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_floor_shape(js.value("steps", vec2i{1, 1}),
-            js.value("size", vec2f{40, 40}), js.value("uvsize", vec2f{20, 20}));
+            value.texturecoords) = make_floor_shape(get_json_value(js, "steps",
+                                                        vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{40, 40}),
+            get_json_value(js, "uvsize", vec2f{20, 20}));
     } else if (type == "matball") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(js.value("steps",
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
                                                          vec2i{64, 32}),
-            js.value("size", 2.0f), js.value("uvsize", vec2f{1, 1}));
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "hairball_interior") {
         tie(value.quads_positions, value.positions, value.normals,
             value.texturecoords) = make_sphere_cube_shape(32,
-            js.value("size", 2.0f) * 0.8f, 1);
+            get_json_value(js, "size", 2.0f) * 0.8f, 1);
     } else if (type == "suzanne") {
         tie(value.quads_positions, value.positions) = make_suzanne_shape(
-            js.value("size", 2.0f));
+            get_json_value(js, "size", 2.0f));
     } else if (type == "cube_facevarying") {
         tie(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords) = make_cube_facevarying_shape(js.value("steps",
+            value.texturecoords) = make_cube_facevarying_shape(get_json_value(js,
+                                                                   "steps",
                                                                    vec3i{1, 1, 1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_multiplematerials") {
         tie(value.quads_positions, value.quads_normals, value.quads_texturecoords,
             value.quads_materials, value.positions, value.normals,
-            value.texturecoords) = make_cube_multiplematerials_shape(js.value("steps",
+            value.texturecoords) = make_cube_multiplematerials_shape(get_json_value(js,
+                                                                         "steps",
                                                                          vec3i{1, 1,
                                                                              1}),
-            js.value("size", vec3f{2, 2, 2}), js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_posonly") {
         tie(value.quads_positions, value.positions) = make_cube_posonly_shape(
-            js.value("steps", vec3i{1, 1, 1}), js.value("size", vec3f{2, 2, 2}),
-            js.value("uvsize", vec3f{1, 1, 1}));
+            get_json_value(js, "steps", vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
         return false;
@@ -1494,7 +1574,7 @@ bool apply_json_procedural(
         value.quads_normals = value.quads_positions;
     if (empty(value.quads_texturecoords) && !empty(value.texturecoords))
         value.quads_texturecoords = value.quads_positions;
-    if (js.value("flipyz", false)) {
+    if (get_json_value(js, "flipyz", false)) {
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
         for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }
@@ -1553,16 +1633,17 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_instance& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    if (js.count("from")) {
-        auto from   = js.value("from", zero3f);
-        auto to     = js.value("to", zero3f);
-        auto up     = js.value("up", vec3f{0, 1, 0});
+    if (has_json_key(js, "from")) {
+        auto from   = get_json_value(js, "from", zero3f);
+        auto to     = get_json_value(js, "to", zero3f);
+        auto up     = get_json_value(js, "up", vec3f{0, 1, 0});
         value.frame = make_lookat_frame(from, to, up, true);
     }
-    if (js.count("translation") || js.count("rotation") || js.count("scale")) {
-        auto translation = js.value("translation", zero3f);
-        auto rotation    = js.value("rotation", zero4f);
-        auto scaling     = js.value("scale", vec3f{1, 1, 1});
+    if (has_json_key(js, "translation") || has_json_key(js, "rotation") ||
+        has_json_key(js, "scale")) {
+        auto translation = get_json_value(js, "translation", zero3f);
+        auto rotation    = get_json_value(js, "rotation", zero4f);
+        auto scaling     = get_json_value(js, "scale", vec3f{1, 1, 1});
         value.frame      = make_translation_frame(translation) *
                       make_scaling_frame(scaling) *
                       make_rotation_frame(xyz(rotation), rotation.w);
@@ -1592,8 +1673,8 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_environment& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    if (js.count("rotation")) {
-        auto rotation = js.value("rotation", zero4f);
+    if (has_json_key(js, "rotation")) {
+        auto rotation = get_json_value(js, "rotation", zero4f);
         value.frame   = make_rotation_frame(xyz(rotation), rotation.w);
     }
     return true;
@@ -1622,10 +1703,10 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_scene_node& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    if (js.count("from")) {
-        auto from   = js.value("from", zero3f);
-        auto to     = js.value("to", zero3f);
-        auto up     = js.value("up", vec3f{0, 1, 0});
+    if (has_json_key(js, "from")) {
+        auto from   = get_json_value(js, "from", zero3f);
+        auto to     = get_json_value(js, "to", zero3f);
+        auto up     = get_json_value(js, "up", vec3f{0, 1, 0});
         value.local = make_lookat_frame(from, to, up, true);
     }
     return true;
@@ -1732,7 +1813,7 @@ bool serialize_json_object(
 bool apply_json_procedural(
     const json& js, yocto_animation& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    if (js.count("make_rotation_axisangle")) {
+    if (has_json_key(js, "make_rotation_axisangle")) {
         for (auto& j : js.at("make_rotation_axisangle")) {
             value.rotation_keyframes.push_back(
                 make_rotation_quat(j.get<vec4f>()));
@@ -1745,10 +1826,10 @@ bool apply_json_procedural(
 bool apply_json_procedural(
     const json& js, yocto_scene& value, const yocto_scene& scene) {
     if (!serialize_json_objbegin((json&)js, false)) return false;
-    if (js.count("random_instances")) {
+    if (has_json_key(js, "random_instances")) {
         auto& jjs          = js.at("random_instances");
-        auto  num          = jjs.value("num", 100);
-        auto  seed         = jjs.value("seed", 13);
+        auto  num          = get_json_value(jjs, "num", 100);
+        auto  seed         = get_json_value(jjs, "seed", 13);
         auto  shape_offset = (int)scene.shapes.size();
         auto  num_shapes   = 0;
         auto  base         = yocto_shape();
@@ -2992,27 +3073,28 @@ static bool startswith(const string& str, const string& substr) {
 // convert gltf to scene
 bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) {
     // convert textures
-    if (gltf.count("images")) {
+    if (has_json_key(gltf, "images")) {
         for (auto instance_id = 0; instance_id < gltf.at("images").size();
              instance_id++) {
             auto& gimg       = gltf.at("images").at(instance_id);
             auto  texture    = yocto_texture{};
-            texture.name     = gimg.value("name", ""s);
-            texture.filename = (startswith(gimg.value("uri", ""s), "data:")) ?
+            texture.name     = get_json_value(gimg, "name", ""s);
+            texture.filename = (startswith(
+                                   get_json_value(gimg, "uri", ""s), "data:")) ?
                                    string("[glTF-inline].png") :
-                                   gimg.value("uri", ""s);
+                                   get_json_value(gimg, "uri", ""s);
             scene.textures.push_back(texture);
         }
     }
 
     // load buffers
     auto bmap = vector<vector<byte>>();
-    if (gltf.count("buffers")) {
+    if (has_json_key(gltf, "buffers")) {
         bmap.resize(gltf.at("buffers").size());
         for (auto bid = 0; bid < gltf.at("buffers").size(); bid++) {
             auto& gbuf = gltf.at("buffers").at(bid);
             auto& data = bmap.at(bid);
-            auto  uri  = gbuf.value("uri", ""s);
+            auto  uri  = get_json_value(gbuf, "uri", ""s);
             if (uri == "") continue;
             if (startswith(uri, "data:")) {
                 // assume it is base64 and find ','
@@ -3036,21 +3118,24 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
 
     // add a texture
     auto add_texture = [&scene, &gltf](const json& ginfo, bool force_linear) {
-        if (!gltf.count("images") || !gltf.count("textures")) return -1;
+        if (!has_json_key(gltf, "images") || !has_json_key(gltf, "textures"))
+            return -1;
         if (ginfo.is_null() || empty(ginfo)) return -1;
         if (ginfo.value("index", -1) < 0) return -1;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
         if (empty(gtxt) || gtxt.value("source", -1) < 0) return -1;
         auto texture_id = gtxt.value("source", -1);
-        if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
+        if (!has_json_key(gltf, "samplers") || gtxt.value("sampler", -1) < 0)
             return texture_id;
         auto& gsmp = gltf.at("samplers").at(gtxt.value("sampler", -1));
-        scene.textures[texture_id].clamp_to_edge = gsmp.value("wrapS", ""s) ==
-                                                       "ClampToEdge" ||
-                                                   gsmp.value("wrapT", ""s) ==
-                                                       "ClampToEdge";
-        scene.textures[texture_id].height_scale = gsmp.value("scale", 1.0f) *
-                                                  gsmp.value("strength", 1.0f);
+        scene.textures[texture_id].clamp_to_edge = get_json_value(gsmp, "wrapS",
+                                                       ""s) == "ClampToEdge" ||
+                                                   get_json_value(gsmp, "wrapT",
+                                                       ""s) == "ClampToEdge";
+        scene.textures[texture_id].height_scale = get_json_value(
+                                                      gsmp, "scale", 1.0f) *
+                                                  get_json_value(
+                                                      gsmp, "strength", 1.0f);
         scene.textures[texture_id]
             .ldr_as_linear = force_linear ||
                              is_hdr_filename(scene.textures[texture_id].filename);
@@ -3058,58 +3143,61 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
     };
 
     // convert materials
-    if (gltf.count("materials")) {
+    if (has_json_key(gltf, "materials")) {
         for (auto mid = 0; mid < gltf.at("materials").size(); mid++) {
             auto& gmat        = gltf.at("materials").at(mid);
             auto  material    = yocto_material();
-            material.name     = gmat.value("name", ""s);
-            material.emission = gmat.value("emissiveFactor", zero3f);
-            if (gmat.count("emissiveTexture"))
+            material.name     = get_json_value(gmat, "name", ""s);
+            material.emission = get_json_value(gmat, "emissiveFactor", zero3f);
+            if (has_json_key(gmat, "emissiveTexture"))
                 material.emission_texture = add_texture(
                     gmat.at("emissiveTexture"), false);
-            if (gmat.count("extensions") &&
+            if (has_json_key(gmat, "extensions") &&
                 gmat.at("extensions").count("KHR_materials_pbrSpecularGlossiness")) {
                 material.base_metallic = false;
                 material.gltf_textures = true;
                 auto& gsg              = gmat.at("extensions")
                                 .at("KHR_materials_pbrSpecularGlossiness");
-                auto kb = gsg.value("diffuseFactor", vec4f{1, 1, 1, 1});
+                auto kb = get_json_value(gsg, "diffuseFactor", vec4f{1, 1, 1, 1});
                 material.diffuse  = {kb.x, kb.y, kb.z};
                 material.opacity  = kb.w;
-                material.specular = gsg.value("specularFactor", vec3f{1, 1, 1});
-                material.roughness = 1 - gsg.value("glossinessFactor", 1.0f);
-                if (gsg.count("diffuseTexture"))
+                material.specular = get_json_value(
+                    gsg, "specularFactor", vec3f{1, 1, 1});
+                material.roughness = 1 - get_json_value(
+                                             gsg, "glossinessFactor", 1.0f);
+                if (has_json_key(gsg, "diffuseTexture"))
                     material.diffuse_texture = add_texture(
                         gsg.at("diffuseTexture"), false);
-                if (gsg.count("specularGlossinessTexture"))
+                if (has_json_key(gsg, "specularGlossinessTexture"))
                     material.specular_texture = add_texture(
                         gsg.at("specularGlossinessTexture"), false);
                 material.roughness_texture = material.specular_texture;
-            } else if (gmat.count("pbrMetallicRoughness")) {
+            } else if (has_json_key(gmat, "pbrMetallicRoughness")) {
                 material.base_metallic = true;
                 material.gltf_textures = true;
                 auto& gmr              = gmat.at("pbrMetallicRoughness");
-                auto  kb = gmr.value("baseColorFactor", vec4f{1, 1, 1, 1});
-                material.diffuse   = {kb.x, kb.y, kb.z};
-                material.opacity   = kb.w;
-                auto km            = gmr.value("metallicFactor", 1.0f);
-                material.specular  = {km, km, km};
-                material.roughness = gmr.value("roughnessFactor", 1.0f);
-                if (gmr.count("baseColorTexture"))
+                auto  kb               = get_json_value(
+                    gmr, "baseColorFactor", vec4f{1, 1, 1, 1});
+                material.diffuse  = {kb.x, kb.y, kb.z};
+                material.opacity  = kb.w;
+                auto km           = get_json_value(gmr, "metallicFactor", 1.0f);
+                material.specular = {km, km, km};
+                material.roughness = get_json_value(gmr, "roughnessFactor", 1.0f);
+                if (has_json_key(gmr, "baseColorTexture"))
                     material.diffuse_texture = add_texture(
                         gmr.at("baseColorTexture"), false);
-                if (gmr.count("metallicRoughnessTexture"))
+                if (has_json_key(gmr, "metallicRoughnessTexture"))
                     material.specular_texture = add_texture(
                         gmr.at("metallicRoughnessTexture"), true);
                 material.roughness_texture = material.specular_texture;
             }
-            if (gmat.count("occlusionTexture"))
+            if (has_json_key(gmat, "occlusionTexture"))
                 material.occlusion_texture = add_texture(
                     gmat.at("occlusionTexture"), true);
-            if (gmat.count("normalTexture"))
+            if (has_json_key(gmat, "normalTexture"))
                 material.normal_texture = add_texture(
                     gmat.at("normalTexture"), true);
-            material.double_sided = gmat.value("doubleSided", true);
+            material.double_sided = get_json_value(gmat, "doubleSided", true);
             scene.materials.push_back(material);
         }
     }
@@ -3120,11 +3208,12 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             bool normalize = false) -> vector<std::array<double, 4>> {
         auto gview  = gltf.at("bufferViews").at(gacc.value("bufferView", -1));
         auto data   = bmap.at(gview.value("buffer", -1)).data();
-        auto offset = gacc.value("byteOffset", 0) + gview.value("byteOffset", 0);
-        auto stride      = gview.value("byteStride", 0);
-        auto compTypeNum = gacc.value("componentType", 5123);
+        auto offset = get_json_value(gacc, "byteOffset", 0) +
+                      get_json_value(gview, "byteOffset", 0);
+        auto stride      = get_json_value(gview, "byteStride", 0);
+        auto compTypeNum = get_json_value(gacc, "componentType", 5123);
         auto count       = gacc.value("count", -1);
-        auto type        = gacc.value("type", ""s);
+        auto type        = get_json_value(gacc, "type", ""s);
         auto ncomp       = 0;
         if (type == "SCALAR") ncomp = 1;
         if (type == "VEC2") ncomp = 2;
@@ -3171,15 +3260,15 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
 
     // convert meshes
     auto meshes = vector<vector<int>>();
-    if (gltf.count("meshes")) {
+    if (has_json_key(gltf, "meshes")) {
         for (auto mid = 0; mid < gltf.at("meshes").size(); mid++) {
             auto& gmesh = gltf.at("meshes").at(mid);
             meshes.push_back({});
             auto sid = 0;
             for (auto& gprim : gmesh.value("primitives", json::array())) {
-                if (!gprim.count("attributes")) continue;
+                if (!has_json_key(gprim, "attributes")) continue;
                 auto shape = yocto_shape();
-                shape.name = gmesh.value("name", ""s) +
+                shape.name = get_json_value(gmesh, "name", ""s) +
                              ((sid) ? std::to_string(sid) : string());
                 sid++;
                 for (json::iterator gattr_it = gprim.at("attributes").begin();
@@ -3226,8 +3315,8 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                     }
                 }
                 // indices
-                auto mode = gprim.value("mode", 4);
-                if (!gprim.count("indices")) {
+                auto mode = get_json_value(gprim, "mode", 4);
+                if (!has_json_key(gprim, "indices")) {
                     if (mode == 4) {
                         // triangles
                         shape.triangles.reserve(shape.positions.size() / 3);
@@ -3316,7 +3405,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                         log_error("unknown primitive type");
                     }
                 }
-                shape.material = gprim.count("material") ?
+                shape.material = has_json_key(gprim, "material") ?
                                      gprim.value("material", -1) :
                                      -1;
                 scene.shapes.push_back(shape);
@@ -3326,47 +3415,53 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
     }
 
     // convert cameras
-    if (gltf.count("cameras")) {
+    if (has_json_key(gltf, "cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
             auto& gcam          = gltf.at("cameras").at(cid);
             auto  camera        = yocto_camera{};
-            camera.name         = gcam.value("name", ""s);
-            camera.orthographic = gcam.value("type", ""s) == "orthographic";
+            camera.name         = get_json_value(gcam, "name", ""s);
+            camera.orthographic = get_json_value(gcam, "type", ""s) ==
+                                  "orthographic";
             if (camera.orthographic) {
                 log_error("orthographic not supported well");
                 auto ortho = gcam.value("orthographic", json::object());
                 camera.lens_aperture = 0;
-                set_camera_perspective(camera, ortho.value("ymag", 0.0f),
-                    ortho.value("xmag", 0.0f) / ortho.value("ymag", 0.0f),
+                set_camera_perspective(camera,
+                    get_json_value(ortho, "ymag", 0.0f),
+                    get_json_value(ortho, "xmag", 0.0f) /
+                        get_json_value(ortho, "ymag", 0.0f),
                     float_max);
             } else {
                 auto persp = gcam.value("perspective", json::object());
                 camera.lens_aperture = 0;
-                set_camera_perspective(camera, persp.value("yfov", 1.0f),
-                    persp.value("aspectRatio", 1.0f), float_max);
+                set_camera_perspective(camera,
+                    get_json_value(persp, "yfov", 1.0f),
+                    get_json_value(persp, "aspectRatio", 1.0f), float_max);
             }
             scene.cameras.push_back(camera);
         }
     }
 
     // convert nodes
-    if (gltf.count("nodes")) {
+    if (has_json_key(gltf, "nodes")) {
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
             auto  node = yocto_scene_node{};
-            node.name  = gnde.value("name", ""s);
-            if (gnde.count("camera")) node.camera = gnde.value("camera", 0);
-            node.translation = gnde.value("translation", zero3f);
-            node.rotation    = gnde.value("rotation", vec4f{0, 0, 0, 1});
-            node.scale       = gnde.value("scale", vec3f{1, 1, 1});
-            node.local = mat_to_frame(gnde.value("matrix", identity_mat4f));
+            node.name  = get_json_value(gnde, "name", ""s);
+            if (has_json_key(gnde, "camera"))
+                node.camera = get_json_value(gnde, "camera", 0);
+            node.translation = get_json_value(gnde, "translation", zero3f);
+            node.rotation = get_json_value(gnde, "rotation", vec4f{0, 0, 0, 1});
+            node.scale    = get_json_value(gnde, "scale", vec3f{1, 1, 1});
+            node.local    = mat_to_frame(
+                get_json_value(gnde, "matrix", identity_mat4f));
             scene.nodes.push_back(node);
         }
 
         // set up parent pointers
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            if (!gnde.count("children")) continue;
+            if (!has_json_key(gnde, "children")) continue;
             for (auto& cid : gnde.at("children"))
                 scene.nodes[cid.get<int>()].parent = nid;
         }
@@ -3374,9 +3469,9 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
         // set up instances
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            if (!gnde.count("mesh")) continue;
+            if (!has_json_key(gnde, "mesh")) continue;
             auto  node = scene.nodes[nid];
-            auto& shps = meshes.at(gnde.value("mesh", 0));
+            auto& shps = meshes.at(get_json_value(gnde, "mesh", 0));
             if (empty(shps)) continue;
             if (shps.size() == 1) {
                 auto instance  = yocto_instance();
@@ -3402,7 +3497,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
     }
 
     // convert animations
-    if (gltf.count("animations")) {
+    if (has_json_key(gltf, "animations")) {
         for (auto& ganm : gltf.at("animations")) {
             auto aid         = 0;
             auto sampler_map = unordered_map<vec2i, int>();
@@ -3418,17 +3513,18 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
                     auto animation = yocto_animation{};
-                    animation.name = (ganm.count("name") ?
-                                             ganm.value("name", ""s) :
+                    animation.name = (has_json_key(ganm, "name") ?
+                                             get_json_value(ganm, "name", ""s) :
                                              "anim") +
                                      std::to_string(aid++);
-                    animation.animation_group = ganm.value("name", ""s);
+                    animation.animation_group = get_json_value(ganm, "name", ""s);
                     auto input_view           = accessor_values(
                         gltf.at("accessors").at(gsampler.value("input", -1)));
                     animation.keyframes_times.resize(input_view.size());
                     for (auto i = 0; i < input_view.size(); i++)
                         animation.keyframes_times[i] = input_view[i][0];
-                    auto type = gsampler.value("interpolation", "LINEAR");
+                    auto type = get_json_value(
+                        gsampler, "interpolation", "LINEAR"s);
                     if (type == "LINEAR")
                         animation.interpolation_type = yocto_interpolation_type::linear;
                     if (type == "STEP")
@@ -4258,18 +4354,19 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     mat_map[material.name] = (int)scene.materials.size() - 1;
                 }
                 auto type = "uber"s;
-                if (jcmd.count("type")) type = jcmd.at("type").get<string>();
+                if (has_json_key(jcmd, "type"))
+                    type = jcmd.at("type").get<string>();
                 if (type == "uber") {
-                    if (jcmd.count("Kd"))
+                    if (has_json_key(jcmd, "Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
-                    if (jcmd.count("Ks"))
+                    if (has_json_key(jcmd, "Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
-                    if (jcmd.count("Kt"))
+                    if (has_json_key(jcmd, "Kt"))
                         get_scaled_texture(jcmd.at("Kt"), material.transmission,
                             material.transmission_texture);
-                    if (jcmd.count("opacity")) {
+                    if (has_json_key(jcmd, "opacity")) {
                         auto op     = vec3f{0, 0, 0};
                         auto op_txt = -1;
                         get_scaled_texture(jcmd.at("opacity"), op, op_txt);
@@ -4278,26 +4375,26 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     }
                     material.roughness = 0;
                 } else if (type == "plastic") {
-                    if (jcmd.count("Kd"))
+                    if (has_json_key(jcmd, "Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
-                    if (jcmd.count("Ks"))
+                    if (has_json_key(jcmd, "Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "translucent") {
-                    if (jcmd.count("Kd"))
+                    if (has_json_key(jcmd, "Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
-                    if (jcmd.count("Ks"))
+                    if (has_json_key(jcmd, "Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
-                    auto matname1 = (jcmd.count("namedmaterial1")) ?
+                    auto matname1 = (has_json_key(jcmd, "namedmaterial1")) ?
                                         jcmd.at("namedmaterial1").get<string>() :
                                         ""s;
-                    auto matname2 = (jcmd.count("namedmaterial2")) ?
+                    auto matname2 = (has_json_key(jcmd, "namedmaterial2")) ?
                                         jcmd.at("namedmaterial2").get<string>() :
                                         ""s;
                     // auto amount = get_vec3f(jcmd.at("amount"));
@@ -4310,7 +4407,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     }
                 } else if (type == "matte") {
                     material.diffuse = {1, 1, 1};
-                    if (jcmd.count("Kd"))
+                    if (has_json_key(jcmd, "Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
                     material.roughness = 1;
@@ -4324,27 +4421,27 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.specular  = pbrt_fresnel_metal(1, eta, k);
                     material.roughness = 0;
                 } else if (type == "substrate") {
-                    if (jcmd.count("Kd"))
+                    if (has_json_key(jcmd, "Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
                     material.specular = {0.04f, 0.04f, 0.04f};
-                    if (jcmd.count("Ks"))
+                    if (has_json_key(jcmd, "Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "glass") {
                     material.specular     = {0.04f, 0.04f, 0.04f};
                     material.transmission = {1, 1, 1};
-                    if (jcmd.count("Ks"))
+                    if (has_json_key(jcmd, "Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
-                    if (jcmd.count("Kt"))
+                    if (has_json_key(jcmd, "Kt"))
                         get_scaled_texture(jcmd.at("Kt"), material.transmission,
                             material.transmission_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
                     log_warning("mix material not properly supported");
-                    if (jcmd.count("namedmaterial1")) {
+                    if (has_json_key(jcmd, "namedmaterial1")) {
                         auto mat1 = jcmd.at("namedmaterial1").get<string>();
                         auto saved_name = material.name;
                         material        = scene.materials[mat_map.at(mat1)];
@@ -4356,18 +4453,18 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.diffuse = {1, 0, 0};
                     log_error("{} material not supported", type);
                 }
-                if (jcmd.count("uroughness")) {
-                    auto remap = js.count("remaproughness") &&
+                if (has_json_key(jcmd, "uroughness")) {
+                    auto remap = has_json_key(js, "remaproughness") &&
                                  js.at("remaproughness").get<bool>();
-                    if (jcmd.count("uroughness"))
+                    if (has_json_key(jcmd, "uroughness"))
                         material.roughness = jcmd.at("uroughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
                     if (remap) log_error("remap roughness not supported");
                 }
-                if (jcmd.count("roughness")) {
-                    auto remap = js.count("remaproughness") &&
+                if (has_json_key(jcmd, "roughness")) {
+                    auto remap = has_json_key(js, "remaproughness") &&
                                  js.at("remaproughness").get<bool>();
-                    if (jcmd.count("roughness"))
+                    if (has_json_key(jcmd, "roughness"))
                         material.roughness = jcmd.at("roughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
                     if (remap) log_error("remap roughness not supported");
@@ -4405,13 +4502,13 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             } else if (type == "trianglemesh") {
                 shape.name     = "mesh" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
-                if (jcmd.count("indices"))
+                if (has_json_key(jcmd, "indices"))
                     shape.triangles = get_vector_vec3i(jcmd.at("indices"));
-                if (jcmd.count("P"))
+                if (has_json_key(jcmd, "P"))
                     shape.positions = get_vector_vec3f(jcmd.at("P"));
-                if (jcmd.count("N"))
+                if (has_json_key(jcmd, "N"))
                     shape.normals = get_vector_vec3f(jcmd.at("N"));
-                if (jcmd.count("uv")) {
+                if (has_json_key(jcmd, "uv")) {
                     shape.texturecoords = get_vector_vec2f(jcmd.at("uv"));
                     for (auto& uv : shape.texturecoords) uv.y = 1 - uv.y;
                 }
@@ -4419,7 +4516,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.name     = "sphere" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
                 auto radius    = 1.0f;
-                if (jcmd.count("radius"))
+                if (has_json_key(jcmd, "radius"))
                     radius = jcmd.at("radius").get<float>();
                 tie(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords) = make_sphere_shape({64, 32},
@@ -4428,7 +4525,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.name     = "disk" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
                 auto radius    = 1.0f;
-                if (jcmd.count("radius"))
+                if (has_json_key(jcmd, "radius"))
                     radius = jcmd.at("radius").get<float>();
                 tie(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords) = make_disk_shape({32, 16}, 2 * radius,
@@ -4491,9 +4588,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 environment.emission = {1, 1, 1};
                 // log_info("stack frame: {}", stack.back().frame);
                 // log_info("env   frame: {}", environment.frame);
-                if (jcmd.count("scale"))
+                if (has_json_key(jcmd, "scale"))
                     environment.emission *= get_vec3f(jcmd.at("scale"));
-                if (jcmd.count("mapname")) {
+                if (has_json_key(jcmd, "mapname")) {
                     auto texture     = yocto_texture{};
                     texture.filename = jcmd.at("mapname").get<string>();
                     texture.name     = environment.name;
@@ -4507,8 +4604,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& shape = scene.shapes.back();
                 shape.name  = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
-                if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
-                if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
+                if (has_json_key(jcmd, "from"))
+                    from = get_vec3f(jcmd.at("from"));
+                if (has_json_key(jcmd, "to")) to = get_vec3f(jcmd.at("to"));
                 auto dir                 = normalize(from - to);
                 auto size                = distant_dist * sin(5 * pif / 180);
                 tie(shape.quads, shape.positions, shape.normals,
@@ -4519,9 +4617,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.material    = scene.materials.size() - 1;
                 material.name     = shape.name;
                 material.emission = {1, 1, 1};
-                if (jcmd.count("L"))
+                if (has_json_key(jcmd, "L"))
                     material.emission *= get_emission_vec3f(jcmd.at("L"));
-                if (jcmd.count("scale"))
+                if (has_json_key(jcmd, "scale"))
                     material.emission *= get_vec3f(jcmd.at("scale"));
                 material.emission *= (distant_dist * distant_dist) /
                                      (size * size);
