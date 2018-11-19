@@ -4504,8 +4504,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             } else if (type == "distant") {
                 auto distant_dist = 100;
                 scene.shapes.push_back({});
-                auto& shape        = scene.shapes.back();
-                shape.name        = "distant" + std::to_string(lid++);
+                auto& shape = scene.shapes.back();
+                shape.name  = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
