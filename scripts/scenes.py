@@ -83,6 +83,7 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):
         if not os.path.isdir(dirname): continue
         if '/_' in dirname: continue
+        if '-instanced' in dirname and outformat == 'obj': continue
         os.system(f'rm -rf {dirname}/meshes')
         if clean_models: os.system(f'rm -rf {dirname}/meshes')
         os.system(f'mkdir -p {dirname}/models')

@@ -178,7 +178,7 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = image4f();
-        if (!load_image(alpha_filename, alpha))
+        if (!load_image(coloralpha_filename, alpha))
             log_fatal("cannot load image {}", coloralpha_filename);
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size");
@@ -186,7 +186,7 @@ int main(int argc, char* argv[]) {
         }
         for (auto j = 0; j < img.height; j++)
             for (auto i = 0; i < img.width; i++)
-                at(img, i, j).w = mean(at(alpha, i, j));
+                at(img, i, j).w = mean(xyz(at(alpha, i, j)));
     }
 
     // resize
