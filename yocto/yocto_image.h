@@ -23,7 +23,8 @@
 //    sRGB LDR with exposure and an optional filmic curve
 // 5. make various image examples with the `make_XXX_image()` functions
 // 6. create procedural sun-sky images with `make_sunsky_image()`
-// 0. load and save image with Yocto/ImageIO
+// 7. load and save image with Yocto/ImageIO
+// 8. many color conversion functions are available in the code below
 //
 //
 
@@ -49,6 +50,30 @@
 // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
+//
+//
+//
+//  LICENSE for blackbody code
+//
+// Copyright (c) 2015 Neil Bartlett
+//
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in
+// all copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+// THE SOFTWARE.
 //
 //
 
@@ -426,7 +451,7 @@ inline vec3f rgb_to_xyz(const vec3f& rgb) {
     };
 }
 
-// Blackbody radiation from wavelength in nm
+// Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature);
 
 // Converts HSV to RGB.
@@ -484,30 +509,9 @@ inline vec3f xyz_color_matching(float wavelength) {
     return {x, y, z};
 }
 
-#if 0
-
-// Blackbody radiation from wavelength in nm. The values are normalized to the maximum channel value.
-inline vec3f blackbody_to_rgb(float temperature) {
-    auto xyz              = zero3f;
-    auto start_wavelength = 400.0f;
-    auto end_wavelength   = 700.0f;
-    auto nsamples = 9;
-    for (auto i = 0; i < nsamples; i++) {
-        auto wavelength = start_wavelength +
-                          (end_wavelength - start_wavelength) / (nsamples - 1);
-        xyz += xyz_color_matching(wavelength) *
-               blackbody_radiation(temperature, wavelength);
-    }
-    xyz /= nsamples;
-    auto rgb = xyz_to_rgb(xyz);
-    rgb /= max(rgb);
-    return rgb;
-}
-
-#else
-
 // Approximate color of blackbody radiation from wavelength in nm.
 inline vec3f blackbody_to_rgb(float temperature) {
+    // https://github.com/neilbartlett/color-temperature
     auto rgb = zero3f;
     if ((temperature / 100) < 66.0) {
         rgb.x = 255;
@@ -573,8 +577,6 @@ inline vec3f blackbody_to_rgb(float temperature) {
 
     return srgb_to_linear(rgb / 255);
 }
-
-#endif
 
 // Convert HSV to RGB
 inline vec3f hsv_to_rgb(const vec3f& hsv) {
