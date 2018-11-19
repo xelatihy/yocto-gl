@@ -773,12 +773,13 @@ bool has_json_key(const json& js, const char* key) {
 }
 
 // Get a value from a JSON key or a default value if any error occurs
-template<typename T>
+template <typename T>
 T get_json_value(const json& js, const char* key, const T& default_value) {
-    if(!js.is_object()) return default_value;
-    if(js.count(key) <= 0) return default_value;
+    if (!js.is_object()) return default_value;
+    if (js.count(key) <= 0) return default_value;
     auto value = default_value;
-    if(!serialize_json_value((json&)js.at(key), value, false)) return default_value;
+    if (!serialize_json_value((json&)js.at(key), value, false))
+        return default_value;
     return value;
 }
 
@@ -969,11 +970,13 @@ bool apply_json_procedural(
     auto width  = get_json_value(js, "width", 512);
     auto height = get_json_value(js, "height", 512);
     if (type == "grid") {
-        value.hdr_image = make_grid_image(width, height, get_json_value(js, "tile", 8),
+        value.hdr_image = make_grid_image(width, height,
+            get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        value.hdr_image = make_checker_image(width, height, get_json_value(js, "tile", 8),
+        value.hdr_image = make_checker_image(width, height,
+            get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
@@ -990,26 +993,32 @@ bool apply_json_procedural(
     } else if (type == "sky") {
         if (width < height * 2) width = height * 2;
         value.hdr_image = make_sunsky_image(width, height,
-            get_json_value(js, "sun_angle", pif / 4), get_json_value(js, "turbidity", 3.0f),
-            get_json_value(js, "has_sun", false), get_json_value(js, "sun_angle_scale", 1.0f),
+            get_json_value(js, "sun_angle", pif / 4),
+            get_json_value(js, "turbidity", 3.0f),
+            get_json_value(js, "has_sun", false),
+            get_json_value(js, "sun_angle_scale", 1.0f),
             get_json_value(js, "sun_emission_scale", 1.0f),
             get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
         is_hdr          = true;
     } else if (type == "noise") {
-        value.hdr_image = make_noise_image(
-            width, height, get_json_value(js, "scale", 1.0f), get_json_value(js, "wrap", true));
+        value.hdr_image = make_noise_image(width, height,
+            get_json_value(js, "scale", 1.0f), get_json_value(js, "wrap", true));
     } else if (type == "fbm") {
-        value.hdr_image = make_fbm_image(width, height, get_json_value(js, "scale", 1.0f),
-            get_json_value(js, "lacunarity", 2.0f), get_json_value(js, "gain", 0.5f),
-            get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
+        value.hdr_image = make_fbm_image(width, height,
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
+            get_json_value(js, "wrap", true));
     } else if (type == "ridge") {
         value.hdr_image = make_ridge_image(width, height,
-            get_json_value(js, "scale", 1.0f), get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "offset", 1.0f),
             get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
     } else if (type == "turbulence") {
         value.hdr_image = make_turbulence_image(width, height,
-            get_json_value(js, "scale", 1.0f), get_json_value(js, "lacunarity", 2.0f),
+            get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
             get_json_value(js, "wrap", true));
     } else {
@@ -1081,7 +1090,8 @@ bool apply_json_procedural(
     auto depth  = get_json_value(js, "depth", 512);
     if (type == "test_volume") {
         value.volume_data = make_test_volume(width, height, depth,
-            get_json_value(js, "scale", 10.0f), get_json_value(js, "exponent", 6.0f));
+            get_json_value(js, "scale", 10.0f),
+            get_json_value(js, "exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);
         return false;
@@ -1208,87 +1218,124 @@ bool apply_json_procedural(
     value.radius        = {};
     if (type == "quad") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(get_json_value(js, "steps", vec2i{1, 1}),
-            get_json_value(js, "size", vec2f{2, 2}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quady") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(get_json_value(js, "steps", vec2i{1, 1}),
-            get_json_value(js, "size", vec2f{2, 2}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quad_stack") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_quad_stack_shape(get_json_value(js, "steps", vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_stack_shape(get_json_value(js,
+                                                             "steps",
+                                                             vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cube") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cube_shape(get_json_value(js, "steps", vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}), get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+            value.texturecoords) = make_cube_shape(get_json_value(js, "steps",
+                                                       vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cube_rounded_shape(get_json_value(js, "steps", vec3i{32, 32, 32}),
+            value.texturecoords) = make_cube_rounded_shape(get_json_value(js,
+                                                               "steps",
+                                                               vec3i{32, 32, 32}),
             get_json_value(js, "size", vec3f{2, 2, 2}),
-            get_json_value(js, "uvsize", vec3f{1, 1, 1}), get_json_value(js, "radius", 0.3f));
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.3f));
     } else if (type == "sphere") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         vec2i{64, 32}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere_cube") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_cube_shape(get_json_value(js, "steps", 32),
+            value.texturecoords) = make_sphere_cube_shape(get_json_value(js,
+                                                              "steps", 32),
             get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "sphere_flipcap") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_flipcap_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}),
+            value.texturecoords) = make_sphere_flipcap_shape(get_json_value(js,
+                                                                 "steps",
+                                                                 vec2i{64, 32}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}),
             js.value("zflip", vec2f{-0.75f, +0.75f}));
     } else if (type == "disk") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_disk_shape(get_json_value(js, "steps", vec2i{32, 16}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_disk_shape(get_json_value(js, "steps",
+                                                       vec2i{32, 16}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "disk_quad") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_disk_quad_shape(get_json_value(js, "steps", 32),
+            value.texturecoords) = make_disk_quad_shape(get_json_value(js,
+                                                            "steps", 32),
             get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "disk_bulged") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_disk_bulged_shape(get_json_value(js, "steps", 32),
+            value.texturecoords) = make_disk_bulged_shape(get_json_value(js,
+                                                              "steps", 32),
             get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f),
             get_json_value(js, "height", 0.25f));
     } else if (type == "cylinder_side") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_side_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", vec2f{2.0f, 2.0f}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_cylinder_side_shape(get_json_value(js,
+                                                                "steps",
+                                                                vec2i{64, 32}),
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cylinder") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_shape(get_json_value(js, "steps", vec3i{64, 32, 16}),
+            value.texturecoords) = make_cylinder_shape(get_json_value(js, "steps",
+                                                           vec3i{64, 32, 16}),
             get_json_value(js, "size", vec2f{2.0f, 2.0f}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cylinder_rounded") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_rounded_shape(get_json_value(js, "steps", vec3i{64, 32, 16}),
+            value.texturecoords) = make_cylinder_rounded_shape(get_json_value(js,
+                                                                   "steps",
+                                                                   vec3i{64, 32,
+                                                                       16}),
             get_json_value(js, "size", vec2f{2.0f, 2.0f}),
-            get_json_value(js, "uvsize", vec3f{1, 1, 1}), get_json_value(js, "radius", 0.15f));
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.15f));
     } else if (type == "sphere_geodesic") {
         tie(value.triangles, value.positions,
-            value.normals) = make_geodesic_sphere_shape(get_json_value(js, "tesselation", 4),
+            value.normals) = make_geodesic_sphere_shape(get_json_value(js,
+                                                            "tesselation", 4),
             get_json_value(js, "size", 2.0f));
     } else if (type == "floor") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_floor_shape(get_json_value(js, "steps", vec2i{1, 1}),
-            get_json_value(js, "size", vec2f{40, 40}), get_json_value(js, "uvsize", vec2f{20, 20}));
+            value.texturecoords) = make_floor_shape(get_json_value(js, "steps",
+                                                        vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{40, 40}),
+            get_json_value(js, "uvsize", vec2f{20, 20}));
     } else if (type == "matball") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         vec2i{64, 32}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "hairball") {
         auto [base_quads, base_positions, base_normals,
             base_texturecoords] = make_sphere_cube_shape(32,
             get_json_value(js, "size", 2.0f) * 0.8f, 1);
         tie(value.lines, value.positions, value.normals, value.texturecoords,
-            value.radius) = make_hair_shape(get_json_value(js, "steps", vec2i{4, 65536}),
+            value.radius)       = make_hair_shape(get_json_value(js, "steps",
+                                                vec2i{4, 65536}),
             {}, base_quads, base_positions, base_normals, base_texturecoords,
             get_json_value(js, "length", vec2f{0.2f, 0.2f}),
             get_json_value(js, "radius", vec2f{0.001f, 0.001f}),
-            get_json_value(js, "noise", vec2f{0, 0}), get_json_value(js, "clump", vec2f{0, 0}));
+            get_json_value(js, "noise", vec2f{0, 0}),
+            get_json_value(js, "clump", vec2f{0, 0}));
     } else if (type == "hairball_interior") {
         tie(value.quads, value.positions, value.normals,
             value.texturecoords) = make_sphere_cube_shape(32,
@@ -1298,7 +1345,8 @@ bool apply_json_procedural(
             get_json_value(js, "size", 2.0f));
     } else if (type == "cube_posonly") {
         tie(value.quads, value.positions) = make_cube_posonly_shape(
-            get_json_value(js, "steps", vec3i{1, 1, 1}), get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "steps", vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
@@ -1388,73 +1436,107 @@ bool apply_json_procedural(
     value.texturecoords       = {};
     if (type == "quad") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(get_json_value(js, "steps", vec2i{1, 1}),
-            get_json_value(js, "size", vec2f{2, 2}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quady") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_quad_shape(get_json_value(js, "steps", vec2i{1, 1}),
-            get_json_value(js, "size", vec2f{2, 2}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_shape(get_json_value(js, "steps",
+                                                       vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "quad_stack") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_quad_stack_shape(get_json_value(js, "steps", vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_quad_stack_shape(get_json_value(js,
+                                                             "steps",
+                                                             vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cube") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cube_shape(get_json_value(js, "steps", vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}), get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+            value.texturecoords) = make_cube_shape(get_json_value(js, "steps",
+                                                       vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cube_rounded_shape(get_json_value(js, "steps", vec3i{32, 32, 32}),
+            value.texturecoords) = make_cube_rounded_shape(get_json_value(js,
+                                                               "steps",
+                                                               vec3i{32, 32, 32}),
             get_json_value(js, "size", vec3f{2, 2, 2}),
-            get_json_value(js, "uvsize", vec3f{1, 1, 1}), get_json_value(js, "radius", 0.3f));
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.3f));
     } else if (type == "sphere") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         vec2i{64, 32}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere_cube") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_cube_shape(get_json_value(js, "steps", 32),
+            value.texturecoords) = make_sphere_cube_shape(get_json_value(js,
+                                                              "steps", 32),
             get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "sphere_flipcap") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_flipcap_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}),
+            value.texturecoords) = make_sphere_flipcap_shape(get_json_value(js,
+                                                                 "steps",
+                                                                 vec2i{64, 32}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}),
             js.value("zflip", vec2f{-0.75f, +0.75f}));
     } else if (type == "disk") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_disk_shape(get_json_value(js, "steps", vec2i{32, 16}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_disk_shape(get_json_value(js, "steps",
+                                                       vec2i{32, 16}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "disk_quad") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_disk_quad_shape(get_json_value(js, "steps", 32),
+            value.texturecoords) = make_disk_quad_shape(get_json_value(js,
+                                                            "steps", 32),
             get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f));
     } else if (type == "disk_bulged") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_disk_bulged_shape(get_json_value(js, "steps", 32),
+            value.texturecoords) = make_disk_bulged_shape(get_json_value(js,
+                                                              "steps", 32),
             get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f),
             get_json_value(js, "height", 0.25f));
     } else if (type == "cylinder_side") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_side_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", vec2f{2.0f, 2.0f}), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_cylinder_side_shape(get_json_value(js,
+                                                                "steps",
+                                                                vec2i{64, 32}),
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cylinder") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_shape(get_json_value(js, "steps", vec3i{64, 32, 16}),
+            value.texturecoords) = make_cylinder_shape(get_json_value(js, "steps",
+                                                           vec3i{64, 32, 16}),
             get_json_value(js, "size", vec2f{2.0f, 2.0f}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cylinder_rounded") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cylinder_rounded_shape(get_json_value(js, "steps", vec3i{64, 32, 16}),
+            value.texturecoords) = make_cylinder_rounded_shape(get_json_value(js,
+                                                                   "steps",
+                                                                   vec3i{64, 32,
+                                                                       16}),
             get_json_value(js, "size", vec2f{2.0f, 2.0f}),
-            get_json_value(js, "uvsize", vec3f{1, 1, 1}), get_json_value(js, "radius", 0.15f));
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}),
+            get_json_value(js, "radius", 0.15f));
     } else if (type == "floor") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_floor_shape(get_json_value(js, "steps", vec2i{1, 1}),
-            get_json_value(js, "size", vec2f{40, 40}), get_json_value(js, "uvsize", vec2f{20, 20}));
+            value.texturecoords) = make_floor_shape(get_json_value(js, "steps",
+                                                        vec2i{1, 1}),
+            get_json_value(js, "size", vec2f{40, 40}),
+            get_json_value(js, "uvsize", vec2f{20, 20}));
     } else if (type == "matball") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps", vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         vec2i{64, 32}),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "hairball_interior") {
         tie(value.quads_positions, value.positions, value.normals,
             value.texturecoords) = make_sphere_cube_shape(32,
@@ -1465,16 +1547,24 @@ bool apply_json_procedural(
     } else if (type == "cube_facevarying") {
         tie(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords) = make_cube_facevarying_shape(get_json_value(js, "steps", vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}), get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+            value.texturecoords) = make_cube_facevarying_shape(get_json_value(js,
+                                                                   "steps",
+                                                                   vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_multiplematerials") {
         tie(value.quads_positions, value.quads_normals, value.quads_texturecoords,
             value.quads_materials, value.positions, value.normals,
-            value.texturecoords) = make_cube_multiplematerials_shape(get_json_value(js, "steps", vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}), get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+            value.texturecoords) = make_cube_multiplematerials_shape(get_json_value(js,
+                                                                         "steps",
+                                                                         vec3i{1, 1,
+                                                                             1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_posonly") {
         tie(value.quads_positions, value.positions) = make_cube_posonly_shape(
-            get_json_value(js, "steps", vec3i{1, 1, 1}), get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "steps", vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
@@ -1549,7 +1639,8 @@ bool apply_json_procedural(
         auto up     = get_json_value(js, "up", vec3f{0, 1, 0});
         value.frame = make_lookat_frame(from, to, up, true);
     }
-    if (has_json_key(js, "translation") || has_json_key(js, "rotation") || has_json_key(js, "scale")) {
+    if (has_json_key(js, "translation") || has_json_key(js, "rotation") ||
+        has_json_key(js, "scale")) {
         auto translation = get_json_value(js, "translation", zero3f);
         auto rotation    = get_json_value(js, "rotation", zero4f);
         auto scaling     = get_json_value(js, "scale", vec3f{1, 1, 1});
@@ -2988,7 +3079,8 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             auto& gimg       = gltf.at("images").at(instance_id);
             auto  texture    = yocto_texture{};
             texture.name     = get_json_value(gimg, "name", ""s);
-            texture.filename = (startswith(get_json_value(gimg, "uri", ""s), "data:")) ?
+            texture.filename = (startswith(
+                                   get_json_value(gimg, "uri", ""s), "data:")) ?
                                    string("[glTF-inline].png") :
                                    get_json_value(gimg, "uri", ""s);
             scene.textures.push_back(texture);
@@ -3026,7 +3118,8 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
 
     // add a texture
     auto add_texture = [&scene, &gltf](const json& ginfo, bool force_linear) {
-        if (!has_json_key(gltf, "images") || !has_json_key(gltf, "textures")) return -1;
+        if (!has_json_key(gltf, "images") || !has_json_key(gltf, "textures"))
+            return -1;
         if (ginfo.is_null() || empty(ginfo)) return -1;
         if (ginfo.value("index", -1) < 0) return -1;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
@@ -3035,12 +3128,14 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
         if (!has_json_key(gltf, "samplers") || gtxt.value("sampler", -1) < 0)
             return texture_id;
         auto& gsmp = gltf.at("samplers").at(gtxt.value("sampler", -1));
-        scene.textures[texture_id].clamp_to_edge = get_json_value(gsmp, "wrapS", ""s) ==
-                                                       "ClampToEdge" ||
-                                                   get_json_value(gsmp, "wrapT", ""s) ==
-                                                       "ClampToEdge";
-        scene.textures[texture_id].height_scale = get_json_value(gsmp, "scale", 1.0f) *
-                                                  get_json_value(gsmp, "strength", 1.0f);
+        scene.textures[texture_id].clamp_to_edge = get_json_value(gsmp, "wrapS",
+                                                       ""s) == "ClampToEdge" ||
+                                                   get_json_value(gsmp, "wrapT",
+                                                       ""s) == "ClampToEdge";
+        scene.textures[texture_id].height_scale = get_json_value(
+                                                      gsmp, "scale", 1.0f) *
+                                                  get_json_value(
+                                                      gsmp, "strength", 1.0f);
         scene.textures[texture_id]
             .ldr_as_linear = force_linear ||
                              is_hdr_filename(scene.textures[texture_id].filename);
@@ -3066,8 +3161,10 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                 auto kb = get_json_value(gsg, "diffuseFactor", vec4f{1, 1, 1, 1});
                 material.diffuse  = {kb.x, kb.y, kb.z};
                 material.opacity  = kb.w;
-                material.specular = get_json_value(gsg, "specularFactor", vec3f{1, 1, 1});
-                material.roughness = 1 - get_json_value(gsg, "glossinessFactor", 1.0f);
+                material.specular = get_json_value(
+                    gsg, "specularFactor", vec3f{1, 1, 1});
+                material.roughness = 1 - get_json_value(
+                                             gsg, "glossinessFactor", 1.0f);
                 if (has_json_key(gsg, "diffuseTexture"))
                     material.diffuse_texture = add_texture(
                         gsg.at("diffuseTexture"), false);
@@ -3079,11 +3176,12 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                 material.base_metallic = true;
                 material.gltf_textures = true;
                 auto& gmr              = gmat.at("pbrMetallicRoughness");
-                auto  kb = get_json_value(gmr, "baseColorFactor", vec4f{1, 1, 1, 1});
-                material.diffuse   = {kb.x, kb.y, kb.z};
-                material.opacity   = kb.w;
-                auto km            = get_json_value(gmr, "metallicFactor", 1.0f);
-                material.specular  = {km, km, km};
+                auto  kb               = get_json_value(
+                    gmr, "baseColorFactor", vec4f{1, 1, 1, 1});
+                material.diffuse  = {kb.x, kb.y, kb.z};
+                material.opacity  = kb.w;
+                auto km           = get_json_value(gmr, "metallicFactor", 1.0f);
+                material.specular = {km, km, km};
                 material.roughness = get_json_value(gmr, "roughnessFactor", 1.0f);
                 if (has_json_key(gmr, "baseColorTexture"))
                     material.diffuse_texture = add_texture(
@@ -3110,7 +3208,8 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             bool normalize = false) -> vector<std::array<double, 4>> {
         auto gview  = gltf.at("bufferViews").at(gacc.value("bufferView", -1));
         auto data   = bmap.at(gview.value("buffer", -1)).data();
-        auto offset = get_json_value(gacc, "byteOffset", 0) + get_json_value(gview, "byteOffset", 0);
+        auto offset = get_json_value(gacc, "byteOffset", 0) +
+                      get_json_value(gview, "byteOffset", 0);
         auto stride      = get_json_value(gview, "byteStride", 0);
         auto compTypeNum = get_json_value(gacc, "componentType", 5123);
         auto count       = gacc.value("count", -1);
@@ -3321,18 +3420,22 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             auto& gcam          = gltf.at("cameras").at(cid);
             auto  camera        = yocto_camera{};
             camera.name         = get_json_value(gcam, "name", ""s);
-            camera.orthographic = get_json_value(gcam, "type", ""s) == "orthographic";
+            camera.orthographic = get_json_value(gcam, "type", ""s) ==
+                                  "orthographic";
             if (camera.orthographic) {
                 log_error("orthographic not supported well");
                 auto ortho = gcam.value("orthographic", json::object());
                 camera.lens_aperture = 0;
-                set_camera_perspective(camera, get_json_value(ortho, "ymag", 0.0f),
-                    get_json_value(ortho, "xmag", 0.0f) / get_json_value(ortho, "ymag", 0.0f),
+                set_camera_perspective(camera,
+                    get_json_value(ortho, "ymag", 0.0f),
+                    get_json_value(ortho, "xmag", 0.0f) /
+                        get_json_value(ortho, "ymag", 0.0f),
                     float_max);
             } else {
                 auto persp = gcam.value("perspective", json::object());
                 camera.lens_aperture = 0;
-                set_camera_perspective(camera, get_json_value(persp, "yfov", 1.0f),
+                set_camera_perspective(camera,
+                    get_json_value(persp, "yfov", 1.0f),
                     get_json_value(persp, "aspectRatio", 1.0f), float_max);
             }
             scene.cameras.push_back(camera);
@@ -3345,11 +3448,13 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             auto& gnde = gltf.at("nodes").at(nid);
             auto  node = yocto_scene_node{};
             node.name  = get_json_value(gnde, "name", ""s);
-            if (has_json_key(gnde, "camera")) node.camera = get_json_value(gnde, "camera", 0);
+            if (has_json_key(gnde, "camera"))
+                node.camera = get_json_value(gnde, "camera", 0);
             node.translation = get_json_value(gnde, "translation", zero3f);
-            node.rotation    = get_json_value(gnde, "rotation", vec4f{0, 0, 0, 1});
-            node.scale       = get_json_value(gnde, "scale", vec3f{1, 1, 1});
-            node.local = mat_to_frame(get_json_value(gnde, "matrix", identity_mat4f));
+            node.rotation = get_json_value(gnde, "rotation", vec4f{0, 0, 0, 1});
+            node.scale    = get_json_value(gnde, "scale", vec3f{1, 1, 1});
+            node.local    = mat_to_frame(
+                get_json_value(gnde, "matrix", identity_mat4f));
             scene.nodes.push_back(node);
         }
 
@@ -3418,7 +3523,8 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                     animation.keyframes_times.resize(input_view.size());
                     for (auto i = 0; i < input_view.size(); i++)
                         animation.keyframes_times[i] = input_view[i][0];
-                    auto type = get_json_value(gsampler, "interpolation", "LINEAR"s);
+                    auto type = get_json_value(
+                        gsampler, "interpolation", "LINEAR"s);
                     if (type == "LINEAR")
                         animation.interpolation_type = yocto_interpolation_type::linear;
                     if (type == "STEP")
@@ -4248,7 +4354,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     mat_map[material.name] = (int)scene.materials.size() - 1;
                 }
                 auto type = "uber"s;
-                if (has_json_key(jcmd, "type")) type = jcmd.at("type").get<string>();
+                if (has_json_key(jcmd, "type"))
+                    type = jcmd.at("type").get<string>();
                 if (type == "uber") {
                     if (has_json_key(jcmd, "Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
@@ -4497,7 +4604,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& shape = scene.shapes.back();
                 shape.name  = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
-                if (has_json_key(jcmd, "from")) from = get_vec3f(jcmd.at("from"));
+                if (has_json_key(jcmd, "from"))
+                    from = get_vec3f(jcmd.at("from"));
                 if (has_json_key(jcmd, "to")) to = get_vec3f(jcmd.at("to"));
                 auto dir                 = normalize(from - to);
                 auto size                = distant_dist * sin(5 * pif / 180);
