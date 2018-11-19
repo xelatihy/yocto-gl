@@ -490,8 +490,6 @@ inline vec3f blackbody_to_rgb(float temperature) {
         if (rgb.x > 255) rgb.x = 255;
     }
 
-    /* Calculate rgb.y */
-
     if ((temperature / 100) < 66.0) {
         // a + b x + c Log[x] /.
         // {a -> -155.25485562709179`,
@@ -515,8 +513,6 @@ inline vec3f blackbody_to_rgb(float temperature) {
         if (rgb.y < 0) rgb.y = 0;
         if (rgb.y > 255) rgb.y = 255;
     }
-
-    /* Calculate rgb.z */
 
     if ((temperature / 100) >= 66) {
         rgb.z = 255;
