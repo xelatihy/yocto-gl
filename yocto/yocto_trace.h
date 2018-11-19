@@ -219,6 +219,9 @@ float evaluate_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
 vec3f sample_phase_function(float vg, const vec2f& u);
 float evaluate_phase_function(float cos_theta, float vg);
 
+// Get a complex ior table with keys the metal name and values (eta, etak)
+const unordered_map<string, pair<vec3f, vec3f>>& get_metal_ior_table();
+
 }  // namespace yocto
 
 #endif

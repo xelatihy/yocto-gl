@@ -966,6 +966,10 @@ bool apply_json_procedural(
             width, height, js.value("tile", 8));
     } else if (type == "uvramp") {
         value.hdr_image = make_uvramp_image(width, height);
+    } else if (type == "gammaramp") {
+        value.hdr_image = make_gammaramp_image(width, height);
+    } else if (type == "blackbodyramp") {
+        value.hdr_image = make_blackbodyramp_image(width, height);
     } else if (type == "uvgrid") {
         value.hdr_image = make_uvgrid_image(width, height);
     } else if (type == "sky") {
@@ -3258,7 +3262,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                             shape.lines.push_back({i - 1, i});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        printf("points not supported\n");
+                        log_error("points not supported");
                     } else {
                         log_error("unknown primitive type");
                     }
@@ -3307,7 +3311,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                                 {(int)indices[i - 1][0], (int)indices[i][0]});
                     } else if (mode == -1 || mode == 0) {
                         // points
-                        printf("points not supported\n");
+                        log_error("points not supported");
                     } else {
                         log_error("unknown primitive type");
                     }
@@ -3329,7 +3333,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             camera.name         = gcam.value("name", ""s);
             camera.orthographic = gcam.value("type", ""s) == "orthographic";
             if (camera.orthographic) {
-                printf("orthographic not supported well\n");
+                log_error("orthographic not supported well");
                 auto ortho = gcam.value("orthographic", json::object());
                 camera.lens_aperture = 0;
                 set_camera_perspective(camera, ortho.value("ymag", 0.0f),
@@ -3462,7 +3466,7 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
                                         (float)output_view[i][2]});
                         } break;
                         case 3: {  // weights
-                            printf("weights not supported for now\n");
+                            log_error("weights not supported for now");
 #if 0
                         // get a node that it refers to
                         auto ncomp = 0;
@@ -3720,7 +3724,7 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
     }
 
     // animations not supported yet
-    if (!empty(scene.animations)) printf("animation not supported yet\n");
+    if (!empty(scene.animations)) log_error("animation not supported yet");
 
     // nodes from instances
     if (empty(scene.nodes)) {
@@ -4053,8 +4057,15 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         if (js.is_array() && js.size() == 3)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>()};
-        printf("cannot handle vec3f\n");
+        log_error("cannot handle vec3f");
         return zero3f;
+    };
+
+    auto get_emission_vec3f = [&get_vec3f](const json& js) -> vec3f {
+        if (js.is_array() && js.size() == 2)
+            return blackbody_to_rgb(js.at(0).get<float>()) *
+                   js.at(1).get<float>();
+        return get_vec3f(js);
     };
 
     auto get_vec4f = [](const json& js) -> vec4f {
@@ -4064,13 +4075,13 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         if (js.is_array() && js.size() == 4)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>(), js.at(3).get<float>()};
-        printf("cannot handle vec4f\n");
+        log_error("cannot handle vec4f");
         return zero4f;
     };
 
     auto get_mat4f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 16) {
-            printf("cannot handle vec4f\n");
+            log_error("cannot handle vec4f");
             return identity_frame3f;
         }
         float m[16] = {0};
@@ -4081,7 +4092,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_mat3f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 9) {
-            printf("cannot handle mat3f\n");
+            log_error("cannot handle mat3f");
             return identity_frame3f;
         }
         auto m = identity_frame3f;
@@ -4091,7 +4102,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_vector_vec3i = [](const json& js) -> vector<vec3i> {
         if (!js.is_array() || js.size() % 3) {
-            printf("cannot handle vector<vec3f>\n");
+            log_error("cannot handle vector<vec3f");
             return {};
         }
         auto vals = vector<vec3i>(js.size() / 3);
@@ -4105,7 +4116,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_vector_vec3f = [](const json& js) -> vector<vec3f> {
         if (!js.is_array() || js.size() % 3) {
-            printf("cannot handle vector<vec3f>\n");
+            log_error("cannot handle vector<vec3f>");
             return {};
         }
         auto vals = vector<vec3f>(js.size() / 3);
@@ -4119,7 +4130,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_vector_vec2f = [](const json& js) -> vector<vec2f> {
         if (!js.is_array() || js.size() % 2) {
-            printf("cannot handle vector<vec3f>\n");
+            log_error("cannot handle vector<vec3f>");
             return {};
         }
         auto vals = vector<vec2f>(js.size() / 2);
@@ -4159,9 +4170,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         if (cmd == "Integrator" || cmd == "Sampler" || cmd == "PixelFilter") {
         } else if (cmd == "Transform") {
             stack.back().frame = get_mat4f(jcmd.at("values"));
-        } else if (cmd == " ConcatTransform") {
-            stack.back().frame = stack.back().frame * get_mat4f(jcmd.at("value"
-                                                                        "s"));
+        } else if (cmd == "ConcatTransform") {
+            stack.back().frame = stack.back().frame *
+                                 get_mat4f(jcmd.at("values"));
         } else if (cmd == "Scale") {
             auto v             = get_vec3f(jcmd.at("values"));
             stack.back().frame = stack.back().frame * make_scaling_frame(v);
@@ -4222,7 +4233,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                             ".hd"
                             "r");
                 } else {
-                    printf("%s texture not supported\n", type.c_str());
+                    log_error("{} texture not supported", type);
                 }
             }
         } else if (cmd == "MakeNamedMaterial" || cmd == "Material") {
@@ -4266,6 +4277,37 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                         material.opacity_texture = op_txt;
                     }
                     material.roughness = 0;
+                } else if (type == "plastic") {
+                    if (jcmd.count("Kd"))
+                        get_scaled_texture(jcmd.at("Kd"), material.diffuse,
+                            material.diffuse_texture);
+                    if (jcmd.count("Ks"))
+                        get_scaled_texture(jcmd.at("Ks"), material.specular,
+                            material.specular_texture);
+                    material.roughness = 0;
+                } else if (type == "translucent") {
+                    if (jcmd.count("Kd"))
+                        get_scaled_texture(jcmd.at("Kd"), material.diffuse,
+                            material.diffuse_texture);
+                    if (jcmd.count("Ks"))
+                        get_scaled_texture(jcmd.at("Ks"), material.specular,
+                            material.specular_texture);
+                    material.roughness = 0;
+                } else if (type == "mix") {
+                    auto matname1 = (jcmd.count("namedmaterial1")) ?
+                                        jcmd.at("namedmaterial1").get<string>() :
+                                        ""s;
+                    auto matname2 = (jcmd.count("namedmaterial2")) ?
+                                        jcmd.at("namedmaterial2").get<string>() :
+                                        ""s;
+                    // auto amount = get_vec3f(jcmd.at("amount"));
+                    auto matname = (!matname1.empty()) ? matname1 : matname2;
+                    for (auto& mat : scene.materials) {
+                        if (mat.name == matname) {
+                            material = mat;
+                            break;
+                        }
+                    }
                 } else if (type == "matte") {
                     material.diffuse = {1, 1, 1};
                     if (jcmd.count("Kd"))
@@ -4301,18 +4343,18 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                             material.transmission_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
-                    printf("mix material not properly supported\n");
+                    log_warning("mix material not properly supported");
                     if (jcmd.count("namedmaterial1")) {
                         auto mat1 = jcmd.at("namedmaterial1").get<string>();
                         auto saved_name = material.name;
                         material        = scene.materials[mat_map.at(mat1)];
                         material.name   = saved_name;
                     } else {
-                        printf("mix material missing front material\n");
+                        log_error("mix material missing front material");
                     }
                 } else {
                     material.diffuse = {1, 0, 0};
-                    printf("%s material not supported\n", type.c_str());
+                    log_error("{} material not supported", type);
                 }
                 if (jcmd.count("uroughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -4320,7 +4362,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     if (jcmd.count("uroughness"))
                         material.roughness = jcmd.at("uroughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
-                    if (remap) printf("remap roughness not supported\n");
+                    if (remap) log_error("remap roughness not supported");
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -4328,7 +4370,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     if (jcmd.count("roughness"))
                         material.roughness = jcmd.at("roughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
-                    if (remap) printf("remap roughness not supported\n");
+                    if (remap) log_error("remap roughness not supported");
                 }
                 if (stack.back().light_mat.emission != zero3f) {
                     material.emission         = stack.back().light_mat.emission;
@@ -4353,11 +4395,13 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto filename  = jcmd.at("filename").get<string>();
                 shape.name     = get_filename(filename);
                 shape.filename = filename;
-                if (!load_ply_mesh(dirname_ + filename, shape.points,
-                        shape.lines, shape.triangles, shape.quads,
-                        shape.positions, shape.normals, shape.texturecoords,
-                        shape.colors, shape.radius, false))
-                    return false;
+                if (!options.skip_meshes) {
+                    if (!load_ply_mesh(dirname_ + filename, shape.points,
+                            shape.lines, shape.triangles, shape.quads,
+                            shape.positions, shape.normals, shape.texturecoords,
+                            shape.colors, shape.radius, false))
+                        return false;
+                }
             } else if (type == "trianglemesh") {
                 shape.name     = "mesh" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
@@ -4367,8 +4411,10 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     shape.positions = get_vector_vec3f(jcmd.at("P"));
                 if (jcmd.count("N"))
                     shape.normals = get_vector_vec3f(jcmd.at("N"));
-                if (jcmd.count("uv"))
+                if (jcmd.count("uv")) {
                     shape.texturecoords = get_vector_vec2f(jcmd.at("uv"));
+                    for (auto& uv : shape.texturecoords) uv.y = 1 - uv.y;
+                }
             } else if (type == "sphere") {
                 shape.name     = "sphere" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
@@ -4388,7 +4434,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     shape.texturecoords) = make_disk_shape({32, 16}, 2 * radius,
                     {1, 1});
             } else {
-                printf("%s shape not supported\n", type.c_str());
+                log_error("{} shape not supported", type);
             }
             auto frame = stack.back().frame;
             auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
@@ -4426,10 +4472,10 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             auto type = jcmd.at("type").get<string>();
             if (type == "diffuse") {
                 auto ligth_mat         = yocto_material();
-                ligth_mat.emission     = get_vec3f(jcmd.at("L"));
+                ligth_mat.emission     = get_emission_vec3f(jcmd.at("L"));
                 stack.back().light_mat = ligth_mat;
             } else {
-                printf("%s area light not supported\n", type.c_str());
+                log_error("{} area light not supported", type);
             }
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<string>();
@@ -4457,8 +4503,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 scene.environments.push_back(environment);
             } else if (type == "distant") {
                 auto distant_dist = 100;
-                auto shape        = yocto_shape();
-                shape.name        = "distant" + std::to_string(lid++);
+                scene.shapes.push_back({});
+                auto& shape = scene.shapes.back();
+                shape.name  = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
                 if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
@@ -4467,14 +4514,13 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 tie(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords) = make_quad_shape({1, 1}, {size, size},
                     {1, 1});
-                scene.shapes.push_back(shape);
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 shape.material    = scene.materials.size() - 1;
                 material.name     = shape.name;
                 material.emission = {1, 1, 1};
                 if (jcmd.count("L"))
-                    material.emission *= get_vec3f(jcmd.at("L"));
+                    material.emission *= get_emission_vec3f(jcmd.at("L"));
                 if (jcmd.count("scale"))
                     material.emission *= get_vec3f(jcmd.at("scale"));
                 material.emission *= (distant_dist * distant_dist) /
@@ -4486,9 +4532,9 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                                  make_lookat_frame(dir * distant_dist, zero3f,
                                      {0, 1, 0}, true);
                 scene.instances.push_back(instance);
-                printf("%s light not properly supported\n", type.c_str());
+                log_warning("{} light not properly supported", type);
             } else {
-                printf("%s light not supported\n", type.c_str());
+                log_error("{} light not supported", type);
             }
         } else if (cmd == "WorldBegin") {
             stack.push_back(stack_item());
@@ -4506,7 +4552,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                    cmd == "TransformEnd") {
             stack.pop_back();
         } else {
-            printf("%s command not supported\n", cmd.c_str());
+            log_error("{} command not supported", cmd.c_str());
         }
     }
     if (use_hierarchy) {
@@ -5112,7 +5158,7 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
-    bool force_triangles) {
+    bool force_triangles, bool flip_texcoord) {
     // clear
     reset_mesh_data(points, lines, triangles, quads, positions, normals,
         texturecoords, color, radius);
@@ -5154,6 +5200,11 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
                 copy_floats(color, vec4f{0, 0, 0, 1}, 4, 3);
             if (prop.name == "radius") copy_floats(radius, 0.0f, 1, 0);
         }
+    }
+
+    // fix texture coordinated
+    if (flip_texcoord && !empty(texturecoords)) {
+        for (auto& uv : texturecoords) uv.y = 1 - uv.y;
     }
 
     // copy face data
@@ -5203,7 +5254,8 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii) {
+    const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
+    bool flip_texcoord) {
     auto fs = open(filename, "wb");
     if (!fs) return false;
 
@@ -5240,7 +5292,11 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         for (auto i = 0; i < positions.size(); i++) {
             if (!empty(positions)) print(fs, "{} ", positions[i]);
             if (!empty(normals)) print(fs, "{} ", normals[i]);
-            if (!empty(texturecoords)) print(fs, "{} ", texturecoords[i]);
+            if (!empty(texturecoords))
+                print(fs, "{} ",
+                    (!flip_texcoord) ?
+                        texturecoords[i] :
+                        vec2f{texturecoords[i].x, 1 - texturecoords[i].y});
             if (!empty(colors)) print(fs, "{} ", colors[i]);
             if (!empty(radius)) print(fs, "{} ", radius[i]);
             print(fs, "\n");
@@ -5260,7 +5316,10 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         for (auto i = 0; i < positions.size(); i++) {
             if (!empty(positions)) write_value(fs, positions[i]);
             if (!empty(normals)) write_value(fs, normals[i]);
-            if (!empty(texturecoords)) write_value(fs, texturecoords[i]);
+            if (!empty(texturecoords))
+                write_value(fs, (!flip_texcoord) ? texturecoords[i] :
+                                                   vec2f{texturecoords[i].x,
+                                                       1 - texturecoords[i].y});
             if (!empty(colors)) write_value(fs, colors[i]);
             if (!empty(radius)) write_value(fs, radius[i]);
         }
@@ -5692,7 +5751,8 @@ bool load_ply(const string& filename, ply_data& ply) {
                 parse_value(view, elem_type);
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
-                if (elem_type != "int") log_error("unsupported ply list type");
+                if (elem_type != "int" && elem_type != "uint")
+                    log_error("unsupported ply list type");
                 prop.type = ply_type::ply_int_list;
             } else if (type == "float") {
                 prop.type = ply_type::ply_float;

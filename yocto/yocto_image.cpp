@@ -216,7 +216,7 @@ image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1)
 }
 
 // Make a gamma ramp image
-image4f make_gammaramp_imagef(int width, int height) {
+image4f make_gammaramp_image(int width, int height) {
     auto img = make_image(width, height, zero4f);
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
@@ -265,6 +265,22 @@ image4f make_uvgrid_image(int width, int height, int tiles, bool colored) {
             }
             auto rgb = (colored) ? hsv_to_rgb({ph, ps, pv}) : vec3f{pv, pv, pv};
             at(img, i, img.height - j - 1) = {rgb.x, rgb.y, rgb.z, 1};
+        }
+    }
+    return img;
+}
+
+// Makes a blackbody ramp
+image4f make_blackbodyramp_image(
+    int width, int height, float start_temperature, float end_temperature) {
+    auto img = make_image(width, height, zero4f);
+    for (int j = 0; j < img.height; j++) {
+        for (int i = 0; i < img.width; i++) {
+            auto temperature = start_temperature +
+                               (end_temperature - start_temperature) *
+                                   (float)i / (float)(img.width - 1);
+            auto rgb      = blackbody_to_rgb(temperature);
+            at(img, i, j) = {rgb.x, rgb.y, rgb.z, 1};
         }
     }
     return img;

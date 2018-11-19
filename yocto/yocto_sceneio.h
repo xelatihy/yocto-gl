@@ -145,12 +145,13 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
-    bool force_triangles);
+    bool force_triangles, bool flip_texcoord = true);
 bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii = false);
+    const vector<vec4f>& colors, const vector<float>& radius,
+    bool ascii = false, bool flip_texcoord = true);
 
 // Load/Save an OBJ mesh
 bool load_obj_mesh(const string& filename, vector<int>& points,
