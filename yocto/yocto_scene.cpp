@@ -1410,13 +1410,27 @@ ray3f evaluate_camera_ray(
         distance = camera.focal_length * camera.focus_distance /
                    (camera.focus_distance - camera.focal_length);
     }
-    auto e = vec3f{
-        lens_uv.x * camera.lens_aperture, lens_uv.y * camera.lens_aperture, 0};
-    auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
-        camera.film_height * (image_uv.y - 0.5f), distance};
-    auto ray = make_ray(transform_point(camera.frame, e),
-        transform_direction(camera.frame, normalize(e - q)));
-    return ray;
+    if(camera.lens_aperture) {
+        auto e = vec3f{
+            (lens_uv.x - 0.5f) * camera.lens_aperture, 
+            (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
+        auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
+            camera.film_height * (image_uv.y - 0.5f), distance};
+        // auto f = normalize(q) * camera.focus_distance / abs(q.z);
+        auto f = normalize(q) * camera.focus_distance;
+        auto ray = make_ray(transform_point(camera.frame, e),
+            transform_direction(camera.frame, normalize(e - f)));
+        return ray;
+    } else {
+        auto e = vec3f{
+            (lens_uv.x - 0.5f) * camera.lens_aperture, 
+            (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
+        auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
+            camera.film_height * (image_uv.y - 0.5f), distance};
+        auto ray = make_ray(transform_point(camera.frame, e),
+            transform_direction(camera.frame, normalize(e - q)));
+        return ray;
+    }
 }
 
 // Generates a ray from a camera.
