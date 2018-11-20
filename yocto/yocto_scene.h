@@ -6,7 +6,7 @@
 // and value oriented design.
 //
 //
-// # Simple scene representation
+// ## Simple scene representation
 //
 // Yocto/Scene define a simple scene data structure useful to create quick demos
 // and as the repsetnation upon which the path tracer works.
@@ -76,7 +76,8 @@ namespace yocto {
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the focal lengthm the focus
-// distance and the lens_aperture. All values are in meters.
+// distance and the lens_aperture. All values are in meters, except for
+// lens_aperture that is in F-stops (ratios of focal_length).
 // Here are some common aspect ratios used in video and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
 // 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
