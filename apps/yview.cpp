@@ -809,7 +809,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
                 !texture.ldr_as_linear, true, true);
         } else {
-            printf("bad texture");
+            log_error("bad texture");
         }
     }
     state.shapes.resize(scene.shapes.size());
@@ -998,15 +998,15 @@ void update(app_state& app) {
     for (auto& [type, index] : app.update_list) {
         if (type == typeid(yocto_texture)) {
             // TODO: update texture
-            printf("texture update not supported\n");
+            log_error("texture update not supported\n");
         }
         if (type == typeid(yocto_surface)) {
             // TODO: update subdiv
-            printf("subdiv update not supported\n");
+            log_error("subdiv update not supported\n");
         }
         if (type == typeid(yocto_shape)) {
             // TODO: update shape
-            printf("shape update not supported\n");
+            log_error("shape update not supported\n");
         }
         if (type == typeid(yocto_scene_node) ||
             type == typeid(yocto_animation) || app.time != last_time) {

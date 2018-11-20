@@ -95,10 +95,11 @@
 #include <string>
 #include <string_view>
 #include <thread>
-#include <ostream>
-#include <istream>
+#include <iostream>
 #include <sstream>
 #include <fstream>
+#include <ostream>
+#include <istream>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -116,6 +117,7 @@ using std::stringstream;
 using std::ifstream;
 using std::ofstream;
 using std::fstream;
+using std::cout;
 using namespace std::chrono_literals;
 
 using std::getline;
@@ -644,8 +646,8 @@ inline bool& _log_console() {
     static auto _log_console = true;
     return _log_console;
 }
-inline FILE*& _log_filestream() {
-    static auto _log_filestream = (FILE*)nullptr;
+inline ofstream& _log_filestream() {
+    static auto _log_filestream = ofstream();
     return _log_filestream;
 }
 inline log_level& _log_level() {
@@ -660,12 +662,11 @@ inline bool is_log_level_skipped(log_level level) {
 inline void log_message(log_level level, const char* msg) {
     static const char* labels[] = {"FATAL", "ERROR", "WARN ", "INFO ", "TRACE"};
     if (_log_console()) {
-        printf("%s\n", msg);
+        cout << msg << "\n";
         fflush(stdout);
     }
     if (_log_filestream()) {
-        fprintf(_log_filestream(), "%s %s\n", labels[(int)level], msg);
-        fflush(_log_filestream());
+        _log_filestream() << labels[(int)level] << " " << msg << "\n";
     }
 }
 
@@ -737,11 +738,11 @@ inline void set_log_level(log_level level) { _log_level() = level; }
 inline void set_log_console(bool enabled) { _log_console() = enabled; }
 inline void set_log_file(const string& filename, bool append) {
     if (_log_filestream()) {
-        fclose(_log_filestream());
-        _log_filestream() = nullptr;
+        _log_filestream().close();
+        _log_filestream() = {};
     }
     if (empty(filename)) return;
-    _log_filestream() = fopen(filename.c_str(), append ? "at" : "wt");
+    _log_filestream().open(filename, append ? std::ios::app : std::ios::out);
 }
 
 }  // namespace yocto
@@ -1007,18 +1008,17 @@ inline string get_option_usage(const string& name, const string& usage,
 
 // print cmdline help
 inline void print_cmdline_usage(const cmdline_parser& parser) {
-    printf("%s: %s\n", parser.help_command.c_str(), parser.help_usage.c_str());
-    printf("usage: %s %s %s\n\n", parser.help_command.c_str(),
-        (empty(parser.help_options)) ? "" : "[options]",
-        (empty(parser.help_arguments)) ? "" : "arguments");
-    if (!empty(parser.help_options)) {
-        printf("options:\n");
-        printf("%s\n", parser.help_options.c_str());
-    }
-    if (!empty(parser.help_arguments)) {
-        printf("arguments:\n");
-        printf("%s\n", parser.help_arguments.c_str());
-    }
+    auto usage = ""s;
+    usage += parser.help_command + ": " + parser.help_usage + "\n";
+    usage += "usage: " + parser.help_command;
+    if(!(empty(parser.help_options))) usage += "[options] ";
+    if(!(empty(parser.help_arguments))) usage += "arguments";
+    usage += "\n\n";
+    if (!empty(parser.help_options))
+        usage += "options:\n" + parser.help_options + "\n";
+    if (!empty(parser.help_arguments))
+        usage += "arguments:\n" + parser.help_arguments + "\n";
+    cout << usage;
 }
 
 // Parse a flag. Name should start with either "--" or "-".
@@ -1057,7 +1057,7 @@ inline void check_cmdline(cmdline_parser& parser) {
         if (!found) parser.error += "unmatched arguments remaining\n";
     }
     if (!empty(parser.error)) {
-        printf("error: %s\n", parser.error.c_str());
+        cout << "error: " + parser.error + "\n";
         print_cmdline_usage(parser);
         exit(1);
     }
