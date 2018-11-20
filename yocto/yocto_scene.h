@@ -6,7 +6,7 @@
 // and value oriented design.
 //
 //
-// # Simple scene representation
+// ## Simple scene representation
 //
 // Yocto/Scene define a simple scene data structure useful to create quick demos
 // and as the repsetnation upon which the path tracer works.
