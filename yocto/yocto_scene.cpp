@@ -1418,6 +1418,7 @@ ray3f evaluate_camera_ray(
             camera.film_height * (image_uv.y - 0.5f), distance};
         auto distance1 = camera.focal_length * distance / (distance - camera.focal_length); // distance of the image of the point
         auto q1 = -q * distance1 / distance;
+        // auto q1 = - normalize(q) * camera.focus_distance / normalize(q).z;
         auto ray = make_ray(transform_point(camera.frame, e),
             transform_direction(camera.frame, normalize(q1 - e)));
         return ray;
