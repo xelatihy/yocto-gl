@@ -1,5 +1,6 @@
 {
     "type": "sky",
     "width": 512,
-    "height": 1024
+    "height": 1024,
+    "sun_angle": 0.1
 }
