@@ -404,13 +404,15 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_sha
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_rounded_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius, bool flip_v);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius,
+    bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_cube_shape(
     int steps, float size, float uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_flipcap_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip, bool flip_v);
+    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip,
+    bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_quad_shape(
@@ -422,7 +424,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_shape(
     const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_rounded_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius, bool flip_v);
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius,
+    bool flip_v);
 tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
     int tesselation, float size, bool flip_v);
 

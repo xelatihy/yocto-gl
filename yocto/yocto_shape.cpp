@@ -1018,8 +1018,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_shap
         }
     }
 
-    if(flip_v) {
-        for(auto& uv : texturecoords) uv.y = 1 - uv.y;
+    if (flip_v) {
+        for (auto& uv : texturecoords) uv.y = 1 - uv.y;
     }
 
     auto quads = vector<vec4i>(steps.x * steps.y);
@@ -1136,7 +1136,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
 
 // Make a rounded cube.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_rounded_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius, bool flip_v) {
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius,
+    bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         steps, size, uvsize, flip_v);
     auto c = size / 2 - vec3f{radius, radius, radius};
@@ -1201,7 +1202,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_cu
 
 // Make a flipped sphere. This is not watertight.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_flipcap_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip, bool flip_v) {
+    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip,
+    bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_sphere_shape(
         steps, size, uvsize, flip_v);
     for (auto i = 0; i < positions.size(); i++) {
@@ -1321,7 +1323,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_
 
 // Make a rounded cylinder.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_rounded_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius, bool flip_v) {
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius,
+    bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_cylinder_shape(
         steps, size, uvsize, flip_v);
     auto c = size / 2 - vec2f{radius, radius};
@@ -1386,10 +1389,11 @@ tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<int>, vector<vec3f>,
     vector<vec3f>, vector<vec2f>>
 make_cube_multiplematerials_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v) {
-    auto [quads_positions, quads_normals, quads_texturecoords, positions, normals,
-        texturecoords]   = make_cube_facevarying_shape(steps, size, uvsize, flip_v);
-    auto quads_materials = vector<int>(quads_positions.size());
-    auto quads_per_face  = (int)quads_positions.size() / 6;
+    auto [quads_positions, quads_normals, quads_texturecoords, positions,
+        normals, texturecoords] = make_cube_facevarying_shape(steps, size,
+        uvsize, flip_v);
+    auto quads_materials        = vector<int>(quads_positions.size());
+    auto quads_per_face         = (int)quads_positions.size() / 6;
     for (auto i = 0; i < quads_positions.size(); i++) {
         quads_materials[i] = i / quads_per_face;
     }
