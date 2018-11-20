@@ -24,10 +24,9 @@
 //
 // 1. load a scene with Yocto/SceneIO,
 // 2. use `compute_shape_box()/compute_scene_box()` to compute element bounds
-// 3. can merge scene together with `merge_scene()`
-// 4. compute interpolated values over scene elements with `evaluate_XXX()`
+// 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
-// 5. for ray-intersection and closest point queries, create a BVH with
+// 4. for ray-intersection and closest point queries, create a BVH with
 //    `make_scene_bvh()` and intersect with with `intersect_scene_bvh()`;
 //     you can also update the BVH with `refit_scene_bvh()`
 //
@@ -302,10 +301,6 @@ namespace yocto {
 
 // Print scene statistics.
 void print_stats(const yocto_scene& scene);
-
-// Merge scene into one another. Note that the objects are _moved_ from
-// merge_from to merged_into, so merge_from will be empty after this function.
-void merge_scene(yocto_scene& merge_into, const yocto_scene& merge_from);
 
 }  // namespace yocto
 
