@@ -1410,23 +1410,25 @@ ray3f evaluate_camera_ray(
         distance = camera.focal_length * camera.focus_distance /
                    (camera.focus_distance - camera.focal_length);
     }
-    if(camera.lens_aperture) {
+    if (camera.lens_aperture) {
         auto e = vec3f{
-            (lens_uv.x - 0.5f) * camera.focal_length / camera.lens_aperture, 
+            (lens_uv.x - 0.5f) * camera.focal_length / camera.lens_aperture,
             (lens_uv.y - 0.5f) * camera.focal_length / camera.lens_aperture, 0};
-        auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
+        auto q         = vec3f{camera.film_width * (0.5f - image_uv.x),
             camera.film_height * (image_uv.y - 0.5f), distance};
-        auto distance1 = camera.focal_length * distance / (distance - camera.focal_length); // distance of the image of the point
+        auto distance1 = camera.focal_length * distance /
+                         (distance - camera.focal_length);  // distance of the
+                                                            // image of the point
         auto q1 = -q * distance1 / distance;
         // auto q1 = - normalize(q) * camera.focus_distance / normalize(q).z;
         auto ray = make_ray(transform_point(camera.frame, e),
             transform_direction(camera.frame, normalize(q1 - e)));
         return ray;
     } else {
-        auto e = zero3f;
+        auto e   = zero3f;
         auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
             camera.film_height * (image_uv.y - 0.5f), distance};
-        auto q1 = -q;
+        auto q1  = -q;
         auto ray = make_ray(transform_point(camera.frame, e),
             transform_direction(camera.frame, normalize(q1 - e)));
         return ray;
