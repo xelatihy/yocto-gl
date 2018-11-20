@@ -396,35 +396,35 @@ namespace yocto {
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_stack_shape(
-    const vec3i& steps, const vec3f& size, const vec2f& uvsize);
+    const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_rounded_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_shape(
-    const vec2i& steps, float size, const vec2f& uvsize);
+    const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_cube_shape(
-    int steps, float size, float uvsize);
+    int steps, float size, float uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_flipcap_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip);
+    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_shape(
-    const vec2i& steps, float size, const vec2f& uvsize);
+    const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_quad_shape(
-    int steps, float size, float uvsize);
+    int steps, float size, float uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_bulged_shape(
-    int steps, float size, float uvsize, float height);
+    int steps, float size, float uvsize, float height, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_side_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize);
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_rounded_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius);
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius, bool flip_v);
 tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
-    int tesselation, float size);
+    int tesselation, float size, bool flip_v);
 
 // Make examples shapes with are watertight (good for subdivs).
 tuple<vector<vec4i>, vector<vec3f>> make_suzanne_shape(float size);
@@ -434,13 +434,13 @@ tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size);
 tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
     vector<vec2f>>
 make_cube_facevarying_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<int>, vector<vec3f>,
     vector<vec3f>, vector<vec2f>>
 make_cube_multiplematerials_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_lines_shape(
