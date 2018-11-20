@@ -314,42 +314,47 @@ image4f bump_to_normal_map(const image4f& img, float scale) {
 
 // Implementation of sunsky modified heavily from pbrt
 image4f make_sunsky_image(int width, int height, float theta_sun,
-    float turbidity, bool has_sun, float sun_intensity, float sun_temperature, 
+    float turbidity, bool has_sun, float sun_intensity, float sun_temperature,
     const vec3f& ground_albedo) {
     // idea adapted from pbrt
 
     // initialize model
     double wavelengths[9] = {630, 680, 710, 500, 530, 560, 460, 480, 490};
-    ArHosekSkyModelState *skymodel_state[9];
-    if(sun_temperature) {
+    ArHosekSkyModelState* skymodel_state[9];
+    if (sun_temperature) {
         sun_temperature = clamp(sun_temperature, 2000.0f, 14000.0f);
         for (int i = 0; i < 9; ++i) {
-            skymodel_state[i] = arhosekskymodelstate_alienworld_alloc_init(theta_sun, sun_intensity, sun_temperature, turbidity, at(ground_albedo, i/3));
+            skymodel_state[i] = arhosekskymodelstate_alienworld_alloc_init(
+                theta_sun, sun_intensity, sun_temperature, turbidity,
+                at(ground_albedo, i / 3));
         }
     } else {
         for (int i = 0; i < 9; ++i) {
-            skymodel_state[i] = arhosekskymodelstate_alloc_init(theta_sun, turbidity, at(ground_albedo, i/3));
+            skymodel_state[i] = arhosekskymodelstate_alloc_init(
+                theta_sun, turbidity, at(ground_albedo, i / 3));
         }
     }
 
     // sun-sky
-    auto img = make_image(width, height, vec4f{0,0,0,1});
+    auto img           = make_image(width, height, vec4f{0, 0, 0, 1});
     auto sun_direction = vec3f{0, sin(theta_sun), cos(theta_sun)};
-    auto integral = zero3f;
-    for(auto j = 0; j < height/2; j ++) {
+    auto integral      = zero3f;
+    for (auto j = 0; j < height / 2; j++) {
         auto theta = (j + 0.5f) * pif / height;
         if (theta > pif / 2) continue;
-        for (auto i = 0; i < width; i ++) {
-            auto phi = (i + 0.5f) * 2 * pif / width;
-            auto direction = vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+        for (auto i = 0; i < width; i++) {
+            auto phi       = (i + 0.5f) * 2 * pif / width;
+            auto direction = vec3f{
+                cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma = acos(clamp(dot(direction, sun_direction), -1.0f, 1.0f));
             for (int c = 0; c < 9; ++c) {
-                auto val = (has_sun) ? arhosekskymodel_solar_radiance(
-                    skymodel_state[c], theta, gamma, wavelengths[c]) :
-                    arhosekskymodel_radiance(
-                    skymodel_state[c], theta, gamma, wavelengths[c]) ;
+                auto val = (has_sun) ?
+                               arhosekskymodel_solar_radiance(skymodel_state[c],
+                                   theta, gamma, wavelengths[c]) :
+                               arhosekskymodel_radiance(skymodel_state[c],
+                                   theta, gamma, wavelengths[c]);
                 // average channel over wavelengths
-                at(at(img, i, j), c/3) += (float)val / 3;
+                at(at(img, i, j), c / 3) += (float)val / 3;
             }
             integral += xyz(at(img, i, j)) * sin(theta) / (width * height / 2);
         }
@@ -357,15 +362,14 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
 
     // ground
     auto ground = ground_albedo * integral;
-    for(auto j = height/2; j < height; j ++) {
-        for (auto i = 0; i < width; i ++) {
+    for (auto j = height / 2; j < height; j++) {
+        for (auto i = 0; i < width; i++) {
             at(img, i, j) = {ground.x, ground.y, ground.z, 1};
         }
     }
 
     // cleanup
-    for (auto i = 0; i < 9; i++ )
-        arhosekskymodelstate_free( skymodel_state[i] );
+    for (auto i = 0; i < 9; i++) arhosekskymodelstate_free(skymodel_state[i]);
 
     return img;
 }
