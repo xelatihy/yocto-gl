@@ -905,6 +905,10 @@ bool apply_json_procedural(
         log_error("unknown texture type {}", type);
         return false;
     }
+    if (get_json_value(js, "border", false)) {
+        value.hdr_image = add_image_border(value.hdr_image, get_json_value(js, 
+            "border_width", 2), get_json_value(js, "border_color", vec4f{0,0,0,1}));
+    }
     if (get_json_value(js, "bump_to_normal", false)) {
         value.hdr_image = bump_to_normal_map(
             value.hdr_image, get_json_value(js, "bump_scale", 1.0f));

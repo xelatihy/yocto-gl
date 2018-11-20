@@ -413,6 +413,10 @@ bool apply_json_procedural(const json& js, image4f& img) {
         log_error("unknown image type {}", type);
         return false;
     }
+    if (get_json_value(js, "border", false)) {
+        img = add_image_border(img, get_json_value(js, "border_width", 2), 
+            get_json_value(js, "border_color", vec4f{0,0,0,1}));
+    }
     if (get_json_value(js, "bump_to_normal", false)) {
         img = bump_to_normal_map(img, get_json_value(js, "bump_scale", 1.0f));
     }
