@@ -1091,7 +1091,7 @@ void run_ui(app_state& app) {
 // Load INI file. The implementation does not handle escaping.
 unordered_map<string, unordered_map<string, string>> load_ini(
     const string& filename) {
-    auto f = fopen(filename.c_str(), "rt");
+    auto f = ifstream(filename);
     if (!f) {
         log_error("cannot open {}", filename);
         return {};
@@ -1100,9 +1100,8 @@ unordered_map<string, unordered_map<string, string>> load_ini(
     auto cur_group = string();
     ret[""]        = {};
 
-    char buffer[4096];
-    while (fgets(buffer, 4096, f)) {
-        auto line = string(buffer);
+    auto line = ""s;
+    while (getline(f, line)) {
         if (empty(line)) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
@@ -1122,8 +1121,6 @@ unordered_map<string, unordered_map<string, string>> load_ini(
             return {};
         }
     }
-
-    fclose(f);
 
     return ret;
 }
