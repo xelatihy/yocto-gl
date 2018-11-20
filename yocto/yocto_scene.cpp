@@ -1590,27 +1590,6 @@ bool is_material_volume_colored(const yocto_material& material) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Merge scene into one another
-void merge_scene(yocto_scene& merge_scene, const yocto_scene& merge_from) {
-    log_error("this is  broken since we did not fix references");
-    auto merge = [](auto& v1, auto& v2) {
-        v1.insert(v1.end(), v2.begin(), v2.end());
-    };
-    auto merge_ = [](auto& v1, auto& v2) {
-        v1.insert(v1.end(), v2.begin(), v2.end());
-    };
-    merge_(merge_scene.cameras, merge_from.cameras);
-    merge(merge_scene.textures, merge_from.textures);
-    merge(merge_scene.voltextures, merge_from.voltextures);
-    merge(merge_scene.materials, merge_from.materials);
-    merge(merge_scene.shapes, merge_from.shapes);
-    merge(merge_scene.surfaces, merge_from.surfaces);
-    merge(merge_scene.instances, merge_from.instances);
-    merge(merge_scene.environments, merge_from.environments);
-    merge_(merge_scene.nodes, merge_from.nodes);
-    merge_(merge_scene.animations, merge_from.animations);
-}
-
 void print_stats(const yocto_scene& scene) {
     // using long long instead of uint64_t to avoid printf macros
     auto num_cameras      = (long long)0;
