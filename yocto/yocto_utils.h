@@ -467,153 +467,162 @@ inline string to_string(const T& value) {
     return stream.str();
 }
 
+// string view wrapper similar to stream
+struct string_view_stream {
+    string_view str = {};
+    bool error = false;
+
+    explicit operator bool() const { return !error; }
+    bool operator!() const { return error; }
+};
+
 // Set error and return the value
-inline string_view& set_error(string_view& view) {
-    view = {};
-    return view;
+inline string_view_stream& set_error(string_view_stream& stream) {
+    stream.error = true;
+    return stream;
 }
 
 // Prints basic types to string
-inline string_view& operator>>(string_view& str, string& value) {
-    if(empty(str)) return str;
-    auto pos = str.find_first_not_of(" \t\r\n");
-    if(pos == string_view::npos) return set_error(str);
-    str.remove_prefix(pos);
-    pos = str.find_first_of(" \t\r\n");
+inline string_view_stream& operator>>(string_view_stream& stream, string& value) {
+    if(!stream) return stream;
+    auto pos = stream.str.find_first_not_of(" \t\r\n");
+    if(pos == string_view::npos) return set_error(stream);
+    stream.str.remove_prefix(pos);
+    pos = stream.str.find_first_of(" \t\r\n");
     if(pos == string_view::npos) {
-        value = str;
-        str.remove_prefix(str.length());
+        value = stream.str;
+        stream.str.remove_prefix(stream.str.length());
     } else {
-        value = str.substr(0, pos);
-        str.remove_prefix(pos);
+        value = stream.str.substr(0, pos);
+        stream.str.remove_prefix(pos);
     }
-    return str;
+    return stream;
 }
-inline string_view& operator>>(string_view& str, int& value) {
-    if(empty(str)) return str;
+inline string_view_stream& operator>>(string_view_stream& stream, int& value) {
+    if(!stream) return stream;
     char* end = nullptr;
-    value     = (int)strtol(data(str), &end, 10);
-    if (data(str) == end) return set_error(str);
-    str.remove_prefix(end - data(str));
+    value     = (int)strtol(data(stream.str), &end, 10);
+    if (data(stream.str) == end) return set_error(stream);
+    stream.str.remove_prefix(end - data(stream.str));
     // auto n = 0;
     // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
     // str.str += n;
-    return str;
+    return stream;
 }
-inline string_view& operator>>(string_view& str, float& value) {
-    if(empty(str)) return str;
+inline string_view_stream& operator>>(string_view_stream& stream, float& value) {
+    if(!stream) return stream;
     char* end = nullptr;
-    value     = strtof(data(str), &end);
-    if (data(str) == end) return set_error(str);
-    str.remove_prefix(end - data(str));
+    value     = strtof(data(stream.str), &end);
+    if (data(stream.str) == end) return set_error(stream);
+    stream.str.remove_prefix(end - data(stream.str));
     // auto n = 0;
     // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
     // str.str += n;
-    return str;
+    return stream;
 }
-inline string_view& operator>>(string_view& str, double& value) {
-    if(empty(str)) return str;
+inline string_view_stream& operator>>(string_view_stream& stream, double& value) {
+    if(!stream) return stream;
     char* end = nullptr;
-    value     = strtod(data(str), &end);
-    if (data(str) == end) return set_error(str);
-    str.remove_prefix(end - data(str));
+    value     = strtod(data(stream.str), &end);
+    if (data(stream.str) == end) return set_error(stream);
+    stream.str.remove_prefix(end - data(stream.str));
     // auto n = 0;
     // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
     // str.str += n;
-    return str;
+    return stream;
 }
-inline string_view& operator>>(string_view& str, bool& value) {
-    if(empty(str)) return str;
+inline string_view_stream& operator>>(string_view_stream& stream, bool& value) {
+    if(!stream) return stream;
     auto ivalue = 0;
-    str >> ivalue;
+    stream >> ivalue;
     value = (bool)ivalue;
-    return str;
+    return stream;
 }
 
 // Print compound types
 template <typename T, size_t N>
-inline string_view& operator>>(string_view& str, array<T, N>& value) {
+inline string_view_stream& operator>>(string_view_stream& str, array<T, N>& value) {
     for (auto i = 0; i < N; i++) str >> value[i];
     return str;
 }
 
 // Iostream utilities for basic types
-inline string_view& operator>>(string_view& is, vec2f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, vec2f& value) {
     return is >> value.x >> value.y;
 }
-inline string_view& operator>>(string_view& is, vec3f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, vec3f& value) {
     return is >> value.x >> value.y >> value.z;
 }
-inline string_view& operator>>(string_view& is, vec4f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, vec4f& value) {
     return is >> value.x >> value.y >> value.z >> value.w;
 }
-inline string_view& operator>>(string_view& is, vec2i& value) {
+inline string_view_stream& operator>>(string_view_stream& is, vec2i& value) {
     return is >> value.x >> value.y;
 }
-inline string_view& operator>>(string_view& is, vec3i& value) {
+inline string_view_stream& operator>>(string_view_stream& is, vec3i& value) {
     return is >> value.x >> value.y >> value.z;
 }
-inline string_view& operator>>(string_view& is, vec4i& value) {
+inline string_view_stream& operator>>(string_view_stream& is, vec4i& value) {
     return is >> value.x >> value.y >> value.z >> value.w;
 }
-inline string_view& operator>>(string_view& is, mat2f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, mat2f& value) {
     return is >> value.x >> value.y;
 }
-inline string_view& operator>>(string_view& is, mat3f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, mat3f& value) {
     return is >> value.x >> value.y >> value.z;
 }
-inline string_view& operator>>(string_view& is, mat4f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, mat4f& value) {
     return is >> value.x >> value.y >> value.z >> value.w;
 }
-inline string_view& operator>>(string_view& is, frame2f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, frame2f& value) {
     return is >> value.x >> value.y >> value.o;
 }
-inline string_view& operator>>(string_view& is, frame3f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, frame3f& value) {
     return is >> value.x >> value.y >> value.z >> value.o;
 }
-inline string_view& operator>>(string_view& is, ray2f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, ray2f& value) {
     return is >> value.o >> value.d >> value.tmin >> value.tmax;
 }
-inline string_view& operator>>(string_view& is, ray3f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, ray3f& value) {
     return is >> value.o >> value.d >> value.tmin >> value.tmax;
 }
-inline string_view& operator>>(string_view& is, bbox1f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, bbox1f& value) {
     return is >> value.min >> value.max;
 }
-inline string_view& operator>>(string_view& is, bbox2f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, bbox2f& value) {
     return is >> value.min >> value.max;
 }
-inline string_view& operator>>(string_view& is, bbox3f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, bbox3f& value) {
     return is >> value.min >> value.max;
 }
-inline string_view& operator>>(string_view& is, bbox4f& value) {
+inline string_view_stream& operator>>(string_view_stream& is, bbox4f& value) {
     return is >> value.min >> value.max;
 }
 
 // parse a value
 template<typename T>
-inline bool parse_value(string_view& str, T& value) {
-    str >> value;
-    return str.data() != nullptr;
+inline bool parse_value(string_view_stream& stream, T& value) {
+    stream >> value;
+    return (bool)stream;
 }
 
 // Prints a string.
-inline bool parse_next(string_view& str) { return true; }
+inline bool parse_next(string_view_stream& str) { return true; }
 template <typename Arg, typename... Args>
-inline bool parse_next(string_view& str, Arg& arg, Args&... args) {
+inline bool parse_next(string_view_stream& str, Arg& arg, Args&... args) {
     if (!parse_value(str, arg)) return false;
     return parse_next(str, args...);
 }
 
 // Returns trus if this is white space
-inline bool is_whitespace(string_view str) {
-    return str.find_first_not_of(" \t\r\n") == string_view::npos;
+inline bool is_whitespace(string_view_stream& str) {
+    return str.str.find_first_not_of(" \t\r\n") == string_view::npos;
 }
 
 // Parse a list of space separated values.
 template <typename... Args>
 inline bool parse(const string& str, Args&... args) {
-    auto view = string_view{str.c_str()};
+    auto view = string_view_stream{str.c_str()};
     if (!parse_next(view, args...)) return false;
     return is_whitespace(view);
 }
