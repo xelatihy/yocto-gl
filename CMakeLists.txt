@@ -54,6 +54,7 @@ add_library(yocto
     yocto/yocto_trace.h yocto/yocto_trace.cpp
     yocto/yocto_imageio.h yocto/yocto_imageio.cpp
     yocto/yocto_sceneio.h yocto/yocto_sceneio.cpp
+    yocto/ext/ArHosekSkyModel.cpp
 )
 
 if(UNIX AND NOT APPLE)

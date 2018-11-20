@@ -233,17 +233,13 @@ image4f make_blackbodyramp_image(int width, int height,
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
-// turbidity in [1.7,10] with or without sun. The sun is not simple to control
-// procedurally, so we include two variables to unrealistically customize it:
-// sun_size_scale and sun_emission_scale with good values in [20-] for both.
-// To make editing easier, we also renormalize the (sun+sky) integral to
-// the sky only integral if renormalize_sun is true. For the same reason,
-// we rescale the sun dimension such that it covers at least 5 pixels in
-// diameter if has_sun is enabled.
+// turbidity in [1.7,10] with or without sun. The sun can be enabled or
+// disabled with has_sun. The sun parameters can be slightly modified by
+// changing the sun intensity and temperature. Has a convention, a temperature
+// of 0 sets the eath sun defaults (ignoring intensity too).
 image4f make_sunsky_image(int width, int height, float sun_angle,
-    float turbidity = 3, bool has_sun = false, float sun_angle_scale = 1.0f,
-    float        sun_emission_scale = 1.0f,
-    const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f}, bool renormalize_sun = true);
+    float turbidity = 3, bool has_sun = false, float sun_intensity = 1.0f,
+    float sun_temperature = 0, const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
 // Make an image of multiple lights.
 image4f make_lights_image(int width, int height, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,

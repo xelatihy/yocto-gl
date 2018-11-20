@@ -387,8 +387,8 @@ bool apply_json_procedural(const json& js, image4f& img) {
             get_json_value(js, "sun_angle", pif / 4),
             get_json_value(js, "turbidity", 3.0f),
             get_json_value(js, "has_sun", false),
-            get_json_value(js, "sun_angle_scale", 1.0f),
-            get_json_value(js, "sun_emission_scale", 1.0f),
+            get_json_value(js, "sun_intensity", 1.0f),
+            get_json_value(js, "sun_temperature", 0.0f),
             get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
     } else if (type == "noise") {
         img = make_noise_image(width, height, get_json_value(js, "scale", 1.0f),
