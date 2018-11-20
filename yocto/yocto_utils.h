@@ -467,10 +467,17 @@ inline string to_string(const T& value) {
     return stream.str();
 }
 
+// Set error and return the value
+inline string_view& set_error(string_view& view) {
+    view = {};
+    return view;
+}
+
 // Prints basic types to string
-inline bool parse_value(string_view& str, string& value) {
+inline string_view& operator>>(string_view& str, string& value) {
+    if(empty(str)) return str;
     auto pos = str.find_first_not_of(" \t\r\n");
-    if(pos == string_view::npos) return false;
+    if(pos == string_view::npos) return set_error(str);
     str.remove_prefix(pos);
     pos = str.find_first_of(" \t\r\n");
     if(pos == string_view::npos) {
@@ -480,182 +487,114 @@ inline bool parse_value(string_view& str, string& value) {
         value = str.substr(0, pos);
         str.remove_prefix(pos);
     }
-    return true;
+    return str;
 }
-inline bool parse_value(string_view& str, int& value) {
+inline string_view& operator>>(string_view& str, int& value) {
+    if(empty(str)) return str;
     char* end = nullptr;
     value     = (int)strtol(data(str), &end, 10);
-    if (data(str) == end) return false;
+    if (data(str) == end) return set_error(str);
     str.remove_prefix(end - data(str));
     // auto n = 0;
     // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
     // str.str += n;
-    return true;
+    return str;
 }
-inline bool parse_value(string_view& str, float& value) {
+inline string_view& operator>>(string_view& str, float& value) {
+    if(empty(str)) return str;
     char* end = nullptr;
     value     = strtof(data(str), &end);
-    if (data(str) == end) return false;
+    if (data(str) == end) return set_error(str);
     str.remove_prefix(end - data(str));
     // auto n = 0;
     // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
     // str.str += n;
-    return true;
+    return str;
 }
-inline bool parse_value(string_view& str, double& value) {
+inline string_view& operator>>(string_view& str, double& value) {
+    if(empty(str)) return str;
     char* end = nullptr;
     value     = strtod(data(str), &end);
-    if (data(str) == end) return false;
+    if (data(str) == end) return set_error(str);
     str.remove_prefix(end - data(str));
     // auto n = 0;
     // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
     // str.str += n;
-    return true;
+    return str;
 }
-inline bool parse_value(string_view& str, bool& value) {
+inline string_view& operator>>(string_view& str, bool& value) {
+    if(empty(str)) return str;
     auto ivalue = 0;
-    if (!parse_value(str, ivalue)) return false;
+    str >> ivalue;
     value = (bool)ivalue;
-    return true;
+    return str;
 }
 
 // Print compound types
 template <typename T, size_t N>
-inline bool parse_value(string_view& str, array<T, N>& value) {
-    for (auto i = 0; i < N; i++) {
-        if (!parse_value(str, value[i])) return false;
-    }
-    return true;
-}
-template <typename T>
-inline bool parse_values(string_view& str, T* values, int N) {
-    for (auto i = 0; i < N; i++) {
-        if (!parse_value(str, values[i])) return false;
-    }
-    return true;
+inline string_view& operator>>(string_view& str, array<T, N>& value) {
+    for (auto i = 0; i < N; i++) str >> value[i];
+    return str;
 }
 
-// Data acess
-inline bool parse_value(string_view& str, vec2f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    return true;
+// Iostream utilities for basic types
+inline string_view& operator>>(string_view& is, vec2f& value) {
+    return is >> value.x >> value.y;
 }
-inline bool parse_value(string_view& str, vec3f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, vec3f& value) {
+    return is >> value.x >> value.y >> value.z;
 }
-inline bool parse_value(string_view& str, vec4f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.w)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, vec4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
 }
-inline bool parse_value(string_view& str, vec2i& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, vec2i& value) {
+    return is >> value.x >> value.y;
 }
-inline bool parse_value(string_view& str, vec3i& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, vec3i& value) {
+    return is >> value.x >> value.y >> value.z;
 }
-inline bool parse_value(string_view& str, vec4i& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.w)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, vec4i& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
 }
-inline bool parse_value(string_view& str, mat2f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, mat2f& value) {
+    return is >> value.x >> value.y;
 }
-inline bool parse_value(string_view& str, mat3f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, mat3f& value) {
+    return is >> value.x >> value.y >> value.z;
 }
-inline bool parse_value(string_view& str, mat4f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.w)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, mat4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
 }
-inline bool parse_value(string_view& str, frame2f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.o)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, frame2f& value) {
+    return is >> value.x >> value.y >> value.o;
 }
-inline bool parse_value(string_view& str, frame3f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.o)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, frame3f& value) {
+    return is >> value.x >> value.y >> value.z >> value.o;
 }
-inline bool parse_value(string_view& str, bbox1f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, ray2f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
 }
-inline bool parse_value(string_view& str, bbox2f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, ray3f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
 }
-inline bool parse_value(string_view& str, bbox3f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, bbox1f& value) {
+    return is >> value.min >> value.max;
 }
-inline bool parse_value(string_view& str, bbox4f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, bbox2f& value) {
+    return is >> value.min >> value.max;
 }
-inline bool parse_value(string_view& str, bbox1i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, bbox3f& value) {
+    return is >> value.min >> value.max;
 }
-inline bool parse_value(string_view& str, bbox2i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
+inline string_view& operator>>(string_view& is, bbox4f& value) {
+    return is >> value.min >> value.max;
 }
-inline bool parse_value(string_view& str, bbox3i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox4i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, ray2f& v) {
-    if(!parse_value(str, v.o)) return false;
-    if(!parse_value(str, v.d)) return false;
-    if(!parse_value(str, v.tmin)) return false;
-    if(!parse_value(str, v.tmax)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, ray3f& v) {
-    if(!parse_value(str, v.o)) return false;
-    if(!parse_value(str, v.d)) return false;
-    if(!parse_value(str, v.tmin)) return false;
-    if(!parse_value(str, v.tmax)) return false;
-    return true;
+
+// parse a value
+template<typename T>
+inline bool parse_value(string_view& str, T& value) {
+    str >> value;
+    return str.data() != nullptr;
 }
 
 // Prints a string.
