@@ -385,11 +385,15 @@ void embree_error(void* ctx, RTCError code, const char* str) {
         case RTC_ERROR_INVALID_OPERATION:
             log_error("RTC_ERROR_INVALID_OPERATION: {}", str);
             break;
-        case RTC_ERROR_OUT_OF_MEMORY: log_error("RTC_ERROR_OUT_OF_MEMORY: {}", str); break;
+        case RTC_ERROR_OUT_OF_MEMORY:
+            log_error("RTC_ERROR_OUT_OF_MEMORY: {}", str);
+            break;
         case RTC_ERROR_UNSUPPORTED_CPU:
             log_error("RTC_ERROR_UNSUPPORTED_CPU: {}", str);
             break;
-        case RTC_ERROR_CANCELLED: log_error("RTC_ERROR_CANCELLED: {}", str); break;
+        case RTC_ERROR_CANCELLED:
+            log_error("RTC_ERROR_CANCELLED: {}", str);
+            break;
         default: log_error("invalid error code"); break;
     }
 }

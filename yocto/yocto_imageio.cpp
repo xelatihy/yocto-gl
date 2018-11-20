@@ -27,8 +27,8 @@
 //
 
 #include "yocto_imageio.h"
-#include "yocto_utils.h"
 #include "yocto_json.h"
+#include "yocto_utils.h"
 
 #include <climits>
 #include <cstdlib>
@@ -92,7 +92,7 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
 
     // buffer
     auto buffer = ""s;
-    auto toks = vector<string>();
+    auto toks   = vector<string>();
 
     // read magic
     if (!getline(fs, buffer)) return {};
@@ -121,7 +121,8 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto nrow    = w * nc;
     auto pixels  = vector<float>(nvalues);
     for (auto j = h - 1; j >= 0; j--) {
-        if (!fs.read((char*)(data(pixels) + j * nrow), sizeof(float) * nrow)) return {};
+        if (!fs.read((char*)(data(pixels) + j * nrow), sizeof(float) * nrow))
+            return {};
     }
 
     // endian conversion
@@ -357,24 +358,21 @@ bool load_stbi_image_from_memory(const byte* data, int data_size, image4f& img) 
 }
 
 bool apply_json_procedural(const json& js, image4f& img) {
-    auto type = get_json_value(js, "type", ""s);
-    auto width = get_json_value(js, "width", 512);
+    auto type   = get_json_value(js, "type", ""s);
+    auto width  = get_json_value(js, "width", 512);
     auto height = get_json_value(js, "height", 512);
-    if(type == "") {
+    if (type == "") {
         img = make_image(width, height, zero4f);
     } else if (type == "grid") {
-        img = make_grid_image(width, height,
-            get_json_value(js, "tile", 8),
+        img = make_grid_image(width, height, get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        img = make_checker_image(width, height,
-            get_json_value(js, "tile", 8),
+        img = make_checker_image(width, height, get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        img = make_bumpdimple_image(
-            width, height, get_json_value(js, "tile", 8));
+        img = make_bumpdimple_image(width, height, get_json_value(js, "tile", 8));
     } else if (type == "uvramp") {
         img = make_uvramp_image(width, height);
     } else if (type == "gammaramp") {
@@ -393,17 +391,15 @@ bool apply_json_procedural(const json& js, image4f& img) {
             get_json_value(js, "sun_emission_scale", 1.0f),
             get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
     } else if (type == "noise") {
-        img = make_noise_image(width, height,
-            get_json_value(js, "scale", 1.0f), get_json_value(js, "wrap", true));
+        img = make_noise_image(width, height, get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "wrap", true));
     } else if (type == "fbm") {
-        img = make_fbm_image(width, height,
-            get_json_value(js, "scale", 1.0f),
+        img = make_fbm_image(width, height, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
             get_json_value(js, "wrap", true));
     } else if (type == "ridge") {
-        img = make_ridge_image(width, height,
-            get_json_value(js, "scale", 1.0f),
+        img = make_ridge_image(width, height, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "offset", 1.0f),
             get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
@@ -418,17 +414,16 @@ bool apply_json_procedural(const json& js, image4f& img) {
         return false;
     }
     if (get_json_value(js, "bump_to_normal", false)) {
-        img = bump_to_normal_map(
-            img, get_json_value(js, "bump_scale", 1.0f));
+        img = bump_to_normal_map(img, get_json_value(js, "bump_scale", 1.0f));
     }
     return true;
 }
 
 bool apply_json_procedural(const json& js, image4b& img) {
     auto imgf = image4f{};
-    if(!apply_json_procedural(js, imgf)) return false;
+    if (!apply_json_procedural(js, imgf)) return false;
     auto srgb = get_json_value(js, "srgb", true);
-    if(srgb) imgf = linear_to_srgb(imgf);
+    if (srgb) imgf = linear_to_srgb(imgf);
     img = float_to_byte(imgf);
     return true;
 }
@@ -436,14 +431,14 @@ bool apply_json_procedural(const json& js, image4b& img) {
 // load a JSON image
 bool load_json_image(const string& filename, image4f& img) {
     auto js = json();
-    if(!load_json(filename, js)) return false;
-    if(!apply_json_procedural(js, img)) return false;
+    if (!load_json(filename, js)) return false;
+    if (!apply_json_procedural(js, img)) return false;
     return true;
 }
 bool load_json_image(const string& filename, image4b& img) {
     auto js = json();
-    if(!load_json(filename, js)) return false;
-    if(!apply_json_procedural(js, img)) return false;
+    if (!load_json(filename, js)) return false;
+    if (!apply_json_procedural(js, img)) return false;
     return true;
 }
 

@@ -2198,8 +2198,8 @@ void print_integrate_func_test(function<float(float)> f, float a, float b,
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
-        cout << ns << " " << integral_base << " " << error_base << " " <<
-            error_stratified << " " << error_importance << "\n";
+        cout << ns << " " << integral_base << " " << error_base << " "
+             << error_stratified << " " << error_importance << "\n";
     }
 }
 
@@ -2263,8 +2263,8 @@ void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
-        cout << ns << " " << integral_base << " " << error_base << " " << 
-            error_stratified << " " << error_importance << "\n";
+        cout << ns << " " << integral_base << " " << error_base << " "
+             << error_stratified << " " << error_importance << "\n";
     }
 }
 

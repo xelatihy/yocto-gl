@@ -56,10 +56,10 @@
 
 #include "yocto_sceneio.h"
 #include "yocto_imageio.h"
+#include "yocto_json.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
 #include "yocto_utils.h"
-#include "yocto_json.h"
 
 #include <cstdlib>
 #include <regex>
@@ -158,7 +158,7 @@ inline bool serialize_json_value(json& js, volume1f& value, bool save) {
     return true;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
@@ -1791,7 +1791,8 @@ struct obj_vertex_hash {
     }
 };
 
-inline string_view_stream& operator>>(string_view_stream& view, obj_vertex& value) {
+inline string_view_stream& operator>>(
+    string_view_stream& view, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
     if (!(view >> value.position)) return set_error(view);
     if (view.str.front() == '/') {
@@ -1811,7 +1812,8 @@ inline string_view_stream& operator>>(string_view_stream& view, obj_vertex& valu
 }
 
 // Input for OBJ textures
-inline string_view_stream& operator>>(string_view_stream& view, obj_texture_info& info) {
+inline string_view_stream& operator>>(
+    string_view_stream& view, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
@@ -2543,7 +2545,7 @@ bool save_mtl(
     }
 
     // check for errors
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -2581,7 +2583,7 @@ bool save_objx(const string& filename, const yocto_scene& scene) {
     }
 
     // check for errors
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -2781,7 +2783,7 @@ bool save_obj(const string& filename, const yocto_scene& scene,
     }
 
     // check for errors
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -3619,7 +3621,7 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     write_values(fs, shape.triangles);
     write_values(fs, convert_quads_to_triangles(shape.quads));
 
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write {}", filename);
         return false;
     }
@@ -4559,7 +4561,7 @@ WorldEnd
     print(fs, "WorldEnd\n");
 
     // check for errors
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -4833,8 +4835,8 @@ bool serialize_bin_object(
     return true;
 }
 
-bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
-    fstream& fs, bool save) {
+bool serialize_bin_object(
+    yocto_surface& surface, const yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(surface.name, fs, save)) return false;
     if (!serialize_bin_value(surface.filename, fs, save)) return false;
     if (!serialize_bin_value(surface.materials, fs, save)) return false;
@@ -4948,14 +4950,14 @@ bool serialize_scene(yocto_scene& scene, fstream& fs, bool save) {
 bool load_ybin_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
-    auto fs = fstream(filename, std::ios::in | std::ios::binary);
+    auto fs    = fstream(filename, std::ios::in | std::ios::binary);
     if (!fs) {
         log_io_error("cannot open file {}", filename);
         return false;
     }
     scene = {};
     serialize_scene(scene, fs, false);
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot reada file {}", filename);
         return false;
     }
@@ -4971,7 +4973,7 @@ bool save_ybin_scene(const string& filename, const yocto_scene& scene,
         return false;
     }
     serialize_scene((yocto_scene&)scene, fs, true);
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -5238,7 +5240,7 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     }
 
     // check for errors
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -5366,7 +5368,7 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
     }
 
     // check for errors
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -5605,7 +5607,7 @@ bool save_obj_facevarying_mesh(const string& filename,
     }
 
     // check for errors
-    if(!fs) {
+    if (!fs) {
         log_io_error("cannot write file {}", filename);
         return false;
     }

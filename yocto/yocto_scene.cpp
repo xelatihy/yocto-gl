@@ -1753,8 +1753,10 @@ void print_stats(const yocto_scene& scene) {
     cout << "memory_fvelems: " << memory_fvelems << "\n";
     cout << "memory_fvverts: " << memory_fvverts << "\n";
 
-    cout << "bbox min: " << bbox.min.x << " " << bbox.min.y << " " << bbox.min.z << "\n";
-    cout << "bbox max: " << bbox.max.x << " " << bbox.max.y << " " << bbox.max.z << "\n";
+    cout << "bbox min: " << bbox.min.x << " " << bbox.min.y << " " << bbox.min.z
+         << "\n";
+    cout << "bbox max: " << bbox.max.x << " " << bbox.max.y << " " << bbox.max.z
+         << "\n";
 }
 
 }  // namespace yocto
