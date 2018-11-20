@@ -944,7 +944,9 @@ inline vector<pair<string, string>> get_flag_names(const string& name) {
 // get default string
 template <typename T>
 inline string get_option_default_string(const T& value) {
-    return to_string(value);
+    auto stream = stringstream{};
+    stream << value;
+    return stream.str();
 }
 inline string get_option_default_string(const bool& value) {
     return (value) ? "true"s : "false"s;
