@@ -27,7 +27,8 @@
             "filename": "textures/floor.png",
             "gamma": 2.2,
             "!!proc": {
-                "type": "grid"
+                "type": "grid",
+                "border": true
             }
         },
         {

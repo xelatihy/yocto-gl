@@ -538,6 +538,25 @@ image4f make_turbulence_image(int width, int height, float scale,
     return img;
 }
 
+// Add a border to an image
+image4f add_image_border(
+    const image4f& img, int border_width, const vec4f& border_color) {
+    auto img_ret = img;
+    for (auto j = 0; j < img.height; j++) {
+        for (auto b = 0; b < border_width; b++) {
+            at(img_ret, b, j)                 = border_color;
+            at(img_ret, img.width - 1 - b, j) = border_color;
+        }
+    }
+    for (auto i = 0; i < img.width; i++) {
+        for (auto b = 0; b < border_width; b++) {
+            at(img_ret, i, b)                  = border_color;
+            at(img_ret, i, img.height - 1 - b) = border_color;
+        }
+    }
+    return img_ret;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

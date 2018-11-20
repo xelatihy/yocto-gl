@@ -260,6 +260,10 @@ image4f make_ridge_image(int width, int height, float scale = 1,
 image4f make_turbulence_image(int width, int height, float scale = 1,
     float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
 
+// Add a border to an image
+image4f add_image_border(const image4f& img, int border_width = 2,
+    const vec4f& border_color = {0, 0, 0, 1});
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

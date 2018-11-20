@@ -127,6 +127,7 @@ void load_image_async(app_image& img) {
     img.display        = img.img;
     img.display_thread = thread([&img]() { update_display_async(img); });
     img.stats_thread   = thread([&img]() { update_stats_async(img); });
+    img.zoom_to_fit    = true;
 }
 
 // save an image

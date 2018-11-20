@@ -77,11 +77,11 @@ using std::string_view;
 
 // string view wrapper similar to stream
 struct string_view_stream {
-    string_view str = {};
-    bool error = false;
+    string_view str   = {};
+    bool        error = false;
 
     explicit operator bool() const { return !error; }
-    bool operator!() const { return error; }
+    bool     operator!() const { return error; }
 };
 
 // Set error and return the value
@@ -92,12 +92,12 @@ inline string_view_stream& set_error(string_view_stream& stream) {
 
 // Prints basic types to string
 inline string_view_stream& operator>>(string_view_stream& stream, string& value) {
-    if(!stream) return stream;
+    if (!stream) return stream;
     auto pos = stream.str.find_first_not_of(" \t\r\n");
-    if(pos == string_view::npos) return set_error(stream);
+    if (pos == string_view::npos) return set_error(stream);
     stream.str.remove_prefix(pos);
     pos = stream.str.find_first_of(" \t\r\n");
-    if(pos == string_view::npos) {
+    if (pos == string_view::npos) {
         value = stream.str;
         stream.str.remove_prefix(stream.str.length());
     } else {
@@ -107,7 +107,7 @@ inline string_view_stream& operator>>(string_view_stream& stream, string& value)
     return stream;
 }
 inline string_view_stream& operator>>(string_view_stream& stream, int& value) {
-    if(!stream) return stream;
+    if (!stream) return stream;
     char* end = nullptr;
     value     = (int)strtol(data(stream.str), &end, 10);
     if (data(stream.str) == end) return set_error(stream);
@@ -118,7 +118,7 @@ inline string_view_stream& operator>>(string_view_stream& stream, int& value) {
     return stream;
 }
 inline string_view_stream& operator>>(string_view_stream& stream, float& value) {
-    if(!stream) return stream;
+    if (!stream) return stream;
     char* end = nullptr;
     value     = strtof(data(stream.str), &end);
     if (data(stream.str) == end) return set_error(stream);
@@ -129,7 +129,7 @@ inline string_view_stream& operator>>(string_view_stream& stream, float& value) 
     return stream;
 }
 inline string_view_stream& operator>>(string_view_stream& stream, double& value) {
-    if(!stream) return stream;
+    if (!stream) return stream;
     char* end = nullptr;
     value     = strtod(data(stream.str), &end);
     if (data(stream.str) == end) return set_error(stream);
@@ -140,7 +140,7 @@ inline string_view_stream& operator>>(string_view_stream& stream, double& value)
     return stream;
 }
 inline string_view_stream& operator>>(string_view_stream& stream, bool& value) {
-    if(!stream) return stream;
+    if (!stream) return stream;
     auto ivalue = 0;
     stream >> ivalue;
     value = (bool)ivalue;
@@ -149,7 +149,8 @@ inline string_view_stream& operator>>(string_view_stream& stream, bool& value) {
 
 // Print compound types
 template <typename T, size_t N>
-inline string_view_stream& operator>>(string_view_stream& str, array<T, N>& value) {
+inline string_view_stream& operator>>(
+    string_view_stream& str, array<T, N>& value) {
     for (auto i = 0; i < N; i++) str >> value[i];
     return str;
 }
@@ -208,7 +209,7 @@ inline string_view_stream& operator>>(string_view_stream& is, bbox4f& value) {
 }
 
 // parse a value
-template<typename T>
+template <typename T>
 inline bool parse_value(string_view_stream& stream, T& value) {
     stream >> value;
     return (bool)stream;
@@ -227,7 +228,7 @@ inline bool is_whitespace(string_view_stream& str) {
     return str.str.find_first_not_of(" \t\r\n") == string_view::npos;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONVERSION TO/FROM JSON
@@ -264,7 +265,7 @@ inline void to_json(json& js, const volume1f& value) {
     js           = json::object();
     js["width"]  = value.width;
     js["height"] = value.height;
-    js["depth"]  = value.width;
+    js["depth"]  = value.depth;
     js["voxels"] = vector<float>{
         data(value), data(value) + value.width * value.height * value.depth};
 }
@@ -312,7 +313,7 @@ inline bool serialize_json_value(json& js, volume1f& value, bool save) {
     auto width = 0, height = 0, depth = 0;
     if (!serialize_json_value(js, width, "width", -1, save)) return false;
     if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!serialize_json_value(js, depth, "heidepthght", -1, save)) return false;
+    if (!serialize_json_value(js, depth, "depth", -1, save)) return false;
     if (!save) value = make_volume(width, height, depth, 0.0f);
     if (!serialize_json_values(
             js, data(value), width * height * depth, "voxels", save))
@@ -847,8 +848,8 @@ bool apply_json_procedural(
     auto type = get_json_value(js, "type", ""s);
     if (type == "") return true;
     auto is_hdr = false;
-    auto width  = get_json_value(js, "width", 512);
-    auto height = get_json_value(js, "height", 512);
+    auto width  = get_json_value(js, "width", 1024);
+    auto height = get_json_value(js, "height", 1024);
     if (type == "grid") {
         value.hdr_image = make_grid_image(width, height,
             get_json_value(js, "tile", 8),
@@ -904,6 +905,11 @@ bool apply_json_procedural(
     } else {
         log_error("unknown texture type {}", type);
         return false;
+    }
+    if (get_json_value(js, "border", false)) {
+        value.hdr_image = add_image_border(value.hdr_image,
+            get_json_value(js, "border_width", 2),
+            get_json_value(js, "border_color", vec4f{0, 0, 0, 1}));
     }
     if (get_json_value(js, "bump_to_normal", false)) {
         value.hdr_image = bump_to_normal_map(
@@ -1166,7 +1172,8 @@ bool apply_json_procedural(
         tie(value.quads, value.positions, value.normals,
             value.texturecoords) = make_disk_quad_shape(get_json_value(js,
                                                             "steps", 32),
-            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f), true);
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", 1.0f), true);
     } else if (type == "disk_bulged") {
         tie(value.quads, value.positions, value.normals,
             value.texturecoords) = make_disk_bulged_shape(get_json_value(js,
@@ -1947,8 +1954,8 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
     // save json
     auto js = json();
     try {
-        js = json::object();
-        js["asset"] = json::object();
+        js                    = json::object();
+        js["asset"]           = json::object();
         js["asset"]["format"] = "Yocto/Scene";
         js["asset"]["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
         if (!serialize_json_object(js, (yocto_scene&)scene, true)) {
@@ -3838,8 +3845,8 @@ bool save_gltf_scene(const string& filename, const yocto_scene& scene,
     // save json
     auto js = json();
     try {
-        js = json::object();
-        js["asset"] = json::object();
+        js                    = json::object();
+        js["asset"]           = json::object();
         js["asset"]["format"] = "Yocto/Scene";
         js["asset"]["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
         if (!scene_to_gltf(scene, js)) return false;
@@ -4494,8 +4501,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     radius = jcmd.at("radius").get<float>();
                 tie(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords) = make_sphere_shape({64, 32},
-                    2 * radius, {1, 1},
-            get_json_value(js, "flip_v", true));
+                    2 * radius, {1, 1}, get_json_value(js, "flip_v", true));
             } else if (type == "disk") {
                 shape.name     = "disk" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
@@ -4504,8 +4510,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                     radius = jcmd.at("radius").get<float>();
                 tie(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords) = make_disk_shape({32, 16}, 2 * radius,
-                    {1, 1},
-            get_json_value(js, "flip_v", true));
+                    {1, 1}, get_json_value(js, "flip_v", true));
             } else {
                 log_error("{} shape not supported", type);
             }
@@ -4587,8 +4592,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto size                = distant_dist * sin(5 * pif / 180);
                 tie(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords) = make_quad_shape({1, 1}, {size, size},
-                    {1, 1},
-            get_json_value(js, "flip_v", true));
+                    {1, 1}, get_json_value(js, "flip_v", true));
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 shape.material    = scene.materials.size() - 1;
@@ -5366,7 +5370,8 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         print(fs, "format ascii 1.0\n");
     else
         print(fs, "format binary_little_endian 1.0\n");
-    print(fs, "comment Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n");
+    print(fs,
+        "comment Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n");
     print(fs, "element vertex {}\n", (int)positions.size());
     if (!empty(positions))
         print(fs, "property float x\nproperty float y\nproperty float z\n");
