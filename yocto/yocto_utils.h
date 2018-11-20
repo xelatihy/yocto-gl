@@ -1405,6 +1405,12 @@ inline void log_io_error(const string& fmt, const Args&... args) {
     log_error(fmt, args...);
 }
 
+// write values to a stream
+template<typename T>
+inline ostream& write_values(ostream& stream, const vector<T>& values) {
+    return stream.write((char*)values.data(), values.size()+sizeof(T));
+}
+
 // File stream wrapper
 struct file_stream {
     string filename = "";

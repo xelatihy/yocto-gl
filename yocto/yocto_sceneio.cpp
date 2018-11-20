@@ -2471,9 +2471,12 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
 
 bool save_mtl(
     const string& filename, const yocto_scene& scene, bool flip_tr = true) {
-    // open
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // for each material, dump all the values
     for (auto& material : scene.materials) {
@@ -2544,9 +2547,12 @@ bool save_mtl(
 }
 
 bool save_objx(const string& filename, const yocto_scene& scene) {
-    // scene
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // cameras
     for (auto& camera : scene.cameras) {
@@ -2585,9 +2591,12 @@ string to_string(const obj_vertex& v) {
 
 bool save_obj(const string& filename, const yocto_scene& scene,
     bool flip_texcoord = true) {
-    // scene
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // material library
     if (!empty(scene.materials)) {
@@ -3575,8 +3584,12 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
 // save gltf mesh
 bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     auto scope = log_trace_scoped("saving scene {}", filename);
-    auto fs    = open(filename, "wb");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     if (!write_values(fs, shape.positions)) return false;
     if (!write_values(fs, shape.normals)) return false;
@@ -3720,12 +3733,15 @@ bool pbrt_to_json(const string& filename, json& js) {
         if (tokens[i][0] == ']') i++;
     };
 
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
 
     auto pbrt = ""s;
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         if (line.find('#') == line.npos)
             pbrt += line + "\n";
         else
