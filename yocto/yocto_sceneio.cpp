@@ -56,16 +56,178 @@
 
 #include "yocto_sceneio.h"
 #include "yocto_imageio.h"
+#include "yocto_json.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
 #include "yocto_utils.h"
-#include "yocto_json.h"
 
 #include <cstdlib>
 #include <regex>
+#include <string_view>
 
 #include <array>
 #include <climits>
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF FAST PARSING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+using std::string_view;
+
+// string view wrapper similar to stream
+struct string_view_stream {
+    string_view str = {};
+    bool error = false;
+
+    explicit operator bool() const { return !error; }
+    bool operator!() const { return error; }
+};
+
+// Set error and return the value
+inline string_view_stream& set_error(string_view_stream& stream) {
+    stream.error = true;
+    return stream;
+}
+
+// Prints basic types to string
+inline string_view_stream& operator>>(string_view_stream& stream, string& value) {
+    if(!stream) return stream;
+    auto pos = stream.str.find_first_not_of(" \t\r\n");
+    if(pos == string_view::npos) return set_error(stream);
+    stream.str.remove_prefix(pos);
+    pos = stream.str.find_first_of(" \t\r\n");
+    if(pos == string_view::npos) {
+        value = stream.str;
+        stream.str.remove_prefix(stream.str.length());
+    } else {
+        value = stream.str.substr(0, pos);
+        stream.str.remove_prefix(pos);
+    }
+    return stream;
+}
+inline string_view_stream& operator>>(string_view_stream& stream, int& value) {
+    if(!stream) return stream;
+    char* end = nullptr;
+    value     = (int)strtol(data(stream.str), &end, 10);
+    if (data(stream.str) == end) return set_error(stream);
+    stream.str.remove_prefix(end - data(stream.str));
+    // auto n = 0;
+    // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
+    // str.str += n;
+    return stream;
+}
+inline string_view_stream& operator>>(string_view_stream& stream, float& value) {
+    if(!stream) return stream;
+    char* end = nullptr;
+    value     = strtof(data(stream.str), &end);
+    if (data(stream.str) == end) return set_error(stream);
+    stream.str.remove_prefix(end - data(stream.str));
+    // auto n = 0;
+    // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
+    // str.str += n;
+    return stream;
+}
+inline string_view_stream& operator>>(string_view_stream& stream, double& value) {
+    if(!stream) return stream;
+    char* end = nullptr;
+    value     = strtod(data(stream.str), &end);
+    if (data(stream.str) == end) return set_error(stream);
+    stream.str.remove_prefix(end - data(stream.str));
+    // auto n = 0;
+    // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
+    // str.str += n;
+    return stream;
+}
+inline string_view_stream& operator>>(string_view_stream& stream, bool& value) {
+    if(!stream) return stream;
+    auto ivalue = 0;
+    stream >> ivalue;
+    value = (bool)ivalue;
+    return stream;
+}
+
+// Print compound types
+template <typename T, size_t N>
+inline string_view_stream& operator>>(string_view_stream& str, array<T, N>& value) {
+    for (auto i = 0; i < N; i++) str >> value[i];
+    return str;
+}
+
+// Iostream utilities for basic types
+inline string_view_stream& operator>>(string_view_stream& is, vec2f& value) {
+    return is >> value.x >> value.y;
+}
+inline string_view_stream& operator>>(string_view_stream& is, vec3f& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline string_view_stream& operator>>(string_view_stream& is, vec4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline string_view_stream& operator>>(string_view_stream& is, vec2i& value) {
+    return is >> value.x >> value.y;
+}
+inline string_view_stream& operator>>(string_view_stream& is, vec3i& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline string_view_stream& operator>>(string_view_stream& is, vec4i& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline string_view_stream& operator>>(string_view_stream& is, mat2f& value) {
+    return is >> value.x >> value.y;
+}
+inline string_view_stream& operator>>(string_view_stream& is, mat3f& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline string_view_stream& operator>>(string_view_stream& is, mat4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline string_view_stream& operator>>(string_view_stream& is, frame2f& value) {
+    return is >> value.x >> value.y >> value.o;
+}
+inline string_view_stream& operator>>(string_view_stream& is, frame3f& value) {
+    return is >> value.x >> value.y >> value.z >> value.o;
+}
+inline string_view_stream& operator>>(string_view_stream& is, ray2f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
+}
+inline string_view_stream& operator>>(string_view_stream& is, ray3f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
+}
+inline string_view_stream& operator>>(string_view_stream& is, bbox1f& value) {
+    return is >> value.min >> value.max;
+}
+inline string_view_stream& operator>>(string_view_stream& is, bbox2f& value) {
+    return is >> value.min >> value.max;
+}
+inline string_view_stream& operator>>(string_view_stream& is, bbox3f& value) {
+    return is >> value.min >> value.max;
+}
+inline string_view_stream& operator>>(string_view_stream& is, bbox4f& value) {
+    return is >> value.min >> value.max;
+}
+
+// parse a value
+template<typename T>
+inline bool parse_value(string_view_stream& stream, T& value) {
+    stream >> value;
+    return (bool)stream;
+}
+
+// Prints a string.
+inline bool parse_next(string_view_stream& str) { return true; }
+template <typename Arg, typename... Args>
+inline bool parse_next(string_view_stream& str, Arg& arg, Args&... args) {
+    if (!parse_value(str, arg)) return false;
+    return parse_next(str, args...);
+}
+
+// Returns trus if this is white space
+inline bool is_whitespace(string_view_stream& str) {
+    return str.str.find_first_not_of(" \t\r\n") == string_view::npos;
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF CONVERSION TO/FROM JSON
@@ -158,7 +320,7 @@ inline bool serialize_json_value(json& js, volume1f& value, bool save) {
     return true;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // GENERIC SCENE LOADING
@@ -1791,27 +1953,29 @@ struct obj_vertex_hash {
     }
 };
 
-inline bool parse_value(string_view& view, obj_vertex& value) {
+inline string_view_stream& operator>>(
+    string_view_stream& view, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
-    if (!parse_value(view, value.position)) return false;
-    if (view.front() == '/') {
-        view.remove_prefix(1);
-        if (view.front() == '/') {
-            view.remove_prefix(1);
-            if (!parse_value(view, value.normal)) return false;
+    if (!(view >> value.position)) return set_error(view);
+    if (view.str.front() == '/') {
+        view.str.remove_prefix(1);
+        if (view.str.front() == '/') {
+            view.str.remove_prefix(1);
+            if (!(view >> value.normal)) return set_error(view);
         } else {
-            if (!parse_value(view, value.texturecoord)) return false;
-            if (view.front() == '/') {
-                view.remove_prefix(1);
-                if (!parse_value(view, value.normal)) return false;
+            if (!(view >> value.texturecoord)) return set_error(view);
+            if (view.str.front() == '/') {
+                view.str.remove_prefix(1);
+                if (!(view >> value.normal)) return set_error(view);
             }
         }
     }
-    return true;
+    return view;
 }
 
 // Input for OBJ textures
-inline bool parse_value(string_view& view, obj_texture_info& info) {
+inline string_view_stream& operator>>(
+    string_view_stream& view, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
@@ -1819,11 +1983,11 @@ inline bool parse_value(string_view& view, obj_texture_info& info) {
     auto tokens = vector<string>();
     while (true) {
         auto token = ""s;
-        parse_value(view, token);
+        view >> token;
         if (token == "") break;
         tokens.push_back(token);
     }
-    if (empty(tokens)) return false;
+    if (empty(tokens)) return set_error(view);
 
     // texture name
     info.path = normalize_path(tokens.back());
@@ -1835,15 +1999,18 @@ inline bool parse_value(string_view& view, obj_texture_info& info) {
         if (tokens[i] == "-clamp") info.clamp = true;
     }
 
-    return true;
+    return view;
 }
 
 // Load obj materials
 bool load_mtl(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // currently parsed material
     auto material = obj_material();
@@ -1851,14 +2018,14 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = string_view{line};
+        auto view = string_view_stream{line};
 
         // get command
         auto cmd = ""s;
-        parse_value(view, cmd);
+        view >> cmd;
         if (cmd == "") continue;
 
         // possible token values
@@ -1866,68 +2033,68 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
             if (!first && cb.material) cb.material(material);
             first    = false;
             material = obj_material();
-            parse_value(view, material.name);
+            view >> material.name;
         } else if (cmd == "illum") {
-            parse_value(view, material.illum);
+            view >> material.illum;
         } else if (cmd == "Ke") {
-            parse_value(view, material.ke);
+            view >> material.ke;
         } else if (cmd == "Kd") {
-            parse_value(view, material.kd);
+            view >> material.kd;
         } else if (cmd == "Ks") {
-            parse_value(view, material.ks);
+            view >> material.ks;
         } else if (cmd == "Kt") {
-            parse_value(view, material.kt);
+            view >> material.kt;
         } else if (cmd == "Tf") {
             material.kt = {-1, -1, -1};
-            parse_value(view, material.kt);
+            view >> material.kt;
             if (material.kt.y < 0)
                 material.kt = {material.kt.x, material.kt.x, material.kt.x};
             if (options.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
             auto tr = vec3f{-1, -1, -1};
-            parse_value(view, tr);
+            view >> tr;
             if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
             material.op = (tr.x + tr.y + tr.z) / 3;
             if (options.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
-            parse_value(view, material.ns);
+            view >> material.ns;
             material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
             if (material.rs < 0.01f) material.rs = 0;
             if (material.rs > 0.99f) material.rs = 1;
         } else if (cmd == "d") {
-            parse_value(view, material.op);
+            view >> material.op;
         } else if (cmd == "Pr" || cmd == "rs") {
-            parse_value(view, material.rs);
+            view >> material.rs;
         } else if (cmd == "map_Ke") {
-            parse_value(view, material.ke_txt);
+            view >> material.ke_txt;
         } else if (cmd == "map_Kd") {
-            parse_value(view, material.kd_txt);
+            view >> material.kd_txt;
         } else if (cmd == "map_Ks") {
-            parse_value(view, material.ks_txt);
+            view >> material.ks_txt;
         } else if (cmd == "map_Tr") {
-            parse_value(view, material.kt_txt);
+            view >> material.kt_txt;
         } else if (cmd == "map_d" || cmd == "map_Tr") {
-            parse_value(view, material.op_txt);
+            view >> material.op_txt;
         } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            parse_value(view, material.rs_txt);
+            view >> material.rs_txt;
         } else if (cmd == "map_occ" || cmd == "occ") {
-            parse_value(view, material.occ_txt);
+            view >> material.occ_txt;
         } else if (cmd == "map_bump" || cmd == "bump") {
-            parse_value(view, material.bump_txt);
+            view >> material.bump_txt;
         } else if (cmd == "map_disp" || cmd == "disp") {
-            parse_value(view, material.disp_txt);
+            view >> material.disp_txt;
         } else if (cmd == "map_norm" || cmd == "norm") {
-            parse_value(view, material.norm_txt);
+            view >> material.norm_txt;
         } else if (cmd == "Ve") {
-            parse_value(view, material.ve);
+            view >> material.ve;
         } else if (cmd == "Va") {
-            parse_value(view, material.va);
+            view >> material.va;
         } else if (cmd == "Vd") {
-            parse_value(view, material.vd);
+            view >> material.vd;
         } else if (cmd == "Vg") {
-            parse_value(view, material.vg);
+            view >> material.vg;
         } else if (cmd == "map_Vd") {
-            parse_value(view, material.vd_txt);
+            view >> material.vd_txt;
         }
     }
 
@@ -1942,39 +2109,42 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
 bool load_objx(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // read the file line by line
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = string_view{line.c_str()};
+        auto view = string_view_stream{line.c_str()};
 
         // get command
         auto cmd = ""s;
-        parse_value(view, cmd);
+        view >> cmd;
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "c") {
             auto camera = obj_camera();
-            parse_value(view, camera.name);
-            parse_value(view, camera.ortho);
-            parse_value(view, camera.width);
-            parse_value(view, camera.height);
-            parse_value(view, camera.focal);
-            parse_value(view, camera.focus);
-            parse_value(view, camera.aperture);
-            parse_value(view, camera.frame);
+            view >> camera.name;
+            view >> camera.ortho;
+            view >> camera.width;
+            view >> camera.height;
+            view >> camera.focal;
+            view >> camera.focus;
+            view >> camera.aperture;
+            view >> camera.frame;
             if (cb.camera) cb.camera(camera);
         } else if (cmd == "e") {
             auto environment = obj_environment();
-            parse_value(view, environment.name);
-            parse_value(view, environment.ke);
-            parse_value(view, environment.ke_txt.path);
-            parse_value(view, environment.frame);
+            view >> environment.name;
+            view >> environment.ke;
+            view >> environment.ke_txt.path;
+            view >> environment.frame;
             if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
             if (cb.environmnet) cb.environmnet(environment);
         } else {
@@ -1990,8 +2160,11 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
 bool load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -1999,30 +2172,30 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = string_view{line.c_str()};
+        auto view = string_view_stream{line.c_str()};
 
         // get command
         auto cmd = ""s;
-        parse_value(view, cmd);
+        view >> cmd;
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "v") {
             auto vert = zero3f;
-            parse_value(view, vert);
+            view >> vert;
             if (cb.vert) cb.vert(vert);
             vert_size.position += 1;
         } else if (cmd == "vn") {
             auto vert = zero3f;
-            parse_value(view, vert);
+            view >> vert;
             if (cb.norm) cb.norm(vert);
             vert_size.normal += 1;
         } else if (cmd == "vt") {
             auto vert = zero2f;
-            parse_value(view, vert);
+            view >> vert;
             if (options.flip_texcoord) vert.y = 1 - vert.y;
             if (cb.texcoord) cb.texcoord(vert);
             vert_size.texturecoord += 1;
@@ -2030,7 +2203,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
             verts.clear();
             while (true) {
                 auto vert = obj_vertex{};
-                parse_value(view, vert);
+                view >> vert;
                 if (!vert.position) break;
                 if (vert.position < 0)
                     vert.position = vert_size.position + vert.position + 1;
@@ -2046,24 +2219,24 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
             if (cmd == "p" && cb.point) cb.point(verts);
         } else if (cmd == "o") {
             auto name = ""s;
-            parse_value(view, name);
+            view >> name;
             if (cb.object) cb.object(name);
         } else if (cmd == "usemtl") {
             auto name = ""s;
-            parse_value(view, name);
+            view >> name;
             if (cb.usemtl) cb.usemtl(name);
         } else if (cmd == "g") {
             auto name = ""s;
-            parse_value(view, name);
+            view >> name;
             if (cb.group) cb.group(name);
         } else if (cmd == "s") {
             auto name = ""s;
-            parse_value(view, name);
+            view >> name;
             if (cb.smoothing) cb.smoothing(name);
         } else if (cmd == "mtllib") {
             if (options.geometry_only) continue;
             auto mtlname = ""s;
-            parse_value(view, mtlname);
+            view >> mtlname;
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + mtlname;
             if (!load_mtl(mtlpath, cb, options)) {
@@ -2462,9 +2635,12 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
 
 bool save_mtl(
     const string& filename, const yocto_scene& scene, bool flip_tr = true) {
-    // open
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // for each material, dump all the values
     for (auto& material : scene.materials) {
@@ -2530,14 +2706,23 @@ bool save_mtl(
         print(fs, "\n");
     }
 
+    // check for errors
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     // done
     return true;
 }
 
 bool save_objx(const string& filename, const yocto_scene& scene) {
-    // scene
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // cameras
     for (auto& camera : scene.cameras) {
@@ -2559,6 +2744,12 @@ bool save_objx(const string& filename, const yocto_scene& scene) {
         }
     }
 
+    // check for errors
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     // done
     return true;
 }
@@ -2576,9 +2767,12 @@ string to_string(const obj_vertex& v) {
 
 bool save_obj(const string& filename, const yocto_scene& scene,
     bool flip_texcoord = true) {
-    // scene
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // material library
     if (!empty(scene.materials)) {
@@ -2748,6 +2942,12 @@ bool save_obj(const string& filename, const yocto_scene& scene,
             offset.normal += shape.normals.size();
         } else {
         }
+    }
+
+    // check for errors
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
     }
 
     return true;
@@ -3566,19 +3766,27 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
 // save gltf mesh
 bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     auto scope = log_trace_scoped("saving scene {}", filename);
-    auto fs    = open(filename, "wb");
-    if (!fs) return false;
+    // open file
+    auto fs = ofstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
-    if (!write_values(fs, shape.positions)) return false;
-    if (!write_values(fs, shape.normals)) return false;
-    if (!write_values(fs, shape.texturecoords)) return false;
-    if (!write_values(fs, shape.colors)) return false;
-    if (!write_values(fs, shape.radius)) return false;
-    if (!write_values(fs, shape.points)) return false;
-    if (!write_values(fs, shape.lines)) return false;
-    if (!write_values(fs, shape.triangles)) return false;
-    auto qtriangles = convert_quads_to_triangles(shape.quads);
-    if (!write_values(fs, qtriangles)) return false;
+    write_values(fs, shape.positions);
+    write_values(fs, shape.normals);
+    write_values(fs, shape.texturecoords);
+    write_values(fs, shape.colors);
+    write_values(fs, shape.radius);
+    write_values(fs, shape.points);
+    write_values(fs, shape.lines);
+    write_values(fs, shape.triangles);
+    write_values(fs, convert_quads_to_triangles(shape.quads));
+
+    if (!fs) {
+        log_io_error("cannot write {}", filename);
+        return false;
+    }
 
     return true;
 }
@@ -3711,12 +3919,15 @@ bool pbrt_to_json(const string& filename, json& js) {
         if (tokens[i][0] == ']') i++;
     };
 
-    auto fs = open(filename, "rt");
-    if (!fs) return false;
+    auto fs = ifstream(filename);
+    if (!fs) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
 
     auto pbrt = ""s;
     auto line = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         if (line.find('#') == line.npos)
             pbrt += line + "\n";
         else
@@ -4407,8 +4618,11 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 // Convert a scene to pbrt format
 bool save_pbrt(const string& filename, const yocto_scene& scene) {
     auto scope = log_trace_scoped("saving scene {}", filename);
-    auto fs    = open(filename, "wt");
-    if (!fs) return false;
+    auto fs    = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
 
 #if 0
 WorldBegin
@@ -4508,6 +4722,12 @@ WorldEnd
     // end world
     print(fs, "WorldEnd\n");
 
+    // check for errors
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     // done
     return true;
 }
@@ -4564,17 +4784,17 @@ namespace yocto {
 
 // Serialize type or struct with no allocated resource
 template <typename T>
-bool serialize_bin_value(T& value, file_stream& fs, bool save) {
+bool serialize_bin_value(T& value, fstream& fs, bool save) {
     if (save) {
-        return write_value(fs, value);
+        return (bool)write_value(fs, value);
     } else {
-        return read_value(fs, value);
+        return (bool)read_value(fs, value);
     }
 }
 
 // Serialize vector
 template <typename T>
-bool serialize_bin_value(vector<T>& vec, file_stream& fs, bool save) {
+bool serialize_bin_value(vector<T>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!write_value(fs, count)) return false;
@@ -4590,7 +4810,7 @@ bool serialize_bin_value(vector<T>& vec, file_stream& fs, bool save) {
 }
 
 // Serialize string
-bool serialize_bin_value(string& str, file_stream& fs, bool save) {
+bool serialize_bin_value(string& str, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)str.size();
         if (!write_value(fs, count)) return false;
@@ -4608,58 +4828,56 @@ bool serialize_bin_value(string& str, file_stream& fs, bool save) {
 }
 
 // Serialize image
-bool serialize_bin_value(image4f& img, file_stream& fs, bool save) {
+bool serialize_bin_value(image4f& img, fstream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.width)) return false;
         if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.width * img.height, data(img))) return false;
+        if (!write_values(fs, img.pixels)) return false;
         return true;
     } else {
         if (!read_value(fs, img.width)) return false;
         if (!read_value(fs, img.height)) return false;
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.width * img.height, data(img))) return false;
+        if (!read_values(fs, img.pixels)) return false;
         return true;
     }
 }
-bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
+bool serialize_bin_value(image4b& img, fstream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.width)) return false;
         if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.width * img.height, data(img))) return false;
+        if (!write_values(fs, img.pixels)) return false;
         return true;
     } else {
         if (!read_value(fs, img.width)) return false;
         if (!read_value(fs, img.height)) return false;
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.width * img.height, data(img))) return false;
+        if (!read_values(fs, img.pixels)) return false;
         return true;
     }
 }
 
 // Serialize image
-bool serialize_bin_value(volume1f& vol, file_stream& fs, bool save) {
+bool serialize_bin_value(volume1f& vol, fstream& fs, bool save) {
     if (save) {
         if (!write_value(fs, vol.width)) return false;
         if (!write_value(fs, vol.height)) return false;
         if (!write_value(fs, vol.depth)) return false;
-        if (!write_values(fs, vol.width * vol.height * vol.depth, data(vol)))
-            return false;
+        if (!write_values(fs, vol.voxels)) return false;
         return true;
     } else {
         if (!read_value(fs, vol.width)) return false;
         if (!read_value(fs, vol.height)) return false;
         if (!read_value(fs, vol.depth)) return false;
         vol.voxels.resize(vol.width * vol.height * vol.depth);
-        if (!read_values(fs, vol.width * vol.height * vol.depth, data(vol)))
-            return false;
+        if (!read_values(fs, vol.voxels)) return false;
         return true;
     }
 }
 
 // Serialize vector of pointers
 template <typename T>
-bool serialize_bin_object(vector<T*>& vec, file_stream& fs, bool save) {
+bool serialize_bin_object(vector<T*>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4681,7 +4899,7 @@ bool serialize_bin_object(vector<T*>& vec, file_stream& fs, bool save) {
 
 // Serialize vector of pointers
 template <typename T>
-bool serialize_bin_object(vector<T>& vec, file_stream& fs, bool save) {
+bool serialize_bin_object(vector<T>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4704,7 +4922,7 @@ bool serialize_bin_object(vector<T>& vec, file_stream& fs, bool save) {
 // Serialize vector of objects
 template <typename T>
 bool serialize_bin_object(
-    vector<T>& vec, const yocto_scene& scene, file_stream& fs, bool save) {
+    vector<T>& vec, const yocto_scene& scene, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4725,7 +4943,7 @@ bool serialize_bin_object(
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
+bool serialize_bin_object(yocto_camera& camera, fstream& fs, bool save) {
     if (!serialize_bin_value(camera.name, fs, save)) return false;
     if (!serialize_bin_value(camera.frame, fs, save)) return false;
     if (!serialize_bin_value(camera.orthographic, fs, save)) return false;
@@ -4737,7 +4955,7 @@ bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_shape& bvh, file_stream& fs, bool save) {
+bool serialize_bin_object(bvh_shape& bvh, fstream& fs, bool save) {
     if (!serialize_bin_value(bvh.positions, fs, save)) return false;
     if (!serialize_bin_value(bvh.radius, fs, save)) return false;
     if (!serialize_bin_value(bvh.points, fs, save)) return false;
@@ -4749,7 +4967,7 @@ bool serialize_bin_object(bvh_shape& bvh, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_scene& bvh, file_stream& fs, bool save) {
+bool serialize_bin_object(bvh_scene& bvh, fstream& fs, bool save) {
     if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
     if (!serialize_bin_value(bvh.instances, fs, save)) return false;
     if (!serialize_bin_object(bvh.shape_bvhs, fs, save)) return false;
@@ -4758,7 +4976,7 @@ bool serialize_bin_object(bvh_scene& bvh, file_stream& fs, bool save) {
 }
 
 bool serialize_bin_object(
-    yocto_shape& shape, const yocto_scene& scene, file_stream& fs, bool save) {
+    yocto_shape& shape, const yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(shape.name, fs, save)) return false;
     if (!serialize_bin_value(shape.filename, fs, save)) return false;
     if (!serialize_bin_value(shape.material, fs, save)) return false;
@@ -4779,8 +4997,8 @@ bool serialize_bin_object(
     return true;
 }
 
-bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
-    file_stream& fs, bool save) {
+bool serialize_bin_object(
+    yocto_surface& surface, const yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(surface.name, fs, save)) return false;
     if (!serialize_bin_value(surface.filename, fs, save)) return false;
     if (!serialize_bin_value(surface.materials, fs, save)) return false;
@@ -4799,7 +5017,7 @@ bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
     return true;
 }
 
-bool serialize_bin_object(yocto_texture& texture, file_stream& fs, bool save) {
+bool serialize_bin_object(yocto_texture& texture, fstream& fs, bool save) {
     if (!serialize_bin_value(texture.name, fs, save)) return false;
     if (!serialize_bin_value(texture.filename, fs, save)) return false;
     if (!serialize_bin_value(texture.hdr_image, fs, save)) return false;
@@ -4812,7 +5030,7 @@ bool serialize_bin_object(yocto_texture& texture, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(yocto_voltexture& texture, file_stream& fs, bool save) {
+bool serialize_bin_object(yocto_voltexture& texture, fstream& fs, bool save) {
     if (!serialize_bin_value(texture.name, fs, save)) return false;
     if (!serialize_bin_value(texture.filename, fs, save)) return false;
     if (!serialize_bin_value(texture.volume_data, fs, save)) return false;
@@ -4821,7 +5039,7 @@ bool serialize_bin_object(yocto_voltexture& texture, file_stream& fs, bool save)
 }
 
 bool serialize_bin_object(yocto_environment& environment,
-    const yocto_scene& scene, file_stream& fs, bool save) {
+    const yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(environment.name, fs, save)) return false;
     if (!serialize_bin_value(environment.frame, fs, save)) return false;
     if (!serialize_bin_value(environment.emission, fs, save)) return false;
@@ -4831,7 +5049,7 @@ bool serialize_bin_object(yocto_environment& environment,
 }
 
 bool serialize_bin_object(yocto_material& material, const yocto_scene& scene,
-    file_stream& fs, bool save) {
+    fstream& fs, bool save) {
     if (!serialize_bin_value(material.name, fs, save)) return false;
     if (!serialize_bin_value(material.base_metallic, fs, save)) return false;
     if (!serialize_bin_value(material.gltf_textures, fs, save)) return false;
@@ -4868,7 +5086,7 @@ bool serialize_bin_object(yocto_material& material, const yocto_scene& scene,
 };
 
 bool serialize_bin_object(yocto_instance& instance, const yocto_scene& scene,
-    file_stream& fs, bool save) {
+    fstream& fs, bool save) {
     if (!serialize_bin_value(instance.name, fs, save)) return false;
     if (!serialize_bin_value(instance.frame, fs, save)) return false;
     if (!serialize_bin_value(instance.shape, fs, save)) return false;
@@ -4876,7 +5094,7 @@ bool serialize_bin_object(yocto_instance& instance, const yocto_scene& scene,
     return true;
 };
 
-bool serialize_scene(yocto_scene& scene, file_stream& fs, bool save) {
+bool serialize_scene(yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(scene.name, fs, save)) return false;
     if (!serialize_bin_object(scene.cameras, fs, save)) return false;
     if (!serialize_bin_object(scene.shapes, scene, fs, save)) return false;
@@ -4894,19 +5112,33 @@ bool serialize_scene(yocto_scene& scene, file_stream& fs, bool save) {
 bool load_ybin_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
-    auto fs    = open(filename, "rb");
-    if (!fs) return false;
+    auto fs    = fstream(filename, std::ios::in | std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
     scene = {};
-    if (!serialize_scene(scene, fs, false)) return false;
+    serialize_scene(scene, fs, false);
+    if (!fs) {
+        log_io_error("cannot reada file {}", filename);
+        return false;
+    }
     return true;
 }
 
 // Load/save a binary dump useful for very fast scene IO.
 bool save_ybin_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
-    auto fs = open(filename, "wb");
-    if (!fs) return false;
-    if (!serialize_scene((yocto_scene&)scene, fs, true)) return false;
+    auto fs = fstream(filename, std::ios::out | std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    serialize_scene((yocto_scene&)scene, fs, true);
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 
@@ -5074,8 +5306,11 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
-    auto fs = open(filename, "wb");
-    if (!fs) return false;
+    auto fs = ofstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // header
     print(fs, "ply\n");
@@ -5166,6 +5401,12 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         }
     }
 
+    // check for errors
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     // done
     return true;
 }
@@ -5250,8 +5491,11 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     bool flip_texcoord) {
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
@@ -5283,6 +5527,12 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
             print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
                 to_string(vert(q.y)), to_string(vert(q.z)), to_string(vert(q.w)));
         }
+    }
+
+    // check for errors
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
     }
 
     return true;
@@ -5478,8 +5728,11 @@ bool save_obj_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<int>& quads_materials, bool flip_texcoord) {
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
@@ -5515,6 +5768,12 @@ bool save_obj_facevarying_mesh(const string& filename,
         }
     }
 
+    // check for errors
+    if (!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     return true;
 }
 
@@ -5534,39 +5793,42 @@ namespace yocto {
 bool load_ply(const string& filename, ply_data& ply) {
     // open file
     ply     = {};
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
+    auto fs = ifstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // parse header
     ply        = ply_data{};
     auto ascii = false;
     auto line  = ""s;
-    while (read_line(fs, line)) {
-        auto view = string_view{line};
+    while (getline(fs, line)) {
+        auto view = string_view_stream{line};
         auto cmd  = ""s;
-        parse_value(view, cmd);
+        view >> cmd;
         if (cmd == "") continue;
         if (cmd == "ply") {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
             auto fmt = ""s;
-            parse_value(view, fmt);
+            view >> fmt;
             if (fmt != "ascii" && fmt != "binary_little_endian") return false;
             ascii = fmt == "ascii";
         } else if (cmd == "element") {
             auto elem = ply_element();
-            parse_value(view, elem.name);
-            parse_value(view, elem.count);
+            view >> elem.name;
+            view >> elem.count;
             ply.elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
             auto type = ""s;
-            parse_value(view, type);
+            view >> type;
             if (type == "list") {
                 auto count_type = ""s;
-                parse_value(view, count_type);
+                view >> count_type;
                 auto elem_type = ""s;
-                parse_value(view, elem_type);
+                view >> elem_type;
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
                 if (elem_type != "int" && elem_type != "uint")
@@ -5581,7 +5843,7 @@ bool load_ply(const string& filename, ply_data& ply) {
             } else {
                 return false;
             }
-            parse_value(view, prop.name);
+            view >> prop.name;
             prop.scalars.resize(ply.elements.back().count);
             if (prop.type == ply_type::ply_int_list)
                 prop.lists.resize(ply.elements.back().count);
@@ -5597,33 +5859,33 @@ bool load_ply(const string& filename, ply_data& ply) {
     if (ascii) {
         for (auto& elem : ply.elements) {
             for (auto vid = 0; vid < elem.count; vid++) {
-                if (!read_line(fs, line)) return false;
-                auto view = string_view{line};
+                if (!getline(fs, line)) return false;
+                auto view = string_view_stream{line};
                 for (auto pid = 0; pid < elem.properties.size(); pid++) {
                     auto& prop = elem.properties[pid];
                     if (prop.type == ply_type::ply_float) {
                         auto v = 0.0f;
-                        parse_value(view, v);
+                        view >> v;
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_int) {
                         auto v = 0;
-                        parse_value(view, v);
+                        view >> v;
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_uchar) {
                         auto vc = (unsigned char)0;
                         auto v  = 0;
-                        parse_value(view, v);
+                        view >> v;
                         vc                = (unsigned char)v;
                         prop.scalars[vid] = vc / 255.0f;
                     } else if (prop.type == ply_type::ply_int_list) {
                         auto vc = (unsigned char)0;
                         auto v  = 0;
-                        parse_value(view, v);
+                        view >> v;
                         vc                = (unsigned char)v;
                         prop.scalars[vid] = vc;
                         for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
                             auto v = 0;
-                            parse_value(view, v);
+                            view >> v;
                             prop.lists[vid][i] = v;
                         }
                     } else {

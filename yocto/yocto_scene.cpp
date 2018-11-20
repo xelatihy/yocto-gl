@@ -1713,48 +1713,50 @@ void print_stats(const yocto_scene& scene) {
     }
     memory_vols = voxel_hdr * sizeof(float);
 
-    printf("num_cameras: %lld\n", num_cameras);
-    printf("num_shapes: %lld\n", num_shapes);
-    printf("num_surface: %lld\n", num_surfaces);
-    printf("num_instances: %lld\n", num_instances);
-    printf("num_materials: %lld\n", num_materials);
-    printf("num_textures: %lld\n", num_textures);
-    printf("num_voltextures: %lld\n", num_voltextures);
-    printf("num_environments: %lld\n", num_environments);
-    printf("num_nodes: %lld\n", num_nodes);
-    printf("num_animations: %lld\n", num_animations);
+    cout << "num_cameras: " << num_cameras << "\n";
+    cout << "num_shapes: " << num_shapes << "\n";
+    cout << "num_surface: " << num_surfaces << "\n";
+    cout << "num_instances: " << num_instances << "\n";
+    cout << "num_materials: " << num_materials << "\n";
+    cout << "num_textures: " << num_textures << "\n";
+    cout << "num_voltextures: " << num_voltextures << "\n";
+    cout << "num_environments: " << num_environments << "\n";
+    cout << "num_nodes: " << num_nodes << "\n";
+    cout << "num_animations: " << num_animations << "\n";
 
-    printf("elem_points: %lld\n", elem_points);
-    printf("elem_lines: %lld\n", elem_lines);
-    printf("elem_triangles: %lld\n", elem_triangles);
-    printf("elem_quads: %lld\n", elem_quads);
-    printf("vert_pos: %lld\n", vert_pos);
-    printf("vert_norm: %lld\n", vert_norm);
-    printf("vert_texcoord: %lld\n", vert_texcoord);
-    printf("vert_color: %lld\n", vert_color);
-    printf("vert_radius: %lld\n", vert_radius);
-    printf("vert_tangsp: %lld\n", vert_tangsp);
+    cout << "elem_points: " << elem_points << "\n";
+    cout << "elem_lines: " << elem_lines << "\n";
+    cout << "elem_triangles: " << elem_triangles << "\n";
+    cout << "elem_quads: " << elem_quads << "\n";
+    cout << "vert_pos: " << vert_pos << "\n";
+    cout << "vert_norm: " << vert_norm << "\n";
+    cout << "vert_texcoord: " << vert_texcoord << "\n";
+    cout << "vert_color: " << vert_color << "\n";
+    cout << "vert_radius: " << vert_radius << "\n";
+    cout << "vert_tangsp: " << vert_tangsp << "\n";
 
-    printf("elem_points: %lld\n", elem_points);
-    printf("elem_lines: %lld\n", elem_lines);
-    printf("elem_triangles: %lld\n", elem_triangles);
-    printf("elem_quads: %lld\n", elem_quads);
-    printf("vert_pos: %lld\n", vert_pos);
-    printf("vert_norm: %lld\n", vert_norm);
-    printf("vert_texcoord: %lld\n", vert_texcoord);
+    cout << "elem_points: " << elem_points << "\n";
+    cout << "elem_lines: " << elem_lines << "\n";
+    cout << "elem_triangles: " << elem_triangles << "\n";
+    cout << "elem_quads: " << elem_quads << "\n";
+    cout << "vert_pos: " << vert_pos << "\n";
+    cout << "vert_norm: " << vert_norm << "\n";
+    cout << "vert_texcoord: " << vert_texcoord << "\n";
 
-    printf("texel_hdr: %lld\n", texel_hdr);
-    printf("texel_ldr: %lld\n", texel_ldr);
+    cout << "texel_hdr: " << texel_hdr << "\n";
+    cout << "texel_ldr: " << texel_ldr << "\n";
 
-    printf("memory_imgs: %lld\n", memory_imgs);
-    printf("memory_vols: %lld\n", memory_vols);
-    printf("memory_elems: %lld\n", memory_elems);
-    printf("memory_verts: %lld\n", memory_verts);
-    printf("memory_fvelems: %lld\n", memory_fvelems);
-    printf("memory_fvverts: %lld\n", memory_fvverts);
+    cout << "memory_imgs: " << memory_imgs << "\n";
+    cout << "memory_vols: " << memory_vols << "\n";
+    cout << "memory_elems: " << memory_elems << "\n";
+    cout << "memory_verts: " << memory_verts << "\n";
+    cout << "memory_fvelems: " << memory_fvelems << "\n";
+    cout << "memory_fvverts: " << memory_fvverts << "\n";
 
-    printf("bbox min: %g %g %g\n", bbox.min.x, bbox.min.y, bbox.min.z);
-    printf("bbox max: %g %g %g\n", bbox.max.x, bbox.max.y, bbox.max.z);
+    cout << "bbox min: " << bbox.min.x << " " << bbox.min.y << " " << bbox.min.z
+         << "\n";
+    cout << "bbox max: " << bbox.max.x << " " << bbox.max.y << " " << bbox.max.z
+         << "\n";
 }
 
 }  // namespace yocto

@@ -27,8 +27,8 @@
 //
 
 #include "yocto_imageio.h"
-#include "yocto_utils.h"
 #include "yocto_json.h"
+#include "yocto_utils.h"
 
 #include <climits>
 #include <cstdlib>
@@ -87,15 +87,15 @@ vector<string> split_string(const string& str) {
 
 // Pfm load
 vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
-    auto fs = open(filename, "rb");
+    auto fs = ifstream(filename, std::ios::binary);
     if (!fs) return {};
 
     // buffer
-    char buffer[256];
-    auto toks = vector<string>();
+    auto buffer = ""s;
+    auto toks   = vector<string>();
 
     // read magic
-    if (!fgets(buffer, 256, fs.fs)) return {};
+    if (!getline(fs, buffer)) return {};
     toks = split_string(buffer);
     if (toks[0] == "Pf")
         nc = 1;
@@ -105,13 +105,13 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
         return {};
 
     // read w, h
-    if (!fgets(buffer, 256, fs.fs)) return {};
+    if (!getline(fs, buffer)) return {};
     toks = split_string(buffer);
     w    = atoi(toks[0].c_str());
     h    = atoi(toks[1].c_str());
 
     // read scale
-    if (!fgets(buffer, 256, fs.fs)) return {};
+    if (!getline(fs, buffer)) return {};
     toks   = split_string(buffer);
     auto s = atof(toks[0].c_str());
 
@@ -121,9 +121,8 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto nrow    = w * nc;
     auto pixels  = vector<float>(nvalues);
     for (auto j = h - 1; j >= 0; j--) {
-        if (fread(data(pixels) + j * nrow, sizeof(float), nrow, fs.fs) != nrow) {
+        if (!fs.read((char*)(data(pixels) + j * nrow), sizeof(float) * nrow))
             return {};
-        }
     }
 
     // endian conversion
@@ -359,24 +358,21 @@ bool load_stbi_image_from_memory(const byte* data, int data_size, image4f& img) 
 }
 
 bool apply_json_procedural(const json& js, image4f& img) {
-    auto type = get_json_value(js, "type", ""s);
-    auto width = get_json_value(js, "width", 512);
+    auto type   = get_json_value(js, "type", ""s);
+    auto width  = get_json_value(js, "width", 512);
     auto height = get_json_value(js, "height", 512);
-    if(type == "") {
+    if (type == "") {
         img = make_image(width, height, zero4f);
     } else if (type == "grid") {
-        img = make_grid_image(width, height,
-            get_json_value(js, "tile", 8),
+        img = make_grid_image(width, height, get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "checker") {
-        img = make_checker_image(width, height,
-            get_json_value(js, "tile", 8),
+        img = make_checker_image(width, height, get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
     } else if (type == "bump") {
-        img = make_bumpdimple_image(
-            width, height, get_json_value(js, "tile", 8));
+        img = make_bumpdimple_image(width, height, get_json_value(js, "tile", 8));
     } else if (type == "uvramp") {
         img = make_uvramp_image(width, height);
     } else if (type == "gammaramp") {
@@ -395,17 +391,15 @@ bool apply_json_procedural(const json& js, image4f& img) {
             get_json_value(js, "sun_emission_scale", 1.0f),
             get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
     } else if (type == "noise") {
-        img = make_noise_image(width, height,
-            get_json_value(js, "scale", 1.0f), get_json_value(js, "wrap", true));
+        img = make_noise_image(width, height, get_json_value(js, "scale", 1.0f),
+            get_json_value(js, "wrap", true));
     } else if (type == "fbm") {
-        img = make_fbm_image(width, height,
-            get_json_value(js, "scale", 1.0f),
+        img = make_fbm_image(width, height, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
             get_json_value(js, "wrap", true));
     } else if (type == "ridge") {
-        img = make_ridge_image(width, height,
-            get_json_value(js, "scale", 1.0f),
+        img = make_ridge_image(width, height, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "offset", 1.0f),
             get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
@@ -420,17 +414,16 @@ bool apply_json_procedural(const json& js, image4f& img) {
         return false;
     }
     if (get_json_value(js, "bump_to_normal", false)) {
-        img = bump_to_normal_map(
-            img, get_json_value(js, "bump_scale", 1.0f));
+        img = bump_to_normal_map(img, get_json_value(js, "bump_scale", 1.0f));
     }
     return true;
 }
 
 bool apply_json_procedural(const json& js, image4b& img) {
     auto imgf = image4f{};
-    if(!apply_json_procedural(js, imgf)) return false;
+    if (!apply_json_procedural(js, imgf)) return false;
     auto srgb = get_json_value(js, "srgb", true);
-    if(srgb) imgf = linear_to_srgb(imgf);
+    if (srgb) imgf = linear_to_srgb(imgf);
     img = float_to_byte(imgf);
     return true;
 }
@@ -438,14 +431,14 @@ bool apply_json_procedural(const json& js, image4b& img) {
 // load a JSON image
 bool load_json_image(const string& filename, image4f& img) {
     auto js = json();
-    if(!load_json(filename, js)) return false;
-    if(!apply_json_procedural(js, img)) return false;
+    if (!load_json(filename, js)) return false;
+    if (!apply_json_procedural(js, img)) return false;
     return true;
 }
 bool load_json_image(const string& filename, image4b& img) {
     auto js = json();
-    if(!load_json(filename, js)) return false;
-    if(!apply_json_procedural(js, img)) return false;
+    if (!load_json(filename, js)) return false;
+    if (!apply_json_procedural(js, img)) return false;
     return true;
 }
 
@@ -646,13 +639,24 @@ namespace yocto {
 
 // Loads volume data from binary format.
 bool load_volume_nolog(const string& filename, volume1f& vol) {
-    auto fs = open(filename, "r");
-    if (!fs) return false;
-    if (!read_value(fs, vol.width)) return false;
-    if (!read_value(fs, vol.height)) return false;
-    if (!read_value(fs, vol.depth)) return false;
+    auto fs = ifstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    read_value(fs, vol.width);
+    read_value(fs, vol.height);
+    read_value(fs, vol.depth);
+    if (fs.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
     vol.voxels.resize(vol.width * vol.height * vol.depth);
-    if (!read_values(fs, size(vol), data(vol))) return false;
+    read_values(fs, vol.voxels);
+    if (fs.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
     return true;
 }
 bool load_volume(const string& filename, volume1f& vol) {
@@ -662,12 +666,19 @@ bool load_volume(const string& filename, volume1f& vol) {
 
 // Saves volume data in binary format.
 bool save_volume_nolog(const string& filename, const volume1f& vol) {
-    auto fs = open(filename, "w");
-    if (!fs) return false;
-    if (!write_value(fs, vol.width)) return false;
-    if (!write_value(fs, vol.height)) return false;
-    if (!write_value(fs, vol.depth)) return false;
-    if (!write_values(fs, size(vol), data(vol))) return false;
+    auto fs = ofstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    write_value(fs, vol.width);
+    write_value(fs, vol.height);
+    write_value(fs, vol.depth);
+    write_values(fs, vol.voxels);
+    if (fs.fail()) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 bool save_volume(const string& filename, const volume1f& vol) {

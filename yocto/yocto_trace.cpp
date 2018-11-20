@@ -2189,7 +2189,7 @@ void print_integrate_func_test(function<float(float)> f, float a, float b,
     float expected, int nsamples, function<float(float)> pdf,
     function<float(float)> warp) {
     auto rng = rng_state();
-    printf("nsamples base base-err stratified-err importance-err\n");
+    cout << "nsamples base base-err stratified-err importance-err\n";
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func_stratified(f, a, b, ns, rng);
@@ -2198,8 +2198,8 @@ void print_integrate_func_test(function<float(float)> f, float a, float b,
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
-        printf("%d %g %g %g %g\n", ns, integral_base, error_base,
-            error_stratified, error_importance);
+        cout << ns << " " << integral_base << " " << error_base << " "
+             << error_stratified << " " << error_importance << "\n";
     }
 }
 
@@ -2254,7 +2254,7 @@ void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
     float expected, int nsamples, function<float(vec2f)> pdf,
     function<vec2f(vec2f)> warp) {
     auto rng = rng_state();
-    printf("nsamples base base-err stratified-err importance-err\n");
+    cout << "nsamples base base-err stratified-err importance-err\n";
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func2_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func2_stratified(f, a, b, ns, rng);
@@ -2263,8 +2263,8 @@ void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
-        printf("%d %g %g %g %g\n", ns, integral_base, error_base,
-            error_stratified, error_importance);
+        cout << ns << " " << integral_base << " " << error_base << " "
+             << error_stratified << " " << error_importance << "\n";
     }
 }
 
