@@ -1061,6 +1061,19 @@ inline void check_cmdline(cmdline_parser& parser) {
     }
 }
 
+// Parse option value
+inline bool parse_option_value(const string& vals, string& val) {
+    val = vals;
+    return true;
+}
+template<typename T>
+inline bool parse_option_value(const string& vals, T& val) {
+    auto stream = stringstream{vals};
+    stream >> val;
+    if(stream.fail()) return false;
+    return true;
+}
+
 // Parse an option string. Name should start with "--" or "-".
 template <typename T>
 inline bool parse_option_argument(cmdline_parser& parser, const string& name,
@@ -1089,7 +1102,7 @@ inline bool parse_option_argument(cmdline_parser& parser, const string& name,
         return false;
     }
     auto new_value = value;
-    if (!parse(vals, new_value)) {
+    if (!parse_option_value(vals, new_value)) {
         parser.error += "bad value for " + name + "\n";
         return false;
     }
@@ -1117,7 +1130,7 @@ inline bool parse_positional_argument(cmdline_parser& parser, const string& name
         return false;
     }
     auto new_value = value;
-    if (!parse(vals, new_value)) {
+    if (!parse_option_value(vals, new_value)) {
         parser.error += "bad value for " + name + "\n";
         return false;
     }
@@ -1142,7 +1155,7 @@ inline bool parse_positional_arguments(cmdline_parser& parser,
     auto new_values = values;
     new_values.resize(vals.size());
     for (auto i = 0; i < vals.size(); i++) {
-        if (!parse(vals[i], new_values[i])) {
+        if (!parse_option_value(vals[i], new_values[i])) {
             parser.error += "bad value for " + name + "\n";
             return false;
         }
