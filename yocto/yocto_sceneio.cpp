@@ -1912,6 +1912,10 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
     // save json
     auto js = json();
     try {
+        js = json::object();
+        js["asset"] = json::object();
+        js["asset"]["format"] = "Yocto/Scene";
+        js["asset"]["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
         if (!serialize_json_object(js, (yocto_scene&)scene, true)) {
             log_io_error("could not serialize json {}", filename);
             return false;
@@ -2773,6 +2777,8 @@ bool save_obj(const string& filename, const yocto_scene& scene,
         log_io_error("cannot open file {}", filename);
         return false;
     }
+
+    print(fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
 
     // material library
     if (!empty(scene.materials)) {
@@ -3797,6 +3803,10 @@ bool save_gltf_scene(const string& filename, const yocto_scene& scene,
     // save json
     auto js = json();
     try {
+        js = json::object();
+        js["asset"] = json::object();
+        js["asset"]["format"] = "Yocto/Scene";
+        js["asset"]["generator"] = "Yocto/GL - https://github.com/xelatihy/yocto-gl";
         if (!scene_to_gltf(scene, js)) return false;
     } catch (...) {
         return false;
@@ -5318,6 +5328,7 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         print(fs, "format ascii 1.0\n");
     else
         print(fs, "format binary_little_endian 1.0\n");
+    print(fs, "comment Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n");
     print(fs, "element vertex {}\n", (int)positions.size());
     if (!empty(positions))
         print(fs, "property float x\nproperty float y\nproperty float z\n");
@@ -5496,6 +5507,8 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
         log_io_error("cannot open file {}", filename);
         return false;
     }
+
+    print(fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
 
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
@@ -5733,6 +5746,8 @@ bool save_obj_facevarying_mesh(const string& filename,
         log_io_error("cannot open file {}", filename);
         return false;
     }
+
+    print(fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
 
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
