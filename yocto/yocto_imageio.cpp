@@ -359,8 +359,8 @@ bool load_stbi_image_from_memory(const byte* data, int data_size, image4f& img) 
 
 bool apply_json_procedural(const json& js, image4f& img) {
     auto type   = get_json_value(js, "type", ""s);
-    auto width  = get_json_value(js, "width", 512);
-    auto height = get_json_value(js, "height", 512);
+    auto width  = get_json_value(js, "width", 1024);
+    auto height = get_json_value(js, "height", 1024);
     if (type == "") {
         img = make_image(width, height, zero4f);
     } else if (type == "grid") {
