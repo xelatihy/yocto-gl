@@ -264,7 +264,7 @@ inline void to_json(json& js, const volume1f& value) {
     js           = json::object();
     js["width"]  = value.width;
     js["height"] = value.height;
-    js["depth"]  = value.width;
+    js["depth"]  = value.depth;
     js["voxels"] = vector<float>{
         data(value), data(value) + value.width * value.height * value.depth};
 }
@@ -312,7 +312,7 @@ inline bool serialize_json_value(json& js, volume1f& value, bool save) {
     auto width = 0, height = 0, depth = 0;
     if (!serialize_json_value(js, width, "width", -1, save)) return false;
     if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!serialize_json_value(js, depth, "heidepthght", -1, save)) return false;
+    if (!serialize_json_value(js, depth, "depth", -1, save)) return false;
     if (!save) value = make_volume(width, height, depth, 0.0f);
     if (!serialize_json_values(
             js, data(value), width * height * depth, "voxels", save))
@@ -847,8 +847,8 @@ bool apply_json_procedural(
     auto type = get_json_value(js, "type", ""s);
     if (type == "") return true;
     auto is_hdr = false;
-    auto width  = get_json_value(js, "width", 512);
-    auto height = get_json_value(js, "height", 512);
+    auto width  = get_json_value(js, "width", 1024);
+    auto height = get_json_value(js, "height", 1024);
     if (type == "grid") {
         value.hdr_image = make_grid_image(width, height,
             get_json_value(js, "tile", 8),
