@@ -105,6 +105,7 @@ void start_rendering_async(app_state& app) {
         app.image_width, app.image_height, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
+    preview_options.image_width /= app.preview_ratio;
     preview_options.image_height /= app.preview_ratio;
     preview_options.num_samples = 1;
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
