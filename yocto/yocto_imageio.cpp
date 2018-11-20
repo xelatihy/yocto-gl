@@ -87,15 +87,15 @@ vector<string> split_string(const string& str) {
 
 // Pfm load
 vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
-    auto fs = open(filename, "rb");
+    auto fs = ifstream(filename, std::ios::binary);
     if (!fs) return {};
 
     // buffer
-    char buffer[256];
+    auto buffer = ""s;
     auto toks = vector<string>();
 
     // read magic
-    if (!fgets(buffer, 256, fs.fs)) return {};
+    if (!getline(fs, buffer)) return {};
     toks = split_string(buffer);
     if (toks[0] == "Pf")
         nc = 1;
@@ -105,13 +105,13 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
         return {};
 
     // read w, h
-    if (!fgets(buffer, 256, fs.fs)) return {};
+    if (!getline(fs, buffer)) return {};
     toks = split_string(buffer);
     w    = atoi(toks[0].c_str());
     h    = atoi(toks[1].c_str());
 
     // read scale
-    if (!fgets(buffer, 256, fs.fs)) return {};
+    if (!getline(fs, buffer)) return {};
     toks   = split_string(buffer);
     auto s = atof(toks[0].c_str());
 
@@ -121,9 +121,7 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto nrow    = w * nc;
     auto pixels  = vector<float>(nvalues);
     for (auto j = h - 1; j >= 0; j--) {
-        if (fread(data(pixels) + j * nrow, sizeof(float), nrow, fs.fs) != nrow) {
-            return {};
-        }
+        if (!fs.read((char*)(data(pixels) + j * nrow), sizeof(float) * nrow)) return {};
     }
 
     // endian conversion
@@ -646,13 +644,24 @@ namespace yocto {
 
 // Loads volume data from binary format.
 bool load_volume_nolog(const string& filename, volume1f& vol) {
-    auto fs = open(filename, "r");
-    if (!fs) return false;
-    if (!read_value(fs, vol.width)) return false;
-    if (!read_value(fs, vol.height)) return false;
-    if (!read_value(fs, vol.depth)) return false;
+    auto fs = ifstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    read_value(fs, vol.width);
+    read_value(fs, vol.height);
+    read_value(fs, vol.depth);
+    if (fs.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
     vol.voxels.resize(vol.width * vol.height * vol.depth);
-    if (!read_values(fs, size(vol), data(vol))) return false;
+    read_values(fs, vol.voxels);
+    if (fs.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
     return true;
 }
 bool load_volume(const string& filename, volume1f& vol) {
@@ -662,12 +671,19 @@ bool load_volume(const string& filename, volume1f& vol) {
 
 // Saves volume data in binary format.
 bool save_volume_nolog(const string& filename, const volume1f& vol) {
-    auto fs = open(filename, "w");
-    if (!fs) return false;
-    if (!write_value(fs, vol.width)) return false;
-    if (!write_value(fs, vol.height)) return false;
-    if (!write_value(fs, vol.depth)) return false;
-    if (!write_values(fs, size(vol), data(vol))) return false;
+    auto fs = ofstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    write_value(fs, vol.width);
+    write_value(fs, vol.height);
+    write_value(fs, vol.depth);
+    write_values(fs, vol.voxels);
+    if (fs.fail()) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 bool save_volume(const string& filename, const volume1f& vol) {

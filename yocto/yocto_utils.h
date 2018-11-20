@@ -115,6 +115,7 @@ using std::istream;
 using std::stringstream;
 using std::ifstream;
 using std::ofstream;
+using std::fstream;
 using namespace std::chrono_literals;
 
 using std::getline;
@@ -1405,156 +1406,30 @@ inline void log_io_error(const string& fmt, const Args&... args) {
     log_error(fmt, args...);
 }
 
+// write value to a stream
+template<typename T>
+inline ostream& write_value(ostream& stream, const T& value) {
+    return stream.write((char*)&value, sizeof(T));
+}
+
 // write values to a stream
 template<typename T>
 inline ostream& write_values(ostream& stream, const vector<T>& values) {
-    return stream.write((char*)values.data(), values.size()+sizeof(T));
-}
-
-// File stream wrapper
-struct file_stream {
-    string filename = "";
-    string mode     = "";
-    FILE*  fs       = nullptr;
-
-    file_stream()                   = default;
-    file_stream(const file_stream&) = delete;
-    file_stream& operator=(const file_stream&) = delete;
-    file_stream(file_stream&&)                 = default;
-    file_stream& operator=(file_stream&&) = default;
-
-    ~file_stream() {
-        if (fs) {
-            fclose(fs);
-            fs = nullptr;
-        }
-    }
-
-    operator bool() const { return fs; }
-};
-
-// Opens a file
-inline file_stream open(const string& filename, const string& mode) {
-    auto fs = fopen(filename.c_str(), mode.c_str());
-    if (!fs) {
-        log_io_error("cannot open {}", filename);
-        return {};
-    }
-    return {filename, mode, fs};
-}
-
-// Close a file
-inline bool close(file_stream& fs) {
-    if (!fs) {
-        log_io_error("cannot close {}", fs.filename);
-        return false;
-    }
-    fclose(fs.fs);
-    fs.fs = nullptr;
-    return true;
-}
-
-// Gets the length of a file
-inline size_t get_length(file_stream& fs) {
-    if (!fs) return 0;
-    fseek(fs.fs, 0, SEEK_END);
-    auto fsize = ftell(fs.fs);
-    fseek(fs.fs, 0, SEEK_SET);
-    return fsize;
-}
-
-// Print to file
-inline bool write_text(file_stream& fs, const string& str) {
-    if (!fs) return false;
-    if (fprintf(fs.fs, "%s", str.c_str()) < 0) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-inline bool write_value(file_stream& fs, const T& value) {
-    if (!fs) return false;
-    if (fwrite(&value, sizeof(T), 1, fs.fs) != 1) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-inline bool write_values(file_stream& fs, const vector<T>& vals) {
-    if (!fs) return false;
-    if (fwrite(data(vals), sizeof(T), vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-inline bool write_values(file_stream& fs, size_t num, const T* vals) {
-    if (!fs) return false;
-    if (fwrite(vals, sizeof(T), num, fs.fs) != num) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Print shortcut
-template <typename... Args>
-inline bool print(file_stream& fs, const string& fmt, const Args&... args) {
-    if (!fs) return false;
-    return write_text(fs, format(fmt, args...));
-}
-
-// Read binary data to fill the whole buffer
-inline bool read_line(file_stream& fs, string& value) {
-    if (!fs) return false;
-    // TODO: make lkne as large as possible
-    value = "";
-    char buffer[4096];
-    if (!fgets(buffer, 4096, fs.fs)) return false;
-    value = string(buffer);
-    return true;
+    if(values.empty()) return stream;
+    return stream.write((char*)values.data(), values.size()*sizeof(T));
 }
 
 // Read binary data to fill the whole buffer
 template <typename T>
-inline bool read_value(file_stream& fs, T& value) {
-    if (!fs) return false;
-    if (fread(&value, sizeof(T), 1, fs.fs) != 1) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
+inline istream& read_value(istream& stream, T& value) {
+    return stream.read((char*)&value, sizeof(T));
 }
 
 // Read binary data to fill the whole buffer
 template <typename T>
-inline bool read_values(file_stream& fs, vector<T>& vals) {
-    if (!fs) return false;
-    if (fread(data(vals), sizeof(T), vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-inline bool read_values(file_stream& fs, size_t num, T* vals) {
-    if (!fs) return false;
-    if (fread(vals, sizeof(T), num, fs.fs) != num) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
+inline istream& read_values(istream& stream, vector<T>& values) {
+    if(values.empty()) return stream;
+    return stream.read((char*)values.data(), values.size()*sizeof(T));
 }
 
 // Load a text file

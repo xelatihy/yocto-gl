@@ -2542,6 +2542,12 @@ bool save_mtl(
         print(fs, "\n");
     }
 
+    // check for errors
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     // done
     return true;
 }
@@ -2572,6 +2578,12 @@ bool save_objx(const string& filename, const yocto_scene& scene) {
             print(fs, "e {} {} \"\" {}\n", environment.name,
                 environment.emission, environment.frame);
         }
+    }
+
+    // check for errors
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
     }
 
     // done
@@ -2766,6 +2778,12 @@ bool save_obj(const string& filename, const yocto_scene& scene,
             offset.normal += shape.normals.size();
         } else {
         }
+    }
+
+    // check for errors
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
     }
 
     return true;
@@ -3591,16 +3609,20 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
         return false;
     }
 
-    if (!write_values(fs, shape.positions)) return false;
-    if (!write_values(fs, shape.normals)) return false;
-    if (!write_values(fs, shape.texturecoords)) return false;
-    if (!write_values(fs, shape.colors)) return false;
-    if (!write_values(fs, shape.radius)) return false;
-    if (!write_values(fs, shape.points)) return false;
-    if (!write_values(fs, shape.lines)) return false;
-    if (!write_values(fs, shape.triangles)) return false;
-    auto qtriangles = convert_quads_to_triangles(shape.quads);
-    if (!write_values(fs, qtriangles)) return false;
+    write_values(fs, shape.positions);
+    write_values(fs, shape.normals);
+    write_values(fs, shape.texturecoords);
+    write_values(fs, shape.colors);
+    write_values(fs, shape.radius);
+    write_values(fs, shape.points);
+    write_values(fs, shape.lines);
+    write_values(fs, shape.triangles);
+    write_values(fs, convert_quads_to_triangles(shape.quads));
+
+    if(!fs) {
+        log_io_error("cannot write {}", filename);
+        return false;
+    }
 
     return true;
 }
@@ -4432,8 +4454,11 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 // Convert a scene to pbrt format
 bool save_pbrt(const string& filename, const yocto_scene& scene) {
     auto scope = log_trace_scoped("saving scene {}", filename);
-    auto fs    = open(filename, "wt");
-    if (!fs) return false;
+    auto fs    = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open {}", filename);
+        return false;
+    }
 
 #if 0
 WorldBegin
@@ -4533,6 +4558,12 @@ WorldEnd
     // end world
     print(fs, "WorldEnd\n");
 
+    // check for errors
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     // done
     return true;
 }
@@ -4589,17 +4620,17 @@ namespace yocto {
 
 // Serialize type or struct with no allocated resource
 template <typename T>
-bool serialize_bin_value(T& value, file_stream& fs, bool save) {
+bool serialize_bin_value(T& value, fstream& fs, bool save) {
     if (save) {
-        return write_value(fs, value);
+        return (bool)write_value(fs, value);
     } else {
-        return read_value(fs, value);
+        return (bool)read_value(fs, value);
     }
 }
 
 // Serialize vector
 template <typename T>
-bool serialize_bin_value(vector<T>& vec, file_stream& fs, bool save) {
+bool serialize_bin_value(vector<T>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!write_value(fs, count)) return false;
@@ -4615,7 +4646,7 @@ bool serialize_bin_value(vector<T>& vec, file_stream& fs, bool save) {
 }
 
 // Serialize string
-bool serialize_bin_value(string& str, file_stream& fs, bool save) {
+bool serialize_bin_value(string& str, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)str.size();
         if (!write_value(fs, count)) return false;
@@ -4633,58 +4664,56 @@ bool serialize_bin_value(string& str, file_stream& fs, bool save) {
 }
 
 // Serialize image
-bool serialize_bin_value(image4f& img, file_stream& fs, bool save) {
+bool serialize_bin_value(image4f& img, fstream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.width)) return false;
         if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.width * img.height, data(img))) return false;
+        if (!write_values(fs, img.pixels)) return false;
         return true;
     } else {
         if (!read_value(fs, img.width)) return false;
         if (!read_value(fs, img.height)) return false;
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.width * img.height, data(img))) return false;
+        if (!read_values(fs, img.pixels)) return false;
         return true;
     }
 }
-bool serialize_bin_value(image4b& img, file_stream& fs, bool save) {
+bool serialize_bin_value(image4b& img, fstream& fs, bool save) {
     if (save) {
         if (!write_value(fs, img.width)) return false;
         if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.width * img.height, data(img))) return false;
+        if (!write_values(fs, img.pixels)) return false;
         return true;
     } else {
         if (!read_value(fs, img.width)) return false;
         if (!read_value(fs, img.height)) return false;
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.width * img.height, data(img))) return false;
+        if (!read_values(fs, img.pixels)) return false;
         return true;
     }
 }
 
 // Serialize image
-bool serialize_bin_value(volume1f& vol, file_stream& fs, bool save) {
+bool serialize_bin_value(volume1f& vol, fstream& fs, bool save) {
     if (save) {
         if (!write_value(fs, vol.width)) return false;
         if (!write_value(fs, vol.height)) return false;
         if (!write_value(fs, vol.depth)) return false;
-        if (!write_values(fs, vol.width * vol.height * vol.depth, data(vol)))
-            return false;
+        if (!write_values(fs, vol.voxels)) return false;
         return true;
     } else {
         if (!read_value(fs, vol.width)) return false;
         if (!read_value(fs, vol.height)) return false;
         if (!read_value(fs, vol.depth)) return false;
         vol.voxels.resize(vol.width * vol.height * vol.depth);
-        if (!read_values(fs, vol.width * vol.height * vol.depth, data(vol)))
-            return false;
+        if (!read_values(fs, vol.voxels)) return false;
         return true;
     }
 }
 
 // Serialize vector of pointers
 template <typename T>
-bool serialize_bin_object(vector<T*>& vec, file_stream& fs, bool save) {
+bool serialize_bin_object(vector<T*>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4706,7 +4735,7 @@ bool serialize_bin_object(vector<T*>& vec, file_stream& fs, bool save) {
 
 // Serialize vector of pointers
 template <typename T>
-bool serialize_bin_object(vector<T>& vec, file_stream& fs, bool save) {
+bool serialize_bin_object(vector<T>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4729,7 +4758,7 @@ bool serialize_bin_object(vector<T>& vec, file_stream& fs, bool save) {
 // Serialize vector of objects
 template <typename T>
 bool serialize_bin_object(
-    vector<T>& vec, const yocto_scene& scene, file_stream& fs, bool save) {
+    vector<T>& vec, const yocto_scene& scene, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
         if (!serialize_bin_value(count, fs, true)) return false;
@@ -4750,7 +4779,7 @@ bool serialize_bin_object(
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
+bool serialize_bin_object(yocto_camera& camera, fstream& fs, bool save) {
     if (!serialize_bin_value(camera.name, fs, save)) return false;
     if (!serialize_bin_value(camera.frame, fs, save)) return false;
     if (!serialize_bin_value(camera.orthographic, fs, save)) return false;
@@ -4762,7 +4791,7 @@ bool serialize_bin_object(yocto_camera& camera, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_shape& bvh, file_stream& fs, bool save) {
+bool serialize_bin_object(bvh_shape& bvh, fstream& fs, bool save) {
     if (!serialize_bin_value(bvh.positions, fs, save)) return false;
     if (!serialize_bin_value(bvh.radius, fs, save)) return false;
     if (!serialize_bin_value(bvh.points, fs, save)) return false;
@@ -4774,7 +4803,7 @@ bool serialize_bin_object(bvh_shape& bvh, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(bvh_scene& bvh, file_stream& fs, bool save) {
+bool serialize_bin_object(bvh_scene& bvh, fstream& fs, bool save) {
     if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
     if (!serialize_bin_value(bvh.instances, fs, save)) return false;
     if (!serialize_bin_object(bvh.shape_bvhs, fs, save)) return false;
@@ -4783,7 +4812,7 @@ bool serialize_bin_object(bvh_scene& bvh, file_stream& fs, bool save) {
 }
 
 bool serialize_bin_object(
-    yocto_shape& shape, const yocto_scene& scene, file_stream& fs, bool save) {
+    yocto_shape& shape, const yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(shape.name, fs, save)) return false;
     if (!serialize_bin_value(shape.filename, fs, save)) return false;
     if (!serialize_bin_value(shape.material, fs, save)) return false;
@@ -4805,7 +4834,7 @@ bool serialize_bin_object(
 }
 
 bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
-    file_stream& fs, bool save) {
+    fstream& fs, bool save) {
     if (!serialize_bin_value(surface.name, fs, save)) return false;
     if (!serialize_bin_value(surface.filename, fs, save)) return false;
     if (!serialize_bin_value(surface.materials, fs, save)) return false;
@@ -4824,7 +4853,7 @@ bool serialize_bin_object(yocto_surface& surface, const yocto_scene& scene,
     return true;
 }
 
-bool serialize_bin_object(yocto_texture& texture, file_stream& fs, bool save) {
+bool serialize_bin_object(yocto_texture& texture, fstream& fs, bool save) {
     if (!serialize_bin_value(texture.name, fs, save)) return false;
     if (!serialize_bin_value(texture.filename, fs, save)) return false;
     if (!serialize_bin_value(texture.hdr_image, fs, save)) return false;
@@ -4837,7 +4866,7 @@ bool serialize_bin_object(yocto_texture& texture, file_stream& fs, bool save) {
     return true;
 }
 
-bool serialize_bin_object(yocto_voltexture& texture, file_stream& fs, bool save) {
+bool serialize_bin_object(yocto_voltexture& texture, fstream& fs, bool save) {
     if (!serialize_bin_value(texture.name, fs, save)) return false;
     if (!serialize_bin_value(texture.filename, fs, save)) return false;
     if (!serialize_bin_value(texture.volume_data, fs, save)) return false;
@@ -4846,7 +4875,7 @@ bool serialize_bin_object(yocto_voltexture& texture, file_stream& fs, bool save)
 }
 
 bool serialize_bin_object(yocto_environment& environment,
-    const yocto_scene& scene, file_stream& fs, bool save) {
+    const yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(environment.name, fs, save)) return false;
     if (!serialize_bin_value(environment.frame, fs, save)) return false;
     if (!serialize_bin_value(environment.emission, fs, save)) return false;
@@ -4856,7 +4885,7 @@ bool serialize_bin_object(yocto_environment& environment,
 }
 
 bool serialize_bin_object(yocto_material& material, const yocto_scene& scene,
-    file_stream& fs, bool save) {
+    fstream& fs, bool save) {
     if (!serialize_bin_value(material.name, fs, save)) return false;
     if (!serialize_bin_value(material.base_metallic, fs, save)) return false;
     if (!serialize_bin_value(material.gltf_textures, fs, save)) return false;
@@ -4893,7 +4922,7 @@ bool serialize_bin_object(yocto_material& material, const yocto_scene& scene,
 };
 
 bool serialize_bin_object(yocto_instance& instance, const yocto_scene& scene,
-    file_stream& fs, bool save) {
+    fstream& fs, bool save) {
     if (!serialize_bin_value(instance.name, fs, save)) return false;
     if (!serialize_bin_value(instance.frame, fs, save)) return false;
     if (!serialize_bin_value(instance.shape, fs, save)) return false;
@@ -4901,7 +4930,7 @@ bool serialize_bin_object(yocto_instance& instance, const yocto_scene& scene,
     return true;
 };
 
-bool serialize_scene(yocto_scene& scene, file_stream& fs, bool save) {
+bool serialize_scene(yocto_scene& scene, fstream& fs, bool save) {
     if (!serialize_bin_value(scene.name, fs, save)) return false;
     if (!serialize_bin_object(scene.cameras, fs, save)) return false;
     if (!serialize_bin_object(scene.shapes, scene, fs, save)) return false;
@@ -4919,19 +4948,33 @@ bool serialize_scene(yocto_scene& scene, file_stream& fs, bool save) {
 bool load_ybin_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
-    auto fs    = open(filename, "rb");
-    if (!fs) return false;
+    auto fs = fstream(filename, std::ios::in | std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
     scene = {};
-    if (!serialize_scene(scene, fs, false)) return false;
+    serialize_scene(scene, fs, false);
+    if(!fs) {
+        log_io_error("cannot reada file {}", filename);
+        return false;
+    }
     return true;
 }
 
 // Load/save a binary dump useful for very fast scene IO.
 bool save_ybin_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
-    auto fs = open(filename, "wb");
-    if (!fs) return false;
-    if (!serialize_scene((yocto_scene&)scene, fs, true)) return false;
+    auto fs = fstream(filename, std::ios::out | std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    serialize_scene((yocto_scene&)scene, fs, true);
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 
@@ -5099,8 +5142,11 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
-    auto fs = open(filename, "wb");
-    if (!fs) return false;
+    auto fs = ofstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // header
     print(fs, "ply\n");
@@ -5191,6 +5237,12 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
         }
     }
 
+    // check for errors
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     // done
     return true;
 }
@@ -5275,8 +5327,11 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     bool flip_texcoord) {
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
@@ -5308,6 +5363,12 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
             print(fs, "f {} {} {} {}\n", to_string(vert(q.x)),
                 to_string(vert(q.y)), to_string(vert(q.z)), to_string(vert(q.w)));
         }
+    }
+
+    // check for errors
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
     }
 
     return true;
@@ -5503,8 +5564,11 @@ bool save_obj_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<int>& quads_materials, bool flip_texcoord) {
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
+    auto fs = ofstream(filename);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     for (auto& p : positions) print(fs, "v {}\n", p);
     for (auto& n : normals) print(fs, "vn {}\n", n);
@@ -5540,6 +5604,12 @@ bool save_obj_facevarying_mesh(const string& filename,
         }
     }
 
+    // check for errors
+    if(!fs) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
+
     return true;
 }
 
@@ -5559,14 +5629,17 @@ namespace yocto {
 bool load_ply(const string& filename, ply_data& ply) {
     // open file
     ply     = {};
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
+    auto fs = ifstream(filename, std::ios::binary);
+    if (!fs) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
 
     // parse header
     ply        = ply_data{};
     auto ascii = false;
     auto line  = ""s;
-    while (read_line(fs, line)) {
+    while (getline(fs, line)) {
         auto view = string_view{line};
         auto cmd  = ""s;
         parse_value(view, cmd);
@@ -5622,7 +5695,7 @@ bool load_ply(const string& filename, ply_data& ply) {
     if (ascii) {
         for (auto& elem : ply.elements) {
             for (auto vid = 0; vid < elem.count; vid++) {
-                if (!read_line(fs, line)) return false;
+                if (!getline(fs, line)) return false;
                 auto view = string_view{line};
                 for (auto pid = 0; pid < elem.properties.size(); pid++) {
                     auto& prop = elem.properties[pid];
