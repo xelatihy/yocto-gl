@@ -135,26 +135,24 @@ int main(int argc, char* argv[]) {
     if (print_info) {
         auto center = (bbox.max + bbox.min) / 2;
         auto size   = bbox.max - bbox.min;
-        printf("bbox min: % 6g % 6g % 6g\n", bbox.min.x, bbox.min.y, bbox.min.z);
-        printf("bbox max: % 6g % 6g % 6g\n", bbox.max.x, bbox.max.y, bbox.max.z);
-        printf("bbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
-        printf("bbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
+        cout << "bbox min: " << bbox.min << "\n";
+        cout << "bbox max: " << bbox.max << "\n";
+        cout << "bbox cen: " << center << "\n";
+        cout << "bbox siz: " << size << "\n";
         if (translation != zero3f || scale != vec3f{1, 1, 1}) {
             auto center = (tbox.max + tbox.min) / 2;
             auto size   = tbox.max - tbox.min;
-            printf("tbox min: % 6g % 6g % 6g\n", tbox.min.x, tbox.min.y,
-                tbox.min.z);
-            printf("tbox max: % 6g % 6g % 6g\n", tbox.max.x, tbox.max.y,
-                tbox.max.z);
-            printf("tbox cen: % 6g % 6g % 6g\n", center.x, center.y, center.z);
-            printf("tbox siz: % 6g % 6g % 6g\n", size.x, size.y, size.z);
+            cout << "tbox min: " << tbox.min << "\n";
+            cout << "tbox max: " << tbox.max << "\n";
+            cout << "tbox cen: " << center << "\n";
+            cout << "tbox siz: " << size << "\n";
         }
-        printf("faces:    % 6d % 6d % 6d % 6d\n", nfaces, ntriangles, nquads,
-            npolys);
-        printf("lines:    % 6d % 6d\n", nplines, nlines);
-        printf("point:    % 6d % 6d\n", nppoints, npoints);
-        printf("objs:     % 6d % 6d\n", nobjects, ngroups);
-        printf("mats:     % 6d % 6d\n", nmaterials, nusemtl);
+        cout << "faces:    " << nfaces << " " << ntriangles << " " << nquads
+             << " " << npolys << "\n";
+        cout << "lines:    " << nplines << " " << nlines << "\n";
+        cout << "point:    " << nppoints << " " << npoints << "\n";
+        cout << "objs:     " << nobjects << " " << ngroups << "\n";
+        cout << "mats:     " << nmaterials << " " << nusemtl << "\n";
     }
 
     // done

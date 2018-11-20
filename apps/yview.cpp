@@ -809,7 +809,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
                 !texture.ldr_as_linear, true, true);
         } else {
-            printf("bad texture");
+            log_error("bad texture");
         }
     }
     state.shapes.resize(scene.shapes.size());
@@ -998,15 +998,15 @@ void update(app_state& app) {
     for (auto& [type, index] : app.update_list) {
         if (type == typeid(yocto_texture)) {
             // TODO: update texture
-            printf("texture update not supported\n");
+            log_error("texture update not supported\n");
         }
         if (type == typeid(yocto_surface)) {
             // TODO: update subdiv
-            printf("subdiv update not supported\n");
+            log_error("subdiv update not supported\n");
         }
         if (type == typeid(yocto_shape)) {
             // TODO: update shape
-            printf("shape update not supported\n");
+            log_error("shape update not supported\n");
         }
         if (type == typeid(yocto_scene_node) ||
             type == typeid(yocto_animation) || app.time != last_time) {
@@ -1091,7 +1091,7 @@ void run_ui(app_state& app) {
 // Load INI file. The implementation does not handle escaping.
 unordered_map<string, unordered_map<string, string>> load_ini(
     const string& filename) {
-    auto f = fopen(filename.c_str(), "rt");
+    auto f = ifstream(filename);
     if (!f) {
         log_error("cannot open {}", filename);
         return {};
@@ -1100,9 +1100,8 @@ unordered_map<string, unordered_map<string, string>> load_ini(
     auto cur_group = string();
     ret[""]        = {};
 
-    char buffer[4096];
-    while (fgets(buffer, 4096, f)) {
-        auto line = string(buffer);
+    auto line = ""s;
+    while (getline(f, line)) {
         if (empty(line)) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
@@ -1122,8 +1121,6 @@ unordered_map<string, unordered_map<string, string>> load_ini(
             return {};
         }
     }
-
-    fclose(f);
 
     return ret;
 }

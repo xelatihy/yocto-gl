@@ -93,8 +93,12 @@
 #include <deque>
 #include <mutex>
 #include <string>
-#include <string_view>
 #include <thread>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <ostream>
+#include <istream>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -104,9 +108,17 @@ namespace yocto {
 using std::deque;
 using std::lock_guard;
 using std::mutex;
-using std::string_view;
 using std::thread;
+using std::ostream;
+using std::istream;
+using std::stringstream;
+using std::ifstream;
+using std::ofstream;
+using std::fstream;
+using std::cout;
 using namespace std::chrono_literals;
+
+using std::getline;
 
 }  // namespace yocto
 
@@ -126,9 +138,11 @@ inline string to_string(const T& value);
 
 // Prints a formatted string to stdout or file.
 template <typename... Args>
+inline bool print(const string& fmt, const Args&... args);
+template <typename... Args>
 inline bool print(FILE* fs, const string& fmt, const Args&... args);
 template <typename... Args>
-inline bool print(const string& fmt, const Args&... args);
+inline bool print(ostream& stream, const string& fmt, const Args&... args);
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
@@ -138,6 +152,8 @@ inline string format_num(uint64_t num);
 // Parse a list of space separated values.
 template <typename... Args>
 inline bool parse(const string& str, Args&... args);
+template <typename... Args>
+inline bool parse(const istream& stream, Args&... args);
 
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time();
@@ -185,6 +201,51 @@ template <typename... Args>
 inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IOSTREAM UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Iostream utilities for basic types
+inline ostream& operator<<(ostream& os, const vec2f& value);
+inline ostream& operator<<(ostream& os, const vec3f& value);
+inline ostream& operator<<(ostream& os, const vec4f& value);
+inline ostream& operator<<(ostream& os, const vec2i& value);
+inline ostream& operator<<(ostream& os, const vec3i& value);
+inline ostream& operator<<(ostream& os, const vec4i& value);
+inline ostream& operator<<(ostream& os, const mat2f& value);
+inline ostream& operator<<(ostream& os, const mat3f& value);
+inline ostream& operator<<(ostream& os, const mat4f& value);
+inline ostream& operator<<(ostream& os, const frame2f& value);
+inline ostream& operator<<(ostream& os, const frame3f& value);
+inline ostream& operator<<(ostream& os, const ray2f& value);
+inline ostream& operator<<(ostream& os, const ray3f& value);
+inline ostream& operator<<(ostream& os, const bbox1f& value);
+inline ostream& operator<<(ostream& os, const bbox2f& value);
+inline ostream& operator<<(ostream& os, const bbox3f& value);
+inline ostream& operator<<(ostream& os, const bbox4f& value);
+
+// Iostream utilities for basic types
+inline istream& operator>>(istream& is, vec2f& value);
+inline istream& operator>>(istream& is, vec3f& value);
+inline istream& operator>>(istream& is, vec4f& value);
+inline istream& operator>>(istream& is, vec2i& value);
+inline istream& operator>>(istream& is, vec3i& value);
+inline istream& operator>>(istream& is, vec4i& value);
+inline istream& operator>>(istream& is, mat2f& value);
+inline istream& operator>>(istream& is, mat3f& value);
+inline istream& operator>>(istream& is, mat4f& value);
+inline istream& operator>>(istream& is, frame2f& value);
+inline istream& operator>>(istream& is, frame3f& value);
+inline istream& operator>>(istream& is, ray2f& value);
+inline istream& operator>>(istream& is, ray3f& value);
+inline istream& operator>>(istream& is, bbox1f& value);
+inline istream& operator>>(istream& is, bbox2f& value);
+inline istream& operator>>(istream& is, bbox3f& value);
+inline istream& operator>>(istream& is, bbox4f& value);
+
+}
 
 // -----------------------------------------------------------------------------
 // IMMEDIATE-MODE COMMAND LINE PARSING
@@ -351,437 +412,68 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Prints basic types
-inline bool print_value(string& str, const string& value) {
-    str += value;
-    return true;
-}
-inline bool print_value(string& str, const char* value) {
-    str += value;
-    return true;
-}
-inline bool print_value(string& str, int value) {
-    str += std::to_string(value);
-    return true;
-}
-inline bool print_value(string& str, float value) {
-    str += std::to_string(value);
-    return true;
-}
-inline bool print_value(string& str, double value) {
-    str += std::to_string(value);
-    return true;
-}
-template <typename T>
-inline bool print_value(string& str, const T* value) {
-    char buffer[512];
-    sprintf(buffer, "%p", value);
-    str += buffer;
-    return true;
-}
-
-// Print compound types.
-inline bool print_value(string& str, const vec2f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    return true;
-}
-inline bool print_value(string& str, const vec3f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    return true;
-}
-inline bool print_value(string& str, const vec4f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.w);
-    return true;
-}
-inline bool print_value(string& str, const vec2i& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    return true;
-}
-inline bool print_value(string& str, const vec3i& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    return true;
-}
-inline bool print_value(string& str, const vec4i& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.w);
-    return true;
-}
-inline bool print_value(string& str, const mat2f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    return true;
-}
-inline bool print_value(string& str, const mat3f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    return true;
-}
-inline bool print_value(string& str, const mat4f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.w);
-    return true;
-}
-inline bool print_value(string& str, const frame2f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.o);
-    return true;
-}
-inline bool print_value(string& str, const frame3f& v) {
-    print_value(str, v.x);
-    print_value(str, " ");
-    print_value(str, v.y);
-    print_value(str, " ");
-    print_value(str, v.z);
-    print_value(str, " ");
-    print_value(str, v.o);
-    return true;
-}
-inline bool print_value(string& str, const bbox1f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox2f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox3f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox4f& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox1i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox2i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox3i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const bbox4i& v) {
-    print_value(str, v.min);
-    print_value(str, " ");
-    print_value(str, v.max);
-    return true;
-}
-inline bool print_value(string& str, const ray2f& v) {
-    print_value(str, v.o);
-    print_value(str, " ");
-    print_value(str, v.d);
-    print_value(str, " ");
-    print_value(str, v.tmin);
-    print_value(str, " ");
-    print_value(str, v.tmax);
-    return true;
+// Print a value
+template<typename T>
+inline bool print_value(stringstream& stream, const T& value) {
+    stream << value;
+    return (bool)stream;
 }
 
 // Prints a string.
-inline bool print_next(string& str, const string& fmt) {
-    return print_value(str, fmt);
+inline bool print_next(stringstream& stream, const string& fmt) {
+    return print_value(stream, fmt);
 }
 template <typename Arg, typename... Args>
 inline bool print_next(
-    string& str, const string& fmt, const Arg& arg, const Args&... args) {
+    stringstream& stream, const string& fmt, const Arg& arg, const Args&... args) {
     auto pos = fmt.find("{}");
-    if (pos == string::npos) return print_value(str, fmt);
-    if (!print_value(str, fmt.substr(0, pos))) return false;
-    if (!print_value(str, arg)) return false;
-    return print_next(str, fmt.substr(pos + 2), args...);
+    if (pos == string::npos) return print_value(stream, fmt);
+    if (!print_value(stream, fmt.substr(0, pos))) return false;
+    if (!print_value(stream, arg)) return false;
+    return print_next(stream, fmt.substr(pos + 2), args...);
 }
 
 // Formats a string `fmt` with values taken from `args`. Uses `{}` as
 // placeholder.
 template <typename... Args>
 inline string format(const string& fmt, const Args&... args) {
-    auto str = string();
-    print_next(str, fmt, args...);
-    return str;
+    auto stream = stringstream();
+    print_next(stream, fmt, args...);
+    return stream.str();
 }
 
 // Prints a string.
+template <typename... Args>
+inline bool print(const string& fmt, const Args&... args) {
+    return print(stdout, fmt, args...);
+}
 template <typename... Args>
 inline bool print(FILE* fs, const string& fmt, const Args&... args) {
     auto str = format(fmt, args...);
     return fprintf(fs, "%s", str.c_str()) >= 0;
 }
 template <typename... Args>
-inline bool print(const string& fmt, const Args&... args) {
-    return print(stdout, fmt, args...);
+inline bool print(ostream& stream, const string& fmt, const Args&... args) {
+    auto str = format(fmt, args...);
+    stream << str;
+    return (bool)stream;
 }
 
 // Converts to string.
 template <typename T>
 inline string to_string(const T& value) {
-    auto str = string();
-    print_value(str, value);
-    return str;
-}
-
-// Prints basic types to string
-inline bool parse_value(string_view& str, string& value) {
-    auto pos = str.find_first_not_of(" \t\r\n");
-    if(pos == string_view::npos) return false;
-    str.remove_prefix(pos);
-    pos = str.find_first_of(" \t\r\n");
-    if(pos == string_view::npos) {
-        value = str;
-        str.remove_prefix(str.length());
-    } else {
-        value = str.substr(0, pos);
-        str.remove_prefix(pos);
-    }
-    return true;
-}
-inline bool parse_value(string_view& str, int& value) {
-    char* end = nullptr;
-    value     = (int)strtol(data(str), &end, 10);
-    if (data(str) == end) return false;
-    str.remove_prefix(end - data(str));
-    // auto n = 0;
-    // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
-    // str.str += n;
-    return true;
-}
-inline bool parse_value(string_view& str, float& value) {
-    char* end = nullptr;
-    value     = strtof(data(str), &end);
-    if (data(str) == end) return false;
-    str.remove_prefix(end - data(str));
-    // auto n = 0;
-    // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
-    // str.str += n;
-    return true;
-}
-inline bool parse_value(string_view& str, double& value) {
-    char* end = nullptr;
-    value     = strtod(data(str), &end);
-    if (data(str) == end) return false;
-    str.remove_prefix(end - data(str));
-    // auto n = 0;
-    // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
-    // str.str += n;
-    return true;
-}
-inline bool parse_value(string_view& str, bool& value) {
-    auto ivalue = 0;
-    if (!parse_value(str, ivalue)) return false;
-    value = (bool)ivalue;
-    return true;
-}
-
-// Print compound types
-template <typename T, size_t N>
-inline bool parse_value(string_view& str, array<T, N>& value) {
-    for (auto i = 0; i < N; i++) {
-        if (!parse_value(str, value[i])) return false;
-    }
-    return true;
-}
-template <typename T>
-inline bool parse_values(string_view& str, T* values, int N) {
-    for (auto i = 0; i < N; i++) {
-        if (!parse_value(str, values[i])) return false;
-    }
-    return true;
-}
-
-// Data acess
-inline bool parse_value(string_view& str, vec2f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, vec3f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, vec4f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.w)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, vec2i& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, vec3i& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, vec4i& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.w)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, mat2f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, mat3f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, mat4f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.w)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, frame2f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.o)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, frame3f& v) {
-    if(!parse_value(str, v.x)) return false;
-    if(!parse_value(str, v.y)) return false;
-    if(!parse_value(str, v.z)) return false;
-    if(!parse_value(str, v.o)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox1f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox2f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox3f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox4f& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox1i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox2i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox3i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, bbox4i& v) {
-    if(!parse_value(str, v.min)) return false;
-    if(!parse_value(str, v.max)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, ray2f& v) {
-    if(!parse_value(str, v.o)) return false;
-    if(!parse_value(str, v.d)) return false;
-    if(!parse_value(str, v.tmin)) return false;
-    if(!parse_value(str, v.tmax)) return false;
-    return true;
-}
-inline bool parse_value(string_view& str, ray3f& v) {
-    if(!parse_value(str, v.o)) return false;
-    if(!parse_value(str, v.d)) return false;
-    if(!parse_value(str, v.tmin)) return false;
-    if(!parse_value(str, v.tmax)) return false;
-    return true;
-}
-
-// Prints a string.
-inline bool parse_next(string_view& str) { return true; }
-template <typename Arg, typename... Args>
-inline bool parse_next(string_view& str, Arg& arg, Args&... args) {
-    if (!parse_value(str, arg)) return false;
-    return parse_next(str, args...);
-}
-
-// Returns trus if this is white space
-inline bool is_whitespace(string_view str) {
-    return str.find_first_not_of(" \t\r\n") == string_view::npos;
+    auto stream = stringstream();
+    stream << value;
+    return stream.str();
 }
 
 // Parse a list of space separated values.
 template <typename... Args>
 inline bool parse(const string& str, Args&... args) {
-    auto view = string_view{str.c_str()};
-    if (!parse_next(view, args...)) return false;
-    return is_whitespace(view);
+    auto stream = stringstream{str};
+    if (!parse_next(stream, args...)) return false;
+    stream >> std::ws;
+    return stream.get() == EOF;
 }
 
 // get time in nanoseconds - useful only to compute difference of times
@@ -801,8 +493,8 @@ inline bool& _log_console() {
     static auto _log_console = true;
     return _log_console;
 }
-inline FILE*& _log_filestream() {
-    static auto _log_filestream = (FILE*)nullptr;
+inline ofstream& _log_filestream() {
+    static auto _log_filestream = ofstream();
     return _log_filestream;
 }
 inline log_level& _log_level() {
@@ -817,12 +509,11 @@ inline bool is_log_level_skipped(log_level level) {
 inline void log_message(log_level level, const char* msg) {
     static const char* labels[] = {"FATAL", "ERROR", "WARN ", "INFO ", "TRACE"};
     if (_log_console()) {
-        printf("%s\n", msg);
+        cout << msg << "\n";
         fflush(stdout);
     }
     if (_log_filestream()) {
-        fprintf(_log_filestream(), "%s %s\n", labels[(int)level], msg);
-        fflush(_log_filestream());
+        _log_filestream() << labels[(int)level] << " " << msg << "\n";
     }
 }
 
@@ -894,14 +585,127 @@ inline void set_log_level(log_level level) { _log_level() = level; }
 inline void set_log_console(bool enabled) { _log_console() = enabled; }
 inline void set_log_file(const string& filename, bool append) {
     if (_log_filestream()) {
-        fclose(_log_filestream());
-        _log_filestream() = nullptr;
+        _log_filestream().close();
+        _log_filestream() = {};
     }
     if (empty(filename)) return;
-    _log_filestream() = fopen(filename.c_str(), append ? "at" : "wt");
+    _log_filestream().open(filename, append ? std::ios::app : std::ios::out);
 }
 
 }  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IOSTREAM UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Iostream utilities for basic types
+inline ostream& operator<<(ostream& os, const vec2f& value) {
+    return os << value.x << " " << value.y;
+}
+inline ostream& operator<<(ostream& os, const vec3f& value) {
+    return os << value.x << " " << value.y << " " << value.z;
+}
+inline ostream& operator<<(ostream& os, const vec4f& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
+}
+inline ostream& operator<<(ostream& os, const vec2i& value) {
+    return os << value.x << " " << value.y;
+}
+inline ostream& operator<<(ostream& os, const vec3i& value) {
+    return os << value.x << " " << value.y << " " << value.z;
+}
+inline ostream& operator<<(ostream& os, const vec4i& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
+}
+inline ostream& operator<<(ostream& os, const mat2f& value) {
+    return os << value.x << " " << value.y;
+}
+inline ostream& operator<<(ostream& os, const mat3f& value) {
+    return os << value.x << " " << value.y << " " << value.z;
+}
+inline ostream& operator<<(ostream& os, const mat4f& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
+}
+inline ostream& operator<<(ostream& os, const frame2f& value) {
+    return os << value.x << " " << value.y << " " << value.o;
+}
+inline ostream& operator<<(ostream& os, const frame3f& value) {
+    return os << value.x << " " << value.y << " " << value.z << " " << value.o;
+}
+inline ostream& operator<<(ostream& os, const ray2f& value) {
+    return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
+}
+inline ostream& operator<<(ostream& os, const ray3f& value) {
+    return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
+}
+inline ostream& operator<<(ostream& os, const bbox1f& value) {
+    return os << value.min << " " << value.max;
+}
+inline ostream& operator<<(ostream& os, const bbox2f& value) {
+    return os << value.min << " " << value.max;
+}
+inline ostream& operator<<(ostream& os, const bbox3f& value) {
+    return os << value.min << " " << value.max;
+}
+inline ostream& operator<<(ostream& os, const bbox4f& value) {
+    return os << value.min << " " << value.max;
+}
+
+// Iostream utilities for basic types
+inline istream& operator>>(istream& is, vec2f& value) {
+    return is >> value.x >> value.y;
+}
+inline istream& operator>>(istream& is, vec3f& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline istream& operator>>(istream& is, vec4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline istream& operator>>(istream& is, vec2i& value) {
+    return is >> value.x >> value.y;
+}
+inline istream& operator>>(istream& is, vec3i& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline istream& operator>>(istream& is, vec4i& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline istream& operator>>(istream& is, mat2f& value) {
+    return is >> value.x >> value.y;
+}
+inline istream& operator>>(istream& is, mat3f& value) {
+    return is >> value.x >> value.y >> value.z;
+}
+inline istream& operator>>(istream& is, mat4f& value) {
+    return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline istream& operator>>(istream& is, frame2f& value) {
+    return is >> value.x >> value.y >> value.o;
+}
+inline istream& operator>>(istream& is, frame3f& value) {
+    return is >> value.x >> value.y >> value.z >> value.o;
+}
+inline istream& operator>>(istream& is, ray2f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
+}
+inline istream& operator>>(istream& is, ray3f& value) {
+    return is >> value.o >> value.d >> value.tmin >> value.tmax;
+}
+inline istream& operator>>(istream& is, bbox1f& value) {
+    return is >> value.min >> value.max;
+}
+inline istream& operator>>(istream& is, bbox2f& value) {
+    return is >> value.min >> value.max;
+}
+inline istream& operator>>(istream& is, bbox3f& value) {
+    return is >> value.min >> value.max;
+}
+inline istream& operator>>(istream& is, bbox4f& value) {
+    return is >> value.min >> value.max;
+}
+
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
@@ -988,7 +792,9 @@ inline vector<pair<string, string>> get_flag_names(const string& name) {
 // get default string
 template <typename T>
 inline string get_option_default_string(const T& value) {
-    return to_string(value);
+    auto stream = stringstream{};
+    stream << value;
+    return stream.str();
 }
 inline string get_option_default_string(const bool& value) {
     return (value) ? "true"s : "false"s;
@@ -1049,18 +855,17 @@ inline string get_option_usage(const string& name, const string& usage,
 
 // print cmdline help
 inline void print_cmdline_usage(const cmdline_parser& parser) {
-    printf("%s: %s\n", parser.help_command.c_str(), parser.help_usage.c_str());
-    printf("usage: %s %s %s\n\n", parser.help_command.c_str(),
-        (empty(parser.help_options)) ? "" : "[options]",
-        (empty(parser.help_arguments)) ? "" : "arguments");
-    if (!empty(parser.help_options)) {
-        printf("options:\n");
-        printf("%s\n", parser.help_options.c_str());
-    }
-    if (!empty(parser.help_arguments)) {
-        printf("arguments:\n");
-        printf("%s\n", parser.help_arguments.c_str());
-    }
+    auto usage = ""s;
+    usage += parser.help_command + ": " + parser.help_usage + "\n";
+    usage += "usage: " + parser.help_command;
+    if(!(empty(parser.help_options))) usage += "[options] ";
+    if(!(empty(parser.help_arguments))) usage += "arguments";
+    usage += "\n\n";
+    if (!empty(parser.help_options))
+        usage += "options:\n" + parser.help_options + "\n";
+    if (!empty(parser.help_arguments))
+        usage += "arguments:\n" + parser.help_arguments + "\n";
+    cout << usage;
 }
 
 // Parse a flag. Name should start with either "--" or "-".
@@ -1099,10 +904,23 @@ inline void check_cmdline(cmdline_parser& parser) {
         if (!found) parser.error += "unmatched arguments remaining\n";
     }
     if (!empty(parser.error)) {
-        printf("error: %s\n", parser.error.c_str());
+        cout << "error: " + parser.error + "\n";
         print_cmdline_usage(parser);
         exit(1);
     }
+}
+
+// Parse option value
+inline bool parse_option_value(const string& vals, string& val) {
+    val = vals;
+    return true;
+}
+template<typename T>
+inline bool parse_option_value(const string& vals, T& val) {
+    auto stream = stringstream{vals};
+    stream >> val;
+    if(stream.fail()) return false;
+    return true;
 }
 
 // Parse an option string. Name should start with "--" or "-".
@@ -1133,7 +951,7 @@ inline bool parse_option_argument(cmdline_parser& parser, const string& name,
         return false;
     }
     auto new_value = value;
-    if (!parse(vals, new_value)) {
+    if (!parse_option_value(vals, new_value)) {
         parser.error += "bad value for " + name + "\n";
         return false;
     }
@@ -1161,7 +979,7 @@ inline bool parse_positional_argument(cmdline_parser& parser, const string& name
         return false;
     }
     auto new_value = value;
-    if (!parse(vals, new_value)) {
+    if (!parse_option_value(vals, new_value)) {
         parser.error += "bad value for " + name + "\n";
         return false;
     }
@@ -1186,7 +1004,7 @@ inline bool parse_positional_arguments(cmdline_parser& parser,
     auto new_values = values;
     new_values.resize(vals.size());
     for (auto i = 0; i < vals.size(); i++) {
-        if (!parse(vals[i], new_values[i])) {
+        if (!parse_option_value(vals[i], new_values[i])) {
             parser.error += "bad value for " + name + "\n";
             return false;
         }
@@ -1398,186 +1216,96 @@ inline void log_io_error(const string& fmt, const Args&... args) {
     log_error(fmt, args...);
 }
 
-// File stream wrapper
-struct file_stream {
-    string filename = "";
-    string mode     = "";
-    FILE*  fs       = nullptr;
-
-    file_stream()                   = default;
-    file_stream(const file_stream&) = delete;
-    file_stream& operator=(const file_stream&) = delete;
-    file_stream(file_stream&&)                 = default;
-    file_stream& operator=(file_stream&&) = default;
-
-    ~file_stream() {
-        if (fs) {
-            fclose(fs);
-            fs = nullptr;
-        }
-    }
-
-    operator bool() const { return fs; }
-};
-
-// Opens a file
-inline file_stream open(const string& filename, const string& mode) {
-    auto fs = fopen(filename.c_str(), mode.c_str());
-    if (!fs) {
-        log_io_error("cannot open {}", filename);
-        return {};
-    }
-    return {filename, mode, fs};
+// write value to a stream
+template<typename T>
+inline ostream& write_value(ostream& stream, const T& value) {
+    return stream.write((char*)&value, sizeof(T));
 }
 
-// Close a file
-inline bool close(file_stream& fs) {
-    if (!fs) {
-        log_io_error("cannot close {}", fs.filename);
-        return false;
-    }
-    fclose(fs.fs);
-    fs.fs = nullptr;
-    return true;
-}
-
-// Gets the length of a file
-inline size_t get_length(file_stream& fs) {
-    if (!fs) return 0;
-    fseek(fs.fs, 0, SEEK_END);
-    auto fsize = ftell(fs.fs);
-    fseek(fs.fs, 0, SEEK_SET);
-    return fsize;
-}
-
-// Print to file
-inline bool write_text(file_stream& fs, const string& str) {
-    if (!fs) return false;
-    if (fprintf(fs.fs, "%s", str.c_str()) < 0) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-inline bool write_value(file_stream& fs, const T& value) {
-    if (!fs) return false;
-    if (fwrite(&value, sizeof(T), 1, fs.fs) != 1) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-inline bool write_values(file_stream& fs, const vector<T>& vals) {
-    if (!fs) return false;
-    if (fwrite(data(vals), sizeof(T), vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Write to file
-template <typename T>
-inline bool write_values(file_stream& fs, size_t num, const T* vals) {
-    if (!fs) return false;
-    if (fwrite(vals, sizeof(T), num, fs.fs) != num) {
-        log_io_error("cannot write to {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Print shortcut
-template <typename... Args>
-inline bool print(file_stream& fs, const string& fmt, const Args&... args) {
-    if (!fs) return false;
-    return write_text(fs, format(fmt, args...));
-}
-
-// Read binary data to fill the whole buffer
-inline bool read_line(file_stream& fs, string& value) {
-    if (!fs) return false;
-    // TODO: make lkne as large as possible
-    value = "";
-    char buffer[4096];
-    if (!fgets(buffer, 4096, fs.fs)) return false;
-    value = string(buffer);
-    return true;
+// write values to a stream
+template<typename T>
+inline ostream& write_values(ostream& stream, const vector<T>& values) {
+    if(values.empty()) return stream;
+    return stream.write((char*)values.data(), values.size()*sizeof(T));
 }
 
 // Read binary data to fill the whole buffer
 template <typename T>
-inline bool read_value(file_stream& fs, T& value) {
-    if (!fs) return false;
-    if (fread(&value, sizeof(T), 1, fs.fs) != 1) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
+inline istream& read_value(istream& stream, T& value) {
+    return stream.read((char*)&value, sizeof(T));
 }
 
 // Read binary data to fill the whole buffer
 template <typename T>
-inline bool read_values(file_stream& fs, vector<T>& vals) {
-    if (!fs) return false;
-    if (fread(data(vals), sizeof(T), vals.size(), fs.fs) != vals.size()) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-inline bool read_values(file_stream& fs, size_t num, T* vals) {
-    if (!fs) return false;
-    if (fread(vals, sizeof(T), num, fs.fs) != num) {
-        log_io_error("cannot read from {}", fs.filename);
-        return false;
-    }
-    return true;
+inline istream& read_values(istream& stream, vector<T>& values) {
+    if(values.empty()) return stream;
+    return stream.read((char*)values.data(), values.size()*sizeof(T));
 }
 
 // Load a text file
 inline bool load_text(const string& filename, string& str) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
-    auto buffer = vector<char>(get_length(fs));
-    if (!read_values(fs, buffer)) return false;
-    str = string{buffer.begin(), buffer.end()};
+    auto stream = ifstream(filename);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    stringstream buffer;
+    buffer << stream.rdbuf();
+    if(stream.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
+    str = buffer.str();
     return true;
 }
 
 // Save a text file
 inline bool save_text(const string& filename, const string& str) {
-    auto fs = open(filename, "wt");
-    if (!fs) return false;
-    if (!write_text(fs, str)) return false;
+    auto stream = ofstream(filename);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    stream << str;
+    if(!stream) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 
 // Load a binary file
 inline bool load_binary(const string& filename, vector<byte>& data) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto fs = open(filename, "rb");
-    if (!fs) return false;
-    data = vector<byte>(get_length(fs));
-    if (!read_values(fs, data)) return false;
+    auto stream = ifstream(filename, std::ios::binary);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    stringstream buffer;
+    buffer << stream.rdbuf();
+    if(stream.fail()) {
+        log_io_error("cannot read file {}", filename);
+        return false;
+    }
+    auto str = buffer.str();
+    data = vector<byte>((byte*)str.data(), (byte*)str.data() + str.size());
     return true;
 }
 
 // Save a binary file
 inline bool save_binary(const string& filename, const vector<byte>& data) {
-    auto fs = open(filename.c_str(), "wb");
-    if (!fs) return false;
-    if (!write_values(fs, data)) return false;
+    auto stream = ofstream(filename, std::ios::binary);
+    if(!stream) {
+        log_io_error("cannot open file {}", filename);
+        return false;
+    }
+    stream.write((char*)data.data(), data.size());
+    if(!stream) {
+        log_io_error("cannot write file {}", filename);
+        return false;
+    }
     return true;
 }
 

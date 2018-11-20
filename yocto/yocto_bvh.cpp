@@ -378,21 +378,24 @@ void clear_scene_bvh_embree(bvh_scene& bvh) {
 #if YOCTO_EMBREE
 void embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
-        case RTC_ERROR_UNKNOWN: printf("RTC_ERROR_UNKNOWN"); break;
+        case RTC_ERROR_UNKNOWN: log_error("RTC_ERROR_UNKNOWN: {}", str); break;
         case RTC_ERROR_INVALID_ARGUMENT:
-            printf("RTC_ERROR_INVALID_ARGUMENT");
+            log_error("RTC_ERROR_INVALID_ARGUMENT: {}", str);
             break;
         case RTC_ERROR_INVALID_OPERATION:
-            printf("RTC_ERROR_INVALID_OPERATION");
+            log_error("RTC_ERROR_INVALID_OPERATION: {}", str);
             break;
-        case RTC_ERROR_OUT_OF_MEMORY: printf("RTC_ERROR_OUT_OF_MEMORY"); break;
+        case RTC_ERROR_OUT_OF_MEMORY:
+            log_error("RTC_ERROR_OUT_OF_MEMORY: {}", str);
+            break;
         case RTC_ERROR_UNSUPPORTED_CPU:
-            printf("RTC_ERROR_UNSUPPORTED_CPU");
+            log_error("RTC_ERROR_UNSUPPORTED_CPU: {}", str);
             break;
-        case RTC_ERROR_CANCELLED: printf("RTC_ERROR_CANCELLED"); break;
-        default: printf("invalid error code"); break;
+        case RTC_ERROR_CANCELLED:
+            log_error("RTC_ERROR_CANCELLED: {}", str);
+            break;
+        default: log_error("invalid error code"); break;
     }
-    printf(": %s\n", str);
 }
 
 // Get Embree device
