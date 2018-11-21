@@ -184,7 +184,7 @@ edge_map make_edge_map(const vector<vec4i>& quads) {
 }
 
 // Create key entry for edge_map
-vec2i make_edge(const vec2i& e) { return e.x < e.y ? e : vec2i{e.y, e.x}; }
+vec2i make_edgemap_edge(const vec2i& e) { return e.x < e.y ? e : vec2i{e.y, e.x}; }
 
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
@@ -206,11 +206,11 @@ void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
 }
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& e, int face) {
-    auto es = make_edge(e);
-    auto it = emap.find(es);
-    if (it == emap.end()) {
-        auto idx = (int)emap.size();
-        emap.insert(it, {es, {idx, face, -1}});
+    auto es = make_edgemap_edge(e);
+    auto it = emap.edge_dict.find(es);
+    if (it == emap.edge_dict.end()) {
+        auto idx = (int)emap.edge_dict.size();
+        emap.edge_dict.insert(it, {es, {idx, face, -1}});
         return idx;
     } else {
         it->second.z = face;
@@ -219,23 +219,23 @@ int insert_edge(edge_map& emap, const vec2i& e, int face) {
 }
 // Get the edge index
 int get_edge_index(const edge_map& emap, const vec2i& e) {
-    auto es = make_edge(e);
-    return emap.at(es).x;
+    auto es = make_edgemap_edge(e);
+    return emap.edge_dict.at(es).x;
 }
 // Get the edge count
 int get_edge_count(const edge_map& emap, const vec2i& e) {
-    auto es = make_edge(e);
-    return emap.at(es).z == -1 ? 1 : 2;
+    auto es = make_edgemap_edge(e);
+    return emap.edge_dict.at(es).z == -1 ? 1 : 2;
 }
 // Get a list of edges, boundary edges, boundary vertices
 vector<vec2i> get_edges(const edge_map& emap) {
-    auto edges = vector<vec2i>(emap.size());
-    for (auto& [edge, counts] : emap) edges[counts.x] = edge;
+    auto edges = vector<vec2i>(emap.edge_dict.size());
+    for (auto& [edge, counts] : emap.edge_dict) edges[counts.x] = edge;
     return edges;
 }
 vector<vec2i> get_boundary(const edge_map& emap) {
     auto boundary = vector<vec2i>();
-    for (auto& [edge, counts] : emap)
+    for (auto& [edge, counts] : emap.edge_dict)
         if (counts.z == -1) boundary.push_back(edge);
     return boundary;
 }

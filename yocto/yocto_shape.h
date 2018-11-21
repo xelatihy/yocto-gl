@@ -228,13 +228,13 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
 
 // Dictionary to store edge information.
 // key: edge, value: (edge index, adjacent face, other adjacent face)
-using edge_map = unordered_map<vec2i, vec3i>;
+struct edge_map {
+    unordered_map<vec2i, vec3i> edge_dict;
+};
 
 // initializes an edge map
 edge_map make_edge_map(const vector<vec3i>& triangles);
-edge_map make_edge_map(const vector<vec4i>& tquadsriangles);
-// Create key entry for edge_map
-vec2i make_edge(const vec2i& e);
+edge_map make_edge_map(const vector<vec4i>& quads);
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
 void insert_edges(edge_map& emap, const vector<vec4i>& quads);
