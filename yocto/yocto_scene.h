@@ -111,7 +111,6 @@ struct yocto_texture {
     bool    no_interpolation = false;
     float   height_scale     = 1;
     bool    ldr_as_linear    = false;
-    bool    has_opacity      = false;
 };
 
 // Volumetric texture containing a float only volume data. See texture

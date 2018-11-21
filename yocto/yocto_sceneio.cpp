@@ -5072,7 +5072,6 @@ bool serialize_bin_object(yocto_texture& texture, fstream& fs, bool save) {
     if (!serialize_bin_value(texture.height_scale, fs, save)) return false;
     if (!serialize_bin_value(texture.no_interpolation, fs, save)) return false;
     if (!serialize_bin_value(texture.ldr_as_linear, fs, save)) return false;
-    if (!serialize_bin_value(texture.has_opacity, fs, save)) return false;
     return true;
 }
 
