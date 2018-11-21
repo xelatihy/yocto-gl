@@ -803,7 +803,7 @@ vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {
 
 // Shape element normal.
 pair<vec3f, bool> evaluate_shape_element_tangentspace(
-    const yocto_shape& shape, int element_id) {
+    const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (!empty(shape.triangles)) {
         auto t    = shape.triangles[element_id];
         auto norm = triangle_normal(
@@ -818,6 +818,26 @@ pair<vec3f, bool> evaluate_shape_element_tangentspace(
                 shape.positions[t.y], shape.positions[t.z],
                 shape.texturecoords[t.x], shape.texturecoords[t.y],
                 shape.texturecoords[t.z]);
+        }
+        auto tx = txty.first, ty = txty.second;
+        tx     = orthonormalize(tx, norm);
+        auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
+        return {tx, s};
+    } else if(!empty(shape.quads)) {
+        auto q    = shape.quads[element_id];
+        auto norm = quad_normal(
+            shape.positions[q.x], shape.positions[q.y], shape.positions[q.z], 
+            shape.positions[q.w]);
+        auto txty = pair<vec3f, vec3f>();
+        if (empty(shape.texturecoords)) {
+            txty = quad_tangents_fromuv(shape.positions[q.x],
+                shape.positions[q.y], shape.positions[q.z], shape.positions[q.w], 
+                {0, 0}, {1, 0}, {0, 1}, {1, 1}, element_uv);
+        } else {
+            txty = quad_tangents_fromuv(shape.positions[q.x],
+                shape.positions[q.y], shape.positions[q.z], shape.positions[q.w],
+                shape.texturecoords[q.x], shape.texturecoords[q.y],
+                shape.texturecoords[q.z], shape.texturecoords[q.w], element_uv);
         }
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
@@ -884,7 +904,7 @@ float evaluate_shape_radius(
 pair<vec3f, bool> evaluate_shape_tangentspace(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (empty(shape.tangentspaces))
-        return evaluate_shape_element_tangentspace(shape, element_id);
+        return evaluate_shape_element_tangentspace(shape, element_id, element_uv);
    auto tangsp = evaluate_shape_elem(
                           shape, shape.tangentspaces, element_id, element_uv);
     return {xyz(tangsp), tangsp.w < 0};
@@ -892,7 +912,7 @@ pair<vec3f, bool> evaluate_shape_tangentspace(
 // Shading normals including material perturbations.
 vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
-    if (!empty(shape.triangles)) {
+    if (!empty(shape.triangles) || !empty(shape.quads)) {
         auto  normal   = evaluate_shape_normal(shape, element_id, element_uv);
         auto& material = scene.materials[shape.material];
         if (scene.materials[shape.material].normal_texture >= 0) {
@@ -1102,7 +1122,7 @@ bool is_instance_normal_perturbed(
     const yocto_scene& scene, const yocto_instance& instance) {
     if (instance.shape >= 0) {
         auto& shape = scene.shapes[instance.shape];
-        return !shape.triangles.empty() && scene.materials[shape.material].normal_texture >= 0;
+        return (!shape.triangles.empty() || !shape.quads.empty()) && scene.materials[shape.material].normal_texture >= 0;
     } else if (instance.surface >= 0) {
         return false;
     } else {

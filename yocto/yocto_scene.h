@@ -385,7 +385,7 @@ vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
 pair<vec3f, bool> evaluate_shape_element_tangentspace(
-    const yocto_shape& shape, int element_id);
+    const yocto_shape& shape, int element_id, const vec2f& element_uv = zero2f);
 
 // Sample a shape element based on area/length.
 vector<float>    compute_shape_elements_cdf(const yocto_shape& shape);

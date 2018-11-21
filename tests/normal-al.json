@@ -128,7 +128,7 @@
             "material": "obj1",
             "!!proc": {
                 "type": "matball",
-                "as_triangles": true
+                "as_triangles": false
             }
         },
         {
