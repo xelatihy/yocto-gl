@@ -1514,9 +1514,10 @@ microfacet_brdf evaluate_basemetallic_material_brdf(const yocto_scene& scene,
         auto& transmission_texture = scene.textures[material.transmission_texture];
         transmission *= xyz(evaluate_texture(transmission_texture, texturecoord));
     }
+    auto fresnel = material.fresnel;
     auto refract = material.refract;
     auto brdf    = microfacet_brdf{
-        diffuse, specular, transmission, roughness, opacity, refract};
+        diffuse, specular, transmission, roughness, opacity, fresnel, refract};
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
     } else if (brdf.roughness <= 0.03f * 0.03f)
@@ -1552,9 +1553,10 @@ microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
         auto& transmission_texture = scene.textures[material.transmission_texture];
         transmission *= xyz(evaluate_texture(transmission_texture, texturecoord));
     }
+    auto fresnel = material.fresnel;
     auto refract = material.refract;
     auto brdf    = microfacet_brdf{
-        diffuse, specular, transmission, roughness, opacity, refract};
+        diffuse, specular, transmission, roughness, opacity, fresnel, refract};
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
     } else if (brdf.roughness <= 0.03f * 0.03f)

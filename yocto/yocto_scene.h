@@ -465,6 +465,7 @@ struct microfacet_brdf {
     vec3f transmission = zero3f;
     float roughness    = 1;
     float opacity      = 1;
+    bool  fresnel      = true;
     bool  refract      = false;
 };
 microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
