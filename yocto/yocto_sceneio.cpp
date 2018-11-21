@@ -854,12 +854,12 @@ bool apply_json_procedural(
         value.hdr_image = make_grid_image(width, height,
             get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
+            get_json_value(js, "c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "checker") {
         value.hdr_image = make_checker_image(width, height,
             get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            get_json_value(js, "c1", vec4f{0.8f, 0.8f, 0.8f, 1}));
+            get_json_value(js, "c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
         value.hdr_image = make_bumpdimple_image(
             width, height, get_json_value(js, "tile", 8));

@@ -215,10 +215,10 @@ namespace yocto {
 // Make example images in linear color space.
 image4f make_grid_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
 image4f make_checker_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
 image4f make_bumpdimple_image(int width, int height, int tile = 8);
 image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1,
     float srgb = false);
