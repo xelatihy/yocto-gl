@@ -64,7 +64,7 @@
                 0.04
             ],
             "roughness": 0.01,
-            "norm_txt": "obj1norm"
+            "normal_texture": "obj1norm"
         },
         {
             "name": "obj2",
@@ -79,7 +79,7 @@
                 0.04
             ],
             "roughness": 0.01,
-            "norm_txt": "obj1norm"
+            "normal_texture": "obj1norm"
         },
         {
             "name": "obj3",
@@ -94,7 +94,7 @@
                 0.04
             ],
             "roughness": 0.01,
-            "norm_txt": "obj1norm"
+            "normal_texture": "obj1norm"
         },
         {
             "name": "light1",
@@ -127,7 +127,8 @@
             "filename": "models/obj1.ply",
             "material": "obj1",
             "!!proc": {
-                "type": "matball"
+                "type": "matball",
+                "as_triangles": true
             }
         },
         {

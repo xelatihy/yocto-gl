@@ -379,13 +379,11 @@ vec4f evaluate_shape_color(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 float evaluate_shape_radius(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec4f evaluate_shape_tangentspace(
+pair<vec3f, bool> evaluate_shape_tangentspace(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec3f evaluate_shape_tangentspace(const yocto_shape& shape, int element_id,
-    const vec2f& element_uv, bool& left_handed);
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
-vec4f evaluate_shape_element_tangentspace(
+pair<vec3f, bool> evaluate_shape_element_tangentspace(
     const yocto_shape& shape, int element_id);
 
 // Sample a shape element based on area/length.

@@ -802,9 +802,8 @@ vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {
 }
 
 // Shape element normal.
-vec4f evaluate_shape_element_tangentspace(
+pair<vec3f, bool> evaluate_shape_element_tangentspace(
     const yocto_shape& shape, int element_id) {
-    auto tangsp = zero4f;
     if (!empty(shape.triangles)) {
         auto t    = shape.triangles[element_id];
         auto norm = triangle_normal(
@@ -823,9 +822,10 @@ vec4f evaluate_shape_element_tangentspace(
         auto tx = txty.first, ty = txty.second;
         tx     = orthonormalize(tx, norm);
         auto s = (dot(cross(norm, tx), ty) < 0) ? -1.0f : 1.0f;
-        tangsp = {tx.x, tx.y, tx.z, s};
+        return {tx, s};
+    } else {
+        return {zero3f, false};
     }
-    return tangsp;
 }
 
 // Shape value interpolated using barycentric coordinates
@@ -881,21 +881,13 @@ float evaluate_shape_radius(
     if (empty(shape.radius)) return 0.001f;
     return evaluate_shape_elem(shape, shape.radius, element_id, element_uv);
 }
-vec4f evaluate_shape_tangentspace(
+pair<vec3f, bool> evaluate_shape_tangentspace(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (empty(shape.tangentspaces))
         return evaluate_shape_element_tangentspace(shape, element_id);
-    return evaluate_shape_elem(
-        shape, shape.tangentspaces, element_id, element_uv);
-}
-vec3f evaluate_shape_tangentspace(const yocto_shape& shape, int element_id,
-    const vec2f& element_uv, bool& left_handed) {
-    auto tangsp = (empty(shape.tangentspaces)) ?
-                      evaluate_shape_element_tangentspace(shape, element_id) :
-                      evaluate_shape_elem(
+   auto tangsp = evaluate_shape_elem(
                           shape, shape.tangentspaces, element_id, element_uv);
-    left_handed = tangsp.w < 0;
-    return {tangsp.x, tangsp.y, tangsp.z};
+    return {xyz(tangsp), tangsp.w < 0};
 }
 // Shading normals including material perturbations.
 vec3f evaluate_shape_shading_normal(const yocto_scene& scene,
@@ -907,15 +899,14 @@ vec3f evaluate_shape_shading_normal(const yocto_scene& scene,
         if (material.normal_texture >= 0) {
             auto texcoord = evaluate_shape_texturecoord(
                 shape, element_id, element_uv);
-            auto  left_handed    = false;
             auto& normal_texture = scene.textures[material.normal_texture];
             auto  texture = xyz(evaluate_texture(normal_texture, texcoord));
             texture       = texture * 2 - vec3f{1, 1, 1};
             texture.y = -texture.y;  // flip vertical axis to align green with
                                      // image up
-            auto tu = orthonormalize(evaluate_shape_tangentspace(shape,
-                                         element_id, element_uv, left_handed),
-                normal);
+            auto [tu, left_handed] = evaluate_shape_tangentspace(shape,
+                                         element_id, element_uv);
+            tu = orthonormalize(tu, normal);
             auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
             normal = normalize(
                 texture.x * tu + texture.y * tv + texture.z * normal);
@@ -946,9 +937,9 @@ vec3f evaluate_surface_element_normal(
 }
 
 // Shape element normal.
-vec4f evaluate_surface_element_tangentspace(
+pair<vec3f, bool> evaluate_surface_element_tangentspace(
     const yocto_surface& surface, int element_id) {
-    return zero4f;
+    return {zero3f, false};
 }
 
 // override for face-varying data
@@ -982,15 +973,9 @@ vec2f evaluate_surface_texturecoord(
     return evaluate_surface_elem(surface, surface.texturecoords,
         surface.quads_texturecoords, element_id, element_uv);
 }
-vec4f evaluate_surface_tangentspace(
-    const yocto_shape& shape, int element_id, const vec2f& element_uv) {
-    return evaluate_shape_element_tangentspace(shape, element_id);
-}
-vec3f evaluate_surface_tangentspace(const yocto_surface& surface,
-    int element_id, const vec2f& element_uv, bool& left_handed) {
-    auto tangsp = evaluate_surface_element_tangentspace(surface, element_id);
-    left_handed = tangsp.w < 0;
-    return {tangsp.x, tangsp.y, tangsp.z};
+pair<vec3f, bool> evaluate_surface_tangentspace(const yocto_surface& surface,
+    int element_id, const vec2f& element_uv) {
+    return evaluate_surface_element_tangentspace(surface, element_id);
 }
 // Shading normals including material perturbations.
 vec3f evaluate_surface_shading_normal(const yocto_scene& scene,
@@ -1053,20 +1038,21 @@ vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
         return zero2f;
     }
 }
-vec3f evaluate_instance_tangentspace(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    bool& left_handed) {
+pair<vec3f, bool> evaluate_instance_tangentspace(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
     if (instance.shape >= 0) {
-        return transform_direction(instance.frame,
+        auto [tu, left_handed] = 
             evaluate_shape_tangentspace(scene.shapes[instance.shape],
-                element_id, element_uv, left_handed));
+                element_id, element_uv);
+        return {transform_direction(instance.frame, tu), left_handed};
     } else if (instance.surface >= 0) {
-        return transform_direction(instance.frame,
+        auto [tu, left_handed] = 
             evaluate_surface_tangentspace(scene.surfaces[instance.surface],
-                element_id, element_uv, left_handed));
+                element_id, element_uv);
+        return {transform_direction(instance.frame, tu), left_handed};
     } else {
         log_error("empty instance");
-        return zero3f;
+        return {zero3f, false};
     }
 }
 // Instance element values.
