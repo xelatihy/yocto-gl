@@ -64,7 +64,8 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.normal = evaluate_instance_normal(scene, instance, element_id, element_uv);
     if(is_instance_faces(scene, instance)) {
         // double-sided goes here
-        point.normal = evaluate_instance_shading_normal(scene, instance, element_id, element_uv, shading_direction);
+        if(is_instance_normal_perturbed(scene, instance))
+        point.normal = evaluate_instance_perturbed_normal(scene, instance, element_id, element_uv);
     } else if(is_instance_lines(scene, instance)) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if(is_instance_points(scene, instance)) {
@@ -493,11 +494,9 @@ trace_point sample_lights_point(const yocto_scene& scene,
     auto instance_id = lights.instances[light_id];
     auto rel         = get_random_float(rng);  // force order of evaluation
     auto ruv         = get_random_vec2f(rng);  // force order of evaluation
-    auto point = sample_instance_point(scene, lights, instance_id, rel, ruv);
-    auto direction = normalize(position - point.position);
-    point.normal   = evaluate_instance_shading_normal(scene,
-        scene.instances[instance_id], point.element_id, point.element_uv,
-        direction);
+    auto point       = sample_instance_point(scene, lights, instance_id, rel, ruv);
+    // auto direction = normalize(position - point.position);
+    // here goes double sided
     return point;
 }
 
@@ -610,8 +609,8 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
         auto& instance       = scene.instances[isec.instance_id];
         auto  light_position = evaluate_instance_position(
             scene, instance, isec.element_id, isec.element_uv);
-        auto light_normal = evaluate_instance_shading_normal(
-            scene, instance, isec.element_id, isec.element_uv, direction);
+        auto light_normal = evaluate_instance_normal(
+            scene, instance, isec.element_id, isec.element_uv);
         // prob triangle * area triangle = area triangle mesh
         auto area = elements_cdf.back();
         pdf += distance_squared(light_position, position) /
@@ -868,8 +867,8 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
         auto& isec_shape    = scene.shapes[isec_instance.shape];
         auto  lp            = evaluate_instance_position(
             scene, isec_instance, isec.element_id, isec.element_uv);
-        auto ln = evaluate_instance_shading_normal(
-            scene, isec_instance, isec.element_id, isec.element_uv, -incoming);
+        auto ln = evaluate_instance_normal(
+            scene, isec_instance, isec.element_id, isec.element_uv);
         auto& isec_material = scene.materials[isec_shape.material];
         auto  emission      = evaluate_material_emission(scene, isec_material,
             evaluate_shape_texturecoord(
@@ -1117,8 +1116,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             auto& isec_material = scene.materials[isec_shape.material];
             auto  p             = evaluate_instance_position(
                 scene, isec_instance, isec.element_id, isec.element_uv);
-            auto normal = evaluate_instance_shading_normal(scene, isec_instance,
-                isec.element_id, isec.element_uv, outgoing);
+            auto normal = evaluate_instance_normal(scene, isec_instance,
+                isec.element_id, isec.element_uv);
             auto brdf   = evaluate_material_brdf(scene, isec_material,
                 evaluate_shape_texturecoord(
                     isec_shape, isec.element_id, isec.element_uv),

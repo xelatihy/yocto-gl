@@ -381,6 +381,8 @@ float evaluate_shape_radius(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 pair<vec3f, bool> evaluate_shape_tangentspace(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
 pair<vec3f, bool> evaluate_shape_element_tangentspace(
@@ -499,16 +501,11 @@ vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec4f evaluate_instance_color(
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_tangentspace(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    bool& left_handed);
+vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
 // Instance element values.
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id);
-// Shading normals including material perturbations.
-vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    const vec3f& o);
 // Check the instance type
 bool is_instance_points(const yocto_scene& scene, const yocto_instance& instance);
 bool is_instance_lines(const yocto_scene& scene, const yocto_instance& instance);
@@ -522,7 +519,9 @@ vec3f evaluate_instance_emission(const yocto_scene& scene,
 float evaluate_instance_opacity(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 bool  is_instance_emissive(
-     const yocto_scene& scene, const yocto_instance& instance);
+    const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_normal_perturbed(const yocto_scene& scene, 
+    const yocto_instance& instance);
 
 // <aterial brdf
 microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
