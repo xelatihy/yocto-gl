@@ -1583,18 +1583,85 @@ vec3f evaluate_material_normalmap(const yocto_scene& scene,
 }
 
 // Evaluates the microfacet_brdf at a location.
+microfacet_brdf evaluate_basemetallic_material_brdf(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord) {
+    auto base = material.diffuse;
+    auto opacity = material.opacity;
+    if (material.diffuse_texture >= 0) {
+        auto& diffuse_texture = scene.textures[material.diffuse_texture];
+        auto diffuse_txt = evaluate_texture(diffuse_texture, texturecoord);
+        base *= xyz(diffuse_txt);
+        opacity *= diffuse_txt.w;
+    }
+    auto metallic = material.specular;
+    if (material.specular_texture >= 0) {
+        auto& specular_texture = scene.textures[material.specular_texture];
+        metallic *= evaluate_texture(specular_texture, texturecoord).z;
+    }
+    auto diffuse = base * (1 - metallic);
+    auto specular = base * metallic + 0.04f * (1 - metallic);
+    auto roughness = 1.0f;
+    if (!material.gltf_textures) {
+        roughness = material.roughness;
+        if (material.roughness_texture >= 0) {
+            auto& roughness_texture = scene.textures[material.roughness_texture];
+            roughness *= evaluate_texture(roughness_texture, texturecoord).x;
+        }
+    } else {
+        auto glossiness = 1 - material.roughness;
+        if (material.roughness_texture >= 0) {
+            auto& roughness_texture = scene.textures[material.roughness_texture];
+            glossiness *= evaluate_texture(roughness_texture, texturecoord).w;
+        }
+        roughness = 1 - glossiness;
+    }
+    roughness = roughness * roughness;
+    auto transmission = material.transmission;
+    if (material.transmission_texture >= 0) {
+        auto& transmission_texture = scene.textures[material.transmission_texture];
+        transmission *= xyz(evaluate_texture(transmission_texture, texturecoord));
+    }
+    auto refract = material.refract;
+    auto brdf    = microfacet_brdf{
+        diffuse, specular, transmission, roughness, opacity, refract};
+    if (brdf.diffuse != zero3f) {
+        brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
+    } else if (brdf.roughness <= 0.03f * 0.03f)
+        brdf.roughness = 0;
+    return brdf;
+}
+
+// Evaluates the microfacet_brdf at a location.
 microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {
-    auto brdf    = microfacet_brdf();
-    brdf.diffuse = evaluate_material_diffuse(
-        scene, material, texturecoord);
-    brdf.specular = evaluate_material_specular(
-        scene, material, texturecoord);
-    brdf.transmission = evaluate_material_transmission(
-        scene, material, texturecoord);
-    brdf.roughness = evaluate_material_roughness(
-        scene, material, texturecoord);
-    brdf.refract = material.refract;
+    if(material.base_metallic) return evaluate_basemetallic_material_brdf(scene, material, texturecoord);
+    auto diffuse = material.diffuse;
+    auto opacity = material.opacity;
+    if (material.diffuse_texture >= 0) {
+        auto& diffuse_texture = scene.textures[material.diffuse_texture];
+        auto diffuse_txt = evaluate_texture(diffuse_texture, texturecoord);
+        diffuse *= xyz(diffuse_txt);
+        opacity *= diffuse_txt.w;
+    }
+    auto specular = material.specular;
+    if (material.specular_texture >= 0) {
+        auto& specular_texture = scene.textures[material.specular_texture];
+        specular *= xyz(evaluate_texture(specular_texture, texturecoord));
+    }
+    auto roughness = material.roughness;
+    if (material.roughness_texture >= 0) {
+        auto& roughness_texture = scene.textures[material.roughness_texture];
+        roughness *= evaluate_texture(roughness_texture, texturecoord).x;
+    }
+    roughness = roughness * roughness;
+    auto transmission = material.transmission;
+    if (material.transmission_texture >= 0) {
+        auto& transmission_texture = scene.textures[material.transmission_texture];
+        transmission *= xyz(evaluate_texture(transmission_texture, texturecoord));
+    }
+    auto refract = material.refract;
+    auto brdf    = microfacet_brdf{
+        diffuse, specular, transmission, roughness, opacity, refract};
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);
     } else if (brdf.roughness <= 0.03f * 0.03f)
