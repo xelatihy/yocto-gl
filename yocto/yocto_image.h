@@ -212,13 +212,13 @@ image4f resize_image(const image4f& img, int width, int height);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Make example images.
+// Make example images in linear color space.
 image4f make_grid_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
 image4f make_checker_image(int width, int height, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-    const vec4f& c1 = {0.8f, 0.8f, 0.8f, 1});
+    const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
 image4f make_bumpdimple_image(int width, int height, int tile = 8);
 image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1,
     float srgb = false);
@@ -229,7 +229,7 @@ image4f make_uvgrid_image(
 image4f make_blackbodyramp_image(int width, int height,
     float start_temperature = 1000, float end_temperature = 12000);
 
-// Comvert a bump map to a normal map.
+// Comvert a bump map to a normal map. All linear color spaces.
 image4f bump_to_normal_map(const image4f& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
