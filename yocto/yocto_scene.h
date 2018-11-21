@@ -509,6 +509,10 @@ vec3f evaluate_instance_element_normal(
 vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv,
     const vec3f& o);
+// Check the instance type
+bool is_instance_points(const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_lines(const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_faces(const yocto_scene& scene, const yocto_instance& instance);
 
 // Material values
 int   get_instance_material_id(const yocto_scene& scene,

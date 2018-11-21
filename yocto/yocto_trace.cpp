@@ -61,8 +61,14 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.element_uv  = element_uv;
     point.position    = evaluate_instance_position(
         scene, instance, element_id, element_uv);
-    point.normal = evaluate_instance_shading_normal(
-        scene, instance, element_id, element_uv, -shading_direction);
+    point.normal = evaluate_instance_normal(scene, instance, element_id, element_uv);
+    if(is_instance_faces(scene, instance)) {
+        // double-sided goes here
+    } else if(is_instance_lines(scene, instance)) {
+        point.normal = orthonormalize(-shading_direction, point.normal);
+    } else if(is_instance_points(scene, instance)) {
+        point.normal = -shading_direction;
+    }
     point.texturecoord = evaluate_instance_texturecoord(
         scene, instance, element_id, element_uv);
     point.emission = evaluate_instance_emission(

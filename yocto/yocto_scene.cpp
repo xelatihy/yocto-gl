@@ -1171,6 +1171,35 @@ bool is_instance_emissive(
         return false;
     }
 }
+// Check the instance type
+bool is_instance_points(const yocto_scene& scene, const yocto_instance& instance) {
+    if (instance.shape >= 0) {
+        return !scene.shapes[instance.shape].points.empty();
+    } else if (instance.surface >= 0) {
+        return false;
+    } else {
+        return false;
+    }
+}
+bool is_instance_lines(const yocto_scene& scene, const yocto_instance& instance) {
+    if (instance.shape >= 0) {
+        return !scene.shapes[instance.shape].points.empty();
+    } else if (instance.surface >= 0) {
+        return false;
+    } else {
+        return false;
+    }
+}
+bool is_instance_faces(const yocto_scene& scene, const yocto_instance& instance) {
+    if (instance.shape >= 0) {
+        return !scene.shapes[instance.shape].triangles.empty() || 
+            !scene.shapes[instance.shape].quads.empty();
+    } else if (instance.surface >= 0) {
+        return !scene.surfaces[instance.surface].quads_positions.empty();
+    } else {
+        return false;
+    }
+}
 
 // Environment texture coordinates from the direction.
 vec2f evaluate_environment_texturecoord(
