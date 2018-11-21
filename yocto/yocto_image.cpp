@@ -307,7 +307,7 @@ image4f bump_to_normal_map(const image4f& img, float scale) {
             at(norm, i, j) = {normal.x, normal.y, normal.z, 1};
         }
     }
-    return img;
+    return norm;
 }
 
 #if 1
