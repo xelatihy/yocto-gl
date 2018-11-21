@@ -47,7 +47,6 @@ struct trace_point {
     vec2f           texturecoord = zero2f;
     vec3f           emission     = zero3f;
     microfacet_brdf brdf         = {};
-    float           opacity      = 1;
 };
 
 // Make a trace point
@@ -76,8 +75,6 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.emission = evaluate_instance_emission(
         scene, instance, element_id, element_uv);
     point.brdf = evaluate_instance_brdf(scene, instance, element_id, element_uv);
-    point.opacity = evaluate_instance_opacity(
-        scene, instance, element_id, element_uv);
     return point;
 }
 
@@ -105,31 +102,9 @@ trace_point trace_ray_with_opacity(const yocto_scene& scene,
     for (auto b = 0; b < max_bounces * 10; b++) {
         auto point = trace_ray(scene, bvh, position, direction);
         if (point.instance_id < 0) return point;
-        if (point.opacity > 0.999f) return point;
-        if (get_random_float(rng) < point.opacity) return point;
+        if (point.brdf.opacity > 0.999f) return point;
+        if (get_random_float(rng) < point.brdf.opacity) return point;
         position = point.position + direction * ray_eps;
-    }
-    return {};
-}
-
-// Intersect a scene handling opacity.
-scene_intersection intersect_scene_with_opacity(const yocto_scene& scene,
-    const bvh_scene& bvh, const ray3f& ray_, rng_state& rng, int max_bounces) {
-    auto ray = ray_;
-    for (auto b = 0; b < max_bounces; b++) {
-        _trace_nrays += 1;
-        auto isec = intersect_scene(scene, bvh, ray);
-        if (isec.instance_id < 0) return isec;
-        auto& instance = scene.instances[isec.instance_id];
-        auto& shape    = scene.shapes[instance.shape];
-        auto& material = scene.materials[shape.material];
-        auto  op       = evaluate_material_opacity(scene, material,
-            evaluate_shape_texturecoord(shape, isec.element_id, isec.element_uv));
-        if (op > 0.999f) return isec;
-        if (get_random_float(rng) < op) return isec;
-        ray = make_ray(evaluate_instance_position(
-                           scene, instance, isec.element_id, isec.element_uv),
-            ray.d);
     }
     return {};
 }
@@ -850,8 +825,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
             get_random_float(rng), get_random_vec2f(rng));
         pdf *= sample_environment_direction_pdf(
             scene, lights, environment_id, incoming);
-        auto isec = intersect_scene_with_opacity(
-            scene, bvh, make_ray(p, incoming), rng, 10);
+        auto isec = intersect_scene(scene, bvh, make_ray(p, incoming));
         if (isec.instance_id < 0) {
             auto& environment = scene.environments[environment_id];
             le = evaluate_environment_emission(scene, environment, incoming);
@@ -1085,8 +1059,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // Create ray and clamp it to make the intersection faster.
         ray       = make_ray(ray.o, ray.d);
         ray.tmax  = distance;
-        auto isec = intersect_scene_with_opacity(
-            scene, bvh, ray, rng, max_bounces);
+        auto isec = intersect_scene(scene, bvh, ray);
 
         // @Hack: When isec.instance == nullptr, we must discern if the ray hit
         // nothing (the environment)
@@ -1471,8 +1444,7 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
             point.brdf, point.normal, outgoing, next_direction);
         auto emission = evaluate_environment_emission(scene, next_direction);
         if (next_pdf &&
-            intersect_scene_with_opacity(scene, bvh,
-                make_ray(point.position, next_direction), rng, max_bounces)
+            intersect_scene(scene, bvh,make_ray(point.position, next_direction))
                     .instance_id < 0)
             radiance += emission * brdf_cosine / next_pdf;
     }

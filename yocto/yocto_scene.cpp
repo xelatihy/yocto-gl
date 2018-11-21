@@ -1084,21 +1084,6 @@ microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
         return {};
     }
 }
-float evaluate_instance_opacity(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    if (instance.shape >= 0) {
-        auto& shape = scene.shapes[instance.shape];
-        return evaluate_material_opacity(scene, scene.materials[shape.material],
-            evaluate_shape_texturecoord(shape, element_id, element_uv));
-    } else if (instance.surface >= 0) {
-        auto& surface = scene.surfaces[instance.surface];
-        return evaluate_material_opacity(scene,
-            scene.materials[get_surface_element_material(surface, element_id)],
-            evaluate_surface_texturecoord(surface, element_id, element_uv));
-    } else {
-        return 0;
-    }
-}
 bool is_instance_emissive(
     const yocto_scene& scene, const yocto_instance& instance) {
     if (instance.shape >= 0) {
@@ -1475,15 +1460,6 @@ vec3f evaluate_material_emission(const yocto_scene& scene,
         emission *= xyz(evaluate_texture(emission_texture, texturecoord));
     }
     return emission;
-}
-float evaluate_material_opacity(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord) {
-    auto opacity = material.opacity;
-    if (material.opacity_texture >= 0) {
-        auto& opacity_texture = scene.textures[material.opacity_texture];
-        opacity *= evaluate_texture(opacity_texture, texturecoord).w;
-    }
-    return opacity;
 }
 vec3f evaluate_material_normalmap(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord) {

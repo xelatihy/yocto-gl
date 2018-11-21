@@ -452,8 +452,8 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 // roughness and opacity.
 vec3f evaluate_material_emission(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
-float evaluate_material_opacity(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord);
+// float evaluate_material_opacity(const yocto_scene& scene,
+//     const yocto_material& material, const vec2f& texturecoord);
 vec3f evaluate_material_normalmap(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
 // Query material properties
@@ -502,16 +502,12 @@ int   get_instance_material_id(const yocto_scene& scene,
       const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_emission(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-float evaluate_instance_opacity(const yocto_scene& scene,
+microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 bool  is_instance_emissive(
     const yocto_scene& scene, const yocto_instance& instance);
 bool is_instance_normal_perturbed(const yocto_scene& scene, 
     const yocto_instance& instance);
-
-// <aterial brdf
-microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
