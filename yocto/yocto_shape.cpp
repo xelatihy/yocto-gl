@@ -184,7 +184,9 @@ edge_map make_edge_map(const vector<vec4i>& quads) {
 }
 
 // Create key entry for edge_map
-vec2i make_edge(const vec2i& e) { return e.x < e.y ? e : vec2i{e.y, e.x}; }
+vec2i make_edgemap_edge(const vec2i& e) {
+    return e.x < e.y ? e : vec2i{e.y, e.x};
+}
 
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
@@ -206,11 +208,11 @@ void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
 }
 // Insert an edge and return its index
 int insert_edge(edge_map& emap, const vec2i& e, int face) {
-    auto es = make_edge(e);
-    auto it = emap.find(es);
-    if (it == emap.end()) {
-        auto idx = (int)emap.size();
-        emap.insert(it, {es, {idx, face, -1}});
+    auto es = make_edgemap_edge(e);
+    auto it = emap.edge_dict.find(es);
+    if (it == emap.edge_dict.end()) {
+        auto idx = (int)emap.edge_dict.size();
+        emap.edge_dict.insert(it, {es, {idx, face, -1}});
         return idx;
     } else {
         it->second.z = face;
@@ -219,23 +221,23 @@ int insert_edge(edge_map& emap, const vec2i& e, int face) {
 }
 // Get the edge index
 int get_edge_index(const edge_map& emap, const vec2i& e) {
-    auto es = make_edge(e);
-    return emap.at(es).x;
+    auto es = make_edgemap_edge(e);
+    return emap.edge_dict.at(es).x;
 }
 // Get the edge count
 int get_edge_count(const edge_map& emap, const vec2i& e) {
-    auto es = make_edge(e);
-    return emap.at(es).z == -1 ? 1 : 2;
+    auto es = make_edgemap_edge(e);
+    return emap.edge_dict.at(es).z == -1 ? 1 : 2;
 }
 // Get a list of edges, boundary edges, boundary vertices
 vector<vec2i> get_edges(const edge_map& emap) {
-    auto edges = vector<vec2i>(emap.size());
-    for (auto& [edge, counts] : emap) edges[counts.x] = edge;
+    auto edges = vector<vec2i>(emap.edge_dict.size());
+    for (auto& [edge, counts] : emap.edge_dict) edges[counts.x] = edge;
     return edges;
 }
 vector<vec2i> get_boundary(const edge_map& emap) {
     auto boundary = vector<vec2i>();
-    for (auto& [edge, counts] : emap)
+    for (auto& [edge, counts] : emap.edge_dict)
         if (counts.z == -1) boundary.push_back(edge);
     return boundary;
 }
@@ -244,6 +246,70 @@ vector<vec2i> get_edges(const vector<vec3i>& triangles) {
 }
 vector<vec2i> get_edges(const vector<vec4i>& quads) {
     return get_edges(make_edge_map(quads));
+}
+
+// Gets the cell index
+vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
+    auto scaledpos = position * grid.cell_inv_size;
+    return vec3i{(int)scaledpos.x, (int)scaledpos.y, (int)scaledpos.z};
+}
+
+// Create a hash_grid
+hash_grid make_hash_grid(float cell_size) {
+    auto grid          = hash_grid{};
+    grid.cell_size     = cell_size;
+    grid.cell_inv_size = 1 / cell_size;
+    return grid;
+}
+hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size) {
+    auto grid          = hash_grid{};
+    grid.cell_size     = cell_size;
+    grid.cell_inv_size = 1 / cell_size;
+    for (auto& position : positions) insert_vertex(grid, position);
+    return grid;
+}
+// Inserts a point into the grid
+int insert_vertex(hash_grid& grid, const vec3f& position) {
+    auto vertex_id = (int)grid.positions.size();
+    auto cell      = get_cell_index(grid, position);
+    grid.cells[cell].push_back(vertex_id);
+    grid.positions.push_back(position);
+    return vertex_id;
+}
+// Finds the nearest neighboors within a given radius
+vector<int> find_nearest_neightbors(const hash_grid& grid,
+    const vec3f& position, float max_radius, int skip_id) {
+    auto cell               = get_cell_index(grid, position);
+    auto cell_radius        = (int)(max_radius * grid.cell_inv_size) + 1;
+    auto neighboors         = vector<int>{};
+    auto max_radius_squared = max_radius * max_radius;
+    for (auto k = -cell_radius; k <= cell_radius; k++) {
+        for (auto j = -cell_radius; j <= cell_radius; j++) {
+            for (auto i = -cell_radius; i <= cell_radius; i++) {
+                auto ncell         = cell + vec3i{i, j, k};
+                auto cell_iterator = grid.cells.find(ncell);
+                if (cell_iterator == grid.cells.end()) continue;
+                auto& ncell_vertices = cell_iterator->second;
+                for (auto vertex_id : ncell_vertices) {
+                    if (distance_squared(grid.positions[vertex_id], position) >
+                        max_radius_squared)
+                        continue;
+                    if (vertex_id == skip_id) continue;
+                    neighboors.push_back(vertex_id);
+                }
+            }
+        }
+    }
+    return neighboors;
+}
+vector<int> find_nearest_neightbors(
+    const hash_grid& grid, const vec3f& position, float max_radius) {
+    return find_nearest_neightbors(grid, position, max_radius, -1);
+}
+vector<int> find_nearest_neightbors(
+    const hash_grid& grid, int vertex_id, float max_radius) {
+    return find_nearest_neightbors(
+        grid, grid.positions[vertex_id], max_radius, vertex_id);
 }
 
 // Convert quads to triangles
@@ -267,22 +333,20 @@ vector<vec3i> convert_quads_to_triangles(
         triangles.push_back({q.x, q.y, q.w});
         if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
     }
-#if 0
-        triangles.resize(usteps * vsteps * 2);
-        for (auto j = 0; j < vsteps; j++) {
-            for (auto i = 0; i < usteps; i++) {
-                auto f1 = triangles[(j * usteps + i) * 2 + 0];
-                auto f2 = triangles[(j * usteps + i) * 2 + 1];
-                if ((i + j) % 2) {
-                    f1 = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
-                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i, j)};
-                } else {
-                    f1 = {vid(i, j), vid(i + 1, j), vid(i, j + 1)};
-                    f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i + 1, j)};
-                }
-            }
-        }
-#endif
+    // triangles.resize(usteps * vsteps * 2);
+    // for (auto j = 0; j < vsteps; j++) {
+    //     for (auto i = 0; i < usteps; i++) {
+    //         auto f1 = triangles[(j * usteps + i) * 2 + 0];
+    //         auto f2 = triangles[(j * usteps + i) * 2 + 1];
+    //         if ((i + j) % 2) {
+    //             f1 = {vid(i, j), vid(i + 1, j), vid(i + 1, j + 1)};
+    //             f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i, j)};
+    //         } else {
+    //             f1 = {vid(i, j), vid(i + 1, j), vid(i, j + 1)};
+    //             f2 = {vid(i + 1, j + 1), vid(i, j + 1), vid(i + 1, j)};
+    //         }
+    //     }
+    // }
     return triangles;
 }
 
@@ -747,22 +811,34 @@ tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     return subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
 
-// Weld vertices within a threshold. For noe the implementation is O(n^2).
+// Weld vertices within a threshold.
 tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold) {
     auto welded_indices   = vector<int>(positions.size());
     auto welded_positions = vector<vec3f>();
-    for (auto i = 0; i < positions.size(); i++) {
-        welded_indices[i] = (int)welded_positions.size();
-        for (auto j = 0; j < welded_positions.size(); j++) {
-            if (length(positions[i] - welded_positions[j]) < threshold) {
-                welded_indices[i] = j;
-                break;
-            }
+    auto grid             = make_hash_grid(threshold);
+    for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
+        auto& position   = positions[vertex_id];
+        auto  neighboors = find_nearest_neightbors(grid, position, threshold);
+        if (neighboors.empty()) {
+            welded_positions.push_back(position);
+            welded_indices[vertex_id] = (int)welded_positions.size() - 1;
+            insert_vertex(grid, position);
+        } else {
+            welded_indices[vertex_id] = neighboors.front();
         }
-        if (welded_indices[i] == (int)welded_positions.size())
-            welded_positions.push_back(positions[i]);
     }
+    // for (auto i = 0; i < positions.size(); i++) {
+    //     welded_indices[i] = (int)welded_positions.size();
+    //     for (auto j = 0; j < welded_positions.size(); j++) {
+    //         if (length(positions[i] - welded_positions[j]) < threshold) {
+    //             welded_indices[i] = j;
+    //             break;
+    //         }
+    //     }
+    //     if (welded_indices[i] == (int)welded_positions.size())
+    //         welded_positions.push_back(positions[i]);
+    // }
     return {welded_positions, welded_indices};
 }
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,

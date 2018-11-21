@@ -143,10 +143,9 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 // Quad tangent and bitangent from uv. Note that we pass a current_uv since
 // internally we may want to split the quad in two and we need to known where
 // to do it. If not interested in the split, just pass zero2f here.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0, 
-    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3, 
-    const vec2f& current_uv);
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv);
 
 // Interpolates values over a line parameterized from a to b by u. Same as lerp.
 template <typename T>
@@ -228,13 +227,13 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
 
 // Dictionary to store edge information.
 // key: edge, value: (edge index, adjacent face, other adjacent face)
-using edge_map = unordered_map<vec2i, vec3i>;
+struct edge_map {
+    unordered_map<vec2i, vec3i> edge_dict;
+};
 
 // initializes an edge map
 edge_map make_edge_map(const vector<vec3i>& triangles);
-edge_map make_edge_map(const vector<vec4i>& tquadsriangles);
-// Create key entry for edge_map
-vec2i make_edge(const vec2i& e);
+edge_map make_edge_map(const vector<vec4i>& quads);
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
 void insert_edges(edge_map& emap, const vector<vec4i>& quads);
@@ -248,6 +247,26 @@ vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
 vector<vec2i> get_edges(const vector<vec4i>& quads);
+
+// A sparse grid of cells, containing list of points. Cells are stored in
+// a dictionary to get sparsing. Helpful for nearest neighboor lookups.
+struct hash_grid {
+    float                             cell_size     = 0;
+    float                             cell_inv_size = 0;
+    vector<vec3f>                     positions     = {};
+    unordered_map<vec3i, vector<int>> cells         = {};
+};
+
+// Create a hash_grid
+hash_grid make_hash_grid(float cell_size);
+hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size);
+// Inserts a point into the grid
+int insert_vertex(hash_grid& grid, const vec3f& position);
+// Finds the nearest neighboors within a given radius
+vector<int> find_nearest_neightbors(
+    const hash_grid& grid, const vec3f& position, float max_radius);
+vector<int> find_nearest_neightbors(
+    const hash_grid& grid, int vertex_id, float max_radius);
 
 // Convert quads to triangles
 vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
@@ -329,7 +348,7 @@ tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec4f>& vert,
     bool lock_boundary = false);
 
-// Weld vertices within a threshold. For noe the implementation is O(n^2).
+// Weld vertices within a threshold.
 tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold);
 tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
@@ -532,10 +551,9 @@ inline pair<vec3f, vec3f> triangle_tangents_fromuv(const vec3f& p0,
 }
 
 // Quad tangent and bitangent from uv.
-inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3, const vec2f& uv0, 
-    const vec2f& uv1, const vec2f& uv2, const vec2f& uv3, 
-    const vec2f& current_uv) {
+inline pair<vec3f, vec3f> quad_tangents_fromuv(const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3, const vec2f& uv0, const vec2f& uv1,
+    const vec2f& uv2, const vec2f& uv3, const vec2f& current_uv) {
 #if YOCTO_QUADS_AS_TRIANGLES
     if (current_uv.x + current_uv.y <= 1) {
         return triangle_tangents_fromuv(p0, p1, p3, uv0, uv1, uv3);

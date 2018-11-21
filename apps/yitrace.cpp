@@ -37,8 +37,8 @@
 // Application state
 struct app_state {
     // loading options
-    string filename     = "scene.json";
-    string imfilename   = "out.obj";
+    string filename   = "scene.json";
+    string imfilename = "out.obj";
 
     // options
     load_scene_options  load_options  = {};
@@ -457,7 +457,7 @@ int main(int argc, char* argv[]) {
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
     app.trace_options.double_sided = parse_argument(parser,
         "--double-sided/--no-double-sided", false, "Double-sided rendering.");
-    app.imfilename   = parse_argument(
+    app.imfilename                 = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);

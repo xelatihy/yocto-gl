@@ -404,9 +404,11 @@ vec2f evaluate_surface_texturecoord(
 pair<vec3f, bool> evaluate_surface_tangentspace(
     const yocto_surface& surface, int element_id, const vec2f& element_uv);
 // Surface element values.
-vec3f evaluate_surface_element_normal(const yocto_surface& surface, int element_id);
+vec3f evaluate_surface_element_normal(
+    const yocto_surface& surface, int element_id);
 pair<vec3f, bool> evaluate_surface_element_tangentspace(
-    const yocto_surface& surface, int element_id, const vec2f& element_uv = zero2f);
+    const yocto_surface& surface, int element_id,
+    const vec2f& element_uv = zero2f);
 // Per-element material.
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
@@ -502,16 +504,16 @@ bool is_instance_lines(const yocto_scene& scene, const yocto_instance& instance)
 bool is_instance_faces(const yocto_scene& scene, const yocto_instance& instance);
 
 // Material values
-int   get_instance_material_id(const yocto_scene& scene,
-      const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_emission(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+int             get_instance_material_id(const yocto_scene& scene,
+                const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f           evaluate_instance_emission(const yocto_scene& scene,
+              const yocto_instance& instance, int element_id, const vec2f& element_uv);
 microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-bool  is_instance_emissive(
+bool            is_instance_emissive(
+               const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_normal_perturbed(
     const yocto_scene& scene, const yocto_instance& instance);
-bool is_instance_normal_perturbed(const yocto_scene& scene, 
-    const yocto_instance& instance);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(

@@ -107,7 +107,7 @@ struct drawgl_options {
     float exposure     = 0;
     float gamma        = 2.2f;
     vec3f ambient      = {0, 0, 0};
-    bool   double_sided  = false;
+    bool  double_sided = false;
     float near_plane   = 0.01f;
     float far_plane    = 10000.0f;
 };
