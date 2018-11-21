@@ -466,6 +466,8 @@ float evaluate_material_roughness(const yocto_scene& scene,
 float evaluate_material_opacity(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord,
     const vec4f& shape_color = {1, 1, 1, 1});
+vec3f evaluate_material_normalmap(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord);
 // Query material properties
 bool is_material_emissive(const yocto_material& material);
 

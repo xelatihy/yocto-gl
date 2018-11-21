@@ -896,20 +896,15 @@ vec3f evaluate_shape_shading_normal(const yocto_scene& scene,
     if (!empty(shape.triangles)) {
         auto  normal   = evaluate_shape_normal(shape, element_id, element_uv);
         auto& material = scene.materials[shape.material];
-        if (material.normal_texture >= 0) {
-            auto texcoord = evaluate_shape_texturecoord(
-                shape, element_id, element_uv);
-            auto& normal_texture = scene.textures[material.normal_texture];
-            auto  texture = xyz(evaluate_texture(normal_texture, texcoord));
-            texture       = texture * 2 - vec3f{1, 1, 1};
-            texture.y = -texture.y;  // flip vertical axis to align green with
-                                     // image up
+        if (scene.materials[shape.material].normal_texture >= 0) {
+            auto normalmap = evaluate_material_normalmap(scene, material, 
+                evaluate_shape_texturecoord(shape, element_id, element_uv)); 
             auto [tu, left_handed] = evaluate_shape_tangentspace(shape,
                                          element_id, element_uv);
             tu = orthonormalize(tu, normal);
             auto tv = normalize(cross(normal, tu) * (left_handed ? -1.0f : 1.0f));
             normal = normalize(
-                texture.x * tu + texture.y * tv + texture.z * normal);
+                normalmap.x * tu + normalmap.y * tv + normalmap.z * normal);
         }
         return normal;
     } else if (!empty(shape.quads)) {
@@ -1606,6 +1601,19 @@ float evaluate_material_opacity(const yocto_scene& scene,
         opacity *= evaluate_texture(opacity_texture, texturecoord).w;
     }
     return opacity;
+}
+vec3f evaluate_material_normalmap(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord) {
+    if (material.normal_texture >= 0) {
+        auto& normal_texture = scene.textures[material.normal_texture];
+        auto  normalmap = xyz(evaluate_texture(normal_texture, texturecoord));
+        normalmap       = normalmap * 2 - vec3f{1, 1, 1};
+        normalmap.y = -normalmap.y;  // flip vertical axis to align green with
+                                    // image up
+        return normalmap;
+    } else {
+        return {0, 0, 1};
+    }
 }
 
 // Evaluates the microfacet_brdf at a location.
