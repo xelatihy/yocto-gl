@@ -1218,10 +1218,9 @@ bool apply_json_procedural(
             get_json_value(js, "flip_v", true));
     } else if (type == "matball") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
-                                                         vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f),
-            get_json_value(js, "uvsize", vec2f{1, 1}),
+            value.texturecoords) = make_sphere_cube_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f),
             get_json_value(js, "flip_v", true));
     } else if (type == "hairball") {
         auto [base_quads, base_positions, base_normals,
@@ -1449,10 +1448,9 @@ bool apply_json_procedural(
             get_json_value(js, "flip_v", true));
     } else if (type == "matball") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
-                                                         vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f),
-            get_json_value(js, "uvsize", vec2f{1, 1}),
+            value.texturecoords) = make_sphere_cube_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f), get_json_value(js, "uvsize", 1.0f),
             get_json_value(js, "flip_v", true));
     } else if (type == "hairball_interior") {
         tie(value.quads_positions, value.positions, value.normals,
