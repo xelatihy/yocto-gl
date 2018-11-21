@@ -132,7 +132,6 @@ struct yocto_material {
     string name          = "";
     bool   base_metallic = false;  // base-metallic parametrization
     bool   gltf_textures = false;  // glTF packed textures
-    bool   double_sided  = false;  // double sided rendering
 
     // base values
     vec3f emission     = {0, 0, 0};

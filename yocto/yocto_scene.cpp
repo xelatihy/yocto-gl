@@ -920,15 +920,9 @@ vec3f evaluate_shape_shading_normal(const yocto_scene& scene,
             normal = normalize(
                 texture.x * tu + texture.y * tv + texture.z * normal);
         }
-        if (material.double_sided && dot(normal, outgoing) < 0)
-            normal = -normal;
         return normal;
     } else if (!empty(shape.quads)) {
-        auto  normal   = evaluate_shape_normal(shape, element_id, element_uv);
-        auto& material = scene.materials[shape.material];
-        if (material.double_sided && dot(normal, outgoing) < 0)
-            normal = -normal;
-        return normal;
+        return evaluate_shape_normal(shape, element_id, element_uv);
     } else if (!empty(shape.lines)) {
         return orthonormalize(
             outgoing, evaluate_shape_normal(shape, element_id, element_uv));
@@ -1003,12 +997,7 @@ vec3f evaluate_surface_shading_normal(const yocto_scene& scene,
     const yocto_surface& surface, int element_id, const vec2f& element_uv,
     const vec3f& outgoing) {
     if (!empty(surface.quads_positions)) {
-        auto  normal = evaluate_surface_normal(surface, element_id, element_uv);
-        auto& material = scene.materials[get_surface_element_material(
-            surface, element_id)];
-        if (material.double_sided && dot(normal, outgoing) < 0)
-            normal = -normal;
-        return normal;
+        return evaluate_surface_normal(surface, element_id, element_uv);
     } else {
         return outgoing;
     }

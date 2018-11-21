@@ -1030,8 +1030,6 @@ bool serialize_json_object(
         js["base_metallic"] = value.base_metallic;
     if (value.gltf_textures != def.gltf_textures)
         js["gltf_textures"] = value.gltf_textures;
-    if (value.double_sided != def.double_sided)
-        js["double_sided"] = value.double_sided;
     if (!serialize_json_value(js, value.emission, "emission", def.emission, save))
         return false;
     if (!serialize_json_value(js, value.diffuse, "diffuse", def.diffuse, save))
@@ -3163,7 +3161,6 @@ bool gltf_to_scene(yocto_scene& scene, const json& gltf, const string& dirname) 
             if (has_json_key(gmat, "normalTexture"))
                 material.normal_texture = add_texture(
                     gmat.at("normalTexture"), true);
-            material.double_sided = get_json_value(gmat, "doubleSided", true);
             scene.materials.push_back(material);
         }
     }
@@ -3664,7 +3661,6 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
     for (auto& material : scene.materials) {
         auto mjs           = json();
         mjs["name"]        = material.name;
-        mjs["doubleSided"] = material.double_sided;
         if (material.emission != zero3f)
             mjs["emissiveFactor"] = material.emission;
         if (material.emission_texture >= 0)
@@ -5105,7 +5101,6 @@ bool serialize_bin_object(yocto_material& material, const yocto_scene& scene,
     if (!serialize_bin_value(material.name, fs, save)) return false;
     if (!serialize_bin_value(material.base_metallic, fs, save)) return false;
     if (!serialize_bin_value(material.gltf_textures, fs, save)) return false;
-    if (!serialize_bin_value(material.double_sided, fs, save)) return false;
     if (!serialize_bin_value(material.emission, fs, save)) return false;
     if (!serialize_bin_value(material.diffuse, fs, save)) return false;
     if (!serialize_bin_value(material.specular, fs, save)) return false;
