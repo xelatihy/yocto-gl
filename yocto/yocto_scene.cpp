@@ -1059,14 +1059,12 @@ vec3f evaluate_instance_emission(const yocto_scene& scene,
     if (instance.shape >= 0) {
         auto& shape = scene.shapes[instance.shape];
         return evaluate_material_emission(scene, scene.materials[shape.material],
-            evaluate_shape_texturecoord(shape, element_id, element_uv),
-            evaluate_shape_color(shape, element_id, element_uv));
+            evaluate_shape_texturecoord(shape, element_id, element_uv));
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
         return evaluate_material_emission(scene,
             scene.materials[get_surface_element_material(surface, element_id)],
-            evaluate_surface_texturecoord(surface, element_id, element_uv),
-            {1, 1, 1, 1});
+            evaluate_surface_texturecoord(surface, element_id, element_uv));
     } else {
         return zero3f;
     }
@@ -1076,14 +1074,12 @@ microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
     if (instance.shape >= 0) {
         auto& shape = scene.shapes[instance.shape];
         return evaluate_material_brdf(scene, scene.materials[shape.material],
-            evaluate_shape_texturecoord(shape, element_id, element_uv),
-            evaluate_shape_color(shape, element_id, element_uv));
+            evaluate_shape_texturecoord(shape, element_id, element_uv));
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
         return evaluate_material_brdf(scene,
             scene.materials[get_surface_element_material(surface, element_id)],
-            evaluate_surface_texturecoord(surface, element_id, element_uv),
-            {1, 1, 1, 1});
+            evaluate_surface_texturecoord(surface, element_id, element_uv));
     } else {
         return {};
     }
@@ -1093,14 +1089,12 @@ float evaluate_instance_opacity(const yocto_scene& scene,
     if (instance.shape >= 0) {
         auto& shape = scene.shapes[instance.shape];
         return evaluate_material_opacity(scene, scene.materials[shape.material],
-            evaluate_shape_texturecoord(shape, element_id, element_uv),
-            evaluate_shape_color(shape, element_id, element_uv));
+            evaluate_shape_texturecoord(shape, element_id, element_uv));
     } else if (instance.surface >= 0) {
         auto& surface = scene.surfaces[instance.surface];
         return evaluate_material_opacity(scene,
             scene.materials[get_surface_element_material(surface, element_id)],
-            evaluate_surface_texturecoord(surface, element_id, element_uv),
-            {1, 1, 1, 1});
+            evaluate_surface_texturecoord(surface, element_id, element_uv));
     } else {
         return 0;
     }
@@ -1474,9 +1468,8 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 
 // Evaluates material parameters.
 vec3f evaluate_material_emission(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color) {
-    auto emission = material.emission * xyz(shape_color);
+    const yocto_material& material, const vec2f& texturecoord) {
+    auto emission = material.emission;
     if (material.emission_texture >= 0) {
         auto& emission_texture = scene.textures[material.emission_texture];
         emission *= xyz(evaluate_texture(emission_texture, texturecoord));
@@ -1484,17 +1477,16 @@ vec3f evaluate_material_emission(const yocto_scene& scene,
     return emission;
 }
 vec3f evaluate_material_diffuse(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color) {
+    const yocto_material& material, const vec2f& texturecoord) {
     if (!material.base_metallic) {
-        auto diffuse = material.diffuse * xyz(shape_color);
+        auto diffuse = material.diffuse;
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
             diffuse *= xyz(evaluate_texture(diffuse_texture, texturecoord));
         }
         return diffuse;
     } else {
-        auto base = material.diffuse * xyz(shape_color);
+        auto base = material.diffuse;
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
             base *= xyz(evaluate_texture(diffuse_texture, texturecoord));
@@ -1508,17 +1500,16 @@ vec3f evaluate_material_diffuse(const yocto_scene& scene,
     }
 }
 vec3f evaluate_material_specular(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color) {
+    const yocto_material& material, const vec2f& texturecoord) {
     if (!material.base_metallic) {
-        auto specular = material.specular * xyz(shape_color);
+        auto specular = material.specular;
         if (material.specular_texture >= 0) {
             auto& specular_texture = scene.textures[material.specular_texture];
             specular *= xyz(evaluate_texture(specular_texture, texturecoord));
         }
         return specular;
     } else {
-        auto base = material.diffuse * xyz(shape_color);
+        auto base = material.diffuse;
         if (material.diffuse_texture >= 0) {
             auto& diffuse_texture = scene.textures[material.diffuse_texture];
             base *= xyz(evaluate_texture(diffuse_texture, texturecoord));
@@ -1532,8 +1523,7 @@ vec3f evaluate_material_specular(const yocto_scene& scene,
     }
 }
 float evaluate_material_roughness(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color) {
+    const yocto_material& material, const vec2f& texturecoord) {
     if (!material.base_metallic) {
         if (!material.gltf_textures) {
             auto roughness = material.roughness;
@@ -1561,9 +1551,8 @@ float evaluate_material_roughness(const yocto_scene& scene,
     }
 }
 vec3f evaluate_material_transmission(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color) {
-    auto transmission = material.transmission * xyz(shape_color);
+    const yocto_material& material, const vec2f& texturecoord) {
+    auto transmission = material.transmission;
     if (material.transmission_texture >= 0) {
         auto& transmission_texture = scene.textures[material.transmission_texture];
         transmission *= xyz(evaluate_texture(transmission_texture, texturecoord));
@@ -1571,9 +1560,8 @@ vec3f evaluate_material_transmission(const yocto_scene& scene,
     return transmission;
 }
 float evaluate_material_opacity(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color) {
-    auto opacity = material.opacity * shape_color.w;
+    const yocto_material& material, const vec2f& texturecoord) {
+    auto opacity = material.opacity;
     if (material.opacity_texture >= 0) {
         auto& opacity_texture = scene.textures[material.opacity_texture];
         opacity *= evaluate_texture(opacity_texture, texturecoord).w;
@@ -1596,17 +1584,16 @@ vec3f evaluate_material_normalmap(const yocto_scene& scene,
 
 // Evaluates the microfacet_brdf at a location.
 microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color) {
+    const yocto_material& material, const vec2f& texturecoord) {
     auto brdf    = microfacet_brdf();
     brdf.diffuse = evaluate_material_diffuse(
-        scene, material, texturecoord, shape_color);
+        scene, material, texturecoord);
     brdf.specular = evaluate_material_specular(
-        scene, material, texturecoord, shape_color);
+        scene, material, texturecoord);
     brdf.transmission = evaluate_material_transmission(
-        scene, material, texturecoord, shape_color);
+        scene, material, texturecoord);
     brdf.roughness = evaluate_material_roughness(
-        scene, material, texturecoord, shape_color);
+        scene, material, texturecoord);
     brdf.refract = material.refract;
     if (brdf.diffuse != zero3f) {
         brdf.roughness = clamp(brdf.roughness, 0.03f * 0.03f, 1.0f);

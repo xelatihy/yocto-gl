@@ -124,8 +124,7 @@ scene_intersection intersect_scene_with_opacity(const yocto_scene& scene,
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[shape.material];
         auto  op       = evaluate_material_opacity(scene, material,
-            evaluate_shape_texturecoord(shape, isec.element_id, isec.element_uv),
-            evaluate_shape_color(shape, isec.element_id, isec.element_uv));
+            evaluate_shape_texturecoord(shape, isec.element_id, isec.element_uv));
         if (op > 0.999f) return isec;
         if (get_random_float(rng) < op) return isec;
         ray = make_ray(evaluate_instance_position(
@@ -872,8 +871,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
         auto& isec_material = scene.materials[isec_shape.material];
         auto  emission      = evaluate_material_emission(scene, isec_material,
             evaluate_shape_texturecoord(
-                isec_shape, isec.element_id, isec.element_uv),
-            evaluate_shape_color(isec_shape, isec.element_id, isec.element_uv));
+                isec_shape, isec.element_id, isec.element_uv)) * xyz(evaluate_shape_color(isec_shape, isec.element_id, isec.element_uv));
 
         auto& medium_instance = scene.instances[mediums.back()];
         auto& medium_shape    = scene.shapes[medium_instance.shape];
@@ -895,8 +893,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
 
         auto brdf = evaluate_material_brdf(scene, isec_material,
             evaluate_shape_texturecoord(
-                isec_shape, isec.element_id, isec.element_uv),
-            evaluate_shape_color(isec_shape, isec.element_id, isec.element_uv));
+                isec_shape, isec.element_id, isec.element_uv));
         if (brdf.transmission == zero3f) {
             le = zero3f;
             break;
@@ -1120,8 +1117,6 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
                 isec.element_id, isec.element_uv);
             auto brdf   = evaluate_material_brdf(scene, isec_material,
                 evaluate_shape_texturecoord(
-                    isec_shape, isec.element_id, isec.element_uv),
-                evaluate_shape_color(
                     isec_shape, isec.element_id, isec.element_uv));
 
             // distance sampling pdf is unknown due to delta tracking, but we do
@@ -1133,8 +1128,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
                 radiance += weight * evaluate_material_emission(scene,
                                          isec_material,
                                          evaluate_shape_texturecoord(isec_shape,
-                                             isec.element_id, isec.element_uv),
-                                         evaluate_shape_color(isec_shape,
+                                             isec.element_id, isec.element_uv)) *
+                                        xyz(evaluate_shape_color(isec_shape,
                                              isec.element_id, isec.element_uv));
 
             // early exit

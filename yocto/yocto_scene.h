@@ -451,23 +451,17 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
 vec3f evaluate_material_emission(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 vec3f evaluate_material_diffuse(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 vec3f evaluate_material_specular(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 vec3f evaluate_material_transmission(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 float evaluate_material_roughness(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 float evaluate_material_opacity(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 vec3f evaluate_material_normalmap(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
 // Query material properties
@@ -482,8 +476,7 @@ struct microfacet_brdf {
     bool  refract      = false;
 };
 microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 bool            is_brdf_delta(const microfacet_brdf& f);
 bool            is_brdf_zero(const microfacet_brdf& f);
 
