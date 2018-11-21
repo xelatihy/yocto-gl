@@ -401,8 +401,12 @@ vec3f evaluate_surface_normal(
     const yocto_surface& surface, int element_id, const vec2f& element_uv);
 vec2f evaluate_surface_texturecoord(
     const yocto_surface& surface, int element_id, const vec2f& element_uv);
+pair<vec3f, bool> evaluate_surface_tangentspace(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 // Surface element values.
-vec3f evaluate_surface_element_normal(const yocto_surface& shape, int element_id);
+vec3f evaluate_surface_element_normal(const yocto_surface& surface, int element_id);
+pair<vec3f, bool> evaluate_surface_element_tangentspace(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv = zero2f);
 // Per-element material.
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
