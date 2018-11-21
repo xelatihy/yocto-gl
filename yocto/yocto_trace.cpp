@@ -1280,7 +1280,8 @@ pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bv
         if (!is_brdf_delta(point.brdf) &&
             !(empty(lights.instances) && empty(lights.environments))) {
             auto light_point = sample_lights_point(scene, lights,
-                point.position, get_random_float(rng), get_random_float(rng), get_random_vec2f(rng));
+                point.position, get_random_float(rng), get_random_float(rng),
+                get_random_vec2f(rng));
             auto light_pdf   = sample_lights_point_pdf(
                 scene, lights, point.position, light_point);
             auto light_direction = normalize(
