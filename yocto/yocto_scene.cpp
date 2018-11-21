@@ -1368,7 +1368,7 @@ pair<int, int> get_camera_image_size(
 }
 void set_camera_perspective(
     yocto_camera& camera, float fovy, float aspect, float focus, float height) {
-    camera.orthographic = false;
+    camera.orthographic   = false;
     camera.film_width     = height * aspect;
     camera.film_height    = height;
     camera.focus_distance = focus;
@@ -1414,16 +1414,15 @@ ray3f evaluate_perspective_camera_ray(
                    (camera.focus_distance - camera.focal_length);
     }
     if (camera.lens_aperture) {
-        auto e = vec3f{
-            (lens_uv.x - 0.5f) * camera.lens_aperture,
+        auto e = vec3f{(lens_uv.x - 0.5f) * camera.lens_aperture,
             (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
-        auto q         = vec3f{camera.film_width * (0.5f - image_uv.x),
+        auto q = vec3f{camera.film_width * (0.5f - image_uv.x),
             camera.film_height * (image_uv.y - 0.5f), distance};
         // distance of the image of the point
         auto distance1 = camera.focal_length * distance /
                          (distance - camera.focal_length);
         auto q1 = -q * distance1 / distance;
-        auto d = normalize(q1 - e);
+        auto d  = normalize(q1 - e);
         // auto q1 = - normalize(q) * camera.focus_distance / normalize(q).z;
         auto ray = make_ray(transform_point(camera.frame, e),
             transform_direction(camera.frame, d));
@@ -1433,7 +1432,7 @@ ray3f evaluate_perspective_camera_ray(
         auto q   = vec3f{camera.film_width * (0.5f - image_uv.x),
             camera.film_height * (image_uv.y - 0.5f), distance};
         auto q1  = -q;
-        auto d = normalize(q1 - e);
+        auto d   = normalize(q1 - e);
         auto ray = make_ray(transform_point(camera.frame, e),
             transform_direction(camera.frame, d));
         return ray;
@@ -1446,24 +1445,24 @@ ray3f evaluate_orthographic_camera_ray(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
     if (camera.lens_aperture) {
         auto scale = 1 / camera.focal_length;
-        auto q   = vec3f{camera.film_width * (0.5f - image_uv.x) * scale,
+        auto q     = vec3f{camera.film_width * (0.5f - image_uv.x) * scale,
             camera.film_height * (image_uv.y - 0.5f) * scale, scale};
-        auto q1  = vec3f{-q.x, -q.y, -camera.focus_distance};
-        auto e   = vec3f{-q.x, -q.y, 0} + vec3f{
-            (lens_uv.x - 0.5f) * camera.lens_aperture,
-            (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
-        auto d = normalize(q1 - e);
+        auto q1    = vec3f{-q.x, -q.y, -camera.focus_distance};
+        auto e     = vec3f{-q.x, -q.y, 0} +
+                 vec3f{(lens_uv.x - 0.5f) * camera.lens_aperture,
+                     (lens_uv.y - 0.5f) * camera.lens_aperture, 0};
+        auto d   = normalize(q1 - e);
         auto ray = make_ray(transform_point(camera.frame, e),
             transform_direction(camera.frame, d));
         return ray;
     } else {
         auto scale = 1 / camera.focal_length;
-        auto q   = vec3f{camera.film_width * (0.5f - image_uv.x) * scale,
+        auto q     = vec3f{camera.film_width * (0.5f - image_uv.x) * scale,
             camera.film_height * (image_uv.y - 0.5f) * scale, scale};
-        auto q1  = -q;
-        auto e   = vec3f{-q.x, -q.y, 0};
-        auto d = normalize(q1 - e);
-        auto ray = make_ray(transform_point(camera.frame, e),
+        auto q1    = -q;
+        auto e     = vec3f{-q.x, -q.y, 0};
+        auto d     = normalize(q1 - e);
+        auto ray   = make_ray(transform_point(camera.frame, e),
             transform_direction(camera.frame, d));
         return ray;
     }
@@ -1473,8 +1472,10 @@ ray3f evaluate_orthographic_camera_ray(
 // the lens coordinates luv.
 ray3f evaluate_camera_ray(
     const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv) {
-    if(camera.orthographic) return evaluate_orthographic_camera_ray(camera, image_uv, lens_uv);
-    else return evaluate_perspective_camera_ray(camera, image_uv, lens_uv);
+    if (camera.orthographic)
+        return evaluate_orthographic_camera_ray(camera, image_uv, lens_uv);
+    else
+        return evaluate_perspective_camera_ray(camera, image_uv, lens_uv);
 }
 
 // Generates a ray from a camera.
