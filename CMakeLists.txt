@@ -135,7 +135,7 @@ foreach(filename "image-grid.json" "image-uvgrid.json" "image-checker.json" "ima
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
 foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomis")
-    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json"  "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json"  "simple-sl.json" "camerap-al.json" "camerapf-al.json")
+    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json"  "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json"  "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json")
         get_filename_component(name ${filename} NAME_WE)
         add_test(NAME ytrace-${tracer}-${filename}
                 COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 360"
