@@ -122,42 +122,101 @@ set(testdir ${CMAKE_SOURCE_DIR}/tests)
 set(outdir ${CMAKE_SOURCE_DIR}/tests/run-tests/output)
 set(resdir ${CMAKE_SOURCE_DIR}/tests/run-tests/result)
 set(diffdir ${CMAKE_SOURCE_DIR}/tests/run-tests/difference)
+# image io
 foreach(filename "uvgrid.png")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
              COMMAND ${test-yimproc} ${testdir}/textures/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
+# procedurla images
 foreach(filename "image-grid.json" "image-uvgrid.json" "image-checker.json" "image-gammaramp.json" "image-noise.json" "image-fbm.json" "image-turbulence.json" "image-ridge.json" "image-sky.json" "image-blackbodyramp.json")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME yimproc-${filename}
              COMMAND ${test-yimproc} ${testdir}/${filename} ${outdir}/yimproc-${name}.png ${resdir}/yimproc-${name}.png ${diffdir}/yimproc-${name}.png
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})    
 endforeach()
-foreach(tracer "eyelight" "path" "direct" "path_naive" "path_nomis" "direct_nomis")
-    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json"  "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json"  "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json")
-        get_filename_component(name ${filename} NAME_WE)
-        add_test(NAME ytrace-${tracer}-${filename}
-                COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 360"
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    endforeach()
-endforeach(tracer)
-foreach(format "json" "ybin" "obj")
-    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "models-al.json" "emptyelems-al.json")
-        get_filename_component(name ${filename} NAME_WE)
-        add_test(NAME yscnproc-${format}-${filename}
-                COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s 4 -r 360"
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    endforeach()
-endforeach(format)
+# eyelight
+foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json" "simple-sl.json")
+    set(tracer "eyelight")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s 4 -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+set(nsamples "4") 
+# path
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json"  "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json")
+    set(tracer "path")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# direct
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "hairball-al.json")
+    set(tracer "direct")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# path naive
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
+    set(tracer "path_naive")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# path no mis
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
+    set(tracer "path_nomis")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# direct no mis
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
+    set(tracer "direct_nomis")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# json output
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "models-al.json" "emptyelems-al.json")
+    set(format "json")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yscnproc-${format}-${filename}
+            COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# obj output
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "models-al.json" "emptyelems-al.json")
+    set(format "obj")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yscnproc-${format}-${filename}
+            COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# ybin output
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "models-al.json" "emptyelems-al.json")
+    set(format "ybin")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yscnproc-${format}-${filename}
+            COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
 if(YOCTO_EMBREE)
-foreach(tracer "eyelight" "path")
-    foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json"  "emptyelems-al.json")
-        get_filename_component(name ${filename} NAME_WE)
-        add_test(NAME ytrace-embree-${tracer}-${filename}
-                COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-embree-${tracer}-${name}.png ${resdir}/ytrace-embree-${tracer}-${name}.png ${diffdir}/ytrace-embree-${tracer}-${name}.png "-t ${tracer} --embree -s 4 -r 360"
-                WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-    endforeach()
-endforeach(tracer)
+# embree
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json")
+    set(tracer "path")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-embree-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-embree-${tracer}-${name}.png ${resdir}/ytrace-embree-${tracer}-${name}.png ${diffdir}/ytrace-embree-${tracer}-${name}.png "-t ${tracer} --embree -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
 endif(YOCTO_EMBREE)
 endif(YOCTO_TESTING)
