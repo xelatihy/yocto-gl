@@ -146,7 +146,7 @@ foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subd
 endforeach()
 set(nsamples "4") 
 # path
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json"  "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json")
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json"  "simple-sl.json" "camerap-al.json" "camerapf-al.json" "camerao-al.json" "cameraof-al.json" "normal-al.json" "normalfv-al.json")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
