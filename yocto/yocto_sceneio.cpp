@@ -3657,8 +3657,8 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
 
     // material
     for (auto& material : scene.materials) {
-        auto mjs           = json();
-        mjs["name"]        = material.name;
+        auto mjs    = json();
+        mjs["name"] = material.name;
         if (material.emission != zero3f)
             mjs["emissiveFactor"] = material.emission;
         if (material.emission_texture >= 0)

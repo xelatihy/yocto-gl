@@ -151,7 +151,7 @@ struct trace_image_options {
     int                samples_per_batch   = 16;
     float              pixel_clamp         = 100;
     bool               environments_hidden = false;
-    bool   double_sided  = false;
+    bool               double_sided        = false;
     uint64_t           random_seed         = 7;
     std::atomic<bool>* cancel_flag         = nullptr;
     bool               run_serially        = false;
