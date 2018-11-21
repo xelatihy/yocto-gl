@@ -179,18 +179,18 @@ vec3f evaluate_smooth_brdf_cosine(const microfacet_brdf& brdf,
     if (brdf.diffuse != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
         auto h = normalize(incoming + outgoing);
-        auto F = fresnel_schlick(brdf.specular, h, outgoing);
-        brdf_cosine += brdf.diffuse * (vec3f{1, 1, 1} - F) / pif;
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular, h, outgoing) : brdf.specular;
+        brdf_cosine += brdf.diffuse * (1 - fresnel) / pif;
     }
 
     // specular
     if (brdf.specular != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
         auto h = normalize(incoming + outgoing);
-        auto F = fresnel_schlick(brdf.specular, h, outgoing);
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular, h, outgoing) : brdf.specular;
         auto D = evaluate_ggx_dist(brdf.roughness, normal, h);
         auto G = evaluate_ggx_sm(brdf.roughness, normal, outgoing, incoming);
-        brdf_cosine += F * D * G /
+        brdf_cosine += fresnel * D * G /
                        (4 * fabs(dot(normal, outgoing)) *
                            fabs(dot(normal, incoming)));
     }
@@ -201,10 +201,10 @@ vec3f evaluate_smooth_brdf_cosine(const microfacet_brdf& brdf,
         auto ir = (dot(normal, outgoing) >= 0) ? reflect(-incoming, normal) :
                                                  reflect(-incoming, -normal);
         auto h = normalize(ir + outgoing);
-        auto F = fresnel_schlick(brdf.specular, h, outgoing);
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular, h, outgoing) : brdf.specular;
         auto D = evaluate_ggx_dist(brdf.roughness, normal, h);
         auto G = evaluate_ggx_sm(brdf.roughness, normal, outgoing, ir);
-        brdf_cosine += brdf.transmission * (vec3f{1, 1, 1} - F) * D * G /
+        brdf_cosine += brdf.transmission * (1 - fresnel) * D * G /
                        (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
     }
 
@@ -221,15 +221,15 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
     // specular
     if (brdf.specular != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
-        auto F = fresnel_schlick(brdf.specular, normal, outgoing);
-        microfacet_brdf += F;
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular, normal, outgoing) : brdf.specular;
+        microfacet_brdf += fresnel;
     }
 
     // transmission (thin sheet)
     if (brdf.transmission != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) < 0) {
-        auto F = fresnel_schlick(brdf.specular, normal, outgoing);
-        microfacet_brdf += brdf.transmission * (1 - F);
+        auto fresnel = (brdf.fresnel) ? fresnel_schlick(brdf.specular, normal, outgoing) : brdf.specular;
+        microfacet_brdf += brdf.transmission * (1 - fresnel);
     }
 
     return microfacet_brdf;
@@ -250,9 +250,9 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
 vec3f sample_smooth_brdf_direction(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (is_brdf_delta(brdf)) return zero3f;
-    auto F    = fresnel_schlick(brdf.specular, normal, outgoing);
-    auto prob = vec3f{max(brdf.diffuse * (vec3f{1, 1, 1} - F)), max(F),
-        max(brdf.transmission * (vec3f{1, 1, 1} - F))};
+    auto fresnel    = (brdf.fresnel) ? fresnel_schlick(brdf.specular, normal, outgoing) : brdf.specular;
+    auto prob = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
+        max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return zero3f;
     prob /= prob.x + prob.y + prob.z;
 
@@ -300,8 +300,8 @@ vec3f sample_smooth_brdf_direction(const microfacet_brdf& brdf,
 vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!is_brdf_delta(brdf)) return zero3f;
-    auto F    = fresnel_schlick(brdf.specular, normal, outgoing);
-    auto prob = vec3f{0, max(F), max(brdf.transmission * (vec3f{1, 1, 1} - F))};
+    auto fresnel    = (brdf.fresnel) ? fresnel_schlick(brdf.specular, normal, outgoing) : brdf.specular;
+    auto prob = vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return zero3f;
     prob /= prob.x + prob.y + prob.z;
 
@@ -353,9 +353,9 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
 float sample_smooth_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return 0;
-    auto F    = fresnel_schlick(brdf.specular, normal, outgoing);
-    auto prob = vec3f{max(brdf.diffuse * (vec3f{1, 1, 1} - F)), max(F),
-        max(brdf.transmission * (vec3f{1, 1, 1} - F))};
+    auto fresnel    = (brdf.fresnel) ? fresnel_schlick(brdf.specular, normal, outgoing) : brdf.specular;
+    auto prob = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
+        max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return 0;
     prob /= prob.x + prob.y + prob.z;
 
@@ -387,8 +387,8 @@ float sample_smooth_brdf_direction_pdf(const microfacet_brdf& brdf,
 float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return 0;
-    auto F    = fresnel_schlick(brdf.specular, normal, outgoing);
-    auto prob = vec3f{0, max(F), max(brdf.transmission * (vec3f{1, 1, 1} - F))};
+    auto fresnel    = (brdf.fresnel) ? fresnel_schlick(brdf.specular, normal, outgoing) : brdf.specular;
+    auto prob = vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return 0;
     prob /= prob.x + prob.y + prob.z;
 
