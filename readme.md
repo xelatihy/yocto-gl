@@ -1,6 +1,6 @@
 # Yocto/GL: Tiny C++ Libraries for Data-Driven Physically-based Graphics
 
-Yocto/GL is a collection of utility C++14 libraries for building 
+Yocto/GL is a collection of utility C++17 libraries for building 
 physically-based graphics algorithms released under the MIT license.
 Yocto/GL is written in a deliberatly data-driven style for ease of
 development and use. 
@@ -32,7 +32,7 @@ Features include:
 - support for loading and saving Wavefront OBJ and Khronos glTF
 - fast, hackable, proprietary JSON format
 
-Yocto/GL is written in C++14 and compiles on OSX (clang from Xcode 9+),
+Yocto/GL is written in C++17 and compiles on OSX (clang from Xcode 10+),
 Linux (gcc 6+, clang 6+) and Windows (MSVC 2015, MSVC 2017). For compilation
 options, check the individual libraries.
 
