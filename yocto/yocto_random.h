@@ -145,7 +145,7 @@ inline float sample_hemisphere_direction_cospower_pdf(
     float exponent, const vec3f& direction);
 
 // Sample a point uniformly on a disk.
-inline vec3f sample_disk_point(const vec2f& ruv);
+inline vec2f sample_disk_point(const vec2f& ruv);
 inline float sample_disk_point_pdf();
 
 // Sample a point uniformly on a cylinder, without caps.
@@ -317,10 +317,10 @@ inline float sample_hemisphere_direction_cospower_pdf(
 }
 
 // Sample a point uniformly on a disk.
-inline vec3f sample_disk_point(const vec2f& ruv) {
+inline vec2f sample_disk_point(const vec2f& ruv) {
     auto r   = sqrt(ruv.y);
     auto phi = 2 * pif * ruv.x;
-    return {cos(phi) * r, sin(phi) * r, 0};
+    return {cos(phi) * r, sin(phi) * r};
 }
 inline float sample_disk_point_pdf() { return 1 / pif; }
 

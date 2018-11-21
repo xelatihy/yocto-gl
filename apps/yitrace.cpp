@@ -39,8 +39,6 @@ struct app_state {
     // loading options
     string filename     = "scene.json";
     string imfilename   = "out.obj";
-    bool   double_sided = false;
-    bool   add_skyenv   = false;
 
     // options
     load_scene_options  load_options  = {};
@@ -140,10 +138,6 @@ bool load_scene_sync(app_state& app) {
     tesselate_shapes_and_surfaces(app.scene);
 
     // add components
-    if (app.add_skyenv && empty(app.scene.environments))
-        add_sky_environment(app.scene);
-    if (app.double_sided)
-        for (auto& material : app.scene.materials) material.double_sided = true;
     add_missing_cameras(app.scene);
     add_missing_names(app.scene);
     log_validation_errors(app.scene);
@@ -225,6 +219,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 (int&)app.trace_options.sampler_type, trace_sampler_type_names);
             edited += draw_slider_opengl_widget(
                 win, "nbounces", app.trace_options.max_bounces, 1, 10);
+            edited += draw_checkbox_opengl_widget(
+                win, "double sided", app.trace_options.double_sided);
             edited += draw_slider_opengl_widget(
                 win, "seed", (int&)app.trace_options.random_seed, 0, 1000000);
             edited += draw_slider_opengl_widget(
@@ -459,7 +455,7 @@ int main(int argc, char* argv[]) {
         "Disable parallel execution.");
     app.bvh_options.use_embree = parse_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    app.double_sided = parse_argument(parser,
+    app.trace_options.double_sided = parse_argument(parser,
         "--double-sided/--no-double-sided", false, "Double-sided rendering.");
     app.imfilename   = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");

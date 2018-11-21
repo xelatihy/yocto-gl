@@ -78,6 +78,6 @@ script:
   # compile and execute unit tests
   - mkdir -p build && cd build
   - cmake .. ${CMAKE_OPTIONS} -GNinja && cmake --build . --config Release
-  - if [[ (-x $(which brew)) ]]; then ctest -j 4; fi
+  # - if [[ (-x $(which brew)) ]]; then ctest -j 4; fi
   # - ctest -j 4
   - cd ..
