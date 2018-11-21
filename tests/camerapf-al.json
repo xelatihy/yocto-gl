@@ -4,7 +4,7 @@
         {
             "name": "cam",
             "focal_length": 0.100,
-            "lens_aperture": 0.3,
+            "lens_aperture": 0.5,
             "!!proc": {
                 "from": [
                     -11,

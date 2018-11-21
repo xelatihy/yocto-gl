@@ -76,14 +76,15 @@ namespace yocto {
 // Camera based on a simple lens model. The camera is placed using a frame.
 // Camera projection is described in photorgaphics terms. In particular,
 // we specify fil size (35mm by default), the focal lengthm the focus
-// distance and the lens_aperture. All values are in meters, except for
-// lens_aperture that is in F-stops (ratios of focal_length).
+// distance and the lens_aperture. All values are in meters.
 // Here are some common aspect ratios used in video and still photography.
 // 3:2    on 35 mm:  0.036 x 0.024
 // 16:9   on 35 mm:  0.036 x 0.02025 or 0.04267 x 0.024
 // 2.35:1 on 35 mm:  0.036 x 0.01532 or 0.05640 x 0.024
 // 2.39:1 on 35 mm:  0.036 x 0.01506 or 0.05736 x 0.024
 // 2.4:1  on 35 mm:  0.036 x 0.015   or 0.05760 x 0.024 (approx. 2.39 : 1)
+// To compute good apertures, one can use the F-stop number from phostography
+// and set the aperture to focal_leangth/f_stop.
 struct yocto_camera {
     string  name           = "";
     frame3f frame          = identity_frame3f;
