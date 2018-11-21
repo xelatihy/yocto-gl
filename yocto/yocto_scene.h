@@ -111,7 +111,6 @@ struct yocto_texture {
     bool    no_interpolation = false;
     float   height_scale     = 1;
     bool    ldr_as_linear    = false;
-    bool    has_opacity      = false;
 };
 
 // Volumetric texture containing a float only volume data. See texture
@@ -132,7 +131,6 @@ struct yocto_material {
     string name          = "";
     bool   base_metallic = false;  // base-metallic parametrization
     bool   gltf_textures = false;  // glTF packed textures
-    bool   double_sided  = false;  // double sided rendering
 
     // base values
     vec3f emission     = {0, 0, 0};
@@ -380,14 +378,14 @@ vec4f evaluate_shape_color(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
 float evaluate_shape_radius(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec4f evaluate_shape_tangentspace(
+pair<vec3f, bool> evaluate_shape_tangentspace(
     const yocto_shape& shape, int element_id, const vec2f& element_uv);
-vec3f evaluate_shape_tangentspace(const yocto_shape& shape, int element_id,
-    const vec2f& element_uv, bool& left_handed);
+vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
-vec4f evaluate_shape_element_tangentspace(
-    const yocto_shape& shape, int element_id);
+pair<vec3f, bool> evaluate_shape_element_tangentspace(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv = zero2f);
 
 // Sample a shape element based on area/length.
 vector<float>    compute_shape_elements_cdf(const yocto_shape& shape);
@@ -403,8 +401,12 @@ vec3f evaluate_surface_normal(
     const yocto_surface& surface, int element_id, const vec2f& element_uv);
 vec2f evaluate_surface_texturecoord(
     const yocto_surface& surface, int element_id, const vec2f& element_uv);
+pair<vec3f, bool> evaluate_surface_tangentspace(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 // Surface element values.
-vec3f evaluate_surface_element_normal(const yocto_surface& shape, int element_id);
+vec3f evaluate_surface_element_normal(const yocto_surface& surface, int element_id);
+pair<vec3f, bool> evaluate_surface_element_tangentspace(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv = zero2f);
 // Per-element material.
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
@@ -452,23 +454,11 @@ ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
 vec3f evaluate_material_emission(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_diffuse(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_specular(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
-vec3f evaluate_material_transmission(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_material_roughness(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
-float evaluate_material_opacity(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
+// float evaluate_material_opacity(const yocto_scene& scene,
+//     const yocto_material& material, const vec2f& texturecoord);
+vec3f evaluate_material_normalmap(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord);
 // Query material properties
 bool is_material_emissive(const yocto_material& material);
 
@@ -478,11 +468,12 @@ struct microfacet_brdf {
     vec3f specular     = zero3f;
     vec3f transmission = zero3f;
     float roughness    = 1;
+    float opacity      = 1;
+    bool  fresnel      = true;
     bool  refract      = false;
 };
 microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
-    const yocto_material& material, const vec2f& texturecoord,
-    const vec4f& shape_color = {1, 1, 1, 1});
+    const yocto_material& material, const vec2f& texturecoord);
 bool            is_brdf_delta(const microfacet_brdf& f);
 bool            is_brdf_zero(const microfacet_brdf& f);
 
@@ -500,30 +491,27 @@ vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec4f evaluate_instance_color(
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f evaluate_instance_tangentspace(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    bool& left_handed);
+vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
 // Instance element values.
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id);
-// Shading normals including material perturbations.
-vec3f evaluate_instance_shading_normal(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv,
-    const vec3f& o);
+// Check the instance type
+bool is_instance_points(const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_lines(const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_faces(const yocto_scene& scene, const yocto_instance& instance);
 
 // Material values
 int   get_instance_material_id(const yocto_scene& scene,
       const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_emission(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-float evaluate_instance_opacity(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
-bool  is_instance_emissive(
-     const yocto_scene& scene, const yocto_instance& instance);
-
-// <aterial brdf
 microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
+bool  is_instance_emissive(
+    const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_normal_perturbed(const yocto_scene& scene, 
+    const yocto_instance& instance);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(

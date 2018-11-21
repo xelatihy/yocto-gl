@@ -107,6 +107,7 @@ struct drawgl_options {
     float exposure     = 0;
     float gamma        = 2.2f;
     vec3f ambient      = {0, 0, 0};
+    bool   double_sided  = false;
     float near_plane   = 0.01f;
     float far_plane    = 10000.0f;
 };
@@ -159,8 +160,6 @@ bool load_scene_sync(app_state& app) {
     tesselate_shapes_and_surfaces(app.scene);
 
     // add components
-    if (app.double_sided)
-        for (auto& material : app.scene.materials) material.double_sided = true;
     add_missing_cameras(app.scene);
     add_missing_names(app.scene);
     log_validation_errors(app.scene);
@@ -533,7 +532,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         set_opengl_uniform(state.program, "mat_rs", material.roughness);
         set_opengl_uniform(state.program, "mat_op", material.opacity);
         set_opengl_uniform(
-            state.program, "mat_double_sided", (int)material.double_sided);
+            state.program, "mat_double_sided", (int)options.double_sided);
         set_opengl_uniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
             material.emission_texture >= 0 ?
                 state.textures.at(material.emission_texture) :
@@ -638,7 +637,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             set_opengl_uniform(state.program, "mat_rs", material.roughness);
             set_opengl_uniform(state.program, "mat_op", material.opacity);
             set_opengl_uniform(
-                state.program, "mat_double_sided", (int)material.double_sided);
+                state.program, "mat_double_sided", (int)options.double_sided);
             set_opengl_uniform_texture(state.program, "mat_ke_txt",
                 "mat_ke_txt_on",
                 material.emission_texture >= 0 ?
@@ -942,6 +941,8 @@ void draw_widgets(const opengl_window& win) {
                 win, "exposure", app.draw_options.exposure, -10, 10);
             draw_slider_opengl_widget(
                 win, "gamma", app.draw_options.gamma, 0.1f, 4);
+            draw_checkbox_opengl_widget(
+                win, "double sided", app.draw_options.double_sided);
             draw_slider_opengl_widget(
                 win, "near", app.draw_options.near_plane, 0.01f, 1.0f);
             draw_slider_opengl_widget(

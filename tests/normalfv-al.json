@@ -1,5 +1,5 @@
 {
-    "name": "normal-el",
+    "name": "normalfv-al",
     "cameras": [
         {
             "name": "cam",
@@ -37,14 +37,7 @@
             "!!proc": {
                 "type": "bump",
                 "bump_to_normal": true,
-                "bump_scale": 4
-            }
-        },
-        {
-            "name": "sky",
-            "filename": "textures/sky.hdr",
-            "!!proc": {
-                "type": "sky"
+                "bump_scale": 0.05
             }
         }
     ],
@@ -71,7 +64,7 @@
                 0.04
             ],
             "roughness": 0.01,
-            "norm_txt": "obj1norm"
+            "normal_texture": "obj1norm"
         },
         {
             "name": "obj2",
@@ -86,7 +79,7 @@
                 0.04
             ],
             "roughness": 0.01,
-            "norm_txt": "obj1norm"
+            "normal_texture": "obj1norm"
         },
         {
             "name": "obj3",
@@ -101,7 +94,23 @@
                 0.04
             ],
             "roughness": 0.01,
-            "norm_txt": "obj1norm"
+            "normal_texture": "obj1norm"
+        },
+        {
+            "name": "light1",
+            "emission": [
+                20,
+                20,
+                20
+            ]
+        },
+        {
+            "name": "light2",
+            "emission": [
+                20,
+                20,
+                20
+            ]
         }
     ],
     "shapes": [
@@ -114,27 +123,51 @@
             }
         },
         {
-            "name": "obj1",
-            "filename": "models/obj1.ply",
-            "material": "obj1",
+            "name": "light1",
+            "material": "light1",
             "!!proc": {
-                "type": "matball"
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "material": "light2",
+            "!!proc": {
+                "type": "quad",
+                "size": [
+                    4,
+                    4
+                ]
+            }
+        }
+    ],
+    "surfaces": [
+        {
+            "name": "obj1",
+            "filename": "models/obj1.obj",
+            "materials": [ "obj1" ],
+            "!!proc": {
+                "type": "sphere_cube"
             }
         },
         {
             "name": "obj2",
-            "filename": "models/obj2.ply",
-            "material": "obj2",
+            "filename": "models/obj2.obj",
+            "materials": [ "obj2" ],
             "!!proc": {
-                "type": "matball"
+                "type": "sphere_cube"
             }
         },
         {
             "name": "obj3",
-            "filename": "models/obj3.ply",
-            "material": "obj3",
+            "filename": "models/obj3.obj",
+            "materials": [ "obj3" ],
             "!!proc": {
-                "type": "matball"
+                "type": "sphere_cube"
             }
         }
     ],
@@ -145,7 +178,7 @@
         },
         {
             "name": "obj1",
-            "shape": "obj1",
+            "surface": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -156,7 +189,7 @@
         },
         {
             "name": "obj2",
-            "shape": "obj2",
+            "surface": "obj2",
             "!!proc": {
                 "translation": [
                     0,
@@ -167,7 +200,7 @@
         },
         {
             "name": "obj3",
-            "shape": "obj3",
+            "surface": "obj3",
             "!!proc": {
                 "translation": [
                     2.5,
@@ -175,17 +208,39 @@
                     0
                 ]
             }
+        },
+        {
+            "name": "light1",
+            "shape": "light1",
+            "!!proc": {
+                "from": [
+                    -4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "light2",
+            "shape": "light2",
+            "!!proc": {
+                "from": [
+                    4,
+                    8,
+                    8
+                ],
+                "to": [
+                    0,
+                    1,
+                    0
+                ]
+            }
         }
     ],
-    "environments": [
-        {
-            "name": "env",
-            "emission": [
-                1,
-                1,
-                1
-            ],
-            "emission_texture": "sky"
-        }
-    ]
+    "environments": []
 }

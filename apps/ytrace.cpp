@@ -65,6 +65,8 @@ int main(int argc, char* argv[]) {
     trace_options.environments_hidden = parse_argument(parser,
         "--env-hidden/--no-env-hidden", false,
         "Environments are hidden in renderer");
+    trace_options.double_sided = parse_argument(parser,
+        "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
     auto save_batch                   = parse_argument(
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_argument(parser, "--exposure,-e", 0.0f, "Hdr exposure");
@@ -72,8 +74,6 @@ int main(int argc, char* argv[]) {
     auto srgb     = parse_argument(parser, "--no-srgb", true, "No srgb");
     bvh_options.use_embree = parse_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    auto double_sided = parse_argument(parser,
-        "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
     auto imfilename   = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     auto filename = parse_argument(
@@ -96,8 +96,6 @@ int main(int argc, char* argv[]) {
     tesselate_shapes_and_surfaces(scene);
 
     // add components
-    if (double_sided)
-        for (auto& material : scene.materials) material.double_sided = true;
     log_validation_errors(scene);
 
     // build bvh
