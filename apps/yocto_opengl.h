@@ -219,8 +219,8 @@ void draw_glimage_background(const opengl_texture& texture, int win_width,
 
 struct opengl_window;
 using refresh_opengl_callback = function<void(const opengl_window&)>;
-using drop_opengl_callback    = function<void(
-    const opengl_window&, const vector<string>&)>;
+using drop_opengl_callback =
+    function<void(const opengl_window&, const vector<string>&)>;
 
 struct opengl_window {
     GLFWwindow*             win        = nullptr;

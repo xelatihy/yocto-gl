@@ -183,17 +183,20 @@ yocto_surface subdivide_surface(const yocto_surface& surface,
                 subdivided.quads_positions, subdivided.positions);
             tie(subdivided.quads_normals, subdivided.normals) = subdivide_quads(
                 subdivided.quads_normals, subdivided.normals);
-            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_quads(
-                subdivided.quads_texturecoords, subdivided.texturecoords);
+            tie(subdivided.quads_texturecoords, subdivided.texturecoords) =
+                subdivide_quads(
+                    subdivided.quads_texturecoords, subdivided.texturecoords);
         }
     } else if (!empty(subdivided.quads_positions) && catmull_clark) {
         for (auto l = 0; l < subdivision_level; l++) {
             subdivided.quads_materials = subdivide_ids(
                 subdivided.quads_positions, subdivided.quads_materials);
-            tie(subdivided.quads_positions, subdivided.positions) = subdivide_catmullclark(
-                subdivided.quads_positions, subdivided.positions);
-            tie(subdivided.quads_texturecoords, subdivided.texturecoords) = subdivide_catmullclark(
-                subdivided.quads_texturecoords, subdivided.texturecoords, true);
+            tie(subdivided.quads_positions, subdivided.positions) =
+                subdivide_catmullclark(
+                    subdivided.quads_positions, subdivided.positions);
+            tie(subdivided.quads_texturecoords, subdivided.texturecoords) =
+                subdivide_catmullclark(subdivided.quads_texturecoords,
+                    subdivided.texturecoords, true);
         }
     }
 
@@ -215,10 +218,9 @@ yocto_shape displace_shape(const yocto_shape& shape,
     auto normals = (empty(shape.normals)) ? compute_shape_normals(shape) :
                                             shape.normals;
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-        displaced_shape.positions[vid] += normals[vid] *
-                                          displacement.height_scale *
-                                          mean(xyz(evaluate_texture(displacement,
-                                              shape.texturecoords[vid])));
+        displaced_shape.positions[vid] +=
+            normals[vid] * displacement.height_scale *
+            mean(xyz(evaluate_texture(displacement, shape.texturecoords[vid])));
     }
 
     if (compute_normals)
@@ -1012,8 +1014,8 @@ vec3f evaluate_surface_perturbed_normal(const yocto_scene& scene,
     const yocto_surface& surface, int element_id, const vec2f& element_uv) {
     auto normal = evaluate_surface_normal(surface, element_id, element_uv);
     if (empty(surface.quads_positions)) return normal;
-    auto& material = scene.materials[get_surface_element_material(
-        surface, element_id)];
+    auto& material =
+        scene.materials[get_surface_element_material(surface, element_id)];
     if (material.normal_texture >= 0) {
         auto normalmap         = evaluate_material_normalmap(scene, material,
             evaluate_surface_texturecoord(surface, element_id, element_uv));
