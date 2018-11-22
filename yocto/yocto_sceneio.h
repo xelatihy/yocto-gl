@@ -280,6 +280,16 @@ struct obj_environment {
     obj_texture_info ke_txt;                    // emission texture
 };
 
+// Obj procedural object [extension].
+struct obj_procedural {
+    string  name;                      // name
+    frame3f frame = identity_frame3f;  // transform
+    string  type;                      // type
+    string  material;                  // material
+    float   size  = 2;                 // size
+    int     level = -1;                // level of subdivision (-1 default)
+};
+
 // Obj callbacks
 struct obj_callbacks {
     function<void(const vec3f&)>              vert        = {};
@@ -296,6 +306,7 @@ struct obj_callbacks {
     function<void(const obj_material&)>       material    = {};
     function<void(const obj_camera&)>         camera      = {};
     function<void(const obj_environment&)>    environmnet = {};
+    function<void(const obj_procedural&)>     procedural  = {};
 };
 
 // Load obj options
