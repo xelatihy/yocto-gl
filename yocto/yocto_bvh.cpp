@@ -39,30 +39,29 @@
 namespace yocto {
 
 // Intersect a ray with a point (approximate)
-bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& distance, vec2f& uv) {
+bvh_element_intersection intersect_point(
+    const ray3f& ray, const vec3f& p, float r) {
     // find parameter for line-point minimum distance
     auto w = p - ray.o;
     auto t = dot(w, ray.d) / dot(ray.d, ray.d);
 
     // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return false;
+    if (t < ray.tmin || t > ray.tmax) return {};
 
     // test for line-point distance vs point radius
     auto rp  = ray.o + ray.d * t;
     auto prp = p - rp;
-    if (dot(prp, prp) > r * r) return false;
+    if (dot(prp, prp) > r * r) return {};
 
     // intersection occurred: set options and exit
-    distance = t;
-    uv       = {0, 0};
-
-    return true;
+    return {
+        {0, 0}, t, true
+    };
 }
 
 // Intersect a ray with a line
-bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, float& distance, vec2f& uv) {
+bvh_element_intersection intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    float r0, float r1) {
     // setup intersection options
     auto u = ray.d;
     auto v = p1 - p0;
@@ -78,14 +77,14 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 
     // check determinant and exit if lines are parallel
     // (could use EPSILONS if desired)
-    if (det == 0) return false;
+    if (det == 0) return {};
 
     // compute Parameters on both ray and segment
     auto t = (b * e - c * d) / det;
     auto s = (a * e - b * d) / det;
 
     // exit if not within bounds
-    if (t < ray.tmin || t > ray.tmax) return false;
+    if (t < ray.tmin || t > ray.tmax) return {};
 
     // clamp segment param to segment corners
     s = clamp(s, (float)0, (float)1);
@@ -98,18 +97,15 @@ bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
     // check with the line radius at the same point
     auto d2 = dot(prl, prl);
     auto r  = r0 * (1 - s) + r1 * s;
-    if (d2 > r * r) return false;
+    if (d2 > r * r) return {};
 
     // intersection occurred: set options and exit
-    distance = t;
-    uv       = {s, sqrt(d2) / r};
-
-    return true;
+    return { {s, sqrt(d2) / r}, t, true };
 }
 
 // Intersect a ray with a triangle
-bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, float& distance, vec2f& uv) {
+bvh_element_intersection intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2) {
     // compute triangle edges
     auto edge1 = p1 - p0;
     auto edge2 = p2 - p0;
@@ -120,45 +116,46 @@ bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
 
     // check determinant and exit if triangle and ray are parallel
     // (could use EPSILONS if desired)
-    if (det == 0) return false;
+    if (det == 0) return {};
     auto inv_det = 1.0f / det;
 
     // compute and check first bricentric coordinated
     auto tvec = ray.o - p0;
     auto u    = dot(tvec, pvec) * inv_det;
-    if (u < 0 || u > 1) return false;
+    if (u < 0 || u > 1) return {};
 
     // compute and check second bricentric coordinated
     auto qvec = cross(tvec, edge1);
     auto v    = dot(ray.d, qvec) * inv_det;
-    if (v < 0 || u + v > 1) return false;
+    if (v < 0 || u + v > 1) return {};
 
     // compute and check ray parameter
     auto t = dot(edge2, qvec) * inv_det;
-    if (t < ray.tmin || t > ray.tmax) return false;
+    if (t < ray.tmin || t > ray.tmax) return {};
 
     // intersection occurred: set options and exit
-    distance = t;
-    uv       = {u, v};
-
-    return true;
+    return {
+        {u, v}, t, true
+    };
 }
 
 // Intersect a ray with a quad.
-bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, float& distance, vec2f& uv) {
-    auto hit  = false;
+bvh_element_intersection intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3) {
+    auto intersection = bvh_element_intersection{};
     auto tray = ray;
-    if (intersect_triangle(tray, p0, p1, p3, distance, uv)) {
-        tray.tmax = distance;
-        hit       = true;
+    auto intersection1 = intersect_triangle(tray, p0, p1, p3);
+    if(intersection1.hit) {
+        intersection = intersection1;
+        tray.tmax = intersection.distance;
     }
-    if (intersect_triangle(tray, p2, p3, p1, distance, uv)) {
-        uv        = {1 - uv.x, 1 - uv.y};
-        tray.tmax = distance;
-        hit       = true;
+    auto intersection2 = intersect_triangle(tray, p2, p3, p1);
+    if(intersection2.hit) {
+        intersection = intersection2;
+        intersection.element_uv        = {1 - intersection.element_uv.x, 1 - intersection.element_uv.y};
+        tray.tmax = intersection.distance;
     }
-    return hit;
+    return intersection;
 }
 
 // Min/max used in BVH traversal. Copied here since the traversal code
@@ -1246,34 +1243,34 @@ bvh_shape_intersection intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ra
             }
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
+                auto element_intersection = bvh_element_intersection{};
                 if (!empty(bvh.triangles)) {
                     auto& t = bvh.triangles[node.primitive_ids[i]];
-                    if (!intersect_triangle(ray, bvh.positions[t.x],
-                            bvh.positions[t.y], bvh.positions[t.z], intersection.distance,
-                            intersection.element_uv))
-                        continue;
+                    element_intersection = intersect_triangle(ray, bvh.positions[t.x],
+                            bvh.positions[t.y], bvh.positions[t.z]);
                 } else if (!empty(bvh.quads)) {
                     auto& t = bvh.quads[node.primitive_ids[i]];
-                    if (!intersect_quad(ray, bvh.positions[t.x],
+                    element_intersection = intersect_quad(ray, bvh.positions[t.x],
                             bvh.positions[t.y], bvh.positions[t.z],
-                            bvh.positions[t.w], intersection.distance, intersection.element_uv))
-                        continue;
+                            bvh.positions[t.w]);
                 } else if (!empty(bvh.lines)) {
                     auto& l = bvh.lines[node.primitive_ids[i]];
-                    if (!intersect_line(ray, bvh.positions[l.x],
+                    element_intersection = intersect_line(ray, bvh.positions[l.x],
                             bvh.positions[l.y], bvh.radius[l.x],
-                            bvh.radius[l.y], intersection.distance, intersection.element_uv))
-                        continue;
+                            bvh.radius[l.y]);
                 } else if (!empty(bvh.points)) {
                     auto& p = bvh.points[node.primitive_ids[i]];
-                    if (!intersect_point(ray, bvh.positions[p], bvh.radius[p],
-                            intersection.distance, intersection.element_uv))
-                        continue;
+                    element_intersection = intersect_point(ray, bvh.positions[p], bvh.radius[p]);
                 } else {
                     continue;
                 }
-                intersection.hit        = true;
-                intersection.element_id = node.primitive_ids[i];
+                if(!element_intersection.hit) continue;
+                intersection = {
+                    node.primitive_ids[i],
+                    element_intersection.element_uv,
+                    element_intersection.distance,
+                    true
+                };
                 ray.tmax   = intersection.distance;
             }
         }

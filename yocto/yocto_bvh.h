@@ -270,26 +270,26 @@ struct bvh_element_intersection {
 
 // Intersect a ray with a point (approximate).
 // Based on http://geomalgorithms.com/a02-lines.html.
-bool intersect_point(
-    const ray3f& ray, const vec3f& p, float r, float& distance, vec2f& uv);
+bvh_element_intersection intersect_point(
+    const ray3f& ray, const vec3f& p, float r);
 
 // Intersect a ray with a line (approximate).
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
 // http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
-bool intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    float r0, float r1, float& distance, vec2f& uv);
+bvh_element_intersection intersect_line(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    float r0, float r1);
 
 // Intersect a ray with a triangle.
-bool intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, float& distance, vec2f& uv);
+bvh_element_intersection intersect_triangle(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
 // 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
 // to 1. This is equivalent to Intel's Embree.
-bool intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
-    const vec3f& p2, const vec3f& p3, float& distance, vec2f& uv);
+bvh_element_intersection intersect_quad(const ray3f& ray, const vec3f& p0, const vec3f& p1,
+    const vec3f& p2, const vec3f& p3);
 
 // Intersect a ray with a axis-aligned bounding box.
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
