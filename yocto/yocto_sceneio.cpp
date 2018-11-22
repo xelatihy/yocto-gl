@@ -2189,6 +2189,14 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
             view >> environment.frame;
             if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
             if (cb.environmnet) cb.environmnet(environment);
+        } else if (cmd == "po") {
+            auto procedural = obj_procedural();
+            view >> procedural.name;
+            view >> procedural.type;
+            view >> procedural.material;
+            view >> procedural.size;
+            view >> procedural.frame;
+            if(cb.procedural) cb.procedural(procedural);
         } else {
             // unused
         }
@@ -2639,6 +2647,27 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         environment.emission         = oenv.ke;
         environment.emission_texture = add_texture(oenv.ke_txt, true);
         scene.environments.push_back(environment);
+    };
+    cb.procedural = [&](const obj_procedural& oproc) {
+        auto shape = yocto_shape();
+        shape.name = oproc.name;
+        if(mmap.find(oproc.material) == mmap.end()) {
+            log_error("missing material ", oproc.material);
+        } else {
+            shape.material = mmap.find(oproc.material)->second;
+        }
+        if(oproc.type == "floor") {
+            make_floor_shape({1, 20}, {oproc.size.x, oproc.size.y}, 
+                {oproc.size.x / 2, oproc.size.y / 2}, true);
+        } else {
+            log_error("unknown obj procedural");
+        }
+        scene.shapes.push_back(shape);
+        auto instance = yocto_instance();
+        instance.name = oproc.name;
+        instance.frame = oproc.frame;
+        instance.shape = (int)scene.shapes.size()-1;
+        scene.instances.push_back(instance);
     };
 
     // Parse obj
