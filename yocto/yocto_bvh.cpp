@@ -404,6 +404,7 @@ RTCDevice get_embree_device() {
 void build_shape_embree_bvh(bvh_shape& bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
+    // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     bvh.embree_bvh     = embree_scene;
     if (!empty(bvh.points)) {
         log_error("embree does not support points");
@@ -446,8 +447,10 @@ void build_scene_embree_instanced_bvh(bvh_scene& bvh) {
     for (auto& surface_bvh : bvh.surface_bvhs)
         build_shape_embree_bvh(surface_bvh);
 
+    // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
+    // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     bvh.embree_bvh     = embree_scene;
     if (empty(bvh.instances)) {
         rtcCommitScene(embree_scene);
@@ -482,6 +485,12 @@ void build_scene_embree_instanced_bvh(bvh_scene& bvh) {
     bvh.embree_flattened = false;
 }
 void build_scene_embree_flattened_bvh(bvh_scene& bvh) {
+    // build shape and surface bvhs
+    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh);
+    for (auto& surface_bvh : bvh.surface_bvhs)
+        build_shape_embree_bvh(surface_bvh);
+
+    // scene bvh
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
