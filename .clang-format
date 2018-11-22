@@ -34,8 +34,8 @@ PointerAlignment: Left
 
 IndentWrappedFunctionNames: false
 
-PenaltyBreakAssignment: 1000
-PenaltyBreakBeforeFirstCallParameter: 1000
+PenaltyBreakAssignment: 100
+PenaltyBreakBeforeFirstCallParameter: 100
 PenaltyBreakComment: 30
 PenaltyBreakFirstLessLess: 30
 PenaltyBreakString: 30
