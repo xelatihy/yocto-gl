@@ -282,12 +282,12 @@ struct obj_environment {
 
 // Obj procedural object [extension].
 struct obj_procedural {
-    string           name;                      // name
-    frame3f          frame = identity_frame3f;  // transform
-    string           type;                      // type
-    string           material;                  // material
-    float            size  = 2;                 // size
-    int              level = -1;                // level of subdivision (-1 default)
+    string  name;                      // name
+    frame3f frame = identity_frame3f;  // transform
+    string  type;                      // type
+    string  material;                  // material
+    float   size  = 2;                 // size
+    int     level = -1;                // level of subdivision (-1 default)
 };
 
 // Obj callbacks

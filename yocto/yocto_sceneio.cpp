@@ -2197,7 +2197,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
             view >> procedural.size;
             view >> procedural.level;
             view >> procedural.frame;
-            if(cb.procedural) cb.procedural(procedural);
+            if (cb.procedural) cb.procedural(procedural);
         } else {
             // unused
         }
@@ -2652,24 +2652,25 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     cb.procedural = [&](const obj_procedural& oproc) {
         auto shape = yocto_shape();
         shape.name = oproc.name;
-        if(mmap.find(oproc.material) == mmap.end()) {
+        if (mmap.find(oproc.material) == mmap.end()) {
             log_error("missing material ", oproc.material);
         } else {
             shape.material = mmap.find(oproc.material)->second;
         }
-        if(oproc.type == "floor") {
+        if (oproc.type == "floor") {
             tie(shape.quads, shape.positions, shape.normals, shape.texturecoords) =
-            make_floor_shape({oproc.level < 0 ? 1 : pow2(oproc.level), oproc.level < 0 ? 20 : pow2(oproc.level)}, 
-                {oproc.size, oproc.size}, 
-                {oproc.size / 2, oproc.size / 2}, true);
+                make_floor_shape({oproc.level < 0 ? 1 : pow2(oproc.level),
+                                     oproc.level < 0 ? 20 : pow2(oproc.level)},
+                    {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2},
+                    true);
         } else {
             log_error("unknown obj procedural");
         }
         scene.shapes.push_back(shape);
-        auto instance = yocto_instance();
-        instance.name = oproc.name;
+        auto instance  = yocto_instance();
+        instance.name  = oproc.name;
         instance.frame = oproc.frame;
-        instance.shape = (int)scene.shapes.size()-1;
+        instance.shape = (int)scene.shapes.size() - 1;
         scene.instances.push_back(instance);
     };
 

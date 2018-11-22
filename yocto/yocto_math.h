@@ -152,7 +152,7 @@ inline float clamp(float x, float min_, float max_) {
     return min(max(x, min_), max_);
 }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
-inline int pow2(int x) { return 1 << x; }
+inline int   pow2(int x) { return 1 << x; }
 
 }  // namespace yocto
 
