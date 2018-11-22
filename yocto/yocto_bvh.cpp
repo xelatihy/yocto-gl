@@ -1297,6 +1297,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
 
     // check empty
     if (empty(bvh.nodes)) return false;
+    if (empty(bvh.instances)) return false;
 
     // node stack
     int  node_stack[128];
@@ -1334,29 +1335,22 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
                 node_stack[node_cur++] = node.primitive_ids[1];
                 node_stack[node_cur++] = node.primitive_ids[0];
             }
-        } else if (!empty(bvh.instances)) {
+        } else {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
                 if (instance.shape_id >= 0) {
-                    if (intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
+                    if (!intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
                             transform_ray(instance.frame_inverse, ray),
-                            find_any, distance, element_id, element_uv)) {
-                        hit         = true;
-                        ray.tmax    = distance;
-                        instance_id = node.primitive_ids[i];
-                    }
+                            find_any, distance, element_id, element_uv)) continue;
                 } else if (instance.surface_id >= 0) {
-                    if (intersect_shape_bvh(bvh.surface_bvhs[instance.surface_id],
+                    if (!intersect_shape_bvh(bvh.surface_bvhs[instance.surface_id],
                             transform_ray(instance.frame_inverse, ray),
-                            find_any, distance, element_id, element_uv)) {
-                        hit         = true;
-                        ray.tmax    = distance;
-                        instance_id = node.primitive_ids[i];
-                    }
+                            find_any, distance, element_id, element_uv)) continue;
                 }
+                hit         = true;
+                ray.tmax    = distance;
+                instance_id = node.primitive_ids[i];
             }
-        } else {
-            log_error("empty bvh");
         }
 
         // check for early exit
