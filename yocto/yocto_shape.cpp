@@ -1129,6 +1129,27 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_sha
     return {quads, positions, normals, texturecoords};
 }
 
+// Make a rounded cube.
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_bent_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, float radius, bool flip_v) {
+    auto [quads, positions, normals, texturecoords] = make_floor_shape(
+        steps, size, uvsize, flip_v);
+    auto start = (size.y / 2 - radius) / 2;
+    auto end = start + radius;
+    for (auto i = 0; i < positions.size(); i++) {
+        if(positions[i].z < -end) {
+            positions[i] = { positions[i].x, - positions[i].z - end + radius, -end };
+            normals[i] = { 0, 0, 1 };
+        } else if(positions[i].z < -start && positions[i].z >= -end) {
+            auto phi = (pif / 2) * (- positions[i].z - start) / radius;
+            positions[i] = { positions[i].x, - cos(phi) * radius + radius, - sin(phi) * radius - start };
+            normals[i] = { 0, cos(phi), sin(phi) };
+        } else {
+        }
+    }
+    return {quads, positions, normals, texturecoords};
+}
+
 // Make a stack of quads
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_stack_shape(
     const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v) {

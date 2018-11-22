@@ -1216,6 +1216,14 @@ bool apply_json_procedural(
             get_json_value(js, "size", vec2f{40, 40}),
             get_json_value(js, "uvsize", vec2f{20, 20}),
             get_json_value(js, "flip_v", true));
+    } else if (type == "floor_bent") {
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_floor_bent_shape(get_json_value(js, "steps",
+                                                        vec2i{1, 40}),
+            get_json_value(js, "size", vec2f{40, 40}),
+            get_json_value(js, "uvsize", vec2f{20, 20}),
+            get_json_value(js, "radius", 10.0f),
+            get_json_value(js, "flip_v", true));
     } else if (type == "matball") {
         tie(value.quads, value.positions, value.normals,
             value.texturecoords) = make_sphere_cube_shape(get_json_value(js,
@@ -1445,6 +1453,14 @@ bool apply_json_procedural(
                                                         vec2i{1, 1}),
             get_json_value(js, "size", vec2f{40, 40}),
             get_json_value(js, "uvsize", vec2f{20, 20}),
+            get_json_value(js, "flip_v", true));
+    } else if (type == "floor_bent") {
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_floor_bent_shape(get_json_value(js, "steps",
+                                                        vec2i{1, 40}),
+            get_json_value(js, "size", vec2f{40, 40}),
+            get_json_value(js, "uvsize", vec2f{20, 20}),
+            get_json_value(js, "radius", 10.0f),
             get_json_value(js, "flip_v", true));
     } else if (type == "matball") {
         tie(value.quads_positions, value.positions, value.normals,
