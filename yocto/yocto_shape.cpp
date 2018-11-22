@@ -123,14 +123,11 @@ tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
     auto skinned_positions = vector<vec3f>{positions.size()};
     auto skinned_normals   = vector<vec3f>{normals};
     for (auto i = 0; i < positions.size(); i++) {
-        skinned_positions[i] = transform_point(xforms[joints[i].x], positions[i]) *
-                                   weights[i].x +
-                               transform_point(xforms[joints[i].y], positions[i]) *
-                                   weights[i].y +
-                               transform_point(xforms[joints[i].z], positions[i]) *
-                                   weights[i].z +
-                               transform_point(xforms[joints[i].w], positions[i]) *
-                                   weights[i].w;
+        skinned_positions[i] =
+            transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
+            transform_point(xforms[joints[i].y], positions[i]) * weights[i].y +
+            transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
+            transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
     }
     for (auto i = 0; i < positions.size(); i++) {
         skinned_normals[i] = normalize(
@@ -1131,19 +1128,21 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_sha
 
 // Make a rounded cube.
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_bent_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, float radius, bool flip_v) {
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, float radius,
+    bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_floor_shape(
         steps, size, uvsize, flip_v);
     auto start = (size.y / 2 - radius) / 2;
-    auto end = start + radius;
+    auto end   = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
-        if(positions[i].z < -end) {
-            positions[i] = { positions[i].x, - positions[i].z - end + radius, -end };
-            normals[i] = { 0, 0, 1 };
-        } else if(positions[i].z < -start && positions[i].z >= -end) {
-            auto phi = (pif / 2) * (- positions[i].z - start) / radius;
-            positions[i] = { positions[i].x, - cos(phi) * radius + radius, - sin(phi) * radius - start };
-            normals[i] = { 0, cos(phi), sin(phi) };
+        if (positions[i].z < -end) {
+            positions[i] = {positions[i].x, -positions[i].z - end + radius, -end};
+            normals[i]   = {0, 0, 1};
+        } else if (positions[i].z < -start && positions[i].z >= -end) {
+            auto phi     = (pif / 2) * (-positions[i].z - start) / radius;
+            positions[i] = {positions[i].x, -cos(phi) * radius + radius,
+                -sin(phi) * radius - start};
+            normals[i]   = {0, cos(phi), sin(phi)};
         } else {
         }
     }

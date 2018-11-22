@@ -134,9 +134,10 @@ const auto trace_sampler_type_names = vector<string>{"path", "direct",
     "debug_diffuse", "debug_specular", "debug_roughness"};
 
 // Tracer function
-using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces, bool environments_hidden)>;
+using trace_sampler_func =
+    function<pair<vec3f, bool>(const yocto_scene& scene, const bvh_scene& bvh,
+        const trace_lights& lights, const vec3f& position, const vec3f& direction,
+        rng_state& rng, int max_bounces, bool environments_hidden)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions

@@ -488,7 +488,8 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
     auto& environment = scene.environments[environment_id];
     if (environment.emission_texture >= 0) {
-        auto& elements_cdf = lights.environment_texture_cdf[environment.emission_texture];
+        auto& elements_cdf =
+            lights.environment_texture_cdf[environment.emission_texture];
         auto& emission_texture = scene.textures[environment.emission_texture];
         auto  size             = evaluate_texture_size(emission_texture);
         auto texcoord = evaluate_environment_texturecoord(environment, incoming);
@@ -510,7 +511,8 @@ vec3f sample_environment_direction(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, float rel, const vec2f& ruv) {
     auto& environment = scene.environments[environment_id];
     if (environment.emission_texture >= 0) {
-        auto& elements_cdf = lights.environment_texture_cdf[environment.emission_texture];
+        auto& elements_cdf =
+            lights.environment_texture_cdf[environment.emission_texture];
         auto& emission_texture = scene.textures[environment.emission_texture];
         auto  idx  = sample_discrete_distribution(elements_cdf, rel);
         auto  size = evaluate_texture_size(emission_texture);
@@ -592,8 +594,8 @@ vec3f sample_lights_direction(const yocto_scene& scene,
         return sample_instance_direction(
             scene, lights, instance, position, rel, ruv);
     } else {
-        auto environment = lights.environments[light_id -
-                                               (int)lights.instances.size()];
+        auto environment =
+            lights.environments[light_id - (int)lights.instances.size()];
         return sample_environment_direction(scene, lights, environment, rel, ruv);
     }
 }
@@ -694,7 +696,8 @@ vec3f evaluate_transmission(const yocto_scene& scene,
         pos += dir * step;
         auto density = material.volume_density;
         if (material.volume_density_texture >= 0) {
-            auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
+            auto& volume_density_texture =
+                scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
         tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
@@ -720,7 +723,8 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
         distance += step;
         auto density = material.volume_density;
         if (material.volume_density_texture >= 0) {
-            auto& volume_density_texture = scene.voltextures[material.volume_density_texture];
+            auto& volume_density_texture =
+                scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
         if (at(density, channel) / majorant >= get_random_float(rng))
@@ -1726,8 +1730,8 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
             auto& surface = scene.surfaces[instance.surface];
             if (empty(surface.quads_positions)) continue;
             lights.instances.push_back(instance_id);
-            lights.surface_elements_cdf[instance.surface] = compute_surface_elements_cdf(
-                surface);
+            lights.surface_elements_cdf[instance.surface] =
+                compute_surface_elements_cdf(surface);
         } else {
             continue;
         }
@@ -1739,8 +1743,8 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
         if (environment.emission == zero3f) continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {
-            lights.environment_texture_cdf[environment.emission_texture] = compute_environment_texels_cdf(
-                scene, environment);
+            lights.environment_texture_cdf[environment.emission_texture] =
+                compute_environment_texels_cdf(scene, environment);
         }
     }
 
