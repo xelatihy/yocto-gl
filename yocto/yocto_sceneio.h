@@ -286,7 +286,8 @@ struct obj_procedural {
     frame3f          frame = identity_frame3f;  // transform
     string           type;                      // type
     string           material;                  // material
-    vec3f            size  = {1,1,1};           // size
+    float            size  = 2;                 // size
+    int              level = -1;                // level of subdivision (-1 default)
 };
 
 // Obj callbacks

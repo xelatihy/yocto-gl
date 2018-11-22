@@ -2195,6 +2195,7 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
             view >> procedural.type;
             view >> procedural.material;
             view >> procedural.size;
+            view >> procedural.level;
             view >> procedural.frame;
             if(cb.procedural) cb.procedural(procedural);
         } else {
@@ -2657,8 +2658,10 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
             shape.material = mmap.find(oproc.material)->second;
         }
         if(oproc.type == "floor") {
-            make_floor_shape({1, 20}, {oproc.size.x, oproc.size.y}, 
-                {oproc.size.x / 2, oproc.size.y / 2}, true);
+            tie(shape.quads, shape.positions, shape.normals, shape.texturecoords) =
+            make_floor_shape({oproc.level < 0 ? 1 : pow2(oproc.level), oproc.level < 0 ? 20 : pow2(oproc.level)}, 
+                {oproc.size, oproc.size}, 
+                {oproc.size / 2, oproc.size / 2}, true);
         } else {
             log_error("unknown obj procedural");
         }
