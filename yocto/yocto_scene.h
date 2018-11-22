@@ -333,10 +333,10 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_surfaces);
 
 // Intersects a ray with the scene.
-bvh_intersection intersect_scene(const yocto_scene& scene,
+bvh_scene_intersection intersect_scene(const yocto_scene& scene,
     const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
 // Intersects a ray with a scene instance.
-bvh_intersection intersect_scene(const yocto_scene& scene, int instance_id,
+bvh_scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
     const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
 
 // Apply subdivision and displacement rules.
