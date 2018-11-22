@@ -405,7 +405,7 @@ void build_shape_embree_bvh(bvh_shape& bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
-    bvh.embree_bvh     = embree_scene;
+    bvh.embree_bvh = embree_scene;
     if (!empty(bvh.points)) {
         log_error("embree does not support points");
     } else if (!empty(bvh.lines)) {
@@ -451,7 +451,7 @@ void build_scene_embree_instanced_bvh(bvh_scene& bvh) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
-    bvh.embree_bvh     = embree_scene;
+    bvh.embree_bvh = embree_scene;
     if (empty(bvh.instances)) {
         rtcCommitScene(embree_scene);
         return;
@@ -1263,7 +1263,10 @@ bvh_shape_intersection intersect_shape_bvh(
                     continue;
                 }
                 if (!element_intersection.hit) continue;
-                if (bvh.intersection_filter && !bvh.intersection_filter(node.primitive_ids[i], element_intersection.element_uv)) continue;
+                if (bvh.intersection_filter &&
+                    !bvh.intersection_filter(
+                        node.primitive_ids[i], element_intersection.element_uv))
+                    continue;
                 intersection = {node.primitive_ids[i],
                     element_intersection.element_uv,
                     element_intersection.distance, true};
@@ -1342,7 +1345,11 @@ bvh_scene_intersection intersect_scene_bvh(
                     continue;
                 }
                 if (!shape_intersection.hit) continue;
-                if (bvh.intersection_filter && !bvh.intersection_filter(node.primitive_ids[i], shape_intersection.element_id, shape_intersection.element_uv)) continue;
+                if (bvh.intersection_filter &&
+                    !bvh.intersection_filter(node.primitive_ids[i],
+                        shape_intersection.element_id,
+                        shape_intersection.element_uv))
+                    continue;
                 intersection = {node.primitive_ids[i],
                     shape_intersection.element_id, shape_intersection.element_uv,
                     shape_intersection.distance, true};

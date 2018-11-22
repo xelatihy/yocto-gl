@@ -541,7 +541,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
-    
+
     // shapes
     auto shape_bvhs = vector<bvh_shape>();
     for (auto& shape : scene.shapes) {
