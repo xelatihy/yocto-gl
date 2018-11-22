@@ -1254,6 +1254,7 @@ bvh_shape_intersection intersect_shape_bvh(
                     continue;
                 }
                 if (!element_intersection.hit) continue;
+                if (bvh.intersection_filter && !bvh.intersection_filter(node.primitive_ids[i], element_intersection.element_uv)) continue;
                 intersection = {node.primitive_ids[i],
                     element_intersection.element_uv,
                     element_intersection.distance, true};
@@ -1332,6 +1333,7 @@ bvh_scene_intersection intersect_scene_bvh(
                     continue;
                 }
                 if (!shape_intersection.hit) continue;
+                if (bvh.intersection_filter && !bvh.intersection_filter(node.primitive_ids[i], shape_intersection.element_id, shape_intersection.element_uv)) continue;
                 intersection = {node.primitive_ids[i],
                     shape_intersection.element_id, shape_intersection.element_uv,
                     shape_intersection.distance, true};
