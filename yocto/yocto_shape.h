@@ -427,7 +427,10 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_shap
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_stack_shape(
     const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, 
+    bool flip_v);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_bent_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, float radius, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_rounded_shape(
