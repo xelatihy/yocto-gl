@@ -1364,16 +1364,15 @@ bvh_intersection intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bo
 }
 
 // Finds the closest element with a bvh.
-bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
-    float max_distance, bool find_any, float& distance, int& instance_id,
-    int& element_id, vec2f& element_uv) {
+bvh_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
+    float max_distance, bool find_any) {
     // node stack
     int  node_stack[64];
     auto node_cur          = 0;
     node_stack[node_cur++] = 0;
 
     // hit
-    auto hit = false;
+    auto intersection = bvh_intersection{};
 
     // walking stack
     while (node_cur) {
@@ -1389,72 +1388,59 @@ bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
             // internal node
             node_stack[node_cur++] = node.primitive_ids[0];
             node_stack[node_cur++] = node.primitive_ids[1];
-        } else if (!empty(bvh.triangles)) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (overlap_triangle(pos, max_distance, bvh.positions[t.x],
-                        bvh.positions[t.y], bvh.positions[t.z], bvh.radius[t.x],
-                        bvh.radius[t.y], bvh.radius[t.z], distance, element_uv)) {
-                    hit          = true;
-                    max_distance = distance;
-                    element_id   = node.primitive_ids[i];
-                }
-            }
-        } else if (!empty(bvh.quads)) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& q = bvh.quads[node.primitive_ids[i]];
-                if (overlap_quad(pos, max_distance, bvh.positions[q.x],
-                        bvh.positions[q.y], bvh.positions[q.z],
-                        bvh.positions[q.w], bvh.radius[q.x], bvh.radius[q.y],
-                        bvh.radius[q.z], bvh.radius[q.w], distance, element_uv)) {
-                    hit          = true;
-                    max_distance = distance;
-                    element_id   = node.primitive_ids[i];
-                }
-            }
-        } else if (!empty(bvh.lines)) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& l = bvh.lines[node.primitive_ids[i]];
-                if (overlap_line(pos, max_distance, bvh.positions[l.x],
-                        bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y],
-                        distance, element_uv)) {
-                    hit          = true;
-                    max_distance = distance;
-                    element_id   = node.primitive_ids[i];
-                }
-            }
-        } else if (!empty(bvh.points)) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& p = bvh.points[node.primitive_ids[i]];
-                if (overlap_point(pos, max_distance, bvh.positions[p],
-                        bvh.radius[p], distance, element_uv)) {
-                    hit          = true;
-                    max_distance = distance;
-                    element_id   = node.primitive_ids[i];
-                }
-            }
         } else {
-            log_error("empty bvh");
+            for (auto i = 0; i < node.num_primitives; i++) {
+                if (!empty(bvh.triangles)) {
+                    auto& t = bvh.triangles[node.primitive_ids[i]];
+                    if (!overlap_triangle(pos, max_distance, bvh.positions[t.x],
+                            bvh.positions[t.y], bvh.positions[t.z], bvh.radius[t.x],
+                            bvh.radius[t.y], bvh.radius[t.z], intersection.distance,
+                            intersection.element_uv))
+                        continue;
+                } else if (!empty(bvh.quads)) {
+                    auto& t = bvh.quads[node.primitive_ids[i]];
+                    if (!overlap_quad(pos, max_distance, bvh.positions[t.x],
+                            bvh.positions[t.y], bvh.positions[t.z],
+                            bvh.positions[t.w], bvh.radius[t.x],
+                            bvh.radius[t.y], bvh.radius[t.z], bvh.radius[t.w], intersection.distance, intersection.element_uv))
+                        continue;
+                } else if (!empty(bvh.lines)) {
+                    auto& l = bvh.lines[node.primitive_ids[i]];
+                    if (!overlap_line(pos, max_distance, bvh.positions[l.x],
+                            bvh.positions[l.y], bvh.radius[l.x],
+                            bvh.radius[l.y], intersection.distance, intersection.element_uv))
+                        continue;
+                } else if (!empty(bvh.points)) {
+                    auto& p = bvh.points[node.primitive_ids[i]];
+                    if (!overlap_point(pos, max_distance, bvh.positions[p], bvh.radius[p],
+                            intersection.distance, intersection.element_uv))
+                        continue;
+                } else {
+                    continue;
+                }
+                intersection.hit        = true;
+                intersection.element_id = node.primitive_ids[i];
+                max_distance   = intersection.distance;
+            }
         }
 
         // check for early exit
-        if (find_any && hit) return true;
+        if (find_any && intersection.hit) return intersection;
     }
 
-    return hit;
+    return intersection;
 }
 
 // Finds the closest element with a bvh.
-bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
-    float max_distance, bool find_any, float& distance, int& instance_id,
-    int& element_id, vec2f& element_uv) {
+bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
+    float max_distance, bool find_any) {
     // node stack
     int  node_stack[64];
     auto node_cur          = 0;
     node_stack[node_cur++] = 0;
 
     // hit
-    auto hit = false;
+    auto intersection = bvh_intersection{};
 
     // walking stack
     while (node_cur) {
@@ -1473,24 +1459,32 @@ bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
         } else if (!empty(bvh.instances)) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
-                if (overlap_shape_bvh(bvh.shape_bvhs[instance.shape_id],
-                        transform_point(instance.frame_inverse, pos),
-                        max_distance, find_any, distance, instance_id,
-                        element_id, element_uv)) {
-                    hit          = true;
-                    max_distance = distance;
-                    instance_id  = node.primitive_ids[i];
+                auto shape_intersection = bvh_intersection{};
+                if (instance.shape_id >= 0) {
+                    shape_intersection = overlap_shape_bvh(bvh.shape_bvhs[instance.shape_id],
+                            transform_point(instance.frame_inverse, pos), max_distance,
+                            find_any);
+                } else if (instance.surface_id >= 0) {
+                    shape_intersection = overlap_shape_bvh(bvh.surface_bvhs[instance.surface_id],
+                            transform_point(instance.frame_inverse, pos), max_distance,
+                            find_any);
+                } else {
+                    continue;
                 }
+                if(!shape_intersection.hit) continue;
+                intersection = shape_intersection;
+                intersection.instance_id = node.primitive_ids[i];
+                max_distance    = intersection.distance;
             }
         } else {
             log_error("empty bvh");
         }
 
         // check for early exit
-        if (find_any && hit) return true;
+        if (find_any && intersection.hit) return intersection;
     }
 
-    return hit;
+    return intersection;
 }
 
 #if 0

@@ -243,9 +243,9 @@ bvh_intersection intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, boo
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos, float max_distance,
-    bool find_any, float& distance, int& element_id, vec2f& element_uv);
-bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
+bvh_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos, 
+    float max_distance, bool find_any);
+bvh_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
     float max_distance, bool find_any);
 
 }  // namespace yocto
