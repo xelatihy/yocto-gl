@@ -1198,6 +1198,9 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
 
     // check empty
     if (empty(bvh.nodes)) return false;
+    if (empty(bvh.points) && empty(bvh.lines) && empty(bvh.triangles) &&
+        empty(bvh.quads))
+        return false;
 
     // node stack
     int  node_stack[128];
@@ -1235,46 +1238,37 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
                 node_stack[node_cur++] = node.primitive_ids[1];
                 node_stack[node_cur++] = node.primitive_ids[0];
             }
-        } else if (!empty(bvh.triangles)) {
+        } else {
             for (auto i = 0; i < node.num_primitives; i++) {
-                auto& t = bvh.triangles[node.primitive_ids[i]];
-                if (intersect_triangle(ray, bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], distance, element_uv)) {
-                    hit        = true;
-                    ray.tmax   = distance;
-                    element_id = node.primitive_ids[i];
+                if (!empty(bvh.triangles)) {
+                    auto& t = bvh.triangles[node.primitive_ids[i]];
+                    if (!intersect_triangle(ray, bvh.positions[t.x],
+                            bvh.positions[t.y], bvh.positions[t.z], distance,
+                            element_uv))
+                        continue;
+                } else if (!empty(bvh.quads)) {
+                    auto& t = bvh.quads[node.primitive_ids[i]];
+                    if (!intersect_quad(ray, bvh.positions[t.x],
+                            bvh.positions[t.y], bvh.positions[t.z],
+                            bvh.positions[t.w], distance, element_uv))
+                        continue;
+                } else if (!empty(bvh.lines)) {
+                    auto& l = bvh.lines[node.primitive_ids[i]];
+                    if (!intersect_line(ray, bvh.positions[l.x],
+                            bvh.positions[l.y], bvh.radius[l.x],
+                            bvh.radius[l.y], distance, element_uv))
+                        continue;
+                } else if (!empty(bvh.points)) {
+                    auto& p = bvh.points[node.primitive_ids[i]];
+                    if (!intersect_point(ray, bvh.positions[p], bvh.radius[p],
+                            distance, element_uv))
+                        continue;
+                } else {
+                    continue;
                 }
-            }
-        } else if (!empty(bvh.quads)) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& t = bvh.quads[node.primitive_ids[i]];
-                if (intersect_quad(ray, bvh.positions[t.x], bvh.positions[t.y],
-                        bvh.positions[t.z], bvh.positions[t.w], distance,
-                        element_uv)) {
-                    hit        = true;
-                    ray.tmax   = distance;
-                    element_id = node.primitive_ids[i];
-                }
-            }
-        } else if (!empty(bvh.lines)) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& l = bvh.lines[node.primitive_ids[i]];
-                if (intersect_line(ray, bvh.positions[l.x], bvh.positions[l.y],
-                        bvh.radius[l.x], bvh.radius[l.y], distance, element_uv)) {
-                    hit        = true;
-                    ray.tmax   = distance;
-                    element_id = node.primitive_ids[i];
-                }
-            }
-        } else if (!empty(bvh.points)) {
-            for (auto i = 0; i < node.num_primitives; i++) {
-                auto& p = bvh.points[node.primitive_ids[i]];
-                if (intersect_point(ray, bvh.positions[p], bvh.radius[p],
-                        distance, element_uv)) {
-                    hit        = true;
-                    ray.tmax   = distance;
-                    element_id = node.primitive_ids[i];
-                }
+                hit        = true;
+                ray.tmax   = distance;
+                element_id = node.primitive_ids[i];
             }
         }
 
@@ -1341,11 +1335,15 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
                 if (instance.shape_id >= 0) {
                     if (!intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
                             transform_ray(instance.frame_inverse, ray),
-                            find_any, distance, element_id, element_uv)) continue;
+                            find_any, distance, element_id, element_uv))
+                        continue;
                 } else if (instance.surface_id >= 0) {
                     if (!intersect_shape_bvh(bvh.surface_bvhs[instance.surface_id],
                             transform_ray(instance.frame_inverse, ray),
-                            find_any, distance, element_id, element_uv)) continue;
+                            find_any, distance, element_id, element_uv))
+                        continue;
+                } else {
+                    continue;
                 }
                 hit         = true;
                 ray.tmax    = distance;
