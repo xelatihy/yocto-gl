@@ -541,47 +541,22 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
-    // check if materials have opacity maps
-    auto material_has_opacity_maps = vector<bool>(scene.materials.size(), false);
-    for(auto material_id = 0; material_id < scene.materials.size(); material_id ++) {
-        auto& material = scene.materials[material_id];
-        if(material.diffuse_texture < 0) continue;
-        auto& texture = scene.textures[material.diffuse_texture];
-        for(auto& c : texture.ldr_image) {
-            if(c.w > 0) continue;
-            material_has_opacity_maps[material_id] = true;
-            break;
-        }
-        for(auto& c : texture.hdr_image) {
-            if(c.w > 0) continue;
-            material_has_opacity_maps[material_id] = true;
-            break;
-        }
-    }
+    
     // shapes
     auto shape_bvhs = vector<bvh_shape>();
     for (auto& shape : scene.shapes) {
-        // check alpha
-        auto intersection_filter = bvh_shape_filter{};
-        if(material_has_opacity_maps[shape.material]) {
-            intersection_filter = [&scene,&shape](int element_id, const vec2f& element_uv) -> bool {
-                auto& material = scene.materials[shape.material];
-                auto& texture = scene.textures[material.diffuse_texture];
-                return evaluate_texture(texture, evaluate_shape_texturecoord(shape, element_id, element_uv)).w > 0;
-            };
-        }
         // make bvh
         auto shape_bvh = bvh_shape{};
         if (!empty(shape.points)) {
             shape_bvh = make_shape_bvh(
-                shape.points, shape.positions, shape.radius, intersection_filter);
+                shape.points, shape.positions, shape.radius);
         } else if (!empty(shape.lines)) {
             shape_bvh = make_shape_bvh(
-                shape.lines, shape.positions, shape.radius, intersection_filter);
+                shape.lines, shape.positions, shape.radius);
         } else if (!empty(shape.triangles)) {
-            shape_bvh = make_shape_bvh(shape.triangles, shape.positions, intersection_filter);
+            shape_bvh = make_shape_bvh(shape.triangles, shape.positions);
         } else if (!empty(shape.quads)) {
-            shape_bvh = make_shape_bvh(shape.quads, shape.positions, intersection_filter);
+            shape_bvh = make_shape_bvh(shape.quads, shape.positions);
         } else {
             shape_bvh = {};
         }
@@ -591,22 +566,11 @@ bvh_scene make_scene_bvh(
     // surfaces
     auto surface_bvhs = vector<bvh_shape>();
     for (auto& surface : scene.surfaces) {
-        // check alpha
-        auto intersection_filter = bvh_shape_filter{};
-        auto has_opacity_maps = false;
-        for(auto material_id : surface.materials) has_opacity_maps = has_opacity_maps || material_has_opacity_maps[material_id];
-        if(has_opacity_maps) {
-            intersection_filter = [&scene,&surface](int element_id, const vec2f& element_uv) -> bool {
-                auto& material = scene.materials[get_surface_element_material(surface, element_id)];
-                auto& texture = scene.textures[material.diffuse_texture];
-                return evaluate_texture(texture, evaluate_surface_texturecoord(surface, element_id, element_uv)).w > 0;
-            };
-        }
         // make bvh
         auto surface_bvh = bvh_shape{};
         if (!empty(surface.quads_positions)) {
             surface_bvh = make_shape_bvh(
-                surface.quads_positions, surface.positions, intersection_filter);
+                surface.quads_positions, surface.positions);
         } else {
             surface_bvh = {};
         }
