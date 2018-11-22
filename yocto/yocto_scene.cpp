@@ -755,34 +755,33 @@ void log_validation_errors(const yocto_scene& scene, bool skip_textures) {
 namespace yocto {
 
 // Scene intersection.
-scene_intersection intersect_scene(const yocto_scene& scene,
+bvh_intersection intersect_scene(const yocto_scene& scene,
     const bvh_scene& bvh, const ray3f& ray, bool find_any) {
-    auto isec = scene_intersection();
-    if (!intersect_scene_bvh(bvh, ray, find_any, isec.distance,
-            isec.instance_id, isec.element_id, isec.element_uv))
-        return {};
-    return isec;
+    return intersect_scene_bvh(bvh, ray, find_any);
 }
 
 // Instance intersection.
-scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
+bvh_intersection intersect_scene(const yocto_scene& scene, int instance_id,
     const bvh_scene& bvh, const ray3f& ray, bool find_any) {
     auto& instance = scene.instances[instance_id];
-    auto  isec     = scene_intersection();
     auto  tray     = transform_ray_inverse(instance.frame, ray);
+    auto shape_intersection = bvh_intersection{};
     if (instance.shape >= 0) {
-        if (!intersect_shape_bvh(bvh.shape_bvhs[instance.shape], tray, find_any,
-                isec.distance, isec.element_id, isec.element_uv))
-            return {};
+        shape_intersection = intersect_shape_bvh(bvh.shape_bvhs[instance.shape], tray, find_any);
     } else if (instance.surface) {
-        if (!intersect_shape_bvh(bvh.shape_bvhs[instance.surface], tray,
-                find_any, isec.distance, isec.element_id, isec.element_uv))
-            return {};
+        shape_intersection = intersect_shape_bvh(bvh.shape_bvhs[instance.surface], tray,
+                find_any);
     } else {
         return {};
     }
-    isec.instance_id = instance_id;
-    return isec;
+    if(!shape_intersection.hit) return {};
+    return {
+        instance_id,
+        shape_intersection.element_id,
+        shape_intersection.element_uv,
+        shape_intersection.distance,
+        true
+    };
 }
 
 // Shape element normal.

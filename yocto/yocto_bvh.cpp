@@ -561,8 +561,7 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh) {
 // Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
 void refit_embree_bvh(bvh_shape& bvh) { log_error("not yet implemented"); }
 void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
-bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
-    float& distance, int& element_id, vec2f& uv) {
+bvh_intersection intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -578,14 +577,16 @@ bool intersect_embree_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
     RTCIntersectContext embree_ctx;
     rtcInitIntersectContext(&embree_ctx);
     rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
-    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-    distance   = embree_ray.ray.tfar;
-    uv         = {embree_ray.hit.u, embree_ray.hit.v};
-    element_id = embree_ray.hit.primID;
-    return true;
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
+    return {
+        -1,
+        (int)embree_ray.hit.primID,
+        {embree_ray.hit.u, embree_ray.hit.v},
+        embree_ray.ray.tfar,
+        true
+    };
 }
-bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
-    float& distance, int& instance_id, int& element_id, vec2f& uv) {
+bvh_intersection intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any) {
     RTCRayHit embree_ray;
     embree_ray.ray.org_x     = ray.o.x;
     embree_ray.ray.org_y     = ray.o.y;
@@ -601,16 +602,14 @@ bool intersect_embree_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
     RTCIntersectContext embree_ctx;
     rtcInitIntersectContext(&embree_ctx);
     rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
-    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return false;
-    distance   = embree_ray.ray.tfar;
-    uv         = {embree_ray.hit.u, embree_ray.hit.v};
-    element_id = embree_ray.hit.primID;
-    if (bvh.embree_flattened) {
-        instance_id = embree_ray.hit.geomID;
-    } else {
-        instance_id = embree_ray.hit.instID[0];
-    }
-    return true;
+    if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
+    return {
+        (bvh.embree_flattened) ? (int)embree_ray.hit.geomID : (int)embree_ray.hit.instID[0],
+        (int)embree_ray.hit.primID,
+        {embree_ray.hit.u, embree_ray.hit.v},
+        embree_ray.ray.tfar,
+        true
+    };
 }
 #endif
 
@@ -1197,20 +1196,18 @@ bvh_shape& get_surface_bvh(bvh_scene& bvh, int shape_id) {
 }
 
 // Intersect ray with a bvh.
-bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
-    float& distance, int& element_id, vec2f& element_uv) {
+bvh_intersection intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
-        return intersect_embree_bvh(
-            bvh, ray_, find_any, distance, element_id, element_uv);
+        return intersect_embree_bvh(bvh, ray_, find_any);
 #endif
 
     // check empty
-    if (empty(bvh.nodes)) return false;
+    if (empty(bvh.nodes)) return {};
     if (empty(bvh.points) && empty(bvh.lines) && empty(bvh.triangles) &&
         empty(bvh.quads))
-        return false;
+        return {};
 
     // node stack
     int  node_stack[128];
@@ -1218,7 +1215,7 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
     node_stack[node_cur++] = 0;
 
     // shared variables
-    auto hit = false;
+    auto intersection = bvh_intersection{};
 
     // copy ray to modify it
     auto ray = ray_;
@@ -1253,55 +1250,53 @@ bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray_, bool find_any,
                 if (!empty(bvh.triangles)) {
                     auto& t = bvh.triangles[node.primitive_ids[i]];
                     if (!intersect_triangle(ray, bvh.positions[t.x],
-                            bvh.positions[t.y], bvh.positions[t.z], distance,
-                            element_uv))
+                            bvh.positions[t.y], bvh.positions[t.z], intersection.distance,
+                            intersection.element_uv))
                         continue;
                 } else if (!empty(bvh.quads)) {
                     auto& t = bvh.quads[node.primitive_ids[i]];
                     if (!intersect_quad(ray, bvh.positions[t.x],
                             bvh.positions[t.y], bvh.positions[t.z],
-                            bvh.positions[t.w], distance, element_uv))
+                            bvh.positions[t.w], intersection.distance, intersection.element_uv))
                         continue;
                 } else if (!empty(bvh.lines)) {
                     auto& l = bvh.lines[node.primitive_ids[i]];
                     if (!intersect_line(ray, bvh.positions[l.x],
                             bvh.positions[l.y], bvh.radius[l.x],
-                            bvh.radius[l.y], distance, element_uv))
+                            bvh.radius[l.y], intersection.distance, intersection.element_uv))
                         continue;
                 } else if (!empty(bvh.points)) {
                     auto& p = bvh.points[node.primitive_ids[i]];
                     if (!intersect_point(ray, bvh.positions[p], bvh.radius[p],
-                            distance, element_uv))
+                            intersection.distance, intersection.element_uv))
                         continue;
                 } else {
                     continue;
                 }
-                hit        = true;
-                ray.tmax   = distance;
-                element_id = node.primitive_ids[i];
+                intersection.hit        = true;
+                intersection.element_id = node.primitive_ids[i];
+                ray.tmax   = intersection.distance;
             }
         }
 
         // check for early exit
-        if (find_any && hit) return true;
+        if (find_any && intersection.hit) return intersection;
     }
 
-    return hit;
+    return intersection;
 }
 
 // Intersect ray with a bvh.
-bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
-    float& distance, int& instance_id, int& element_id, vec2f& element_uv) {
+bvh_intersection intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any) {
 #if YOCTO_EMBREE
     // call Embree if needed
     if (bvh.embree_bvh)
-        return intersect_embree_bvh(
-            bvh, ray_, find_any, distance, instance_id, element_id, element_uv);
+        return intersect_embree_bvh(bvh, ray_, find_any);
 #endif
 
     // check empty
-    if (empty(bvh.nodes)) return false;
-    if (empty(bvh.instances)) return false;
+    if (empty(bvh.nodes)) return {};
+    if (empty(bvh.instances)) return {};
 
     // node stack
     int  node_stack[128];
@@ -1309,7 +1304,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
     node_stack[node_cur++] = 0;
 
     // shared variables
-    auto hit = false;
+    auto intersection = bvh_intersection{};
 
     // copy ray to modify it
     auto ray = ray_;
@@ -1342,30 +1337,30 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray_, bool find_any,
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance = bvh.instances[node.primitive_ids[i]];
+                auto shape_intersection = bvh_intersection{};
                 if (instance.shape_id >= 0) {
-                    if (!intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
+                    shape_intersection = intersect_shape_bvh(bvh.shape_bvhs[instance.shape_id],
                             transform_ray(instance.frame_inverse, ray),
-                            find_any, distance, element_id, element_uv))
-                        continue;
+                            find_any);
                 } else if (instance.surface_id >= 0) {
-                    if (!intersect_shape_bvh(bvh.surface_bvhs[instance.surface_id],
+                    shape_intersection = intersect_shape_bvh(bvh.surface_bvhs[instance.surface_id],
                             transform_ray(instance.frame_inverse, ray),
-                            find_any, distance, element_id, element_uv))
-                        continue;
+                            find_any);
                 } else {
                     continue;
                 }
-                hit         = true;
-                ray.tmax    = distance;
-                instance_id = node.primitive_ids[i];
+                if(!shape_intersection.hit) continue;
+                intersection = shape_intersection;
+                intersection.instance_id = node.primitive_ids[i];
+                ray.tmax    = intersection.distance;
             }
         }
 
         // check for early exit
-        if (find_any && hit) return true;
+        if (find_any && intersection.hit) return intersection;
     }
 
-    return hit;
+    return intersection;
 }
 
 // Finds the closest element with a bvh.

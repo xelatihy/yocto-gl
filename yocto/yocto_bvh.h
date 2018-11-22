@@ -220,13 +220,24 @@ void refit_shape_bvh(bvh_shape& bvh);
 void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
     const vector<int>& updated_shapes, const vector<int>& updated_surfaces);
 
+// Results of intersect_xxx and overlap_xxx functions that include hit flag,
+// instance id, shape element id, shape element uv and intersection distance.
+// The values are all set for scene intersection. Shape intersection does not
+// set the instance id and element intersections do not set shape element id 
+// and the instance id. Results values are set only if hit is true.
+struct bvh_intersection {
+    int instance_id = -1;
+    int element_id = -1;
+    vec2f element_uv = {0, 0};
+    float distance = 0;
+    bool hit  = false;
+};
+
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bool intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any,
-    float& distance, int& element_id, vec2f& element_uv);
-bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
-    float& distance, int& instance_id, int& element_id, vec2f& element_uv);
+bvh_intersection intersect_shape_bvh(const bvh_shape& bvh, const ray3f& ray, bool find_any);
+bvh_intersection intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
@@ -235,8 +246,7 @@ bool intersect_scene_bvh(const bvh_scene& bvh, const ray3f& ray, bool find_any,
 bool overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos, float max_distance,
     bool find_any, float& distance, int& element_id, vec2f& element_uv);
 bool overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
-    float max_distance, bool find_any, float& distance, int& instance_id,
-    int& element_id, vec2f& element_uv);
+    float max_distance, bool find_any);
 
 }  // namespace yocto
 
