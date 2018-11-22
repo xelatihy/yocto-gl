@@ -181,6 +181,7 @@ struct build_bvh_options {
     bool          high_quality   = true;
     bool          use_embree     = false;
     bool          flatten_embree = true;
+    bool          opacity_filter = true;
     bool          run_serially   = false;
     atomic<bool>* cancel_flag    = nullptr;
 };
