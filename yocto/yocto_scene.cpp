@@ -606,7 +606,7 @@ bvh_scene make_scene_bvh(
         auto surface_bvh = bvh_shape{};
         if (!empty(surface.quads_positions)) {
             surface_bvh = make_shape_bvh(
-                surface.quads_positions, surface.positions);
+                surface.quads_positions, surface.positions, intersection_filter);
         } else {
             surface_bvh = {};
         }
