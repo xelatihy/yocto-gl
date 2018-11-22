@@ -1000,33 +1000,41 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 
 // Build a BVH from the given set of shape primitives.
 bvh_shape make_shape_bvh(const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius) {
+    const vector<vec3f>& positions, const vector<float>& radius, 
+    const bvh_shape_filter& intersection_filter) {
     auto bvh      = bvh_shape{};
     bvh.points    = points;
     bvh.positions = positions;
     bvh.radius    = radius;
+    bvh.intersection_filter       = intersection_filter;
     return bvh;
 }
 bvh_shape make_shape_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius) {
+    const vector<vec3f>& positions, const vector<float>& radius, 
+    const bvh_shape_filter& intersection_filter) {
     auto bvh      = bvh_shape{};
     bvh.lines     = lines;
     bvh.positions = positions;
     bvh.radius    = radius;
+    bvh.intersection_filter       = intersection_filter;
     return bvh;
 }
 bvh_shape make_shape_bvh(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, 
+    const bvh_shape_filter& intersection_filter) {
     auto bvh      = bvh_shape{};
     bvh.triangles = triangles;
     bvh.positions = positions;
+    bvh.intersection_filter       = intersection_filter;
     return bvh;
 }
 bvh_shape make_shape_bvh(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+    const vector<vec4i>& quads, const vector<vec3f>& positions, 
+    const bvh_shape_filter& intersection_filter) {
     auto bvh      = bvh_shape{};
     bvh.quads     = quads;
     bvh.positions = positions;
+    bvh.intersection_filter       = intersection_filter;
     return bvh;
 }
 
@@ -1089,11 +1097,13 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
 // Build a BVH from the given set of instances.
 bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs) {
+    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs, 
+    const bvh_scene_filter& intersection_filter) {
     auto bvh         = bvh_scene{};
     bvh.instances    = instances;
     bvh.shape_bvhs   = shape_bvhs;
     bvh.surface_bvhs = surface_bvhs;
+    bvh.intersection_filter       = intersection_filter;
     return bvh;
 }
 

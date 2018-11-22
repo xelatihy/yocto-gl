@@ -102,6 +102,10 @@ namespace yocto {
 // Maximum number of primitives per BVH node.
 const int bvh_max_prims = 4;
 
+// Filter functions applied during intersection
+using bvh_shape_filter = function<bool (int element_id, const vec2f& element_uv)>;
+using bvh_scene_filter = function<bool (int instance_id, int element_id, const vec2f& element_uv)>;
+
 // BVH tree node containing its bounds, indices to the BVH arrays of either
 // primitives or internal nodes, the node element type,
 // and the split axis. Leaf and internal nodes are identical, except that
@@ -130,6 +134,9 @@ struct bvh_shape {
     vector<vec3i> triangles;
     vector<vec4i> quads;
 
+    // intersection filter function
+    bvh_shape_filter intersection_filter = {};
+
     // bvh internal nodes
     vector<bvh_node> nodes;
 
@@ -157,6 +164,9 @@ struct bvh_scene {
     vector<bvh_shape>    shape_bvhs;
     vector<bvh_shape>    surface_bvhs;
 
+    // intersection filter function
+    bvh_scene_filter intersection_filter = {};
+
     // bvh internal nodes
     vector<bvh_node> nodes;
 
@@ -176,17 +186,22 @@ struct build_bvh_options {
 
 // Build a BVH from the given set of shape primitives.
 bvh_shape make_shape_bvh(const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius, 
+    const bvh_shape_filter& intersection_filter = {});
 bvh_shape make_shape_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius);
+    const vector<vec3f>& positions, const vector<float>& radius, 
+    const bvh_shape_filter& intersection_filter = {});
 bvh_shape make_shape_bvh(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, 
+    const bvh_shape_filter& intersection_filter = {});
 bvh_shape make_shape_bvh(
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
+    const vector<vec4i>& quads, const vector<vec3f>& positions, 
+    const bvh_shape_filter& intersection_filter = {});
 
 // Build a BVH from the given set of instances.
 bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs);
+    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs, 
+    const bvh_scene_filter& intersection_filter = {});
 
 // Build the bvh acceleration structure.
 void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
