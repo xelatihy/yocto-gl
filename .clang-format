@@ -40,4 +40,4 @@ PenaltyBreakComment: 30
 PenaltyBreakFirstLessLess: 30
 PenaltyBreakString: 30
 PenaltyExcessCharacter: 10
-PenaltyReturnTypeOnItsOwnLine: 1000
+PenaltyReturnTypeOnItsOwnLine: 100

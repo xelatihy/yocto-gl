@@ -369,8 +369,9 @@ vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> convert_face_varying(
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+convert_face_varying(const vector<vec4i>& quads_positions,
+    const vector<vec4i>&                  quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords) {
     // make faces unique
@@ -1127,9 +1128,9 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_sha
 }
 
 // Make a rounded cube.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_bent_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, float radius,
-    bool flip_v) {
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_floor_bent_shape(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, float radius, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_floor_shape(
         steps, size, uvsize, flip_v);
     auto start = (size.y / 2 - radius) / 2;
@@ -1150,7 +1151,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_ben
 }
 
 // Make a stack of quads
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_stack_shape(
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_quad_stack_shape(
     const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v) {
     auto quads         = vector<vec4i>{};
     auto positions     = vector<vec3f>{};
@@ -1231,9 +1233,9 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shap
 }
 
 // Make a rounded cube.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_rounded_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius,
-    bool flip_v) {
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, float radius, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         steps, size, uvsize, flip_v);
     auto c = size / 2 - vec3f{radius, radius, radius};
@@ -1284,8 +1286,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_sh
 }
 
 // Make a spherecube.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_cube_shape(
-    int steps, float size, float uvsize, bool flip_v) {
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_sphere_cube_shape(int steps, float size, float uvsize, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize}, flip_v);
     for (auto i = 0; i < positions.size(); i++) {
@@ -1297,9 +1299,9 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_cu
 }
 
 // Make a flipped sphere. This is not watertight.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_flipcap_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip,
-    bool flip_v) {
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_sphere_flipcap_shape(const vec2i& steps, float size, const vec2f& uvsize,
+    const vec2f& zflip, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_sphere_shape(
         steps, size, uvsize, flip_v);
     for (auto i = 0; i < positions.size(); i++) {
@@ -1333,8 +1335,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_shap
 }
 
 // Make a disk from a quad.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_quad_shape(
-    int steps, float size, float uvsize, bool flip_v) {
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_disk_quad_shape(int steps, float size, float uvsize, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
         {steps, steps}, {2, 2}, {uvsize, uvsize}, flip_v);
     for (auto i = 0; i < positions.size(); i++) {
@@ -1349,7 +1351,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_quad
 }
 
 // Make a bulged disk from a quad.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_bulged_shape(
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_disk_bulged_shape(
     int steps, float size, float uvsize, float height, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_disk_quad_shape(
         steps, size, uvsize, flip_v);
@@ -1365,7 +1368,8 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_bulg
 }
 
 // Make a cylinder (side-only).
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_side_shape(
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_cylinder_side_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
         steps, {1, 1}, {1, 1}, flip_v);
@@ -1418,9 +1422,9 @@ tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_
 }
 
 // Make a rounded cylinder.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_rounded_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius,
-    bool flip_v) {
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_cylinder_rounded_shape(const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, float radius, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_cylinder_shape(
         steps, size, uvsize, flip_v);
     auto c = size / 2 - vec2f{radius, radius};
@@ -1948,8 +1952,8 @@ tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size) {
 }
 
 // Generate lines set along a quad.
-tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_lines_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize,
+tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
+make_lines_shape(const vec2i& steps, const vec2f& size, const vec2f& uvsize,
     const vec2f& line_radius) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
@@ -1992,8 +1996,8 @@ tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
 
 // Generate a point set with points placed at the origin with texcoords
 // varying along u.
-tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_points_shape(
-    int num, float uvsize, float point_radius) {
+tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
+make_points_shape(int num, float uvsize, float point_radius) {
     auto points = vector<int>(num);
     for (auto i = 0; i < num; i++) points[i] = i;
     auto positions     = vector<vec3f>(num, {0, 0, 0});
@@ -2006,8 +2010,9 @@ tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> m
 }
 
 // Generate a point set.
-tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_random_points_shape(
-    int num, const vec3f& size, float uvsize, float point_radius, uint64_t seed) {
+tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
+make_random_points_shape(int num, const vec3f& size, float uvsize,
+    float point_radius, uint64_t seed) {
     auto [points, positions, normals, texturecoords,
         radius] = make_points_shape(num, uvsize, point_radius);
     auto rng    = make_rng(seed);
@@ -2018,8 +2023,8 @@ tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> m
 }
 
 // Make a point.
-tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_point_shape(
-    float point_radius) {
+tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
+make_point_shape(float point_radius) {
     auto points        = vector<int>{0};
     auto positions     = vector<vec3f>{{0, 0, 0}};
     auto normals       = vector<vec3f>{{0, 0, 1}};
@@ -2044,8 +2049,8 @@ tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size) {
 }
 
 // Make a hair ball around a shape
-tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>> make_hair_shape(
-    const vec2i& steps, const vector<vec3i>& striangles,
+tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>
+make_hair_shape(const vec2i& steps, const vector<vec3i>& striangles,
     const vector<vec4i>& squads, const vector<vec3f>& spos,
     const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
     const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
