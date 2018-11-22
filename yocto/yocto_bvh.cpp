@@ -1026,9 +1026,9 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 #if YOCTO_EMBREE
     if (options.use_embree) {
         if (options.flatten_embree) {
-            build_scene_embree_flattened_bvh(bvh);
+            return build_scene_embree_flattened_bvh(bvh);
         } else {
-            build_scene_embree_instanced_bvh(bvh);
+            return build_scene_embree_instanced_bvh(bvh);
         }
     }
 #endif
