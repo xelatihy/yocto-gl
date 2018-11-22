@@ -209,13 +209,12 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
 namespace yocto {
 
 // TODO: documentation
-bool overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r,
-    float& distance, vec2f& uv) {
+bvh_element_intersection overlap_point(const vec3f& pos, float dist_max, const vec3f& p, float r) {
     auto d2 = dot(pos - p, pos - p);
-    if (d2 > (dist_max + r) * (dist_max + r)) return false;
-    distance = sqrt(d2);
-    uv       = {0, 0};
-    return true;
+    if (d2 > (dist_max + r) * (dist_max + r)) return {};
+    return {
+        {0, 0}, sqrt(d2), true
+    };
 }
 
 // TODO: documentation
@@ -230,19 +229,19 @@ float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1) {
 }
 
 // TODO: documentation
-bool overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, float r0, float r1, float& distance, vec2f& uv) {
+bvh_element_intersection overlap_line(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, float r0, float r1) {
     auto u = closestuv_line(pos, p0, p1);
     // Compute projected position from the clamped t d = a + t * ab;
     auto p  = p0 + (p1 - p0) * u;
     auto r  = r0 + (r1 - r0) * u;
     auto d2 = dot(pos - p, pos - p);
     // check distance
-    if (d2 > (dist_max + r) * (dist_max + r)) return false;
+    if (d2 > (dist_max + r) * (dist_max + r)) return {};
     // done
-    distance = sqrt(d2);
-    uv       = {u, 0};
-    return true;
+    return {
+        {u, 0}, sqrt(d2), true
+    };
 }
 
 // TODO: documentation
@@ -290,33 +289,35 @@ vec2f closestuv_triangle(
 }
 
 // TODO: documentation
-bool overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2,
-    float& distance, vec2f& uv) {
-    uv      = closestuv_triangle(pos, p0, p1, p2);
+bvh_element_intersection overlap_triangle(const vec3f& pos, float dist_max, const vec3f& p0,
+    const vec3f& p1, const vec3f& p2, float r0, float r1, float r2) {
+    auto uv      = closestuv_triangle(pos, p0, p1, p2);
     auto p  = p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
     auto r  = r0 * (1 - uv.x - uv.y) + r1 * uv.x + r2 * uv.y;
     auto dd = dot(p - pos, p - pos);
-    if (dd > (dist_max + r) * (dist_max + r)) return false;
-    distance = sqrt(dd);
-    return true;
+    if (dd > (dist_max + r) * (dist_max + r)) return {};
+    return {
+        uv, sqrt(dd), true
+    };
 }
 
 // TODO: documentation
-bool overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
+bvh_element_intersection overlap_quad(const vec3f& pos, float dist_max, const vec3f& p0,
     const vec3f& p1, const vec3f& p2, const vec3f& p3, float r0, float r1,
-    float r2, float r3, float& distance, vec2f& uv) {
-    auto hit = false;
-    if (overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r3, distance, uv)) {
-        dist_max = distance;
-        hit      = true;
+    float r2, float r3) {
+    auto intersection = bvh_element_intersection{};
+    auto intersection1 = overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2);
+    if(intersection1.hit) {
+        intersection = intersection1;
+        dist_max = intersection.distance;
     }
-    if (overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1, distance, uv)) {
-        // dist_max = distance;
-        uv  = {1 - uv.x, 1 - uv.y};
-        hit = true;
+    auto intersection2 = overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1);
+    if(intersection2.hit) {
+        intersection = intersection2;
+        intersection.element_uv        = {1 - intersection.element_uv.x, 1 - intersection.element_uv.y};
+        dist_max = intersection.distance;
     }
-    return hit;
+    return intersection;
 }
 
 // TODO: documentation
@@ -1391,36 +1392,36 @@ bvh_shape_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
             node_stack[node_cur++] = node.primitive_ids[1];
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
+                auto element_intersection = bvh_element_intersection{};
                 if (!empty(bvh.triangles)) {
                     auto& t = bvh.triangles[node.primitive_ids[i]];
-                    if (!overlap_triangle(pos, max_distance, bvh.positions[t.x],
+                    element_intersection = overlap_triangle(pos, max_distance, bvh.positions[t.x],
                             bvh.positions[t.y], bvh.positions[t.z], bvh.radius[t.x],
-                            bvh.radius[t.y], bvh.radius[t.z], intersection.distance,
-                            intersection.element_uv))
-                        continue;
+                            bvh.radius[t.y], bvh.radius[t.z]);
                 } else if (!empty(bvh.quads)) {
                     auto& t = bvh.quads[node.primitive_ids[i]];
-                    if (!overlap_quad(pos, max_distance, bvh.positions[t.x],
+                    element_intersection = overlap_quad(pos, max_distance, bvh.positions[t.x],
                             bvh.positions[t.y], bvh.positions[t.z],
                             bvh.positions[t.w], bvh.radius[t.x],
-                            bvh.radius[t.y], bvh.radius[t.z], bvh.radius[t.w], intersection.distance, intersection.element_uv))
-                        continue;
+                            bvh.radius[t.y], bvh.radius[t.z], bvh.radius[t.w]);
                 } else if (!empty(bvh.lines)) {
                     auto& l = bvh.lines[node.primitive_ids[i]];
-                    if (!overlap_line(pos, max_distance, bvh.positions[l.x],
+                    element_intersection = overlap_line(pos, max_distance, bvh.positions[l.x],
                             bvh.positions[l.y], bvh.radius[l.x],
-                            bvh.radius[l.y], intersection.distance, intersection.element_uv))
-                        continue;
+                            bvh.radius[l.y]);
                 } else if (!empty(bvh.points)) {
                     auto& p = bvh.points[node.primitive_ids[i]];
-                    if (!overlap_point(pos, max_distance, bvh.positions[p], bvh.radius[p],
-                            intersection.distance, intersection.element_uv))
-                        continue;
+                    element_intersection = overlap_point(pos, max_distance, bvh.positions[p], bvh.radius[p]);
                 } else {
                     continue;
                 }
-                intersection.hit        = true;
-                intersection.element_id = node.primitive_ids[i];
+                if(!element_intersection.hit) continue;
+                intersection = {
+                    node.primitive_ids[i],
+                    element_intersection.element_uv,
+                    element_intersection.distance,
+                    true
+                };
                 max_distance   = intersection.distance;
             }
         }
