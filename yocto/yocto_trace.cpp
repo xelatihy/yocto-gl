@@ -1303,7 +1303,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_brdf_cosine   = zero3f;
         auto next_direction_pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
-            if (get_random_float(rng)) {
+            if (get_random_float(rng) < 0.5f) {
                 next_direction = sample_brdf_direction(point.brdf, point.normal,
                     outgoing, get_random_float(rng), get_random_vec2f(rng));
             } else {
@@ -1428,7 +1428,7 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     if (!is_brdf_delta(point.brdf) &&
         !(empty(lights.instances) && empty(lights.environments))) {
         auto light_direction = zero3f;
-        if (get_random_float(rng)) {
+        if (get_random_float(rng) < 0.5f) {
             light_direction = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
         } else {
