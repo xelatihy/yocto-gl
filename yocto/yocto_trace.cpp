@@ -83,7 +83,7 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
 // Intersects a ray and returns a point
 trace_point trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
-    auto isec = intersect_scene(scene, bvh, make_ray(position, direction));
+    auto isec = intersect_scene_bvh(bvh, make_ray(position, direction));
     _trace_nrays += 1;
     if (isec.instance_id >= 0) {
         return make_trace_point(scene, isec.instance_id, isec.element_id,
@@ -564,8 +564,8 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     auto pdf      = 0.0f;
     auto position = position_;
     for (auto bounce = 0; bounce < 10; bounce++) {
-        auto isec = intersect_scene(
-            scene, instance_id, bvh, make_ray(position, direction));
+        auto isec = intersect_instance_bvh(bvh,
+            instance_id, make_ray(position, direction));
         if (isec.instance_id < 0) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance_id];
@@ -810,7 +810,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
             get_random_float(rng), get_random_vec2f(rng));
         pdf *= sample_environment_direction_pdf(
             scene, lights, environment_id, incoming);
-        auto isec = intersect_scene(scene, bvh, make_ray(p, incoming));
+        auto isec = intersect_scene_bvh(bvh, make_ray(p, incoming));
         if (isec.instance_id < 0) {
             auto& environment = scene.environments[environment_id];
             le = evaluate_environment_emission(scene, environment, incoming);
@@ -818,7 +818,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
         }
     }
 
-    auto isec = intersect_scene(scene, bvh, make_ray(p, incoming));
+    auto isec = intersect_scene_bvh(bvh, make_ray(p, incoming));
 
     while (isec.instance_id >= 0) {
         auto& isec_instance = scene.instances[isec.instance_id];
@@ -865,8 +865,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
 
         if (ndi > threshold) {
             // Exiting from medium.
-            if (isec.instance_id != mediums.back()) {  // exiting a different
-                                                       // medium??
+            if (isec.instance_id != mediums.back()) {
                 pdf = 0;
                 return zero3f;
             }
@@ -877,8 +876,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
             mediums.pop_back();
         } else if (ndi < -threshold) {
             // Entering new medium.
-            if (isec.instance_id == mediums.back()) {  // entering the same
-                                                       // medium??
+            if (isec.instance_id == mediums.back()) { 
                 pdf = 0;
                 return zero3f;
             }
@@ -888,9 +886,8 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
             return zero3f;
         }
 
-        isec = intersect_scene(scene, bvh, make_ray(lp, incoming));  //@Hack:
-                                                                     // 10? Don't
-                                                                     // know...
+        // HACK: 10? Don't know...
+        isec = intersect_scene_bvh(bvh, make_ray(lp, incoming));
     }
 
     return incoming;
@@ -1049,7 +1046,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // Create ray and clamp it to make the intersection faster.
         ray       = make_ray(ray.o, ray.d);
         ray.tmax  = distance;
-        auto isec = intersect_scene(scene, bvh, ray);
+        auto isec = intersect_scene_bvh(bvh, ray);
 
         // @Hack: When isec.instance == nullptr, we must discern if the ray hit
         // nothing (the environment)
@@ -1439,7 +1436,7 @@ pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
             point.brdf, point.normal, outgoing, next_direction);
         auto emission = evaluate_environment_emission(scene, next_direction);
         if (next_pdf &&
-            intersect_scene(scene, bvh, make_ray(point.position, next_direction))
+            intersect_scene_bvh(bvh, make_ray(point.position, next_direction))
                     .instance_id < 0)
             radiance += emission * brdf_cosine / next_pdf;
     }

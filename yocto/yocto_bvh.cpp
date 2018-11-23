@@ -1430,6 +1430,25 @@ bvh_shape_intersection overlap_shape_bvh(
     return intersection;
 }
 
+bvh_scene_intersection intersect_instance_bvh(
+    const bvh_scene& bvh, int instance_id, const ray3f& ray, bool find_any) {
+    auto& instance           = bvh.instances[instance_id];
+    auto  tray               = transform_ray_inverse(instance.frame, ray);
+    auto  shape_intersection = bvh_shape_intersection{};
+    if (instance.shape_id >= 0) {
+        shape_intersection = intersect_shape_bvh(
+            bvh.shape_bvhs[instance.shape_id], tray, find_any);
+    } else if (instance.surface_id) {
+        shape_intersection = intersect_shape_bvh(
+            bvh.shape_bvhs[instance.surface_id], tray, find_any);
+    } else {
+        return {};
+    }
+    if (!shape_intersection.hit) return {};
+    return {instance_id, shape_intersection.element_id,
+        shape_intersection.element_uv, shape_intersection.distance, true};
+}
+
 // Finds the closest element with a bvh.
 bvh_scene_intersection overlap_scene_bvh(
     const bvh_scene& bvh, const vec3f& pos, float max_distance, bool find_any) {

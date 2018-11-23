@@ -757,32 +757,6 @@ void log_validation_errors(const yocto_scene& scene, bool skip_textures) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Scene intersection.
-bvh_scene_intersection intersect_scene(const yocto_scene& scene,
-    const bvh_scene& bvh, const ray3f& ray, bool find_any) {
-    return intersect_scene_bvh(bvh, ray, find_any);
-}
-
-// Instance intersection.
-bvh_scene_intersection intersect_scene(const yocto_scene& scene,
-    int instance_id, const bvh_scene& bvh, const ray3f& ray, bool find_any) {
-    auto& instance           = scene.instances[instance_id];
-    auto  tray               = transform_ray_inverse(instance.frame, ray);
-    auto  shape_intersection = bvh_shape_intersection{};
-    if (instance.shape >= 0) {
-        shape_intersection = intersect_shape_bvh(
-            bvh.shape_bvhs[instance.shape], tray, find_any);
-    } else if (instance.surface) {
-        shape_intersection = intersect_shape_bvh(
-            bvh.shape_bvhs[instance.surface], tray, find_any);
-    } else {
-        return {};
-    }
-    if (!shape_intersection.hit) return {};
-    return {instance_id, shape_intersection.element_id,
-        shape_intersection.element_uv, shape_intersection.distance, true};
-}
-
 // Shape element normal.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {
     auto norm = zero3f;
