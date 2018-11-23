@@ -1303,10 +1303,9 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_brdf_cosine   = zero3f;
         auto next_direction_pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
-            if(get_random_float(rng)) {
-                next_direction = sample_brdf_direction(
-                    point.brdf, point.normal, outgoing,
-                    get_random_float(rng), get_random_vec2f(rng));
+            if (get_random_float(rng)) {
+                next_direction = sample_brdf_direction(point.brdf, point.normal,
+                    outgoing, get_random_float(rng), get_random_vec2f(rng));
             } else {
                 next_direction = sample_lights_direction(scene, lights, bvh,
                     point.position, get_random_float(rng),
@@ -1314,10 +1313,11 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
             }
             next_brdf_cosine = evaluate_brdf_cosine(
                 point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = 0.5f * sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing,
-                next_direction) + 0.5f * sample_lights_direction_pdf(scene,
-                lights, bvh, point.position, next_direction);
+            next_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
+                                            point.normal, outgoing,
+                                            next_direction) +
+                                 0.5f * sample_lights_direction_pdf(scene, lights,
+                                            bvh, point.position, next_direction);
         } else {
             next_direction   = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
@@ -1428,25 +1428,27 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     if (!is_brdf_delta(point.brdf) &&
         !(empty(lights.instances) && empty(lights.environments))) {
         auto light_direction = zero3f;
-        if(get_random_float(rng)) {
-                light_direction = sample_brdf_direction(
-                    point.brdf, point.normal, outgoing,
-                    get_random_float(rng), get_random_vec2f(rng));
-            } else {
-                light_direction = sample_lights_direction(scene, lights, bvh,
-                    point.position, get_random_float(rng),
-                    get_random_float(rng), get_random_vec2f(rng));
-            }
-            auto light_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, light_direction);
-            auto light_direction_pdf = 0.5f * sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing,
-                light_direction) + 0.5f * sample_lights_direction_pdf(scene,
-                lights, bvh, point.position, light_direction);
+        if (get_random_float(rng)) {
+            light_direction = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+        } else {
+            light_direction = sample_lights_direction(scene, lights, bvh,
+                point.position, get_random_float(rng), get_random_float(rng),
+                get_random_vec2f(rng));
+        }
+        auto light_brdf_cosine = evaluate_brdf_cosine(
+            point.brdf, point.normal, outgoing, light_direction);
+        auto light_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
+                                              point.normal, outgoing,
+                                              light_direction) +
+                                   0.5f * sample_lights_direction_pdf(scene,
+                                              lights, bvh, point.position,
+                                              light_direction);
         auto light_point = trace_ray_with_opacity(
             scene, bvh, point.position, light_direction, rng, max_bounces);
         if (light_direction_pdf)
-            radiance += light_point.emission * light_brdf_cosine / light_direction_pdf;
+            radiance += light_point.emission * light_brdf_cosine /
+                        light_direction_pdf;
     }
 
     // deltas
