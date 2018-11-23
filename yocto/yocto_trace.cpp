@@ -1154,6 +1154,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
+        // exit if needed
+        if(is_brdf_zero(point.brdf) || weight == zero3f) break;
+
         // direct
         if (!is_brdf_delta(point.brdf) &&
             !(empty(lights.instances) && empty(lights.environments))) {
@@ -1225,6 +1228,9 @@ pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene, const bvh_scene& bv
 
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
+        // exit if needed
+        if(is_brdf_zero(point.brdf) || weight == zero3f) break;
+
         // direct
         if (!is_brdf_delta(point.brdf) &&
             !(empty(lights.instances) && empty(lights.environments))) {
