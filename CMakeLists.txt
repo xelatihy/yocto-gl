@@ -163,7 +163,7 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
 endforeach()
 # path naive
 foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
-    set(tracer "path_naive")
+    set(tracer "naive")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
@@ -180,6 +180,14 @@ endforeach()
 # direct no mis
 foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
     set(tracer "direct_nomis")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME ytrace-${tracer}-${filename}
+            COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
+# path naive no mis
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "simplemat-el.json")
+    set(tracer "naive_nomis")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-${tracer}-${filename}
             COMMAND ${test-ytrace} ${testdir}/${filename} ${outdir}/ytrace-${tracer}-${name}.png ${resdir}/ytrace-${tracer}-${name}.png ${diffdir}/ytrace-${tracer}-${name}.png "-t ${tracer} -s ${nsamples} -r 360"

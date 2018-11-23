@@ -231,17 +231,17 @@ bvh_shape_intersection intersect_shape_bvh(
     const bvh_shape& bvh, const ray3f& ray, bool find_any = false);
 bvh_scene_intersection intersect_scene_bvh(
     const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
-bvh_scene_intersection intersect_instance_bvh(
-    const bvh_scene& bvh, int instance_id, const ray3f& ray, bool find_any = false);
+bvh_scene_intersection intersect_instance_bvh(const bvh_scene& bvh,
+    int instance_id, const ray3f& ray, bool find_any = false);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
-bvh_shape_intersection overlap_shape_bvh(
-    const bvh_shape& bvh, const vec3f& pos, float max_distance, bool find_any = false);
-bvh_scene_intersection overlap_scene_bvh(
-    const bvh_scene& bvh, const vec3f& pos, float max_distance, bool find_any = false);
+bvh_shape_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
+    float max_distance, bool find_any = false);
+bvh_scene_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
+    float max_distance, bool find_any = false);
 
 }  // namespace yocto
 

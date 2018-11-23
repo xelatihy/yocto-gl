@@ -114,11 +114,12 @@ trace_state make_trace_state(
 enum struct trace_sampler_type {
     path,               // path tracing
     direct,             // direct illumination
+    naive,              // naive path tracing
     environment,        // environment illumination only
     eyelight,           // eyelight rendering
     path_nomis,         // path tracer without mis
-    path_naive,         // naive path tracing
     direct_nomis,       // direct illumition without mis
+    naive_nomis,        // naive path tracing without mis
     debug_normal,       // debug - normal
     debug_albedo,       // debug - albedo
     debug_texcoord,     // debug - texcoord
@@ -128,8 +129,8 @@ enum struct trace_sampler_type {
     debug_roughness,    // debug - roughness
 };
 
-const auto trace_sampler_type_names = vector<string>{"path", "direct",
-    "environment", "eyelight", "path_nomis", "path_naive", "direct_nomis",
+const auto trace_sampler_type_names = vector<string>{"path", "direct", "naive",
+    "environment", "eyelight", "path_nomis", "direct_nomis", "naive_nomis",
     "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
     "debug_diffuse", "debug_specular", "debug_roughness"};
 
