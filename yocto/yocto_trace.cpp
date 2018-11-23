@@ -618,30 +618,6 @@ float sample_lights_direction_pdf(const yocto_scene& scene,
     return pdf;
 }
 
-// Sample a direction accoding to either ligts or brdf
-vec3f sample_lights_or_brdf_direction(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh,
-    const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, float rmode, float rl, float rel, const vec2f& ruv) {
-    if (rmode < 0.5f) {
-        return sample_lights_direction(
-            scene, lights, bvh, position, rl, rel, ruv);
-    } else {
-        return sample_smooth_brdf_direction(brdf, normal, outgoing, rel, ruv);
-    }
-}
-
-// Pdf for direction sampling
-float sample_lights_or_brdf_direction_pdf(const yocto_scene& scene,
-    const trace_lights& lights, const bvh_scene& bvh,
-    const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
-    return 0.5f * sample_lights_direction_pdf(
-                      scene, lights, bvh, position, incoming) +
-           0.5f * sample_smooth_brdf_direction_pdf(
-                      brdf, normal, outgoing, incoming);
-}
-
 // Russian roulette
 bool sample_russian_roulette(
     const vec3f& weight, int bounce, float rr, int min_bounce = 2) {
@@ -1327,15 +1303,21 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_brdf_cosine   = zero3f;
         auto next_direction_pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
-            next_direction = sample_lights_or_brdf_direction(scene, lights, bvh,
-                point.brdf, point.position, point.normal, outgoing,
-                get_random_float(rng), get_random_float(rng),
-                get_random_float(rng), get_random_vec2f(rng));
+            if(get_random_float(rng)) {
+                next_direction = sample_brdf_direction(
+                    point.brdf, point.normal, outgoing,
+                    get_random_float(rng), get_random_vec2f(rng));
+            } else {
+                next_direction = sample_lights_direction(scene, lights, bvh,
+                    point.position, get_random_float(rng),
+                    get_random_float(rng), get_random_vec2f(rng));
+            }
             next_brdf_cosine = evaluate_brdf_cosine(
                 point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_lights_or_brdf_direction_pdf(scene,
-                lights, bvh, point.brdf, point.position, point.normal, outgoing,
-                next_direction);
+            next_direction_pdf = 0.5f * sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing,
+                next_direction) + 0.5f * sample_lights_direction_pdf(scene,
+                lights, bvh, point.position, next_direction);
         } else {
             next_direction   = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
@@ -1445,18 +1427,26 @@ pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
     // direct
     if (!is_brdf_delta(point.brdf) &&
         !(empty(lights.instances) && empty(lights.environments))) {
-        auto light_direction = sample_lights_or_brdf_direction(scene, lights,
-            bvh, point.brdf, point.position, point.normal, outgoing,
-            get_random_float(rng), get_random_float(rng), get_random_float(rng),
-            get_random_vec2f(rng));
-        auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights, bvh,
-            point.brdf, point.position, point.normal, outgoing, light_direction);
+        auto light_direction = zero3f;
+        if(get_random_float(rng)) {
+                light_direction = sample_brdf_direction(
+                    point.brdf, point.normal, outgoing,
+                    get_random_float(rng), get_random_vec2f(rng));
+            } else {
+                light_direction = sample_lights_direction(scene, lights, bvh,
+                    point.position, get_random_float(rng),
+                    get_random_float(rng), get_random_vec2f(rng));
+            }
+            auto light_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, light_direction);
+            auto light_direction_pdf = 0.5f * sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing,
+                light_direction) + 0.5f * sample_lights_direction_pdf(scene,
+                lights, bvh, point.position, light_direction);
         auto light_point = trace_ray_with_opacity(
             scene, bvh, point.position, light_direction, rng, max_bounces);
-        auto brdf_cosine = evaluate_smooth_brdf_cosine(
-            point.brdf, point.normal, outgoing, light_direction);
-        if (light_pdf)
-            radiance += light_point.emission * brdf_cosine / light_pdf;
+        if (light_direction_pdf)
+            radiance += light_point.emission * light_brdf_cosine / light_direction_pdf;
     }
 
     // deltas
