@@ -78,7 +78,7 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     point.emission = evaluate_instance_emission(
         scene, instance, element_id, element_uv);
     point.brdf = evaluate_instance_brdf(scene, instance, element_id, element_uv);
-    point.hit = true;
+    point.hit  = true;
     return point;
 }
 
