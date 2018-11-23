@@ -30,7 +30,7 @@
 #include "yocto_random.h"
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF SHAPE UTILITIES
+// IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -156,6 +156,13 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     }
     return {skinned_positions, skinned_normals};
 }
+
+}
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF EDGE AND GRID DATA STRUCTURES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Creates an edge map
 edge_map make_edge_map(const vector<vec3i>& triangles) {
@@ -309,6 +316,13 @@ vector<int> find_nearest_neightbors(
         grid, grid.positions[vertex_id], max_radius, vertex_id);
 }
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE ELEMENT CONVERSION AND GROUPING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Convert quads to triangles
 vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
     auto triangles = vector<vec3i>();
@@ -444,6 +458,68 @@ vector<vector<vec4i>> ungroup_quads(
     const vector<vec4i>& quads, const vector<int>& ids) {
     return ungroup_elems(quads, ids);
 }
+
+// Weld vertices within a threshold.
+tuple<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold) {
+    auto welded_indices   = vector<int>(positions.size());
+    auto welded_positions = vector<vec3f>();
+    auto grid             = make_hash_grid(threshold);
+    for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
+        auto& position   = positions[vertex_id];
+        auto  neighboors = find_nearest_neightbors(grid, position, threshold);
+        if (neighboors.empty()) {
+            welded_positions.push_back(position);
+            welded_indices[vertex_id] = (int)welded_positions.size() - 1;
+            insert_vertex(grid, position);
+        } else {
+            welded_indices[vertex_id] = neighboors.front();
+        }
+    }
+    // for (auto i = 0; i < positions.size(); i++) {
+    //     welded_indices[i] = (int)welded_positions.size();
+    //     for (auto j = 0; j < welded_positions.size(); j++) {
+    //         if (length(positions[i] - welded_positions[j]) < threshold) {
+    //             welded_indices[i] = j;
+    //             break;
+    //         }
+    //     }
+    //     if (welded_indices[i] == (int)welded_positions.size())
+    //         welded_positions.push_back(positions[i]);
+    // }
+    return {welded_positions, welded_indices};
+}
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold) {
+    auto [welded_positions, welded_indices] = weld_vertices(positions, threshold);
+    auto welded_triangles                   = vector<vec3i>{};
+    for (auto& t : triangles) {
+        welded_triangles.push_back(
+            {welded_indices[t.x], welded_indices[t.y], welded_indices[t.z]});
+    }
+    return {welded_triangles, welded_positions};
+}
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold) {
+    auto [welded_positions, welded_indices] = weld_vertices(positions, threshold);
+    auto welded_quads                       = vector<vec4i>{};
+    for (auto& q : quads) {
+        welded_quads.push_back({
+            welded_indices[q.x],
+            welded_indices[q.y],
+            welded_indices[q.z],
+            welded_indices[q.w],
+        });
+    }
+    return {welded_quads, welded_positions};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE SUBDIVISION
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Subdivide lines.
 template <typename T>
@@ -809,60 +885,12 @@ tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     return subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
 
-// Weld vertices within a threshold.
-tuple<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& positions, float threshold) {
-    auto welded_indices   = vector<int>(positions.size());
-    auto welded_positions = vector<vec3f>();
-    auto grid             = make_hash_grid(threshold);
-    for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
-        auto& position   = positions[vertex_id];
-        auto  neighboors = find_nearest_neightbors(grid, position, threshold);
-        if (neighboors.empty()) {
-            welded_positions.push_back(position);
-            welded_indices[vertex_id] = (int)welded_positions.size() - 1;
-            insert_vertex(grid, position);
-        } else {
-            welded_indices[vertex_id] = neighboors.front();
-        }
-    }
-    // for (auto i = 0; i < positions.size(); i++) {
-    //     welded_indices[i] = (int)welded_positions.size();
-    //     for (auto j = 0; j < welded_positions.size(); j++) {
-    //         if (length(positions[i] - welded_positions[j]) < threshold) {
-    //             welded_indices[i] = j;
-    //             break;
-    //         }
-    //     }
-    //     if (welded_indices[i] == (int)welded_positions.size())
-    //         welded_positions.push_back(positions[i]);
-    // }
-    return {welded_positions, welded_indices};
-}
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold) {
-    auto [welded_positions, welded_indices] = weld_vertices(positions, threshold);
-    auto welded_triangles                   = vector<vec3i>{};
-    for (auto& t : triangles) {
-        welded_triangles.push_back(
-            {welded_indices[t.x], welded_indices[t.y], welded_indices[t.z]});
-    }
-    return {welded_triangles, welded_positions};
-}
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold) {
-    auto [welded_positions, welded_indices] = weld_vertices(positions, threshold);
-    auto welded_quads                       = vector<vec4i>{};
-    for (auto& q : quads) {
-        welded_quads.push_back({
-            welded_indices[q.x],
-            welded_indices[q.y],
-            welded_indices[q.z],
-            welded_indices[q.w],
-        });
-    }
-    return {welded_quads, welded_positions};
-}
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF SHAPE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Pick a point in a point set uniformly.
 int sample_points_element(int npoints, float re) {

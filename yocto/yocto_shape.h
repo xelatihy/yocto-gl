@@ -190,10 +190,11 @@ inline T interpolate_bezier_derivative(
     return (p1 - p0) * 3 * (1 - u) * (1 - u) + (p2 - p1) * 6 * u * (1 - u) +
            (p3 - p2) * 3 * u * u;
 }
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// SHAPE UTILITIES
+// COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
@@ -224,6 +225,13 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// EDGE AND GRID DATA STRUCTURES
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Dictionary to store edge information.
 // key: edge, value: (edge index, adjacent face, other adjacent face)
@@ -268,6 +276,13 @@ vector<int> find_nearest_neightbors(
 vector<int> find_nearest_neightbors(
     const hash_grid& grid, int vertex_id, float max_radius);
 
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE ELEMENT CONVERSION AND GROUPING
+// -----------------------------------------------------------------------------
+namespace yocto {
+
 // Convert quads to triangles
 vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
@@ -296,6 +311,42 @@ vector<vector<vec3i>> ungroup_triangles(
     const vector<vec3i>& triangles, const vector<int>& ids);
 vector<vector<vec4i>> ungroup_quads(
     const vector<vec4i>& quads, const vector<int>& ids);
+
+// Weld vertices within a threshold.
+tuple<vector<vec3f>, vector<int>> weld_vertices(
+    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, float threshold);
+
+// Merge shape elements
+void merge_lines(
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts);
+void merge_triangles(vector<vec3i>& triangles,
+    const vector<vec2i>& merge_triangles, int num_verts);
+void merge_quads(
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
+void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& tangents, vector<vec2f>& texturecoords,
+    vector<float>& radius, const vector<vec2i>& merge_lines,
+    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
+    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
+void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
+void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE SUBDIVISION
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Subdivide lines by splitting each line in half.
 tuple<vector<vec2i>, vector<float>> subdivide_lines(
@@ -349,34 +400,12 @@ tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
     const vector<vec4i>& quads, const vector<vec4f>& vert,
     bool lock_boundary = false);
 
-// Weld vertices within a threshold.
-tuple<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& positions, float threshold);
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold);
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold);
+}  // namespace yocto
 
-// Merge shape elements
-void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts);
-void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec2i>& merge_triangles, int num_verts);
-void merge_quads(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts);
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& tangents, vector<vec2f>& texturecoords,
-    vector<float>& radius, const vector<vec2i>& merge_lines,
-    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
-    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
+// -----------------------------------------------------------------------------
+// SHAPE SAMPLING
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 // Pick a point in a point set uniformly.
 int           sample_points_element(int npoints, float re);
@@ -413,6 +442,19 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed = 7);
+
+// Data structure used for geodesic computation
+struct edge_graph {
+    vector<vector<pair<int, float>>> edges = {};
+    vector<vec3f> positions = {};
+};
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE GEODESICS
+// -----------------------------------------------------------------------------
+namespace yocto {
 
 }  // namespace yocto
 
