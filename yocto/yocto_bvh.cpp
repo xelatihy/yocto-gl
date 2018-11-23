@@ -400,30 +400,15 @@ RTCDevice get_embree_device() {
     return device;
 }
 
-// struct RTCFilterFunctionNArguments
-// {
-//   int* valid;
-//   void* geometryUserPtr;
-//   const struct RTCIntersectContext* context;
-//   struct RTCRayN* ray;
-//   struct RTCHitN* hit;
-//   unsigned int N;
-// };
-
-// float& RTCHitN_u(RTCHitN* hit, unsigned int N, unsigned int i);
-// float& RTCHitN_v(RTCHitN* hit, unsigned int N, unsigned int i);
-// unsigned& RTCHitN_primID(RTCHitN* hit, unsigned int N, unsigned int i);
-// unsigned& RTCHitN_geomID(RTCHitN* hit, unsigned int N, unsigned int i);
-// unsigned& RTCHitN_instID(RTCHitN* hit, unsigned int N, unsigned int i, unsigned int l);
-
-void test_embree_shape_filter(const RTCFilterFunctionNArguments* args) {
-    auto& bvh = *(bvh_shape*)args->geometryUserPtr;
-    if(!bvh.intersection_filter) return;
-    auto element_uv = vec2f{RTCHitN_u(args->hit, args->N, 0), RTCHitN_v(args->hit, args->N, 0)};
-    auto element_id = (int)RTCHitN_primID(args->hit, args->N, 0);
-    auto hit = bvh.intersection_filter(element_id, element_uv);
-    if(hit) args->valid[0] = 0;
-}
+// unused Embree code kept in case we want to reactivate in the future
+// void test_embree_shape_filter(const RTCFilterFunctionNArguments* args) {
+//     auto& bvh = *(bvh_shape*)args->geometryUserPtr;
+//     if(!bvh.intersection_filter) return;
+//     auto element_uv = vec2f{RTCHitN_u(args->hit, args->N, 0), RTCHitN_v(args->hit, args->N, 0)};
+//     auto element_id = (int)RTCHitN_primID(args->hit, args->N, 0);
+//     auto hit = bvh.intersection_filter(element_id, element_uv);
+//     if(hit) args->valid[0] = 0;
+// }
 
 // Build a BVH using Embree.
 void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
@@ -447,10 +432,6 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
             bvh.triangles.size());
         memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
         memcpy(embree_triangles, data(bvh.triangles), bvh.triangles.size() * 12);
-        if (options.opacity_filter && bvh.intersection_filter) {
-            rtcSetGeometryUserData(embree_geom, &bvh);
-            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
-        } 
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!empty(bvh.quads)) {
@@ -463,10 +444,6 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
             RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
         memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
         memcpy(embree_quads, data(bvh.quads), bvh.quads.size() * 16);
-        if (options.opacity_filter && bvh.intersection_filter) {
-            rtcSetGeometryUserData(embree_geom, &bvh);
-            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
-        } 
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else {
@@ -567,10 +544,6 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh, const build_bvh_options& o
                 transformed_positions.size() * 12);
             memcpy(embree_triangles, data(shape_bvh.triangles),
                 shape_bvh.triangles.size() * 12);
-        if (options.opacity_filter && bvh.intersection_filter) {
-            rtcSetGeometryUserData(embree_geom, &shape_bvh);
-            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
-        } 
             rtcCommitGeometry(embree_geom);
             rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
         } else if (!empty(shape_bvh.quads)) {
@@ -587,10 +560,6 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh, const build_bvh_options& o
                 transformed_positions.size() * 12);
             memcpy(embree_quads, data(shape_bvh.quads),
                 shape_bvh.quads.size() * 16);
-        if (options.opacity_filter && bvh.intersection_filter) {
-            rtcSetGeometryUserData(embree_geom, &shape_bvh);
-            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
-        } 
             rtcCommitGeometry(embree_geom);
             rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
         } else {
@@ -1035,39 +1004,33 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 
 // Build a BVH from the given set of shape primitives.
 bvh_shape make_shape_bvh(const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const bvh_shape_filter& intersection_filter) {
+    const vector<vec3f>& positions, const vector<float>& radius) {
     auto bvh                = bvh_shape{};
     bvh.points              = points;
     bvh.positions           = positions;
     bvh.radius              = radius;
-    bvh.intersection_filter = intersection_filter;
     return bvh;
 }
 bvh_shape make_shape_bvh(const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius,
-    const bvh_shape_filter& intersection_filter) {
+    const vector<vec3f>& positions, const vector<float>& radius) {
     auto bvh                = bvh_shape{};
     bvh.lines               = lines;
     bvh.positions           = positions;
     bvh.radius              = radius;
-    bvh.intersection_filter = intersection_filter;
     return bvh;
 }
 bvh_shape make_shape_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const bvh_shape_filter& intersection_filter) {
+    const vector<vec3f>& positions) {
     auto bvh                = bvh_shape{};
     bvh.triangles           = triangles;
     bvh.positions           = positions;
-    bvh.intersection_filter = intersection_filter;
     return bvh;
 }
 bvh_shape make_shape_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const bvh_shape_filter& intersection_filter) {
+    const vector<vec3f>& positions) {
     auto bvh                = bvh_shape{};
     bvh.quads               = quads;
     bvh.positions           = positions;
-    bvh.intersection_filter = intersection_filter;
     return bvh;
 }
 
@@ -1130,13 +1093,11 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
 // Build a BVH from the given set of instances.
 bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs,
-    const bvh_scene_filter& intersection_filter) {
+    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs) {
     auto bvh                = bvh_scene{};
     bvh.instances           = instances;
     bvh.shape_bvhs          = shape_bvhs;
     bvh.surface_bvhs        = surface_bvhs;
-    bvh.intersection_filter = intersection_filter;
     return bvh;
 }
 
@@ -1304,10 +1265,6 @@ bvh_shape_intersection intersect_shape_bvh(
                     continue;
                 }
                 if (!element_intersection.hit) continue;
-                if (bvh.intersection_filter &&
-                    !bvh.intersection_filter(
-                        node.primitive_ids[i], element_intersection.element_uv))
-                    continue;
                 intersection = {node.primitive_ids[i],
                     element_intersection.element_uv,
                     element_intersection.distance, true};
@@ -1386,11 +1343,6 @@ bvh_scene_intersection intersect_scene_bvh(
                     continue;
                 }
                 if (!shape_intersection.hit) continue;
-                if (bvh.intersection_filter &&
-                    !bvh.intersection_filter(node.primitive_ids[i],
-                        shape_intersection.element_id,
-                        shape_intersection.element_uv))
-                    continue;
                 intersection = {node.primitive_ids[i],
                     shape_intersection.element_id, shape_intersection.element_uv,
                     shape_intersection.distance, true};

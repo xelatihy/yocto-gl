@@ -537,48 +537,6 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
     }
 }
 
-// Functions used for opacity filtering
-bool has_material_opacity_texture(
-    const yocto_scene& scene, const yocto_material& material) {
-    if (material.diffuse_texture < 0) return false;
-    auto& texture = scene.textures[material.diffuse_texture];
-    for (auto& c : texture.ldr_image)
-        if (c.w == 0) return true;
-    for (auto& c : texture.hdr_image)
-        if (c.w == 0) return true;
-    return false;
-}
-bool has_shape_opacity_texture(
-    const yocto_scene& scene, const yocto_shape& shape) {
-    return has_material_opacity_texture(scene, scene.materials[shape.material]);
-}
-bool test_shape_opacity_texture(const yocto_scene& scene,
-    const yocto_shape& shape, int element_id, const vec2f& element_uv) {
-    auto& material = scene.materials[shape.material];
-    if (material.diffuse_texture < 0) return true;
-    auto& texture = scene.textures[material.diffuse_texture];
-    return evaluate_texture(texture,
-               evaluate_shape_texturecoord(shape, element_id, element_uv))
-               .w > 0;
-}
-bool has_surface_opacity_texture(
-    const yocto_scene& scene, const yocto_surface& surface) {
-    for (auto material_id : surface.materials)
-        if (has_material_opacity_texture(scene, scene.materials[material_id]))
-            return true;
-    return false;
-}
-bool test_surface_opacity_texture(const yocto_scene& scene,
-    const yocto_surface& surface, int element_id, const vec2f& element_uv) {
-    auto& material =
-        scene.materials[get_surface_element_material(surface, element_id)];
-    if (material.diffuse_texture < 0) return true;
-    auto& texture = scene.textures[material.diffuse_texture];
-    return evaluate_texture(texture,
-               evaluate_surface_texturecoord(surface, element_id, element_uv))
-               .w > 0;
-}
-
 // Build a scene BVH
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, const build_bvh_options& options) {
@@ -589,25 +547,18 @@ bvh_scene make_scene_bvh(
     for (auto& shape : scene.shapes) {
         // make bvh
         auto shape_bvh       = bvh_shape{};
-        auto filter_function = bvh_shape_filter{};
-        if (options.opacity_filter && has_shape_opacity_texture(scene, shape))
-            filter_function = [&scene, &shape](int element_id,
-                                  const vec2f&     element_uv) -> bool {
-                return test_shape_opacity_texture(
-                    scene, shape, element_id, element_uv);
-            };
         if (!empty(shape.points)) {
             shape_bvh = make_shape_bvh(
-                shape.points, shape.positions, shape.radius, filter_function);
+                shape.points, shape.positions, shape.radius);
         } else if (!empty(shape.lines)) {
             shape_bvh = make_shape_bvh(
-                shape.lines, shape.positions, shape.radius, filter_function);
+                shape.lines, shape.positions, shape.radius);
         } else if (!empty(shape.triangles)) {
             shape_bvh = make_shape_bvh(
-                shape.triangles, shape.positions, filter_function);
+                shape.triangles, shape.positions);
         } else if (!empty(shape.quads)) {
             shape_bvh = make_shape_bvh(
-                shape.quads, shape.positions, filter_function);
+                shape.quads, shape.positions);
         } else {
             shape_bvh = {};
         }
@@ -619,16 +570,9 @@ bvh_scene make_scene_bvh(
     for (auto& surface : scene.surfaces) {
         // make bvh
         auto surface_bvh     = bvh_shape{};
-        auto filter_function = bvh_shape_filter{};
-        if (options.opacity_filter && has_surface_opacity_texture(scene, surface))
-            filter_function = [&scene, &surface](int element_id,
-                                  const vec2f&       element_uv) -> bool {
-                return test_surface_opacity_texture(
-                    scene, surface, element_id, element_uv);
-            };
         if (!empty(surface.quads_positions)) {
             surface_bvh = make_shape_bvh(
-                surface.quads_positions, surface.positions, filter_function);
+                surface.quads_positions, surface.positions);
         } else {
             surface_bvh = {};
         }
