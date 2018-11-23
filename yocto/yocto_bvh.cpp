@@ -448,6 +448,7 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
         memcpy(embree_triangles, data(bvh.triangles), bvh.triangles.size() * 12);
         if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryUserData(embree_geom, &bvh);
             rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
         } 
         rtcCommitGeometry(embree_geom);
@@ -463,6 +464,7 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
         memcpy(embree_quads, data(bvh.quads), bvh.quads.size() * 16);
         if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryUserData(embree_geom, &bvh);
             rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
         } 
         rtcCommitGeometry(embree_geom);
@@ -566,6 +568,7 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh, const build_bvh_options& o
             memcpy(embree_triangles, data(shape_bvh.triangles),
                 shape_bvh.triangles.size() * 12);
         if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryUserData(embree_geom, &shape_bvh);
             rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
         } 
             rtcCommitGeometry(embree_geom);
@@ -585,6 +588,7 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh, const build_bvh_options& o
             memcpy(embree_quads, data(shape_bvh.quads),
                 shape_bvh.quads.size() * 16);
         if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryUserData(embree_geom, &shape_bvh);
             rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
         } 
             rtcCommitGeometry(embree_geom);
