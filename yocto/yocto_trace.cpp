@@ -637,9 +637,9 @@ float sample_lights_or_brdf_direction_pdf(const yocto_scene& scene,
     const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     return 0.5f * sample_lights_direction_pdf(
-                      scene, lights, bvh, position, incoming) +
-           0.5f * sample_smooth_brdf_direction_pdf(
-                      brdf, normal, outgoing, incoming);
+                    scene, lights, bvh, position, incoming) +
+        0.5f * sample_smooth_brdf_direction_pdf(
+                    brdf, normal, outgoing, incoming);
 }
 
 // Russian roulette
@@ -1304,12 +1304,24 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // continue path
-        auto next_direction = sample_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng));
-        auto brdf_cosine    = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
+        auto next_direction = zero3f;
+        auto brdf_cosine = zero3f;
+        auto next_pdf = 0.0f;
+        if(!is_brdf_delta(point.brdf)) {
+            next_direction = sample_lights_or_brdf_direction(scene, lights, bvh, point.brdf, point.position, point.normal,
+                outgoing, get_random_float(rng), get_random_float(rng), get_random_float(rng), get_random_vec2f(rng));
+            brdf_cosine    = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_pdf = sample_lights_or_brdf_direction_pdf(scene, lights, bvh, point.brdf, 
+                point.position, point.normal, outgoing, next_direction);
+        } else {
+            next_direction = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+            brdf_cosine    = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
+        }
 
         // accumulate weight
         if (next_pdf == 0) break;
