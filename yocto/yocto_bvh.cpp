@@ -404,10 +404,11 @@ RTCDevice get_embree_device() {
 // void test_embree_shape_filter(const RTCFilterFunctionNArguments* args) {
 //     auto& bvh = *(bvh_shape*)args->geometryUserPtr;
 //     if(!bvh.intersection_filter) return;
-//     auto element_uv = vec2f{RTCHitN_u(args->hit, args->N, 0), RTCHitN_v(args->hit, args->N, 0)};
-//     auto element_id = (int)RTCHitN_primID(args->hit, args->N, 0);
-//     auto hit = bvh.intersection_filter(element_id, element_uv);
-//     if(hit) args->valid[0] = 0;
+//     auto element_uv = vec2f{RTCHitN_u(args->hit, args->N, 0),
+//     RTCHitN_v(args->hit, args->N, 0)}; auto element_id =
+//     (int)RTCHitN_primID(args->hit, args->N, 0); auto hit =
+//     bvh.intersection_filter(element_id, element_uv); if(hit) args->valid[0] =
+//     0;
 // }
 
 // Build a BVH using Embree.
@@ -451,9 +452,11 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     }
     rtcCommitScene(embree_scene);
 }
-void build_scene_embree_instanced_bvh(bvh_scene& bvh, const build_bvh_options& options) {
+void build_scene_embree_instanced_bvh(
+    bvh_scene& bvh, const build_bvh_options& options) {
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh, options);
+    for (auto& shape_bvh : bvh.shape_bvhs)
+        build_shape_embree_bvh(shape_bvh, options);
     for (auto& surface_bvh : bvh.surface_bvhs)
         build_shape_embree_bvh(surface_bvh, options);
 
@@ -494,9 +497,11 @@ void build_scene_embree_instanced_bvh(bvh_scene& bvh, const build_bvh_options& o
     rtcCommitScene(embree_scene);
     bvh.embree_flattened = false;
 }
-void build_scene_embree_flattened_bvh(bvh_scene& bvh, const build_bvh_options& options) {
+void build_scene_embree_flattened_bvh(
+    bvh_scene& bvh, const build_bvh_options& options) {
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh, options);
+    for (auto& shape_bvh : bvh.shape_bvhs)
+        build_shape_embree_bvh(shape_bvh, options);
     for (auto& surface_bvh : bvh.surface_bvhs)
         build_shape_embree_bvh(surface_bvh, options);
 
@@ -1005,32 +1010,32 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 // Build a BVH from the given set of shape primitives.
 bvh_shape make_shape_bvh(const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
-    auto bvh                = bvh_shape{};
-    bvh.points              = points;
-    bvh.positions           = positions;
-    bvh.radius              = radius;
+    auto bvh      = bvh_shape{};
+    bvh.points    = points;
+    bvh.positions = positions;
+    bvh.radius    = radius;
     return bvh;
 }
 bvh_shape make_shape_bvh(const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
-    auto bvh                = bvh_shape{};
-    bvh.lines               = lines;
-    bvh.positions           = positions;
-    bvh.radius              = radius;
+    auto bvh      = bvh_shape{};
+    bvh.lines     = lines;
+    bvh.positions = positions;
+    bvh.radius    = radius;
     return bvh;
 }
-bvh_shape make_shape_bvh(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
-    auto bvh                = bvh_shape{};
-    bvh.triangles           = triangles;
-    bvh.positions           = positions;
+bvh_shape make_shape_bvh(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+    auto bvh      = bvh_shape{};
+    bvh.triangles = triangles;
+    bvh.positions = positions;
     return bvh;
 }
-bvh_shape make_shape_bvh(const vector<vec4i>& quads,
-    const vector<vec3f>& positions) {
-    auto bvh                = bvh_shape{};
-    bvh.quads               = quads;
-    bvh.positions           = positions;
+bvh_shape make_shape_bvh(
+    const vector<vec4i>& quads, const vector<vec3f>& positions) {
+    auto bvh      = bvh_shape{};
+    bvh.quads     = quads;
+    bvh.positions = positions;
     return bvh;
 }
 
@@ -1048,7 +1053,8 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
     // build shape and surface bvhs
     for (auto& shape_bvh : bvh.shape_bvhs) build_shape_bvh(shape_bvh, options);
-    for (auto& surface_bvh : bvh.surface_bvhs) build_shape_bvh(surface_bvh, options);
+    for (auto& surface_bvh : bvh.surface_bvhs)
+        build_shape_bvh(surface_bvh, options);
 
     // get the number of primitives and the primitive type
     auto prims = vector<bvh_prim>();
@@ -1094,10 +1100,10 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 // Build a BVH from the given set of instances.
 bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
     const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs) {
-    auto bvh                = bvh_scene{};
-    bvh.instances           = instances;
-    bvh.shape_bvhs          = shape_bvhs;
-    bvh.surface_bvhs        = surface_bvhs;
+    auto bvh         = bvh_scene{};
+    bvh.instances    = instances;
+    bvh.shape_bvhs   = shape_bvhs;
+    bvh.surface_bvhs = surface_bvhs;
     return bvh;
 }
 

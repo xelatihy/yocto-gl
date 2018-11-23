@@ -546,7 +546,7 @@ bvh_scene make_scene_bvh(
     auto shape_bvhs = vector<bvh_shape>();
     for (auto& shape : scene.shapes) {
         // make bvh
-        auto shape_bvh       = bvh_shape{};
+        auto shape_bvh = bvh_shape{};
         if (!empty(shape.points)) {
             shape_bvh = make_shape_bvh(
                 shape.points, shape.positions, shape.radius);
@@ -554,11 +554,9 @@ bvh_scene make_scene_bvh(
             shape_bvh = make_shape_bvh(
                 shape.lines, shape.positions, shape.radius);
         } else if (!empty(shape.triangles)) {
-            shape_bvh = make_shape_bvh(
-                shape.triangles, shape.positions);
+            shape_bvh = make_shape_bvh(shape.triangles, shape.positions);
         } else if (!empty(shape.quads)) {
-            shape_bvh = make_shape_bvh(
-                shape.quads, shape.positions);
+            shape_bvh = make_shape_bvh(shape.quads, shape.positions);
         } else {
             shape_bvh = {};
         }
@@ -569,7 +567,7 @@ bvh_scene make_scene_bvh(
     auto surface_bvhs = vector<bvh_shape>();
     for (auto& surface : scene.surfaces) {
         // make bvh
-        auto surface_bvh     = bvh_shape{};
+        auto surface_bvh = bvh_shape{};
         if (!empty(surface.quads_positions)) {
             surface_bvh = make_shape_bvh(
                 surface.quads_positions, surface.positions);
