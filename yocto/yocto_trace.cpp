@@ -564,8 +564,8 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     auto pdf      = 0.0f;
     auto position = position_;
     for (auto bounce = 0; bounce < 10; bounce++) {
-        auto isec = intersect_instance_bvh(bvh,
-            instance_id, make_ray(position, direction));
+        auto isec = intersect_instance_bvh(
+            bvh, instance_id, make_ray(position, direction));
         if (isec.instance_id < 0) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance_id];
@@ -637,9 +637,9 @@ float sample_lights_or_brdf_direction_pdf(const yocto_scene& scene,
     const microfacet_brdf& brdf, const vec3f& position, const vec3f& normal,
     const vec3f& outgoing, const vec3f& incoming) {
     return 0.5f * sample_lights_direction_pdf(
-                    scene, lights, bvh, position, incoming) +
-        0.5f * sample_smooth_brdf_direction_pdf(
-                    brdf, normal, outgoing, incoming);
+                      scene, lights, bvh, position, incoming) +
+           0.5f * sample_smooth_brdf_direction_pdf(
+                      brdf, normal, outgoing, incoming);
 }
 
 // Russian roulette
@@ -876,7 +876,7 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
             mediums.pop_back();
         } else if (ndi < -threshold) {
             // Entering new medium.
-            if (isec.instance_id == mediums.back()) { 
+            if (isec.instance_id == mediums.back()) {
                 pdf = 0;
                 return zero3f;
             }
@@ -1305,15 +1305,18 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
         // continue path
         auto next_direction = zero3f;
-        auto brdf_cosine = zero3f;
-        auto next_pdf = 0.0f;
-        if(!is_brdf_delta(point.brdf)) {
-            next_direction = sample_lights_or_brdf_direction(scene, lights, bvh, point.brdf, point.position, point.normal,
-                outgoing, get_random_float(rng), get_random_float(rng), get_random_float(rng), get_random_vec2f(rng));
+        auto brdf_cosine    = zero3f;
+        auto next_pdf       = 0.0f;
+        if (!is_brdf_delta(point.brdf)) {
+            next_direction = sample_lights_or_brdf_direction(scene, lights, bvh,
+                point.brdf, point.position, point.normal, outgoing,
+                get_random_float(rng), get_random_float(rng),
+                get_random_float(rng), get_random_vec2f(rng));
             brdf_cosine    = evaluate_brdf_cosine(
                 point.brdf, point.normal, outgoing, next_direction);
-            next_pdf = sample_lights_or_brdf_direction_pdf(scene, lights, bvh, point.brdf, 
-                point.position, point.normal, outgoing, next_direction);
+            next_pdf = sample_lights_or_brdf_direction_pdf(scene, lights, bvh,
+                point.brdf, point.position, point.normal, outgoing,
+                next_direction);
         } else {
             next_direction = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
@@ -1348,9 +1351,10 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_naive_nomis(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_naive_nomis(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);

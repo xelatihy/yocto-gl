@@ -130,7 +130,7 @@ enum struct trace_sampler_type {
 };
 
 const auto trace_sampler_type_names = vector<string>{"path", "direct", "naive",
-    "environment", "eyelight", "path_nomis", "direct_nomis", "naive_nomis", 
+    "environment", "eyelight", "path_nomis", "direct_nomis", "naive_nomis",
     "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
     "debug_diffuse", "debug_specular", "debug_roughness"};
 
