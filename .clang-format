@@ -39,5 +39,5 @@ PenaltyBreakBeforeFirstCallParameter: 100
 PenaltyBreakComment: 30
 PenaltyBreakFirstLessLess: 30
 PenaltyBreakString: 30
-PenaltyExcessCharacter: 10
-PenaltyReturnTypeOnItsOwnLine: 100
+PenaltyExcessCharacter: 100
+PenaltyReturnTypeOnItsOwnLine: 50

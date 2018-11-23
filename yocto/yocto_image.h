@@ -198,9 +198,10 @@ image4f gamma_to_linear(const image4f& srgb, float gamma);
 image4f linear_to_gamma(const image4f& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-image4f tonemap_image(const image4f& hdr, float exposure, bool filmic, bool srgb);
-void    tonemap_image_region(image4f& ldr, const image_region& region,
-       const image4f& hdr, float exposure, bool filmic, bool srgb);
+image4f tonemap_image(
+    const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image_region(image4f& ldr, const image_region& region,
+    const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
 image4f resize_image(const image4f& img, int width, int height);
@@ -288,10 +289,12 @@ inline volume1f make_volume(
 
 // Pixel access
 inline float& at(volume1f& vol, const vec3i& ijk) {
-    return vol.voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
+    return vol
+        .voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
 }
 inline const float& at(const volume1f& vol, const vec3i& ijk) {
-    return vol.voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
+    return vol
+        .voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
 }
 inline float& at(volume1f& vol, int i, int j, int k) {
     return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
@@ -346,7 +349,8 @@ inline vec3f gamma_to_linear(const vec3f& srgb, float gamma) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
 }
 inline vec3f linear_to_gamma(const vec3f& lin, float gamma) {
-    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
+    return {
+        pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
 }
 inline vec4f gamma_to_linear(const vec4f& srgb, float gamma) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
@@ -378,7 +382,8 @@ inline vec3f srgb_to_linear(const vec3f& srgb) {
         srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
 }
 inline vec3f linear_to_srgb(const vec3f& lin) {
-    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
+    return {
+        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
     return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),

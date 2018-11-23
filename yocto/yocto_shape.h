@@ -48,7 +48,8 @@
 //    `make_lines_shape()`, `make_points_shape()`, `make_sphere_cube_shape()`,
 //    `make_cube_rounded_shape()`, `make_sphere_flipcap_shape()`,
 //    `make_cylinder_shape()`, `make_cylinder_rounded_shape()`,
-//    `make_disk_shape()`, `make_cylinder_side_shape()`, `make_disk_quad_shape()`
+//    `make_disk_shape()`, `make_cylinder_side_shape()`,
+//    `make_disk_quad_shape()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points_element()`, `sample_lines_element()`,
 //    `sample_triangles_element()`; initialize the sampling CDFs with
@@ -118,7 +119,8 @@ inline float line_length(const vec3f& p0, const vec3f& p1) {
 }
 
 // Triangle properties.
-inline vec3f triangle_normal(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline vec3f triangle_normal(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return normalize(cross(p1 - p0, p2 - p0));
 }
 inline float triangle_area(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
@@ -315,8 +317,9 @@ vector<vector<vec4i>> ungroup_quads(
 // Weld vertices within a threshold.
 tuple<vector<vec3f>, vector<int>> weld_vertices(
     const vector<vec3f>& positions, float threshold);
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, float threshold);
+tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    float threshold);
 tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
     const vector<vec3f>& positions, float threshold);
 
@@ -331,15 +334,18 @@ void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
     vector<vec3f>& tangents, vector<vec2f>& texturecoords,
     vector<float>& radius, const vector<vec2i>& merge_lines,
     const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
-    const vector<vec2f>& merge_texturecoords, const vector<float>& merge_radius);
+    const vector<vec2f>& merge_texturecoords,
+    const vector<float>& merge_radius);
 void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vector<vec2i>& merge_triangles, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords);
 void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
     const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals, const vector<vec2f>& merge_texturecoords);
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords);
 
 }  // namespace yocto
 
@@ -443,18 +449,22 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed = 7);
 
-// Data structure used for geodesic computation
-struct edge_graph {
-    vector<vector<pair<int, float>>> edges = {};
-    vector<vec3f> positions = {};
-};
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // SHAPE GEODESICS
 // -----------------------------------------------------------------------------
 namespace yocto {
+
+// Data structure used for geodesic computation
+struct edge_graph {
+    vector<vector<pair<int, float>>> edges     = {};
+    vector<vec3f>                    positions = {};
+};
+
+// Construct an edge graph
+edge_graph make_edge_graph(
+    const vector<vec3i>& triangles, vector<vec3f>& positions);
 
 }  // namespace yocto
 
@@ -465,29 +475,34 @@ namespace yocto {
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_quad_shape(
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_quad_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_quad_stack_shape(
     const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v);
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_floor_shape(
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_floor_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-                                                                  make_floor_bent_shape(const vec2i& steps, const vec2f& size,
-                                                                      const vec2f& uvsize, float radius, bool flip_v);
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cube_shape(
+make_floor_bent_shape(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, float radius, bool flip_v);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_cube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-                                                                  make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
-                                                                      const vec3f& uvsize, float radius, bool flip_v);
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_sphere_shape(
+make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize, float radius, bool flip_v);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_sphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_sphere_cube_shape(int steps, float size, float uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-                                                                  make_sphere_flipcap_shape(const vec2i& steps, float size, const vec2f& uvsize,
-                                                                      const vec2f& zflip, bool flip_v);
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_disk_shape(
+make_sphere_flipcap_shape(const vec2i& steps, float size, const vec2f& uvsize,
+    const vec2f& zflip, bool flip_v);
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_disk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_disk_quad_shape(int steps, float size, float uvsize, bool flip_v);
@@ -497,7 +512,8 @@ make_disk_bulged_shape(
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
 make_cylinder_side_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_cylinder_shape(
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_cylinder_shape(
     const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v);
 tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
                                                    make_cylinder_rounded_shape(const vec3i& steps, const vec2f& size,
@@ -555,8 +571,8 @@ make_hair_shape(const vec2i& steps, const vector<vec3i>& striangles,
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
 // cases.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>> make_shell_shape(
-    const vector<vec4i>& quads, const vector<vec3f>& positions,
+tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
+make_shell_shape(const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     float thickness);
 

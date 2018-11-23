@@ -57,7 +57,8 @@ image4b get_image_region(const image4b& img, const image_region& region) {
 }
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(int width, int height, int region_size) {
+vector<image_region> make_image_regions(
+    int width, int height, int region_size) {
     auto regions = vector<image_region>{};
     for (auto y = 0; y < height; y += region_size) {
         for (auto x = 0; x < width; x += region_size) {
@@ -129,11 +130,13 @@ image4b float_to_byte(const image4f& fl) {
 }
 
 // Tonemap image
-image4f tonemap_image(const image4f& hdr, float exposure, bool filmic, bool srgb) {
+image4f tonemap_image(
+    const image4f& hdr, float exposure, bool filmic, bool srgb) {
     auto ldr = make_image(hdr.width, hdr.height, zero4f);
     for (auto j = 0; j < hdr.height; j++) {
         for (auto i = 0; i < hdr.width; i++) {
-            at(ldr, i, j) = tonemap_filmic(at(hdr, i, j), exposure, filmic, srgb);
+            at(ldr, i, j) = tonemap_filmic(
+                at(hdr, i, j), exposure, filmic, srgb);
         }
     }
     return ldr;
@@ -144,7 +147,8 @@ void tonemap_image_region(image4f& ldr, const image_region& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb) {
     for (auto j = region.offsety; j < region.offsety + region.height; j++) {
         for (auto i = region.offsetx; i < region.offsetx + region.width; i++) {
-            at(ldr, i, j) = tonemap_filmic(at(hdr, i, j), exposure, filmic, srgb);
+            at(ldr, i, j) = tonemap_filmic(
+                at(hdr, i, j), exposure, filmic, srgb);
         }
     }
 }
@@ -206,7 +210,8 @@ image4f make_bumpdimple_image(int width, int height, int tiles) {
 }
 
 // Make a uv colored grid
-image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1) {
+image4f make_ramp_image(
+    int width, int height, const vec4f& c0, const vec4f& c1) {
     auto img = make_image(width, height, zero4f);
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
@@ -295,7 +300,8 @@ image4f bump_to_normal_map(const image4f& img, float scale) {
     for (int j = 0; j < img.height; j++) {
         for (int i = 0; i < img.width; i++) {
             auto i1 = (i + 1) % img.width, j1 = (j + 1) % img.height;
-            auto p00 = at(img, i, j), p10 = at(img, i1, j), p01 = at(img, i, j1);
+            auto p00 = at(img, i, j), p10 = at(img, i1, j),
+                 p01    = at(img, i, j1);
             auto g00    = (p00.x + p00.y + p00.z) / 3;
             auto g01    = (p01.x + p01.y + p01.z) / 3;
             auto g10    = (p10.x + p10.y + p10.z) / 3;
@@ -346,7 +352,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
             auto phi       = (i + 0.5f) * 2 * pif / width;
             auto direction = vec3f{
                 cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma = acos(clamp(dot(direction, sun_direction), -1.0f, 1.0f));
+            auto gamma = acos(
+                clamp(dot(direction, sun_direction), -1.0f, 1.0f));
             for (int c = 0; c < 9; ++c) {
                 auto val = (has_sun) ?
                                arhosekskymodel_solar_radiance(skymodel_state[c],
@@ -379,7 +386,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
 // Implementation of sunsky modified heavily from pbrt
 image4f make_sunsky_image(int width, int height, float theta_sun,
     float turbidity, bool has_sun, float sun_angle_scale,
-    float sun_emission_scale, const vec3f& ground_albedo, bool renormalize_sun) {
+    float sun_emission_scale, const vec3f& ground_albedo,
+    bool renormalize_sun) {
     auto zenith_xyY = vec3f{
         (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
             0.00208f * theta_sun + 0) *
@@ -398,7 +406,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
             (+0.15346f * pow(theta_sun, 3.f) - 0.26756f * pow(theta_sun, 2.f) +
                 0.06669f * theta_sun + 0.26688f),
         1000 * (4.0453f * turbidity - 4.9710f) *
-                tan((4.0f / 9.0f - turbidity / 120.0f) * (pif - 2 * theta_sun)) -
+                tan((4.0f / 9.0f - turbidity / 120.0f) *
+                    (pif - 2 * theta_sun)) -
             .2155f * turbidity + 2.4192f};
 
     auto perez_A_xyY = vec3f{-0.01925f * turbidity - 0.25922f,
@@ -414,8 +423,9 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
 
     auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
                        float gamma, float theta_sun, vec3f zenith) -> vec3f {
-        auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
-                                           E * cos(theta_sun) * cos(theta_sun)));
+        auto den = ((1 + A * exp(B)) *
+                    (1 + C * exp(D * theta_sun) +
+                        E * cos(theta_sun) * cos(theta_sun)));
         auto num = ((1 + A * exp(B / cos(theta))) *
                     (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
         return zenith * num / den;
@@ -465,7 +475,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
     auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
         // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
         //                                                zero3f;
-        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 : zero3f;
+        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 :
+                                                         zero3f;
     };
 
     // Make the sun sky image
@@ -644,7 +655,8 @@ volume1f make_test_volume(
                 auto p = vec3f{
                     i / (float)width, j / (float)height, k / (float)depth};
                 float value = pow(
-                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f), exponent);
+                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
+                    exponent);
                 at(vol, i, j, k) = clamp(value, 0.0f, 1.0f);
             }
         }

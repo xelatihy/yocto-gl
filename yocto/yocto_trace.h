@@ -135,10 +135,10 @@ const auto trace_sampler_type_names = vector<string>{"path", "direct", "naive",
     "debug_diffuse", "debug_specular", "debug_roughness"};
 
 // Tracer function
-using trace_sampler_func =
-    function<pair<vec3f, bool>(const yocto_scene& scene, const bvh_scene& bvh,
-        const trace_lights& lights, const vec3f& position, const vec3f& direction,
-        rng_state& rng, int max_bounces, bool environments_hidden)>;
+using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions
@@ -206,7 +206,8 @@ vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak);
 vec3f fresnel_schlick(const vec3f& ks, float cosw);
 vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
 vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& o);
-vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& o, float rs);
+vec3f fresnel_schlick(
+    const vec3f& ks, const vec3f& h, const vec3f& o, float rs);
 
 // Evaluates the GGX distribution and geometric term.
 float evaluate_ggx(float rs, float ndh, float ndi, float ndo);

@@ -84,7 +84,8 @@ struct app_state {
 };
 
 void stop_rendering_async(app_state& app) {
-    trace_image_async_stop(app.trace_threads, app.trace_queue, app.trace_options);
+    trace_image_async_stop(
+        app.trace_threads, app.trace_queue, app.trace_options);
 }
 
 void start_rendering_async(app_state& app) {
@@ -112,8 +113,10 @@ void start_rendering_async(app_state& app) {
     auto large_preview = make_image(app.image_width, app.image_height, zero4f);
     for (auto j = 0; j < app.image_height; j++) {
         for (auto i = 0; i < app.image_width; i++) {
-            auto pi = clamp(i / app.preview_ratio, 0, display_preview.width - 1),
-                 pj = clamp(j / app.preview_ratio, 0, display_preview.height - 1);
+            auto pi = clamp(
+                     i / app.preview_ratio, 0, display_preview.width - 1),
+                 pj = clamp(
+                     j / app.preview_ratio, 0, display_preview.height - 1);
             at(large_preview, i, j) = at(display_preview, pi, pj);
         }
     }
@@ -121,8 +124,9 @@ void start_rendering_async(app_state& app) {
     app.trace_queue.push({0, 0, 0, 0});
 
     app.trace_options.cancel_flag = &app.trace_stop;
-    trace_image_async_start(app.image, app.state, app.scene, app.bvh, app.lights,
-        app.trace_threads, app.trace_sample, app.trace_queue, app.trace_options);
+    trace_image_async_start(app.image, app.state, app.scene, app.bvh,
+        app.lights, app.trace_threads, app.trace_sample, app.trace_queue,
+        app.trace_options);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -348,7 +352,8 @@ bool update(app_state& app) {
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
-    trace_image_async_stop(app.trace_threads, app.trace_queue, app.trace_options);
+    trace_image_async_stop(
+        app.trace_threads, app.trace_queue, app.trace_options);
     app.filename = paths.front();
     load_scene_async(app);
 }
@@ -401,10 +406,11 @@ void run_ui(app_state& app) {
                 app.image_scale, {app.image.width, app.image.height});
             if (ij.x < 0 || ij.x >= app.image.width || ij.y < 0 ||
                 ij.y >= app.image.height) {
-                auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
-                auto  ray    = evaluate_camera_ray(camera, ij,
+                auto& camera = app.scene.cameras.at(
+                    app.trace_options.camera_id);
+                auto ray  = evaluate_camera_ray(camera, ij,
                     {app.image.width, app.image.height}, {0.5f, 0.5f}, zero2f);
-                auto  isec   = intersect_scene_bvh(app.bvh, ray);
+                auto isec = intersect_scene_bvh(app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {typeid(yocto_instance), isec.instance_id};
             }
@@ -481,7 +487,8 @@ int main(int argc, char* argv[]) {
     run_ui(app);
 
     // cleanup
-    trace_image_async_stop(app.trace_threads, app.trace_queue, app.trace_options);
+    trace_image_async_stop(
+        app.trace_threads, app.trace_queue, app.trace_options);
 
     // done
     return 0;

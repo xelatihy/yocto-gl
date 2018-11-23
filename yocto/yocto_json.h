@@ -113,7 +113,8 @@ inline bool has_json_key(const json& js, const char* key);
 
 // Get a value from a JSON key or a default value if any error occurs
 template <typename T>
-inline T get_json_value(const json& js, const char* key, const T& default_value);
+inline T get_json_value(
+    const json& js, const char* key, const T& default_value);
 
 }  // namespace yocto
 
@@ -401,7 +402,8 @@ inline bool has_json_key(const json& js, const char* key) {
 
 // Get a value from a JSON key or a default value if any error occurs
 template <typename T>
-inline T get_json_value(const json& js, const char* key, const T& default_value) {
+inline T get_json_value(
+    const json& js, const char* key, const T& default_value) {
     if (!js.is_object()) return default_value;
     if (js.count(key) <= 0) return default_value;
     auto value = default_value;

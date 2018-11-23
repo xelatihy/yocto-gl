@@ -144,13 +144,15 @@ void save_image_async(app_image& img) {
 }
 
 // add a new image
-void add_new_image(app_state& app, const string& filename, const string& outname,
-    float exposure = 0, bool filmic = false, bool srgb = true) {
+void add_new_image(app_state& app, const string& filename,
+    const string& outname, float exposure = 0, bool filmic = false,
+    bool srgb = true) {
     app.imgs.emplace_back();
     auto& img    = app.imgs.back();
     img.filename = filename;
-    img.outname = (outname == "") ? replace_extension(filename, ".display.png") :
-                                    outname;
+    img.outname  = (outname == "") ?
+                      replace_extension(filename, ".display.png") :
+                      outname;
     img.name         = get_filename(filename);
     img.exposure     = exposure;
     img.filmic       = filmic;
@@ -171,11 +173,13 @@ void draw_opengl_widgets(const opengl_window& win) {
         if (begin_header_opengl_widget(win, "image")) {
             draw_combobox_opengl_widget(
                 win, "image", app.img_id, app.imgs, false);
-            draw_label_opengl_widget(win, "filename", "%s", img.filename.c_str());
+            draw_label_opengl_widget(
+                win, "filename", "%s", img.filename.c_str());
             draw_textinput_opengl_widget(win, "outname", img.outname);
             if (draw_button_opengl_widget(win, "save display")) {
                 if (img.display_done) {
-                    img.save_thread = thread([&img]() { save_image_async(img); });
+                    img.save_thread = thread(
+                        [&img]() { save_image_async(img); });
                 }
             }
             auto status = string();

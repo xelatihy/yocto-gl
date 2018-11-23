@@ -130,15 +130,17 @@ bool save_ybin_scene(const string& filename, const yocto_scene& scene,
 namespace yocto {
 
 // Load/Save a mesh
-bool load_mesh(const string& filename, vector<int>& points, vector<vec2i>& lines,
-    vector<vec3i>& triangles, vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
-    vector<float>& radius, bool force_triangles);
+bool load_mesh(const string& filename, vector<int>& points,
+    vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius,
+    bool force_triangles);
 bool save_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<vec4f>& colors, const vector<float>& radius, bool ascii = false);
+    const vector<vec4f>& colors, const vector<float>& radius,
+    bool ascii = false);
 
 // Load/Save a ply mesh
 bool load_ply_mesh(const string& filename, vector<int>& points,
@@ -166,10 +168,11 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
     bool flip_texcoord = true);
 
 // Load/Save a face-varying mesh
-bool load_facevarying_mesh(const string& filename, vector<vec4i>& quads_positions,
-    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
-    vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<int>& quads_materials);
+bool load_facevarying_mesh(const string& filename,
+    vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
+    vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    vector<int>& quads_materials);
 bool save_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,

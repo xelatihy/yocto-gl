@@ -163,12 +163,14 @@ inline void draw_opengl_widgets_scene_tree(
     const opengl_window& win, yocto_scene& scene, pair<type_index, int>& sel) {
     if (!empty(scene.cameras) && begin_treenode_opengl_widget(win, "cameras")) {
         for (auto v = 0; v < scene.cameras.size(); v++)
-            draw_opengl_widgets_scene_tree(win, "", scene, v, scene.cameras, sel);
+            draw_opengl_widgets_scene_tree(
+                win, "", scene, v, scene.cameras, sel);
         end_treenode_opengl_widget(win);
     }
     if (!empty(scene.shapes) && begin_treenode_opengl_widget(win, "shapes")) {
         for (auto v = 0; v < scene.shapes.size(); v++)
-            draw_opengl_widgets_scene_tree(win, "", scene, v, scene.shapes, sel);
+            draw_opengl_widgets_scene_tree(
+                win, "", scene, v, scene.shapes, sel);
         end_treenode_opengl_widget(win);
     }
     if (!empty(scene.instances) &&
@@ -185,7 +187,8 @@ inline void draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.materials, sel);
         end_treenode_opengl_widget(win);
     }
-    if (!empty(scene.textures) && begin_treenode_opengl_widget(win, "textures")) {
+    if (!empty(scene.textures) &&
+        begin_treenode_opengl_widget(win, "textures")) {
         for (auto v = 0; v < scene.textures.size(); v++)
             draw_opengl_widgets_scene_tree(
                 win, "", scene, v, scene.textures, sel);
@@ -264,7 +267,8 @@ inline bool draw_opengl_widgets_scene_inspector(
     edited += draw_coloredit_opengl_widget(win, "specular", value.specular);
     edited += draw_coloredit_opengl_widget(
         win, "transmission", value.transmission);
-    edited += draw_slider_opengl_widget(win, "roughness", value.roughness, 0, 1);
+    edited += draw_slider_opengl_widget(
+        win, "roughness", value.roughness, 0, 1);
     edited += draw_slider_opengl_widget(win, "opacity", value.opacity, 0, 1);
     continue_opengl_widget_line(win);
     edited += draw_checkbox_opengl_widget(win, "fresnel", value.fresnel);
@@ -313,7 +317,8 @@ inline bool draw_opengl_widgets_scene_inspector(
     draw_label_opengl_widget(win, "quads", "%ld", value.quads.size());
     draw_label_opengl_widget(win, "pos", "%ld", value.positions.size());
     draw_label_opengl_widget(win, "norm", "%ld", value.normals.size());
-    draw_label_opengl_widget(win, "texcoord", "%ld", value.texturecoords.size());
+    draw_label_opengl_widget(
+        win, "texcoord", "%ld", value.texturecoords.size());
     draw_label_opengl_widget(win, "color", "%ld", value.colors.size());
     draw_label_opengl_widget(win, "radius", "%ld", value.radius.size());
     draw_label_opengl_widget(win, "tangsp", "%ld", value.tangentspaces.size());

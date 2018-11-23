@@ -306,7 +306,8 @@ void bind_opengl_program(opengl_program& program) {
 }
 void unbind_opengl_program() { glUseProgram(0); }
 
-int get_opengl_uniform_location(const opengl_program& program, const char* name) {
+int get_opengl_uniform_location(
+    const opengl_program& program, const char* name) {
     return glGetUniformLocation(program.program_id, name);
 }
 
@@ -605,7 +606,8 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
 }
 
 bool init_opengl_window(opengl_window& win, const vec2i& size,
-    const string& title, void* user_pointer, refresh_opengl_callback refresh_cb) {
+    const string& title, void* user_pointer,
+    refresh_opengl_callback refresh_cb) {
     // init glfw
     if (!glfwInit()) log_fatal("cannot initialize windowing system");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
@@ -642,7 +644,8 @@ void delete_opengl_window(opengl_window& win) {
 
 void* get_opengl_user_pointer(const opengl_window& win) { return win.user_ptr; }
 
-void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb) {
+void set_drop_opengl_callback(
+    opengl_window& win, drop_opengl_callback drop_cb) {
     win.drop_cb = drop_cb;
     glfwSetDropCallback(win.win, _glfw_drop_callback);
 }
