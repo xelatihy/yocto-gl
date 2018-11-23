@@ -1373,33 +1373,35 @@ pair<vec3f, bool> trace_naive_nomis(const yocto_scene& scene,
 
     // trace  path
     for (auto bounce = 0; bounce < max_bounces; bounce++) {
+        // exit if needed
+        if(is_brdf_zero(point.brdf) || weight == zero3f) break;
+
         // continue path
         auto next_direction = sample_brdf_direction(point.brdf, point.normal,
             outgoing, get_random_float(rng), get_random_vec2f(rng));
-        auto brdf_cosine    = evaluate_brdf_cosine(
+        auto next_brdf_cosine    = evaluate_brdf_cosine(
             point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_brdf_direction_pdf(
+        auto next_direction_pdf = sample_brdf_direction_pdf(
             point.brdf, point.normal, outgoing, next_direction);
 
-        // accumulate weight
-        if (next_pdf == 0) break;
-        weight *= brdf_cosine / next_pdf;
-        if (weight == zero3f) break;
-
-        // russian roulette
-        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(weight, bounce);
+        // exit if no hit
+        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
 
         // intersect next point
         auto next_point = trace_ray_with_opacity(
             scene, bvh, point.position, next_direction, rng, max_bounces);
-        radiance += weight * next_point.emission;
+        radiance += weight * next_brdf_cosine * next_point.emission / next_direction_pdf;
         if (next_point.instance_id < 0 || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point    = next_point;
         outgoing = -next_direction;
+        weight *= next_brdf_cosine / next_direction_pdf;
+
+        // russian roulette
+        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
     return {radiance, true};
