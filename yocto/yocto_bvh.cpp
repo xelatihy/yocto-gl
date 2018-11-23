@@ -400,8 +400,33 @@ RTCDevice get_embree_device() {
     return device;
 }
 
+// struct RTCFilterFunctionNArguments
+// {
+//   int* valid;
+//   void* geometryUserPtr;
+//   const struct RTCIntersectContext* context;
+//   struct RTCRayN* ray;
+//   struct RTCHitN* hit;
+//   unsigned int N;
+// };
+
+// float& RTCHitN_u(RTCHitN* hit, unsigned int N, unsigned int i);
+// float& RTCHitN_v(RTCHitN* hit, unsigned int N, unsigned int i);
+// unsigned& RTCHitN_primID(RTCHitN* hit, unsigned int N, unsigned int i);
+// unsigned& RTCHitN_geomID(RTCHitN* hit, unsigned int N, unsigned int i);
+// unsigned& RTCHitN_instID(RTCHitN* hit, unsigned int N, unsigned int i, unsigned int l);
+
+void test_embree_shape_filter(const RTCFilterFunctionNArguments* args) {
+    auto& bvh = *(bvh_shape*)args->geometryUserPtr;
+    if(!bvh.intersection_filter) return;
+    auto element_uv = vec2f{RTCHitN_u(args->hit, args->N, 0), RTCHitN_v(args->hit, args->N, 0)};
+    auto element_id = (int)RTCHitN_primID(args->hit, args->N, 0);
+    auto hit = bvh.intersection_filter(element_id, element_uv);
+    if(hit) args->valid[0] = 0;
+}
+
 // Build a BVH using Embree.
-void build_shape_embree_bvh(bvh_shape& bvh) {
+void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     auto embree_device = get_embree_device();
     auto embree_scene  = rtcNewScene(embree_device);
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
@@ -422,6 +447,9 @@ void build_shape_embree_bvh(bvh_shape& bvh) {
             bvh.triangles.size());
         memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
         memcpy(embree_triangles, data(bvh.triangles), bvh.triangles.size() * 12);
+        if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
+        } 
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!empty(bvh.quads)) {
@@ -434,6 +462,9 @@ void build_shape_embree_bvh(bvh_shape& bvh) {
             RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
         memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
         memcpy(embree_quads, data(bvh.quads), bvh.quads.size() * 16);
+        if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
+        } 
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else {
@@ -441,11 +472,11 @@ void build_shape_embree_bvh(bvh_shape& bvh) {
     }
     rtcCommitScene(embree_scene);
 }
-void build_scene_embree_instanced_bvh(bvh_scene& bvh) {
+void build_scene_embree_instanced_bvh(bvh_scene& bvh, const build_bvh_options& options) {
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh);
+    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh, options);
     for (auto& surface_bvh : bvh.surface_bvhs)
-        build_shape_embree_bvh(surface_bvh);
+        build_shape_embree_bvh(surface_bvh, options);
 
     // scene bvh
     auto embree_device = get_embree_device();
@@ -484,11 +515,11 @@ void build_scene_embree_instanced_bvh(bvh_scene& bvh) {
     rtcCommitScene(embree_scene);
     bvh.embree_flattened = false;
 }
-void build_scene_embree_flattened_bvh(bvh_scene& bvh) {
+void build_scene_embree_flattened_bvh(bvh_scene& bvh, const build_bvh_options& options) {
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh);
+    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_embree_bvh(shape_bvh, options);
     for (auto& surface_bvh : bvh.surface_bvhs)
-        build_shape_embree_bvh(surface_bvh);
+        build_shape_embree_bvh(surface_bvh, options);
 
     // scene bvh
     auto embree_device = get_embree_device();
@@ -534,6 +565,9 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh) {
                 transformed_positions.size() * 12);
             memcpy(embree_triangles, data(shape_bvh.triangles),
                 shape_bvh.triangles.size() * 12);
+        if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
+        } 
             rtcCommitGeometry(embree_geom);
             rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
         } else if (!empty(shape_bvh.quads)) {
@@ -550,6 +584,9 @@ void build_scene_embree_flattened_bvh(bvh_scene& bvh) {
                 transformed_positions.size() * 12);
             memcpy(embree_quads, data(shape_bvh.quads),
                 shape_bvh.quads.size() * 16);
+        if (options.opacity_filter && bvh.intersection_filter) {
+            rtcSetGeometryIntersectFilterFunction(embree_geom, test_embree_shape_filter);
+        } 
             rtcCommitGeometry(embree_geom);
             rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
         } else {
@@ -952,7 +989,7 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
 // Build a BVH from a set of primitives.
 void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 #if YOCTO_EMBREE
-    if (options.use_embree) return build_shape_embree_bvh(bvh);
+    if (options.use_embree) return build_shape_embree_bvh(bvh, options);
 #endif
 
     // get the number of primitives and the primitive type
@@ -1035,16 +1072,16 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 #if YOCTO_EMBREE
     if (options.use_embree) {
         if (options.flatten_embree) {
-            return build_scene_embree_flattened_bvh(bvh);
+            return build_scene_embree_flattened_bvh(bvh, options);
         } else {
-            return build_scene_embree_instanced_bvh(bvh);
+            return build_scene_embree_instanced_bvh(bvh, options);
         }
     }
 #endif
 
     // build shape and surface bvhs
-    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_bvh(shape_bvh);
-    for (auto& surface_bvh : bvh.surface_bvhs) build_shape_bvh(surface_bvh);
+    for (auto& shape_bvh : bvh.shape_bvhs) build_shape_bvh(shape_bvh, options);
+    for (auto& surface_bvh : bvh.surface_bvhs) build_shape_bvh(surface_bvh, options);
 
     // get the number of primitives and the primitive type
     auto prims = vector<bvh_prim>();
