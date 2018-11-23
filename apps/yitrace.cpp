@@ -404,7 +404,7 @@ void run_ui(app_state& app) {
                 auto& camera = app.scene.cameras.at(app.trace_options.camera_id);
                 auto  ray    = evaluate_camera_ray(camera, ij,
                     {app.image.width, app.image.height}, {0.5f, 0.5f}, zero2f);
-                auto  isec   = intersect_scene(app.scene, app.bvh, ray);
+                auto  isec   = intersect_scene_bvh(app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {typeid(yocto_instance), isec.instance_id};
             }

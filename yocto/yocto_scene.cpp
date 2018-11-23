@@ -541,9 +541,11 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 bvh_scene make_scene_bvh(
     const yocto_scene& scene, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
+
     // shapes
     auto shape_bvhs = vector<bvh_shape>();
     for (auto& shape : scene.shapes) {
+        // make bvh
         auto shape_bvh = bvh_shape{};
         if (!empty(shape.points)) {
             shape_bvh = make_shape_bvh(
@@ -564,6 +566,7 @@ bvh_scene make_scene_bvh(
     // surfaces
     auto surface_bvhs = vector<bvh_shape>();
     for (auto& surface : scene.surfaces) {
+        // make bvh
         auto surface_bvh = bvh_shape{};
         if (!empty(surface.quads_positions)) {
             surface_bvh = make_shape_bvh(
@@ -753,37 +756,6 @@ void log_validation_errors(const yocto_scene& scene, bool skip_textures) {
 // IMPLEMENTATION FOR EVAL AND SAMPLING FUNCTIONS
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Scene intersection.
-scene_intersection intersect_scene(const yocto_scene& scene,
-    const bvh_scene& bvh, const ray3f& ray, bool find_any) {
-    auto isec = scene_intersection();
-    if (!intersect_scene_bvh(bvh, ray, find_any, isec.distance,
-            isec.instance_id, isec.element_id, isec.element_uv))
-        return {};
-    return isec;
-}
-
-// Instance intersection.
-scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
-    const bvh_scene& bvh, const ray3f& ray, bool find_any) {
-    auto& instance = scene.instances[instance_id];
-    auto  isec     = scene_intersection();
-    auto  tray     = transform_ray_inverse(instance.frame, ray);
-    if (instance.shape >= 0) {
-        if (!intersect_shape_bvh(bvh.shape_bvhs[instance.shape], tray, find_any,
-                isec.distance, isec.element_id, isec.element_uv))
-            return {};
-    } else if (instance.surface) {
-        if (!intersect_shape_bvh(bvh.shape_bvhs[instance.surface], tray,
-                find_any, isec.distance, isec.element_id, isec.element_uv))
-            return {};
-    } else {
-        return {};
-    }
-    isec.instance_id = instance_id;
-    return isec;
-}
 
 // Shape element normal.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {

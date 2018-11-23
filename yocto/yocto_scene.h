@@ -332,22 +332,6 @@ void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const vector<int>& updated_surfaces);
 
-// Scene intersection. Upron intersection we set the instance pointer,
-// the shape element_id and element_uv and the inetrsection distance.
-struct scene_intersection {
-    int   instance_id = -1;
-    int   element_id  = -1;
-    vec2f element_uv  = zero2f;
-    float distance    = float_max;
-};
-
-// Intersects a ray with the scene.
-scene_intersection intersect_scene(const yocto_scene& scene,
-    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
-// Intersects a ray with a scene instance.
-scene_intersection intersect_scene(const yocto_scene& scene, int instance_id,
-    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
-
 // Apply subdivision and displacement rules.
 void tesselate_shapes_and_surfaces(yocto_scene& scene);
 
