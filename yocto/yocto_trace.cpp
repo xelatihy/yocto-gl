@@ -1157,52 +1157,63 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         // exit if needed
         if(is_brdf_zero(point.brdf) || weight == zero3f) break;
 
-        // direct
-        if (!is_brdf_delta(point.brdf) &&
-            !(empty(lights.instances) && empty(lights.environments))) {
-            auto light_direction = sample_lights_or_brdf_direction(scene,
-                lights, bvh, point.brdf, point.position, point.normal, outgoing,
-                get_random_float(rng), get_random_float(rng),
+        // continue path
+        auto next_direction = zero3f, light_direction = zero3f;
+        auto next_brdf_cosine    = zero3f,light_brdf_cosine    = zero3f;
+        auto next_direction_pdf       = 0.0f,light_direction_pdf       = 0.0f;
+        if (!is_brdf_delta(point.brdf)) {
+            next_direction = sample_brdf_direction(
+                point.brdf, point.normal, outgoing,
                 get_random_float(rng), get_random_vec2f(rng));
-            auto light_pdf = sample_lights_or_brdf_direction_pdf(scene, lights,
-                bvh, point.brdf, point.position, point.normal, outgoing,
-                light_direction);
-            auto light_point = trace_ray_with_opacity(
-                scene, bvh, point.position, light_direction, rng, max_bounces);
-            auto brdf_cosine = evaluate_smooth_brdf_cosine(
+            light_direction = sample_lights_direction(scene, lights, bvh,
+                point.position, get_random_float(rng),
+                get_random_float(rng), get_random_vec2f(rng));
+            next_brdf_cosine    = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            light_brdf_cosine    = evaluate_brdf_cosine(
                 point.brdf, point.normal, outgoing, light_direction);
-            if (light_pdf)
-                radiance += weight * light_point.emission * brdf_cosine /
-                            light_pdf;
+            next_direction_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing,
+                next_direction) + sample_lights_direction_pdf(scene, lights, bvh,
+                point.position, 
+                next_direction);
+            light_direction_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing,
+                light_direction) + sample_lights_direction_pdf(scene, lights, bvh,
+                point.position, 
+                light_direction);
+        } else {
+            next_direction = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+            next_brdf_cosine    = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_direction_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
         }
 
-        // continue path
-        auto next_direction = sample_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng));
-        auto brdf_cosine    = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-
-        // accumulate weight
-        if (next_pdf == 0) break;
-        weight *= brdf_cosine / next_pdf;
-        if (weight == zero3f) break;
-
-        // russian roulette
-        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(weight, bounce);
-
-        // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, max_bounces);
-        if (is_brdf_delta(point.brdf)) radiance += weight * next_point.emission;
+        // intersect points
+        auto next_point = trace_point{}, light_point = trace_point{};
+        if (next_direction_pdf > 0 && next_brdf_cosine != zero3f) {
+            next_point = trace_ray_with_opacity(
+                scene, bvh, point.position, next_direction, rng, max_bounces);
+            radiance += weight * next_brdf_cosine * next_point.emission / next_direction_pdf;
+        }
+        if (light_direction_pdf > 0 && light_brdf_cosine != zero3f) {
+            light_point = trace_ray_with_opacity(
+                scene, bvh, point.position, light_direction, rng, max_bounces);
+            radiance += weight * light_brdf_cosine * light_point.emission / light_direction_pdf;
+        }
         if (next_point.instance_id < 0 || is_brdf_zero(next_point.brdf)) break;
 
         // setup next iteration
         point    = next_point;
         outgoing = -next_direction;
+        weight *= next_brdf_cosine / next_direction_pdf;
+
+        // russian roulette
+        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
     return {radiance, true};
