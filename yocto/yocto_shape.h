@@ -456,15 +456,24 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Arc of edge graph
+struct edge_graph_arc {
+    int   node   = 0;
+    float length = 0;
+};
+
 // Data structure used for geodesic computation
 struct edge_graph {
-    vector<vector<pair<int, float>>> edges     = {};
-    vector<vec3f>                    positions = {};
+    vector<vector<edge_graph_arc>> graph     = {};
+    vector<vec3f>                  positions = {};
 };
 
 // Construct an edge graph
 edge_graph make_edge_graph(
     const vector<vec3i>& triangles, vector<vec3f>& positions);
+vector<float> compute_geodesic_distances(edge_graph& graph, 
+    const vector<int>& sources);
+vector<vec4f> convert_distance_to_color(const vector<float>& distances);
 
 }  // namespace yocto
 

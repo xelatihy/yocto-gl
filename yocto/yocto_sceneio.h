@@ -101,6 +101,12 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
 bool save_obj_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options = {});
 
+// Load/save a scene from/to PLY. Loads/saves only one mesh with no other data.
+bool load_ply_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options = {});
+bool save_ply_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options = {});
+
 // Load/save a scene from/to glTF.
 bool load_gltf_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options = {});

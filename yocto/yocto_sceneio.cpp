@@ -345,6 +345,8 @@ bool load_scene(const string& filename, yocto_scene& scene,
         return load_pbrt_scene(filename, scene, options);
     } else if (ext == "ybin" || ext == "YBIN") {
         return load_ybin_scene(filename, scene, options);
+    } else if (ext == "ply" || ext == "PLY") {
+        return load_ply_scene(filename, scene, options);
     } else {
         scene = {};
         log_io_error("unsupported scene format {}", ext);
@@ -3090,6 +3092,51 @@ bool save_obj_scene(const string& filename, const yocto_scene& scene,
     if (!save_scene_textures(scene, dirname, options)) return false;
 
     // done
+    return true;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// PLY CONVERSION
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+bool load_ply_scene(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
+    scene = {};
+
+    // load ply mesh
+    scene.shapes.push_back({});
+    auto& shape = scene.shapes.back();
+    if (!load_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.positions, shape.normals, shape.texturecoords,
+            shape.colors, shape.radius, false))
+        return false;
+    
+    // add instance
+    auto instance = yocto_instance{};
+    instance.name = shape.name;
+    instance.shape = 0;
+    scene.instances.push_back(instance);
+
+    // fix scene
+    scene.name = get_filename(filename);
+    add_missing_cameras(scene);
+    add_missing_materials(scene);
+    add_missing_names(scene);
+    update_transforms(scene);
+
+    return true;
+}
+bool save_ply_scene(const string& filename, const yocto_scene& scene,
+    const save_scene_options& options) {
+    if (scene.shapes.empty()) return false;
+    auto& shape = scene.shapes.front();
+    if (!save_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
+            shape.quads, shape.positions, shape.normals, shape.texturecoords,
+            shape.colors, shape.radius))
+        return false;
     return true;
 }
 

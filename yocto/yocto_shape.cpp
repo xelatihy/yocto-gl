@@ -29,6 +29,8 @@
 #include "yocto_shape.h"
 #include "yocto_random.h"
 
+#include <cassert>
+
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF COMPUTATION OF PER_VERTEX PROPETIES
 // -----------------------------------------------------------------------------
@@ -447,7 +449,7 @@ convert_face_varying(const vector<vec4i>& quads_positions,
 template <typename T>
 vector<vector<T>> ungroup_elems(
     const vector<T>& elems, const vector<int>& ids) {
-    auto max_id      = *std::max_element(ids.begin(), ids.end());
+    auto max_id      = *max_element(ids.begin(), ids.end());
     auto split_elems = vector<vector<T>>(max_id + 1);
     for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
         split_elems[ids[elem_id]].push_back(elems[elem_id]);
@@ -523,6 +525,72 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
         });
     }
     return {welded_quads, welded_positions};
+}
+
+// Merge shape elements
+void merge_lines(
+    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts) {
+    for (auto& l : merge_lines)
+        lines.push_back({l.x + num_verts, l.y + num_verts});
+}
+void merge_triangles(vector<vec3i>& triangles,
+    const vector<vec3i>& merge_triangles, int num_verts) {
+    for (auto& t : merge_triangles)
+        triangles.push_back(
+            {t.x + num_verts, t.y + num_verts, t.z + num_verts});
+}
+void merge_quads(
+    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
+    for (auto& q : merge_quads)
+        quads.push_back({q.x + num_verts, q.y + num_verts, q.z + num_verts,
+            q.w + num_verts});
+}
+void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& tangents, vector<vec2f>& texturecoords,
+    vector<float>& radius, const vector<vec2i>& merge_lines,
+    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
+    const vector<vec2f>& merge_texturecoords,
+    const vector<float>& merge_radius) {
+    auto merge_verts = (int)positions.size();
+    for (auto& l : merge_lines)
+        lines.push_back({l.x + merge_verts, l.y + merge_verts});
+    positions.insert(
+        positions.end(), merge_positions.begin(), merge_positions.end());
+    tangents.insert(
+        tangents.end(), merge_tangents.begin(), merge_tangents.end());
+    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
+        merge_texturecoords.end());
+    radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
+}
+void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    const vector<vec3i>& merge_triangles, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords) {
+    auto merge_verts = (int)positions.size();
+    for (auto& t : merge_triangles)
+        triangles.push_back(
+            {t.x + merge_verts, t.y + merge_verts, t.z + merge_verts});
+    positions.insert(
+        positions.end(), merge_positions.begin(), merge_positions.end());
+    normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
+    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
+        merge_texturecoords.end());
+}
+void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords,
+    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
+    const vector<vec3f>& merge_normals,
+    const vector<vec2f>& merge_texturecoords) {
+    auto merge_verts = (int)positions.size();
+    for (auto& q : merge_quads)
+        quads.push_back({q.x + merge_verts, q.y + merge_verts,
+            q.z + merge_verts, q.w + merge_verts});
+    positions.insert(
+        positions.end(), merge_positions.begin(), merge_positions.end());
+    normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
+    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
+        merge_texturecoords.end());
 }
 
 }  // namespace yocto
@@ -1050,70 +1118,253 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
-// Merge shape elements
-void merge_lines(
-    vector<vec2i>& lines, const vector<vec2i>& merge_lines, int num_verts) {
-    for (auto& l : merge_lines)
-        lines.push_back({l.x + num_verts, l.y + num_verts});
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// SHAPE GEODESICS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+edge_graph_arc& at(edge_graph& graph, int node, int a) {
+    return graph.graph[node][a];
 }
-void merge_triangles(vector<vec3i>& triangles,
-    const vector<vec3i>& merge_triangles, int num_verts) {
-    for (auto& t : merge_triangles)
-        triangles.push_back(
-            {t.x + num_verts, t.y + num_verts, t.z + num_verts});
+
+const edge_graph_arc& at(const edge_graph& graph, int node, int a) {
+    return graph.graph[node][a];
 }
-void merge_quads(
-    vector<vec4i>& quads, const vector<vec4i>& merge_quads, int num_verts) {
-    for (auto& q : merge_quads)
-        quads.push_back({q.x + num_verts, q.y + num_verts, q.z + num_verts,
-            q.w + num_verts});
+
+inline int degree(const edge_graph& graph, int node) {
+    return graph.graph[node].size();
 }
-void merge_lines(vector<vec2i>& lines, vector<vec3f>& positions,
-    vector<vec3f>& tangents, vector<vec2f>& texturecoords,
-    vector<float>& radius, const vector<vec2i>& merge_lines,
-    const vector<vec3f>& merge_positions, const vector<vec3f>& merge_tangents,
-    const vector<vec2f>& merge_texturecoords,
-    const vector<float>& merge_radius) {
-    auto merge_verts = (int)positions.size();
-    for (auto& l : merge_lines)
-        lines.push_back({l.x + merge_verts, l.y + merge_verts});
-    positions.insert(
-        positions.end(), merge_positions.begin(), merge_positions.end());
-    tangents.insert(
-        tangents.end(), merge_tangents.begin(), merge_tangents.end());
-    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
-        merge_texturecoords.end());
-    radius.insert(radius.end(), merge_radius.begin(), merge_radius.end());
+
+inline int num_nodes(const edge_graph& graph) { return graph.graph.size(); }
+
+inline void add_node(edge_graph& graph, int degree) {
+    graph.graph.push_back({});
+    if (degree != 0) graph.graph.back().reserve(degree);
 }
-void merge_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec3i>& merge_triangles, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords) {
-    auto merge_verts = (int)positions.size();
-    for (auto& t : merge_triangles)
-        triangles.push_back(
-            {t.x + merge_verts, t.y + merge_verts, t.z + merge_verts});
-    positions.insert(
-        positions.end(), merge_positions.begin(), merge_positions.end());
-    normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
-        merge_texturecoords.end());
+
+inline void add_directed_arc(
+    edge_graph& graph, int from, int to, float weight) {
+    assert(from >= 0 and from < graph.graph.size());
+    assert(to >= 0 and to < graph.graph.size());
+    edge_graph_arc a = edge_graph_arc{to, weight};
+    graph.graph[from].push_back(a);
 }
-void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
-    vector<vec3f>& normals, vector<vec2f>& texturecoords,
-    const vector<vec4i>& merge_quads, const vector<vec3f>& merge_positions,
-    const vector<vec3f>& merge_normals,
-    const vector<vec2f>& merge_texturecoords) {
-    auto merge_verts = (int)positions.size();
-    for (auto& q : merge_quads)
-        quads.push_back({q.x + merge_verts, q.y + merge_verts,
-            q.z + merge_verts, q.w + merge_verts});
-    positions.insert(
-        positions.end(), merge_positions.begin(), merge_positions.end());
-    normals.insert(normals.end(), merge_normals.begin(), merge_normals.end());
-    texturecoords.insert(texturecoords.end(), merge_texturecoords.begin(),
-        merge_texturecoords.end());
+
+inline void add_undirected_arc(edge_graph& graph, int na, int nb, float w) {
+    add_directed_arc(graph, na, nb, w);
+    add_directed_arc(graph, nb, na, w);
+}
+
+edge_graph make_coarse_graph(const vector<vec3i>& triangles, 
+    const vector<vec3f>& positions, const edge_map& emap) {
+    auto graph = edge_graph();
+    graph.positions = positions;
+
+    graph.graph.reserve(positions.size());
+
+    for (int i = 0; i < positions.size(); i++) add_node(graph, 8);
+
+    for (auto& epair : emap.edge_dict) {
+        vec2i edge = epair.first;
+        // @Speed: precompute edge lengths?
+        auto edge_length = length(positions[edge.x] - positions[edge.y]);
+        add_undirected_arc(graph, edge.x, edge.y, edge_length);
+    }
+
+    return graph;
+}
+
+edge_graph make_fine_graph(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const edge_map& emap) {
+    auto graph = make_coarse_graph(triangles, positions, emap);
+    
+    graph.graph.reserve(positions.size() + emap.edge_dict.size());
+    auto steiner_map = emap;
+
+    // On each edge, connect the mid vertex with the vertices on th same edge.
+    for (auto& epair : steiner_map.edge_dict) {
+        int v0         = epair.first.x;
+        int v1         = epair.first.y;
+        int idx        = graph.graph.size();
+        epair.second.y = idx;
+        add_node(graph, 5);
+
+        // The edge_graph_arc vertex -> mid-vertex is useless while solving,
+        // don't add it. Add only mid-vertex -> vertex.
+        float weight = length(positions[v0] - positions[v1]) * 0.5f;
+        add_directed_arc(graph, idx, v0, weight);
+        add_directed_arc(graph, idx, v1, weight);
+    }
+
+    // Make connection for each face
+    for (int face = 0; face < triangles.size(); ++face) {
+        int   steiner_idx[3];
+        vec3f steiner_pos[3];
+        for (int k : {0, 1, 2}) {
+            int   a        = at(triangles[face], k);
+            int   b        = at(triangles[face], (k + 1) % 3);
+            vec2i edge     = a < b ? vec2i{a, b} : vec2i{b, a};
+            steiner_idx[k] = steiner_map.edge_dict.at(edge).y;
+            steiner_pos[k] = (positions[a] + positions[b]) * 0.5f;
+        }
+
+        // Connect each mid-vertex to the opposite mesh vertex in the triangle
+        int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
+        add_undirected_arc(graph, steiner_idx[0], opp[0],
+            length(positions[opp[0]] - steiner_pos[0]));
+        add_undirected_arc(graph, steiner_idx[1], opp[1],
+            length(positions[opp[1]] - steiner_pos[1]));
+        add_undirected_arc(graph, steiner_idx[2], opp[2],
+            length(positions[opp[2]] - steiner_pos[2]));
+
+        // Connect mid-verts of the face between them
+        add_undirected_arc(graph, steiner_idx[0], steiner_idx[1],
+            length(steiner_pos[0] - steiner_pos[1]));
+        add_undirected_arc(graph, steiner_idx[0], steiner_idx[2],
+            length(steiner_pos[0] - steiner_pos[2]));
+        add_undirected_arc(graph, steiner_idx[1], steiner_idx[2],
+            length(steiner_pos[1] - steiner_pos[2]));
+    }
+
+    return graph;
+}
+
+edge_graph make_edge_graph(
+    const vector<vec3i>& triangles, vector<vec3f>& positions) {
+    return make_fine_graph(triangles, positions, make_edge_map(triangles));
+}
+
+// Double-ended queue used during graph search
+template <int capacity>
+struct circular_buffer {
+    int* data = nullptr;
+    int  head = 0, count = 0;
+
+    circular_buffer() : data{new int[capacity]}, head{0}, count{0} {}
+
+    bool empty() const { return count == 0; }
+    int  size() const { return count; }
+
+    int& front() { return data[head]; }
+    int& back() { return data[(head + count - 1) % capacity]; }
+
+    void push_front(const int& v) {
+        assert(count < capacity);
+        head = (head - 1 + capacity) % capacity;
+        count++;
+        front() = v;
+    }
+    void push_back(const int& v) {
+        assert(count < capacity);
+        count++;
+        back() = v;
+    }
+
+    void pop_front() {
+        assert(count > 0);
+        head = (head + 1) % capacity;
+        count--;
+    }
+    void pop_back() {
+        assert(count > 0);
+        count--;
+    }
+
+    struct iterator {
+        iterator(int p, int e) : pos(p), end(e) {}
+        bool      operator!=(const iterator& a) const { return pos != a.pos; }
+        iterator& operator++() {
+            pos = (pos + 1) % capacity;
+            return *this;
+        }
+        int operator*() const { return pos; }
+
+       private:
+        int pos, end;
+    };
+
+    iterator begin() const { return {head, capacity}; }
+    iterator end() const { return {head + count, capacity}; }
+};
+
+using Queue = circular_buffer<500000>;
+
+// temeplate used to easily switch between edge_graph and FastGraph
+vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& sources) {
+    // edge_graph search to compute goedesic distance fields. The result must be
+    // preallocated
+    auto distances = vector<float>(graph.positions.size());
+
+    // Small Label Fisrt + Large Label Last
+    // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
+    int nnodes = num_nodes(graph);
+    assert(distances.size() == nnodes);
+    auto  flag = std::vector<bool>(nnodes, false);
+    Queue Q;
+    for (int i : sources) {
+        distances[i] = 0.0f;
+        flag[i]      = true;
+        Q.push_back(i);
+    }
+
+    // Cumulative weights of elements in queue.
+    float cumw = 0.0f;
+    while (not Q.empty()) {
+        int    node = Q.front();
+        double avgw = cumw / Q.size();
+
+        // Large Label Last: until front node weights more than the average, put
+        // it on back. Sometimes avgw is less than envery value due to floating
+        // point errors  (doesn't happen with double precision).
+        for (int tries = 0; tries < Q.size() + 1; tries++) {
+            if (distances[node] <= avgw) break;
+            Q.pop_front();
+            Q.push_back(node);
+            node = Q.front();
+        }
+        Q.pop_front();
+        flag[node] = false;       // out of queue
+        cumw -= distances[node];  // update average
+
+        const float offset        = distances[node];
+        const int   num_neighbors = degree(graph, node);
+
+        for (int i = 0; i < num_neighbors; i++) {
+            // distance to neightbor through this node
+            float dist_new = offset + at(graph, node, i).length;
+            int n = at(graph, node, i).node;  // id of neighbor.
+
+            float dist_old = distances[n];
+            if (dist_new >= dist_old) continue;
+
+            if (flag[n]) {
+                // if neighbor already in queue, update cumulative weights.
+                cumw = cumw - dist_old + dist_new;
+            } else {
+                // if neighbor not in queue, Small Label first.
+                if (Q.empty() or (dist_new < distances[Q.front()]))
+                    Q.push_front(n);
+                else
+                    Q.push_back(n);
+
+                flag[n] = true;
+                cumw    = cumw + dist_new;
+            }
+            distances[n] = dist_new;
+        }
+    }
+
+    return distances;
+}
+
+vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
+    auto colors = vector<vec4f>(distances.size());
+    for(auto idx = 0; idx < distances.size(); idx++) {
+        colors[idx] = { distances[idx], distances[idx], distances[idx], 1 };
+    }
+    return colors;
 }
 
 }  // namespace yocto
