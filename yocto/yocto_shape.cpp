@@ -28,6 +28,7 @@
 
 #include "yocto_shape.h"
 #include "yocto_random.h"
+#include "yocto_utils.h"
 
 #include <cassert>
 
@@ -1230,6 +1231,7 @@ edge_graph make_fine_graph(
 
 edge_graph make_edge_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+    auto scope = log_trace_scoped("make edge graph");
     return make_fine_graph(triangles, positions, make_edge_map(triangles));
 }
 
@@ -1290,6 +1292,8 @@ using Queue = circular_buffer<500000>;
 
 #if 1
 vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& sources) {
+    auto scope = log_trace_scoped("computing geodesics");
+
     // preallocated
     auto distances = vector<float>(graph.positions.size(), float_max);
 
