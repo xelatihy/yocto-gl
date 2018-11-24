@@ -1083,6 +1083,18 @@ vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
         return zero2f;
     }
 }
+vec4f evaluate_instance_color(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
+    if (instance.shape >= 0) {
+        return evaluate_shape_color(
+            scene.shapes[instance.shape], element_id, element_uv);
+    } else if (instance.surface >= 0) {
+        return {1, 1, 1, 1};
+    } else {
+        log_error("empty instance");
+        return {1, 1, 1, 1};
+    }
+}
 // Instance element values.
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id) {

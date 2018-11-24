@@ -478,7 +478,7 @@ vec3f evaluate_instance_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec4f evaluate_instance_color(
+vec4f evaluate_instance_color(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);

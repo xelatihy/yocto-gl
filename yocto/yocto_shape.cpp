@@ -1233,7 +1233,7 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
 
 edge_graph make_edge_graph(
     const vector<vec3i>& triangles, vector<vec3f>& positions) {
-    return make_fine_graph(triangles, positions, make_edge_map(triangles));
+    return make_coarse_graph(triangles, positions, make_edge_map(triangles));
 }
 
 // Double-ended queue used during graph search
@@ -1362,7 +1362,8 @@ vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& s
 vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
     auto colors = vector<vec4f>(distances.size());
     for(auto idx = 0; idx < distances.size(); idx++) {
-        colors[idx] = { distances[idx], distances[idx], distances[idx], 1 };
+        auto distance = distances[idx] * 100;
+        colors[idx] = { distance, distance, distance, 1 };
     }
     return colors;
 }

@@ -45,6 +45,7 @@ struct trace_point {
     vec3f           position     = zero3f;
     vec3f           normal       = zero3f;
     vec2f           texturecoord = zero2f;
+    vec4f           color        = zero4f;
     vec3f           emission     = zero3f;
     microfacet_brdf brdf         = {};
     bool            hit          = false;
@@ -75,10 +76,14 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     }
     point.texturecoord = evaluate_instance_texturecoord(
         scene, instance, element_id, element_uv);
+    point.color = evaluate_instance_color(scene, instance, element_id, element_uv);
     point.emission = evaluate_instance_emission(
         scene, instance, element_id, element_uv);
     point.brdf = evaluate_instance_brdf(
         scene, instance, element_id, element_uv);
+    point.brdf.diffuse *= xyz(point.color);
+    point.brdf.specular *= xyz(point.color);
+    point.brdf.opacity *= point.color.w;
     point.hit = true;
     return point;
 }
@@ -1733,6 +1738,20 @@ pair<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene,
     return {{point.texturecoord.x, point.texturecoord.y, 0}, true};
 }
 
+// Debug previewing.
+pair<vec3f, bool> trace_debug_color(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) return {zero3f, false};
+
+    // shade
+    return {xyz(point.color), true};
+}
+
 // Trace a single ray from the camera using the given algorithm.
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
     switch (type) {
@@ -1750,6 +1769,7 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         case trace_sampler_type::debug_normal: return trace_debug_normal;
         case trace_sampler_type::debug_albedo: return trace_debug_albedo;
         case trace_sampler_type::debug_texcoord: return trace_debug_texcoord;
+        case trace_sampler_type::debug_color: return trace_debug_color;
         case trace_sampler_type::debug_frontfacing:
             return trace_debug_frontfacing;
         case trace_sampler_type::debug_diffuse: return trace_debug_diffuse;
