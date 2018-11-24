@@ -456,6 +456,22 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Short preallocated vector
+template<typename T, int N>
+struct dvec {
+
+    int size() const { return _size; }
+
+    void push_back(const T& v) { _data[_size++] = v; }
+
+    T& operator[](int i) { return _data[i]; }
+    const T& operator[](int i) const { return _data[i]; }
+
+    private:
+    int _size = 0;
+    T _data[N];
+};
+
 // Arc of edge graph
 struct edge_graph_arc {
     int   node   = 0;
@@ -464,7 +480,8 @@ struct edge_graph_arc {
 
 // Data structure used for geodesic computation
 struct edge_graph {
-    vector<vector<edge_graph_arc>> graph     = {};
+    // vector<vector<edge_graph_arc>> graph     = {};
+    vector<dvec<edge_graph_arc, 32>> graph     = {};
     vector<vec3f>                  positions = {};
 };
 

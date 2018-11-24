@@ -1140,10 +1140,10 @@ inline int degree(const edge_graph& graph, int node) {
 
 inline int num_nodes(const edge_graph& graph) { return graph.graph.size(); }
 
-void add_node(edge_graph& solver, const vec3f& position, int degree) {
+void add_node(edge_graph& solver, const vec3f& position) {
     solver.positions.push_back(position);
     solver.graph.push_back({});
-    if(degree != 0) solver.graph.back().reserve(degree);
+    // solver.graph.back().reserve(8);
 }
 
 inline void add_directed_arc(edge_graph& solver, int from, int to) {
@@ -1168,7 +1168,7 @@ edge_graph make_coarse_graph(
     solver.graph.reserve(positions.size());
 
     for (int i=0; i < positions.size(); i++)
-        add_node(solver, positions[i], 8);
+        add_node(solver, positions[i]);
 
     for(auto& epair : emap.edge_dict) {
         vec2i edge = epair.first;
@@ -1194,7 +1194,7 @@ edge_graph make_fine_graph(
         int v1 = epair.first.y;
         int idx = solver.graph.size();
         epair.second.y = idx;
-        add_node(solver, (pos[v0] + pos[v1]) * 0.5f, 5);
+        add_node(solver, (pos[v0] + pos[v1]) * 0.5f);
         
         // The arc vertex -> mid-vertex is useless while solving, don't add it.
         // Add only mid-vertex -> vertex.
