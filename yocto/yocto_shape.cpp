@@ -1200,6 +1200,8 @@ edge_graph make_fine_graph(
         // Add only mid-vertex -> vertex.
         add_directed_arc(solver, idx, v0);
         add_directed_arc(solver, idx, v1);
+        // add_undirected_arc(solver, idx, v0);
+        // add_undirected_arc(solver, idx, v1);
     }
 
     // Make connection for each face
