@@ -6002,6 +6002,7 @@ bool load_ply(const string& filename, ply_data& ply) {
     // parse header
     ply        = ply_data{};
     auto ascii = false;
+    auto big_endian = false;
     auto line  = ""s;
     while (getline(fs, line)) {
         auto view = string_view_stream{line};
@@ -6013,8 +6014,17 @@ bool load_ply(const string& filename, ply_data& ply) {
         } else if (cmd == "format") {
             auto fmt = ""s;
             view >> fmt;
-            if (fmt != "ascii" && fmt != "binary_little_endian") return false;
-            ascii = fmt == "ascii";
+            if (fmt == "ascii") {
+                ascii = true;
+            } else if(fmt == "binary_little_endian") {
+                ascii = false;
+                big_endian = false;
+            } else if(fmt == "binary_big_endian") {
+                ascii = false;
+                big_endian = true;
+            } else {
+                return false;
+            }
         } else if (cmd == "element") {
             auto elem = ply_element();
             view >> elem.name;
@@ -6095,6 +6105,15 @@ bool load_ply(const string& filename, ply_data& ply) {
             }
         }
     } else {
+        auto byte_swap = [](auto val) {
+            // https://stackoverflow.com/questions/2782725/converting-float-values-from-big-endian-to-little-endian
+            auto retVal = val;
+            auto pVal = (char*) &val, pRetVal = (char*)&retVal;
+            auto size = (int)sizeof(val);
+            for(auto i=0; i<size; i++)
+                pRetVal[size-1-i] = pVal[i];
+            return retVal;
+        };
         for (auto& elem : ply.elements) {
             for (auto vid = 0; vid < elem.count; vid++) {
                 for (auto pid = 0; pid < elem.properties.size(); pid++) {
@@ -6102,10 +6121,12 @@ bool load_ply(const string& filename, ply_data& ply) {
                     if (prop.type == ply_type::ply_float) {
                         auto v = 0.0f;
                         if (!read_value(fs, v)) return false;
+                        if(big_endian) v = byte_swap(v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_int) {
                         auto v = 0;
                         if (!read_value(fs, v)) return false;
+                        if(big_endian) v = byte_swap(v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_uchar) {
                         auto vc = (unsigned char)0;
@@ -6116,8 +6137,10 @@ bool load_ply(const string& filename, ply_data& ply) {
                         if (!read_value(fs, vc)) return false;
                         prop.scalars[vid] = vc;
                         for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
-                            if (!read_value(fs, prop.lists[vid][i]))
-                                return false;
+                            auto v = 0;
+                            if(!read_value(fs, v)) return false;
+                            if(big_endian) v = byte_swap(v);
+                            prop.lists[vid][i] = v;
                         }
                     } else {
                         return false;
