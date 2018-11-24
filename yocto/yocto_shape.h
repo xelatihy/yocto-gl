@@ -470,7 +470,7 @@ struct edge_graph {
 
 // Construct an edge graph
 edge_graph make_edge_graph(
-    const vector<vec3i>& triangles, vector<vec3f>& positions);
+    const vector<vec3i>& triangles, const vector<vec3f>& positions);
 vector<float> compute_geodesic_distances(edge_graph& graph, 
     const vector<int>& sources);
 vector<vec4f> convert_distance_to_color(const vector<float>& distances);

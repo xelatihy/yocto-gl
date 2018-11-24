@@ -1139,101 +1139,98 @@ inline int degree(const edge_graph& graph, int node) {
 
 inline int num_nodes(const edge_graph& graph) { return graph.graph.size(); }
 
-inline void add_node(edge_graph& graph, int degree) {
-    graph.graph.push_back({});
-    if (degree != 0) graph.graph.back().reserve(degree);
+void add_node(edge_graph& solver, const vec3f& position, int degree) {
+    solver.positions.push_back(position);
+    solver.graph.push_back({});
+    if(degree != 0) solver.graph.back().reserve(degree);
 }
 
-inline void add_directed_arc(
-    edge_graph& graph, int from, int to, float weight) {
-    assert(from >= 0 and from < graph.graph.size());
-    assert(to >= 0 and to < graph.graph.size());
-    edge_graph_arc a = edge_graph_arc{to, weight};
-    graph.graph[from].push_back(a);
+inline void add_directed_arc(edge_graph& solver, int from, int to) {
+    assert(from >= 0 and from < solver.graph.size());
+    assert(to >= 0 and to < solver.graph.size());
+
+    float len = length(solver.positions[from] - solver.positions[to]);
+    solver.graph[from].push_back({to, len});
 }
 
-inline void add_undirected_arc(edge_graph& graph, int na, int nb, float w) {
-    add_directed_arc(graph, na, nb, w);
-    add_directed_arc(graph, nb, na, w);
+inline void add_undirected_arc(edge_graph& solver, int na, int nb) {
+    add_directed_arc(solver, na, nb);
+    add_directed_arc(solver, nb, na);
 }
 
-edge_graph make_coarse_graph(const vector<vec3i>& triangles, 
-    const vector<vec3f>& positions, const edge_map& emap) {
-    auto graph = edge_graph();
-    graph.positions = positions;
+edge_graph make_coarse_graph(
+    const vector<vec3i>& triangles,
+    const vector<vec3f>& positions,
+    const edge_map& emap)
+{
+    auto solver = edge_graph();
+    solver.graph.reserve(positions.size());
 
-    graph.graph.reserve(positions.size());
+    for (int i=0; i < positions.size(); i++)
+        add_node(solver, positions[i], 8);
 
-    for (int i = 0; i < positions.size(); i++) add_node(graph, 8);
-
-    for (auto& epair : emap.edge_dict) {
+    for(auto& epair : emap.edge_dict) {
         vec2i edge = epair.first;
-        // @Speed: precompute edge lengths?
-        auto edge_length = length(positions[edge.x] - positions[edge.y]);
-        add_undirected_arc(graph, edge.x, edge.y, edge_length);
+        add_undirected_arc(solver, edge.x, edge.y);
     }
-
-    return graph;
+    return solver;
 }
 
-edge_graph make_fine_graph(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const edge_map& emap) {
-    auto graph = make_coarse_graph(triangles, positions, emap);
-    
-    graph.graph.reserve(positions.size() + emap.edge_dict.size());
+
+edge_graph make_fine_graph(
+    const vector<vec3i>& triangles,
+    const vector<vec3f>& pos,
+    const edge_map& emap)
+{
+    auto solver = make_coarse_graph(triangles, pos, emap);
+    solver.graph.reserve(pos.size() + emap.edge_dict.size());
+
     auto steiner_map = emap;
 
     // On each edge, connect the mid vertex with the vertices on th same edge.
-    for (auto& epair : steiner_map.edge_dict) {
-        int v0         = epair.first.x;
-        int v1         = epair.first.y;
-        int idx        = graph.graph.size();
+    for(auto& epair : steiner_map.edge_dict) {
+        int v0 = epair.first.x;
+        int v1 = epair.first.y;
+        int idx = solver.graph.size();
         epair.second.y = idx;
-        add_node(graph, 5);
-
-        // The edge_graph_arc vertex -> mid-vertex is useless while solving,
-        // don't add it. Add only mid-vertex -> vertex.
-        float weight = length(positions[v0] - positions[v1]) * 0.5f;
-        add_directed_arc(graph, idx, v0, weight);
-        add_directed_arc(graph, idx, v1, weight);
+        add_node(solver, (pos[v0] + pos[v1]) * 0.5f, 5);
+        
+        // The arc vertex -> mid-vertex is useless while solving, don't add it.
+        // Add only mid-vertex -> vertex.
+        add_directed_arc(solver, idx, v0);
+        add_directed_arc(solver, idx, v1);
     }
 
     // Make connection for each face
     for (int face = 0; face < triangles.size(); ++face) {
         int   steiner_idx[3];
         vec3f steiner_pos[3];
-        for (int k : {0, 1, 2}) {
-            int   a        = at(triangles[face], k);
-            int   b        = at(triangles[face], (k + 1) % 3);
-            vec2i edge     = a < b ? vec2i{a, b} : vec2i{b, a};
+        for(int k : {0, 1, 2}) {
+            int a = at(triangles[face], k);
+            int b = at(triangles[face], (k+1) % 3);
+            vec2i edge = a<b? vec2i{a, b} : vec2i{b, a};
             steiner_idx[k] = steiner_map.edge_dict.at(edge).y;
-            steiner_pos[k] = (positions[a] + positions[b]) * 0.5f;
+            steiner_pos[k] = (pos[a] + pos[b]) * 0.5f;
         }
-
+        
         // Connect each mid-vertex to the opposite mesh vertex in the triangle
         int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
-        add_undirected_arc(graph, steiner_idx[0], opp[0],
-            length(positions[opp[0]] - steiner_pos[0]));
-        add_undirected_arc(graph, steiner_idx[1], opp[1],
-            length(positions[opp[1]] - steiner_pos[1]));
-        add_undirected_arc(graph, steiner_idx[2], opp[2],
-            length(positions[opp[2]] - steiner_pos[2]));
-
+        add_undirected_arc(solver, steiner_idx[0], opp[0]);
+        add_undirected_arc(solver, steiner_idx[1], opp[1]);
+        add_undirected_arc(solver, steiner_idx[2], opp[2]);
+        
         // Connect mid-verts of the face between them
-        add_undirected_arc(graph, steiner_idx[0], steiner_idx[1],
-            length(steiner_pos[0] - steiner_pos[1]));
-        add_undirected_arc(graph, steiner_idx[0], steiner_idx[2],
-            length(steiner_pos[0] - steiner_pos[2]));
-        add_undirected_arc(graph, steiner_idx[1], steiner_idx[2],
-            length(steiner_pos[1] - steiner_pos[2]));
+        add_undirected_arc(solver, steiner_idx[0], steiner_idx[1]);
+        add_undirected_arc(solver, steiner_idx[0], steiner_idx[2]);
+        add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
     }
 
-    return graph;
+    return solver;
 }
 
 edge_graph make_edge_graph(
-    const vector<vec3i>& triangles, vector<vec3f>& positions) {
-    return make_coarse_graph(triangles, positions, make_edge_map(triangles));
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+    return make_fine_graph(triangles, positions, make_edge_map(triangles));
 }
 
 // Double-ended queue used during graph search
@@ -1291,11 +1288,81 @@ struct circular_buffer {
 
 using Queue = circular_buffer<500000>;
 
+#if 1
+vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& sources) {
+    // preallocated
+    auto distances = vector<float>(graph.positions.size(), float_max);
+
+    // Small Label Fisrt + Large Label Last
+    // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
+    int nnodes = num_nodes(graph);
+    assert(distances.size() == nnodes);
+    auto flag = std::vector<bool>(nnodes, false);
+    Queue Q;
+    for (int i : sources) {
+        distances[i] = 0.0f;
+        flag[i] = true;
+        Q.push_back(i);
+    }
+
+    // Cumulative weights of elements in queue.
+    float cumw = 0.0f;
+    while(not Q.empty())
+    {    
+        int node = Q.front();
+        double avgw = cumw/Q.size();
+
+        // Large Label Last: until front node weights more than the average, put it on back.
+        // Sometimes avgw is less than envery value due to floating point errors  (doesn't happen with double precision).
+        for (int tries = 0; tries < Q.size()+1; tries++) {
+            if (distances[node] <= avgw) break;
+            Q.pop_front();
+            Q.push_back(node);
+            node = Q.front();
+        }
+        Q.pop_front();
+        flag[node] = false; // out of queue
+        cumw -= distances[node]; // update average
+
+        const float offset = distances[node];
+        const int num_neighbors = degree(graph, node);
+
+        for (int i = 0; i < num_neighbors; i++) {
+
+            float dist_new = offset + at(graph, node, i).length; // distance to neightbor through this node.
+            int n = at(graph, node, i).node; // id of neighbor.
+            
+            float dist_old = distances[n];
+            if (dist_new >= dist_old) continue;
+
+            if (flag[n]) {
+                // if neighbor already in queue, update cumulative weights.
+                cumw = cumw - dist_old + dist_new;
+            }
+            else {
+                // if neighbor not in queue, Small Label first.
+                if (Q.empty() or (dist_new < distances[Q.front()]))
+                    Q.push_front(n);
+                else
+                    Q.push_back(n);
+
+                flag[n] = true;
+                cumw = cumw + dist_new;
+            }
+            
+            distances[n] = dist_new;
+        }
+    }
+    return distances;
+}
+
+#else 
+
 // temeplate used to easily switch between edge_graph and FastGraph
 vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& sources) {
     // edge_graph search to compute goedesic distance fields. The result must be
     // preallocated
-    auto distances = vector<float>(graph.positions.size());
+    auto distances = vector<float>(graph.positions.size(), float_max);
 
     // Small Label Fisrt + Large Label Last
     // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -1359,10 +1426,12 @@ vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& s
     return distances;
 }
 
+#endif
+
 vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
     auto colors = vector<vec4f>(distances.size());
     for(auto idx = 0; idx < distances.size(); idx++) {
-        auto distance = distances[idx] * 100;
+        auto distance = fmod(distances[idx] * 10, 1.0f);
         colors[idx] = { distance, distance, distance, 1 };
     }
     return colors;
