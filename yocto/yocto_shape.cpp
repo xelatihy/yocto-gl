@@ -1226,6 +1226,15 @@ edge_graph make_fine_graph(
         add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
     }
 
+    auto min_len = 0, max_len = 0;
+    auto avg_len = 0.0;
+    for(auto& adj : solver.graph) {
+        min_len = min(min_len, (int)adj.size());
+        max_len = max(max_len, (int)adj.size());
+        avg_len += adj.size() / (double)solver.graph.size();
+    }
+    log_info("stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
+
     return solver;
 }
 
