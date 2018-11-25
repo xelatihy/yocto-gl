@@ -239,7 +239,7 @@ image4f bump_to_normal_map(const image4f& img, float scale = 1);
 // of 0 sets the eath sun defaults (ignoring intensity too).
 image4f make_sunsky_image(int width, int height, float sun_angle,
     float turbidity = 3, bool has_sun = false, float sun_intensity = 1.0f,
-    float sun_temperature = 0, const vec3f& ground_albedo = {0.7f, 0.7f, 0.7f});
+    float sun_temperature = 0, const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
 image4f make_lights_image(int width, int height, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,

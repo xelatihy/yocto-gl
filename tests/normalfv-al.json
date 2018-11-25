@@ -3,13 +3,13 @@
     "cameras": [
         {
             "name": "cam",
-            "focal_length": 0.100,
+            "focal_length": 0.1,
             "lens_aperture": 0.0,
             "!!proc": {
                 "from": [
-                    0,
+                    -7,
                     5,
-                    14
+                    12
                 ],
                 "to": [
                     0,
@@ -17,7 +17,7 @@
                     0
                 ]
             },
-            "film_width": 0.05760,
+            "film_width": 0.0576,
             "film_height": 0.024
         }
     ],
@@ -149,7 +149,9 @@
         {
             "name": "obj1",
             "filename": "models/obj1.obj",
-            "materials": [ "obj1" ],
+            "materials": [
+                "obj1"
+            ],
             "!!proc": {
                 "type": "sphere_cube"
             }
@@ -157,7 +159,9 @@
         {
             "name": "obj2",
             "filename": "models/obj2.obj",
-            "materials": [ "obj2" ],
+            "materials": [
+                "obj2"
+            ],
             "!!proc": {
                 "type": "sphere_cube"
             }
@@ -165,7 +169,9 @@
         {
             "name": "obj3",
             "filename": "models/obj3.obj",
-            "materials": [ "obj3" ],
+            "materials": [
+                "obj3"
+            ],
             "!!proc": {
                 "type": "sphere_cube"
             }

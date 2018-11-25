@@ -3,13 +3,13 @@
     "cameras": [
         {
             "name": "cam",
-            "focal_length": 0.100,
+            "focal_length": 0.1,
             "lens_aperture": 0.0,
             "!!proc": {
                 "from": [
-                    0,
+                    -7,
                     5,
-                    14
+                    12
                 ],
                 "to": [
                     0,
@@ -17,7 +17,7 @@
                     0
                 ]
             },
-            "film_width": 0.05760,
+            "film_width": 0.0576,
             "film_height": 0.024
         }
     ],
@@ -35,7 +35,8 @@
             "name": "sky",
             "filename": "textures/sky.hdr",
             "!!proc": {
-                "type": "sky"
+                "type": "sky",
+                "has_sun": true
             }
         }
     ],
@@ -158,7 +159,15 @@
                 1,
                 1
             ],
-            "emission_texture": "sky"
+            "emission_texture": "sky",
+            "!!proc": {
+                "rotation": [
+                    0,
+                    1,
+                    0,
+                    0.2
+                ]
+            }
         }
     ]
 }

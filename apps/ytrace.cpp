@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
     trace_options.max_bounces  = parse_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     trace_options.pixel_clamp = parse_argument(
-        parser, "--pixel-clamp", 100.0f, "Final pixel clamping.");
+        parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
     auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
         "Disable parallel execution.");
     trace_options.random_seed = parse_argument(
