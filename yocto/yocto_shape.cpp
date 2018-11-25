@@ -1239,8 +1239,8 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
 
 inline void add_half_edge(edge_graph& egraph, const vec2i& edge, float len) {
     // check if edge exists already
-    for(auto [vert, _] : egraph.graph[edge.x]) {
-        if(vert == edge.y) return;
+    for (auto [vert, _] : egraph.graph[edge.x]) {
+        if (vert == edge.y) return;
     }
     auto edge_index = (int)egraph.edges.size();
     egraph.graph[edge.x].push_back({edge.y, len});
@@ -1250,11 +1250,11 @@ inline void add_half_edge(edge_graph& egraph, const vec2i& edge, float len) {
 
 inline void add_edge(edge_graph& egraph, const vec2i& edge, float len) {
     // check if edge exists already
-    for(auto [vert, _] : egraph.graph[edge.x]) {
-        if(vert == edge.y) return;
+    for (auto [vert, _] : egraph.graph[edge.x]) {
+        if (vert == edge.y) return;
     }
-    egraph.graph[edge.x].push_back({edge.y, len });
-    egraph.graph[edge.y].push_back({edge.x, len });
+    egraph.graph[edge.x].push_back({edge.y, len});
+    egraph.graph[edge.y].push_back({edge.x, len});
     auto edge_index = (int)egraph.edges.size();
     egraph.edge_index[edge.x].push_back({edge.y, edge_index});
     egraph.edge_index[edge.y].push_back({edge.x, edge_index});
@@ -1262,26 +1262,28 @@ inline void add_edge(edge_graph& egraph, const vec2i& edge, float len) {
 }
 
 inline void add_edge(edge_graph& egraph, const vec2i& edge) {
-    return add_edge(egraph, edge, length(egraph.positions[edge.x] - egraph.positions[edge.y]));
+    return add_edge(egraph, edge,
+        length(egraph.positions[edge.x] - egraph.positions[edge.y]));
 }
 
 inline int get_edge_index(const edge_graph& egraph, const vec2i& edge) {
-    for(auto [node, index] : egraph.edge_index[edge.x])
-        if(edge.y == node) return index;
+    for (auto [node, index] : egraph.edge_index[edge.x])
+        if (edge.y == node) return index;
     return -1;
 }
 
 edge_graph make_coarse_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto egraph = edge_graph();
+    auto egraph      = edge_graph();
     egraph.positions = positions;
     egraph.graph.resize(size(positions));
     egraph.edge_index.resize(size(positions));
 
     // fast construction assuming edges are not repeated
-    for(auto t : triangles) {
-        auto edge_lengths = vec3f{ length(positions[t.x] - positions[t.y]),
-            length(positions[t.y] - positions[t.z]), length(positions[t.z] - positions[t.x]) };
+    for (auto t : triangles) {
+        auto edge_lengths = vec3f{length(positions[t.x] - positions[t.y]),
+            length(positions[t.y] - positions[t.z]),
+            length(positions[t.z] - positions[t.x])};
         add_edge(egraph, {t.x, t.y}, edge_lengths.x);
         add_edge(egraph, {t.y, t.z}, edge_lengths.y);
         add_edge(egraph, {t.z, t.x}, edge_lengths.z);
@@ -1290,10 +1292,10 @@ edge_graph make_coarse_graph(
     return egraph;
 }
 
-edge_graph make_fine_graph(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions) {
+edge_graph make_fine_graph(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto egraph = make_coarse_graph(triangles, positions);
-    auto edges = egraph.edges;
+    auto edges  = egraph.edges;
     egraph.graph.resize(size(positions) + size(edges));
     egraph.edge_index.resize(size(positions) + size(edges));
     egraph.positions.resize(size(positions) + size(edges));
@@ -1302,10 +1304,12 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
     // On each edge, connect the mid vertex with the vertices on th same edge.
     auto edge_offset = (int)positions.size();
     for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
-        auto& edge                   = edges[edge_index];
-        auto  steiner_idx            = edge_offset + edge_index;
-        steiner_per_edge[edge_index] = steiner_idx;
-        egraph.positions[steiner_idx] = (positions[edge.x] + positions[edge.y]) * 0.5f;
+        auto& edge                    = edges[edge_index];
+        auto  steiner_idx             = edge_offset + edge_index;
+        steiner_per_edge[edge_index]  = steiner_idx;
+        egraph.positions[steiner_idx] = (positions[edge.x] +
+                                            positions[edge.y]) *
+                                        0.5f;
         auto edge_length = length(positions[edge.x] + positions[edge.y]) / 2;
         add_half_edge(egraph, {steiner_idx, edge.x}, edge_length);
         add_half_edge(egraph, {steiner_idx, edge.y}, edge_length);
@@ -1356,8 +1360,8 @@ edge_graph make_edge_graph(
 // Double-ended queue used during graph search
 template <typename T, int capacity>
 struct circular_buffer {
-    T* data = nullptr;
-    int  head = 0, count = 0;
+    T*  data = nullptr;
+    int head = 0, count = 0;
 
     circular_buffer() : data{new T[capacity]}, head{0}, count{0} {}
     ~circular_buffer() { delete[] data; }
@@ -1427,19 +1431,19 @@ vector<float> compute_geodesic_distances(
 #endif
     for (auto source : sources) {
         distances[source] = 0.0f;
-        visited[source]      = true;
+        visited[source]   = true;
         queue.push_back(source);
     }
 
     // Cumulative weights of elements in queue.
     auto cumulative_weight = 0.0f;
     while (!queue.empty()) {
-        auto    node = queue.front();
+        auto node           = queue.front();
         auto average_weight = (double)cumulative_weight / queue.size();
 
         // Large Label Last: until front node weights more than the average, put
-        // it on back. Sometimes average_weight is less than envery value due to floating
-        // point errors  (doesn't happen with double precision).
+        // it on back. Sometimes average_weight is less than envery value due to
+        // floating point errors  (doesn't happen with double precision).
         for (auto tries = 0; tries < queue.size() + 1; tries++) {
             if (distances[node] <= average_weight) break;
             queue.pop_front();
@@ -1447,15 +1451,17 @@ vector<float> compute_geodesic_distances(
             node = queue.front();
         }
         queue.pop_front();
-        visited[node] = false;       // out of queue
+        visited[node] = false;                 // out of queue
         cumulative_weight -= distances[node];  // update average
 
-        const auto offset_distance        = distances[node];
-        const auto num_neighbors = (int)graph.graph[node].size();
+        const auto offset_distance = distances[node];
+        const auto num_neighbors   = (int)graph.graph[node].size();
 
-        for (int neighbor_idx = 0; neighbor_idx < num_neighbors; neighbor_idx++) {
+        for (int neighbor_idx = 0; neighbor_idx < num_neighbors;
+             neighbor_idx++) {
             // distance and id to neightbor through this node
-            auto new_distance = offset_distance + at(graph, node, neighbor_idx).length;
+            auto new_distance = offset_distance +
+                                at(graph, node, neighbor_idx).length;
             auto neighbor = at(graph, node, neighbor_idx).node;
 
             auto old_distance = distances[neighbor];
@@ -1463,7 +1469,8 @@ vector<float> compute_geodesic_distances(
 
             if (visited[neighbor]) {
                 // if neighbor already in queue, update cumulative weights.
-                cumulative_weight = cumulative_weight - old_distance + new_distance;
+                cumulative_weight = cumulative_weight - old_distance +
+                                    new_distance;
             } else {
                 // if neighbor not in queue, Small Label first.
                 if (queue.empty() or (new_distance < distances[queue.front()]))
@@ -1472,7 +1479,7 @@ vector<float> compute_geodesic_distances(
                     queue.push_back(neighbor);
 
                 visited[neighbor] = true;
-                cumulative_weight    = cumulative_weight + new_distance;
+                cumulative_weight = cumulative_weight + new_distance;
             }
 
             distances[neighbor] = new_distance;

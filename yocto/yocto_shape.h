@@ -483,17 +483,17 @@ struct edge_graph_arc {
     float length = 0;
 };
 struct edge_graph_index {
-    int   node   = 0;
-    int   index = 0;
+    int node  = 0;
+    int index = 0;
 };
 
 // Data structure used for geodesic computation
 struct edge_graph {
-    vector<vector<edge_graph_arc>> graph     = {};
+    vector<vector<edge_graph_arc>> graph = {};
     // vector<dvec<edge_graph_arc, 64>> graph     = {};
-    vector<vector<edge_graph_index>> edge_index     = {};
-    vector<vec3f>                    positions = {};
-    vector<vec2i>                    edges = {};
+    vector<vector<edge_graph_index>> edge_index = {};
+    vector<vec3f>                    positions  = {};
+    vector<vec2i>                    edges      = {};
 };
 
 // Construct an edge graph
