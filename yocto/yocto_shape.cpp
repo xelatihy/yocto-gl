@@ -1354,18 +1354,19 @@ edge_graph make_edge_graph(
 }
 
 // Double-ended queue used during graph search
-template <int capacity>
+template <typename T, int capacity>
 struct circular_buffer {
-    int* data = nullptr;
+    T* data = nullptr;
     int  head = 0, count = 0;
 
-    circular_buffer() : data{new int[capacity]}, head{0}, count{0} {}
+    circular_buffer() : data{new T[capacity]}, head{0}, count{0} {}
+    ~circular_buffer() { delete[] data; }
 
     bool empty() const { return count == 0; }
     int  size() const { return count; }
 
-    int& front() { return data[head]; }
-    int& back() { return data[(head + count - 1) % capacity]; }
+    T& front() { return data[head]; }
+    T& back() { return data[(head + count - 1) % capacity]; }
 
     void push_front(const int& v) {
         assert(count < capacity);
@@ -1396,7 +1397,7 @@ struct circular_buffer {
             pos = (pos + 1) % capacity;
             return *this;
         }
-        int operator*() const { return pos; }
+        T operator*() const { return pos; }
 
        private:
         int pos, end;
@@ -1406,9 +1407,6 @@ struct circular_buffer {
     iterator end() const { return {head + count, capacity}; }
 };
 
-using Queue = circular_buffer<500000>;
-
-#if 1
 vector<float> compute_geodesic_distances(
     edge_graph& graph, const vector<int>& sources) {
     auto scope = log_trace_scoped("computing geodesics");
@@ -1418,140 +1416,70 @@ vector<float> compute_geodesic_distances(
 
     // Small Label Fisrt + Large Label Last
     // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
-    int nnodes = num_nodes(graph);
-    assert(distances.size() == nnodes);
-    auto  flag = std::vector<bool>(nnodes, false);
-    Queue Q;
-    for (int i : sources) {
-        distances[i] = 0.0f;
-        flag[i]      = true;
-        Q.push_back(i);
-    }
+    auto num_nodes = (int)graph.graph.size();
+    assert(distances.size() == num_nodes);
+    auto visited = vector<bool>(num_nodes, false);
 
-    // Cumulative weights of elements in queue.
-    float cumw = 0.0f;
-    while (not Q.empty()) {
-        int    node = Q.front();
-        double avgw = cumw / Q.size();
-
-        // Large Label Last: until front node weights more than the average, put
-        // it on back. Sometimes avgw is less than envery value due to floating
-        // point errors  (doesn't happen with double precision).
-        for (int tries = 0; tries < Q.size() + 1; tries++) {
-            if (distances[node] <= avgw) break;
-            Q.pop_front();
-            Q.push_back(node);
-            node = Q.front();
-        }
-        Q.pop_front();
-        flag[node] = false;       // out of queue
-        cumw -= distances[node];  // update average
-
-        const float offset        = distances[node];
-        const int   num_neighbors = degree(graph, node);
-
-        for (int i = 0; i < num_neighbors; i++) {
-            float dist_new = offset + at(graph, node, i).length;  // distance to
-                                                                  // neightbor
-                                                                  // through
-                                                                  // this node.
-            int n = at(graph, node, i).node;  // id of neighbor.
-
-            float dist_old = distances[n];
-            if (dist_new >= dist_old) continue;
-
-            if (flag[n]) {
-                // if neighbor already in queue, update cumulative weights.
-                cumw = cumw - dist_old + dist_new;
-            } else {
-                // if neighbor not in queue, Small Label first.
-                if (Q.empty() or (dist_new < distances[Q.front()]))
-                    Q.push_front(n);
-                else
-                    Q.push_back(n);
-
-                flag[n] = true;
-                cumw    = cumw + dist_new;
-            }
-
-            distances[n] = dist_new;
-        }
-    }
-    return distances;
-}
-
+#if 1
+    auto queue = circular_buffer<int, 500000>{};
 #else
-
-// temeplate used to easily switch between edge_graph and FastGraph
-vector<float> compute_geodesic_distances(
-    edge_graph& graph, const vector<int>& sources) {
-    // edge_graph search to compute goedesic distance fields. The result must be
-    // preallocated
-    auto distances = vector<float>(graph.positions.size(), float_max);
-
-    // Small Label Fisrt + Large Label Last
-    // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
-    int nnodes = num_nodes(graph);
-    assert(distances.size() == nnodes);
-    auto  flag = std::vector<bool>(nnodes, false);
-    Queue Q;
-    for (int i : sources) {
-        distances[i] = 0.0f;
-        flag[i]      = true;
-        Q.push_back(i);
+    auto queue = deque<int>{};
+#endif
+    for (auto source : sources) {
+        distances[source] = 0.0f;
+        visited[source]      = true;
+        queue.push_back(source);
     }
 
     // Cumulative weights of elements in queue.
-    float cumw = 0.0f;
-    while (not Q.empty()) {
-        int    node = Q.front();
-        double avgw = cumw / Q.size();
+    auto cumulative_weight = 0.0f;
+    while (!queue.empty()) {
+        auto    node = queue.front();
+        auto average_weight = (double)cumulative_weight / queue.size();
 
         // Large Label Last: until front node weights more than the average, put
-        // it on back. Sometimes avgw is less than envery value due to floating
+        // it on back. Sometimes average_weight is less than envery value due to floating
         // point errors  (doesn't happen with double precision).
-        for (int tries = 0; tries < Q.size() + 1; tries++) {
-            if (distances[node] <= avgw) break;
-            Q.pop_front();
-            Q.push_back(node);
-            node = Q.front();
+        for (auto tries = 0; tries < queue.size() + 1; tries++) {
+            if (distances[node] <= average_weight) break;
+            queue.pop_front();
+            queue.push_back(node);
+            node = queue.front();
         }
-        Q.pop_front();
-        flag[node] = false;       // out of queue
-        cumw -= distances[node];  // update average
+        queue.pop_front();
+        visited[node] = false;       // out of queue
+        cumulative_weight -= distances[node];  // update average
 
-        const float offset        = distances[node];
-        const int   num_neighbors = degree(graph, node);
+        const auto offset_distance        = distances[node];
+        const auto num_neighbors = (int)graph.graph[node].size();
 
-        for (int i = 0; i < num_neighbors; i++) {
-            // distance to neightbor through this node
-            float dist_new = offset + at(graph, node, i).length;
-            int   n        = at(graph, node, i).node;  // id of neighbor.
+        for (int neighbor_idx = 0; neighbor_idx < num_neighbors; neighbor_idx++) {
+            // distance and id to neightbor through this node
+            auto new_distance = offset_distance + at(graph, node, neighbor_idx).length;
+            auto neighbor = at(graph, node, neighbor_idx).node;
 
-            float dist_old = distances[n];
-            if (dist_new >= dist_old) continue;
+            auto old_distance = distances[neighbor];
+            if (new_distance >= old_distance) continue;
 
-            if (flag[n]) {
+            if (visited[neighbor]) {
                 // if neighbor already in queue, update cumulative weights.
-                cumw = cumw - dist_old + dist_new;
+                cumulative_weight = cumulative_weight - old_distance + new_distance;
             } else {
                 // if neighbor not in queue, Small Label first.
-                if (Q.empty() or (dist_new < distances[Q.front()]))
-                    Q.push_front(n);
+                if (queue.empty() or (new_distance < distances[queue.front()]))
+                    queue.push_front(neighbor);
                 else
-                    Q.push_back(n);
+                    queue.push_back(neighbor);
 
-                flag[n] = true;
-                cumw    = cumw + dist_new;
+                visited[neighbor] = true;
+                cumulative_weight    = cumulative_weight + new_distance;
             }
-            distances[n] = dist_new;
+
+            distances[neighbor] = new_distance;
         }
     }
-
     return distances;
 }
-
-#endif
 
 vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
     auto colors = vector<vec4f>(distances.size());
