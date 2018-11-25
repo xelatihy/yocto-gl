@@ -235,10 +235,14 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Dictionary to store edge information.
-// key: edge, value: (edge index, adjacent face, other adjacent face)
+// Dictionary to store edge information. edge_index is the index to the edge
+// array, edges the array of edges and adj_faces the adjacent faces. We store
+// only bidirectional edges to keep the dictionary small. Use the functions
+// below to access this data.
 struct edge_map {
-    unordered_map<vec2i, vec3i> edge_dict;
+    unordered_map<vec2i, int> edge_index = {};
+    vector<vec2i> edges = {};
+    vector<vec2i> adj_faces = {};
 };
 
 // initializes an edge map
@@ -251,8 +255,10 @@ void insert_edges(edge_map& emap, const vector<vec4i>& quads);
 int insert_edge(edge_map& emap, const vec2i& edge, int face);
 // Get the edge index / insertion count
 int get_edge_index(const edge_map& emap, const vec2i& edge);
-int get_edge_count(const edge_map& emap, const vec2i& edge);
+int get_adjacent_face_count(const edge_map& emap, const vec2i& edge);
+int get_adjacent_face_count(const edge_map& emap, int edge_index);
 // Get list of edges / boundary edges
+int get_num_edges(const edge_map& emap);
 vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);

@@ -197,7 +197,7 @@ edge_map make_edge_map(const vector<vec4i>& quads) {
 }
 
 // Create key entry for edge_map
-vec2i make_edgemap_edge(const vec2i& e) {
+inline vec2i make_edgemap_edge(const vec2i& e) {
     return e.x < e.y ? e : vec2i{e.y, e.x};
 }
 
@@ -220,38 +220,53 @@ void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
     }
 }
 // Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& e, int face) {
-    auto es = make_edgemap_edge(e);
-    auto it = emap.edge_dict.find(es);
-    if (it == emap.edge_dict.end()) {
-        auto idx = (int)emap.edge_dict.size();
-        emap.edge_dict.insert(it, {es, {idx, face, -1}});
+int insert_edge(edge_map& emap, const vec2i& edge, int face) {
+    auto es = make_edgemap_edge(edge);
+    auto it = emap.edge_index.find(es);
+    if (it == emap.edge_index.end()) {
+        auto idx = (int)emap.edges.size();
+        emap.edge_index.insert(it, {es, idx});
+        emap.edges.push_back(es);
+        emap.adj_faces.push_back({face, -1});
         return idx;
     } else {
-        it->second.z = face;
-        return it->second.x;
+        auto idx = it->second;
+        emap.adj_faces[idx].y = face;
+        return idx;
     }
 }
+// Get number of edges
+int get_num_edges(const edge_map& emap) {
+    return emap.edges.size();
+}
 // Get the edge index
-int get_edge_index(const edge_map& emap, const vec2i& e) {
-    auto es = make_edgemap_edge(e);
-    return emap.edge_dict.at(es).x;
+int get_edge_index(const edge_map& emap, const vec2i& edge) {
+    auto iterator = emap.edge_index.find(make_edgemap_edge(edge));
+    if(iterator == emap.edge_index.end()) return -1;
+    return iterator->second;
 }
 // Get the edge count
-int get_edge_count(const edge_map& emap, const vec2i& e) {
-    auto es = make_edgemap_edge(e);
-    return emap.edge_dict.at(es).z == -1 ? 1 : 2;
+int get_adjacent_face_count(const edge_map& emap, int edge_index) {
+    if(edge_index < 0) return -1;
+    auto count = 0;
+    auto adj = emap.adj_faces[edge_index];
+    if(adj.x >= 0) count += 1; 
+    if(adj.y >= 0) count += 1; 
+    return count;
+}
+int get_adjacent_face_count(const edge_map& emap, const vec2i& edge) {
+    return get_adjacent_face_count(emap, get_edge_index(emap, edge));
 }
 // Get a list of edges, boundary edges, boundary vertices
 vector<vec2i> get_edges(const edge_map& emap) {
-    auto edges = vector<vec2i>(emap.edge_dict.size());
-    for (auto& [edge, counts] : emap.edge_dict) edges[counts.x] = edge;
-    return edges;
+    return emap.edges;
 }
 vector<vec2i> get_boundary(const edge_map& emap) {
     auto boundary = vector<vec2i>();
-    for (auto& [edge, counts] : emap.edge_dict)
-        if (counts.z == -1) boundary.push_back(edge);
+    for(auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
+        if(get_adjacent_face_count(emap, edge_index) > 1) 
+            boundary.push_back(emap.edges[edge_index]);
+    }
     return boundary;
 }
 vector<vec2i> get_edges(const vector<vec3i>& triangles) {
@@ -1139,6 +1154,7 @@ inline int degree(const edge_graph& graph, int node) {
 }
 
 inline int num_nodes(const edge_graph& graph) { return graph.graph.size(); }
+inline int get_num_nodes(const edge_graph& graph) { return graph.graph.size(); }
 
 void add_node(edge_graph& solver, const vec3f& position) {
     solver.positions.push_back(position);
@@ -1170,8 +1186,7 @@ edge_graph make_coarse_graph(
     for (int i=0; i < positions.size(); i++)
         add_node(solver, positions[i]);
 
-    for(auto& epair : emap.edge_dict) {
-        vec2i edge = epair.first;
+    for(auto& edge : get_edges(emap)) {
         add_undirected_arc(solver, edge.x, edge.y);
     }
     return solver;
@@ -1184,23 +1199,20 @@ edge_graph make_fine_graph(
     const edge_map& emap)
 {
     auto solver = make_coarse_graph(triangles, pos, emap);
-    solver.graph.reserve(pos.size() + emap.edge_dict.size());
-    auto steiner_per_edge = vector<int>(emap.edge_dict.size());
+
+    auto edges = get_edges(emap);
+
+    solver.graph.reserve(size(pos) + size(edges));
+    auto steiner_per_edge = vector<int>(get_num_edges(emap));
 
     // On each edge, connect the mid vertex with the vertices on th same edge.
-    for(auto& epair : emap.edge_dict) {
-        int v0 = epair.first.x;
-        int v1 = epair.first.y;
-        int idx = solver.graph.size();
-        steiner_per_edge[epair.second.x] = num_nodes(solver);
-        add_node(solver, (pos[v0] + pos[v1]) * 0.5f);
-        
-        // The arc vertex -> mid-vertex is useless while solving, don't add it.
-        // Add only mid-vertex -> vertex.
-        // add_directed_arc(solver, idx, v0);
-        // add_directed_arc(solver, idx, v1);
-        add_undirected_arc(solver, idx, v0);
-        add_undirected_arc(solver, idx, v1);
+    for(auto edge_index = 0; edge_index < size(edges); edge_index ++) {
+        auto& edge = edges[edge_index];
+        auto steiner_idx = get_num_nodes(solver);
+        steiner_per_edge[edge_index] = steiner_idx;
+        add_node(solver, (pos[edge.x] + pos[edge.y]) * 0.5f);
+        add_undirected_arc(solver, steiner_idx, edge.x);
+        add_undirected_arc(solver, steiner_idx, edge.y);
     }
 
     // Make connection for each face
@@ -1209,8 +1221,7 @@ edge_graph make_fine_graph(
         for(int k : {0, 1, 2}) {
             int a = at(triangles[face], k);
             int b = at(triangles[face], (k+1) % 3);
-            vec2i edge = a<b? vec2i{a, b} : vec2i{b, a};
-            steiner_idx[k] = steiner_per_edge[emap.edge_dict.at(edge).x];
+            steiner_idx[k] = steiner_per_edge[get_edge_index(emap, {a, b})];
         }
         
         // Connect each mid-vertex to the opposite mesh vertex in the triangle
