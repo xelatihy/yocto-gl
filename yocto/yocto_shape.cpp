@@ -1237,6 +1237,10 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
     return solver;
 }
 
+inline void add_half_edge(edge_graph& egraph, const vec2i& edge, float len) {
+    egraph.graph[edge.x].push_back({edge.y, len });
+}
+
 edge_graph make_coarse_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto egraph = edge_graph();
@@ -1247,12 +1251,12 @@ edge_graph make_coarse_graph(
     for(auto t : triangles) {
         auto edge_lengths = vec3f{ length(positions[t.x] - positions[t.y]),
             length(positions[t.y] - positions[t.z]), length(positions[t.z] - positions[t.x]) };
-        egraph.graph[t.x].push_back({ t.y, edge_lengths.x });
-        egraph.graph[t.y].push_back({ t.x, edge_lengths.x });
-        egraph.graph[t.z].push_back({ t.y, edge_lengths.y });
-        egraph.graph[t.y].push_back({ t.z, edge_lengths.y });
-        egraph.graph[t.z].push_back({ t.x, edge_lengths.z });
-        egraph.graph[t.x].push_back({ t.z, edge_lengths.z });
+        add_half_edge(egraph, {t.x, t.y}, edge_lengths.x);
+        add_half_edge(egraph, {t.x, t.y}, edge_lengths.x);
+        add_half_edge(egraph, {t.y, t.z}, edge_lengths.y);
+        add_half_edge(egraph, {t.z, t.y}, edge_lengths.y);
+        add_half_edge(egraph, {t.z, t.x}, edge_lengths.z);
+        add_half_edge(egraph, {t.x, t.z}, edge_lengths.z);
     }
 
     return egraph;
@@ -1261,7 +1265,7 @@ edge_graph make_coarse_graph(
 edge_graph make_edge_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
-    return make_coarse_graph(triangles, positions, make_edge_map(triangles));
+    return make_coarse_graph(triangles, positions);
     // return make_fine_graph(triangles, positions, make_edge_map(triangles));
 }
 
