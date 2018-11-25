@@ -1242,9 +1242,9 @@ inline void add_half_edge(edge_graph& egraph, const vec2i& edge, float len) {
     for(auto [vert, _] : egraph.graph[edge.x]) {
         if(vert == edge.y) return;
     }
-    egraph.graph[edge.x].push_back({edge.y, len });
     auto edge_index = (int)egraph.edges.size();
-    egraph.edge_index[edge.x].push_back(edge_index);
+    egraph.graph[edge.x].push_back({edge.y, len});
+    egraph.edge_index[edge.x].push_back({edge.y, edge_index});
     egraph.edges.push_back(edge);
 }
 
@@ -1256,9 +1256,19 @@ inline void add_edge(edge_graph& egraph, const vec2i& edge, float len) {
     egraph.graph[edge.x].push_back({edge.y, len });
     egraph.graph[edge.y].push_back({edge.x, len });
     auto edge_index = (int)egraph.edges.size();
-    egraph.edge_index[edge.x].push_back(edge_index);
-    egraph.edge_index[edge.y].push_back(edge_index);
+    egraph.edge_index[edge.x].push_back({edge.y, edge_index});
+    egraph.edge_index[edge.y].push_back({edge.x, edge_index});
     egraph.edges.push_back(edge);
+}
+
+inline void add_edge(edge_graph& egraph, const vec2i& edge) {
+    return add_edge(egraph, edge, length(egraph.positions[edge.x] - egraph.positions[edge.y]));
+}
+
+inline int get_edge_index(const edge_graph& egraph, const vec2i& edge) {
+    for(auto [node, index] : egraph.edge_index[edge.x])
+        if(edge.y == node) return index;
+    return -1;
 }
 
 edge_graph make_coarse_graph(
@@ -1281,23 +1291,24 @@ edge_graph make_coarse_graph(
 }
 
 edge_graph make_fine_graph(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos) {
-    auto emap = make_edge_map(triangles);
-    auto solver = make_coarse_graph(triangles, pos, emap);
-
-    auto edges = get_edges(emap);
-
-    solver.graph.reserve(size(pos) + size(edges));
-    auto steiner_per_edge = vector<int>(get_num_edges(emap));
+    const vector<vec3f>& positions) {
+    auto egraph = make_coarse_graph(triangles, positions);
+    auto edges = egraph.edges;
+    egraph.graph.resize(size(positions) + size(edges));
+    egraph.edge_index.resize(size(positions) + size(edges));
+    egraph.positions.resize(size(positions) + size(edges));
+    auto steiner_per_edge = vector<int>(size(edges));
 
     // On each edge, connect the mid vertex with the vertices on th same edge.
+    auto edge_offset = (int)positions.size();
     for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
         auto& edge                   = edges[edge_index];
-        auto  steiner_idx            = get_num_nodes(solver);
+        auto  steiner_idx            = edge_offset + edge_index;
         steiner_per_edge[edge_index] = steiner_idx;
-        add_node(solver, (pos[edge.x] + pos[edge.y]) * 0.5f);
-        add_undirected_arc(solver, steiner_idx, edge.x);
-        add_undirected_arc(solver, steiner_idx, edge.y);
+        egraph.positions[steiner_idx] = (positions[edge.x] + positions[edge.y]) * 0.5f;
+        auto edge_length = length(positions[edge.x] + positions[edge.y]) / 2;
+        add_half_edge(egraph, {steiner_idx, edge.x}, edge_length);
+        add_half_edge(egraph, {steiner_idx, edge.y}, edge_length);
     }
 
     // Make connection for each face
@@ -1306,32 +1317,32 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
         for (int k : {0, 1, 2}) {
             int a          = at(triangles[face], k);
             int b          = at(triangles[face], (k + 1) % 3);
-            steiner_idx[k] = steiner_per_edge[get_edge_index(emap, {a, b})];
+            steiner_idx[k] = steiner_per_edge[get_edge_index(egraph, {a, b})];
         }
 
         // Connect each mid-vertex to the opposite mesh vertex in the triangle
         int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
-        add_undirected_arc(solver, steiner_idx[0], opp[0]);
-        add_undirected_arc(solver, steiner_idx[1], opp[1]);
-        add_undirected_arc(solver, steiner_idx[2], opp[2]);
+        add_edge(egraph, {steiner_idx[0], opp[0]});
+        add_edge(egraph, {steiner_idx[1], opp[1]});
+        add_edge(egraph, {steiner_idx[2], opp[2]});
 
         // Connect mid-verts of the face between them
-        add_undirected_arc(solver, steiner_idx[0], steiner_idx[1]);
-        add_undirected_arc(solver, steiner_idx[0], steiner_idx[2]);
-        add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
+        add_edge(egraph, {steiner_idx[0], steiner_idx[1]});
+        add_edge(egraph, {steiner_idx[1], steiner_idx[2]});
+        add_edge(egraph, {steiner_idx[2], steiner_idx[0]});
     }
 
     auto min_len = 0, max_len = 0;
     auto avg_len = 0.0;
-    for (auto& adj : solver.graph) {
+    for (auto& adj : egraph.graph) {
         min_len = min(min_len, (int)adj.size());
         max_len = max(max_len, (int)adj.size());
-        avg_len += adj.size() / (double)solver.graph.size();
+        avg_len += adj.size() / (double)egraph.graph.size();
     }
     log_info(
-        "stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
+        "stats {} {} {} {}", egraph.graph.size(), min_len, avg_len, max_len);
 
-    return solver;
+    return egraph;
 }
 
 edge_graph make_edge_graph(
