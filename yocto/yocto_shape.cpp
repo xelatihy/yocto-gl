@@ -1199,8 +1199,8 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
         auto  steiner_idx            = get_num_nodes(solver);
         steiner_per_edge[edge_index] = steiner_idx;
         add_node(solver, (pos[edge.x] + pos[edge.y]) * 0.5f);
-        add_undirected_arc(solver, steiner_idx, edge.x);
-        add_undirected_arc(solver, steiner_idx, edge.y);
+        add_directed_arc(solver, steiner_idx, edge.x);
+        add_directed_arc(solver, steiner_idx, edge.y);
     }
 
     // Make connection for each face
@@ -1349,7 +1349,8 @@ edge_graph make_edge_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
     // return make_coarse_graph(triangles, positions);
-    return make_fine_graph(triangles, positions);
+    // return make_fine_graph(triangles, positions);
+    return make_fine_graph(triangles, positions, make_edge_map(triangles));
 }
 
 // Double-ended queue used during graph search
