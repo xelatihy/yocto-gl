@@ -1337,8 +1337,8 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
 edge_graph make_edge_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
-    return make_coarse_graph(triangles, positions);
-    // return make_fine_graph(triangles, positions, make_edge_map(triangles));
+    // return make_coarse_graph(triangles, positions);
+    return make_fine_graph(triangles, positions);
 }
 
 // Double-ended queue used during graph search
