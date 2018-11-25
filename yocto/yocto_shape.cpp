@@ -1140,7 +1140,7 @@ namespace yocto {
 void add_node(geodesic_solver& solver, const vec3f& position) {
     solver.positions.push_back(position);
     solver.graph.push_back({});
-    // solver.graph.back().reserve(8);
+    solver.graph.back().reserve(8);
 }
 
 inline void add_directed_arc(geodesic_solver& solver, int from, int to) {
@@ -1209,33 +1209,30 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
     return solver;
 }
 
-inline void add_half_edge(geodesic_solver& solver, const vec2i& edge, float len) {
+inline void add_half_edge(geodesic_solver& solver, const vec2i& edge) {
     // check if edge exists already
     for (auto [vert, _] : solver.graph[edge.x]) {
         if (vert == edge.y) return;
     }
+    auto len = length(solver.positions[edge.x] - solver.positions[edge.y]);
     auto edge_index = (int)solver.edges.size();
     solver.graph[edge.x].push_back({edge.y, len});
     solver.edge_index[edge.x].push_back({edge.y, edge_index});
     solver.edges.push_back(edge);
 }
 
-inline void add_edge(geodesic_solver& solver, const vec2i& edge, float len) {
+inline void add_edge(geodesic_solver& solver, const vec2i& edge) {
     // check if edge exists already
     for (auto [vert, _] : solver.graph[edge.x]) {
         if (vert == edge.y) return;
     }
+    auto len = length(solver.positions[edge.x] - solver.positions[edge.y]);
     solver.graph[edge.x].push_back({edge.y, len});
     solver.graph[edge.y].push_back({edge.x, len});
     auto edge_index = (int)solver.edges.size();
     solver.edge_index[edge.x].push_back({edge.y, edge_index});
     solver.edge_index[edge.y].push_back({edge.x, edge_index});
     solver.edges.push_back(edge);
-}
-
-inline void add_edge(geodesic_solver& solver, const vec2i& edge) {
-    return add_edge(solver, edge,
-        length(solver.positions[edge.x] - solver.positions[edge.y]));
 }
 
 inline int get_edge_index(const geodesic_solver& solver, const vec2i& edge) {
@@ -1253,12 +1250,9 @@ geodesic_solver make_edge_solver_fast(
 
     // fast construction assuming edges are not repeated
     for (auto t : triangles) {
-        auto edge_lengths = vec3f{length(positions[t.x] - positions[t.y]),
-            length(positions[t.y] - positions[t.z]),
-            length(positions[t.z] - positions[t.x])};
-        add_edge(solver, {t.x, t.y}, edge_lengths.x);
-        add_edge(solver, {t.y, t.z}, edge_lengths.y);
-        add_edge(solver, {t.z, t.x}, edge_lengths.z);
+        add_edge(solver, {t.x, t.y});
+        add_edge(solver, {t.y, t.z});
+        add_edge(solver, {t.z, t.x});
     }
 
     if(!use_steiner_points) return solver;
@@ -1278,9 +1272,8 @@ geodesic_solver make_edge_solver_fast(
         solver.positions[steiner_idx] = (positions[edge.x] +
                                             positions[edge.y]) *
                                         0.5f;
-        auto edge_length = length(positions[edge.x] + positions[edge.y]) / 2;
-        add_half_edge(solver, {steiner_idx, edge.x}, edge_length);
-        add_half_edge(solver, {steiner_idx, edge.y}, edge_length);
+        add_half_edge(solver, {steiner_idx, edge.x});
+        add_half_edge(solver, {steiner_idx, edge.y});
     }
 
     // Make connection for each face
@@ -1330,6 +1323,12 @@ void log_geodesic_solver_stats(const geodesic_solver& solver) {
         "adjacents {} {} {}", min_adjacents, avg_adjacents, max_adjacents);
     log_trace(
         "edge length {} {} {}", min_length, avg_length, max_length);
+}
+
+void update_edge_distances(geodesic_solver& solver) {
+    for(auto node = 0; node < solver.graph.size(); node ++) {
+        for(auto& edge : solver.graph[node]) edge.length = length(solver.positions[node] - solver.positions[edge.node]);
+    }
 }
 
 geodesic_solver make_geodesic_solver(
