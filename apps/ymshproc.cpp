@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 
     // compute geodesics and store them as colors
     if (geodesic_source >= 0) {
-        auto graph     = make_edge_graph(shape.triangles, shape.positions);
+        auto graph     = make_geodesic_solver(shape.triangles, shape.positions);
         auto distances = compute_geodesic_distances(graph, {geodesic_source});
         shape.colors   = convert_distance_to_color(distances);
     }

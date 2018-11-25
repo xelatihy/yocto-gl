@@ -1137,28 +1137,28 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-edge_graph_arc& at(edge_graph& graph, int node, int a) {
+geodesic_solver::arc& at(geodesic_solver& graph, int node, int a) {
     return graph.graph[node][a];
 }
 
-const edge_graph_arc& at(const edge_graph& graph, int node, int a) {
+const geodesic_solver::arc& at(const geodesic_solver& graph, int node, int a) {
     return graph.graph[node][a];
 }
 
-inline int degree(const edge_graph& graph, int node) {
+inline int degree(const geodesic_solver& graph, int node) {
     return graph.graph[node].size();
 }
 
-inline int num_nodes(const edge_graph& graph) { return graph.graph.size(); }
-inline int get_num_nodes(const edge_graph& graph) { return graph.graph.size(); }
+inline int num_nodes(const geodesic_solver& graph) { return graph.graph.size(); }
+inline int get_num_nodes(const geodesic_solver& graph) { return graph.graph.size(); }
 
-void add_node(edge_graph& solver, const vec3f& position) {
+void add_node(geodesic_solver& solver, const vec3f& position) {
     solver.positions.push_back(position);
     solver.graph.push_back({});
     // solver.graph.back().reserve(8);
 }
 
-inline void add_directed_arc(edge_graph& solver, int from, int to) {
+inline void add_directed_arc(geodesic_solver& solver, int from, int to) {
     assert(from >= 0 and from < solver.graph.size());
     assert(to >= 0 and to < solver.graph.size());
 
@@ -1166,14 +1166,14 @@ inline void add_directed_arc(edge_graph& solver, int from, int to) {
     solver.graph[from].push_back({to, len});
 }
 
-inline void add_undirected_arc(edge_graph& solver, int na, int nb) {
+inline void add_undirected_arc(geodesic_solver& solver, int na, int nb) {
     add_directed_arc(solver, na, nb);
     add_directed_arc(solver, nb, na);
 }
 
-edge_graph make_coarse_graph(const vector<vec3i>& triangles,
+geodesic_solver make_coarse_graph(const vector<vec3i>& triangles,
     const vector<vec3f>& positions, const edge_map& emap) {
-    auto solver = edge_graph();
+    auto solver = geodesic_solver();
     solver.graph.reserve(positions.size());
 
     for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
@@ -1184,7 +1184,7 @@ edge_graph make_coarse_graph(const vector<vec3i>& triangles,
     return solver;
 }
 
-edge_graph make_fine_graph(const vector<vec3i>& triangles,
+geodesic_solver make_fine_graph(const vector<vec3i>& triangles,
     const vector<vec3f>& pos, const edge_map& emap) {
     auto solver = make_coarse_graph(triangles, pos, emap);
 
@@ -1237,7 +1237,7 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
     return solver;
 }
 
-inline void add_half_edge(edge_graph& egraph, const vec2i& edge, float len) {
+inline void add_half_edge(geodesic_solver& egraph, const vec2i& edge, float len) {
     // check if edge exists already
     for (auto [vert, _] : egraph.graph[edge.x]) {
         if (vert == edge.y) return;
@@ -1248,7 +1248,7 @@ inline void add_half_edge(edge_graph& egraph, const vec2i& edge, float len) {
     egraph.edges.push_back(edge);
 }
 
-inline void add_edge(edge_graph& egraph, const vec2i& edge, float len) {
+inline void add_edge(geodesic_solver& egraph, const vec2i& edge, float len) {
     // check if edge exists already
     for (auto [vert, _] : egraph.graph[edge.x]) {
         if (vert == edge.y) return;
@@ -1261,20 +1261,20 @@ inline void add_edge(edge_graph& egraph, const vec2i& edge, float len) {
     egraph.edges.push_back(edge);
 }
 
-inline void add_edge(edge_graph& egraph, const vec2i& edge) {
+inline void add_edge(geodesic_solver& egraph, const vec2i& edge) {
     return add_edge(egraph, edge,
         length(egraph.positions[edge.x] - egraph.positions[edge.y]));
 }
 
-inline int get_edge_index(const edge_graph& egraph, const vec2i& edge) {
+inline int get_edge_index(const geodesic_solver& egraph, const vec2i& edge) {
     for (auto [node, index] : egraph.edge_index[edge.x])
         if (edge.y == node) return index;
     return -1;
 }
 
-edge_graph make_coarse_graph(
+geodesic_solver make_coarse_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto egraph      = edge_graph();
+    auto egraph      = geodesic_solver();
     egraph.positions = positions;
     egraph.graph.resize(size(positions));
     egraph.edge_index.resize(size(positions));
@@ -1292,7 +1292,7 @@ edge_graph make_coarse_graph(
     return egraph;
 }
 
-edge_graph make_fine_graph(
+geodesic_solver make_fine_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto egraph = make_coarse_graph(triangles, positions);
     auto edges  = egraph.edges;
@@ -1349,7 +1349,7 @@ edge_graph make_fine_graph(
     return egraph;
 }
 
-edge_graph make_edge_graph(
+geodesic_solver make_geodesic_solver(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
     // return make_coarse_graph(triangles, positions);
@@ -1358,7 +1358,7 @@ edge_graph make_edge_graph(
 }
 
 vector<float> compute_geodesic_distances(
-    edge_graph& graph, const vector<int>& sources) {
+    geodesic_solver& graph, const vector<int>& sources) {
     auto scope = log_trace_scoped("computing geodesics");
 
     // preallocated

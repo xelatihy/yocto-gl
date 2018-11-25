@@ -462,45 +462,21 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Short preallocated vector
-template <typename T, int N>
-struct dvec {
-    int size() const { return _size; }
-
-    void push_back(const T& v) { _data[_size++] = v; }
-
-    T&       operator[](int i) { return _data[i]; }
-    const T& operator[](int i) const { return _data[i]; }
-
-   private:
-    int _size = 0;
-    T   _data[N];
-};
-
-// Arc of edge graph
-struct edge_graph_arc {
-    int   node   = 0;
-    float length = 0;
-};
-struct edge_graph_index {
-    int node  = 0;
-    int index = 0;
-};
-
 // Data structure used for geodesic computation
-struct edge_graph {
-    vector<vector<edge_graph_arc>> graph = {};
-    // vector<dvec<edge_graph_arc, 64>> graph     = {};
-    vector<vector<edge_graph_index>> edge_index = {};
+struct geodesic_solver {
+    struct arc { int   node   = 0; float length = 0; };
+    struct index { int   node   = 0; int index = 0; };
+    vector<vector<arc>> graph = {};
+    vector<vector<index>> edge_index = {};
     vector<vec3f>                    positions  = {};
     vector<vec2i>                    edges      = {};
 };
 
 // Construct an edge graph
-edge_graph make_edge_graph(
+geodesic_solver make_geodesic_solver(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 vector<float> compute_geodesic_distances(
-    edge_graph& graph, const vector<int>& sources);
+    geodesic_solver& graph, const vector<int>& sources);
 vector<vec4f> convert_distance_to_color(const vector<float>& distances);
 
 }  // namespace yocto
