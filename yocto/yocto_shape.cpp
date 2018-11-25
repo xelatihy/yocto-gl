@@ -1156,26 +1156,23 @@ inline void add_undirected_arc(geodesic_solver& solver, int na, int nb) {
     add_directed_arc(solver, nb, na);
 }
 
-geodesic_solver make_coarse_graph(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const edge_map& emap) {
+geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, bool use_steiner_points) {
     auto solver = geodesic_solver();
     solver.graph.reserve(positions.size());
 
     for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
 
+    auto emap = make_edge_map(triangles);
     for (auto& edge : get_edges(emap)) {
         add_undirected_arc(solver, edge.x, edge.y);
     }
-    return solver;
-}
 
-geodesic_solver make_fine_graph(const vector<vec3i>& triangles,
-    const vector<vec3f>& pos, const edge_map& emap) {
-    auto solver = make_coarse_graph(triangles, pos, emap);
+    if(!use_steiner_points) return solver;
 
     auto edges = get_edges(emap);
 
-    solver.graph.reserve(size(pos) + size(edges));
+    solver.graph.reserve(size(positions) + size(edges));
     auto steiner_per_edge = vector<int>(get_num_edges(emap));
 
     // On each edge, connect the mid vertex with the vertices on th same edge.
@@ -1183,7 +1180,7 @@ geodesic_solver make_fine_graph(const vector<vec3i>& triangles,
         auto& edge                   = edges[edge_index];
         auto  steiner_idx            = solver.graph.size();
         steiner_per_edge[edge_index] = steiner_idx;
-        add_node(solver, (pos[edge.x] + pos[edge.y]) * 0.5f);
+        add_node(solver, (positions[edge.x] + positions[edge.y]) * 0.5f);
         add_directed_arc(solver, steiner_idx, edge.x);
         add_directed_arc(solver, steiner_idx, edge.y);
     }
@@ -1222,68 +1219,64 @@ geodesic_solver make_fine_graph(const vector<vec3i>& triangles,
     return solver;
 }
 
-inline void add_half_edge(geodesic_solver& egraph, const vec2i& edge, float len) {
+inline void add_half_edge(geodesic_solver& solver, const vec2i& edge, float len) {
     // check if edge exists already
-    for (auto [vert, _] : egraph.graph[edge.x]) {
+    for (auto [vert, _] : solver.graph[edge.x]) {
         if (vert == edge.y) return;
     }
-    auto edge_index = (int)egraph.edges.size();
-    egraph.graph[edge.x].push_back({edge.y, len});
-    egraph.edge_index[edge.x].push_back({edge.y, edge_index});
-    egraph.edges.push_back(edge);
+    auto edge_index = (int)solver.edges.size();
+    solver.graph[edge.x].push_back({edge.y, len});
+    solver.edge_index[edge.x].push_back({edge.y, edge_index});
+    solver.edges.push_back(edge);
 }
 
-inline void add_edge(geodesic_solver& egraph, const vec2i& edge, float len) {
+inline void add_edge(geodesic_solver& solver, const vec2i& edge, float len) {
     // check if edge exists already
-    for (auto [vert, _] : egraph.graph[edge.x]) {
+    for (auto [vert, _] : solver.graph[edge.x]) {
         if (vert == edge.y) return;
     }
-    egraph.graph[edge.x].push_back({edge.y, len});
-    egraph.graph[edge.y].push_back({edge.x, len});
-    auto edge_index = (int)egraph.edges.size();
-    egraph.edge_index[edge.x].push_back({edge.y, edge_index});
-    egraph.edge_index[edge.y].push_back({edge.x, edge_index});
-    egraph.edges.push_back(edge);
+    solver.graph[edge.x].push_back({edge.y, len});
+    solver.graph[edge.y].push_back({edge.x, len});
+    auto edge_index = (int)solver.edges.size();
+    solver.edge_index[edge.x].push_back({edge.y, edge_index});
+    solver.edge_index[edge.y].push_back({edge.x, edge_index});
+    solver.edges.push_back(edge);
 }
 
-inline void add_edge(geodesic_solver& egraph, const vec2i& edge) {
-    return add_edge(egraph, edge,
-        length(egraph.positions[edge.x] - egraph.positions[edge.y]));
+inline void add_edge(geodesic_solver& solver, const vec2i& edge) {
+    return add_edge(solver, edge,
+        length(solver.positions[edge.x] - solver.positions[edge.y]));
 }
 
-inline int get_edge_index(const geodesic_solver& egraph, const vec2i& edge) {
-    for (auto [node, index] : egraph.edge_index[edge.x])
+inline int get_edge_index(const geodesic_solver& solver, const vec2i& edge) {
+    for (auto [node, index] : solver.edge_index[edge.x])
         if (edge.y == node) return index;
     return -1;
 }
 
-geodesic_solver make_coarse_graph(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto egraph      = geodesic_solver();
-    egraph.positions = positions;
-    egraph.graph.resize(size(positions));
-    egraph.edge_index.resize(size(positions));
+geodesic_solver make_edge_solver_fast(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, bool use_steiner_points) {
+    auto solver      = geodesic_solver();
+    solver.positions = positions;
+    solver.graph.resize(size(positions));
+    solver.edge_index.resize(size(positions));
 
     // fast construction assuming edges are not repeated
     for (auto t : triangles) {
         auto edge_lengths = vec3f{length(positions[t.x] - positions[t.y]),
             length(positions[t.y] - positions[t.z]),
             length(positions[t.z] - positions[t.x])};
-        add_edge(egraph, {t.x, t.y}, edge_lengths.x);
-        add_edge(egraph, {t.y, t.z}, edge_lengths.y);
-        add_edge(egraph, {t.z, t.x}, edge_lengths.z);
+        add_edge(solver, {t.x, t.y}, edge_lengths.x);
+        add_edge(solver, {t.y, t.z}, edge_lengths.y);
+        add_edge(solver, {t.z, t.x}, edge_lengths.z);
     }
 
-    return egraph;
-}
+    if(!use_steiner_points) return solver;
 
-geodesic_solver make_fine_graph(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto egraph = make_coarse_graph(triangles, positions);
-    auto edges  = egraph.edges;
-    egraph.graph.resize(size(positions) + size(edges));
-    egraph.edge_index.resize(size(positions) + size(edges));
-    egraph.positions.resize(size(positions) + size(edges));
+    auto edges  = solver.edges;
+    solver.graph.resize(size(positions) + size(edges));
+    solver.edge_index.resize(size(positions) + size(edges));
+    solver.positions.resize(size(positions) + size(edges));
     auto steiner_per_edge = vector<int>(size(edges));
 
     // On each edge, connect the mid vertex with the vertices on th same edge.
@@ -1292,12 +1285,12 @@ geodesic_solver make_fine_graph(
         auto& edge                    = edges[edge_index];
         auto  steiner_idx             = edge_offset + edge_index;
         steiner_per_edge[edge_index]  = steiner_idx;
-        egraph.positions[steiner_idx] = (positions[edge.x] +
+        solver.positions[steiner_idx] = (positions[edge.x] +
                                             positions[edge.y]) *
                                         0.5f;
         auto edge_length = length(positions[edge.x] + positions[edge.y]) / 2;
-        add_half_edge(egraph, {steiner_idx, edge.x}, edge_length);
-        add_half_edge(egraph, {steiner_idx, edge.y}, edge_length);
+        add_half_edge(solver, {steiner_idx, edge.x}, edge_length);
+        add_half_edge(solver, {steiner_idx, edge.y}, edge_length);
     }
 
     // Make connection for each face
@@ -1306,40 +1299,39 @@ geodesic_solver make_fine_graph(
         for (int k : {0, 1, 2}) {
             int a          = at(triangles[face], k);
             int b          = at(triangles[face], (k + 1) % 3);
-            steiner_idx[k] = steiner_per_edge[get_edge_index(egraph, {a, b})];
+            steiner_idx[k] = steiner_per_edge[get_edge_index(solver, {a, b})];
         }
 
         // Connect each mid-vertex to the opposite mesh vertex in the triangle
         int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
-        add_edge(egraph, {steiner_idx[0], opp[0]});
-        add_edge(egraph, {steiner_idx[1], opp[1]});
-        add_edge(egraph, {steiner_idx[2], opp[2]});
+        add_edge(solver, {steiner_idx[0], opp[0]});
+        add_edge(solver, {steiner_idx[1], opp[1]});
+        add_edge(solver, {steiner_idx[2], opp[2]});
 
         // Connect mid-verts of the face between them
-        add_edge(egraph, {steiner_idx[0], steiner_idx[1]});
-        add_edge(egraph, {steiner_idx[1], steiner_idx[2]});
-        add_edge(egraph, {steiner_idx[2], steiner_idx[0]});
+        add_edge(solver, {steiner_idx[0], steiner_idx[1]});
+        add_edge(solver, {steiner_idx[1], steiner_idx[2]});
+        add_edge(solver, {steiner_idx[2], steiner_idx[0]});
     }
 
     auto min_len = 0, max_len = 0;
     auto avg_len = 0.0;
-    for (auto& adj : egraph.graph) {
+    for (auto& adj : solver.graph) {
         min_len = min(min_len, (int)adj.size());
         max_len = max(max_len, (int)adj.size());
-        avg_len += adj.size() / (double)egraph.graph.size();
+        avg_len += adj.size() / (double)solver.graph.size();
     }
     log_info(
-        "stats {} {} {} {}", egraph.graph.size(), min_len, avg_len, max_len);
+        "stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
 
-    return egraph;
+    return solver;
 }
 
 geodesic_solver make_geodesic_solver(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
-    // return make_coarse_graph(triangles, positions);
-    return make_fine_graph(triangles, positions);
-    // return make_fine_graph(triangles, positions, make_edge_map(triangles));
+    return make_edge_solver_fast(triangles, positions, true);
+    // return make_edge_solver_slow(triangles, positions, true);
 }
 
 vector<float> compute_geodesic_distances(
