@@ -1285,15 +1285,17 @@ inline vec2f transform_point(const mat3f& a, const vec2f& b) {
     auto tvb = a * vec3f{b.x, b.y, 1};
     return vec2f{tvb.x, tvb.y} / tvb.z;
 }
-inline vec3f transform_point(const mat4f& a, const vec3f& b) {
-    auto tvb = a * vec4f{b.x, b.y, b.z, 1};
-    return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
-}
 inline vec2f transform_vector(const mat3f& a, const vec2f& b) {
     auto tvb = a * vec3f{b.x, b.y, 0};
     return vec2f{tvb.x, tvb.y} / tvb.z;
 }
-inline vec3f transform_vector(const mat3f& a, const vec3f& b) { return a * b; }
+inline vec2f transform_direction(const mat3f& a, const vec2f& b) {
+    return normalize(transform_vector(a, b));
+}
+inline vec3f transform_point(const mat4f& a, const vec3f& b) {
+    auto tvb = a * vec4f{b.x, b.y, b.z, 1};
+    return vec3f{tvb.x, tvb.y, tvb.z} / tvb.w;
+}
 inline vec3f transform_vector(const mat4f& a, const vec3f& b) {
     auto tvb = a * vec4f{b.x, b.y, b.z, 0};
     return vec3f{tvb.x, tvb.y, tvb.z};
@@ -1301,16 +1303,23 @@ inline vec3f transform_vector(const mat4f& a, const vec3f& b) {
 inline vec3f transform_direction(const mat4f& a, const vec3f& b) {
     return normalize(transform_vector(a, b));
 }
+inline vec3f transform_vector(const mat3f& a, const vec3f& b) { return a * b; }
+inline vec3f transform_direction(const mat3f& a, const vec3f& b) {
+    return normalize(transform_vector(a, b));
+}
 
 // Transforms points, vectors and directions by frames.
 inline vec2f transform_point(const frame2f& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y + a.o;
 }
-inline vec3f transform_point(const frame3f& a, const vec3f& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
-}
 inline vec2f transform_vector(const frame2f& a, const vec2f& b) {
     return a.x * b.x + a.y * b.y;
+}
+inline vec2f transform_direction(const frame2f& a, const vec2f& b) {
+    return normalize(transform_vector(a, b));
+}
+inline vec3f transform_point(const frame3f& a, const vec3f& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
 }
 inline vec3f transform_vector(const frame3f& a, const vec3f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z;
@@ -1351,11 +1360,14 @@ inline bbox3f transform_bbox(const mat4f& a, const bbox3f& b) {
 inline vec2f transform_point_inverse(const frame2f& a, const vec2f& b) {
     return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
 }
-inline vec3f transform_point_inverse(const frame3f& a, const vec3f& b) {
-    return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
-}
 inline vec2f transform_vector_inverse(const frame2f& a, const vec2f& b) {
     return {dot(b, a.x), dot(b, a.y)};
+}
+inline vec2f transform_direction_inverse(const frame2f& a, const vec2f& b) {
+    return normalize(transform_vector_inverse(a, b));
+}
+inline vec3f transform_point_inverse(const frame3f& a, const vec3f& b) {
+    return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
 }
 inline vec3f transform_vector_inverse(const frame3f& a, const vec3f& b) {
     return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
