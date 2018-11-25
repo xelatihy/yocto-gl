@@ -1239,15 +1239,23 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
 
 edge_graph make_coarse_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto solver = edge_graph();
-    solver.graph.reserve(positions.size());
+    auto egraph = edge_graph();
+    egraph.positions = positions;
+    egraph.graph.resize(size(positions));
 
-    for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
-
-    for (auto& edge : get_edges(emap)) {
-        add_undirected_arc(solver, edge.x, edge.y);
+    // fast construction assuming edges are not repeated
+    for(auto t : triangles) {
+        auto edge_lengths = vec3f{ length(positions[t.x] - positions[t.y]),
+            length(positions[t.y] - positions[t.z]), length(positions[t.z] - positions[t.x]) };
+        egraph.graph[t.x].push_back({ t.y, edge_lengths.x });
+        egraph.graph[t.y].push_back({ t.x, edge_lengths.x });
+        egraph.graph[t.z].push_back({ t.y, edge_lengths.y });
+        egraph.graph[t.y].push_back({ t.z, edge_lengths.y });
+        egraph.graph[t.z].push_back({ t.x, edge_lengths.z });
+        egraph.graph[t.x].push_back({ t.z, edge_lengths.z });
     }
-    return solver;
+
+    return egraph;
 }
 
 edge_graph make_edge_graph(
