@@ -1238,7 +1238,27 @@ edge_graph make_fine_graph(const vector<vec3i>& triangles,
 }
 
 inline void add_half_edge(edge_graph& egraph, const vec2i& edge, float len) {
+    // check if edge exists already
+    for(auto [vert, _] : egraph.graph[edge.x]) {
+        if(vert == edge.y) return;
+    }
     egraph.graph[edge.x].push_back({edge.y, len });
+    auto edge_index = (int)egraph.edges.size();
+    egraph.edge_index[edge.x].push_back(edge_index);
+    egraph.edges.push_back(edge);
+}
+
+inline void add_edge(edge_graph& egraph, const vec2i& edge, float len) {
+    // check if edge exists already
+    for(auto [vert, _] : egraph.graph[edge.x]) {
+        if(vert == edge.y) return;
+    }
+    egraph.graph[edge.x].push_back({edge.y, len });
+    egraph.graph[edge.y].push_back({edge.x, len });
+    auto edge_index = (int)egraph.edges.size();
+    egraph.edge_index[edge.x].push_back(edge_index);
+    egraph.edge_index[edge.y].push_back(edge_index);
+    egraph.edges.push_back(edge);
 }
 
 edge_graph make_coarse_graph(
@@ -1246,20 +1266,72 @@ edge_graph make_coarse_graph(
     auto egraph = edge_graph();
     egraph.positions = positions;
     egraph.graph.resize(size(positions));
+    egraph.edge_index.resize(size(positions));
 
     // fast construction assuming edges are not repeated
     for(auto t : triangles) {
         auto edge_lengths = vec3f{ length(positions[t.x] - positions[t.y]),
             length(positions[t.y] - positions[t.z]), length(positions[t.z] - positions[t.x]) };
-        add_half_edge(egraph, {t.x, t.y}, edge_lengths.x);
-        add_half_edge(egraph, {t.x, t.y}, edge_lengths.x);
-        add_half_edge(egraph, {t.y, t.z}, edge_lengths.y);
-        add_half_edge(egraph, {t.z, t.y}, edge_lengths.y);
-        add_half_edge(egraph, {t.z, t.x}, edge_lengths.z);
-        add_half_edge(egraph, {t.x, t.z}, edge_lengths.z);
+        add_edge(egraph, {t.x, t.y}, edge_lengths.x);
+        add_edge(egraph, {t.y, t.z}, edge_lengths.y);
+        add_edge(egraph, {t.z, t.x}, edge_lengths.z);
     }
 
     return egraph;
+}
+
+edge_graph make_fine_graph(const vector<vec3i>& triangles,
+    const vector<vec3f>& pos) {
+    auto emap = make_edge_map(triangles);
+    auto solver = make_coarse_graph(triangles, pos, emap);
+
+    auto edges = get_edges(emap);
+
+    solver.graph.reserve(size(pos) + size(edges));
+    auto steiner_per_edge = vector<int>(get_num_edges(emap));
+
+    // On each edge, connect the mid vertex with the vertices on th same edge.
+    for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
+        auto& edge                   = edges[edge_index];
+        auto  steiner_idx            = get_num_nodes(solver);
+        steiner_per_edge[edge_index] = steiner_idx;
+        add_node(solver, (pos[edge.x] + pos[edge.y]) * 0.5f);
+        add_undirected_arc(solver, steiner_idx, edge.x);
+        add_undirected_arc(solver, steiner_idx, edge.y);
+    }
+
+    // Make connection for each face
+    for (int face = 0; face < triangles.size(); ++face) {
+        int steiner_idx[3];
+        for (int k : {0, 1, 2}) {
+            int a          = at(triangles[face], k);
+            int b          = at(triangles[face], (k + 1) % 3);
+            steiner_idx[k] = steiner_per_edge[get_edge_index(emap, {a, b})];
+        }
+
+        // Connect each mid-vertex to the opposite mesh vertex in the triangle
+        int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
+        add_undirected_arc(solver, steiner_idx[0], opp[0]);
+        add_undirected_arc(solver, steiner_idx[1], opp[1]);
+        add_undirected_arc(solver, steiner_idx[2], opp[2]);
+
+        // Connect mid-verts of the face between them
+        add_undirected_arc(solver, steiner_idx[0], steiner_idx[1]);
+        add_undirected_arc(solver, steiner_idx[0], steiner_idx[2]);
+        add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
+    }
+
+    auto min_len = 0, max_len = 0;
+    auto avg_len = 0.0;
+    for (auto& adj : solver.graph) {
+        min_len = min(min_len, (int)adj.size());
+        max_len = max(max_len, (int)adj.size());
+        avg_len += adj.size() / (double)solver.graph.size();
+    }
+    log_info(
+        "stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
+
+    return solver;
 }
 
 edge_graph make_edge_graph(
