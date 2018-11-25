@@ -1137,21 +1137,6 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-geodesic_solver::arc& at(geodesic_solver& graph, int node, int a) {
-    return graph.graph[node][a];
-}
-
-const geodesic_solver::arc& at(const geodesic_solver& graph, int node, int a) {
-    return graph.graph[node][a];
-}
-
-inline int degree(const geodesic_solver& graph, int node) {
-    return graph.graph[node].size();
-}
-
-inline int num_nodes(const geodesic_solver& graph) { return graph.graph.size(); }
-inline int get_num_nodes(const geodesic_solver& graph) { return graph.graph.size(); }
-
 void add_node(geodesic_solver& solver, const vec3f& position) {
     solver.positions.push_back(position);
     solver.graph.push_back({});
@@ -1196,7 +1181,7 @@ geodesic_solver make_fine_graph(const vector<vec3i>& triangles,
     // On each edge, connect the mid vertex with the vertices on th same edge.
     for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
         auto& edge                   = edges[edge_index];
-        auto  steiner_idx            = get_num_nodes(solver);
+        auto  steiner_idx            = solver.graph.size();
         steiner_per_edge[edge_index] = steiner_idx;
         add_node(solver, (pos[edge.x] + pos[edge.y]) * 0.5f);
         add_directed_arc(solver, steiner_idx, edge.x);
@@ -1403,9 +1388,8 @@ vector<float> compute_geodesic_distances(
         for (int neighbor_idx = 0; neighbor_idx < num_neighbors;
              neighbor_idx++) {
             // distance and id to neightbor through this node
-            auto new_distance = offset_distance +
-                                at(graph, node, neighbor_idx).length;
-            auto neighbor = at(graph, node, neighbor_idx).node;
+            auto new_distance = offset_distance + graph.graph[node][neighbor_idx].length;
+            auto neighbor = graph.graph[node][neighbor_idx].node;
 
             auto old_distance = distances[neighbor];
             if (new_distance >= old_distance) continue;
