@@ -1206,16 +1206,6 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
         add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
     }
 
-    auto min_len = 0, max_len = 0;
-    auto avg_len = 0.0;
-    for (auto& adj : solver.graph) {
-        min_len = min(min_len, (int)adj.size());
-        max_len = max(max_len, (int)adj.size());
-        avg_len += adj.size() / (double)solver.graph.size();
-    }
-    log_info(
-        "stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
-
     return solver;
 }
 
@@ -1314,24 +1304,41 @@ geodesic_solver make_edge_solver_fast(
         add_edge(solver, {steiner_idx[2], steiner_idx[0]});
     }
 
-    auto min_len = 0, max_len = 0;
-    auto avg_len = 0.0;
-    for (auto& adj : solver.graph) {
-        min_len = min(min_len, (int)adj.size());
-        max_len = max(max_len, (int)adj.size());
-        avg_len += adj.size() / (double)solver.graph.size();
-    }
-    log_info(
-        "stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
-
     return solver;
+}
+
+void log_geodesic_solver_stats(const geodesic_solver& solver) {
+    // stats
+    auto num_edges = 0;
+    auto min_adjacents = int_max, max_adjacents = int_min;
+    auto min_length = float_max, max_length = float_min;
+    auto avg_adjacents = 0.0, avg_length = 0.0;
+    for (auto& adj : solver.graph) {
+        num_edges += (int)adj.size();
+        min_adjacents = min(min_adjacents, (int)adj.size());
+        max_adjacents = max(max_adjacents, (int)adj.size());
+        avg_adjacents += adj.size() / (double)solver.graph.size();
+        for(auto& edge : adj) {
+            min_length = min(min_length, edge.length);
+            max_length = max(max_length, edge.length);
+            avg_length += edge.length;
+        }
+    }
+    avg_length /= num_edges;
+    log_trace("graph size {} {}", solver.graph.size(), solver.positions.size(), num_edges);
+    log_trace(
+        "adjacents {} {} {}", min_adjacents, avg_adjacents, max_adjacents);
+    log_trace(
+        "edge length {} {} {}", min_length, avg_length, max_length);
 }
 
 geodesic_solver make_geodesic_solver(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
-    return make_edge_solver_fast(triangles, positions, true);
+    auto solver = make_edge_solver_fast(triangles, positions, true);
     // return make_edge_solver_slow(triangles, positions, true);
+    log_geodesic_solver_stats(solver);
+    return solver;
 }
 
 vector<float> compute_geodesic_distances(
