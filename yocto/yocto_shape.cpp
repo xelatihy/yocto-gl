@@ -1357,60 +1357,6 @@ edge_graph make_edge_graph(
     // return make_fine_graph(triangles, positions, make_edge_map(triangles));
 }
 
-// Double-ended queue used during graph search
-template <typename T, int capacity>
-struct circular_buffer {
-    T*  data = nullptr;
-    int head = 0, count = 0;
-
-    circular_buffer() : data{new T[capacity]}, head{0}, count{0} {}
-    ~circular_buffer() { delete[] data; }
-
-    bool empty() const { return count == 0; }
-    int  size() const { return count; }
-
-    T& front() { return data[head]; }
-    T& back() { return data[(head + count - 1) % capacity]; }
-
-    void push_front(const int& v) {
-        assert(count < capacity);
-        head = (head - 1 + capacity) % capacity;
-        count++;
-        front() = v;
-    }
-    void push_back(const int& v) {
-        assert(count < capacity);
-        count++;
-        back() = v;
-    }
-
-    void pop_front() {
-        assert(count > 0);
-        head = (head + 1) % capacity;
-        count--;
-    }
-    void pop_back() {
-        assert(count > 0);
-        count--;
-    }
-
-    struct iterator {
-        iterator(int p, int e) : pos(p), end(e) {}
-        bool      operator!=(const iterator& a) const { return pos != a.pos; }
-        iterator& operator++() {
-            pos = (pos + 1) % capacity;
-            return *this;
-        }
-        T operator*() const { return pos; }
-
-       private:
-        int pos, end;
-    };
-
-    iterator begin() const { return {head, capacity}; }
-    iterator end() const { return {head + count, capacity}; }
-};
-
 vector<float> compute_geodesic_distances(
     edge_graph& graph, const vector<int>& sources) {
     auto scope = log_trace_scoped("computing geodesics");
@@ -1424,11 +1370,8 @@ vector<float> compute_geodesic_distances(
     assert(distances.size() == num_nodes);
     auto visited = vector<bool>(num_nodes, false);
 
-#if 1
-    auto queue = circular_buffer<int, 500000>{};
-#else
+    // setup queue
     auto queue = deque<int>{};
-#endif
     for (auto source : sources) {
         distances[source] = 0.0f;
         visited[source]   = true;
