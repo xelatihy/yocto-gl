@@ -103,7 +103,7 @@ def make_procedurals(directory='procedurals',mode='skies',clean=False):
         dirname = f'{directory}/textures'
         os.system(f'mkdir -p {dirname}')
         angles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 85, 90]
-        for name in ['sky-clear', 'sun-clear', 'sky-hazy', 'sun-hazy']:
+        for name in ['sky', 'sun']:
             for angle in angles:
                 jsonname = f'{dirname}/_proc.json' 
                 outname = f'{dirname}/{name}-{angle:02}.hdr'
@@ -113,7 +113,7 @@ def make_procedurals(directory='procedurals',mode='skies',clean=False):
                     'height': 1024,
                     'sun_angle': math.radians(angle),
                     'has_sun': 'sun' in name,
-                    'turbidity': 3 if 'clear' in name else 10
+                    'turbidity': 3
                 }
                 with open(jsonname, 'w') as f: json.dump(js, f, indent=2)
                 cmd = f'../yocto-gl/bin/yimproc -o {outname} {jsonname}'
