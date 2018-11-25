@@ -6,7 +6,11 @@
             "focal_length": 0.1,
             "lens_aperture": 0.0,
             "!!proc": {
-                "from": [ -7, 5, 12 ],
+                "from": [
+                    -7,
+                    5,
+                    12
+                ],
                 "to": [
                     0,
                     1,

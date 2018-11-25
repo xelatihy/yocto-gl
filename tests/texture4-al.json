@@ -6,7 +6,11 @@
             "focal_length": 0.1,
             "lens_aperture": 0.0,
             "!!proc": {
-                "from": [ -7, 5, 12 ],
+                "from": [
+                    -7,
+                    5,
+                    12
+                ],
                 "to": [
                     0,
                     1,
@@ -40,7 +44,8 @@
             "filename": "textures/texture2.hdr",
             "gamma": 2.2,
             "!!proc": {
-                "type": "sky"
+                "type": "sky",
+                "has_sun": true
             }
         },
         {
@@ -48,7 +53,8 @@
             "filename": "textures/texture3.hdr",
             "gamma": 2.2,
             "!!proc": {
-                "type": "sky"
+                "type": "sky",
+                "has_sun": true
             }
         }
     ],

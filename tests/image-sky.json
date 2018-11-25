@@ -1,5 +1,6 @@
 {
     "type": "sky",
+    "has_sun": true,
     "width": 2048,
     "height": 1024,
     "sun_angle": 0.1

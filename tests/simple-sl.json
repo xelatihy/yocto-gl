@@ -6,7 +6,11 @@
             "focal_length": 0.1,
             "lens_aperture": 0.0,
             "!!proc": {
-                "from": [ -7, 5, 12 ],
+                "from": [
+                    -7,
+                    5,
+                    12
+                ],
                 "to": [
                     0,
                     1,
@@ -40,8 +44,8 @@
             "filename": "textures/sky.hdr",
             "!!proc": {
                 "type": "sky",
-                "sun_angle": 1.1,
                 "has_sun": true,
+                "sun_angle": 1.1,
                 "turbidity": 1.7,
                 "sun_angle_scale": 0,
                 "sun_emission_scale": 1000

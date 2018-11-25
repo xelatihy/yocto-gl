@@ -6,7 +6,11 @@
             "focal_length": 0.1,
             "lens_aperture": 0.0,
             "!!proc": {
-                "from": [ -7, 5, 12 ],
+                "from": [
+                    -7,
+                    5,
+                    12
+                ],
                 "to": [
                     0,
                     1,
@@ -31,7 +35,8 @@
             "name": "sky",
             "filename": "textures/sky.hdr",
             "!!proc": {
-                "type": "sky"
+                "type": "sky",
+                "has_sun": true
             }
         }
     ],
@@ -187,7 +192,15 @@
                 1,
                 1
             ],
-            "emission_texture": "sky"
+            "emission_texture": "sky",
+            "!!proc": {
+                "rotation": [
+                    0,
+                    1,
+                    0,
+                    0.2
+                ]
+            }
         }
     ]
 }
