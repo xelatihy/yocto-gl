@@ -1,6 +1,6 @@
 #! /usr/bin/env python3 -B
 
-import click, glob, os, sys
+import click, glob, os, sys, math, json
 
 @click.group()
 def cli():
@@ -92,7 +92,36 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
             filedir = os.path.dirname(filename)
             cmd = f'../yocto-gl/bin/yscnproc -o {outname} {options} {filename}'
             print(cmd, file=sys.stderr)
-            os.system(cmd)    
+            os.system(cmd)
+
+@cli.command()
+@click.option('--directory', '-d', default='procedurals')
+@click.option('--mode','-m', default='skies')
+@click.option('--clean/--no-clean','-C', default=False)
+def make_procedurals(directory='procedurals',mode='skies',clean=False):
+    if mode == 'skies':
+        dirname = f'{directory}/textures'
+        os.system(f'mkdir -p {dirname}')
+        angles = [0, 5, 10, 20, 30, 40, 50, 60, 70, 80, 85, 90]
+        for name in ['sky-clear', 'sun-clear', 'sky-hazy', 'sun-hazy']:
+            for angle in angles:
+                jsonname = f'{dirname}/_proc.json' 
+                outname = f'{dirname}/{name}-{angle:02}.hdr'
+                js = {
+                    'type': 'sky',
+                    'width': 2048,
+                    'height': 1024,
+                    'sun_angle': math.radians(angle),
+                    'has_sun': 'sun' in name,
+                    'turbidity': 3 if 'clear' in name else 10
+                }
+                with open(jsonname, 'w') as f: json.dump(js, f, indent=2)
+                cmd = f'../yocto-gl/bin/yimproc -o {outname} {jsonname}'
+                print(cmd, file=sys.stderr)
+                os.system(cmd)
+                os.system(f'rm {jsonname}')
+    else:
+        print('unknown mode')
 
 @cli.command()
 def sync():
