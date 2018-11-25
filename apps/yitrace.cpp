@@ -445,7 +445,7 @@ int main(int argc, char* argv[]) {
     app.trace_options.max_bounces  = parse_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     app.trace_options.pixel_clamp = parse_argument(
-        parser, "--pixel-clamp", 100, "Final pixel clamping.");
+        parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
     app.trace_options.random_seed = parse_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
     app.trace_options.environments_hidden = parse_argument(parser,

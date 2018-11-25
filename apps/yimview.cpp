@@ -206,12 +206,15 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto ij        = get_image_coords(mouse_pos, img.image_center,
                 img.image_scale, {img.img.width, img.img.height});
             draw_dragger_opengl_widget(win, "mouse", ij);
-            auto pixel = zero4f;
+            auto img_pixel = zero4f, display_pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
                 ij.y < img.img.height) {
-                pixel = at(img.img, ij.x, ij.y);
+                img_pixel = at(img.img, ij.x, ij.y);
+                display_pixel = at(img.display, ij.x, ij.y);
+                
             }
-            draw_coloredit_opengl_widget(win, "pixel", pixel);
+            draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
+            draw_dragger_opengl_widget(win, "pixel value", display_pixel);
             auto stats = (img.stats_done) ? img.stats : image_stats{};
             draw_dragger_opengl_widget(win, "pxl min", stats.pxl_bounds.min);
             draw_dragger_opengl_widget(win, "pxl max", stats.pxl_bounds.max);
