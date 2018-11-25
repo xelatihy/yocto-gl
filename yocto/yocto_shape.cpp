@@ -1185,35 +1185,32 @@ edge_graph make_fine_graph(
 {
     auto solver = make_coarse_graph(triangles, pos, emap);
     solver.graph.reserve(pos.size() + emap.edge_dict.size());
-
-    auto steiner_map = emap;
+    auto steiner_per_edge = vector<int>(emap.edge_dict.size());
 
     // On each edge, connect the mid vertex with the vertices on th same edge.
-    for(auto& epair : steiner_map.edge_dict) {
+    for(auto& epair : emap.edge_dict) {
         int v0 = epair.first.x;
         int v1 = epair.first.y;
         int idx = solver.graph.size();
-        epair.second.y = idx;
+        steiner_per_edge[epair.second.x] = num_nodes(solver);
         add_node(solver, (pos[v0] + pos[v1]) * 0.5f);
         
         // The arc vertex -> mid-vertex is useless while solving, don't add it.
         // Add only mid-vertex -> vertex.
-        add_directed_arc(solver, idx, v0);
-        add_directed_arc(solver, idx, v1);
-        // add_undirected_arc(solver, idx, v0);
-        // add_undirected_arc(solver, idx, v1);
+        // add_directed_arc(solver, idx, v0);
+        // add_directed_arc(solver, idx, v1);
+        add_undirected_arc(solver, idx, v0);
+        add_undirected_arc(solver, idx, v1);
     }
 
     // Make connection for each face
     for (int face = 0; face < triangles.size(); ++face) {
         int   steiner_idx[3];
-        vec3f steiner_pos[3];
         for(int k : {0, 1, 2}) {
             int a = at(triangles[face], k);
             int b = at(triangles[face], (k+1) % 3);
             vec2i edge = a<b? vec2i{a, b} : vec2i{b, a};
-            steiner_idx[k] = steiner_map.edge_dict.at(edge).y;
-            steiner_pos[k] = (pos[a] + pos[b]) * 0.5f;
+            steiner_idx[k] = steiner_per_edge[emap.edge_dict.at(edge).x];
         }
         
         // Connect each mid-vertex to the opposite mesh vertex in the triangle
