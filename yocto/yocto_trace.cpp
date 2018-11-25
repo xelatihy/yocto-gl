@@ -76,7 +76,8 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     }
     point.texturecoord = evaluate_instance_texturecoord(
         scene, instance, element_id, element_uv);
-    point.color = evaluate_instance_color(scene, instance, element_id, element_uv);
+    point.color = evaluate_instance_color(
+        scene, instance, element_id, element_uv);
     point.emission = evaluate_instance_emission(
         scene, instance, element_id, element_uv);
     point.brdf = evaluate_instance_brdf(

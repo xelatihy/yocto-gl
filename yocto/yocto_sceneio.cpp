@@ -3113,10 +3113,10 @@ bool load_ply_scene(const string& filename, yocto_scene& scene,
             shape.quads, shape.positions, shape.normals, shape.texturecoords,
             shape.colors, shape.radius, false))
         return false;
-    
+
     // add instance
-    auto instance = yocto_instance{};
-    instance.name = shape.name;
+    auto instance  = yocto_instance{};
+    instance.name  = shape.name;
     instance.shape = 0;
     scene.instances.push_back(instance);
 
@@ -6000,10 +6000,10 @@ bool load_ply(const string& filename, ply_data& ply) {
     }
 
     // parse header
-    ply        = ply_data{};
-    auto ascii = false;
+    ply             = ply_data{};
+    auto ascii      = false;
     auto big_endian = false;
-    auto line  = ""s;
+    auto line       = ""s;
     while (getline(fs, line)) {
         auto view = string_view_stream{line};
         auto cmd  = ""s;
@@ -6016,11 +6016,11 @@ bool load_ply(const string& filename, ply_data& ply) {
             view >> fmt;
             if (fmt == "ascii") {
                 ascii = true;
-            } else if(fmt == "binary_little_endian") {
-                ascii = false;
+            } else if (fmt == "binary_little_endian") {
+                ascii      = false;
                 big_endian = false;
-            } else if(fmt == "binary_big_endian") {
-                ascii = false;
+            } else if (fmt == "binary_big_endian") {
+                ascii      = false;
                 big_endian = true;
             } else {
                 return false;
@@ -6108,10 +6108,9 @@ bool load_ply(const string& filename, ply_data& ply) {
         auto byte_swap = [](auto val) {
             // https://stackoverflow.com/questions/2782725/converting-float-values-from-big-endian-to-little-endian
             auto retVal = val;
-            auto pVal = (char*) &val, pRetVal = (char*)&retVal;
+            auto pVal = (char*)&val, pRetVal = (char*)&retVal;
             auto size = (int)sizeof(val);
-            for(auto i=0; i<size; i++)
-                pRetVal[size-1-i] = pVal[i];
+            for (auto i = 0; i < size; i++) pRetVal[size - 1 - i] = pVal[i];
             return retVal;
         };
         for (auto& elem : ply.elements) {
@@ -6121,12 +6120,12 @@ bool load_ply(const string& filename, ply_data& ply) {
                     if (prop.type == ply_type::ply_float) {
                         auto v = 0.0f;
                         if (!read_value(fs, v)) return false;
-                        if(big_endian) v = byte_swap(v);
+                        if (big_endian) v = byte_swap(v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_int) {
                         auto v = 0;
                         if (!read_value(fs, v)) return false;
-                        if(big_endian) v = byte_swap(v);
+                        if (big_endian) v = byte_swap(v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_uchar) {
                         auto vc = (unsigned char)0;
@@ -6138,8 +6137,8 @@ bool load_ply(const string& filename, ply_data& ply) {
                         prop.scalars[vid] = vc;
                         for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
                             auto v = 0;
-                            if(!read_value(fs, v)) return false;
-                            if(big_endian) v = byte_swap(v);
+                            if (!read_value(fs, v)) return false;
+                            if (big_endian) v = byte_swap(v);
                             prop.lists[vid][i] = v;
                         }
                     } else {

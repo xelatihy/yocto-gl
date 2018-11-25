@@ -241,8 +241,8 @@ namespace yocto {
 // below to access this data.
 struct edge_map {
     unordered_map<vec2i, int> edge_index = {};
-    vector<vec2i> edges = {};
-    vector<vec2i> adj_faces = {};
+    vector<vec2i>             edges      = {};
+    vector<vec2i>             adj_faces  = {};
 };
 
 // initializes an edge map
@@ -258,7 +258,7 @@ int get_edge_index(const edge_map& emap, const vec2i& edge);
 int get_adjacent_face_count(const edge_map& emap, const vec2i& edge);
 int get_adjacent_face_count(const edge_map& emap, int edge_index);
 // Get list of edges / boundary edges
-int get_num_edges(const edge_map& emap);
+int           get_num_edges(const edge_map& emap);
 vector<vec2i> get_edges(const edge_map& emap);
 vector<vec2i> get_boundary(const edge_map& emap);
 vector<vec2i> get_edges(const vector<vec3i>& triangles);
@@ -463,19 +463,18 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
 namespace yocto {
 
 // Short preallocated vector
-template<typename T, int N>
+template <typename T, int N>
 struct dvec {
-
     int size() const { return _size; }
 
     void push_back(const T& v) { _data[_size++] = v; }
 
-    T& operator[](int i) { return _data[i]; }
+    T&       operator[](int i) { return _data[i]; }
     const T& operator[](int i) const { return _data[i]; }
 
-    private:
+   private:
     int _size = 0;
-    T _data[N];
+    T   _data[N];
 };
 
 // Arc of edge graph
@@ -488,14 +487,14 @@ struct edge_graph_arc {
 struct edge_graph {
     // vector<vector<edge_graph_arc>> graph     = {};
     vector<dvec<edge_graph_arc, 64>> graph     = {};
-    vector<vec3f>                  positions = {};
+    vector<vec3f>                    positions = {};
 };
 
 // Construct an edge graph
 edge_graph make_edge_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-vector<float> compute_geodesic_distances(edge_graph& graph, 
-    const vector<int>& sources);
+vector<float> compute_geodesic_distances(
+    edge_graph& graph, const vector<int>& sources);
 vector<vec4f> convert_distance_to_color(const vector<float>& distances);
 
 }  // namespace yocto

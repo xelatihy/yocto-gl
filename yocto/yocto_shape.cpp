@@ -230,41 +230,37 @@ int insert_edge(edge_map& emap, const vec2i& edge, int face) {
         emap.adj_faces.push_back({face, -1});
         return idx;
     } else {
-        auto idx = it->second;
+        auto idx              = it->second;
         emap.adj_faces[idx].y = face;
         return idx;
     }
 }
 // Get number of edges
-int get_num_edges(const edge_map& emap) {
-    return emap.edges.size();
-}
+int get_num_edges(const edge_map& emap) { return emap.edges.size(); }
 // Get the edge index
 int get_edge_index(const edge_map& emap, const vec2i& edge) {
     auto iterator = emap.edge_index.find(make_edgemap_edge(edge));
-    if(iterator == emap.edge_index.end()) return -1;
+    if (iterator == emap.edge_index.end()) return -1;
     return iterator->second;
 }
 // Get the edge count
 int get_adjacent_face_count(const edge_map& emap, int edge_index) {
-    if(edge_index < 0) return -1;
+    if (edge_index < 0) return -1;
     auto count = 0;
-    auto adj = emap.adj_faces[edge_index];
-    if(adj.x >= 0) count += 1; 
-    if(adj.y >= 0) count += 1; 
+    auto adj   = emap.adj_faces[edge_index];
+    if (adj.x >= 0) count += 1;
+    if (adj.y >= 0) count += 1;
     return count;
 }
 int get_adjacent_face_count(const edge_map& emap, const vec2i& edge) {
     return get_adjacent_face_count(emap, get_edge_index(emap, edge));
 }
 // Get a list of edges, boundary edges, boundary vertices
-vector<vec2i> get_edges(const edge_map& emap) {
-    return emap.edges;
-}
+vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
 vector<vec2i> get_boundary(const edge_map& emap) {
     auto boundary = vector<vec2i>();
-    for(auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
-        if(get_adjacent_face_count(emap, edge_index) > 1) 
+    for (auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
+        if (get_adjacent_face_count(emap, edge_index) > 1)
             boundary.push_back(emap.edges[edge_index]);
     }
     return boundary;
@@ -1175,29 +1171,21 @@ inline void add_undirected_arc(edge_graph& solver, int na, int nb) {
     add_directed_arc(solver, nb, na);
 }
 
-edge_graph make_coarse_graph(
-    const vector<vec3i>& triangles,
-    const vector<vec3f>& positions,
-    const edge_map& emap)
-{
+edge_graph make_coarse_graph(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, const edge_map& emap) {
     auto solver = edge_graph();
     solver.graph.reserve(positions.size());
 
-    for (int i=0; i < positions.size(); i++)
-        add_node(solver, positions[i]);
+    for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
 
-    for(auto& edge : get_edges(emap)) {
+    for (auto& edge : get_edges(emap)) {
         add_undirected_arc(solver, edge.x, edge.y);
     }
     return solver;
 }
 
-
-edge_graph make_fine_graph(
-    const vector<vec3i>& triangles,
-    const vector<vec3f>& pos,
-    const edge_map& emap)
-{
+edge_graph make_fine_graph(const vector<vec3i>& triangles,
+    const vector<vec3f>& pos, const edge_map& emap) {
     auto solver = make_coarse_graph(triangles, pos, emap);
 
     auto edges = get_edges(emap);
@@ -1206,9 +1194,9 @@ edge_graph make_fine_graph(
     auto steiner_per_edge = vector<int>(get_num_edges(emap));
 
     // On each edge, connect the mid vertex with the vertices on th same edge.
-    for(auto edge_index = 0; edge_index < size(edges); edge_index ++) {
-        auto& edge = edges[edge_index];
-        auto steiner_idx = get_num_nodes(solver);
+    for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
+        auto& edge                   = edges[edge_index];
+        auto  steiner_idx            = get_num_nodes(solver);
         steiner_per_edge[edge_index] = steiner_idx;
         add_node(solver, (pos[edge.x] + pos[edge.y]) * 0.5f);
         add_undirected_arc(solver, steiner_idx, edge.x);
@@ -1217,19 +1205,19 @@ edge_graph make_fine_graph(
 
     // Make connection for each face
     for (int face = 0; face < triangles.size(); ++face) {
-        int   steiner_idx[3];
-        for(int k : {0, 1, 2}) {
-            int a = at(triangles[face], k);
-            int b = at(triangles[face], (k+1) % 3);
+        int steiner_idx[3];
+        for (int k : {0, 1, 2}) {
+            int a          = at(triangles[face], k);
+            int b          = at(triangles[face], (k + 1) % 3);
             steiner_idx[k] = steiner_per_edge[get_edge_index(emap, {a, b})];
         }
-        
+
         // Connect each mid-vertex to the opposite mesh vertex in the triangle
         int opp[3] = {triangles[face].z, triangles[face].x, triangles[face].y};
         add_undirected_arc(solver, steiner_idx[0], opp[0]);
         add_undirected_arc(solver, steiner_idx[1], opp[1]);
         add_undirected_arc(solver, steiner_idx[2], opp[2]);
-        
+
         // Connect mid-verts of the face between them
         add_undirected_arc(solver, steiner_idx[0], steiner_idx[1]);
         add_undirected_arc(solver, steiner_idx[0], steiner_idx[2]);
@@ -1238,20 +1226,35 @@ edge_graph make_fine_graph(
 
     auto min_len = 0, max_len = 0;
     auto avg_len = 0.0;
-    for(auto& adj : solver.graph) {
+    for (auto& adj : solver.graph) {
         min_len = min(min_len, (int)adj.size());
         max_len = max(max_len, (int)adj.size());
         avg_len += adj.size() / (double)solver.graph.size();
     }
-    log_info("stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
+    log_info(
+        "stats {} {} {} {}", solver.graph.size(), min_len, avg_len, max_len);
 
+    return solver;
+}
+
+edge_graph make_coarse_graph(
+    const vector<vec3i>& triangles, const vector<vec3f>& positions) {
+    auto solver = edge_graph();
+    solver.graph.reserve(positions.size());
+
+    for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
+
+    for (auto& edge : get_edges(emap)) {
+        add_undirected_arc(solver, edge.x, edge.y);
+    }
     return solver;
 }
 
 edge_graph make_edge_graph(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
-    return make_fine_graph(triangles, positions, make_edge_map(triangles));
+    return make_coarse_graph(triangles, positions, make_edge_map(triangles));
+    // return make_fine_graph(triangles, positions, make_edge_map(triangles));
 }
 
 // Double-ended queue used during graph search
@@ -1310,7 +1313,8 @@ struct circular_buffer {
 using Queue = circular_buffer<500000>;
 
 #if 1
-vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& sources) {
+vector<float> compute_geodesic_distances(
+    edge_graph& graph, const vector<int>& sources) {
     auto scope = log_trace_scoped("computing geodesics");
 
     // preallocated
@@ -1320,49 +1324,50 @@ vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& s
     // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
     int nnodes = num_nodes(graph);
     assert(distances.size() == nnodes);
-    auto flag = std::vector<bool>(nnodes, false);
+    auto  flag = std::vector<bool>(nnodes, false);
     Queue Q;
     for (int i : sources) {
         distances[i] = 0.0f;
-        flag[i] = true;
+        flag[i]      = true;
         Q.push_back(i);
     }
 
     // Cumulative weights of elements in queue.
     float cumw = 0.0f;
-    while(not Q.empty())
-    {    
-        int node = Q.front();
-        double avgw = cumw/Q.size();
+    while (not Q.empty()) {
+        int    node = Q.front();
+        double avgw = cumw / Q.size();
 
-        // Large Label Last: until front node weights more than the average, put it on back.
-        // Sometimes avgw is less than envery value due to floating point errors  (doesn't happen with double precision).
-        for (int tries = 0; tries < Q.size()+1; tries++) {
+        // Large Label Last: until front node weights more than the average, put
+        // it on back. Sometimes avgw is less than envery value due to floating
+        // point errors  (doesn't happen with double precision).
+        for (int tries = 0; tries < Q.size() + 1; tries++) {
             if (distances[node] <= avgw) break;
             Q.pop_front();
             Q.push_back(node);
             node = Q.front();
         }
         Q.pop_front();
-        flag[node] = false; // out of queue
-        cumw -= distances[node]; // update average
+        flag[node] = false;       // out of queue
+        cumw -= distances[node];  // update average
 
-        const float offset = distances[node];
-        const int num_neighbors = degree(graph, node);
+        const float offset        = distances[node];
+        const int   num_neighbors = degree(graph, node);
 
         for (int i = 0; i < num_neighbors; i++) {
+            float dist_new = offset + at(graph, node, i).length;  // distance to
+                                                                  // neightbor
+                                                                  // through
+                                                                  // this node.
+            int n = at(graph, node, i).node;  // id of neighbor.
 
-            float dist_new = offset + at(graph, node, i).length; // distance to neightbor through this node.
-            int n = at(graph, node, i).node; // id of neighbor.
-            
             float dist_old = distances[n];
             if (dist_new >= dist_old) continue;
 
             if (flag[n]) {
                 // if neighbor already in queue, update cumulative weights.
                 cumw = cumw - dist_old + dist_new;
-            }
-            else {
+            } else {
                 // if neighbor not in queue, Small Label first.
                 if (Q.empty() or (dist_new < distances[Q.front()]))
                     Q.push_front(n);
@@ -1370,19 +1375,20 @@ vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& s
                     Q.push_back(n);
 
                 flag[n] = true;
-                cumw = cumw + dist_new;
+                cumw    = cumw + dist_new;
             }
-            
+
             distances[n] = dist_new;
         }
     }
     return distances;
 }
 
-#else 
+#else
 
 // temeplate used to easily switch between edge_graph and FastGraph
-vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& sources) {
+vector<float> compute_geodesic_distances(
+    edge_graph& graph, const vector<int>& sources) {
     // edge_graph search to compute goedesic distance fields. The result must be
     // preallocated
     auto distances = vector<float>(graph.positions.size(), float_max);
@@ -1424,7 +1430,7 @@ vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& s
         for (int i = 0; i < num_neighbors; i++) {
             // distance to neightbor through this node
             float dist_new = offset + at(graph, node, i).length;
-            int n = at(graph, node, i).node;  // id of neighbor.
+            int   n        = at(graph, node, i).node;  // id of neighbor.
 
             float dist_old = distances[n];
             if (dist_new >= dist_old) continue;
@@ -1453,9 +1459,9 @@ vector<float> compute_geodesic_distances(edge_graph& graph, const vector<int>& s
 
 vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
     auto colors = vector<vec4f>(distances.size());
-    for(auto idx = 0; idx < distances.size(); idx++) {
+    for (auto idx = 0; idx < distances.size(); idx++) {
         auto distance = fmod(distances[idx] * 10, 1.0f);
-        colors[idx] = { distance, distance, distance, 1 };
+        colors[idx]   = {distance, distance, distance, 1};
     }
     return colors;
 }
