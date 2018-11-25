@@ -887,6 +887,18 @@ inline mat4f inverse(const mat4f& a) {
     return adjugate(a) * (1 / determinant(a));
 }
 
+// Constructs a basis from a direction
+inline mat3f make_basis_fromz(const vec3f& v) {
+    // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
+    auto z = normalize(v);
+    auto sign = copysignf(1.0f, z.z);
+    auto a = -1.0f / (sign + z.z);
+    auto b = z.x * z.y * a;
+    auto x = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y = vec3f{b, sign + z.y * z.y * a, -z.y};
+    return {x, y, z};
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -913,9 +925,13 @@ const auto identity_frame3f = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}
 
 // Frame construction from axis.
 inline frame3f make_frame_fromz(const vec3f& o, const vec3f& v) {
+    // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
     auto z = normalize(v);
-    auto x = normalize(orthogonal(z));
-    auto y = normalize(cross(z, x));
+    auto sign = copysignf(1.0f, z.z);
+    auto a = -1.0f / (sign + z.z);
+    auto b = z.x * z.y * a;
+    auto x = vec3f{1.0f + sign * z.x * z.x * a, sign * b, -sign * z.x};
+    auto y = vec3f{b, sign + z.y * z.y * a, -z.y};
     return {x, y, z, o};
 }
 inline frame3f make_frame_fromzx(
