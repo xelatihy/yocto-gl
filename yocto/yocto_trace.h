@@ -63,6 +63,10 @@
 #define YOCTO_QUADS_AS_TRIANGLES 1
 #endif
 
+#ifndef YOCTO_TRACE_THINSHEET
+#define YOCTO_TRACE_THINSHEET 0
+#endif
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
