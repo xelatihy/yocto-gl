@@ -175,7 +175,8 @@ inline float sample_uniform_element_pdf(const vector<T>& elements);
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete_distribution(const vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_distribution_pdf(const vector<float>& cdf, int idx);
+inline float sample_discrete_distribution_pdf(
+    const vector<float>& cdf, int idx);
 
 }  // namespace yocto
 
@@ -375,7 +376,8 @@ inline int sample_discrete_distribution(const vector<float>& cdf, float r) {
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_distribution_pdf(const vector<float>& cdf, int idx) {
+inline float sample_discrete_distribution_pdf(
+    const vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }

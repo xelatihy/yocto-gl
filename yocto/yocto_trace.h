@@ -123,6 +123,7 @@ enum struct trace_sampler_type {
     debug_normal,       // debug - normal
     debug_albedo,       // debug - albedo
     debug_texcoord,     // debug - texcoord
+    debug_color,        // debug - color
     debug_frontfacing,  // debug - faceforward
     debug_diffuse,      // debug - diffuse
     debug_specular,     // debug - specular
@@ -131,14 +132,14 @@ enum struct trace_sampler_type {
 
 const auto trace_sampler_type_names = vector<string>{"path", "direct", "naive",
     "environment", "eyelight", "path_nomis", "direct_nomis", "naive_nomis",
-    "debug_normal", "debug_albedo", "debug_texcoord", "debug_frontfacing",
-    "debug_diffuse", "debug_specular", "debug_roughness"};
+    "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
+    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
 
 // Tracer function
-using trace_sampler_func =
-    function<pair<vec3f, bool>(const yocto_scene& scene, const bvh_scene& bvh,
-        const trace_lights& lights, const vec3f& position, const vec3f& direction,
-        rng_state& rng, int max_bounces, bool environments_hidden)>;
+using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions
@@ -206,7 +207,8 @@ vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak);
 vec3f fresnel_schlick(const vec3f& ks, float cosw);
 vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
 vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& o);
-vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& o, float rs);
+vec3f fresnel_schlick(
+    const vec3f& ks, const vec3f& h, const vec3f& o, float rs);
 
 // Evaluates the GGX distribution and geometric term.
 float evaluate_ggx(float rs, float ndh, float ndi, float ndo);

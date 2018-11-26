@@ -299,12 +299,14 @@ bvh_element_intersection overlap_quad(const vec3f& pos, float dist_max,
     const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
     float r0, float r1, float r2, float r3) {
     auto intersection  = bvh_element_intersection{};
-    auto intersection1 = overlap_triangle(pos, dist_max, p0, p1, p3, r0, r1, r2);
+    auto intersection1 = overlap_triangle(
+        pos, dist_max, p0, p1, p3, r0, r1, r2);
     if (intersection1.hit) {
         intersection = intersection1;
         dist_max     = intersection.distance;
     }
-    auto intersection2 = overlap_triangle(pos, dist_max, p2, p3, p1, r2, r3, r1);
+    auto intersection2 = overlap_triangle(
+        pos, dist_max, p2, p3, p1, r2, r3, r1);
     if (intersection2.hit) {
         intersection            = intersection2;
         intersection.element_uv = {
@@ -431,19 +433,24 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         auto embree_triangles = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3, 3 * 4,
             bvh.triangles.size());
-        memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
-        memcpy(embree_triangles, data(bvh.triangles), bvh.triangles.size() * 12);
+        memcpy(
+            embree_positions, data(bvh.positions), bvh.positions.size() * 12);
+        memcpy(
+            embree_triangles, data(bvh.triangles), bvh.triangles.size() * 12);
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else if (!empty(bvh.quads)) {
-        auto embree_geom = rtcNewGeometry(embree_device, RTC_GEOMETRY_TYPE_QUAD);
+        auto embree_geom = rtcNewGeometry(
+            embree_device, RTC_GEOMETRY_TYPE_QUAD);
         rtcSetGeometryVertexAttributeCount(embree_geom, 1);
         auto embree_positions = rtcSetNewGeometryBuffer(embree_geom,
             RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3, 3 * 4,
             bvh.positions.size());
         auto embree_quads     = rtcSetNewGeometryBuffer(embree_geom,
-            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4, bvh.quads.size());
-        memcpy(embree_positions, data(bvh.positions), bvh.positions.size() * 12);
+            RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT4, 4 * 4,
+            bvh.quads.size());
+        memcpy(
+            embree_positions, data(bvh.positions), bvh.positions.size() * 12);
         memcpy(embree_quads, data(bvh.quads), bvh.quads.size() * 16);
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
@@ -469,7 +476,8 @@ void build_scene_embree_instanced_bvh(
         rtcCommitScene(embree_scene);
         return;
     }
-    for (auto instance_id = 0; instance_id < bvh.instances.size(); instance_id++) {
+    for (auto instance_id = 0; instance_id < bvh.instances.size();
+         instance_id++) {
         auto& instance = bvh.instances[instance_id];
         if (instance.shape_id < 0 && instance.surface_id < 0) continue;
         if (instance.shape_id >= 0 &&
@@ -514,7 +522,8 @@ void build_scene_embree_flattened_bvh(
         rtcCommitScene(embree_scene);
         return;
     }
-    for (auto instance_id = 0; instance_id < bvh.instances.size(); instance_id++) {
+    for (auto instance_id = 0; instance_id < bvh.instances.size();
+         instance_id++) {
         auto& instance = bvh.instances[instance_id];
         if (instance.shape_id < 0 && instance.surface_id < 0) continue;
         if (instance.shape_id >= 0 &&
@@ -574,7 +583,8 @@ void build_scene_embree_flattened_bvh(
     rtcCommitScene(embree_scene);
     bvh.embree_flattened = true;
 }
-// Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not available.
+// Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not
+// available.
 void refit_embree_bvh(bvh_shape& bvh) { log_error("not yet implemented"); }
 void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
 bvh_shape_intersection intersect_embree_bvh(
@@ -695,7 +705,8 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     return {mid, split_axis};
 }
 
-// Splits a BVH node using the balance heuristic. Returns split position and axis.
+// Splits a BVH node using the balance heuristic. Returns split position and
+// axis.
 pair<int, int> split_bvh_node_balanced(
     vector<bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
@@ -733,8 +744,10 @@ pair<int, int> split_bvh_node_balanced(
     return {mid, split_axis};
 }
 
-// Splits a BVH node using the middle heutirtic. Returns split position and axis.
-pair<int, int> split_bvh_node_middle(vector<bvh_prim>& prims, int start, int end) {
+// Splits a BVH node using the middle heutirtic. Returns split position and
+// axis.
+pair<int, int> split_bvh_node_middle(
+    vector<bvh_prim>& prims, int start, int end) {
     // initialize split axis and position
     auto split_axis = 0;
     auto mid        = (start + end) / 2;
@@ -1099,7 +1112,8 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
 // Build a BVH from the given set of instances.
 bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs) {
+    const vector<bvh_shape>&                         shape_bvhs,
+    const vector<bvh_shape>&                         surface_bvhs) {
     auto bvh         = bvh_scene{};
     bvh.instances    = instances;
     bvh.shape_bvhs   = shape_bvhs;
@@ -1159,7 +1173,8 @@ void refit_scene_bvh_rec(bvh_scene& bvh, int nodeid) {
         for (auto i = 0; i < node.num_primitives; i++) {
             auto& instance = bvh.instances[node.primitive_ids[i]];
             auto  sbvh     = bvh.shape_bvhs[instance.shape_id];
-            node.bbox += transform_bbox(instance.frame, sbvh.nodes.front().bbox);
+            node.bbox += transform_bbox(
+                instance.frame, sbvh.nodes.front().bbox);
         }
     } else {
         log_warning("empty bvh");
@@ -1261,8 +1276,9 @@ bvh_shape_intersection intersect_shape_bvh(
                         bvh.positions[t.z], bvh.positions[t.w]);
                 } else if (!empty(bvh.lines)) {
                     auto& l              = bvh.lines[node.primitive_ids[i]];
-                    element_intersection = intersect_line(ray, bvh.positions[l.x],
-                        bvh.positions[l.y], bvh.radius[l.x], bvh.radius[l.y]);
+                    element_intersection = intersect_line(ray,
+                        bvh.positions[l.x], bvh.positions[l.y], bvh.radius[l.x],
+                        bvh.radius[l.y]);
                 } else if (!empty(bvh.points)) {
                     auto& p              = bvh.points[node.primitive_ids[i]];
                     element_intersection = intersect_point(
@@ -1350,8 +1366,9 @@ bvh_scene_intersection intersect_scene_bvh(
                 }
                 if (!shape_intersection.hit) continue;
                 intersection = {node.primitive_ids[i],
-                    shape_intersection.element_id, shape_intersection.element_uv,
-                    shape_intersection.distance, true};
+                    shape_intersection.element_id,
+                    shape_intersection.element_uv, shape_intersection.distance,
+                    true};
                 ray.tmax     = intersection.distance;
             }
         }
@@ -1493,8 +1510,9 @@ bvh_scene_intersection overlap_scene_bvh(
                 }
                 if (!shape_intersection.hit) continue;
                 intersection = {node.primitive_ids[i],
-                    shape_intersection.element_id, shape_intersection.element_uv,
-                    shape_intersection.distance, true};
+                    shape_intersection.element_id,
+                    shape_intersection.element_uv, shape_intersection.distance,
+                    true};
                 max_distance = intersection.distance;
             }
         } else {

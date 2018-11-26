@@ -753,8 +753,9 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
                         shape.positions[t.y], shape.positions[t.z]);
             } else if (!empty(shape.quads)) {
                 for (auto q : shape.quads)
-                    area += quad_area(shape.positions[q.x], shape.positions[q.y],
-                        shape.positions[q.z], shape.positions[q.w]);
+                    area += quad_area(shape.positions[q.x],
+                        shape.positions[q.y], shape.positions[q.z],
+                        shape.positions[q.w]);
             } else if (!empty(shape.lines)) {
                 for (auto l : shape.lines)
                     area += line_length(
@@ -786,8 +787,9 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         auto& instance = scene.instances[instance_id];
         // auto& shape     = scene.shapes[instance.shape];
         // auto& material  = scene.materials[shape.material];
-        auto highlight = highlighted == pair<type_index, int>{
-                                            typeid(yocto_instance), instance_id};
+        auto highlight = highlighted ==
+                         pair<type_index, int>{
+                             typeid(yocto_instance), instance_id};
         draw_glinstance(state, scene, instance, highlight, options);
     }
 
@@ -799,7 +801,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     // load textures and vbos
     init_opengl_program(state.program, vertex, fragment);
     state.textures.resize(scene.textures.size());
-    for (auto texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
+    for (auto texture_id = 0; texture_id < scene.textures.size();
+         texture_id++) {
         auto texture = scene.textures[texture_id];
         if (!empty(texture.hdr_image)) {
             init_opengl_texture(state.textures[texture_id], texture.hdr_image,
@@ -842,7 +845,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         state.shapes[shape_id] = vbos;
     }
     state.surfaces.resize(scene.surfaces.size());
-    for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++) {
+    for (auto surface_id = 0; surface_id < scene.surfaces.size();
+         surface_id++) {
         auto& surface = scene.surfaces[surface_id];
         auto  vbos    = drawgl_shape();
         auto [quads, positions, normals, texturecoords] = convert_face_varying(
@@ -1142,7 +1146,8 @@ int main(int argc, char* argv[]) {
     app.draw_options.eyelight = parse_argument(
         parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
     app.double_sided        = parse_argument(parser,
-        "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
+        "--double-sided/--no-double-sided,-D", false,
+        "Double-sided rendering.");
     auto highlight_filename = parse_argument(
         parser, "--highlights", ""s, "Highlight filename");
     auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,

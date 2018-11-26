@@ -259,16 +259,17 @@ enum struct yocto_interpolation_type { linear, step, bezier };
 
 // Keyframe data.
 struct yocto_animation {
-    string                   name               = "";
-    string                   filename           = "";
-    string                   animation_group    = "";
-    yocto_interpolation_type interpolation_type = yocto_interpolation_type::linear;
-    vector<float>            keyframes_times    = {};
-    vector<vec3f>            translation_keyframes   = {};
-    vector<vec4f>            rotation_keyframes      = {};
-    vector<vec3f>            scale_keyframes         = {};
-    vector<vector<float>>    morph_weights_keyframes = {};
-    vector<int>              node_targets            = {};
+    string                   name            = "";
+    string                   filename        = "";
+    string                   animation_group = "";
+    yocto_interpolation_type interpolation_type =
+        yocto_interpolation_type::linear;
+    vector<float>         keyframes_times         = {};
+    vector<vec3f>         translation_keyframes   = {};
+    vector<vec4f>         rotation_keyframes      = {};
+    vector<vec3f>         scale_keyframes         = {};
+    vector<vector<float>> morph_weights_keyframes = {};
+    vector<int>           node_targets            = {};
 };
 
 // Scene comprised an array of objects whose memory is owened by the scene.
@@ -346,7 +347,8 @@ void add_missing_cameras(yocto_scene& scene);
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
 
 // Checks for validity of the scene.
-void log_validation_errors(const yocto_scene& scene, bool skip_textures = false);
+void log_validation_errors(
+    const yocto_scene& scene, bool skip_textures = false);
 
 // Queries on objects
 bool is_shape_face_varying(const yocto_shape& shape);
@@ -408,7 +410,8 @@ vec2i evaluate_texture_size(const yocto_texture& texture);
 vec4f lookup_texture(const yocto_texture& texture, int i, int j);
 vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
 float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
-float evaluate_voltexture(const yocto_voltexture& texture, const vec3f& texcoord);
+float evaluate_voltexture(
+    const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float          get_camera_fovx(const yocto_camera& camera);
@@ -475,7 +478,7 @@ vec3f evaluate_instance_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec4f evaluate_instance_color(
+vec4f evaluate_instance_color(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
@@ -483,9 +486,12 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id);
 // Check the instance type
-bool is_instance_points(const yocto_scene& scene, const yocto_instance& instance);
-bool is_instance_lines(const yocto_scene& scene, const yocto_instance& instance);
-bool is_instance_faces(const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_points(
+    const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_lines(
+    const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_faces(
+    const yocto_scene& scene, const yocto_instance& instance);
 
 // Material values
 int             get_instance_material_id(const yocto_scene& scene,

@@ -160,7 +160,8 @@ bool init_opengl_elementbuffer(opengl_elementbuffer& buffer,
 
 void delete_opengl_elementbuffer(opengl_elementbuffer& buffer);
 
-int get_opengl_uniform_location(const opengl_program& program, const char* name);
+int get_opengl_uniform_location(
+    const opengl_program& program, const char* name);
 
 void set_opengl_uniform(int locatiom, int value);
 void set_opengl_uniform(int locatiom, const vec2i& value);
@@ -230,7 +231,8 @@ struct opengl_window {
 };
 
 bool init_opengl_window(opengl_window& win, const vec2i& size,
-    const string& title, void* user_pointer, refresh_opengl_callback refresh_cb);
+    const string& title, void* user_pointer,
+    refresh_opengl_callback refresh_cb);
 void delete_opengl_window(opengl_window& win);
 
 void set_drop_opengl_callback(opengl_window& win, drop_opengl_callback drop_cb);
@@ -338,20 +340,23 @@ bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl,
     bool include_null = false);
 
 template <typename T>
-inline bool draw_combobox_opengl_widget(const opengl_window& win, const char* lbl,
-    int& idx, const vector<T*>& vals, bool include_null = false) {
+inline bool draw_combobox_opengl_widget(const opengl_window& win,
+    const char* lbl, int& idx, const vector<T*>& vals,
+    bool include_null = false) {
     return draw_combobox_opengl_widget(win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox_opengl_widget(const opengl_window& win,
-    const char* lbl, int& idx, const vector<T>& vals, bool include_null = false) {
+    const char* lbl, int& idx, const vector<T>& vals,
+    bool include_null = false) {
     return draw_combobox_opengl_widget(win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox_opengl_widget(const opengl_window& win,
-    const char* lbl, int& idx, const deque<T>& vals, bool include_null = false) {
+    const char* lbl, int& idx, const deque<T>& vals,
+    bool include_null = false) {
     return draw_combobox_opengl_widget(win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }

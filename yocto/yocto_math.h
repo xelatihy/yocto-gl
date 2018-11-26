@@ -374,7 +374,8 @@ inline vec3f normalize(const vec3f& a) {
     return (l) ? a / l : a;
 }
 inline vec3f cross(const vec3f& a, const vec3f& b) {
-    return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
+    return {
+        a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 inline float dot(const vec4f& a, const vec4f& b) {
     return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
@@ -921,7 +922,8 @@ struct frame3f {
 
 // Indentity frames.
 const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-const auto identity_frame3f = frame3f{{1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+const auto identity_frame3f = frame3f{
+    {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame construction from axis.
 inline frame3f make_frame_fromz(const vec3f& o, const vec3f& v) {
@@ -1095,8 +1097,10 @@ inline bbox3f& operator+=(bbox3f& a, const vec3f& b) {
     return a;
 }
 inline bbox3f& operator+=(bbox3f& a, const bbox3f& b) {
-    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
-    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)};
+    a.min = {
+        min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
+    a.max = {
+        max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)};
     return a;
 }
 // Bounding box expansions with points and other boxes.
@@ -1153,7 +1157,8 @@ inline bbox3f line_bounds(
     bbox += p1 + vec3f{r1, r1, r1};
     return bbox;
 }
-inline bbox3f triangle_bounds(const vec3f& p0, const vec3f& p1, const vec3f& p2) {
+inline bbox3f triangle_bounds(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     auto bbox = bbox3f{};
     bbox += p0;
     bbox += p1;
@@ -1269,7 +1274,8 @@ const auto ray_eps = 1e-4f;
 inline ray3f make_ray(const vec3f& o, const vec3f& d, float eps = ray_eps) {
     return {o, d, eps, float_max};
 }
-inline ray3f make_segment(const vec3f& p1, const vec3f& p2, float eps = ray_eps) {
+inline ray3f make_segment(
+    const vec3f& p1, const vec3f& p2, float eps = ray_eps) {
     return {p1, normalize(p2 - p1), eps, length(p2 - p1) - 2 * eps};
 }
 
@@ -1436,12 +1442,14 @@ inline mat4f make_frustum_mat(
         {(r + l) / (r - l), (t + b) / (t - b), -(f + n) / (f - n), -1},
         {0, 0, -2 * f * n / (f - n), 0}};
 }
-inline mat4f make_ortho_mat(float l, float r, float b, float t, float n, float f) {
+inline mat4f make_ortho_mat(
+    float l, float r, float b, float t, float n, float f) {
     return {{2 / (r - l), 0, 0, 0}, {0, 2 / (t - b), 0, 0},
         {0, 0, -2 / (f - n), 0},
         {-(r + l) / (r - l), -(t + b) / (t - b), -(f + n) / (f - n), 1}};
 }
-inline mat4f make_ortho2d_mat(float left, float right, float bottom, float top) {
+inline mat4f make_ortho2d_mat(
+    float left, float right, float bottom, float top) {
     return make_ortho_mat(left, right, bottom, top, -1, 1);
 }
 inline mat4f make_ortho_mat(float xmag, float ymag, float near, float far) {

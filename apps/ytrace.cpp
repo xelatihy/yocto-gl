@@ -66,12 +66,14 @@ int main(int argc, char* argv[]) {
         "--env-hidden/--no-env-hidden", false,
         "Environments are hidden in renderer");
     trace_options.double_sided        = parse_argument(parser,
-        "--double-sided/--no-double-sided,-D", false, "Double-sided rendering.");
+        "--double-sided/--no-double-sided,-D", false,
+        "Double-sided rendering.");
     auto save_batch                   = parse_argument(
         parser, "--save-batch", false, "Save images progressively");
-    auto exposure = parse_argument(parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto filmic   = parse_argument(parser, "--filmic", false, "Hdr filmic");
-    auto srgb     = parse_argument(parser, "--no-srgb", true, "No srgb");
+    auto exposure = parse_argument(
+        parser, "--exposure,-e", 0.0f, "Hdr exposure");
+    auto filmic = parse_argument(parser, "--filmic", false, "Hdr filmic");
+    auto srgb   = parse_argument(parser, "--no-srgb", true, "No srgb");
     bvh_options.use_embree = parse_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
     auto imfilename = parse_argument(
