@@ -1013,8 +1013,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
                     get_random_float(rng), get_random_vec2f(rng));
                 brdf_cosine = evaluate_brdf_cosine(
                     brdf, normal, outgoing, incoming);
-                pdf = sample_brdf_direction_pdf(
-                    brdf, normal, outgoing, incoming);
+                pdf = sample_brdf_direction_pdf(brdf, normal, outgoing, incoming);
             } else {
                 incoming = sample_delta_brdf_direction(brdf, normal, outgoing,
                     get_random_float(rng), get_random_vec2f(rng));
@@ -1142,11 +1141,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
                                   sample_lights_direction_pdf(scene, lights,
                                       bvh, point.position, light_direction);
         } else {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
+            next_direction = sample_delta_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_brdf_cosine(
+            next_brdf_cosine = evaluate_delta_brdf_cosine(
                 point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_brdf_direction_pdf(
+            next_direction_pdf = sample_delta_brdf_direction_pdf(
                 point.brdf, point.normal, outgoing, next_direction);
         }
 
