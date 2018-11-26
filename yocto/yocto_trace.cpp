@@ -515,13 +515,13 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
     }
 
     // transmission (thin sheet)
-    if (brdf.transmission != zero3f && outgoing_up && !incoming_up) {
+    if (brdf.transmission != zero3f && !brdf.refract && outgoing_up && !incoming_up) {
         auto fresnel = (brdf.fresnel) ?
                            evaluate_fresnel_schlick(brdf.specular, normal, outgoing) :
                            brdf.specular;
         microfacet_brdf += brdf.transmission * (1 - fresnel);
     }
-    if (brdf.transmission != zero3f && !outgoing_up && incoming_up) {
+    if (brdf.transmission != zero3f && !brdf.refract && !outgoing_up && incoming_up) {
         auto fresnel = (brdf.fresnel) ?
                            evaluate_fresnel_schlick(brdf.specular, normal, outgoing) :
                            brdf.specular;
@@ -686,10 +686,10 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
     if (brdf.specular != zero3f && outgoing_up && incoming_up) {
         return prob.y;
     }
-    if (brdf.transmission != zero3f && outgoing_up && !incoming_up) {
+    if (brdf.transmission != zero3f && !brdf.refract && outgoing_up && !incoming_up) {
         return prob.z;
     }
-    if (brdf.transmission != zero3f && !outgoing_up && incoming_up) {
+    if (brdf.transmission != zero3f && !brdf.refract && !outgoing_up && incoming_up) {
         return prob.z;
     }
 
