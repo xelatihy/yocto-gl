@@ -178,9 +178,9 @@ edge_map make_edge_map(const vector<vec3i>& triangles) {
     auto emap = edge_map{};
     for (int i = 0; i < triangles.size(); i++) {
         auto& t = triangles[i];
-        insert_edge(emap, {t.x, t.y}, i);
-        insert_edge(emap, {t.y, t.z}, i);
-        insert_edge(emap, {t.z, t.x}, i);
+        insert_edge(emap, {t.x, t.y});
+        insert_edge(emap, {t.y, t.z});
+        insert_edge(emap, {t.z, t.x});
     }
     return emap;
 }
@@ -188,10 +188,10 @@ edge_map make_edge_map(const vector<vec4i>& quads) {
     auto emap = edge_map{};
     for (int i = 0; i < quads.size(); i++) {
         auto& q = quads[i];
-        insert_edge(emap, {q.x, q.y}, i);
-        insert_edge(emap, {q.y, q.z}, i);
-        if (q.z != q.w) insert_edge(emap, {q.z, q.w}, i);
-        insert_edge(emap, {q.w, q.x}, i);
+        insert_edge(emap, {q.x, q.y});
+        insert_edge(emap, {q.y, q.z});
+        if (q.z != q.w) insert_edge(emap, {q.z, q.w});
+        insert_edge(emap, {q.w, q.x});
     }
     return emap;
 }
@@ -205,33 +205,33 @@ inline vec2i make_edgemap_edge(const vec2i& e) {
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles) {
     for (int i = 0; i < triangles.size(); i++) {
         auto& t = triangles[i];
-        insert_edge(emap, {t.x, t.y}, i);
-        insert_edge(emap, {t.y, t.z}, i);
-        insert_edge(emap, {t.z, t.x}, i);
+        insert_edge(emap, {t.x, t.y});
+        insert_edge(emap, {t.y, t.z});
+        insert_edge(emap, {t.z, t.x});
     }
 }
 void insert_edges(edge_map& emap, const vector<vec4i>& quads) {
     for (int i = 0; i < quads.size(); i++) {
         auto& q = quads[i];
-        insert_edge(emap, {q.x, q.y}, i);
-        insert_edge(emap, {q.y, q.z}, i);
-        if (q.z != q.w) insert_edge(emap, {q.z, q.w}, i);
-        insert_edge(emap, {q.w, q.x}, i);
+        insert_edge(emap, {q.x, q.y});
+        insert_edge(emap, {q.y, q.z});
+        if (q.z != q.w) insert_edge(emap, {q.z, q.w});
+        insert_edge(emap, {q.w, q.x});
     }
 }
 // Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& edge, int face) {
+int insert_edge(edge_map& emap, const vec2i& edge) {
     auto es = make_edgemap_edge(edge);
     auto it = emap.edge_index.find(es);
     if (it == emap.edge_index.end()) {
         auto idx = (int)emap.edges.size();
         emap.edge_index.insert(it, {es, idx});
         emap.edges.push_back(es);
-        emap.adj_faces.push_back({face, -1});
+        emap.boundary.push_back(true);
         return idx;
     } else {
-        auto idx              = it->second;
-        emap.adj_faces[idx].y = face;
+        auto idx           = it->second;
+        emap.boundary[idx] = false;
         return idx;
     }
 }
@@ -243,24 +243,12 @@ int get_edge_index(const edge_map& emap, const vec2i& edge) {
     if (iterator == emap.edge_index.end()) return -1;
     return iterator->second;
 }
-// Get the edge count
-int get_adjacent_face_count(const edge_map& emap, int edge_index) {
-    if (edge_index < 0) return -1;
-    auto count = 0;
-    auto adj   = emap.adj_faces[edge_index];
-    if (adj.x >= 0) count += 1;
-    if (adj.y >= 0) count += 1;
-    return count;
-}
-int get_adjacent_face_count(const edge_map& emap, const vec2i& edge) {
-    return get_adjacent_face_count(emap, get_edge_index(emap, edge));
-}
 // Get a list of edges, boundary edges, boundary vertices
 vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
 vector<vec2i> get_boundary(const edge_map& emap) {
     auto boundary = vector<vec2i>();
     for (auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
-        if (get_adjacent_face_count(emap, edge_index) > 1)
+        if (emap.boundary[edge_index])
             boundary.push_back(emap.edges[edge_index]);
     }
     return boundary;
@@ -1168,7 +1156,7 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
         add_undirected_arc(solver, edge.x, edge.y);
     }
 
-    if(!use_steiner_points) return solver;
+    if (!use_steiner_points) return solver;
 
     auto edges = get_edges(emap);
 
@@ -1241,8 +1229,8 @@ inline int get_edge_index(const geodesic_solver& solver, const vec2i& edge) {
     return -1;
 }
 
-geodesic_solver make_edge_solver_fast(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, bool use_steiner_points) {
+geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, bool use_steiner_points) {
     auto solver      = geodesic_solver();
     solver.positions = positions;
     solver.graph.resize(size(positions));
@@ -1255,9 +1243,9 @@ geodesic_solver make_edge_solver_fast(
         add_edge(solver, {t.z, t.x});
     }
 
-    if(!use_steiner_points) return solver;
+    if (!use_steiner_points) return solver;
 
-    auto edges  = solver.edges;
+    auto edges = solver.edges;
     solver.graph.resize(size(positions) + size(edges));
     solver.edge_index.resize(size(positions) + size(edges));
     solver.positions.resize(size(positions) + size(edges));
@@ -1302,7 +1290,7 @@ geodesic_solver make_edge_solver_fast(
 
 void log_geodesic_solver_stats(const geodesic_solver& solver) {
     // stats
-    auto num_edges = 0;
+    auto num_edges     = 0;
     auto min_adjacents = int_max, max_adjacents = int_min;
     auto min_length = float_max, max_length = float_min;
     auto avg_adjacents = 0.0, avg_length = 0.0;
@@ -1311,29 +1299,31 @@ void log_geodesic_solver_stats(const geodesic_solver& solver) {
         min_adjacents = min(min_adjacents, (int)adj.size());
         max_adjacents = max(max_adjacents, (int)adj.size());
         avg_adjacents += adj.size() / (double)solver.graph.size();
-        for(auto& edge : adj) {
+        for (auto& edge : adj) {
             min_length = min(min_length, edge.length);
             max_length = max(max_length, edge.length);
             avg_length += edge.length;
         }
     }
     avg_length /= num_edges;
-    log_trace("graph size {} {} {}", solver.graph.size(), solver.positions.size(), num_edges);
+    log_trace("graph size {} {} {}", solver.graph.size(),
+        solver.positions.size(), num_edges);
     log_trace(
         "adjacents {} {} {}", min_adjacents, avg_adjacents, max_adjacents);
-    log_trace(
-        "edge length {} {} {}", min_length, avg_length, max_length);
+    log_trace("edge length {} {} {}", min_length, avg_length, max_length);
 }
 
 void update_edge_distances(geodesic_solver& solver) {
-    for(auto node = 0; node < solver.graph.size(); node ++) {
-        for(auto& edge : solver.graph[node]) edge.length = length(solver.positions[node] - solver.positions[edge.node]);
+    for (auto node = 0; node < solver.graph.size(); node++) {
+        for (auto& edge : solver.graph[node])
+            edge.length = length(
+                solver.positions[node] - solver.positions[edge.node]);
     }
 }
 
 geodesic_solver make_geodesic_solver(
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto scope = log_trace_scoped("make edge graph");
+    auto scope  = log_trace_scoped("make edge graph");
     auto solver = make_edge_solver_fast(triangles, positions, true);
     // auto solver = make_edge_solver_slow(triangles, positions, true);
     log_geodesic_solver_stats(solver);
@@ -1386,7 +1376,8 @@ vector<float> compute_geodesic_distances(
         for (int neighbor_idx = 0; neighbor_idx < num_neighbors;
              neighbor_idx++) {
             // distance and id to neightbor through this node
-            auto new_distance = offset_distance + graph.graph[node][neighbor_idx].length;
+            auto new_distance = offset_distance +
+                                graph.graph[node][neighbor_idx].length;
             auto neighbor = graph.graph[node][neighbor_idx].node;
 
             auto old_distance = distances[neighbor];

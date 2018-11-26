@@ -242,7 +242,7 @@ namespace yocto {
 struct edge_map {
     unordered_map<vec2i, int> edge_index = {};
     vector<vec2i>             edges      = {};
-    vector<vec2i>             adj_faces  = {};
+    vector<bool>              boundary   = {};
 };
 
 // initializes an edge map
@@ -252,11 +252,9 @@ edge_map make_edge_map(const vector<vec4i>& quads);
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
 void insert_edges(edge_map& emap, const vector<vec4i>& quads);
 // Insert an edge and return its index
-int insert_edge(edge_map& emap, const vec2i& edge, int face);
+int insert_edge(edge_map& emap, const vec2i& edge);
 // Get the edge index / insertion count
 int get_edge_index(const edge_map& emap, const vec2i& edge);
-int get_adjacent_face_count(const edge_map& emap, const vec2i& edge);
-int get_adjacent_face_count(const edge_map& emap, int edge_index);
 // Get list of edges / boundary edges
 int           get_num_edges(const edge_map& emap);
 vector<vec2i> get_edges(const edge_map& emap);
@@ -464,12 +462,18 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-    struct arc { int   node   = 0; float length = 0; };
-    struct index { int   node   = 0; int index = 0; };
-    vector<vector<arc>> graph = {};
+    struct arc {
+        int   node   = 0;
+        float length = 0;
+    };
+    struct index {
+        int node  = 0;
+        int index = 0;
+    };
+    vector<vector<arc>>   graph      = {};
     vector<vector<index>> edge_index = {};
-    vector<vec3f>                    positions  = {};
-    vector<vec2i>                    edges      = {};
+    vector<vec3f>         positions  = {};
+    vector<vec2i>         edges      = {};
 };
 
 // Construct an edge graph
