@@ -605,18 +605,14 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
     if (brdf.diffuse != zero3f && outgoing_up && rnl < weights.x) {
         auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
         auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        auto fp = dot(normal, outgoing) >= 0 ?
-                      make_frame_fromz(zero3f, normal) :
-                      make_frame_fromz(zero3f, -normal);
+        auto fp = make_frame_fromz(zero3f, normal);
         return transform_direction(fp, il);
     }
     // sample according to specular GGX
     else if (brdf.specular != zero3f && outgoing_up &&
              rnl < weights.x + weights.y) {
         auto hl = sample_microfacet_distribution(brdf.roughness, rn);
-        auto fp = dot(normal, outgoing) >= 0 ?
-                      make_frame_fromz(zero3f, normal) :
-                      make_frame_fromz(zero3f, -normal);
+        auto fp = make_frame_fromz(zero3f, normal);
         auto half_vector = transform_direction(fp, hl);
         return reflect(outgoing, half_vector);
     }
