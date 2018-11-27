@@ -409,29 +409,28 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
 
 // Schlick approximation of the Fresnel term
 vec3f evaluate_fresnel_schlick(
-    const vec3f& specular, const vec3f& normal, const vec3f& incoming) {
+    const vec3f& specular, float direction_cosine) {
     return specular +
            (1 - specular) *
-               pow(clamp(1 - abs(dot(normal, incoming)), 0.0f, 1.0f), 5.0f);
+               pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
 }
-vec3f evaluate_fresnel_schlick(const vec3f& specular, const vec3f& half_vector,
-    const vec3f& incoming, float roughness) {
-    auto fks = evaluate_fresnel_schlick(
-        specular, fabs(dot(half_vector, incoming)));
+vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine, float roughness) {
+    auto fks = evaluate_fresnel_schlick(specular, direction_cosine);
     return specular +
            (fks - specular) * (1 - sqrt(clamp(roughness, 0.0f, 1.0f)));
 }
 
 // Evaluates the GGX distribution and geometric term
-float evaluate_ggx_distribution(
-    float roughness, const vec3f& normal, const vec3f& half_vector) {
+float evaluate_microfacet_distribution(
+    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
     auto di = (dot(normal, half_vector) * dot(normal, half_vector)) *
                   (roughness * roughness - 1) +
               1;
     return roughness * roughness / (pif * di * di);
 }
-float evaluate_ggx_shadowing(float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming) {
+float evaluate_microfacet_shadowing(float roughness, const vec3f& normal,
+    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming, 
+    bool ggx) {
 #if 0
     // evaluate G from Heitz
     auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
@@ -451,12 +450,27 @@ float evaluate_ggx_shadowing(float roughness, const vec3f& normal,
     return Go * Gi;
 #endif
 }
+vec3f sample_microfacet_distribution(float roughness, const vec2f& rn, bool ggx) {
+    auto tan2 = roughness * roughness * rn.y / (1 - rn.y);
+    auto rz   = sqrt(1 / (tan2 + 1));
+    auto rr   = sqrt(1 - rz * rz);
+    auto rphi = 2 * pif * rn.x;
+    // set to wh
+    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
+    return wh_local;
+}
+float sample_microfacet_distribution_pdf(float roughness, float ndh, bool ggx) {
+    auto alpha2 = roughness * roughness;
+    auto di     = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d      = alpha2 / (pif * di * di);
+    return d * ndh;
+}
 
 vec3f evaluate_brdf_fresnel(
     const microfacet_brdf& brdf, const vec3f& normal, const vec3f& incoming) {
     if (brdf.specular == zero3f) return zero3f;
     if (!brdf.fresnel) return brdf.specular;
-    return evaluate_fresnel_schlick(brdf.specular, normal, incoming);
+    return evaluate_fresnel_schlick(brdf.specular, dot(normal, incoming));
 }
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
@@ -485,9 +499,9 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
     if (brdf.specular != zero3f && outgoing_up && incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
-        auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
-        auto G = evaluate_ggx_shadowing(
-            brdf.roughness, normal, outgoing, incoming);
+        auto D = evaluate_microfacet_distribution(brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(
+            brdf.roughness, normal, half_vector, outgoing, incoming);
         brdf_cosine += fresnel * D * G /
                        (4 * fabs(dot(normal, outgoing)) *
                            fabs(dot(normal, incoming)));
@@ -498,8 +512,8 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
         auto ir          = reflect(-incoming, normal);
         auto half_vector = normalize(ir + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, -outgoing);
-        auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
-        auto G = evaluate_ggx_shadowing(brdf.roughness, normal, outgoing, ir);
+        auto D = evaluate_microfacet_distribution(brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(brdf.roughness, normal, half_vector, outgoing, ir);
         brdf_cosine += brdf.transmission * (1 - fresnel) * D * G /
                        (4 * fabs(dot(normal, outgoing)) *
                            fabs(dot(normal, ir)));
@@ -508,8 +522,8 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
         auto ir          = reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
-        auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
-        auto G = evaluate_ggx_shadowing(brdf.roughness, normal, outgoing, ir);
+        auto D = evaluate_microfacet_distribution(brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(brdf.roughness, normal, half_vector, outgoing, ir);
         brdf_cosine += brdf.transmission * (1 - fresnel) * D * G /
                        (4 * fabs(dot(normal, outgoing)) *
                            fabs(dot(normal, ir)));
@@ -575,7 +589,7 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
     // sample according to specular GGX
     else if (brdf.specular != zero3f && outgoing_up &&
              rnl < weights.x + weights.y) {
-        auto hl = sample_ggx_distribution(brdf.roughness, rn);
+        auto hl = sample_microfacet_distribution(brdf.roughness, rn);
         auto fp = dot(normal, outgoing) >= 0 ?
                       make_frame_fromz(zero3f, normal) :
                       make_frame_fromz(zero3f, -normal);
@@ -585,14 +599,14 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
     // transmission hack
     else if (brdf.transmission != zero3f && outgoing_up &&
              rnl < weights.x + weights.y + weights.z) {
-        auto hl          = sample_ggx_distribution(brdf.roughness, rn);
+        auto hl          = sample_microfacet_distribution(brdf.roughness, rn);
         auto fp          = make_frame_fromz(zero3f, normal);
         auto half_vector = transform_direction(fp, hl);
         auto ir          = reflect(outgoing, half_vector);
         return reflect(-ir, -normal);
     } else if (brdf.transmission != zero3f && !outgoing_up &&
                rnl < weights.x + weights.y + weights.z) {
-        auto hl          = sample_ggx_distribution(brdf.roughness, rn);
+        auto hl          = sample_microfacet_distribution(brdf.roughness, rn);
         auto fp          = make_frame_fromz(zero3f, -normal);
         auto half_vector = transform_direction(fp, hl);
         auto ir          = reflect(outgoing, half_vector);
@@ -648,9 +662,7 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
 float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return 0;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
-                                        brdf.specular, normal, outgoing) :
-                                    brdf.specular;
+    auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
     auto weights = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
         max(brdf.transmission * (1 - fresnel))};
     if (weights == zero3f) return 0;
@@ -667,21 +679,21 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     }
     if (brdf.specular != zero3f && outgoing_up && incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
-        auto d           = sample_ggx_distribution_pdf(
+        auto d           = sample_microfacet_distribution_pdf(
             brdf.roughness, fabs(dot(normal, half_vector)));
         pdf += weights.y * d / (4 * fabs(dot(outgoing, half_vector)));
     }
     if (brdf.transmission != zero3f && outgoing_up && !incoming_up) {
         auto ir          = reflect(-incoming, normal);
         auto half_vector = normalize(ir + outgoing);
-        auto d           = sample_ggx_distribution_pdf(
+        auto d           = sample_microfacet_distribution_pdf(
             brdf.roughness, fabs(dot(normal, half_vector)));
         pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
     }
     if (brdf.transmission != zero3f && !outgoing_up && incoming_up) {
         auto ir          = reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
-        auto d           = sample_ggx_distribution_pdf(
+        auto d           = sample_microfacet_distribution_pdf(
             brdf.roughness, fabs(dot(normal, half_vector)));
         pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
     }
@@ -693,9 +705,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
     const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return 0;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
-                                        brdf.specular, normal, outgoing) :
-                                    brdf.specular;
+    auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
     auto weights = vec3f{
         0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
     if (weights == zero3f) return 0;
@@ -2438,39 +2448,6 @@ vec3f evaluate_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
     auto rp = roughness * (t3 - t4) / (t3 + t4);
 
     return (rp + roughness) / 2.0f;
-}
-
-// Schlick approximation of the Fresnel term
-vec3f evaluate_fresnel_schlick(const vec3f& specular, float cosw) {
-    if (specular == zero3f) return zero3f;
-    return specular + (vec3f{1, 1, 1} - specular) *
-                          pow(clamp(1.0f - cosw, 0.0f, 1.0f), 5.0f);
-}
-vec3f evaluate_fresnel_schlick(
-    const vec3f& specular, float cosw, float roughness) {
-    if (specular == zero3f) return zero3f;
-    auto fks = evaluate_fresnel_schlick(specular, cosw);
-    return specular +
-           (fks - specular) * (1 - sqrt(clamp(roughness, 0.0f, 1.0f)));
-}
-
-// Evaluates the GGX pdf
-float sample_ggx_distribution_pdf(float roughness, float ndh) {
-    auto alpha2 = roughness * roughness;
-    auto di     = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d      = alpha2 / (pif * di * di);
-    return d * ndh;
-}
-
-// Sample the GGX distribution
-vec3f sample_ggx_distribution(float roughness, const vec2f& rn) {
-    auto tan2 = roughness * roughness * rn.y / (1 - rn.y);
-    auto rz   = sqrt(1 / (tan2 + 1));
-    auto rr   = sqrt(1 - rz * rz);
-    auto rphi = 2 * pif * rn.x;
-    // set to wh
-    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
-    return wh_local;
 }
 
 // Tabulated ior for metals

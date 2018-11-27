@@ -211,17 +211,15 @@ vec3f evaluate_fresnel_metal(
     float direction_cosine, const vec3f& eta, const vec3f& etak);
 // Schlick approximation of Fresnel term, optionally weighted by roughness;
 vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine);
-vec3f evaluate_fresnel_schlick(
-    const vec3f& specular, float direction_cosine, float roughness);
+vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine, float roughness);
 
-// Evaluates the GGX distribution and geometric term.
-float evaluate_ggx_distribution(
-    float roughness, const vec3f& normal, const vec3f& half_vector);
-float evaluate_ggx_shadowing(float roughness, const vec3f& normal,
-    const vec3f& outgoing, const vec3f& incoming);
-// Sample the GGX distribution.
-vec3f sample_ggx_distribution(float roughness, const vec2f& rn);
-float sample_ggx_distribution_pdf(float roughness, float direction_cosine);
+// Evaluates the microfacet distribution and geometric term (ggx or beckman).
+float evaluate_microfacet_distribution(
+    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx = true);
+float evaluate_microfacet_shadowing(float roughness, const vec3f& normal, const vec3f& half_vector, 
+    const vec3f& outgoing, const vec3f& incoming, bool ggx = true);
+vec3f sample_microfacet_distribution(float roughness, const vec2f& rn, bool ggx = true);
+float sample_microfacet_distribution_pdf(float roughness, float direction_cosine, bool ggx = true);
 
 // Evaluate and sample volume phase function.
 vec3f sample_phase_function(float vg, const vec2f& u);
