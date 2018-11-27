@@ -408,13 +408,13 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
 #else
 
 // Schlick approximation of the Fresnel term
-vec3f evaluate_fresnel_schlick(
-    const vec3f& specular, float direction_cosine) {
+vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine) {
     return specular +
            (1 - specular) *
                pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
 }
-vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine, float roughness) {
+vec3f evaluate_fresnel_schlick(
+    const vec3f& specular, float direction_cosine, float roughness) {
     auto fks = evaluate_fresnel_schlick(specular, direction_cosine);
     return specular +
            (fks - specular) * (1 - sqrt(clamp(roughness, 0.0f, 1.0f)));
@@ -423,47 +423,66 @@ vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine, fl
 // Evaluates the GGX distribution and geometric term
 float evaluate_microfacet_distribution(
     float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
-    auto di = (dot(normal, half_vector) * dot(normal, half_vector)) *
-                  (roughness * roughness - 1) +
-              1;
-    return roughness * roughness / (pif * di * di);
+    auto cosine = dot(normal, half_vector);
+    if (cosine <= 0) return 0;
+    auto roughness_square = roughness * roughness;
+    auto cosine_square    = cosine * cosine;
+    auto tangent_square   = clamp01(1 - cosine_square) / cosine_square;
+    if (ggx) {
+        return roughness_square / (pif * cosine_square * cosine_square *
+                                      (roughness_square + tangent_square) *
+                                      (roughness_square + tangent_square));
+    } else {
+        return exp(-tangent_square / roughness_square) /
+               (pif * roughness_square * cosine_square * cosine_square);
+    }
+}
+float evaluate_microfacet_shadowing_term(float roughness, const vec3f& normal,
+    const vec3f& half_vector, const vec3f& direction, bool ggx) {
+    auto cosine = dot(normal, direction);
+    if (dot(half_vector, direction) * cosine <= 0) return 0;
+    auto roughness_square = roughness * roughness;
+    auto cosine_square    = cosine * cosine;
+    auto tangent_square   = clamp01(1 - cosine_square) / cosine_square;
+    if (ggx) {
+        return 2 / (1 + sqrt(1.0f + roughness_square * tangent_square));
+    } else {
+        auto tangent       = sqrt(tangent_square);
+        auto inv_rt        = 1 / (roughness * tangent);
+        auto inv_rt_square = 1 / (roughness_square * tangent_square);
+        if (inv_rt < 1.6f) {
+            return (3.535f * inv_rt + 2.181f * inv_rt_square) /
+                   (1.0f + 2.276f * inv_rt + 2.577f * inv_rt_square);
+        } else {
+            return 1.0f;
+        }
+    }
 }
 float evaluate_microfacet_shadowing(float roughness, const vec3f& normal,
-    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming, 
+    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
     bool ggx) {
-#if 0
-    // evaluate G from Heitz
-    auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
-    auto lambda_i = (-1 + sqrt(1 + alpha2 * (1 - ndi * ndi) / (ndi * ndi))) / 2;
-    auto g = 1 / (1 + lambda_o + lambda_i);
-#else
-    auto Go = (2 * fabs(dot(normal, outgoing))) /
-              (fabs(dot(normal, outgoing)) +
-                  sqrt(roughness * roughness + (1 - roughness * roughness) *
-                                                   dot(normal, outgoing) *
-                                                   dot(normal, outgoing)));
-    auto Gi = (2 * fabs(dot(normal, incoming))) /
-              (fabs(dot(normal, incoming)) +
-                  sqrt(roughness * roughness + (1 - roughness * roughness) *
-                                                   dot(normal, incoming) *
-                                                   dot(normal, incoming)));
-    return Go * Gi;
-#endif
+    return evaluate_microfacet_shadowing_term(roughness, normal, half_vector, outgoing, ggx) * evaluate_microfacet_shadowing_term(roughness, normal, half_vector, incoming, ggx);
 }
-vec3f sample_microfacet_distribution(float roughness, const vec2f& rn, bool ggx) {
-    auto tan2 = roughness * roughness * rn.y / (1 - rn.y);
-    auto rz   = sqrt(1 / (tan2 + 1));
-    auto rr   = sqrt(1 - rz * rz);
-    auto rphi = 2 * pif * rn.x;
-    // set to wh
-    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
-    return wh_local;
+vec3f sample_microfacet_distribution(
+    float roughness, const vec2f& rn, bool ggx) {
+    auto phi = rn.x / (2 * pif);
+    auto roughness_square = roughness * roughness;
+    auto tangent_square = 0.0f;
+    if(ggx) {
+        tangent_square = -roughness_square*log(1 - rn.y);
+    } else {
+        tangent_square = roughness_square*rn.y/(1 - rn.y);
+    }
+    auto cosine_square = 1 / (1 + tangent_square);
+    auto cosine = 1 / sqrt(1 + tangent_square);
+    auto radius = sqrt(clamp01(1 - cosine_square));
+    return {cos(phi)*radius, sin(phi)*radius, cosine};
 }
-float sample_microfacet_distribution_pdf(float roughness, float ndh, bool ggx) {
-    auto alpha2 = roughness * roughness;
-    auto di     = (ndh * ndh) * (alpha2 - 1) + 1;
-    auto d      = alpha2 / (pif * di * di);
-    return d * ndh;
+float sample_microfacet_distribution_pdf(float roughness, const vec3f& normal,
+    const vec3f& half_vector, bool ggx) {
+    auto cosine = dot(normal, half_vector);
+    if(cosine < 0) return 0;
+    return evaluate_microfacet_distribution(roughness, normal, half_vector, ggx) * cosine;
 }
 
 vec3f evaluate_brdf_fresnel(
@@ -499,7 +518,8 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
     if (brdf.specular != zero3f && outgoing_up && incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
-        auto D = evaluate_microfacet_distribution(brdf.roughness, normal, half_vector);
+        auto D           = evaluate_microfacet_distribution(
+            brdf.roughness, normal, half_vector);
         auto G = evaluate_microfacet_shadowing(
             brdf.roughness, normal, half_vector, outgoing, incoming);
         brdf_cosine += fresnel * D * G /
@@ -512,8 +532,10 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
         auto ir          = reflect(-incoming, normal);
         auto half_vector = normalize(ir + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, -outgoing);
-        auto D = evaluate_microfacet_distribution(brdf.roughness, normal, half_vector);
-        auto G = evaluate_microfacet_shadowing(brdf.roughness, normal, half_vector, outgoing, ir);
+        auto D           = evaluate_microfacet_distribution(
+            brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(
+            brdf.roughness, normal, half_vector, outgoing, ir);
         brdf_cosine += brdf.transmission * (1 - fresnel) * D * G /
                        (4 * fabs(dot(normal, outgoing)) *
                            fabs(dot(normal, ir)));
@@ -522,8 +544,10 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
         auto ir          = reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
-        auto D = evaluate_microfacet_distribution(brdf.roughness, normal, half_vector);
-        auto G = evaluate_microfacet_shadowing(brdf.roughness, normal, half_vector, outgoing, ir);
+        auto D           = evaluate_microfacet_distribution(
+            brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(
+            brdf.roughness, normal, half_vector, outgoing, ir);
         brdf_cosine += brdf.transmission * (1 - fresnel) * D * G /
                        (4 * fabs(dot(normal, outgoing)) *
                            fabs(dot(normal, ir)));
@@ -680,21 +704,21 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     if (brdf.specular != zero3f && outgoing_up && incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
         auto d           = sample_microfacet_distribution_pdf(
-            brdf.roughness, fabs(dot(normal, half_vector)));
+            brdf.roughness, normal, half_vector);
         pdf += weights.y * d / (4 * fabs(dot(outgoing, half_vector)));
     }
     if (brdf.transmission != zero3f && outgoing_up && !incoming_up) {
         auto ir          = reflect(-incoming, normal);
         auto half_vector = normalize(ir + outgoing);
         auto d           = sample_microfacet_distribution_pdf(
-            brdf.roughness, fabs(dot(normal, half_vector)));
+            brdf.roughness, normal, half_vector);
         pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
     }
     if (brdf.transmission != zero3f && !outgoing_up && incoming_up) {
         auto ir          = reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
         auto d           = sample_microfacet_distribution_pdf(
-            brdf.roughness, fabs(dot(normal, half_vector)));
+            brdf.roughness, normal, half_vector);
         pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
     }
 

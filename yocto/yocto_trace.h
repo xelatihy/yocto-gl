@@ -219,7 +219,7 @@ float evaluate_microfacet_distribution(
 float evaluate_microfacet_shadowing(float roughness, const vec3f& normal, const vec3f& half_vector, 
     const vec3f& outgoing, const vec3f& incoming, bool ggx = true);
 vec3f sample_microfacet_distribution(float roughness, const vec2f& rn, bool ggx = true);
-float sample_microfacet_distribution_pdf(float roughness, float direction_cosine, bool ggx = true);
+float sample_microfacet_distribution_pdf(float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx = true);
 
 // Evaluate and sample volume phase function.
 vec3f sample_phase_function(float vg, const vec2f& u);
