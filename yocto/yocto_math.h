@@ -451,8 +451,12 @@ inline vec4f clamp(const vec4f& x, float min, float max) {
         clamp(x.w, min, max)};
 }
 inline vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
-inline vec3f clamp01(const vec3f& x) { return {clamp01(x.x), clamp01(x.y), clamp01(x.z)}; }
-inline vec4f clamp01(const vec4f& x) { return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)}; }
+inline vec3f clamp01(const vec3f& x) {
+    return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
+}
+inline vec4f clamp01(const vec4f& x) {
+    return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
+}
 inline float max(const vec2f& a) { return max(a.x, a.y); }
 inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }
 inline float max(const vec4f& a) { return max(max(max(a.x, a.y), a.z), a.w); }
