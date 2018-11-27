@@ -462,18 +462,18 @@ namespace yocto {
 
 // Data structure used for geodesic computation
 struct geodesic_solver {
-    struct arc {
+    struct arc_ {
         int   node   = 0;
         float length = 0;
     };
-    struct index {
+    struct index_ {
         int node  = 0;
         int index = 0;
     };
-    vector<vector<arc>>   graph      = {};
-    vector<vector<index>> edge_index = {};
-    vector<vec3f>         positions  = {};
-    vector<vec2i>         edges      = {};
+    vector<vector<arc_>>   graph      = {};
+    vector<vector<index_>> edge_index = {};
+    vector<vec3f>          positions  = {};
+    vector<vec2i>          edges      = {};
 };
 
 // Construct an edge graph
