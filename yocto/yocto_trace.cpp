@@ -69,6 +69,8 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
         if (is_instance_normal_perturbed(scene, instance))
             point.normal = evaluate_instance_perturbed_normal(
                 scene, instance, element_id, element_uv);
+        if (dot(point.normal, -shading_direction) < 0)
+            point.normal = -point.normal;
     } else if (is_instance_lines(scene, instance)) {
         point.normal = orthonormalize(-shading_direction, point.normal);
     } else if (is_instance_points(scene, instance)) {
