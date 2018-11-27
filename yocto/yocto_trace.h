@@ -201,19 +201,24 @@ namespace yocto {
 float convert_specular_exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-void  compute_fresnel_from_specular(const vec3f& specular, vec3f& es, vec3f& esk);
+void compute_fresnel_from_specular(
+    const vec3f& specular, vec3f& es, vec3f& esk);
 float convert_specular_to_eta(const vec3f& specular);
 // Compute the fresnel term for dielectrics.
 vec3f evaluate_fresnel_dielectric(float direction_cosine, const vec3f& eta);
 // Compute the fresnel term for metals.
-vec3f evaluate_fresnel_metal(float direction_cosine, const vec3f& eta, const vec3f& etak);
+vec3f evaluate_fresnel_metal(
+    float direction_cosine, const vec3f& eta, const vec3f& etak);
 // Schlick approximation of Fresnel term, optionally weighted by roughness;
 vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine);
-vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine, float roughness);
+vec3f evaluate_fresnel_schlick(
+    const vec3f& specular, float direction_cosine, float roughness);
 
 // Evaluates the GGX distribution and geometric term.
-float evaluate_ggx_distribution(float roughness, const vec3f& normal, const vec3f& half_vector);
-float evaluate_ggx_shadowing(float roughness, const vec3f& normal, const vec3f& outgoing, const vec3f& incoming);
+float evaluate_ggx_distribution(
+    float roughness, const vec3f& normal, const vec3f& half_vector);
+float evaluate_ggx_shadowing(float roughness, const vec3f& normal,
+    const vec3f& outgoing, const vec3f& incoming);
 // Sample the GGX distribution.
 vec3f sample_ggx_distribution(float roughness, const vec2f& rn);
 float sample_ggx_distribution_pdf(float roughness, float direction_cosine);

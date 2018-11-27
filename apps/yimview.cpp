@@ -213,9 +213,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             auto img_pixel = zero4f, display_pixel = zero4f;
             if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
                 ij.y < img.img.height) {
-                img_pixel = at(img.img, ij.x, ij.y);
+                img_pixel     = at(img.img, ij.x, ij.y);
                 display_pixel = at(img.display, ij.x, ij.y);
-                
             }
             draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
             draw_dragger_opengl_widget(win, "pixel value", display_pixel);
