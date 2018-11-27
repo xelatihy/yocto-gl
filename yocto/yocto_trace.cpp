@@ -464,7 +464,7 @@ float evaluate_microfacet_shadowing(float roughness, const vec3f& normal,
     return evaluate_microfacet_shadowing_term(roughness, normal, half_vector, outgoing, ggx) * evaluate_microfacet_shadowing_term(roughness, normal, half_vector, incoming, ggx);
 }
 vec3f sample_microfacet_distribution(
-    float roughness, const vec2f& rn, bool ggx) {
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
     auto phi = rn.x / (2 * pif);
     auto roughness_square = roughness * roughness;
     auto tangent_square = 0.0f;
@@ -476,7 +476,8 @@ vec3f sample_microfacet_distribution(
     auto cosine_square = 1 / (1 + tangent_square);
     auto cosine = 1 / sqrt(1 + tangent_square);
     auto radius = sqrt(clamp01(1 - cosine_square));
-    return {cos(phi)*radius, sin(phi)*radius, cosine};
+    auto local_half_vector = vec3f{cos(phi)*radius, sin(phi)*radius, cosine};
+    return transform_direction(make_basis_fromz(normal), local_half_vector);
 }
 float sample_microfacet_distribution_pdf(float roughness, const vec3f& normal,
     const vec3f& half_vector, bool ggx) {
@@ -603,32 +604,23 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
 
     // sample according to diffuse
     if (brdf.diffuse != zero3f && outgoing_up && rnl < weights.x) {
-        auto rz = sqrtf(rn.y), rr = sqrtf(1 - rz * rz), rphi = 2 * pif * rn.x;
-        auto il = vec3f{rr * cosf(rphi), rr * sinf(rphi), rz};
-        auto fp = make_frame_fromz(zero3f, normal);
-        return transform_direction(fp, il);
+        return sample_hemisphere_direction(normal, rn);
     }
     // sample according to specular GGX
     else if (brdf.specular != zero3f && outgoing_up &&
              rnl < weights.x + weights.y) {
-        auto hl = sample_microfacet_distribution(brdf.roughness, rn);
-        auto fp = make_frame_fromz(zero3f, normal);
-        auto half_vector = transform_direction(fp, hl);
+        auto half_vector = sample_microfacet_distribution(brdf.roughness, normal, rn);
         return reflect(outgoing, half_vector);
     }
     // transmission hack
     else if (brdf.transmission != zero3f && outgoing_up &&
              rnl < weights.x + weights.y + weights.z) {
-        auto hl          = sample_microfacet_distribution(brdf.roughness, rn);
-        auto fp          = make_frame_fromz(zero3f, normal);
-        auto half_vector = transform_direction(fp, hl);
+        auto half_vector          = sample_microfacet_distribution(brdf.roughness, normal, rn);
         auto ir          = reflect(outgoing, half_vector);
         return reflect(-ir, -normal);
     } else if (brdf.transmission != zero3f && !outgoing_up &&
                rnl < weights.x + weights.y + weights.z) {
-        auto hl          = sample_microfacet_distribution(brdf.roughness, rn);
-        auto fp          = make_frame_fromz(zero3f, -normal);
-        auto half_vector = transform_direction(fp, hl);
+        auto half_vector          = sample_microfacet_distribution(brdf.roughness, normal, rn);
         auto ir          = reflect(outgoing, half_vector);
         return reflect(-ir, normal);
     } else {
