@@ -1389,7 +1389,7 @@ vector<float> compute_geodesic_distances(
                                     new_distance;
             } else {
                 // if neighbor not in queue, Small Label first.
-                if (queue.empty() or (new_distance < distances[queue.front()]))
+                if (queue.empty() || (new_distance < distances[queue.front()]))
                     queue.push_front(neighbor);
                 else
                     queue.push_back(neighbor);

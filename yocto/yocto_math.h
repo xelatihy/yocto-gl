@@ -151,6 +151,7 @@ inline int clamp(int x, int min_, int max_) { return min(max(x, min_), max_); }
 inline float clamp(float x, float min_, float max_) {
     return min(max(x, min_), max_);
 }
+inline float clamp01(float x) { return min(max(x, 0.0f), 1.0f); }
 inline float lerp(float a, float b, float u) { return a * (1 - u) + b * u; }
 inline int   pow2(int x) { return 1 << x; }
 
@@ -448,6 +449,13 @@ inline vec3f clamp(const vec3f& x, float min, float max) {
 inline vec4f clamp(const vec4f& x, float min, float max) {
     return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
         clamp(x.w, min, max)};
+}
+inline vec2f clamp01(const vec2f& x) { return {clamp01(x.x), clamp01(x.y)}; }
+inline vec3f clamp01(const vec3f& x) {
+    return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
+}
+inline vec4f clamp01(const vec4f& x) {
+    return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
 }
 inline float max(const vec2f& a) { return max(a.x, a.y); }
 inline float max(const vec3f& a) { return max(max(a.x, a.y), a.z); }

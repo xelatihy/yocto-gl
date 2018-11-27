@@ -63,6 +63,10 @@
 #define YOCTO_QUADS_AS_TRIANGLES 1
 #endif
 
+#ifndef YOCTO_TRACE_THINSHEET
+#define YOCTO_TRACE_THINSHEET 0
+#endif
+
 // -----------------------------------------------------------------------------
 // INCLUDES
 // -----------------------------------------------------------------------------
@@ -194,31 +198,32 @@ void                     reset_trace_stats();
 namespace yocto {
 
 // Phong exponent to roughness.
-float specular_exponent_to_roughness(float n);
+float convert_specular_exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-void  specular_fresnel_from_ks(const vec3f& ks, vec3f& es, vec3f& esk);
-float specular_to_eta(const vec3f& ks);
+void compute_fresnel_from_specular(
+    const vec3f& specular, vec3f& es, vec3f& esk);
+float convert_specular_to_eta(const vec3f& specular);
 // Compute the fresnel term for dielectrics.
-vec3f fresnel_dielectric(float cosw, const vec3f& eta_);
+vec3f evaluate_fresnel_dielectric(float direction_cosine, const vec3f& eta);
 // Compute the fresnel term for metals.
-vec3f fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak);
-// Schlick approximation of Fresnel term, optionally weighted by rs;
-vec3f fresnel_schlick(const vec3f& ks, float cosw);
-vec3f fresnel_schlick(const vec3f& ks, float cosw, float rs);
-vec3f fresnel_schlick(const vec3f& ks, const vec3f& h, const vec3f& o);
-vec3f fresnel_schlick(
-    const vec3f& ks, const vec3f& h, const vec3f& o, float rs);
+vec3f evaluate_fresnel_metal(
+    float direction_cosine, const vec3f& eta, const vec3f& etak);
+// Schlick approximation of Fresnel term, optionally weighted by roughness;
+vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine);
+vec3f evaluate_fresnel_schlick(
+    const vec3f& specular, float direction_cosine, float roughness);
 
-// Evaluates the GGX distribution and geometric term.
-float evaluate_ggx(float rs, float ndh, float ndi, float ndo);
-// Sample the GGX distribution.
-vec3f sample_ggx(float rs, const vec2f& rn);
-float sample_ggx_pdf(float rs, float ndh);
-
-// Evaluates the GGX distribution and geometric term.
-float evaluate_ggx_dist(float rs, const vec3f& n, const vec3f& h);
-float evaluate_ggx_sm(float rs, const vec3f& n, const vec3f& o, const vec3f& i);
+// Evaluates the microfacet distribution and geometric term (ggx or beckman).
+float evaluate_microfacet_distribution(float roughness, const vec3f& normal,
+    const vec3f& half_vector, bool ggx = true);
+float evaluate_microfacet_shadowing(float roughness, const vec3f& normal,
+    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
+    bool ggx = true);
+vec3f sample_microfacet_distribution(
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true);
+float sample_microfacet_distribution_pdf(float roughness, const vec3f& normal,
+    const vec3f& half_vector, bool ggx = true);
 
 // Evaluate and sample volume phase function.
 vec3f sample_phase_function(float vg, const vec2f& u);

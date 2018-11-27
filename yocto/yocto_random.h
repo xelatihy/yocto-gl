@@ -272,7 +272,7 @@ namespace yocto {
 // Sample an hemispherical direction with uniform distribution.
 inline vec3f sample_hemisphere_direction(const vec2f& ruv) {
     auto z   = ruv.y;
-    auto r   = sqrt(1 - z * z);
+    auto r   = sqrt(clamp01(1 - z * z));
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
@@ -280,10 +280,24 @@ inline float sample_hemisphere_direction_pdf(const vec3f& direction) {
     return (direction.z <= 0) ? 0 : 1 / (2 * pif);
 }
 
+// Sample an hemispherical direction with uniform distribution.
+inline vec3f sample_hemisphere_direction(
+    const vec3f& normal, const vec2f& ruv) {
+    auto z               = ruv.y;
+    auto r               = sqrt(clamp01(1 - z * z));
+    auto phi             = 2 * pif * ruv.x;
+    auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
+    return transform_direction(make_basis_fromz(normal), local_direction);
+}
+inline float sample_hemisphere_direction_pdf(
+    const vec3f& normal, const vec3f& direction) {
+    return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
+}
+
 // Sample a spherical direction with uniform distribution.
 inline vec3f sample_sphere_direction(const vec2f& ruv) {
     auto z   = 2 * ruv.y - 1;
-    auto r   = sqrt(1 - z * z);
+    auto r   = sqrt(clamp01(1 - z * z));
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
