@@ -6350,6 +6350,9 @@ bool load_cyhair_mesh(const string& filename, vector<int>& points,
     // compute tangents
     normals = compute_vertex_tangents(lines, positions);
 
+    // fix colors
+    for(auto& c : color) c = srgb_to_linear(c);
+
     return true;
 }
 

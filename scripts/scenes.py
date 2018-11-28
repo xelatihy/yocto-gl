@@ -95,6 +95,29 @@ def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='pa
             os.system(cmd)
 
 @cli.command()
+@click.option('--directory', '-d', default='yuksel')
+@click.option('--scene', '-s', default='*')
+@click.option('--format','-f', default='hair')
+@click.option('--outformat','-F', default='ply')
+@click.option('--mode','-m', default='default')
+@click.option('--clean-models/--no-clean-models','-C', default=False)
+def convert_hair(directory='yuksel',scene='*',format='hair',outformat="ply",mode='path',clean_models=True):
+    modes = {
+        'default': ''
+    }
+    options = modes[mode]
+    for dirname in sorted(glob.glob(f'{directory}/{scene}')):
+        if not os.path.isdir(dirname): continue
+        if '/_' in dirname: continue
+        if '-instanced' in dirname and outformat == 'obj': continue
+        for filename in sorted(glob.glob(f'{dirname}/models/*.{format}')):
+            outname = filename.replace(f'.{format}',f'.{outformat}')
+            filedir = os.path.dirname(filename)
+            cmd = f'../yocto-gl/bin/ymshproc -o {outname} {options} {filename}'
+            print(cmd, file=sys.stderr)
+            os.system(cmd)
+
+@cli.command()
 @click.option('--directory', '-d', default='procedurals')
 @click.option('--mode','-m', default='skies')
 @click.option('--clean/--no-clean','-C', default=False)
