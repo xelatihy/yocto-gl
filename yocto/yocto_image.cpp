@@ -66,9 +66,9 @@ vector<image_region> make_image_regions(
                 min(region_size, height - y)});
         }
     }
-    if(shuffled) {
+    if (shuffled) {
         auto rng = rng_state{};
-        regions = random_shuffle(regions, rng);
+        regions  = random_shuffle(regions, rng);
     }
     return regions;
 }
