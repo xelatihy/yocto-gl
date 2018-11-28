@@ -401,7 +401,7 @@ void update_transforms(
             scene.nodes[node.parent].children.push_back(node_id);
     }
     for (auto& node : scene.nodes)
-        if (node.parent >= 0) update_transforms(scene, node);
+        if (node.parent < 0) update_transforms(scene, node);
 }
 
 // Compute animation range

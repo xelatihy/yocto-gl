@@ -3561,7 +3561,7 @@ bool gltf_to_scene(
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
             if (!has_json_key(gnde, "mesh")) continue;
-            auto  node = scene.nodes[nid];
+            auto& node = scene.nodes[nid];
             auto& shps = meshes.at(get_json_value(gnde, "mesh", 0));
             if (empty(shps)) continue;
             if (shps.size() == 1) {
@@ -3768,15 +3768,17 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
         auto cjs    = json();
         cjs["name"] = camera.name;
         if (!camera.orthographic) {
-            cjs["type"]                       = "perspective";
-            cjs["perspective"]["aspectRatio"] = camera.film_width /
-                                                camera.film_height;
-            cjs["perspective"]["znear"] = 0.01f;
+            cjs["type"]         = "perspective";
+            auto& pcjs          = cjs["perspective"];
+            pcjs["yfov"]        = get_camera_fovy(camera);
+            pcjs["aspectRatio"] = camera.film_width / camera.film_height;
+            pcjs["znear"]       = 0.01f;
         } else {
-            cjs["type"]                  = "orthographic";
-            cjs["orthographic"]["xmag"]  = camera.film_width / 2;
-            cjs["orthographic"]["ymag"]  = camera.film_height / 2;
-            cjs["orthographic"]["znear"] = 0.01f;
+            cjs["type"]   = "orthographic";
+            auto& ocjs    = cjs["orthographic"];
+            ocjs["xmag"]  = camera.film_width / 2;
+            ocjs["ymag"]  = camera.film_height / 2;
+            ocjs["znear"] = 0.01f;
         }
         js["cameras"].push_back(cjs);
     }
