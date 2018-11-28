@@ -521,7 +521,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
         set_opengl_uniform(state.program, "shape_xform", xform);
         set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
-        set_opengl_uniform(state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
+        set_opengl_uniform(state.program, "highlight",
+            (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
         auto mtype = 1;
         if (material.base_metallic) mtype = 2;
@@ -626,7 +627,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
             set_opengl_uniform(state.program, "shape_xform", xform);
             set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
-            set_opengl_uniform(state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
+            set_opengl_uniform(state.program, "highlight",
+                (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
             auto mtype = 1;
             if (material.base_metallic) mtype = 2;
