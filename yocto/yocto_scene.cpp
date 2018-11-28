@@ -1188,7 +1188,7 @@ bool is_instance_points(
 bool is_instance_lines(
     const yocto_scene& scene, const yocto_instance& instance) {
     if (instance.shape >= 0) {
-        return !scene.shapes[instance.shape].points.empty();
+        return !scene.shapes[instance.shape].lines.empty();
     } else if (instance.surface >= 0) {
         return false;
     } else {

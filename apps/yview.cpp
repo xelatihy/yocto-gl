@@ -521,6 +521,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
         set_opengl_uniform(state.program, "shape_xform", xform);
         set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
+        set_opengl_uniform(state.program, "highlight",
+            (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
         auto mtype = 1;
         if (material.base_metallic) mtype = 2;
@@ -625,6 +627,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
             set_opengl_uniform(state.program, "shape_xform", xform);
             set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
+            set_opengl_uniform(state.program, "highlight",
+                (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
             auto mtype = 1;
             if (material.base_metallic) mtype = 2;
@@ -695,21 +699,6 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             }
         }
 
-#if 0
-    if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
-        enable_glculling(false);
-        check_opengl_error();
-        set_opengl_uniform(state.program, "mtype"), 0);
-        glUniform3f(glGetUniformLocation(state.program, "ke"), 0, 0, 0);
-        set_opengl_uniform(state.program, "op"), material.op);
-        set_opengl_uniform(state.program, "shp_normal_offset"), 0.01f);
-        check_opengl_error();
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos.gl_edges);
-        glDrawElements(GL_LINES, vbos.triangles.size() * 3, GL_UNSIGNED_INT, nullptr);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-        check_opengl_error();
-    }
-#endif
         if (options.edges) log_error("edges are momentarily disabled");
 
         // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
