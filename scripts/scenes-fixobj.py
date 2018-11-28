@@ -94,11 +94,11 @@ nobj = ''
 for line in obj.splitlines(True):
     # nobj += rotate90(line)
     # nobj += rotate180(line)
-    # nobj += rotate90yz(line)
+    nobj += rotate90yz(line)
     # nobj += rotate180(rotate180yz(line))
     # nobj += rotate90yz(rotate180yz(line))
     # nobj += translatey(line, 3.0336)
-    nobj += scalexyz(line, 930.9102 / 2)
+    # nobj += scalexyz(line, 930.9102 / 2)
     # nobj += line
 
 outbbox = [ [1e10,1e10,1e10], [-1e10,-1e10,-1e10] ]
