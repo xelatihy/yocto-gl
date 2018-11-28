@@ -156,6 +156,7 @@ struct trace_image_options {
     int                num_samples         = 512;
     int                max_bounces         = 8;
     int                samples_per_batch   = 16;
+    int                region_size         = 16;
     float              pixel_clamp         = 10;
     bool               environments_hidden = false;
     bool               double_sided        = false;

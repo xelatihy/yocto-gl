@@ -58,13 +58,17 @@ image4b get_image_region(const image4b& img, const image_region& region) {
 
 // Splits an image into an array of regions
 vector<image_region> make_image_regions(
-    int width, int height, int region_size) {
+    int width, int height, int region_size, bool shuffled) {
     auto regions = vector<image_region>{};
     for (auto y = 0; y < height; y += region_size) {
         for (auto x = 0; x < width; x += region_size) {
             regions.push_back({x, y, min(region_size, width - x),
                 min(region_size, height - y)});
         }
+    }
+    if (shuffled) {
+        auto rng = rng_state{};
+        regions  = random_shuffle(regions, rng);
     }
     return regions;
 }
