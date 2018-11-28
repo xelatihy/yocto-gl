@@ -279,7 +279,7 @@ template<typename T>
 inline void random_shuffle_inplace(vector<T>& vals, rng_state& rng) {
     // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
     using std::swap;
-    for(auto i = (int)vals.size()-1; i > 0; i ++) {
+    for(auto i = (int)vals.size()-1; i > 0; i --) {
         auto j = get_random_int(rng, i+1);
         swap(vals[j], vals[i]);
     }
