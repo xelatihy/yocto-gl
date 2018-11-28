@@ -55,7 +55,8 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
     modes = {
         'path': '-s 64 -r 360',
         'embree': '-s 256 -r 720',
-        'eyelight': '-s 16 -r 720 -t eyelight'
+        'eyelight': '-s 16 -r 720 -t eyelight',
+        'embree-naive': '-s 256 -r 720 -t naive'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):

@@ -179,7 +179,7 @@ struct image_region {
 
 // Splits an image into an array of regions
 vector<image_region> make_image_regions(
-    int width, int height, int region_size = 32);
+    int width, int height, int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 image4f get_image_region(const image4f& img, const image_region& region);
