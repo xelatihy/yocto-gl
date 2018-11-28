@@ -115,6 +115,12 @@ int main(int argc, char** argv) {
             surface.filename = mesh_directory + surface.name + ".obj";
         }
     }
+    // gltf does not support embedded data
+    if (get_extension(output) == "gltf") {
+        for (auto& shape : scene.shapes) {
+            shape.filename = mesh_directory + shape.name + ".bin";
+        }
+    }
 
     // make a directory if needed
     if (!mkdir(get_dirname(output))) {

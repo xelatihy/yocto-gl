@@ -161,79 +161,97 @@ inline bool save_json(const string& filename, const json& js) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+inline void to_json_array(json& js, const float* vals, int N) {
+    js = json::array();
+    for (auto i = 0; i < N; i++) js.push_back(vals[i]);
+}
+inline void to_json_array(json& js, const int* vals, int N) {
+    js = json::array();
+    for (auto i = 0; i < N; i++) js.push_back(vals[i]);
+}
+inline void to_json_array(json& js, const byte* vals, int N) {
+    js = json::array();
+    for (auto i = 0; i < N; i++) js.push_back((int)vals[i]);
+}
+inline void from_json_array(const json& js, float* vals, int N) {
+    if (js.is_array()) throw std::runtime_error("canot convert json");
+    if (js.size() != N) throw std::runtime_error("canot convert json");
+    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<float>();
+}
+inline void from_json_array(const json& js, int* vals, int N) {
+    if (js.is_array()) throw std::runtime_error("canot convert json");
+    if (js.size() != N) throw std::runtime_error("canot convert json");
+    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<int>();
+}
+inline void from_json_array(const json& js, byte* vals, int N) {
+    if (js.is_array()) throw std::runtime_error("canot convert json");
+    if (js.size() != N) throw std::runtime_error("canot convert json");
+    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<int>();
+}
+
 inline void to_json(json& js, const vec2f& val) {
-    js = std::array<float, 2>{{val.x, val.y}};
+    to_json_array(js, &val.x, 2);
 }
 inline void from_json(const json& js, vec2f& val) {
-    auto vala = js.get<std::array<float, 2>>();
-    val       = {vala[0], vala[1]};
+    from_json_array(js, &val.x, 2);
 }
 inline void to_json(json& js, const vec3f& val) {
-    js = std::array<float, 3>{{val.x, val.y, val.z}};
+    to_json_array(js, &val.x, 3);
 }
 inline void from_json(const json& js, vec3f& val) {
-    auto vala = js.get<std::array<float, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
+    from_json_array(js, &val.x, 3);
 }
 inline void to_json(json& js, const vec4f& val) {
-    js = std::array<float, 4>{{val.x, val.y, val.z, val.w}};
+    to_json_array(js, &val.x, 4);
 }
 inline void from_json(const json& js, vec4f& val) {
-    auto vala = js.get<std::array<float, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
+    from_json_array(js, &val.x, 4);
 }
 
 inline void to_json(json& js, const vec2i& val) {
-    js = std::array<int, 2>{{val.x, val.y}};
+    to_json_array(js, &val.x, 2);
 }
 inline void from_json(const json& js, vec2i& val) {
-    auto vala = js.get<std::array<int, 2>>();
-    val       = {vala[0], vala[1]};
+    from_json_array(js, &val.x, 2);
 }
 inline void to_json(json& js, const vec3i& val) {
-    js = std::array<int, 3>{{val.x, val.y, val.z}};
+    to_json_array(js, &val.x, 3);
 }
 inline void from_json(const json& js, vec3i& val) {
-    auto vala = js.get<std::array<int, 3>>();
-    val       = {vala[0], vala[1], vala[2]};
+    from_json_array(js, &val.x, 3);
 }
 inline void to_json(json& js, const vec4i& val) {
-    js = std::array<int, 4>{{val.x, val.y, val.z, val.w}};
-}
-inline void from_json(const json& js, vec4b& val) {
-    auto vala = js.get<std::array<byte, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
-}
-inline void to_json(json& js, const vec4b& val) {
-    js = std::array<byte, 4>{{val.x, val.y, val.z, val.w}};
+    to_json_array(js, &val.x, 4);
 }
 inline void from_json(const json& js, vec4i& val) {
-    auto vala = js.get<std::array<int, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
+    from_json_array(js, &val.x, 4);
+}
+inline void to_json(json& js, const vec4b& val) {
+    to_json_array(js, &val.x, 4);
+}
+inline void from_json(const json& js, vec4b& val) {
+    from_json_array(js, &val.x, 4);
 }
 
 inline void to_json(json& js, const frame3f& val) {
-    js = std::array<vec3f, 4>{{val.x, val.y, val.z, val.o}};
+    to_json_array(js, &val.x.x, 12);
 }
 inline void from_json(const json& js, frame3f& val) {
-    auto vala = js.get<std::array<vec3f, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
+    from_json_array(js, &val.x.x, 12);
 }
 
 inline void to_json(json& js, const mat4f& val) {
-    js = std::array<vec4f, 4>{{val.x, val.y, val.z, val.w}};
+    to_json_array(js, &val.x.x, 16);
 }
 inline void from_json(const json& js, mat4f& val) {
-    auto vala = js.get<std::array<vec4f, 4>>();
-    val       = {vala[0], vala[1], vala[2], vala[3]};
+    from_json_array(js, &val.x.x, 16);
 }
 
 inline void to_json(json& js, const bbox3f& val) {
-    js = std::array<vec3f, 2>{{val.min, val.max}};
+    to_json_array(js, &val.min.x, 6);
 }
 inline void from_json(const json& js, bbox3f& val) {
-    auto vala = js.get<std::array<vec3f, 2>>();
-    val       = {vala[0], vala[1]};
+    from_json_array(js, &val.min.x, 6);
 }
 
 }  // namespace yocto

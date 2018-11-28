@@ -219,6 +219,14 @@ foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplem
             COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s ${nsamples} -r 360"
             WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endforeach()
+# gltf output
+foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "models-al.json" "emptyelems-al.json")
+    set(format "gltf")
+    get_filename_component(name ${filename} NAME_WE)
+    add_test(NAME yscnproc-${format}-${filename}
+            COMMAND ${test-yscnproc} ${testdir}/${filename} ${outdir}/${format}/${name} ${outdir}/${format}/${name}/${name}.${format} ${outdir}/yscnproc-${format}-${name}.png ${resdir}/yscnproc-${format}-${name}.png ${diffdir}/yscnproc-${format}-${name}.png "-t path -s ${nsamples} -r 360"
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+endforeach()
 if(YOCTO_EMBREE)
 # embree
 foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "subdivfv-al.json" "multimat-al.json" "hairball-al.json" "models-al.json" "emptyelems-al.json")
