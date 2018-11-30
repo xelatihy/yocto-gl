@@ -14,6 +14,20 @@
 // to print it. Use `parse()` to parse a value from a string.
 //
 //
+// ## Python-like iterators and collection helpers
+//
+// This library includes a set of functions to help use C++ collections with
+// more ease, inspired by Python. All functions and operators are defined in
+// the yocto namespace so they will not affect the code outside. But within
+// the Yocto/GL collection they are the best way to do this.
+//
+// 1. use `range()` to iterato over an integer sequence
+// 2. use `enumerate()` to iteratare over a vector and number its elements
+// 3. use opeartors + to either concatenate two vectors or a vector and an 
+//    element
+// 4. use operators += to append an element or a vector to a given vector
+//
+//
 // ## Command-Line Parsing
 //
 // We provide a simple, immediate-mode, command-line parser. The parser
@@ -36,6 +50,11 @@
 // ## Path manipulation
 //
 // We define a few path manipulation utilities to split and join path components.
+//
+// 1. Get paths components with `get_dirname()`, `get_filename()` and 
+//   `get_extension()`
+// 2. Replace the extension with `replace_path_extension()`
+// 3. check if a file exists with `exists_file()`
 //
 //
 // ## File IO
@@ -244,6 +263,75 @@ inline istream& operator>>(istream& is, bbox1f& value);
 inline istream& operator>>(istream& is, bbox2f& value);
 inline istream& operator>>(istream& is, bbox3f& value);
 inline istream& operator>>(istream& is, bbox4f& value);
+
+}
+
+// -----------------------------------------------------------------------------
+// PYTHON-LIKE ITERATORS
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Range helpper (this should not be used directly)
+struct _range_helper {
+    struct _iterator {
+        int _pos = 0;
+        _iterator& operator++() { _pos ++; return *this;  }
+        bool operator!=(const _iterator& other) const { return _pos != other._pos; }
+        int operator*() const { return _pos; }
+    };
+    int _start = 0, _end = 0;
+    _iterator begin() const { return {_start}; }
+    _iterator end() const { return {_end}; }
+};
+
+// Python `range()` equivalent. Construct an object to iterate over a sequence.
+inline auto range(int max) { return _range_helper{0, max}; }
+inline auto range(int min, int max) { return _range_helper{min, max}; }
+
+// Enumerate helper (this should not be used directly)
+template<typename T>
+struct _enumerate_helper {
+    struct _iterator {
+        T* _data = nullptr;
+        int _pos = 0;
+        _iterator& operator++() { _pos ++; return *this;  }
+        bool operator!=(const _iterator& other) const { return _pos != other._pos; }
+        pair<int&, T&> operator*() const { return {_pos, *(_data + _pos)}; }
+    };
+    T* _data = nullptr;
+    int _size = 0;
+    _iterator begin() const { return {_data, 0}; }
+    _iterator end() const { return {_data, _size}; }
+};
+
+// Python `enumerate()` equivalent. Construct an object that iteraterates over a
+// sequence of elements and numbers them.
+template<typename T>
+inline auto enumerate(const vector<T>& vals) { return _enumerate_helper<const T>{vals.data(), vals.size()}; };
+template<typename T>
+inline auto enumerate(vector<T>& vals) { return _enumerate_helper<T>{vals.data(), vals.size()}; };
+
+// Vector append and concatenation
+template<typename T>
+inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
+    a.insert(a.end(), b.begin(), b.end());
+    return a;
+}
+template<typename T>
+inline vector<T>& operator+=(vector<T>& a, const T& b) {
+    a.push_back(b);
+    return a;
+}
+template<typename T>
+inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
+    auto c = a;
+    return c += b;
+}
+template<typename T>
+inline vector<T> operator+(const vector<T>& a, const T& b) {
+    auto c = a;
+    return c += b;
+}
 
 }
 
