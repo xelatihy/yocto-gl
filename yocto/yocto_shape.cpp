@@ -227,11 +227,11 @@ int insert_edge(edge_map& emap, const vec2i& edge) {
         auto idx = (int)emap.edges.size();
         emap.edge_index.insert(it, {es, idx});
         emap.edges.push_back(es);
-        emap.boundary.push_back(true);
+        emap.num_faces.push_back(1);
         return idx;
     } else {
         auto idx           = it->second;
-        emap.boundary[idx] = false;
+        emap.num_faces[idx] += 1;
         return idx;
     }
 }
@@ -248,7 +248,7 @@ vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
 vector<vec2i> get_boundary(const edge_map& emap) {
     auto boundary = vector<vec2i>();
     for (auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
-        if (emap.boundary[edge_index])
+        if (emap.num_faces[edge_index] < 2)
             boundary.push_back(emap.edges[edge_index]);
     }
     return boundary;

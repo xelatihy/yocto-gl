@@ -242,7 +242,7 @@ namespace yocto {
 struct edge_map {
     unordered_map<vec2i, int> edge_index = {};
     vector<vec2i>             edges      = {};
-    vector<bool>              boundary   = {};
+    vector<int>               num_faces  = {};
 };
 
 // initializes an edge map
