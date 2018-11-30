@@ -178,6 +178,23 @@ float evaluate_ggx_shadowing(float roughness, const vec3f& normal,
     return Go * Gi;
 #endif
 }
+// Evaluates the GGX pdf
+float sample_ggx_pdf(float rs, float ndh) {
+    auto alpha2 = rs * rs;
+    auto di     = (ndh * ndh) * (alpha2 - 1) + 1;
+    auto d      = alpha2 / (pif * di * di);
+    return d * ndh;
+}
+// Sample the GGX distribution
+vec3f sample_ggx(float rs, const vec2f& rn) {
+    auto tan2 = rs * rs * rn.y / (1 - rn.y);
+    auto rz   = sqrt(1 / (tan2 + 1));
+    auto rr   = sqrt(1 - rz * rz);
+    auto rphi = 2 * pif * rn.x;
+    // set to wh
+    auto wh_local = vec3f{rr * cos(rphi), rr * sin(rphi), rz};
+    return wh_local;
+}
 
 // Evaluates the BRDF scaled by the cosine of the incoming direction.
 // - ggx from [Heitz 2014] and [Walter 2007] and [Lagarde 2014]
@@ -470,7 +487,7 @@ float evaluate_microfacet_shadowing(float roughness, const vec3f& normal,
 }
 vec3f sample_microfacet_distribution(
     float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
-    auto phi              = rn.x / (2 * pif);
+    auto phi              = 2 * pif * rn.x;
     auto roughness_square = roughness * roughness;
     auto tangent_square   = 0.0f;
     if (ggx) {

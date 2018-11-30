@@ -3683,7 +3683,9 @@ bool gltf_to_scene(
                         }
 #endif
                         } break;
-                        default: { return false; }
+                        default: {
+                            return false;
+                        }
                     }
                     sampler_map[{gchannel.at("sampler").get<int>(), path}] =
                         (int)scene.animations.size();
