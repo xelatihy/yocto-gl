@@ -61,12 +61,11 @@
 #include "yocto_shape.h"
 #include "yocto_utils.h"
 
+#include <array>
+#include <climits>
 #include <cstdlib>
 #include <regex>
 #include <string_view>
-
-#include <array>
-#include <climits>
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF FAST PARSING
