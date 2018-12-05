@@ -230,7 +230,7 @@ int insert_edge(edge_map& emap, const vec2i& edge) {
         emap.num_faces.push_back(1);
         return idx;
     } else {
-        auto idx           = it->second;
+        auto idx = it->second;
         emap.num_faces[idx] += 1;
         return idx;
     }
