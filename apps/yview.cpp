@@ -792,7 +792,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     state.textures.resize(scene.textures.size());
     for (auto texture_id = 0; texture_id < scene.textures.size();
          texture_id++) {
-        auto texture = scene.textures[texture_id];
+        auto& texture = scene.textures[texture_id];
         if (!empty(texture.hdr_image)) {
             init_opengl_texture(state.textures[texture_id], texture.hdr_image,
                 true, true, true);
