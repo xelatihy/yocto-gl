@@ -311,9 +311,9 @@ void draw(const opengl_window& win) {
             }
         }
         set_opengl_blending(true);
-        draw_glimage_background(app.display_texture, win_size.x, win_size.y,
-            app.image_center, app.image_scale);
-        draw_glimage(app.display_texture, win_size.x, win_size.y,
+        draw_opengl_image_background(app.display_texture, win_size.x,
+            win_size.y, app.image_center, app.image_scale);
+        draw_opengl_image(app.display_texture, win_size.x, win_size.y,
             app.image_center, app.image_scale);
         set_opengl_blending(false);
     }

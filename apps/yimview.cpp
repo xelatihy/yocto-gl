@@ -249,10 +249,10 @@ void draw(const opengl_window& win) {
     if (img.gl_txt) {
         update_image_view(img.image_center, img.image_scale,
             {img.display.width, img.display.height}, win_size, img.zoom_to_fit);
-        draw_glimage_background(img.gl_txt, win_size.x, win_size.y,
+        draw_opengl_image_background(img.gl_txt, win_size.x, win_size.y,
             img.image_center, img.image_scale);
         set_opengl_blending(true);
-        draw_glimage(img.gl_txt, win_size.x, win_size.y, img.image_center,
+        draw_opengl_image(img.gl_txt, win_size.x, win_size.y, img.image_center,
             img.image_scale);
         set_opengl_blending(false);
     }

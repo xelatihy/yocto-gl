@@ -478,8 +478,8 @@ void draw_opengl_triangles(const opengl_elementbuffer& buffer, int num) {
     glDrawElements(GL_TRIANGLES, num * 3, GL_UNSIGNED_INT, nullptr);
 }
 
-void draw_glimage(const opengl_texture& texture, int win_width, int win_height,
-    const vec2f& image_center, float image_scale) {
+void draw_opengl_image(const opengl_texture& texture, int win_width,
+    int win_height, const vec2f& image_center, float image_scale) {
     static opengl_program       gl_prog      = {};
     static opengl_array_buffer  gl_texcoord  = {};
     static opengl_elementbuffer gl_triangles = {};
@@ -531,7 +531,7 @@ void draw_glimage(const opengl_texture& texture, int win_width, int win_height,
     check_opengl_error();
 }
 
-void draw_glimage_background(const opengl_texture& texture, int win_width,
+void draw_opengl_image_background(const opengl_texture& texture, int win_width,
     int win_height, const vec2f& image_center, float image_scale,
     float border_size) {
     static opengl_program       gl_prog      = {};
