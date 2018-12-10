@@ -58,7 +58,9 @@ int main(int argc, char** argv) {
     auto uniform_txt    = parse_argument(parser,
         "--uniform-texture/--no-uniform-textures", false,
         "uniform texture formats");
-    auto output         = parse_argument(
+    auto print_info     = parse_argument(
+        parser, "--print-info,-i", false, "print scene info");
+    auto output = parse_argument(
         parser, "--output,-o", "out.json"s, "output scene", true);
     auto filename = parse_argument(
         parser, "scene", "scene.json"s, "input scene", true);
@@ -79,6 +81,9 @@ int main(int argc, char** argv) {
 
     // validate scene
     log_validation_errors(scene, true);
+
+    // print info
+    if (print_info) cout << print_scene_stats(scene) << "\n";
 
     // change texture names
     if (uniform_txt) {

@@ -1809,10 +1809,10 @@ string print_scene_stats(const yocto_scene& scene) {
     stream << "memory_fvelems: " << memory_fvelems << "\n";
     stream << "memory_fvverts: " << memory_fvverts << "\n";
 
-    stream << "bbox min: " << bbox.min.x << " " << bbox.min.y << " " << bbox.min.z
-         << "\n";
-    stream << "bbox max: " << bbox.max.x << " " << bbox.max.y << " " << bbox.max.z
-         << "\n";
+    stream << "bbox min: " << bbox.min.x << " " << bbox.min.y << " "
+           << bbox.min.z << "\n";
+    stream << "bbox max: " << bbox.max.x << " " << bbox.max.y << " "
+           << bbox.max.z << "\n";
 
     return stream.str();
 }

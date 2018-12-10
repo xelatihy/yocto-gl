@@ -176,7 +176,7 @@ bool load_scene_sync(app_state& app) {
 
     // animation
     app.time_range = compute_animation_range(app.scene);
-    app.time        = app.time_range.x;
+    app.time       = app.time_range.x;
 
     // set flags
     app.load_done    = true;
