@@ -4364,17 +4364,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
         }
     };
 
-    auto use_hierarchy = false;
-
     unordered_map<string, vector<yocto_instance>> objects;
-    for (auto& jcmd : js) {
-        auto cmd = jcmd.at("cmd").get<string>();
-        if (cmd == "ObjectInstance") {
-            use_hierarchy = true;
-            break;
-        }
-    }
-
     auto lid = 0, sid = 0, cid = 0;
     auto cur_object = ""s;
     for (auto& jcmd : js) {
@@ -4770,24 +4760,6 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
             stack.pop_back();
         } else {
             log_error("{} command not supported", cmd.c_str());
-        }
-    }
-    if (use_hierarchy) {
-        auto camera_id = 0;
-        for (auto& camera : scene.cameras) {
-            auto node   = yocto_scene_node{};
-            node.name   = camera.name;
-            node.local  = camera.frame;
-            node.camera = camera_id++;
-            scene.nodes.insert(scene.nodes.begin(), node);
-        }
-        auto environment_id = 0;
-        for (auto& environment : scene.environments) {
-            auto node        = yocto_scene_node{};
-            node.name        = environment.name;
-            node.local       = environment.frame;
-            node.environment = environment_id++;
-            scene.nodes.push_back(node);
         }
     }
 
