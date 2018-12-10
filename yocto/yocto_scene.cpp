@@ -1664,7 +1664,7 @@ bool is_material_volume_colored(const yocto_material& material) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-void print_stats(const yocto_scene& scene) {
+string print_scene_stats(const yocto_scene& scene) {
     // using long long instead of uint64_t to avoid printf macros
     auto num_cameras      = (long long)0;
     auto num_shapes       = (long long)0;
@@ -1767,50 +1767,54 @@ void print_stats(const yocto_scene& scene) {
     }
     memory_vols = voxel_hdr * sizeof(float);
 
-    cout << "num_cameras: " << num_cameras << "\n";
-    cout << "num_shapes: " << num_shapes << "\n";
-    cout << "num_surface: " << num_surfaces << "\n";
-    cout << "num_instances: " << num_instances << "\n";
-    cout << "num_materials: " << num_materials << "\n";
-    cout << "num_textures: " << num_textures << "\n";
-    cout << "num_voltextures: " << num_voltextures << "\n";
-    cout << "num_environments: " << num_environments << "\n";
-    cout << "num_nodes: " << num_nodes << "\n";
-    cout << "num_animations: " << num_animations << "\n";
+    auto stream = stringstream{};
 
-    cout << "elem_points: " << elem_points << "\n";
-    cout << "elem_lines: " << elem_lines << "\n";
-    cout << "elem_triangles: " << elem_triangles << "\n";
-    cout << "elem_quads: " << elem_quads << "\n";
-    cout << "vert_pos: " << vert_pos << "\n";
-    cout << "vert_norm: " << vert_norm << "\n";
-    cout << "vert_texcoord: " << vert_texcoord << "\n";
-    cout << "vert_color: " << vert_color << "\n";
-    cout << "vert_radius: " << vert_radius << "\n";
-    cout << "vert_tangsp: " << vert_tangsp << "\n";
+    stream << "num_cameras: " << num_cameras << "\n";
+    stream << "num_shapes: " << num_shapes << "\n";
+    stream << "num_surface: " << num_surfaces << "\n";
+    stream << "num_instances: " << num_instances << "\n";
+    stream << "num_materials: " << num_materials << "\n";
+    stream << "num_textures: " << num_textures << "\n";
+    stream << "num_voltextures: " << num_voltextures << "\n";
+    stream << "num_environments: " << num_environments << "\n";
+    stream << "num_nodes: " << num_nodes << "\n";
+    stream << "num_animations: " << num_animations << "\n";
 
-    cout << "elem_points: " << elem_points << "\n";
-    cout << "elem_lines: " << elem_lines << "\n";
-    cout << "elem_triangles: " << elem_triangles << "\n";
-    cout << "elem_quads: " << elem_quads << "\n";
-    cout << "vert_pos: " << vert_pos << "\n";
-    cout << "vert_norm: " << vert_norm << "\n";
-    cout << "vert_texcoord: " << vert_texcoord << "\n";
+    stream << "elem_points: " << elem_points << "\n";
+    stream << "elem_lines: " << elem_lines << "\n";
+    stream << "elem_triangles: " << elem_triangles << "\n";
+    stream << "elem_quads: " << elem_quads << "\n";
+    stream << "vert_pos: " << vert_pos << "\n";
+    stream << "vert_norm: " << vert_norm << "\n";
+    stream << "vert_texcoord: " << vert_texcoord << "\n";
+    stream << "vert_color: " << vert_color << "\n";
+    stream << "vert_radius: " << vert_radius << "\n";
+    stream << "vert_tangsp: " << vert_tangsp << "\n";
 
-    cout << "texel_hdr: " << texel_hdr << "\n";
-    cout << "texel_ldr: " << texel_ldr << "\n";
+    stream << "elem_points: " << elem_points << "\n";
+    stream << "elem_lines: " << elem_lines << "\n";
+    stream << "elem_triangles: " << elem_triangles << "\n";
+    stream << "elem_quads: " << elem_quads << "\n";
+    stream << "vert_pos: " << vert_pos << "\n";
+    stream << "vert_norm: " << vert_norm << "\n";
+    stream << "vert_texcoord: " << vert_texcoord << "\n";
 
-    cout << "memory_imgs: " << memory_imgs << "\n";
-    cout << "memory_vols: " << memory_vols << "\n";
-    cout << "memory_elems: " << memory_elems << "\n";
-    cout << "memory_verts: " << memory_verts << "\n";
-    cout << "memory_fvelems: " << memory_fvelems << "\n";
-    cout << "memory_fvverts: " << memory_fvverts << "\n";
+    stream << "texel_hdr: " << texel_hdr << "\n";
+    stream << "texel_ldr: " << texel_ldr << "\n";
 
-    cout << "bbox min: " << bbox.min.x << " " << bbox.min.y << " " << bbox.min.z
-         << "\n";
-    cout << "bbox max: " << bbox.max.x << " " << bbox.max.y << " " << bbox.max.z
-         << "\n";
+    stream << "memory_imgs: " << memory_imgs << "\n";
+    stream << "memory_vols: " << memory_vols << "\n";
+    stream << "memory_elems: " << memory_elems << "\n";
+    stream << "memory_verts: " << memory_verts << "\n";
+    stream << "memory_fvelems: " << memory_fvelems << "\n";
+    stream << "memory_fvverts: " << memory_fvverts << "\n";
+
+    stream << "bbox min: " << bbox.min.x << " " << bbox.min.y << " "
+           << bbox.min.z << "\n";
+    stream << "bbox max: " << bbox.max.x << " " << bbox.max.y << " "
+           << bbox.max.z << "\n";
+
+    return stream.str();
 }
 
 }  // namespace yocto

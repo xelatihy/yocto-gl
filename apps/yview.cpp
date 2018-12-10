@@ -175,8 +175,8 @@ bool load_scene_sync(app_state& app) {
     }
 
     // animation
-    auto time_range = compute_animation_range(app.scene);
-    app.time        = time_range.x;
+    app.time_range = compute_animation_range(app.scene);
+    app.time       = app.time_range.x;
 
     // set flags
     app.load_done    = true;
@@ -1033,6 +1033,7 @@ void run_ui(app_state& app) {
 
     // loop
     auto mouse_pos = zero2f, last_pos = zero2f;
+    auto last_time = get_time();
     while (!should_opengl_window_close(win)) {
         last_pos            = mouse_pos;
         mouse_pos           = get_opengl_mouse_pos(win);
@@ -1061,10 +1062,12 @@ void run_ui(app_state& app) {
 
         // animation
         if (app.load_done && app.animate) {
-            app.time += 1 / 60.0f;
+            auto time = (double)(get_time() - last_time) / 1000000000.0;
+            app.time += min(1 / 60.0f, (float)time);
             if (app.time < app.time_range.x || app.time > app.time_range.y)
                 app.time = app.time_range.x;
             update_transforms(app.scene, app.time);
+            last_time = get_time();
         }
 
         // update

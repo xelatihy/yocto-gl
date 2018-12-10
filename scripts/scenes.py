@@ -78,7 +78,8 @@ def ytrace(directory='mcguire',scene='*',format='obj',mode='path'):
 @click.option('--clean-models/--no-clean-models','-C', default=False)
 def convert(directory='mcguire',scene='*',format='obj',outformat="json",mode='path',clean_models=True):
     modes = {
-        'default': '--skip-textures --mesh-filenames'
+        'default': '--skip-textures --mesh-filenames',
+        'gltf': '--skip-textures --mesh-filenames --mesh-directory gltf_meshes/'
     }
     options = modes[mode]
     for dirname in sorted(glob.glob(f'{directory}/{scene}')):

@@ -301,7 +301,7 @@ struct yocto_scene {
 namespace yocto {
 
 // Print scene statistics.
-void print_stats(const yocto_scene& scene);
+string print_scene_stats(const yocto_scene& scene);
 
 }  // namespace yocto
 
