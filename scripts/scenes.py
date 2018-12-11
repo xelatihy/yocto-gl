@@ -120,6 +120,23 @@ def convert_hair(directory='yuksel',scene='*',format='hair',outformat="ply",mode
             os.system(cmd)
 
 @cli.command()
+@click.option('--directory', '-d', default='mcguire')
+@click.option('--scene', '-s', default='*')
+@click.option('--mode','-m', default='default')
+def zip(directory='mcguire',scene='*',mode='default'):
+    modes = {
+        'default': '-r -X -q',
+    }
+    options = modes[mode]
+    for dirname in sorted(glob.glob(f'{directory}/{scene}')):
+        if not os.path.isdir(dirname): continue
+        if '/_' in dirname: continue
+        os.system(f'rm -f {dirname}.zip')
+        cmd = f'zip {options} {dirname}.zip {dirname}'
+        print(cmd)
+        os.system(cmd)
+
+@cli.command()
 @click.option('--directory', '-d', default='procedurals')
 @click.option('--mode','-m', default='skies')
 @click.option('--clean/--no-clean','-C', default=False)
@@ -150,6 +167,7 @@ def make_procedurals(directory='procedurals',mode='skies',clean=False):
 
 @cli.command()
 def sync():
-    os.system('rsync -avc --delete ./ ../yocto-scenes')
+    os.system("rsync -avcm --delete --include '*/' --include '*.zip' --include '*.tgz' --include '*.pdf' --exclude='*' ./ ../yocto-scenes")
+    # os.system('rsync -avc --delete ./ ../yocto-scenes')
 
 cli()
