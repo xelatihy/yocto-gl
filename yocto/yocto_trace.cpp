@@ -2086,6 +2086,20 @@ pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
 }
 
 // Debug previewing.
+pair<vec3f, bool> trace_debug_emission(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) return {zero3f, false};
+
+    // shade
+    return {point.emission, true};
+}
+
+// Debug previewing.
 pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
     const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
     const vec3f& direction, rng_state& rng, int max_bounces,
@@ -2111,6 +2125,20 @@ pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
 
     // shade
     return {point.brdf.specular, true};
+}
+
+// Debug previewing.
+pair<vec3f, bool> trace_debug_tranmission(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) return {zero3f, false};
+
+    // shade
+    return {point.brdf.transmission, true};
 }
 
 // Debug previewing.
@@ -2176,8 +2204,10 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         case trace_sampler_type::debug_color: return trace_debug_color;
         case trace_sampler_type::debug_frontfacing:
             return trace_debug_frontfacing;
+        case trace_sampler_type::debug_emission: return trace_debug_emission;
         case trace_sampler_type::debug_diffuse: return trace_debug_diffuse;
         case trace_sampler_type::debug_specular: return trace_debug_specular;
+        case trace_sampler_type::debug_transmission: return trace_debug_tranmission;
         case trace_sampler_type::debug_roughness: return trace_debug_roughness;
     }
     return {};

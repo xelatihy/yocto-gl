@@ -129,15 +129,18 @@ enum struct trace_sampler_type {
     debug_texcoord,     // debug - texcoord
     debug_color,        // debug - color
     debug_frontfacing,  // debug - faceforward
+    debug_emission,     // debug - emission
     debug_diffuse,      // debug - diffuse
     debug_specular,     // debug - specular
+    debug_transmission, // debug - transmission
     debug_roughness,    // debug - roughness
 };
 
 const auto trace_sampler_type_names = vector<string>{"path", "direct", "naive",
     "environment", "eyelight", "path_nomis", "direct_nomis", "naive_nomis",
     "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
-    "debug_frontfacing", "debug_diffuse", "debug_specular", "debug_roughness"};
+    "debug_frontfacing", "debug_emission", "debug_diffuse", "debug_specular", 
+    "debug_transmission", "debug_roughness"};
 
 // Tracer function
 using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
