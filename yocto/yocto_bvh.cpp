@@ -198,6 +198,21 @@ bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     return tmin <= tmax;
 }
 
+// Intersect a ray with a axis-aligned bounding box
+bool intersect_bbox(
+    const ray3f& ray, const vec3f& ray_dinv, const bbox3f& bbox) {
+    auto it_min = (bbox.min - ray.o) * ray_dinv;
+    auto it_max = (bbox.max - ray.o) * ray_dinv;
+    auto tmin   = vec3f{_safemin(it_min.x, it_max.x),
+        _safemin(it_min.y, it_max.y), _safemin(it_min.z, it_max.z)};
+    auto tmax   = vec3f{_safemax(it_min.x, it_max.x),
+        _safemax(it_min.y, it_max.y), _safemax(it_min.z, it_max.z)};
+    auto t0 = _safemax(tmin.x, _safemax(tmin.y, _safemax(tmin.z, ray.tmin)));
+    auto t1 = _safemin(tmax.x, _safemin(tmax.y, _safemin(tmax.z, ray.tmax)));
+    t1 *= 1.00000024f;  // for double: 1.0000000000000004
+    return t0 <= t1;
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
@@ -1247,7 +1262,8 @@ bvh_shape_intersection intersect_shape_bvh(
         auto& node = bvh.nodes[node_stack[--node_cur]];
 
         // intersect bbox
-        if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
+        // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
+        if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list
@@ -1335,7 +1351,8 @@ bvh_scene_intersection intersect_scene_bvh(
         auto& node = bvh.nodes[node_stack[--node_cur]];
 
         // intersect bbox
-        if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
+        // if (!intersect_bbox(ray, ray_dinv, ray_dsign, node.bbox)) continue;
+        if (!intersect_bbox(ray, ray_dinv, node.bbox)) continue;
 
         // intersect node, switching based on node type
         // for each type, iterate over the the primitive list

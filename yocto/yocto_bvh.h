@@ -289,6 +289,13 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
     const vec3i& ray_dsign, const bbox3f& bbox);
 
+// Intersect a ray with a axis-aligned bounding box, implemented as
+// "A Ray-Box Intersection Algorithm and Efficient Dynamic Voxel Rendering" at
+// http://jcgt.org/published/0007/03/04/
+// but using the Wald implementation
+bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
+    const vec3i& ray_dsign, const bbox3f& bbox);
+
 // Check if a point overlaps a position within a max distance.
 bvh_element_intersection overlap_point(
     const vec3f& pos, float dist_max, const vec3f& p0, float r0);
