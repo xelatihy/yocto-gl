@@ -2763,8 +2763,7 @@ bool save_mtl(
         print(fs, "  Kt {}\n", material.transmission);
         print(fs, "  Ns {}\n",
             (int)clamp(
-                2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f,
-                        4.0f) -
+                2 / pow(clamp(material.roughness, 0.0f, 0.99f) + 1e-10f, 4.0f) -
                     2,
                 0.0f, 1.0e9f));
         print(fs, "  d {}\n", material.opacity);
@@ -4360,8 +4359,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
     };
 
     unordered_map<string, vector<yocto_instance>> objects;
-    auto lid = 0, sid = 0, cid = 0;
-    auto cur_object = ""s;
+    auto                                          lid = 0, sid = 0, cid = 0;
+    auto                                          cur_object = ""s;
     for (auto& jcmd : js) {
         auto cmd = jcmd.at("cmd").get<string>();
         if (cmd == "Integrator" || cmd == "Sampler" || cmd == "PixelFilter") {

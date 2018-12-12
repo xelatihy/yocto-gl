@@ -2197,7 +2197,7 @@ pair<vec3f, bool> trace_debug_highlight(const yocto_scene& scene,
     // initialize
     auto emission = point.emission;
     auto outgoing = -direction;
-    if(emission == zero3f) emission = {0.2f,0.2f,0.2f};
+    if (emission == zero3f) emission = {0.2f, 0.2f, 0.2f};
 
     // done
     return {emission * abs(dot(outgoing, point.normal)), true};
@@ -2226,7 +2226,8 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         case trace_sampler_type::debug_emission: return trace_debug_emission;
         case trace_sampler_type::debug_diffuse: return trace_debug_diffuse;
         case trace_sampler_type::debug_specular: return trace_debug_specular;
-        case trace_sampler_type::debug_transmission: return trace_debug_tranmission;
+        case trace_sampler_type::debug_transmission:
+            return trace_debug_tranmission;
         case trace_sampler_type::debug_roughness: return trace_debug_roughness;
         case trace_sampler_type::debug_highlight: return trace_debug_highlight;
     }
