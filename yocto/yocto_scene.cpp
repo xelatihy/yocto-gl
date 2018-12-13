@@ -57,7 +57,7 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
     auto shape_bbox = vector<bbox3f>(scene.shapes.size());
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++)
         shape_bbox[shape_id] = compute_shape_bounds(scene.shapes[shape_id]);
-    auto surface_bbox = vector<bbox3f>(scene.shapes.size());
+    auto surface_bbox = vector<bbox3f>(scene.surfaces.size());
     for (auto surface_id = 0; surface_id < scene.surfaces.size(); surface_id++)
         surface_bbox[surface_id] = compute_surface_bounds(
             scene.surfaces[surface_id]);
