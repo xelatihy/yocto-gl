@@ -68,14 +68,14 @@ endif(YOCTO_EMBREE)
 
 add_executable(ytrace apps/ytrace.cpp)
 add_executable(yscnproc apps/yscnproc.cpp)
+add_executable(yscnmerge apps/yscnmerge.cpp)
 add_executable(yimproc apps/yimproc.cpp)
-add_executable(yobjproc apps/yobjproc.cpp)
 add_executable(ymshproc apps/ymshproc.cpp)
 
 target_link_libraries(ytrace yocto)
 target_link_libraries(yscnproc yocto)
+target_link_libraries(yscnmerge yocto)
 target_link_libraries(yimproc yocto)
-target_link_libraries(yobjproc yocto)
 target_link_libraries(ymshproc yocto)
 
 if(YOCTO_OPENGL)
