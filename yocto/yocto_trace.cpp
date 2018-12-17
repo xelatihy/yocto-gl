@@ -941,7 +941,7 @@ vec3f sample_instance_direction(const yocto_scene& scene,
 // Sample pdf for a light point.
 float sample_instance_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const bvh_scene& bvh,
-    const vec3f& position_, const vec3f& direction) {
+    const vec3f& position, const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
     if (!is_instance_emissive(scene, instance)) return 0;
     auto& elements_cdf = instance.shape >= 0 ?
@@ -949,10 +949,10 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
                              lights.surface_elements_cdf[instance.surface];
     // check all intersection
     auto pdf      = 0.0f;
-    auto position = position_;
-    for (auto bounce = 0; bounce < 10; bounce++) {
+    auto next_position = position;
+    for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
-            bvh, instance_id, make_ray(position, direction));
+            bvh, instance_id, make_ray(next_position, direction));
         if (!isec.hit) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance_id];
@@ -965,7 +965,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
         pdf += distance_squared(light_position, position) /
                (abs(dot(light_normal, direction)) * area);
         // continue
-        position = light_position + direction * 1e-3f;
+        next_position = light_position + direction * 1e-3f;
     }
     return pdf;
 }
