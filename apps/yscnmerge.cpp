@@ -47,6 +47,8 @@ bool mkdir(const string& dir) {
 int main(int argc, char** argv) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
+    auto scene_postfix = parse_argument(parser, "--scene-postfix/no-scene-postfix", 
+        false, "Append unique scene postfix to each name");
     auto skip_textures = parse_argument(parser,
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
     auto mesh_filenames = parse_argument(parser,
@@ -77,6 +79,20 @@ int main(int argc, char** argv) {
         auto to_merge = yocto_scene{};
         if (!load_scene(filename, to_merge, load_options))
             log_fatal("cannot load scene {}", filename);
+        log_validation_errors(to_merge, true);
+        if(scene_postfix) {
+            auto postfix = "{" + get_filename(filename) + "}";
+            for(auto& val : to_merge.cameras) val.name += postfix;
+            for(auto& val : to_merge.textures) val.name += postfix;
+            for(auto& val : to_merge.voltextures) val.name += postfix;
+            for(auto& val : to_merge.materials) val.name += postfix;
+            for(auto& val : to_merge.shapes) val.name += postfix;
+            for(auto& val : to_merge.surfaces) val.name += postfix;
+            for(auto& val : to_merge.instances) val.name += postfix;
+            for(auto& val : to_merge.environments) val.name += postfix;
+            for(auto& val : to_merge.nodes) val.name += postfix;
+            for(auto& val : to_merge.animations) val.name += postfix;
+        }
         merge_scene_into(scene, to_merge);
     }
 
