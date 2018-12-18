@@ -2125,10 +2125,7 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
                 material.kt = {material.kt.x, material.kt.x, material.kt.x};
             if (options.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
-            auto tr = vec3f{-1, -1, -1};
-            view >> tr;
-            if (tr.y < 0) tr = {tr.x, tr.x, tr.x};
-            material.op = (tr.x + tr.y + tr.z) / 3;
+            view >> material.op;
             if (options.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
             view >> material.ns;
@@ -2352,7 +2349,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     // splitting policy
     auto split_material  = options.obj_split_shapes;
     auto split_group     = options.obj_split_shapes;
-    auto split_smoothing = options.obj_split_shapes;
+    // auto split_smoothing = options.obj_split_shapes;
+    auto split_smoothing = false;
 
     // current parsing values
     auto matname   = string();

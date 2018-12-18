@@ -1664,6 +1664,73 @@ bool is_material_volume_colored(const yocto_material& material) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
+    auto offset_cameras = scene.cameras.size();
+    auto offset_textures = scene.textures.size();
+    auto offset_voltextures = scene.voltextures.size();
+    auto offset_materials = scene.materials.size();
+    auto offset_shapes = scene.shapes.size();
+    auto offset_surfaces = scene.surfaces.size();
+    auto offset_instances = scene.instances.size();
+    auto offset_environments = scene.environments.size();
+    auto offset_nodes = scene.nodes.size();
+    auto offset_animations = scene.animations.size();
+    scene.cameras += merge.cameras;
+    scene.textures += merge.textures;
+    scene.voltextures += merge.voltextures;
+    scene.materials += merge.materials;
+    scene.shapes += merge.shapes;
+    scene.surfaces += merge.surfaces;
+    scene.instances += merge.instances;
+    scene.environments += merge.environments;
+    scene.nodes += merge.nodes;
+    scene.animations += merge.animations;
+    for(auto material_id = offset_materials; material_id < scene.materials.size(); material_id++) {
+        auto& material = scene.materials[material_id];
+        if(material.emission_texture >= 0) material.emission_texture += offset_textures;
+        if(material.diffuse_texture >= 0) material.diffuse_texture += offset_textures;
+        if(material.specular_texture >= 0) material.specular_texture += offset_textures;
+        if(material.transmission_texture >= 0) material.transmission_texture += offset_textures;
+        if(material.roughness_texture >= 0) material.roughness_texture += offset_textures;
+        if(material.opacity_texture >= 0) material.opacity_texture += offset_textures;
+        if(material.occlusion_texture >= 0) material.occlusion_texture += offset_textures;
+        if(material.normal_texture >= 0) material.normal_texture += offset_textures;
+        if(material.bump_texture >= 0) material.bump_texture += offset_textures;
+        if(material.displacement_texture >= 0) material.displacement_texture += offset_textures;
+        if(material.volume_density_texture >= 0) material.volume_density_texture += offset_voltextures;
+    }
+    for(auto shape_id = offset_shapes; shape_id < scene.shapes.size(); shape_id++) {
+        auto& shape = scene.shapes[shape_id];
+        if(shape.material >= 0) shape.material += offset_materials;
+    }
+    for(auto surface_id = offset_surfaces; surface_id < scene.surfaces.size(); surface_id++) {
+        auto& surface = scene.surfaces[surface_id];
+        for(auto& material : surface.materials)
+            if(material >= 0) material += offset_materials;
+    }
+    for(auto instance_id = offset_instances; instance_id < scene.instances.size(); instance_id++) {
+        auto& instance = scene.instances[instance_id];
+        if(instance.shape >= 0) instance.shape += offset_shapes;
+        if(instance.surface >= 0) instance.surface += offset_surfaces;
+    }
+    for(auto environment_id = offset_environments; environment_id < scene.environments.size(); environment_id++) {
+        auto& environment = scene.environments[environment_id];
+        if(environment.emission_texture >= 0) environment.emission_texture += offset_textures;
+    }
+    for(auto node_id = offset_nodes; node_id < scene.nodes.size(); node_id++) {
+        auto& node = scene.nodes[node_id];
+        if(node.parent >= 0) node.parent += offset_nodes;
+        if(node.camera >= 0) node.camera += offset_cameras;
+        if(node.instance >= 0) node.instance += offset_instances;
+        if(node.environment >= 0) node.environment += offset_environments;
+    }
+    for(auto animation_id = offset_animations; animation_id < scene.animations.size(); animation_id++) {
+        auto& animation = scene.animations[animation_id];
+        for(auto& target: animation.node_targets)
+            if(target >= 0) target += offset_nodes;
+    }
+}
+
 string print_scene_stats(const yocto_scene& scene) {
     // using long long instead of uint64_t to avoid printf macros
     auto num_cameras      = (long long)0;
