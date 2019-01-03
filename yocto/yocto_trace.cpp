@@ -948,7 +948,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
                              lights.shape_elements_cdf[instance.shape] :
                              lights.surface_elements_cdf[instance.surface];
     // check all intersection
-    auto pdf      = 0.0f;
+    auto pdf           = 0.0f;
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(

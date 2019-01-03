@@ -506,28 +506,26 @@ make_shape_quads make_quad_stack_shape(
     const vec3i& steps, const vec3f& size, const vec2f& uvsize);
 make_shape_quads make_floor_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize);
-make_shape_quads make_floor_bent_shape(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, float radius);
+make_shape_quads make_floor_bent_shape(
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize, float radius);
 make_shape_quads make_cube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize, float radius);
+make_shape_quads make_cube_rounded_shape(
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius);
 make_shape_quads make_uvsphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize);
-make_shape_quads make_sphere_shape(
-    int steps, float size, float uvsize);
-make_shape_quads make_uvsphere_flipcap_shape(const vec2i& steps, float size,
-    const vec2f& uvsize, const vec2f& zflip);
+make_shape_quads make_sphere_shape(int steps, float size, float uvsize);
+make_shape_quads make_uvsphere_flipcap_shape(
+    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip);
 make_shape_quads make_uvdisk_shape(
     const vec2i& steps, float size, const vec2f& uvsize);
-make_shape_quads make_disk_shape(
-    int steps, float size, float uvsize);
+make_shape_quads make_disk_shape(int steps, float size, float uvsize);
 make_shape_quads make_disk_bulged_shape(
     int steps, float size, float uvsize, float height);
 make_shape_quads make_uvcylinder_shape(
     const vec3i& steps, const vec2f& size, const vec3f& uvsize);
-make_shape_quads make_uvcylinder_rounded_shape(const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius);
+make_shape_quads make_uvcylinder_rounded_shape(
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius);
 tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
     int tesselation, float size);
 

@@ -1142,15 +1142,14 @@ bool apply_json_procedural(
                 get_json_value(js, "uvsize", vec3f{1, 1, 1}),
                 get_json_value(js, "radius", 0.3f));
     } else if (type == "uvsphere") {
-        tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_uvsphere_shape(get_json_value(js, "steps",
-                                                         vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f),
-            get_json_value(js, "uvsize", vec2f{1, 1}));
+        tie(value.quads, value.positions, value.normals, value.texturecoords) =
+            make_uvsphere_shape(get_json_value(js, "steps", vec2i{64, 32}),
+                get_json_value(js, "size", 2.0f),
+                get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js,
-                                                              "steps", 32),
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "uvsphere_flipcap") {
@@ -1163,13 +1162,13 @@ bool apply_json_procedural(
     } else if (type == "uvdisk") {
         tie(value.quads, value.positions, value.normals,
             value.texturecoords) = make_uvdisk_shape(get_json_value(js, "steps",
-                                                       vec2i{32, 16}),
+                                                         vec2i{32, 16}),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "disk") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_disk_shape(get_json_value(js,
-                                                            "steps", 32),
+            value.texturecoords) = make_disk_shape(get_json_value(js, "steps",
+                                                       32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "disk_bulged") {
@@ -1181,7 +1180,8 @@ bool apply_json_procedural(
             get_json_value(js, "height", 0.25f));
     } else if (type == "uvcylinder") {
         tie(value.quads, value.positions, value.normals, value.texturecoords) =
-            make_uvcylinder_shape(get_json_value(js, "steps", vec3i{64, 32, 16}),
+            make_uvcylinder_shape(
+                get_json_value(js, "steps", vec3i{64, 32, 16}),
                 get_json_value(js, "size", vec2f{2.0f, 2.0f}),
                 get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "uvcylinder_rounded") {
@@ -1210,8 +1210,8 @@ bool apply_json_procedural(
                 get_json_value(js, "radius", 10.0f));
     } else if (type == "matball") {
         tie(value.quads, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js,
-                                                              "steps", 32),
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "hairball") {
@@ -1355,34 +1355,34 @@ bool apply_json_procedural(
                 get_json_value(js, "radius", 0.3f));
     } else if (type == "uvsphere") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_uvsphere_shape(get_json_value(js, "steps",
-                                                         vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f),
-            get_json_value(js, "uvsize", vec2f{1, 1}));
+            value.texturecoords) =
+            make_uvsphere_shape(get_json_value(js, "steps", vec2i{64, 32}),
+                get_json_value(js, "size", 2.0f),
+                get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js,
-                                                              "steps", 32),
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "uvsphere_flipcap") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_uvsphere_flipcap_shape(get_json_value(js,
-                                                                 "steps",
-                                                                 vec2i{64, 32}),
-            get_json_value(js, "size", 2.0f),
-            get_json_value(js, "uvsize", vec2f{1, 1}),
-            get_json_value(js, "zflip", vec2f{-0.75f, +0.75f}));
+            value.texturecoords) =
+            make_uvsphere_flipcap_shape(
+                get_json_value(js, "steps", vec2i{64, 32}),
+                get_json_value(js, "size", 2.0f),
+                get_json_value(js, "uvsize", vec2f{1, 1}),
+                get_json_value(js, "zflip", vec2f{-0.75f, +0.75f}));
     } else if (type == "uvdisk") {
         tie(value.quads_positions, value.positions, value.normals,
             value.texturecoords) = make_uvdisk_shape(get_json_value(js, "steps",
-                                                       vec2i{32, 16}),
+                                                         vec2i{32, 16}),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "disk") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_disk_shape(get_json_value(js,
-                                                            "steps", 32),
+            value.texturecoords) = make_disk_shape(get_json_value(js, "steps",
+                                                       32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "disk_bulged") {
@@ -1394,10 +1394,11 @@ bool apply_json_procedural(
             get_json_value(js, "height", 0.25f));
     } else if (type == "uvcylinder") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) =
-            make_uvcylinder_shape(get_json_value(js, "steps", vec3i{64, 32, 16}),
-                get_json_value(js, "size", vec2f{2.0f, 2.0f}),
-                get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+            value.texturecoords) = make_uvcylinder_shape(get_json_value(js,
+                                                             "steps",
+                                                             vec3i{64, 32, 16}),
+            get_json_value(js, "size", vec2f{2.0f, 2.0f}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "uvcylinder_rounded") {
         tie(value.quads_positions, value.positions, value.normals,
             value.texturecoords) =
@@ -1421,8 +1422,8 @@ bool apply_json_procedural(
                 get_json_value(js, "radius", 10.0f));
     } else if (type == "matball") {
         tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js,
-                                                              "steps", 32),
+            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+                                                         32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "hairball_interior") {
@@ -2293,8 +2294,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     scene      = {};
 
     // splitting policy
-    auto split_material  = options.obj_split_shapes;
-    auto split_group     = options.obj_split_shapes;
+    auto split_material = options.obj_split_shapes;
+    auto split_group    = options.obj_split_shapes;
     // auto split_smoothing = options.obj_split_shapes;
     auto split_smoothing = false;
 
@@ -4573,8 +4574,8 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 if (has_json_key(jcmd, "radius"))
                     radius = jcmd.at("radius").get<float>();
                 tie(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords) = make_uvdisk_shape({32, 16}, 2 * radius,
-                    {1, 1});
+                    shape.texturecoords) = make_uvdisk_shape({32, 16},
+                    2 * radius, {1, 1});
             } else {
                 log_error("{} shape not supported", type);
             }
