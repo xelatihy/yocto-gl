@@ -1819,15 +1819,6 @@ make_cube_facevarying_shape(
     return {quads_positions, quads_normals, quads_texturecoords, positions,
         normals, texturecoords};
 }
-tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_cube_shape(
-        steps, size, uvsize);
-    auto [wquads, wpositions] = weld_quads(quads, positions,
-        min(0.1f * size /
-            vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    return {wquads, wpositions};
-}
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.

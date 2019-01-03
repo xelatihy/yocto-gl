@@ -1461,10 +1461,13 @@ bool apply_json_procedural(
             else if(nd.y < -0.5f) value.quads_materials.push_back(5);
         }
     } else if (type == "cube_posonly") {
-        tie(value.quads_positions, value.positions) = make_cube_posonly_shape(
-            get_json_value(js, "steps", vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}),
-            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+        tie(value.quads_positions, ignore, ignore,
+            value.positions, value.normals,
+            value.texturecoords) =
+            make_cube_facevarying_shape(
+                get_json_value(js, "steps", vec3i{1, 1, 1}),
+                get_json_value(js, "size", vec3f{2, 2, 2}),
+                get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
         return false;
