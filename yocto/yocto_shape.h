@@ -540,10 +540,6 @@ make_cube_facevarying_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
-tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<int>, vector<vec3f>,
-    vector<vec3f>, vector<vec2f>>
-make_cube_multiplematerials_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 make_shape_lines make_lines_shape(const vec2i& steps, const vec2f& size,

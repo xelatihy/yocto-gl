@@ -1819,21 +1819,6 @@ make_cube_facevarying_shape(
     return {quads_positions, quads_normals, quads_texturecoords, positions,
         normals, texturecoords};
 }
-tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<int>, vector<vec3f>,
-    vector<vec3f>, vector<vec2f>>
-make_cube_multiplematerials_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto [quads_positions, quads_normals, quads_texturecoords, positions,
-        normals,
-        texturecoords]   = make_cube_facevarying_shape(steps, size, uvsize);
-    auto quads_materials = vector<int>(quads_positions.size());
-    auto quads_per_face  = (int)quads_positions.size() / 6;
-    for (auto i = 0; i < quads_positions.size(); i++) {
-        quads_materials[i] = i / quads_per_face;
-    }
-    return {quads_positions, quads_normals, quads_texturecoords,
-        quads_materials, positions, normals, texturecoords};
-}
 tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
