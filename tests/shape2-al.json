@@ -155,7 +155,8 @@
                 "type": "sphere_flipcap",
                 "steps": [64, 32],
                 "size": 1,
-                "uvsize": [1, 1]
+                "uvsize": [1, 1],
+                "zflip": [-0.25, 0.25]
             }
         },
         {

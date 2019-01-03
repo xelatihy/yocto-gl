@@ -1165,7 +1165,7 @@ bool apply_json_procedural(
                 get_json_value(js, "steps", vec2i{64, 32}),
                 get_json_value(js, "size", 2.0f),
                 get_json_value(js, "uvsize", vec2f{1, 1}),
-                js.value("zflip", vec2f{-0.75f, +0.75f}),
+                get_json_value(js, "zflip", vec2f{-0.75f, +0.75f}),
                 get_json_value(js, "flip_v", true));
     } else if (type == "disk") {
         tie(value.quads, value.positions, value.normals,
@@ -1407,7 +1407,7 @@ bool apply_json_procedural(
                                                                  vec2i{64, 32}),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", vec2f{1, 1}),
-            js.value("zflip", vec2f{-0.75f, +0.75f}),
+            get_json_value(js, "zflip", vec2f{-0.75f, +0.75f}),
             get_json_value(js, "flip_v", true));
     } else if (type == "disk") {
         tie(value.quads_positions, value.positions, value.normals,
