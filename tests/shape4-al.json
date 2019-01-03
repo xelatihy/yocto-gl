@@ -141,7 +141,7 @@
             "filename": "models/obj1.ply",
             "material": "obj1",
             "!!proc": {
-                "type": "disk",
+                "type": "uvdisk",
                 "steps": [64, 32],
                 "size": 1,
                 "uvsize": [1, 1]
@@ -152,7 +152,7 @@
             "filename": "models/obj2.ply",
             "material": "obj2",
             "!!proc": {
-                "type": "disk_quad",
+                "type": "disk",
                 "steps": 32,
                 "size": 1,
                 "uvsize": 1

@@ -153,7 +153,7 @@
                 "obj1"
             ],
             "!!proc": {
-                "type": "sphere_cube"
+                "type": "sphere"
             }
         },
         {
@@ -163,7 +163,7 @@
                 "obj2"
             ],
             "!!proc": {
-                "type": "sphere_cube"
+                "type": "sphere"
             }
         },
         {
@@ -173,7 +173,7 @@
                 "obj3"
             ],
             "!!proc": {
-                "type": "sphere_cube"
+                "type": "sphere"
             }
         }
     ],

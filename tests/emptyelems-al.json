@@ -130,7 +130,7 @@
             "filename": "models/obj2.ply",
             "material": "obj2",
             "!!proc": {
-                "type": "sphere_cube"
+                "type": "sphere"
             }
         },
         {

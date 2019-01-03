@@ -1627,7 +1627,7 @@ make_shape_quads make_uvsphere_shape(
 }
 
 // Make a spherecube.
-make_shape_quads make_sphere_cube_shape(
+make_shape_quads make_sphere_shape(
     int steps, float size, float uvsize, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize}, flip_v);
@@ -1675,7 +1675,7 @@ make_shape_quads make_uvdisk_shape(
 }
 
 // Make a disk from a quad.
-make_shape_quads make_disk_quad_shape(
+make_shape_quads make_disk_shape(
     int steps, float size, float uvsize, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
         {steps, steps}, {2, 2}, {uvsize, uvsize}, flip_v);
@@ -1693,7 +1693,7 @@ make_shape_quads make_disk_quad_shape(
 // Make a bulged disk from a quad.
 make_shape_quads make_disk_bulged_shape(
     int steps, float size, float uvsize, float height, bool flip_v) {
-    auto [quads, positions, normals, texturecoords] = make_disk_quad_shape(
+    auto [quads, positions, normals, texturecoords] = make_disk_shape(
         steps, size, uvsize, flip_v);
     if (height == 0) return {quads, positions, normals, texturecoords};
     auto radius = (size * size / 4 + height * height) / (2 * height);

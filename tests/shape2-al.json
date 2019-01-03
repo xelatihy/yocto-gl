@@ -141,7 +141,7 @@
             "filename": "models/obj1.ply",
             "material": "obj1",
             "!!proc": {
-                "type": "sphere",
+                "type": "uvsphere",
                 "steps": [64, 32],
                 "size": 1,
                 "uvsize": [1, 1]
@@ -152,7 +152,7 @@
             "filename": "models/obj2.ply",
             "material": "obj2",
             "!!proc": {
-                "type": "sphere_flipcap",
+                "type": "uvsphere_flipcap",
                 "steps": [64, 32],
                 "size": 1,
                 "uvsize": [1, 1],
@@ -164,7 +164,7 @@
             "filename": "models/obj3.ply",
             "material": "obj3",
             "!!proc": {
-                "type": "sphere_cube",
+                "type": "sphere",
                 "steps": 32,
                 "size": 1,
                 "uvsize": 1
@@ -175,7 +175,7 @@
             "filename": "models/obj4.ply",
             "material": "obj4",
             "!!proc": {
-                "type": "sphere_cube",
+                "type": "sphere",
                 "steps": 32,
                 "size": 1,
                 "uvsize": 1

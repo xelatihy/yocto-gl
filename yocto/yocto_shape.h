@@ -45,11 +45,11 @@
 // 6. create shapes with `make_cube_shape()`, `make_uvsphere_shape()`,
 // `make_quad_shape()`,
 //    `make_cube_fvshape()`, `make_hair_shape()`, `make_suzanne_shape()`,
-//    `make_lines_shape()`, `make_points_shape()`, `make_sphere_cube_shape()`,
+//    `make_lines_shape()`, `make_points_shape()`, `make_sphere_shape()`,
 //    `make_cube_rounded_shape()`, `make_uvsphere_flipcap_shape()`,
 //    `make_uvcylinder_shape()`, `make_uvcylinder_rounded_shape()`,
 //    `make_uvdisk_shape()`, `make_cylinder_side_shape()`,
-//    `make_disk_quad_shape()`
+//    `make_disk_shape()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points_element()`, `sample_lines_element()`,
 //    `sample_triangles_element()`; initialize the sampling CDFs with
@@ -514,13 +514,13 @@ make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool flip_v);
 make_shape_quads make_uvsphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
-make_shape_quads make_sphere_cube_shape(
+make_shape_quads make_sphere_shape(
     int steps, float size, float uvsize, bool flip_v);
 make_shape_quads make_uvsphere_flipcap_shape(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool flip_v);
 make_shape_quads make_uvdisk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
-make_shape_quads make_disk_quad_shape(
+make_shape_quads make_disk_shape(
     int steps, float size, float uvsize, bool flip_v);
 make_shape_quads make_disk_bulged_shape(
     int steps, float size, float uvsize, float height, bool flip_v);
