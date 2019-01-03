@@ -491,55 +491,45 @@ vector<vec4f> convert_distance_to_color(const vector<float>& distances);
 namespace yocto {
 
 // Data returned by `make_xxx_shape()` functions.
-using make_shape_quads = tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>;
-using make_shape_lines = tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>;
-using make_shape_points = tuple<vector<int>, vector<vec3f>, vector<vec3f>, vector<vec2f>, vector<float>>;
+using make_shape_quads =
+    tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>;
+using make_shape_lines  = tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>,
+    vector<vec2f>, vector<float>>;
+using make_shape_points = tuple<vector<int>, vector<vec3f>, vector<vec3f>,
+    vector<vec2f>, vector<float>>;
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
-make_shape_quads
-make_quad_shape(
+make_shape_quads make_quad_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
-make_shape_quads
-make_quad_stack_shape(
+make_shape_quads make_quad_stack_shape(
     const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v);
-make_shape_quads
-make_floor_shape(
+make_shape_quads make_floor_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
-make_shape_quads
-make_floor_bent_shape(const vec2i& steps, const vec2f& size,
+make_shape_quads make_floor_bent_shape(const vec2i& steps, const vec2f& size,
     const vec2f& uvsize, float radius, bool flip_v);
-make_shape_quads
-make_cube_shape(
+make_shape_quads make_cube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
-make_shape_quads
-make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
+make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool flip_v);
-make_shape_quads
-make_sphere_shape(
+make_shape_quads make_sphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
-make_shape_quads
-make_sphere_cube_shape(int steps, float size, float uvsize, bool flip_v);
-make_shape_quads
-make_sphere_flipcap_shape(const vec2i& steps, float size, const vec2f& uvsize,
-    const vec2f& zflip, bool flip_v);
-make_shape_quads
-make_disk_shape(
+make_shape_quads make_sphere_cube_shape(
+    int steps, float size, float uvsize, bool flip_v);
+make_shape_quads make_sphere_flipcap_shape(const vec2i& steps, float size,
+    const vec2f& uvsize, const vec2f& zflip, bool flip_v);
+make_shape_quads make_disk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
-make_shape_quads
-make_disk_quad_shape(int steps, float size, float uvsize, bool flip_v);
-make_shape_quads
-make_disk_bulged_shape(
+make_shape_quads make_disk_quad_shape(
+    int steps, float size, float uvsize, bool flip_v);
+make_shape_quads make_disk_bulged_shape(
     int steps, float size, float uvsize, float height, bool flip_v);
-make_shape_quads
-make_cylinder_side_shape(
+make_shape_quads make_cylinder_side_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
-make_shape_quads
-make_cylinder_shape(
+make_shape_quads make_cylinder_shape(
     const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v);
-make_shape_quads
-                                                   make_cylinder_rounded_shape(const vec3i& steps, const vec2f& size,
-                                                       const vec3f& uvsize, float radius, bool flip_v);
+make_shape_quads make_cylinder_rounded_shape(const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize, float radius, bool flip_v);
 tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
     int tesselation, float size, bool flip_v);
 
@@ -560,18 +550,15 @@ make_cube_multiplematerials_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
-make_shape_lines
-make_lines_shape(const vec2i& steps, const vec2f& size, const vec2f& uvsize,
-    const vec2f& line_radius = {0.001f, 0.001f});
+make_shape_lines make_lines_shape(const vec2i& steps, const vec2f& size,
+    const vec2f& uvsize, const vec2f& line_radius = {0.001f, 0.001f});
 
 // Make point primitives. Returns points, pos, norm, texcoord, radius.
-make_shape_points
-make_point_shape(float point_radius = 0.001f);
-make_shape_points
-make_points_shape(int num, float uvsize, float point_radius = 0.001f);
-make_shape_points
-make_random_points_shape(int num, const vec3f& size, float uvsize,
-    float point_radius = 0.001f, uint64_t seed = 0);
+make_shape_points make_point_shape(float point_radius = 0.001f);
+make_shape_points make_points_shape(
+    int num, float uvsize, float point_radius = 0.001f);
+make_shape_points make_random_points_shape(int num, const vec3f& size,
+    float uvsize, float point_radius = 0.001f, uint64_t seed = 0);
 
 // Make a bezier circle. Returns bezier, pos.
 tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size);
@@ -582,21 +569,19 @@ tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size);
 // noise: noise added to hair (strength/scale)
 // clump: clump added to hair (number/strength)
 // rotation: rotation added to hair (angle/strength)
-make_shape_lines
-make_hair_shape(const vec2i& steps, const vector<vec3i>& striangles,
-    const vector<vec4i>& squads, const vector<vec3f>& spos,
-    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
-    const vec2f& length = {0.1f, 0.1f}, const vec2f& rad = {0.001f, 0.001f},
-    const vec2f& noise = zero2f, const vec2f& clump = zero2f,
-    const vec2f& rotation = zero2f, int seed = 7);
+make_shape_lines make_hair_shape(const vec2i& steps,
+    const vector<vec3i>& striangles, const vector<vec4i>& squads,
+    const vector<vec3f>& spos, const vector<vec3f>& snorm,
+    const vector<vec2f>& stexcoord, const vec2f& length = {0.1f, 0.1f},
+    const vec2f& rad = {0.001f, 0.001f}, const vec2f& noise = zero2f,
+    const vec2f& clump = zero2f, const vec2f& rotation = zero2f, int seed = 7);
 
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
 // cases.
-make_shape_quads
-make_shell_shape(const vector<vec4i>& quads, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    float thickness);
+make_shape_quads make_shell_shape(const vector<vec4i>& quads,
+    const vector<vec3f>& positions, const vector<vec3f>& normals,
+    const vector<vec2f>& texturecoords, float thickness);
 
 }  // namespace yocto
 
