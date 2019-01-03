@@ -1234,7 +1234,8 @@ bool apply_json_procedural(
         tie(value.quads, value.positions) = make_suzanne_shape(
             get_json_value(js, "size", 2.0f));
     } else if (type == "cube_posonly") {
-        tie(value.quads, value.positions) = make_cube_posonly_shape(
+        tie(value.quads, ignore, ignore, value.positions, ignore, ignore) = 
+            make_cube_facevarying_shape(
             get_json_value(js, "steps", vec3i{1, 1, 1}),
             get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
