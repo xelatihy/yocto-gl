@@ -1527,46 +1527,38 @@ make_cube_shape(
     auto [pz_quads, pz_positions, pz_normals,
         pz_texturecoords] = make_quad_shape({steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y}, flip_v);
-    for (auto i = 0; i < pz_positions.size(); i++) {
-        pz_positions[i] = {pz_positions[i].x, pz_positions[i].y, size.z / 2};
-        pz_normals[i]   = {0, 0, 1};
-    }
+    for(auto& p : pz_positions) p = {p.x, p.y, size.z/2};
+    for(auto& n : pz_normals) n = {0, 0, 1};
     merge_quads(quads, positions, normals, texturecoords, pz_quads,
         pz_positions, pz_normals, pz_texturecoords);
     // - z
     auto [nz_quads, nz_positions, nz_normals,
         nz_texturecoords] = make_quad_shape({steps.x, steps.y},
         {size.x, size.y}, {uvsize.x, uvsize.y}, flip_v);
-    for (auto i = 0; i < nz_positions.size(); i++) {
-        nz_positions[i] = {-nz_positions[i].x, nz_positions[i].y, -size.z / 2};
-        nz_normals[i]   = {0, 0, -1};
-    }
+    for(auto& p : nz_positions) p = {-p.x, p.y, - size.z/2};
+    for(auto& n : nz_normals) n = {0, 0, -1};
     merge_quads(quads, positions, normals, texturecoords, nz_quads,
         nz_positions, nz_normals, nz_texturecoords);
     // + x
     auto [px_quads, px_positions, px_normals,
-        px_texturecoords] = make_quad_shape({steps.y, steps.z},
-        {size.y, size.z}, {uvsize.y, uvsize.z}, flip_v);
-    for (auto i = 0; i < px_positions.size(); i++) {
-        px_positions[i] = {size.x / 2, px_positions[i].y, -px_positions[i].x};
-        px_normals[i]   = {1, 0, 0};
-    }
+        px_texturecoords] = make_quad_shape({steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y}, flip_v);
+    for(auto& p : px_positions) p = {size.x / 2, p.y, -p.x};
+    for(auto& n : px_normals) n = {1, 0, 0};
     merge_quads(quads, positions, normals, texturecoords, px_quads,
         px_positions, px_normals, px_texturecoords);
     // - x
     auto [nx_quads, nx_positions, nx_normals,
-        nx_texturecoords] = make_quad_shape({steps.y, steps.z},
-        {size.y, size.z}, {uvsize.y, uvsize.z}, flip_v);
-    for (auto i = 0; i < nx_positions.size(); i++) {
-        nx_positions[i] = {-size.x / 2, nx_positions[i].y, nx_positions[i].x};
-        nx_normals[i]   = {-1, 0, 0};
-    }
+        nx_texturecoords] = make_quad_shape({steps.z, steps.y},
+        {size.z, size.y}, {uvsize.z, uvsize.y}, flip_v);
+    for(auto& p : nx_positions) p = {-size.x / 2, p.y, p.x};
+    for(auto& n : nx_normals) n = {-1, 0, 0};
     merge_quads(quads, positions, normals, texturecoords, nx_quads,
         nx_positions, nx_normals, nx_texturecoords);
     // + y
     auto [py_quads, py_positions, py_normals,
-        py_texturecoords] = make_quad_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y}, flip_v);
+        py_texturecoords] = make_quad_shape({steps.x, steps.z},
+        {size.x, size.z}, {uvsize.x, uvsize.z}, flip_v);
     for (auto i = 0; i < py_positions.size(); i++) {
         py_positions[i] = {py_positions[i].x, size.y / 2, -py_positions[i].y};
         py_normals[i]   = {0, 1, 0};
@@ -1575,8 +1567,8 @@ make_cube_shape(
         py_positions, py_normals, py_texturecoords);
     // - y
     auto [ny_quads, ny_positions, ny_normals,
-        ny_texturecoords] = make_quad_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y}, flip_v);
+        ny_texturecoords] = make_quad_shape({steps.x, steps.z},
+        {size.x, size.z}, {uvsize.x, uvsize.z}, flip_v);
     for (auto i = 0; i < ny_positions.size(); i++) {
         ny_positions[i] = {ny_positions[i].x, -size.y / 2, ny_positions[i].y};
         ny_normals[i]   = {0, -1, 0};
