@@ -501,35 +501,35 @@ using make_shape_points = tuple<vector<int>, vector<vec3f>, vector<vec3f>,
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
 make_shape_quads make_quad_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
 make_shape_quads make_quad_stack_shape(
-    const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v);
+    const vec3i& steps, const vec3f& size, const vec2f& uvsize);
 make_shape_quads make_floor_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize);
 make_shape_quads make_floor_bent_shape(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, float radius, bool flip_v);
+    const vec2f& uvsize, float radius);
 make_shape_quads make_cube_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize, float radius, bool flip_v);
+    const vec3f& uvsize, float radius);
 make_shape_quads make_uvsphere_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
+    const vec2i& steps, float size, const vec2f& uvsize);
 make_shape_quads make_sphere_shape(
-    int steps, float size, float uvsize, bool flip_v);
+    int steps, float size, float uvsize);
 make_shape_quads make_uvsphere_flipcap_shape(const vec2i& steps, float size,
-    const vec2f& uvsize, const vec2f& zflip, bool flip_v);
+    const vec2f& uvsize, const vec2f& zflip);
 make_shape_quads make_uvdisk_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
+    const vec2i& steps, float size, const vec2f& uvsize);
 make_shape_quads make_disk_shape(
-    int steps, float size, float uvsize, bool flip_v);
+    int steps, float size, float uvsize);
 make_shape_quads make_disk_bulged_shape(
-    int steps, float size, float uvsize, float height, bool flip_v);
+    int steps, float size, float uvsize, float height);
 make_shape_quads make_uvcylinder_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v);
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize);
 make_shape_quads make_uvcylinder_rounded_shape(const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius, bool flip_v);
+    const vec2f& size, const vec3f& uvsize, float radius);
 tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
-    int tesselation, float size, bool flip_v);
+    int tesselation, float size);
 
 // Make examples shapes with are watertight (good for subdivs).
 tuple<vector<vec4i>, vector<vec3f>> make_suzanne_shape(float size);
@@ -539,13 +539,13 @@ tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size);
 tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
     vector<vec2f>>
 make_cube_facevarying_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<int>, vector<vec3f>,
     vector<vec3f>, vector<vec2f>>
 make_cube_multiplematerials_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 make_shape_lines make_lines_shape(const vec2i& steps, const vec2f& size,

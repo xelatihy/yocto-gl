@@ -1422,7 +1422,7 @@ namespace yocto {
 
 // Make a quad.
 make_shape_quads make_quad_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v) {
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
     auto positions     = vector<vec3f>((steps.x + 1) * (steps.y + 1));
     auto normals       = vector<vec3f>((steps.x + 1) * (steps.y + 1));
     auto texturecoords = vector<vec2f>((steps.x + 1) * (steps.y + 1));
@@ -1436,9 +1436,7 @@ make_shape_quads make_quad_shape(
         }
     }
 
-    if (flip_v) {
-        for (auto& uv : texturecoords) uv.y = 1 - uv.y;
-    }
+    for (auto& uv : texturecoords) uv.y = 1 - uv.y;
 
     auto quads = vector<vec4i>(steps.x * steps.y);
     for (auto j = 0; j < steps.y; j++) {
@@ -1463,9 +1461,9 @@ make_shape_quads make_quad_shape(
 }
 
 make_shape_quads make_floor_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v) {
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, size, uvsize, flip_v);
+        steps, size, uvsize);
     for (auto& p : positions) p = {p.x, p.z, p.y};
     for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
     return {quads, positions, normals, texturecoords};
@@ -1473,9 +1471,9 @@ make_shape_quads make_floor_shape(
 
 // Make a rounded cube.
 make_shape_quads make_floor_bent_shape(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, float radius, bool flip_v) {
+    const vec2f& uvsize, float radius) {
     auto [quads, positions, normals, texturecoords] = make_floor_shape(
-        steps, size, uvsize, flip_v);
+        steps, size, uvsize);
     auto start = (size.y / 2 - radius) / 2;
     auto end   = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
@@ -1496,14 +1494,14 @@ make_shape_quads make_floor_bent_shape(const vec2i& steps, const vec2f& size,
 
 // Make a stack of quads
 make_shape_quads make_quad_stack_shape(
-    const vec3i& steps, const vec3f& size, const vec2f& uvsize, bool flip_v) {
+    const vec3i& steps, const vec3f& size, const vec2f& uvsize) {
     auto quads         = vector<vec4i>{};
     auto positions     = vector<vec3f>{};
     auto normals       = vector<vec3f>{};
     auto texturecoords = vector<vec2f>{};
     for (auto i = 0; i <= steps.z; i++) {
         auto [qquads, qpositions, qnormals, qtexturecoords] = make_quad_shape(
-            {steps.x, steps.y}, {size.x, size.y}, uvsize, flip_v);
+            {steps.x, steps.y}, {size.x, size.y}, uvsize);
         for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
         merge_quads(quads, positions, normals, texturecoords, qquads,
             qpositions, qnormals, qtexturecoords);
@@ -1513,7 +1511,7 @@ make_shape_quads make_quad_stack_shape(
 
 // Make a cube.
 make_shape_quads make_cube_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v) {
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto quads         = vector<vec4i>{};
     auto positions     = vector<vec3f>{};
     auto normals       = vector<vec3f>{};
@@ -1521,7 +1519,7 @@ make_shape_quads make_cube_shape(
     // + z
     auto [pz_quads, pz_positions, pz_normals,
         pz_texturecoords] = make_quad_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y}, flip_v);
+        {size.x, size.y}, {uvsize.x, uvsize.y});
     for (auto& p : pz_positions) p = {p.x, p.y, size.z / 2};
     for (auto& n : pz_normals) n = {0, 0, 1};
     merge_quads(quads, positions, normals, texturecoords, pz_quads,
@@ -1529,7 +1527,7 @@ make_shape_quads make_cube_shape(
     // - z
     auto [nz_quads, nz_positions, nz_normals,
         nz_texturecoords] = make_quad_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y}, flip_v);
+        {size.x, size.y}, {uvsize.x, uvsize.y});
     for (auto& p : nz_positions) p = {-p.x, p.y, -size.z / 2};
     for (auto& n : nz_normals) n = {0, 0, -1};
     merge_quads(quads, positions, normals, texturecoords, nz_quads,
@@ -1537,7 +1535,7 @@ make_shape_quads make_cube_shape(
     // + x
     auto [px_quads, px_positions, px_normals,
         px_texturecoords] = make_quad_shape({steps.z, steps.y},
-        {size.z, size.y}, {uvsize.z, uvsize.y}, flip_v);
+        {size.z, size.y}, {uvsize.z, uvsize.y});
     for (auto& p : px_positions) p = {size.x / 2, p.y, -p.x};
     for (auto& n : px_normals) n = {1, 0, 0};
     merge_quads(quads, positions, normals, texturecoords, px_quads,
@@ -1545,7 +1543,7 @@ make_shape_quads make_cube_shape(
     // - x
     auto [nx_quads, nx_positions, nx_normals,
         nx_texturecoords] = make_quad_shape({steps.z, steps.y},
-        {size.z, size.y}, {uvsize.z, uvsize.y}, flip_v);
+        {size.z, size.y}, {uvsize.z, uvsize.y});
     for (auto& p : nx_positions) p = {-size.x / 2, p.y, p.x};
     for (auto& n : nx_normals) n = {-1, 0, 0};
     merge_quads(quads, positions, normals, texturecoords, nx_quads,
@@ -1553,7 +1551,7 @@ make_shape_quads make_cube_shape(
     // + y
     auto [py_quads, py_positions, py_normals,
         py_texturecoords] = make_quad_shape({steps.x, steps.z},
-        {size.x, size.z}, {uvsize.x, uvsize.z}, flip_v);
+        {size.x, size.z}, {uvsize.x, uvsize.z});
     for (auto i = 0; i < py_positions.size(); i++) {
         py_positions[i] = {py_positions[i].x, size.y / 2, -py_positions[i].y};
         py_normals[i]   = {0, 1, 0};
@@ -1563,7 +1561,7 @@ make_shape_quads make_cube_shape(
     // - y
     auto [ny_quads, ny_positions, ny_normals,
         ny_texturecoords] = make_quad_shape({steps.x, steps.z},
-        {size.x, size.z}, {uvsize.x, uvsize.z}, flip_v);
+        {size.x, size.z}, {uvsize.x, uvsize.z});
     for (auto i = 0; i < ny_positions.size(); i++) {
         ny_positions[i] = {ny_positions[i].x, -size.y / 2, ny_positions[i].y};
         ny_normals[i]   = {0, -1, 0};
@@ -1575,9 +1573,9 @@ make_shape_quads make_cube_shape(
 
 // Make a rounded cube.
 make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
-    const vec3f& uvsize, float radius, bool flip_v) {
+    const vec3f& uvsize, float radius) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
-        steps, size, uvsize, flip_v);
+        steps, size, uvsize);
     auto c = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto pc = vec3f{
@@ -1612,9 +1610,9 @@ make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
 
 // Make a sphere.
 make_shape_quads make_uvsphere_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, bool flip_v) {
+    const vec2i& steps, float size, const vec2f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, {1, 1}, {1, 1}, flip_v);
+        steps, {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
         auto uv = texturecoords[i];
         auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -1628,9 +1626,9 @@ make_shape_quads make_uvsphere_shape(
 
 // Make a spherecube.
 make_shape_quads make_sphere_shape(
-    int steps, float size, float uvsize, bool flip_v) {
+    int steps, float size, float uvsize) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
-        {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize}, flip_v);
+        {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize});
     for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
         positions[i] = normalize(p) * (size / 2);
@@ -1641,9 +1639,9 @@ make_shape_quads make_sphere_shape(
 
 // Make a flipped sphere. This is not watertight.
 make_shape_quads make_uvsphere_flipcap_shape(const vec2i& steps, float size,
-    const vec2f& uvsize, const vec2f& zflip, bool flip_v) {
+    const vec2f& uvsize, const vec2f& zflip) {
     auto [quads, positions, normals, texturecoords] = make_uvsphere_shape(
-        steps, size, uvsize, flip_v);
+        steps, size, uvsize);
     for (auto i = 0; i < positions.size(); i++) {
         if (positions[i].z > zflip.y) {
             positions[i].z = 2 * zflip.y - positions[i].z;
@@ -1660,9 +1658,9 @@ make_shape_quads make_uvsphere_flipcap_shape(const vec2i& steps, float size,
 
 // Make a disk.
 make_shape_quads make_uvdisk_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, bool flip_v) {
+    const vec2i& steps, float size, const vec2f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, {1, 1}, {1, 1}, flip_v);
+        steps, {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
         auto uv      = texturecoords[i];
         auto phi     = 2 * pif * uv.x;
@@ -1676,9 +1674,9 @@ make_shape_quads make_uvdisk_shape(
 
 // Make a disk from a quad.
 make_shape_quads make_disk_shape(
-    int steps, float size, float uvsize, bool flip_v) {
+    int steps, float size, float uvsize) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        {steps, steps}, {2, 2}, {uvsize, uvsize}, flip_v);
+        {steps, steps}, {2, 2}, {uvsize, uvsize});
     for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -1692,9 +1690,9 @@ make_shape_quads make_disk_shape(
 
 // Make a bulged disk from a quad.
 make_shape_quads make_disk_bulged_shape(
-    int steps, float size, float uvsize, float height, bool flip_v) {
+    int steps, float size, float uvsize, float height) {
     auto [quads, positions, normals, texturecoords] = make_disk_shape(
-        steps, size, uvsize, flip_v);
+        steps, size, uvsize);
     if (height == 0) return {quads, positions, normals, texturecoords};
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
@@ -1708,9 +1706,9 @@ make_shape_quads make_disk_bulged_shape(
 
 // Make a cylinder (side-only).
 make_shape_quads make_cylinder_side_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v) {
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, {1, 1}, {1, 1}, flip_v);
+        steps, {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
         auto uv          = texturecoords[i];
         auto phi         = 2 * pif * uv.x;
@@ -1724,7 +1722,7 @@ make_shape_quads make_cylinder_side_shape(
 
 // Make a cylinder.
 make_shape_quads make_uvcylinder_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v) {
+    const vec3i& steps, const vec2f& size, const vec3f& uvsize) {
     auto quads         = vector<vec4i>{};
     auto positions     = vector<vec3f>{};
     auto normals       = vector<vec3f>{};
@@ -1732,13 +1730,13 @@ make_shape_quads make_uvcylinder_shape(
     // side
     auto [side_quads, side_positions, side_normals,
         side_texturecoords] = make_cylinder_side_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y}, flip_v);
+        {size.x, size.y}, {uvsize.x, uvsize.y});
     merge_quads(quads, positions, normals, texturecoords, side_quads,
         side_positions, side_normals, side_texturecoords);
     // top
     auto [top_quads, top_positions, top_normals,
         top_texturecoords] = make_uvdisk_shape({steps.x, steps.z}, size.x,
-        {uvsize.x, uvsize.z}, flip_v);
+        {uvsize.x, uvsize.z});
     for (auto i = 0; i < top_positions.size(); i++) {
         top_positions[i].z = size.y / 2;
     }
@@ -1747,7 +1745,7 @@ make_shape_quads make_uvcylinder_shape(
     // bottom
     auto [bottom_quads, bottom_positions, bottom_normals,
         bottom_texturecoords] = make_uvdisk_shape({steps.x, steps.z}, size.x,
-        {uvsize.x, uvsize.z}, flip_v);
+        {uvsize.x, uvsize.z});
     for (auto i = 0; i < bottom_positions.size(); i++) {
         bottom_positions[i].z = -size.y / 2;
         bottom_normals[i]     = -bottom_normals[i];
@@ -1761,9 +1759,9 @@ make_shape_quads make_uvcylinder_shape(
 
 // Make a rounded cylinder.
 make_shape_quads make_uvcylinder_rounded_shape(const vec3i& steps,
-    const vec2f& size, const vec3f& uvsize, float radius, bool flip_v) {
+    const vec2f& size, const vec3f& uvsize, float radius) {
     auto [quads, positions, normals, texturecoords] = make_uvcylinder_shape(
-        steps, size, uvsize, flip_v);
+        steps, size, uvsize);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto phi = atan2(positions[i].y, positions[i].x);
@@ -1785,7 +1783,7 @@ make_shape_quads make_uvcylinder_rounded_shape(const vec3i& steps,
 
 // Make a geodesic sphere.
 tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
-    int tesselation, float size, bool flip_v) {
+    int tesselation, float size) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X                = 0.525731112119133606f;
     const float Z                = 0.850650808352039932f;
@@ -1811,9 +1809,9 @@ tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
 tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
     vector<vec2f>>
 make_cube_facevarying_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v) {
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
-        steps, size, uvsize, flip_v);
+        steps, size, uvsize);
     auto quads_positions            = quads;
     auto quads_normals              = quads;
     auto quads_texturecoords        = quads;
@@ -1826,10 +1824,10 @@ make_cube_facevarying_shape(
 tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<int>, vector<vec3f>,
     vector<vec3f>, vector<vec2f>>
 make_cube_multiplematerials_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v) {
+    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto [quads_positions, quads_normals, quads_texturecoords, positions,
         normals, texturecoords] = make_cube_facevarying_shape(steps, size,
-        uvsize, flip_v);
+        uvsize);
     auto quads_materials        = vector<int>(quads_positions.size());
     auto quads_per_face         = (int)quads_positions.size() / 6;
     for (auto i = 0; i < quads_positions.size(); i++) {
@@ -1841,7 +1839,7 @@ make_cube_multiplematerials_shape(
 tuple<vector<vec4i>, vector<vec3f>> make_cube_posonly_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
-        steps, size, uvsize, false);
+        steps, size, uvsize);
     auto [wquads, wpositions] = weld_quads(quads, positions,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
