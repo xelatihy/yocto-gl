@@ -144,7 +144,7 @@
                 "type": "cylinder",
                 "steps": [64, 1, 1],
                 "size": [1, 2],
-                "uvsize": [1, 2]
+                "uvsize": [1, 2, 1]
             }
         },
         {
@@ -153,9 +153,9 @@
             "material": "obj2",
             "!!proc": {
                 "type": "cylinder_rounded",
-                "steps": [64, 1, 1],
+                "steps": [64, 64, 32],
                 "size": [1, 2],
-                "uvsize": [1, 2]
+                "uvsize": [1, 2, 1]
             }
         },
         {
