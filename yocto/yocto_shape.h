@@ -42,13 +42,13 @@
 //    `compute_tangent_spaces()`
 // 6. compute skinning with `compute_skinning()` and
 //    `compute_matrix_skinning()`
-// 6. create shapes with `make_cube_shape()`, `make_sphere_shape()`,
+// 6. create shapes with `make_cube_shape()`, `make_uvsphere_shape()`,
 // `make_quad_shape()`,
 //    `make_cube_fvshape()`, `make_hair_shape()`, `make_suzanne_shape()`,
 //    `make_lines_shape()`, `make_points_shape()`, `make_sphere_cube_shape()`,
-//    `make_cube_rounded_shape()`, `make_sphere_flipcap_shape()`,
-//    `make_cylinder_shape()`, `make_cylinder_rounded_shape()`,
-//    `make_disk_shape()`, `make_cylinder_side_shape()`,
+//    `make_cube_rounded_shape()`, `make_uvsphere_flipcap_shape()`,
+//    `make_uvcylinder_shape()`, `make_uvcylinder_rounded_shape()`,
+//    `make_uvdisk_shape()`, `make_cylinder_side_shape()`,
 //    `make_disk_quad_shape()`
 // 7. merge element with `marge_lines()`, `marge_triangles()`, `marge_quads()`
 // 8. shape sampling with `sample_points_element()`, `sample_lines_element()`,
@@ -512,23 +512,21 @@ make_shape_quads make_cube_shape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize, bool flip_v);
 make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
     const vec3f& uvsize, float radius, bool flip_v);
-make_shape_quads make_sphere_shape(
+make_shape_quads make_uvsphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 make_shape_quads make_sphere_cube_shape(
     int steps, float size, float uvsize, bool flip_v);
-make_shape_quads make_sphere_flipcap_shape(const vec2i& steps, float size,
+make_shape_quads make_uvsphere_flipcap_shape(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool flip_v);
-make_shape_quads make_disk_shape(
+make_shape_quads make_uvdisk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v);
 make_shape_quads make_disk_quad_shape(
     int steps, float size, float uvsize, bool flip_v);
 make_shape_quads make_disk_bulged_shape(
     int steps, float size, float uvsize, float height, bool flip_v);
-make_shape_quads make_cylinder_side_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, bool flip_v);
-make_shape_quads make_cylinder_shape(
+make_shape_quads make_uvcylinder_shape(
     const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v);
-make_shape_quads make_cylinder_rounded_shape(const vec3i& steps,
+make_shape_quads make_uvcylinder_rounded_shape(const vec3i& steps,
     const vec2f& size, const vec3f& uvsize, float radius, bool flip_v);
 tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
     int tesselation, float size, bool flip_v);

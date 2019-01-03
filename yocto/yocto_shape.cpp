@@ -1611,7 +1611,7 @@ make_shape_quads make_cube_rounded_shape(const vec3i& steps, const vec3f& size,
 }
 
 // Make a sphere.
-make_shape_quads make_sphere_shape(
+make_shape_quads make_uvsphere_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
         steps, {1, 1}, {1, 1}, flip_v);
@@ -1640,9 +1640,9 @@ make_shape_quads make_sphere_cube_shape(
 }
 
 // Make a flipped sphere. This is not watertight.
-make_shape_quads make_sphere_flipcap_shape(const vec2i& steps, float size,
+make_shape_quads make_uvsphere_flipcap_shape(const vec2i& steps, float size,
     const vec2f& uvsize, const vec2f& zflip, bool flip_v) {
-    auto [quads, positions, normals, texturecoords] = make_sphere_shape(
+    auto [quads, positions, normals, texturecoords] = make_uvsphere_shape(
         steps, size, uvsize, flip_v);
     for (auto i = 0; i < positions.size(); i++) {
         if (positions[i].z > zflip.y) {
@@ -1659,7 +1659,7 @@ make_shape_quads make_sphere_flipcap_shape(const vec2i& steps, float size,
 }
 
 // Make a disk.
-make_shape_quads make_disk_shape(
+make_shape_quads make_uvdisk_shape(
     const vec2i& steps, float size, const vec2f& uvsize, bool flip_v) {
     auto [quads, positions, normals, texturecoords] = make_quad_shape(
         steps, {1, 1}, {1, 1}, flip_v);
@@ -1723,7 +1723,7 @@ make_shape_quads make_cylinder_side_shape(
 }
 
 // Make a cylinder.
-make_shape_quads make_cylinder_shape(
+make_shape_quads make_uvcylinder_shape(
     const vec3i& steps, const vec2f& size, const vec3f& uvsize, bool flip_v) {
     auto quads         = vector<vec4i>{};
     auto positions     = vector<vec3f>{};
@@ -1737,7 +1737,7 @@ make_shape_quads make_cylinder_shape(
         side_positions, side_normals, side_texturecoords);
     // top
     auto [top_quads, top_positions, top_normals,
-        top_texturecoords] = make_disk_shape({steps.x, steps.z}, size.x,
+        top_texturecoords] = make_uvdisk_shape({steps.x, steps.z}, size.x,
         {uvsize.x, uvsize.z}, flip_v);
     for (auto i = 0; i < top_positions.size(); i++) {
         top_positions[i].z = size.y / 2;
@@ -1746,7 +1746,7 @@ make_shape_quads make_cylinder_shape(
         top_positions, top_normals, top_texturecoords);
     // bottom
     auto [bottom_quads, bottom_positions, bottom_normals,
-        bottom_texturecoords] = make_disk_shape({steps.x, steps.z}, size.x,
+        bottom_texturecoords] = make_uvdisk_shape({steps.x, steps.z}, size.x,
         {uvsize.x, uvsize.z}, flip_v);
     for (auto i = 0; i < bottom_positions.size(); i++) {
         bottom_positions[i].z = -size.y / 2;
@@ -1760,9 +1760,9 @@ make_shape_quads make_cylinder_shape(
 }
 
 // Make a rounded cylinder.
-make_shape_quads make_cylinder_rounded_shape(const vec3i& steps,
+make_shape_quads make_uvcylinder_rounded_shape(const vec3i& steps,
     const vec2f& size, const vec3f& uvsize, float radius, bool flip_v) {
-    auto [quads, positions, normals, texturecoords] = make_cylinder_shape(
+    auto [quads, positions, normals, texturecoords] = make_uvcylinder_shape(
         steps, size, uvsize, flip_v);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
