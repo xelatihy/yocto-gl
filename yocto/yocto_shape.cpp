@@ -1773,8 +1773,8 @@ make_shape_quads make_cylinder_rounded_shape(const vec3i& steps,
         auto ps  = (z < 0) ? -1.0f : 1.0f;
         if (pc.x >= c.x && pc.y >= c.y) {
             auto pn      = normalize(pc - c);
-            positions[i] = {cos(phi) * c.x + radius * pn.x,
-                sin(phi) * c.x + radius * pn.x, ps * (c.y + radius * pn.y)};
+            positions[i] = {cos(phi) * (c.x + radius * pn.x),
+                sin(phi) * (c.x + radius * pn.x), ps * (c.y + radius * pn.y)};
             normals[i]   = {cos(phi) * pn.x, sin(phi) * pn.x, ps * pn.y};
         } else {
             continue;
