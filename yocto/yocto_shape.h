@@ -497,6 +497,8 @@ using make_shape_lines  = tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>,
     vector<vec2f>, vector<float>>;
 using make_shape_points = tuple<vector<int>, vector<vec3f>, vector<vec3f>,
     vector<vec2f>, vector<float>>;
+using make_fvshape_quads = tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
+    vector<vec2f>>;
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
@@ -534,9 +536,8 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne_shape(float size);
 tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
-    vector<vec2f>>
-make_cube_facevarying_shape(
+make_fvshape_quads
+make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.

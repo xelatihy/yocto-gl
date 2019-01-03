@@ -1235,7 +1235,7 @@ bool apply_json_procedural(
             get_json_value(js, "size", 2.0f));
     } else if (type == "cube_posonly") {
         tie(value.quads, ignore, ignore, value.positions, ignore, ignore) = 
-            make_cube_facevarying_shape(
+            make_cube_fvshape(
             get_json_value(js, "steps", vec3i{1, 1, 1}),
             get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
@@ -1341,11 +1341,13 @@ bool apply_json_procedural(
                 get_json_value(js, "size", vec3f{2, 2, 2}),
                 get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "cube") {
-        tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_cube_shape(get_json_value(js, "steps",
-                                                       vec3i{1, 1, 1}),
-            get_json_value(js, "size", vec3f{2, 2, 2}),
-            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+        tie(value.quads_positions, value.quads_normals,
+            value.quads_texturecoords, value.positions, value.normals,
+            value.texturecoords) =
+            make_cube_fvshape(
+                get_json_value(js, "steps", vec3i{1, 1, 1}),
+                get_json_value(js, "size", vec3f{2, 2, 2}),
+                get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
         tie(value.quads_positions, value.positions, value.normals,
             value.texturecoords) =
@@ -1434,19 +1436,11 @@ bool apply_json_procedural(
     } else if (type == "suzanne") {
         tie(value.quads_positions, value.positions) = make_suzanne_shape(
             get_json_value(js, "size", 2.0f));
-    } else if (type == "cube_facevarying") {
-        tie(value.quads_positions, value.quads_normals,
-            value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords) =
-            make_cube_facevarying_shape(
-                get_json_value(js, "steps", vec3i{1, 1, 1}),
-                get_json_value(js, "size", vec3f{2, 2, 2}),
-                get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_multiplematerials") {
         tie(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions,
             value.normals, value.texturecoords) =
-            make_cube_facevarying_shape(
+            make_cube_fvshape(
                 get_json_value(js, "steps", vec3i{1, 1, 1}),
                 get_json_value(js, "size", vec3f{2, 2, 2}),
                 get_json_value(js, "uvsize", vec3f{1, 1, 1}));
@@ -1464,7 +1458,7 @@ bool apply_json_procedural(
         tie(value.quads_positions, ignore, ignore,
             value.positions, value.normals,
             value.texturecoords) =
-            make_cube_facevarying_shape(
+            make_cube_fvshape(
                 get_json_value(js, "steps", vec3i{1, 1, 1}),
                 get_json_value(js, "size", vec3f{2, 2, 2}),
                 get_json_value(js, "uvsize", vec3f{1, 1, 1}));

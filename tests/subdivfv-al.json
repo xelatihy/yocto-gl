@@ -154,7 +154,7 @@
             "catmull_clark": true,
             "compute_vertex_normals": true,
             "!!proc": {
-                "type": "cube_facevarying"
+                "type": "cube"
             }
         },
         {
@@ -180,7 +180,7 @@
             "catmull_clark": true,
             "compute_vertex_normals": true,
             "!!proc": {
-                "type": "cube_facevarying"
+                "type": "cube"
             }
         }
     ],

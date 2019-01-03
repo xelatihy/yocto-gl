@@ -1804,9 +1804,8 @@ tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
 
 // Make a facevarying cube with unique vertices but different texture
 // coordinates.
-tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
-    vector<vec2f>>
-make_cube_facevarying_shape(
+make_fvshape_quads
+make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         steps, size, uvsize);
