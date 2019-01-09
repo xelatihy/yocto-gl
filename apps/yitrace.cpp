@@ -156,7 +156,7 @@ bool load_scene_sync(app_state& app) {
 
     // fix renderer type if no lights
     if (empty(app.lights.instances) && empty(app.lights.environments) &&
-        app.trace_options.sampler_type != trace_sampler_type::eyelight) {
+        is_trace_sampler_lit(app.trace_options)) {
         log_info("no lights presents, switching to eyelight shader\n");
         app.trace_options.sampler_type = trace_sampler_type::eyelight;
     }

@@ -948,7 +948,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
                              lights.shape_elements_cdf[instance.shape] :
                              lights.surface_elements_cdf[instance.surface];
     // check all intersection
-    auto pdf      = 0.0f;
+    auto pdf           = 0.0f;
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
         auto isec = intersect_instance_bvh(
@@ -2230,8 +2230,41 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
             return trace_debug_tranmission;
         case trace_sampler_type::debug_roughness: return trace_debug_roughness;
         case trace_sampler_type::debug_highlight: return trace_debug_highlight;
+        default: {
+            log_error("sampler unknown");
+            return {};
+        }
     }
-    return {};
+}
+
+// Check is a sampler requires lights
+bool is_trace_sampler_lit(const trace_image_options& options) {
+    auto type = options.sampler_type;
+    switch (type) {
+        case trace_sampler_type::path:
+        case trace_sampler_type::direct:
+        case trace_sampler_type::naive:
+        case trace_sampler_type::environment:
+        case trace_sampler_type::path_nomis:
+        case trace_sampler_type::direct_nomis:
+        case trace_sampler_type::naive_nomis: return true;
+        case trace_sampler_type::eyelight:
+        case trace_sampler_type::debug_normal:
+        case trace_sampler_type::debug_albedo:
+        case trace_sampler_type::debug_texcoord:
+        case trace_sampler_type::debug_color:
+        case trace_sampler_type::debug_frontfacing:
+        case trace_sampler_type::debug_emission:
+        case trace_sampler_type::debug_diffuse:
+        case trace_sampler_type::debug_specular:
+        case trace_sampler_type::debug_transmission:
+        case trace_sampler_type::debug_roughness:
+        case trace_sampler_type::debug_highlight: return false;
+        default: {
+            log_error("sampler unknown");
+            return false;
+        }
+    }
 }
 
 // Get trace pixel

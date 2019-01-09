@@ -47,19 +47,21 @@ bool mkdir(const string& dir) {
 int main(int argc, char** argv) {
     // parse command line
     auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
-    auto scene_postfix = parse_argument(parser, "--scene-postfix/no-scene-postfix", 
-        false, "Append unique scene postfix to each name");
-    auto skip_textures = parse_argument(parser,
+    auto scene_postfix  = parse_argument(parser,
+        "--scene-postfix/no-scene-postfix", false,
+        "Append unique scene postfix to each name");
+    auto skip_textures  = parse_argument(parser,
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
     auto mesh_filenames = parse_argument(parser,
         "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
     auto mesh_directory = parse_argument(parser, "--mesh-directory", "models/"s,
         "Mesh directory when adding names.");
     auto texture_filenames = parse_argument(parser,
-        "--texture-filenames/--no-texture-filenames", true, "Add texture filenames.");
-    auto texture_directory = parse_argument(parser, "--texture-directory", "textures/"s,
-        "Texture directory when adding names.");
-    auto print_info     = parse_argument(
+        "--texture-filenames/--no-texture-filenames", true,
+        "Add texture filenames.");
+    auto texture_directory = parse_argument(parser, "--texture-directory",
+        "textures/"s, "Texture directory when adding names.");
+    auto print_info        = parse_argument(
         parser, "--print-info,-i", false, "print scene info");
     auto output = parse_argument(
         parser, "--output,-o", "out.json"s, "output scene", true);
@@ -75,23 +77,23 @@ int main(int argc, char** argv) {
 
     // load scene
     auto scene = yocto_scene{};
-    for(auto& filename : filenames) {
+    for (auto& filename : filenames) {
         auto to_merge = yocto_scene{};
         if (!load_scene(filename, to_merge, load_options))
             log_fatal("cannot load scene {}", filename);
         log_validation_errors(to_merge, true);
-        if(scene_postfix) {
+        if (scene_postfix) {
             auto postfix = "{" + get_filename(filename) + "}";
-            for(auto& val : to_merge.cameras) val.name += postfix;
-            for(auto& val : to_merge.textures) val.name += postfix;
-            for(auto& val : to_merge.voltextures) val.name += postfix;
-            for(auto& val : to_merge.materials) val.name += postfix;
-            for(auto& val : to_merge.shapes) val.name += postfix;
-            for(auto& val : to_merge.surfaces) val.name += postfix;
-            for(auto& val : to_merge.instances) val.name += postfix;
-            for(auto& val : to_merge.environments) val.name += postfix;
-            for(auto& val : to_merge.nodes) val.name += postfix;
-            for(auto& val : to_merge.animations) val.name += postfix;
+            for (auto& val : to_merge.cameras) val.name += postfix;
+            for (auto& val : to_merge.textures) val.name += postfix;
+            for (auto& val : to_merge.voltextures) val.name += postfix;
+            for (auto& val : to_merge.materials) val.name += postfix;
+            for (auto& val : to_merge.shapes) val.name += postfix;
+            for (auto& val : to_merge.surfaces) val.name += postfix;
+            for (auto& val : to_merge.instances) val.name += postfix;
+            for (auto& val : to_merge.environments) val.name += postfix;
+            for (auto& val : to_merge.nodes) val.name += postfix;
+            for (auto& val : to_merge.animations) val.name += postfix;
         }
         merge_scene_into(scene, to_merge);
     }
@@ -107,9 +109,9 @@ int main(int argc, char** argv) {
         mesh_directory += '/';
     if (get_extension(output) == "json") {
         for (auto& shape : scene.shapes) {
-            if(shape.filename.empty()) {
+            if (shape.filename.empty()) {
                 shape.filename = mesh_directory + shape.name + ".ply";
-            } else if(mesh_filenames) {
+            } else if (mesh_filenames) {
                 shape.filename = mesh_directory + get_filename(shape.filename);
             }
         }
@@ -129,10 +131,11 @@ int main(int argc, char** argv) {
         texture_directory += '/';
     if (get_extension(output) == "json") {
         for (auto& texture : scene.textures) {
-            if(texture.filename.empty()) {
+            if (texture.filename.empty()) {
                 texture.filename = texture_directory + texture.name + ".ply";
-            } else if(texture_filenames) {
-                texture.filename = texture_directory + get_filename(texture.filename);
+            } else if (texture_filenames) {
+                texture.filename = texture_directory +
+                                   get_filename(texture.filename);
             }
         }
     }

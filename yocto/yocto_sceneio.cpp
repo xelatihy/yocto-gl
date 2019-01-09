@@ -2347,8 +2347,8 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     scene      = {};
 
     // splitting policy
-    auto split_material  = options.obj_split_shapes;
-    auto split_group     = options.obj_split_shapes;
+    auto split_material = options.obj_split_shapes;
+    auto split_group    = options.obj_split_shapes;
     // auto split_smoothing = options.obj_split_shapes;
     auto split_smoothing = false;
 
