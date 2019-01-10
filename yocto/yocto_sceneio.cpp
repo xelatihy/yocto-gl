@@ -3524,6 +3524,19 @@ bool gltf_to_scene(
         }
     }
 
+    // convert cameras
+    if (has_json_key(gltf, "environments")) {
+        for (auto eid = 0; eid < gltf.at("environments").size(); eid++) {
+            auto& genv          = gltf.at("environments").at(eid);
+            auto  environment        = yocto_environment{};
+            environment.name         = get_json_value(genv, "name", ""s);
+            environment.emission = get_json_value(genv, "emissiveFactor", zero3f);
+            environment.emission_texture = add_texture(
+                    genv.at("emissiveTexture"), false);
+            scene.environments.push_back(environment);
+        }
+    }
+
     // convert nodes
     if (has_json_key(gltf, "nodes")) {
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
@@ -3532,6 +3545,8 @@ bool gltf_to_scene(
             node.name  = get_json_value(gnde, "name", ""s);
             if (has_json_key(gnde, "camera"))
                 node.camera = get_json_value(gnde, "camera", 0);
+            if (has_json_key(gnde, "environment"))
+                node.environment = get_json_value(gnde, "environment", 0);
             node.translation = get_json_value(gnde, "translation", zero3f);
             node.rotation = get_json_value(gnde, "rotation", vec4f{0, 0, 0, 1});
             node.scale    = get_json_value(gnde, "scale", vec3f{1, 1, 1});
