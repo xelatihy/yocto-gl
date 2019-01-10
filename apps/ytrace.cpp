@@ -76,7 +76,9 @@ int main(int argc, char* argv[]) {
     auto srgb   = parse_argument(parser, "--no-srgb", true, "No srgb");
     bvh_options.use_embree = parse_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    auto imfilename = parse_argument(
+    bvh_options.flatten_embree = parse_argument(parser,
+        "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
+    auto imfilename            = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     auto filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);

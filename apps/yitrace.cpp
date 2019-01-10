@@ -461,6 +461,8 @@ int main(int argc, char* argv[]) {
         "Disable parallel execution.");
     app.bvh_options.use_embree = parse_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
+    app.bvh_options.flatten_embree = parse_argument(parser,
+        "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
     app.trace_options.double_sided = parse_argument(parser,
         "--double-sided/--no-double-sided", false, "Double-sided rendering.");
     app.imfilename                 = parse_argument(
