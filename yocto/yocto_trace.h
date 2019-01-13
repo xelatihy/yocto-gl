@@ -190,6 +190,9 @@ void trace_image_async_start(image4f& image, trace_state& state,
 void trace_image_async_stop(vector<thread>& threads,
     concurrent_queue<image_region>& queue, const trace_image_options& options);
 
+// Check is a sampler requires lights
+bool is_trace_sampler_lit(const trace_image_options& options);
+
 // Trace statistics for last run used for fine tuning implementation.
 // For now returns number of paths and number of rays.
 pair<uint64_t, uint64_t> get_trace_stats();

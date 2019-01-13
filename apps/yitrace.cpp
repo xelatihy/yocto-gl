@@ -54,6 +54,7 @@ struct app_state {
     // scene
     yocto_scene scene = {};
     bvh_scene   bvh   = {};
+    bool add_skyenv = false;
 
     // rendering state
     trace_lights                   lights  = {};
@@ -141,6 +142,9 @@ bool load_scene_sync(app_state& app) {
     app.status = "tesselating surfaces";
     tesselate_shapes_and_surfaces(app.scene);
 
+    // add sky
+    if(app.add_skyenv) add_sky_environment(app.scene);
+
     // add components
     add_missing_cameras(app.scene);
     add_missing_names(app.scene);
@@ -156,7 +160,7 @@ bool load_scene_sync(app_state& app) {
 
     // fix renderer type if no lights
     if (empty(app.lights.instances) && empty(app.lights.environments) &&
-        app.trace_options.sampler_type != trace_sampler_type::eyelight) {
+        is_trace_sampler_lit(app.trace_options)) {
         log_info("no lights presents, switching to eyelight shader\n");
         app.trace_options.sampler_type = trace_sampler_type::eyelight;
     }
@@ -461,8 +465,12 @@ int main(int argc, char* argv[]) {
         "Disable parallel execution.");
     app.bvh_options.use_embree = parse_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
+    app.bvh_options.flatten_embree = parse_argument(parser,
+        "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
     app.trace_options.double_sided = parse_argument(parser,
         "--double-sided/--no-double-sided", false, "Double-sided rendering.");
+    app.add_skyenv = parse_argument(parser,
+        "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
     app.imfilename                 = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     app.filename = parse_argument(
