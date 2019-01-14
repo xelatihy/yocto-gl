@@ -574,6 +574,10 @@ make_shape_quads make_shell_shape(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texturecoords, float thickness);
 
+// Make a shape face-varying. This is just a convenience function that 
+// duplicates quads arrays.
+make_fvshape_quads make_faceavrying_shape(const make_shape_quads& shape);
+
 }  // namespace yocto
 
 // ---------------------------------------------------------------------------//

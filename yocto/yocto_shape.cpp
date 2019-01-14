@@ -2443,4 +2443,17 @@ make_shape_quads make_shell_shape(const vector<vec4i>& quads,
     return {shell_quads, shell_positions, shell_normals, shell_texturecoords};
 }
 
+// Make a shape face-varying.
+make_fvshape_quads make_faceavrying_shape(const make_shape_quads& shape) {
+    auto& [quads, positions, normals, texturecoords] = shape;
+    return {
+        quads, 
+        normals.empty() ? vector<vec4i>{} : quads, 
+        texturecoords.empty() ? vector<vec4i>{} : quads, 
+        positions, 
+        normals, 
+        texturecoords
+    };
+}
+
 }  // namespace yocto
