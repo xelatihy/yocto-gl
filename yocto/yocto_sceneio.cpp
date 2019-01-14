@@ -6164,20 +6164,12 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
 
     // parse header
     hair = cyhair_data{};
-    struct cyhair_flags {
-        char has_segments : 1;
-        char has_points : 1;
-        char has_thickness : 1;
-        char has_transparency : 1;
-        char has_color : 1;
-        int  padding : 27;
-    };
     struct cyhair_header {
         char         magic[4]             = {0};
-        uint32_t     num_strands          = 0;
-        uint32_t     num_points           = 0;
-        cyhair_flags flags                = {};
-        uint32_t     default_segments     = 0;
+        unsigned int num_strands          = 0;
+        unsigned int num_points           = 0;
+        unsigned int flags                = 0;
+        unsigned int default_segments     = 0;
         float        default_thickness    = 0;
         float        default_transparency = 0;
         vec3f        default_color        = zero3f;
@@ -6213,14 +6205,14 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
 
     // get segments length
     auto segments = vector<unsigned short>();
-    if (header.flags.has_segments) {
+    if (header.flags & 1) {
         segments.resize(header.num_strands);
         if (!read_vector(fs, segments)) return false;
     } else {
         segments.assign(header.num_strands, header.default_segments);
     }
 
-    // checl segment length
+    // check segment length
     auto total_length = 0;
     for (auto segment : segments) total_length += segment + 1;
     if (total_length != header.num_points) {
@@ -6229,7 +6221,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
     }
 
     // read positions data
-    if (header.flags.has_points) {
+    if (header.flags & 2) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].positions.resize(strand_size);
@@ -6238,7 +6230,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
         }
     }
     // read radius data
-    if (header.flags.has_thickness) {
+    if (header.flags & 4) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].radius.resize(strand_size);
@@ -6246,7 +6238,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
         }
     }
     // read transparency data
-    if (header.flags.has_transparency) {
+    if (header.flags & 8) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].transparency.resize(strand_size);
@@ -6255,7 +6247,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
         }
     }
     // read color data
-    if (header.flags.has_color) {
+    if (header.flags & 16) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].color.resize(strand_size);
