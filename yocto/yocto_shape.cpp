@@ -1802,8 +1802,7 @@ tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
     return {triangles, positions, normals};
 }
 
-// Make a facevarying cube with unique vertices but different texture
-// coordinates.
+// Make a facevarying cube.
 make_fvshape_quads
 make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
@@ -1816,6 +1815,22 @@ make_cube_fvshape(
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     return {quads_positions, quads_normals, quads_texturecoords, positions,
+        normals, texturecoords};
+}
+
+// Make a faceavrying spherecube.
+make_fvshape_quads make_sphere_fvshape(int steps, float size, float uvsize) {
+    auto [quads_positions, quads_normals, quads_texturecoords, positions, 
+        normals, texturecoords] = make_cube_fvshape(
+        {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize});
+    quads_normals = quads_positions;
+    normals = positions;
+    for (auto i = 0; i < positions.size(); i++) {
+        auto p       = positions[i];
+        positions[i] = normalize(p) * (size / 2);
+        normals[i]   = normalize(p);
+    }
+    return {quads_positions, quads_normals, quads_texturecoords, positions, 
         normals, texturecoords};
 }
 

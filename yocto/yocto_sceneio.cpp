@@ -1363,8 +1363,8 @@ bool apply_json_procedural(
                 get_json_value(js, "size", 2.0f),
                 get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere") {
-        tie(value.quads_positions, value.positions, value.normals,
-            value.texturecoords) = make_sphere_shape(get_json_value(js, "steps",
+        tie(value.quads_positions, value.quads_normals, value.quads_texturecoords, value.positions, value.normals,
+            value.texturecoords) = make_sphere_fvshape(get_json_value(js, "steps",
                                                          32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));

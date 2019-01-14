@@ -539,6 +539,7 @@ tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size);
 make_fvshape_quads
 make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
+make_fvshape_quads make_sphere_fvshape(int steps, float size, float uvsize);
 
 // Generate lines set along a quad. Returns lines, pos, norm, texcoord, radius.
 make_shape_lines make_lines_shape(const vec2i& steps, const vec2f& size,
