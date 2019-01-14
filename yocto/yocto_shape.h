@@ -524,6 +524,8 @@ make_shape_quads make_uvdisk_shape(
 make_shape_quads make_disk_shape(int steps, float size, float uvsize);
 make_shape_quads make_disk_bulged_shape(
     int steps, float size, float uvsize, float height);
+make_shape_quads make_quad_bulged_shape(
+    int steps, float size, float uvsize, float height);
 make_shape_quads make_uvcylinder_shape(
     const vec3i& steps, const vec2f& size, const vec3f& uvsize);
 make_shape_quads make_uvcylinder_rounded_shape(

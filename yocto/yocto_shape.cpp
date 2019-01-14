@@ -1702,6 +1702,22 @@ make_shape_quads make_disk_bulged_shape(
     return {quads, positions, normals, texturecoords};
 }
 
+// Make a bulged quad.
+make_shape_quads make_quad_bulged_shape(
+    int steps, float size, float uvsize, float height) {
+    auto [quads, positions, normals, texturecoords] = make_quad_shape(
+        {steps, steps}, {size, size}, {uvsize, uvsize});
+    if (height == 0) return {quads, positions, normals, texturecoords};
+    auto radius = (size * size / 4 + height * height) / (2 * height);
+    auto center = vec3f{0, 0, -radius + height};
+    for (auto i = 0; i < positions.size(); i++) {
+        auto pn      = normalize(positions[i] - center);
+        positions[i] = center + pn * radius;
+        normals[i]   = pn;
+    }
+    return {quads, positions, normals, texturecoords};
+}
+
 // Make a cylinder (side-only).
 make_shape_quads make_cylinder_side_shape(
     const vec2i& steps, const vec2f& size, const vec2f& uvsize) {

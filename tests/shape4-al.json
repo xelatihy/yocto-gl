@@ -164,9 +164,9 @@
             "material": "obj3",
             "!!proc": {
                 "type": "disk_bulged",
-                "steps": [64, 32],
+                "steps": 32,
                 "size": 1,
-                "uvsize": [1, 1]
+                "uvsize": 1
             }
         },
         {
@@ -174,7 +174,7 @@
             "filename": "models/obj4.ply",
             "material": "obj4",
             "!!proc": {
-                "type": "disk_bulged",
+                "type": "quad_bulged",
                 "steps": [64, 32],
                 "size": 1,
                 "uvsize": [1, 1]

@@ -1178,6 +1178,13 @@ bool apply_json_procedural(
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f),
             get_json_value(js, "height", 0.25f));
+    } else if (type == "quad_bulged") {
+        tie(value.quads, value.positions, value.normals,
+            value.texturecoords) = make_quad_bulged_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", 1.0f),
+            get_json_value(js, "height", 0.25f));
     } else if (type == "uvcylinder") {
         tie(value.quads, value.positions, value.normals, value.texturecoords) =
             make_uvcylinder_shape(
@@ -1391,6 +1398,13 @@ bool apply_json_procedural(
     } else if (type == "disk_bulged") {
         tie(value.quads_positions, value.positions, value.normals,
             value.texturecoords) = make_disk_bulged_shape(get_json_value(js,
+                                                              "steps", 32),
+            get_json_value(js, "size", 2.0f),
+            get_json_value(js, "uvsize", 1.0f),
+            get_json_value(js, "height", 0.25f));
+    } else if (type == "quad_bulged") {
+        tie(value.quads_positions, value.positions, value.normals,
+            value.texturecoords) = make_quad_bulged_shape(get_json_value(js,
                                                               "steps", 32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f),
