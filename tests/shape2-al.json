@@ -1,5 +1,5 @@
 {
-    "name": "normalfv-al",
+    "name": "shape2-al",
     "cameras": [
         {
             "name": "cam",
@@ -32,12 +32,11 @@
             }
         },
         {
-            "name": "obj1norm",
-            "filename": "textures/obj1norm.png",
+            "name": "uvgrid",
+            "filename": "textures/uvgrid.png",
+            "gamma": 2.2,
             "!!proc": {
-                "type": "bump",
-                "bump_to_normal": true,
-                "bump_scale": 0.05
+                "type": "uvgrid"
             }
         }
     ],
@@ -54,47 +53,62 @@
         {
             "name": "obj1",
             "diffuse": [
-                0.5,
-                0.5,
-                0.7
+                1,
+                1,
+                1
             ],
             "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "roughness": 0.01,
-            "normal_texture": "obj1norm"
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
             "name": "obj2",
             "diffuse": [
-                0.5,
-                0.5,
-                0.7
+                1,
+                1,
+                1
             ],
             "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "roughness": 0.01,
-            "normal_texture": "obj1norm"
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
             "name": "obj3",
             "diffuse": [
-                0.5,
-                0.5,
-                0.7
+                1,
+                1,
+                1
             ],
             "specular": [
                 0.04,
                 0.04,
                 0.04
             ],
-            "roughness": 0.01,
-            "normal_texture": "obj1norm"
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
+        },
+        {
+            "name": "obj4",
+            "diffuse": [
+                1,
+                1,
+                1
+            ],
+            "specular": [
+                0.04,
+                0.04,
+                0.04
+            ],
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
             "name": "light1",
@@ -123,6 +137,51 @@
             }
         },
         {
+            "name": "obj1",
+            "filename": "models/obj1.ply",
+            "material": "obj1",
+            "!!proc": {
+                "type": "uvsphere",
+                "steps": [64, 32],
+                "size": 1,
+                "uvsize": [1, 1]
+            }
+        },
+        {
+            "name": "obj2",
+            "filename": "models/obj2.ply",
+            "material": "obj2",
+            "!!proc": {
+                "type": "uvsphere_flipcap",
+                "steps": [64, 32],
+                "size": 1,
+                "uvsize": [1, 1],
+                "zflip": [-0.25, 0.25]
+            }
+        },
+        {
+            "name": "obj3",
+            "filename": "models/obj3.ply",
+            "material": "obj3",
+            "!!proc": {
+                "type": "sphere",
+                "steps": 32,
+                "size": 1,
+                "uvsize": 1
+            }
+        },
+        {
+            "name": "obj4",
+            "filename": "models/obj4.ply",
+            "material": "obj4",
+            "!!proc": {
+                "type": "sphere",
+                "steps": 32,
+                "size": 1,
+                "uvsize": 1
+            }
+        },
+        {
             "name": "light1",
             "material": "light1",
             "!!proc": {
@@ -145,38 +204,6 @@
             }
         }
     ],
-    "surfaces": [
-        {
-            "name": "obj1",
-            "filename": "models/obj1.obj",
-            "materials": [
-                "obj1"
-            ],
-            "!!proc": {
-                "type": "sphere"
-            }
-        },
-        {
-            "name": "obj2",
-            "filename": "models/obj2.obj",
-            "materials": [
-                "obj2"
-            ],
-            "!!proc": {
-                "type": "sphere"
-            }
-        },
-        {
-            "name": "obj3",
-            "filename": "models/obj3.obj",
-            "materials": [
-                "obj3"
-            ],
-            "!!proc": {
-                "type": "sphere"
-            }
-        }
-    ],
     "instances": [
         {
             "name": "floor",
@@ -184,7 +211,7 @@
         },
         {
             "name": "obj1",
-            "surface": "obj1",
+            "shape": "obj1",
             "!!proc": {
                 "translation": [
                     -2.5,
@@ -195,10 +222,10 @@
         },
         {
             "name": "obj2",
-            "surface": "obj2",
+            "shape": "obj2",
             "!!proc": {
                 "translation": [
-                    0,
+                    -1,
                     1,
                     0
                 ]
@@ -206,7 +233,18 @@
         },
         {
             "name": "obj3",
-            "surface": "obj3",
+            "shape": "obj3",
+            "!!proc": {
+                "translation": [
+                    1,
+                    1,
+                    0
+                ]
+            }
+        },
+        {
+            "name": "obj4",
+            "shape": "obj4",
             "!!proc": {
                 "translation": [
                     2.5,

@@ -104,7 +104,7 @@
             "filename": "models/obj1.ply",
             "material": "obj1",
             "!!proc": {
-                "type": "sphere_flipcap"
+                "type": "uvsphere_flipcap"
             }
         },
         {
@@ -112,7 +112,7 @@
             "filename": "models/obj2.ply",
             "material": "obj2",
             "!!proc": {
-                "type": "sphere"
+                "type": "uvsphere"
             }
         },
         {
