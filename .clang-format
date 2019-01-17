@@ -1,6 +1,6 @@
 BasedOnStyle: Google
 
-Language:        Cpp
+# Language:        Cpp
 Standard:        Cpp11
 
 IndentWidth:     4
