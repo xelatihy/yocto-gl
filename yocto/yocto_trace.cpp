@@ -798,76 +798,6 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
 
 #endif
 
-// Picks a point on a light.
-trace_point sample_instance_point(const yocto_scene& scene,
-    const trace_lights& lights, int instance_id, float rel, const vec2f& ruv) {
-    auto& instance = scene.instances[instance_id];
-    if (instance.shape >= 0) {
-        auto& shape        = scene.shapes[instance.shape];
-        auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        auto [element_id, element_uv] = sample_shape_element(
-            shape, elements_cdf, rel, ruv);
-        return make_trace_point(scene, instance_id, element_id, element_uv);
-    } else if (instance.surface >= 0) {
-        auto& surface      = scene.surfaces[instance.surface];
-        auto& elements_cdf = lights.surface_elements_cdf[instance.shape];
-        auto [element_id, element_uv] = sample_surface_element(
-            surface, elements_cdf, rel, ruv);
-        return make_trace_point(scene, instance_id, element_id, element_uv);
-    } else {
-        log_error("empty instance");
-        return {};
-    }
-}
-
-// Sample pdf for a light point.
-float sample_instance_point_pdf(const yocto_scene& scene,
-    const trace_lights& lights, int instance_id, int element_id,
-    const vec2f& element_uv) {
-    auto& instance = scene.instances[instance_id];
-    if (!is_instance_emissive(scene, instance)) return 0;
-    if (instance.shape >= 0) {
-        auto& shape        = scene.shapes[instance.shape];
-        auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        return sample_shape_element_pdf(
-            shape, elements_cdf, element_id, element_uv);
-    } else if (instance.surface >= 0) {
-        auto& surface      = scene.shapes[instance.surface];
-        auto& elements_cdf = lights.surface_elements_cdf[instance.surface];
-        return sample_shape_element_pdf(
-            surface, elements_cdf, element_id, element_uv);
-    } else {
-        return 0;
-    }
-}
-
-// Sample a point from all shape lights.
-trace_point sample_lights_point(const yocto_scene& scene,
-    const trace_lights& lights, const vec3f& position, float rl, float rel,
-    const vec2f& ruv) {
-    if (empty(lights.instances)) return {};
-    auto light_id    = sample_uniform_index(lights.instances.size(), rl);
-    auto instance_id = lights.instances[light_id];
-    auto point = sample_instance_point(scene, lights, instance_id, rel, ruv);
-    // auto direction = normalize(position - point.position);
-    // here goes double sided
-    return point;
-}
-
-// Sample pdf for a light point.
-float sample_lights_point_pdf(const yocto_scene& scene,
-    const trace_lights& lights, const vec3f& position,
-    const trace_point& light_point) {
-    auto& instance = scene.instances[light_point.instance_id];
-    auto& shape    = scene.shapes[instance.shape];
-    auto& material = scene.materials[shape.material];
-    if (empty(lights.instances)) return 0;
-    if (material.emission == zero3f) return 0;
-    return sample_instance_point_pdf(scene, lights, light_point.instance_id,
-               light_point.element_id, light_point.element_uv) *
-           sample_uniform_index_pdf(lights.instances.size());
-}
-
 // Sample pdf for an environment.
 float sample_environment_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int environment_id, const vec3f& incoming) {
@@ -1522,6 +1452,152 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         if (is_brdf_zero(point.brdf) || weight == zero3f) break;
 
         // continue path
+        auto next_direction     = zero3f;
+        auto next_brdf_cosine   = zero3f;
+        auto next_direction_pdf = 0.0f;
+        if (!is_brdf_delta(point.brdf)) {
+            if (get_random_float(rng) < 0.5f) {
+                next_direction = sample_brdf_direction(point.brdf, point.normal,
+                    outgoing, get_random_float(rng), get_random_vec2f(rng));
+            } else {
+                next_direction = sample_lights_direction(scene, lights, bvh,
+                    point.position, get_random_float(rng),
+                    get_random_float(rng), get_random_vec2f(rng));
+            }
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
+                                            point.normal, outgoing,
+                                            next_direction) +
+                                 0.5f * sample_lights_direction_pdf(scene,
+                                            lights, bvh, point.position,
+                                            next_direction);
+        } else {
+            next_direction   = sample_delta_brdf_direction(point.brdf,
+                point.normal, outgoing, get_random_float(rng),
+                get_random_vec2f(rng));
+            next_brdf_cosine = evaluate_delta_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_direction_pdf = sample_delta_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
+        }
+
+        // exit if no hit
+        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
+
+        // intersect next point
+        auto next_point = trace_ray_with_opacity(
+            scene, bvh, point.position, next_direction, rng, max_bounces);
+        radiance += weight * next_brdf_cosine * next_point.emission /
+                    next_direction_pdf;
+        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
+
+        // setup next iteration
+        point    = next_point;
+        outgoing = -next_direction;
+        weight *= next_brdf_cosine / next_direction_pdf;
+
+        // russian roulette
+        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
+    }
+
+    return {radiance, true};
+}
+
+// Recursive path tracing.
+pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) {
+        if (environments_hidden || empty(scene.environments))
+            return {zero3f, false};
+        return {point.emission, true};
+    }
+
+    // initialize
+    auto radiance = point.emission;
+    auto weight   = vec3f{1, 1, 1};
+    auto outgoing = -direction;
+
+    // trace  path
+    for (auto bounce = 0; bounce < max_bounces; bounce++) {
+        // exit if needed
+        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
+
+        // continue path
+        auto next_direction     = zero3f;
+        auto next_brdf_cosine   = zero3f;
+        auto next_direction_pdf = 0.0f;
+        if (!is_brdf_delta(point.brdf)) {
+            next_direction   = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_direction_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
+        } else {
+            next_direction   = sample_delta_brdf_direction(point.brdf,
+                point.normal, outgoing, get_random_float(rng),
+                get_random_vec2f(rng));
+            next_brdf_cosine = evaluate_delta_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            next_direction_pdf = sample_delta_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
+        }
+
+        // exit if no hit
+        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
+
+        // intersect next point
+        auto next_point = trace_ray_with_opacity(
+            scene, bvh, point.position, next_direction, rng, max_bounces);
+        radiance += weight * next_brdf_cosine * next_point.emission /
+                    next_direction_pdf;
+        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
+
+        // setup next iteration
+        point    = next_point;
+        outgoing = -next_direction;
+        weight *= next_brdf_cosine / next_direction_pdf;
+
+        // russian roulette
+        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
+            break;
+        weight /= sample_russian_roulette_pdf(weight, bounce);
+    }
+
+    return {radiance, true};
+}
+
+// Recursive path tracing.
+pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
+    // intersect ray
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
+    if (!point.hit) {
+        if (environments_hidden || empty(scene.environments))
+            return {zero3f, false};
+        return {point.emission, true};
+    }
+
+    // initialize
+    auto radiance = point.emission;
+    auto weight   = vec3f{1, 1, 1};
+    auto outgoing = -direction;
+
+    // trace  path
+    for (auto bounce = 0; bounce < max_bounces; bounce++) {
+        // exit if needed
+        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
+
+        // continue path
         auto next_direction = zero3f, light_direction = zero3f;
         auto next_brdf_cosine = zero3f, light_brdf_cosine = zero3f;
         auto next_direction_pdf = 0.0f, light_direction_pdf = 0.0f;
@@ -1580,435 +1656,6 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         weight /= sample_russian_roulette_pdf(weight, bounce);
     }
 
-    return {radiance, true};
-}
-
-// Recursive path tracing.
-pair<vec3f, bool> trace_path_nomis(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto weight   = vec3f{1, 1, 1};
-    auto outgoing = -direction;
-
-    // trace  path
-    for (auto bounce = 0; bounce < max_bounces; bounce++) {
-        // exit if needed
-        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
-
-        // direct
-        if (!is_brdf_delta(point.brdf) &&
-            !(empty(lights.instances) && empty(lights.environments))) {
-            auto light_point = sample_lights_point(scene, lights,
-                point.position, get_random_float(rng), get_random_float(rng),
-                get_random_vec2f(rng));
-            auto light_pdf   = sample_lights_point_pdf(
-                scene, lights, point.position, light_point);
-            auto light_direction = normalize(
-                light_point.position - point.position);
-            auto intersection_point = trace_ray_with_opacity(
-                scene, bvh, point.position, light_direction, rng, max_bounces);
-            if (light_pdf &&
-                light_point.instance_id == intersection_point.instance_id) {
-                auto brdf_cosine = evaluate_brdf_cosine(
-                    point.brdf, point.normal, outgoing, light_direction);
-                auto geometric_term = abs(dot(light_point.normal,
-                                          light_direction)) /
-                                      distance_squared(
-                                          light_point.position, point.position);
-                radiance += weight * light_point.emission * brdf_cosine *
-                            geometric_term / light_pdf;
-            }
-        }
-
-        // continue path
-        auto next_direction     = zero3f;
-        auto next_brdf_cosine   = zero3f;
-        auto next_direction_pdf = 0.0f;
-        if (!is_brdf_delta(point.brdf)) {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction);
-        } else {
-            next_direction   = sample_delta_brdf_direction(point.brdf,
-                point.normal, outgoing, get_random_float(rng),
-                get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_delta_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_delta_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction);
-        }
-
-        // accumulate weight
-        if (next_direction_pdf == 0) break;
-        weight *= next_brdf_cosine / next_direction_pdf;
-        if (weight == zero3f) break;
-
-        // russian roulette
-        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(weight, bounce);
-
-        // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, max_bounces);
-        if (!next_point.hit || is_brdf_delta(point.brdf))
-            radiance += weight * next_point.emission;
-        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
-
-        // setup next iteration
-        point    = next_point;
-        outgoing = -next_direction;
-    }
-
-    return {radiance, true};
-}
-
-// Recursive path tracing.
-pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces, bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto weight   = vec3f{1, 1, 1};
-    auto outgoing = -direction;
-
-    // trace  path
-    for (auto bounce = 0; bounce < max_bounces; bounce++) {
-        // exit if needed
-        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
-
-        // continue path
-        auto next_direction     = zero3f;
-        auto next_brdf_cosine   = zero3f;
-        auto next_direction_pdf = 0.0f;
-        if (!is_brdf_delta(point.brdf)) {
-            if (get_random_float(rng) < 0.5f) {
-                next_direction = sample_brdf_direction(point.brdf, point.normal,
-                    outgoing, get_random_float(rng), get_random_vec2f(rng));
-            } else {
-                next_direction = sample_lights_direction(scene, lights, bvh,
-                    point.position, get_random_float(rng),
-                    get_random_float(rng), get_random_vec2f(rng));
-            }
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
-                                            point.normal, outgoing,
-                                            next_direction) +
-                                 0.5f * sample_lights_direction_pdf(scene,
-                                            lights, bvh, point.position,
-                                            next_direction);
-        } else {
-            next_direction   = sample_delta_brdf_direction(point.brdf,
-                point.normal, outgoing, get_random_float(rng),
-                get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_delta_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_delta_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction);
-        }
-
-        // exit if no hit
-        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
-
-        // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, max_bounces);
-        radiance += weight * next_brdf_cosine * next_point.emission /
-                    next_direction_pdf;
-        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
-
-        // setup next iteration
-        point    = next_point;
-        outgoing = -next_direction;
-        weight *= next_brdf_cosine / next_direction_pdf;
-
-        // russian roulette
-        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(weight, bounce);
-    }
-
-    return {radiance, true};
-}
-
-// Recursive path tracing.
-pair<vec3f, bool> trace_naive_nomis(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto weight   = vec3f{1, 1, 1};
-    auto outgoing = -direction;
-
-    // trace  path
-    for (auto bounce = 0; bounce < max_bounces; bounce++) {
-        // exit if needed
-        if (is_brdf_zero(point.brdf) || weight == zero3f) break;
-
-        // continue path
-        auto next_direction     = zero3f;
-        auto next_brdf_cosine   = zero3f;
-        auto next_direction_pdf = 0.0f;
-        if (!is_brdf_delta(point.brdf)) {
-            next_direction   = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction);
-        } else {
-            next_direction   = sample_delta_brdf_direction(point.brdf,
-                point.normal, outgoing, get_random_float(rng),
-                get_random_vec2f(rng));
-            next_brdf_cosine = evaluate_delta_brdf_cosine(
-                point.brdf, point.normal, outgoing, next_direction);
-            next_direction_pdf = sample_delta_brdf_direction_pdf(
-                point.brdf, point.normal, outgoing, next_direction);
-        }
-
-        // exit if no hit
-        if (next_direction_pdf == 0 || next_brdf_cosine == zero3f) break;
-
-        // intersect next point
-        auto next_point = trace_ray_with_opacity(
-            scene, bvh, point.position, next_direction, rng, max_bounces);
-        radiance += weight * next_brdf_cosine * next_point.emission /
-                    next_direction_pdf;
-        if (!next_point.hit || is_brdf_zero(next_point.brdf)) break;
-
-        // setup next iteration
-        point    = next_point;
-        outgoing = -next_direction;
-        weight *= next_brdf_cosine / next_direction_pdf;
-
-        // russian roulette
-        if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
-            break;
-        weight /= sample_russian_roulette_pdf(weight, bounce);
-    }
-
-    return {radiance, true};
-}
-
-// Direct illumination.
-pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces, bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto outgoing = -direction;
-
-    // direct
-    if (!is_brdf_delta(point.brdf) &&
-        !(empty(lights.instances) && empty(lights.environments))) {
-        auto light_direction = zero3f;
-        if (get_random_float(rng) < 0.5f) {
-            light_direction = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng));
-        } else {
-            light_direction = sample_lights_direction(scene, lights, bvh,
-                point.position, get_random_float(rng), get_random_float(rng),
-                get_random_vec2f(rng));
-        }
-        auto light_brdf_cosine = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, light_direction);
-        auto light_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
-                                              point.normal, outgoing,
-                                              light_direction) +
-                                   0.5f * sample_lights_direction_pdf(scene,
-                                              lights, bvh, point.position,
-                                              light_direction);
-        auto light_point = trace_ray_with_opacity(
-            scene, bvh, point.position, light_direction, rng, max_bounces);
-        if (light_direction_pdf)
-            radiance += light_point.emission * light_brdf_cosine /
-                        light_direction_pdf;
-    }
-
-    // deltas
-    if (is_brdf_delta(point.brdf) && max_bounces) {
-        auto next_direction = sample_delta_brdf_direction(point.brdf,
-            point.normal, outgoing, get_random_float(rng),
-            get_random_vec2f(rng));
-        auto brdf_cosine    = evaluate_delta_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_delta_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto incoming_radiance = trace_direct(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1, false)
-                                     .first;
-        radiance += brdf_cosine * incoming_radiance / next_pdf;
-    }
-
-    // done
-    return {radiance, true};
-}
-
-// Direct illumination.
-pair<vec3f, bool> trace_direct_nomis(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto outgoing = -direction;
-
-    // direct
-    if (!is_brdf_delta(point.brdf) && !empty(lights.instances)) {
-        auto light_point = sample_lights_point(scene, lights, point.position,
-            get_random_float(rng), get_random_float(rng),
-            get_random_vec2f(rng));
-        auto light_pdf   = sample_lights_point_pdf(
-            scene, lights, point.position, light_point);
-        auto light_direction = normalize(light_point.position - point.position);
-        auto intersection_point = trace_ray_with_opacity(
-            scene, bvh, point.position, light_direction, rng, max_bounces);
-        if (light_pdf &&
-            light_point.instance_id == intersection_point.instance_id) {
-            auto brdf_cosine = evaluate_brdf_cosine(
-                point.brdf, point.normal, outgoing, light_direction);
-            auto geometric_term = abs(dot(
-                                      light_point.normal, light_direction)) /
-                                  distance_squared(
-                                      light_point.position, point.position);
-            radiance += light_point.emission * brdf_cosine * geometric_term /
-                        light_pdf;
-        }
-    }
-
-    // environments
-    if (!is_brdf_delta(point.brdf) && !empty(lights.environments)) {
-        auto next_direction = sample_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng));
-        auto brdf_cosine    = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto emission = evaluate_environment_emission(scene, next_direction);
-        if (next_pdf &&
-            intersect_scene_bvh(bvh, make_ray(point.position, next_direction))
-                    .instance_id < 0)
-            radiance += emission * brdf_cosine / next_pdf;
-    }
-
-    // deltas
-    if (is_brdf_delta(point.brdf)) {
-        auto next_direction = sample_delta_brdf_direction(point.brdf,
-            point.normal, outgoing, get_random_float(rng),
-            get_random_vec2f(rng));
-        auto brdf_cosine    = evaluate_delta_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_delta_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto incoming_radiance = trace_direct_nomis(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1, false)
-                                     .first;
-        radiance += brdf_cosine * incoming_radiance * next_pdf;
-    }
-
-    // done
-    return {radiance, true};
-}
-
-// Environment illumination only with no shadows.
-pair<vec3f, bool> trace_environment(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto outgoing = -direction;
-
-    // continue path
-    auto next_direction     = zero3f;
-    auto next_brdf_cosine   = zero3f;
-    auto next_direction_pdf = 0.0f;
-    if (!is_brdf_delta(point.brdf)) {
-        next_direction   = sample_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng));
-        next_brdf_cosine = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf = sample_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-    } else {
-        next_direction   = sample_delta_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng));
-        next_brdf_cosine = evaluate_delta_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf = sample_delta_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-    }
-
-    // accumulate environment illumination
-    if (next_direction_pdf) {
-        radiance += next_brdf_cosine *
-                    evaluate_environment_emission(scene, next_direction) /
-                    next_direction_pdf;
-    }
-
-    // done
     return {radiance, true};
 }
 
@@ -2210,13 +1857,9 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         // case trace_type::volpath:
         //     return trace_volpath(
         //         scene, bvh, lights, position, direction, rng, max_bounces);
-        case trace_sampler_type::direct: return trace_direct;
         case trace_sampler_type::naive: return trace_naive;
-        case trace_sampler_type::environment: return trace_environment;
+        case trace_sampler_type::split: return trace_split;
         case trace_sampler_type::eyelight: return trace_eyelight;
-        case trace_sampler_type::path_nomis: return trace_path_nomis;
-        case trace_sampler_type::direct_nomis: return trace_direct_nomis;
-        case trace_sampler_type::naive_nomis: return trace_naive_nomis;
         case trace_sampler_type::debug_normal: return trace_debug_normal;
         case trace_sampler_type::debug_albedo: return trace_debug_albedo;
         case trace_sampler_type::debug_texcoord: return trace_debug_texcoord;
@@ -2242,12 +1885,8 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
     auto type = options.sampler_type;
     switch (type) {
         case trace_sampler_type::path:
-        case trace_sampler_type::direct:
         case trace_sampler_type::naive:
-        case trace_sampler_type::environment:
-        case trace_sampler_type::path_nomis:
-        case trace_sampler_type::direct_nomis:
-        case trace_sampler_type::naive_nomis: return true;
+        case trace_sampler_type::split: return true;
         case trace_sampler_type::eyelight:
         case trace_sampler_type::debug_normal:
         case trace_sampler_type::debug_albedo:

@@ -1241,9 +1241,9 @@ bool apply_json_procedural(
         tie(value.quads, value.positions) = make_suzanne_shape(
             get_json_value(js, "size", 2.0f));
     } else if (type == "cube_posonly") {
-        tie(value.quads, ignore, ignore, value.positions, ignore, ignore) = 
-            make_cube_fvshape(
-            get_json_value(js, "steps", vec3i{1, 1, 1}),
+        tie(value.quads, ignore, ignore, value.positions, ignore,
+            ignore) = make_cube_fvshape(get_json_value(js, "steps",
+                                            vec3i{1, 1, 1}),
             get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
@@ -1350,11 +1350,10 @@ bool apply_json_procedural(
     } else if (type == "cube") {
         tie(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords) =
-            make_cube_fvshape(
-                get_json_value(js, "steps", vec3i{1, 1, 1}),
-                get_json_value(js, "size", vec3f{2, 2, 2}),
-                get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+            value.texturecoords) = make_cube_fvshape(get_json_value(js, "steps",
+                                                         vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else if (type == "cube_rounded") {
         tie(value.quads_positions, value.positions, value.normals,
             value.texturecoords) =
@@ -1370,9 +1369,10 @@ bool apply_json_procedural(
                 get_json_value(js, "size", 2.0f),
                 get_json_value(js, "uvsize", vec2f{1, 1}));
     } else if (type == "sphere") {
-        tie(value.quads_positions, value.quads_normals, value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords) = make_sphere_fvshape(get_json_value(js, "steps",
-                                                         32),
+        tie(value.quads_positions, value.quads_normals,
+            value.quads_texturecoords, value.positions, value.normals,
+            value.texturecoords) = make_sphere_fvshape(get_json_value(js,
+                                                           "steps", 32),
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "uvsphere_flipcap") {
@@ -1452,30 +1452,35 @@ bool apply_json_procedural(
             get_json_value(js, "size", 2.0f));
     } else if (type == "cube_multiplematerials") {
         tie(value.quads_positions, value.quads_normals,
-            value.quads_texturecoords, value.positions,
-            value.normals, value.texturecoords) =
-            make_cube_fvshape(
-                get_json_value(js, "steps", vec3i{1, 1, 1}),
-                get_json_value(js, "size", vec3f{2, 2, 2}),
-                get_json_value(js, "uvsize", vec3f{1, 1, 1}));
-        for(auto& q : value.quads_normals) {
-            auto n = value.normals[q.x];
-            auto nd = vec3f{dot(n, {1,0,0}), dot(n, {0,1,0}), dot(n, {0,0,1})};
-            if(nd.z > 0.5f) value.quads_materials.push_back(0);
-            else if(nd.z < -0.5f) value.quads_materials.push_back(1);
-            else if(nd.x > 0.5f) value.quads_materials.push_back(2);
-            else if(nd.x < -0.5f) value.quads_materials.push_back(3);
-            else if(nd.y > 0.5f) value.quads_materials.push_back(4);
-            else if(nd.y < -0.5f) value.quads_materials.push_back(5);
+            value.quads_texturecoords, value.positions, value.normals,
+            value.texturecoords) = make_cube_fvshape(get_json_value(js, "steps",
+                                                         vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+        for (auto& q : value.quads_normals) {
+            auto n  = value.normals[q.x];
+            auto nd = vec3f{
+                dot(n, {1, 0, 0}), dot(n, {0, 1, 0}), dot(n, {0, 0, 1})};
+            if (nd.z > 0.5f)
+                value.quads_materials.push_back(0);
+            else if (nd.z < -0.5f)
+                value.quads_materials.push_back(1);
+            else if (nd.x > 0.5f)
+                value.quads_materials.push_back(2);
+            else if (nd.x < -0.5f)
+                value.quads_materials.push_back(3);
+            else if (nd.y > 0.5f)
+                value.quads_materials.push_back(4);
+            else if (nd.y < -0.5f)
+                value.quads_materials.push_back(5);
         }
     } else if (type == "cube_posonly") {
-        tie(value.quads_positions, ignore, ignore,
-            value.positions, value.normals,
-            value.texturecoords) =
-            make_cube_fvshape(
-                get_json_value(js, "steps", vec3i{1, 1, 1}),
-                get_json_value(js, "size", vec3f{2, 2, 2}),
-                get_json_value(js, "uvsize", vec3f{1, 1, 1}));
+        tie(value.quads_positions, ignore, ignore, value.positions,
+            value.normals,
+            value.texturecoords) = make_cube_fvshape(get_json_value(js, "steps",
+                                                         vec3i{1, 1, 1}),
+            get_json_value(js, "size", vec3f{2, 2, 2}),
+            get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
         log_error("unknown shape type {}", type);
         return false;
@@ -3495,12 +3500,13 @@ bool gltf_to_scene(
     // convert cameras
     if (has_json_key(gltf, "environments")) {
         for (auto eid = 0; eid < gltf.at("environments").size(); eid++) {
-            auto& genv          = gltf.at("environments").at(eid);
-            auto  environment        = yocto_environment{};
-            environment.name         = get_json_value(genv, "name", ""s);
-            environment.emission = get_json_value(genv, "emissiveFactor", zero3f);
+            auto& genv           = gltf.at("environments").at(eid);
+            auto  environment    = yocto_environment{};
+            environment.name     = get_json_value(genv, "name", ""s);
+            environment.emission = get_json_value(
+                genv, "emissiveFactor", zero3f);
             environment.emission_texture = add_texture(
-                    genv.at("emissiveTexture"), false);
+                genv.at("emissiveTexture"), false);
             scene.environments.push_back(environment);
         }
     }

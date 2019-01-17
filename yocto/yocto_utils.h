@@ -23,7 +23,7 @@
 //
 // 1. use `range()` to iterato over an integer sequence
 // 2. use `enumerate()` to iteratare over a vector and number its elements
-// 3. use opeartors + to either concatenate two vectors or a vector and an 
+// 3. use opeartors + to either concatenate two vectors or a vector and an
 //    element
 // 4. use operators += to append an element or a vector to a given vector
 //
@@ -49,9 +49,10 @@
 //
 // ## Path manipulation
 //
-// We define a few path manipulation utilities to split and join path components.
+// We define a few path manipulation utilities to split and join path
+// components.
 //
-// 1. Get paths components with `get_dirname()`, `get_filename()` and 
+// 1. Get paths components with `get_dirname()`, `get_filename()` and
 //   `get_extension()`
 // 2. Replace the extension with `replace_path_extension()`
 // 3. check if a file exists with `exists_file()`
@@ -110,14 +111,14 @@
 #include <chrono>
 #include <cstdio>
 #include <deque>
+#include <fstream>
+#include <iostream>
+#include <istream>
 #include <mutex>
+#include <ostream>
+#include <sstream>
 #include <string>
 #include <thread>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <ostream>
-#include <istream>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -274,12 +275,17 @@ namespace yocto {
 // Range helpper (this should not be used directly)
 struct _range_helper {
     struct _iterator {
-        int _pos = 0;
-        _iterator& operator++() { _pos ++; return *this;  }
-        bool operator!=(const _iterator& other) const { return _pos != other._pos; }
+        int        _pos = 0;
+        _iterator& operator++() {
+            _pos++;
+            return *this;
+        }
+        bool operator!=(const _iterator& other) const {
+            return _pos != other._pos;
+        }
         int operator*() const { return _pos; }
     };
-    int _start = 0, _end = 0;
+    int       _start = 0, _end = 0;
     _iterator begin() const { return {_start}; }
     _iterator end() const { return {_end}; }
 };
@@ -289,45 +295,54 @@ inline auto range(int max) { return _range_helper{0, max}; }
 inline auto range(int min, int max) { return _range_helper{min, max}; }
 
 // Enumerate helper (this should not be used directly)
-template<typename T>
+template <typename T>
 struct _enumerate_helper {
     struct _iterator {
-        T* _data = nullptr;
-        int _pos = 0;
-        _iterator& operator++() { _pos ++; return *this;  }
-        bool operator!=(const _iterator& other) const { return _pos != other._pos; }
+        T*         _data = nullptr;
+        int        _pos  = 0;
+        _iterator& operator++() {
+            _pos++;
+            return *this;
+        }
+        bool operator!=(const _iterator& other) const {
+            return _pos != other._pos;
+        }
         pair<int&, T&> operator*() const { return {_pos, *(_data + _pos)}; }
     };
-    T* _data = nullptr;
-    int _size = 0;
+    T*        _data = nullptr;
+    int       _size = 0;
     _iterator begin() const { return {_data, 0}; }
     _iterator end() const { return {_data, _size}; }
 };
 
 // Python `enumerate()` equivalent. Construct an object that iteraterates over a
 // sequence of elements and numbers them.
-template<typename T>
-inline auto enumerate(const vector<T>& vals) { return _enumerate_helper<const T>{vals.data(), vals.size()}; };
-template<typename T>
-inline auto enumerate(vector<T>& vals) { return _enumerate_helper<T>{vals.data(), vals.size()}; };
+template <typename T>
+inline auto enumerate(const vector<T>& vals) {
+    return _enumerate_helper<const T>{vals.data(), vals.size()};
+};
+template <typename T>
+inline auto enumerate(vector<T>& vals) {
+    return _enumerate_helper<T>{vals.data(), vals.size()};
+};
 
 // Vector append and concatenation
-template<typename T>
+template <typename T>
 inline vector<T>& operator+=(vector<T>& a, const vector<T>& b) {
     a.insert(a.end(), b.begin(), b.end());
     return a;
 }
-template<typename T>
+template <typename T>
 inline vector<T>& operator+=(vector<T>& a, const T& b) {
     a.push_back(b);
     return a;
 }
-template<typename T>
+template <typename T>
 inline vector<T> operator+(const vector<T>& a, const vector<T>& b) {
     auto c = a;
     return c += b;
 }
-template<typename T>
+template <typename T>
 inline vector<T> operator+(const vector<T>& a, const T& b) {
     auto c = a;
     return c += b;
@@ -399,7 +414,8 @@ inline bool parse_arguments_ref(cmdline_parser& parser, const string& name,
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
 inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
-    T& val, const string& usage, const vector<string>& labels, bool req = false);
+    T& val, const string& usage, const vector<string>& labels,
+    bool req = false);
 
 }  // namespace yocto
 
@@ -501,7 +517,7 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 namespace yocto {
 
 // Print a value
-template<typename T>
+template <typename T>
 inline bool print_value(stringstream& stream, const T& value) {
     stream << value;
     return (bool)stream;
@@ -512,8 +528,8 @@ inline bool print_next(stringstream& stream, const string& fmt) {
     return print_value(stream, fmt);
 }
 template <typename Arg, typename... Args>
-inline bool print_next(
-    stringstream& stream, const string& fmt, const Arg& arg, const Args&... args) {
+inline bool print_next(stringstream& stream, const string& fmt, const Arg& arg,
+    const Args&... args) {
     auto pos = fmt.find("{}");
     if (pos == string::npos) return print_value(stream, fmt);
     if (!print_value(stream, fmt.substr(0, pos))) return false;
@@ -722,10 +738,12 @@ inline ostream& operator<<(ostream& os, const frame3f& value) {
     return os << value.x << " " << value.y << " " << value.z << " " << value.o;
 }
 inline ostream& operator<<(ostream& os, const ray2f& value) {
-    return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
+    return os << value.o << " " << value.d << " " << value.tmin << " "
+              << value.tmax;
 }
 inline ostream& operator<<(ostream& os, const ray3f& value) {
-    return os << value.o << " " << value.d << " " << value.tmin << " " << value.tmax;
+    return os << value.o << " " << value.d << " " << value.tmin << " "
+              << value.tmax;
 }
 inline ostream& operator<<(ostream& os, const bbox1f& value) {
     return os << value.min << " " << value.max;
@@ -848,7 +866,8 @@ inline bool is_optional_argument(const string& name) {
 
 // check if flag
 inline bool is_optional_flag(const string& name) {
-    return name.size() > 1 && name.front() == '-' && name.find('/') != name.npos;
+    return name.size() > 1 && name.front() == '-' &&
+           name.find('/') != name.npos;
 }
 
 // get names from string
@@ -946,8 +965,8 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
     auto usage = ""s;
     usage += parser.help_command + ": " + parser.help_usage + "\n";
     usage += "usage: " + parser.help_command;
-    if(!(empty(parser.help_options))) usage += "[options] ";
-    if(!(empty(parser.help_arguments))) usage += "arguments";
+    if (!(empty(parser.help_options))) usage += "[options] ";
+    if (!(empty(parser.help_arguments))) usage += "arguments";
     usage += "\n\n";
     if (!empty(parser.help_options))
         usage += "options:\n" + parser.help_options + "\n";
@@ -964,7 +983,8 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
 inline void check_cmdline(cmdline_parser& parser) {
     if (parser.add_help_flag) {
         auto help = false;
-        if (parse_flag_argument(parser, "--help,-?", help, "print help", false)) {
+        if (parse_flag_argument(
+                parser, "--help,-?", help, "print help", false)) {
             print_cmdline_usage(parser);
             exit(0);
         }
@@ -1003,11 +1023,11 @@ inline bool parse_option_value(const string& vals, string& val) {
     val = vals;
     return true;
 }
-template<typename T>
+template <typename T>
 inline bool parse_option_value(const string& vals, T& val) {
     auto stream = stringstream{vals};
     stream >> val;
-    if(stream.fail()) return false;
+    if (stream.fail()) return false;
     return true;
 }
 
@@ -1049,8 +1069,9 @@ inline bool parse_option_argument(cmdline_parser& parser, const string& name,
 
 // Parse an argument string. Name should not start with "--" or "-".
 template <typename T>
-inline bool parse_positional_argument(cmdline_parser& parser, const string& name,
-    T& value, const string& usage, bool req, const vector<string>& choices) {
+inline bool parse_positional_argument(cmdline_parser& parser,
+    const string& name, T& value, const string& usage, bool req,
+    const vector<string>& choices) {
     parser.help_arguments += get_option_usage(name, usage, value, req, choices);
     if (parser.error != "") return false;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
@@ -1116,8 +1137,8 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
             new_value = true;
             break;
         }
-        pos = std::min(pos,
-            std::find(parser.args.begin(), parser.args.end(), name_off));
+        pos = std::min(
+            pos, std::find(parser.args.begin(), parser.args.end(), name_off));
         if (pos != parser.args.end()) {
             new_value = false;
             break;
@@ -1168,7 +1189,8 @@ inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
     auto values = labels.at((int)value);
     auto parsed = false;
     if (is_optional_argument(name)) {
-        parsed = parse_option_argument(parser, name, values, usage, req, labels);
+        parsed = parse_option_argument(
+            parser, name, values, usage, req, labels);
     } else {
         parsed = parse_positional_argument(
             parser, name, values, usage, req, labels);
@@ -1254,7 +1276,7 @@ string get_dirname(const string& filename_) {
     auto filename = normalize_path(filename_);
     auto pos      = filename.rfind('/');
     if (pos == string::npos) return "";
-    return filename.substr(0, pos+1);
+    return filename.substr(0, pos + 1);
 }
 
 // Get extension (not including '.').
@@ -1305,16 +1327,16 @@ inline void log_io_error(const string& fmt, const Args&... args) {
 }
 
 // write value to a stream
-template<typename T>
+template <typename T>
 inline ostream& write_value(ostream& stream, const T& value) {
     return stream.write((char*)&value, sizeof(T));
 }
 
 // write values to a stream
-template<typename T>
+template <typename T>
 inline ostream& write_values(ostream& stream, const vector<T>& values) {
-    if(values.empty()) return stream;
-    return stream.write((char*)values.data(), values.size()*sizeof(T));
+    if (values.empty()) return stream;
+    return stream.write((char*)values.data(), values.size() * sizeof(T));
 }
 
 // Read binary data to fill the whole buffer
@@ -1326,21 +1348,21 @@ inline istream& read_value(istream& stream, T& value) {
 // Read binary data to fill the whole buffer
 template <typename T>
 inline istream& read_values(istream& stream, vector<T>& values) {
-    if(values.empty()) return stream;
-    return stream.read((char*)values.data(), values.size()*sizeof(T));
+    if (values.empty()) return stream;
+    return stream.read((char*)values.data(), values.size() * sizeof(T));
 }
 
 // Load a text file
 inline bool load_text(const string& filename, string& str) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     auto stream = ifstream(filename);
-    if(!stream) {
+    if (!stream) {
         log_io_error("cannot open file {}", filename);
         return false;
     }
     stringstream buffer;
     buffer << stream.rdbuf();
-    if(stream.fail()) {
+    if (stream.fail()) {
         log_io_error("cannot read file {}", filename);
         return false;
     }
@@ -1351,12 +1373,12 @@ inline bool load_text(const string& filename, string& str) {
 // Save a text file
 inline bool save_text(const string& filename, const string& str) {
     auto stream = ofstream(filename);
-    if(!stream) {
+    if (!stream) {
         log_io_error("cannot open file {}", filename);
         return false;
     }
     stream << str;
-    if(!stream) {
+    if (!stream) {
         log_io_error("cannot write file {}", filename);
         return false;
     }
@@ -1367,30 +1389,30 @@ inline bool save_text(const string& filename, const string& str) {
 inline bool load_binary(const string& filename, vector<byte>& data) {
     // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
     auto stream = ifstream(filename, std::ios::binary);
-    if(!stream) {
+    if (!stream) {
         log_io_error("cannot open file {}", filename);
         return false;
     }
     stringstream buffer;
     buffer << stream.rdbuf();
-    if(stream.fail()) {
+    if (stream.fail()) {
         log_io_error("cannot read file {}", filename);
         return false;
     }
     auto str = buffer.str();
-    data = vector<byte>((byte*)str.data(), (byte*)str.data() + str.size());
+    data     = vector<byte>((byte*)str.data(), (byte*)str.data() + str.size());
     return true;
 }
 
 // Save a binary file
 inline bool save_binary(const string& filename, const vector<byte>& data) {
     auto stream = ofstream(filename, std::ios::binary);
-    if(!stream) {
+    if (!stream) {
         log_io_error("cannot open file {}", filename);
         return false;
     }
     stream.write((char*)data.data(), data.size());
-    if(!stream) {
+    if (!stream) {
         log_io_error("cannot write file {}", filename);
         return false;
     }

@@ -493,12 +493,12 @@ namespace yocto {
 // Data returned by `make_xxx_shape()` functions.
 using make_shape_quads =
     tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>;
-using make_shape_lines  = tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>,
+using make_shape_lines   = tuple<vector<vec2i>, vector<vec3f>, vector<vec3f>,
     vector<vec2f>, vector<float>>;
-using make_shape_points = tuple<vector<int>, vector<vec3f>, vector<vec3f>,
+using make_shape_points  = tuple<vector<int>, vector<vec3f>, vector<vec3f>,
     vector<vec2f>, vector<float>>;
-using make_fvshape_quads = tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>, vector<vec3f>, vector<vec3f>,
-    vector<vec2f>>;
+using make_fvshape_quads = tuple<vector<vec4i>, vector<vec4i>, vector<vec4i>,
+    vector<vec3f>, vector<vec3f>, vector<vec2f>>;
 
 // Make examples shapes that are not watertight (besides quads).
 // Return (triangles, quads, pos, norm, texcoord)
@@ -538,8 +538,7 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne_shape(float size);
 tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size);
 
 // Make facevarying example shapes that are watertight (good for subdivs).
-make_fvshape_quads
-make_cube_fvshape(
+make_fvshape_quads make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize);
 make_fvshape_quads make_sphere_fvshape(int steps, float size, float uvsize);
 
@@ -577,7 +576,7 @@ make_shape_quads make_shell_shape(const vector<vec4i>& quads,
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec2f>& texturecoords, float thickness);
 
-// Make a shape face-varying. This is just a convenience function that 
+// Make a shape face-varying. This is just a convenience function that
 // duplicates quads arrays.
 make_fvshape_quads make_faceavrying_shape(const make_shape_quads& shape);
 

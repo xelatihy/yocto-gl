@@ -1819,8 +1819,7 @@ tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
 }
 
 // Make a facevarying cube.
-make_fvshape_quads
-make_cube_fvshape(
+make_fvshape_quads make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         steps, size, uvsize);
@@ -1836,17 +1835,17 @@ make_cube_fvshape(
 
 // Make a faceavrying spherecube.
 make_fvshape_quads make_sphere_fvshape(int steps, float size, float uvsize) {
-    auto [quads_positions, quads_normals, quads_texturecoords, positions, 
-        normals, texturecoords] = make_cube_fvshape(
-        {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize});
-    quads_normals = quads_positions;
-    normals = positions;
+    auto [quads_positions, quads_normals, quads_texturecoords, positions,
+        normals, texturecoords] = make_cube_fvshape({steps, steps, steps},
+        {1, 1, 1}, {uvsize, uvsize, uvsize});
+    quads_normals               = quads_positions;
+    normals                     = positions;
     for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
         positions[i] = normalize(p) * (size / 2);
         normals[i]   = normalize(p);
     }
-    return {quads_positions, quads_normals, quads_texturecoords, positions, 
+    return {quads_positions, quads_normals, quads_texturecoords, positions,
         normals, texturecoords};
 }
 
@@ -2477,14 +2476,9 @@ make_shape_quads make_shell_shape(const vector<vec4i>& quads,
 // Make a shape face-varying.
 make_fvshape_quads make_faceavrying_shape(const make_shape_quads& shape) {
     auto& [quads, positions, normals, texturecoords] = shape;
-    return {
-        quads, 
-        normals.empty() ? vector<vec4i>{} : quads, 
-        texturecoords.empty() ? vector<vec4i>{} : quads, 
-        positions, 
-        normals, 
-        texturecoords
-    };
+    return {quads, normals.empty() ? vector<vec4i>{} : quads,
+        texturecoords.empty() ? vector<vec4i>{} : quads, positions, normals,
+        texturecoords};
 }
 
 }  // namespace yocto

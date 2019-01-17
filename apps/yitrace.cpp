@@ -52,9 +52,9 @@ struct app_state {
     int                 image_height  = 0;
 
     // scene
-    yocto_scene scene = {};
-    bvh_scene   bvh   = {};
-    bool add_skyenv = false;
+    yocto_scene scene      = {};
+    bvh_scene   bvh        = {};
+    bool        add_skyenv = false;
 
     // rendering state
     trace_lights                   lights  = {};
@@ -143,7 +143,7 @@ bool load_scene_sync(app_state& app) {
     tesselate_shapes_and_surfaces(app.scene);
 
     // add sky
-    if(app.add_skyenv) add_sky_environment(app.scene);
+    if (app.add_skyenv) add_sky_environment(app.scene);
 
     // add components
     add_missing_cameras(app.scene);
@@ -469,9 +469,9 @@ int main(int argc, char* argv[]) {
         "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
     app.trace_options.double_sided = parse_argument(parser,
         "--double-sided/--no-double-sided", false, "Double-sided rendering.");
-    app.add_skyenv = parse_argument(parser,
-        "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
-    app.imfilename                 = parse_argument(
+    app.add_skyenv                 = parse_argument(
+        parser, "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
+    app.imfilename = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     app.filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
