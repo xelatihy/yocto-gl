@@ -119,11 +119,9 @@ enum struct trace_sampler_type {
     path,                // path tracing
     direct,              // direct illumination
     naive,               // naive path tracing
+    split,               // path tracing with split heuristic
     environment,         // environment illumination only
     eyelight,            // eyelight rendering
-    path_nomis,          // path tracer without mis
-    direct_nomis,        // direct illumition without mis
-    naive_nomis,         // naive path tracing without mis
     debug_normal,        // debug - normal
     debug_albedo,        // debug - albedo
     debug_texcoord,      // debug - texcoord
@@ -138,7 +136,7 @@ enum struct trace_sampler_type {
 };
 
 const auto trace_sampler_type_names = vector<string>{"path", "direct", "naive",
-    "environment", "eyelight", "path_nomis", "direct_nomis", "naive_nomis",
+    "split", "environment", "eyelight",
     "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
     "debug_frontfacing", "debug_emission", "debug_diffuse", "debug_specular",
     "debug_transmission", "debug_roughness", "debug_highlight"};
