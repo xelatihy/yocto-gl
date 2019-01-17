@@ -133,9 +133,8 @@ enum struct trace_sampler_type {
     debug_highlight,     // debug - highlight
 };
 
-const auto trace_sampler_type_names = vector<string>{"path", "naive", "split", 
-    "eyelight",
-    "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
+const auto trace_sampler_type_names = vector<string>{"path", "naive", "split",
+    "eyelight", "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
     "debug_frontfacing", "debug_emission", "debug_diffuse", "debug_specular",
     "debug_transmission", "debug_roughness", "debug_highlight"};
 

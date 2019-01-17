@@ -1577,10 +1577,9 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 }
 
 // Recursive path tracing.
-pair<vec3f, bool> trace_naive(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
+pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
@@ -1957,8 +1956,7 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
     switch (type) {
         case trace_sampler_type::path:
         case trace_sampler_type::naive:
-        case trace_sampler_type::split:
-            return true;
+        case trace_sampler_type::split: return true;
         case trace_sampler_type::eyelight:
         case trace_sampler_type::debug_normal:
         case trace_sampler_type::debug_albedo:
@@ -1970,8 +1968,7 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
         case trace_sampler_type::debug_specular:
         case trace_sampler_type::debug_transmission:
         case trace_sampler_type::debug_roughness:
-        case trace_sampler_type::debug_highlight: 
-            return false;
+        case trace_sampler_type::debug_highlight: return false;
         default: {
             log_error("sampler unknown");
             return false;

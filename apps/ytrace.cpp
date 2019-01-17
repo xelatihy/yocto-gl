@@ -78,9 +78,9 @@ int main(int argc, char* argv[]) {
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
     bvh_options.flatten_embree = parse_argument(parser,
         "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
-    auto add_skyenv = parse_argument(parser,
-        "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
-    auto imfilename            = parse_argument(
+    auto add_skyenv            = parse_argument(
+        parser, "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
+    auto imfilename = parse_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
     auto filename = parse_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
     log_validation_errors(scene);
 
     // add sky
-    if(add_skyenv) add_sky_environment(scene);
+    if (add_skyenv) add_sky_environment(scene);
 
     // build bvh
     log_info("building bvh");
