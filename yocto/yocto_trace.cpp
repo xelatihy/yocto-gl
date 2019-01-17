@@ -1730,118 +1730,6 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
     return {radiance, true};
 }
 
-// Direct illumination.
-pair<vec3f, bool> trace_direct(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const vec3f& position, const vec3f& direction,
-    rng_state& rng, int max_bounces, bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto outgoing = -direction;
-
-    // direct
-    if (!is_brdf_delta(point.brdf) &&
-        !(empty(lights.instances) && empty(lights.environments))) {
-        auto light_direction = zero3f;
-        if (get_random_float(rng) < 0.5f) {
-            light_direction = sample_brdf_direction(point.brdf, point.normal,
-                outgoing, get_random_float(rng), get_random_vec2f(rng));
-        } else {
-            light_direction = sample_lights_direction(scene, lights, bvh,
-                point.position, get_random_float(rng), get_random_float(rng),
-                get_random_vec2f(rng));
-        }
-        auto light_brdf_cosine = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, light_direction);
-        auto light_direction_pdf = 0.5f * sample_brdf_direction_pdf(point.brdf,
-                                              point.normal, outgoing,
-                                              light_direction) +
-                                   0.5f * sample_lights_direction_pdf(scene,
-                                              lights, bvh, point.position,
-                                              light_direction);
-        auto light_point = trace_ray_with_opacity(
-            scene, bvh, point.position, light_direction, rng, max_bounces);
-        if (light_direction_pdf)
-            radiance += light_point.emission * light_brdf_cosine /
-                        light_direction_pdf;
-    }
-
-    // deltas
-    if (is_brdf_delta(point.brdf) && max_bounces) {
-        auto next_direction = sample_delta_brdf_direction(point.brdf,
-            point.normal, outgoing, get_random_float(rng),
-            get_random_vec2f(rng));
-        auto brdf_cosine    = evaluate_delta_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto next_pdf = sample_delta_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-        auto incoming_radiance = trace_direct(scene, bvh, lights,
-            point.position, next_direction, rng, max_bounces - 1, false)
-                                     .first;
-        radiance += brdf_cosine * incoming_radiance / next_pdf;
-    }
-
-    // done
-    return {radiance, true};
-}
-
-// Environment illumination only with no shadows.
-pair<vec3f, bool> trace_environment(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden) {
-    // intersect ray
-    auto point = trace_ray_with_opacity(
-        scene, bvh, position, direction, rng, max_bounces);
-    if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
-            return {zero3f, false};
-        return {point.emission, true};
-    }
-
-    // initialize
-    auto radiance = point.emission;
-    auto outgoing = -direction;
-
-    // continue path
-    auto next_direction     = zero3f;
-    auto next_brdf_cosine   = zero3f;
-    auto next_direction_pdf = 0.0f;
-    if (!is_brdf_delta(point.brdf)) {
-        next_direction   = sample_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng));
-        next_brdf_cosine = evaluate_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf = sample_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-    } else {
-        next_direction   = sample_delta_brdf_direction(point.brdf, point.normal,
-            outgoing, get_random_float(rng), get_random_vec2f(rng));
-        next_brdf_cosine = evaluate_delta_brdf_cosine(
-            point.brdf, point.normal, outgoing, next_direction);
-        next_direction_pdf = sample_delta_brdf_direction_pdf(
-            point.brdf, point.normal, outgoing, next_direction);
-    }
-
-    // accumulate environment illumination
-    if (next_direction_pdf) {
-        radiance += next_brdf_cosine *
-                    evaluate_environment_emission(scene, next_direction) /
-                    next_direction_pdf;
-    }
-
-    // done
-    return {radiance, true};
-}
-
 // Eyelight for quick previewing.
 pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
@@ -2040,10 +1928,8 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         // case trace_type::volpath:
         //     return trace_volpath(
         //         scene, bvh, lights, position, direction, rng, max_bounces);
-        case trace_sampler_type::direct: return trace_direct;
         case trace_sampler_type::naive: return trace_naive;
         case trace_sampler_type::split: return trace_split;
-        case trace_sampler_type::environment: return trace_environment;
         case trace_sampler_type::eyelight: return trace_eyelight;
         case trace_sampler_type::debug_normal: return trace_debug_normal;
         case trace_sampler_type::debug_albedo: return trace_debug_albedo;
@@ -2070,10 +1956,9 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
     auto type = options.sampler_type;
     switch (type) {
         case trace_sampler_type::path:
-        case trace_sampler_type::direct:
         case trace_sampler_type::naive:
         case trace_sampler_type::split:
-        case trace_sampler_type::environment:
+            return true;
         case trace_sampler_type::eyelight:
         case trace_sampler_type::debug_normal:
         case trace_sampler_type::debug_albedo:
@@ -2085,7 +1970,8 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
         case trace_sampler_type::debug_specular:
         case trace_sampler_type::debug_transmission:
         case trace_sampler_type::debug_roughness:
-        case trace_sampler_type::debug_highlight: return false;
+        case trace_sampler_type::debug_highlight: 
+            return false;
         default: {
             log_error("sampler unknown");
             return false;

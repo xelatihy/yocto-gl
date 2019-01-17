@@ -117,10 +117,8 @@ trace_state make_trace_state(
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
     path,                // path tracing
-    direct,              // direct illumination
     naive,               // naive path tracing
     split,               // path tracing with split heuristic
-    environment,         // environment illumination only
     eyelight,            // eyelight rendering
     debug_normal,        // debug - normal
     debug_albedo,        // debug - albedo
@@ -135,8 +133,8 @@ enum struct trace_sampler_type {
     debug_highlight,     // debug - highlight
 };
 
-const auto trace_sampler_type_names = vector<string>{"path", "direct", "naive",
-    "split", "environment", "eyelight",
+const auto trace_sampler_type_names = vector<string>{"path", "naive", "split", 
+    "eyelight",
     "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
     "debug_frontfacing", "debug_emission", "debug_diffuse", "debug_specular",
     "debug_transmission", "debug_roughness", "debug_highlight"};
