@@ -264,6 +264,12 @@ bool begin_opengl_widgets_window(const opengl_window& win, const char* title);
 bool begin_header_opengl_widget(const opengl_window& win, const char* title);
 void end_header_opengl_widget(const opengl_window& win);
 
+bool begin_tabbar_opengl_widget(const opengl_window& win, const char* title);
+void end_tabbar_opengl_widget(const opengl_window& win);
+
+bool begin_tabitem_opengl_widget(const opengl_window& win, const char* title);
+void end_tabitem_opengl_widget(const opengl_window& win);
+
 void draw_label_opengl_widget(
     const opengl_window& win, const char* lbl, const string& texture);
 void draw_label_opengl_widget(

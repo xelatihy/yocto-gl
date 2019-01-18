@@ -898,7 +898,8 @@ void draw_widgets(const opengl_window& win) {
 
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yview")) {
-        if (begin_header_opengl_widget(win, "scene")) {
+        if(begin_tabbar_opengl_widget(win, "tabs")) {
+        if (begin_tabitem_opengl_widget(win, "scene")) {
             draw_label_opengl_widget(win, "scene", get_filename(app.filename));
             if (draw_button_opengl_widget(win, "load")) {
                 delete_drawgl_state(app.state);
@@ -906,9 +907,9 @@ void draw_widgets(const opengl_window& win) {
             }
             draw_label_opengl_widget(win, "filename", app.filename);
             draw_label_opengl_widget(win, "status", app.status);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (begin_header_opengl_widget(win, "view")) {
+        if (begin_tabitem_opengl_widget(win, "view")) {
             if (app.load_done) {
                 draw_combobox_opengl_widget(win, "camera",
                     app.draw_options.camera_id, app.scene.cameras, false);
@@ -950,17 +951,19 @@ void draw_widgets(const opengl_window& win) {
                         camera.frame);
                 }
             }
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (app.load_done && begin_header_opengl_widget(win, "navigate")) {
+        if (app.load_done && begin_tabitem_opengl_widget(win, "navigate")) {
             draw_opengl_widgets_scene_tree(
                 win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (app.load_done && begin_header_opengl_widget(win, "inspect")) {
+        if (app.load_done && begin_tabitem_opengl_widget(win, "inspect")) {
             draw_opengl_widgets_scene_inspector(
                 win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
+        }
+        end_tabbar_opengl_widget(win);
         }
     }
     end_opengl_widgets_frame(win);
