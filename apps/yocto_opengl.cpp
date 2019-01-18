@@ -752,14 +752,20 @@ bool begin_tabbar_opengl_widget(const opengl_window& win, const char* lbl) {
     ImGui::PushID(lbl);
     return true;
 }
-void end_tabbar_opengl_widget(const opengl_window& win) { ImGui::PopID(); ImGui::EndTabBar(); }
+void end_tabbar_opengl_widget(const opengl_window& win) {
+    ImGui::PopID();
+    ImGui::EndTabBar();
+}
 
 bool begin_tabitem_opengl_widget(const opengl_window& win, const char* lbl) {
     if (!ImGui::BeginTabItem(lbl)) return false;
     ImGui::PushID(lbl);
     return true;
 }
-void end_tabitem_opengl_widget(const opengl_window& win) { ImGui::PopID(); ImGui::EndTabItem(); }
+void end_tabitem_opengl_widget(const opengl_window& win) {
+    ImGui::PopID();
+    ImGui::EndTabItem();
+}
 
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl) {
     return ImGui::Button(lbl);
