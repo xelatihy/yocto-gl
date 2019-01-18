@@ -170,7 +170,8 @@ void draw_opengl_widgets(const opengl_window& win) {
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yimview")) {
         auto& img = app.imgs.at(app.img_id);
-        if (begin_header_opengl_widget(win, "image")) {
+        if(begin_tabbar_opengl_widget(win, "tabs")) {
+        if (begin_tabitem_opengl_widget(win, "image")) {
             draw_combobox_opengl_widget(
                 win, "image", app.img_id, app.imgs, false);
             draw_label_opengl_widget(
@@ -196,16 +197,16 @@ void draw_opengl_widgets(const opengl_window& win) {
                 win, "size", "%d x %d ", img.img.width, img.img.height);
             draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
             draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (begin_header_opengl_widget(win, "adjust")) {
+        if (begin_tabitem_opengl_widget(win, "adjust")) {
             edited += draw_slider_opengl_widget(
                 win, "exposure", img.exposure, -5, 5);
             edited += draw_checkbox_opengl_widget(win, "filmic", img.filmic);
             edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (begin_header_opengl_widget(win, "inspect")) {
+        if (begin_tabitem_opengl_widget(win, "inspect")) {
             auto mouse_pos = get_opengl_mouse_pos(win);
             auto ij        = get_image_coords(mouse_pos, img.image_center,
                 img.image_scale, {img.img.width, img.img.height});
@@ -223,7 +224,9 @@ void draw_opengl_widgets(const opengl_window& win) {
             draw_dragger_opengl_widget(win, "pxl max", stats.pxl_bounds.max);
             draw_dragger_opengl_widget(win, "lum min", stats.lum_bounds.min);
             draw_dragger_opengl_widget(win, "lum max", stats.lum_bounds.max);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
+        }
+        end_tabbar_opengl_widget(win);
         }
     }
     end_opengl_widgets_frame(win);

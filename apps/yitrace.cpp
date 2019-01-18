@@ -196,7 +196,8 @@ void draw_opengl_widgets(const opengl_window& win) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yitrace")) {
-        if (begin_header_opengl_widget(win, "scene")) {
+        if(begin_tabbar_opengl_widget(win, "tabs")) {
+        if (begin_tabitem_opengl_widget(win, "scene")) {
             draw_label_opengl_widget(win, "scene", get_filename(app.filename));
             if (draw_button_opengl_widget(win, "load")) {
                 stop_rendering_async(app);
@@ -204,9 +205,9 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             draw_label_opengl_widget(win, "filename", app.filename);
             draw_label_opengl_widget(win, "status", app.status);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (begin_header_opengl_widget(win, "trace")) {
+        if (begin_tabitem_opengl_widget(win, "trace")) {
             draw_label_opengl_widget(win, "image", "%d x %d @ %d",
                 app.image.width, app.image.height, (int)app.trace_sample);
             auto cam_names = vector<string>();
@@ -267,17 +268,19 @@ void draw_opengl_widgets(const opengl_window& win) {
                 auto zero4f_ = zero4f;
                 draw_coloredit_opengl_widget(win, "pixel", zero4f_);
             }
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (app.load_done && begin_header_opengl_widget(win, "navigate")) {
+        if (app.load_done && begin_tabitem_opengl_widget(win, "navigate")) {
             draw_opengl_widgets_scene_tree(
                 win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
         }
-        if (app.load_done && begin_header_opengl_widget(win, "inspec")) {
+        if (app.load_done && begin_tabitem_opengl_widget(win, "inspec")) {
             draw_opengl_widgets_scene_inspector(
                 win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_opengl_widget(win);
+            end_tabitem_opengl_widget(win);
+        }
+        end_tabbar_opengl_widget(win);
         }
     }
     end_opengl_widgets_frame(win);
