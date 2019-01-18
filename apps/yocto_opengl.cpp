@@ -724,7 +724,7 @@ void begin_opengl_widgets_frame(const opengl_window& win) {
     ImGui::NewFrame();
     if (first_time) {
         ImGui::SetNextWindowPos({0, 0});
-        ImGui::SetNextWindowSize({320, 0});
+        ImGui::SetNextWindowSize({320, 360});
         ImGui::SetNextWindowCollapsed(true);
         first_time = false;
     }
