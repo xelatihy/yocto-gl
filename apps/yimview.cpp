@@ -170,60 +170,70 @@ void draw_opengl_widgets(const opengl_window& win) {
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yimview")) {
         auto& img = app.imgs.at(app.img_id);
-        if (begin_header_opengl_widget(win, "image")) {
-            draw_combobox_opengl_widget(
-                win, "image", app.img_id, app.imgs, false);
-            draw_label_opengl_widget(
-                win, "filename", "%s", img.filename.c_str());
-            draw_textinput_opengl_widget(win, "outname", img.outname);
-            if (draw_button_opengl_widget(win, "save display")) {
-                if (img.display_done) {
-                    img.save_thread = thread(
-                        [&img]() { save_image_async(img); });
+        if (begin_tabbar_opengl_widget(win, "tabs")) {
+            if (begin_tabitem_opengl_widget(win, "image")) {
+                draw_combobox_opengl_widget(
+                    win, "image", app.img_id, app.imgs, false);
+                draw_label_opengl_widget(
+                    win, "filename", "%s", img.filename.c_str());
+                draw_textinput_opengl_widget(win, "outname", img.outname);
+                if (draw_button_opengl_widget(win, "save display")) {
+                    if (img.display_done) {
+                        img.save_thread = thread(
+                            [&img]() { save_image_async(img); });
+                    }
                 }
+                auto status = string();
+                if (img.error_msg != "")
+                    status = "error: " + img.error_msg;
+                else if (!img.load_done)
+                    status = "loading...";
+                else if (!img.display_done)
+                    status = "displaying...";
+                else
+                    status = "done";
+                draw_label_opengl_widget(win, "status", status.c_str());
+                draw_label_opengl_widget(
+                    win, "size", "%d x %d ", img.img.width, img.img.height);
+                draw_slider_opengl_widget(
+                    win, "zoom", img.image_scale, 0.1, 10);
+                draw_checkbox_opengl_widget(
+                    win, "zoom to fit", img.zoom_to_fit);
+                end_tabitem_opengl_widget(win);
             }
-            auto status = string();
-            if (img.error_msg != "")
-                status = "error: " + img.error_msg;
-            else if (!img.load_done)
-                status = "loading...";
-            else if (!img.display_done)
-                status = "displaying...";
-            else
-                status = "done";
-            draw_label_opengl_widget(win, "status", status.c_str());
-            draw_label_opengl_widget(
-                win, "size", "%d x %d ", img.img.width, img.img.height);
-            draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1, 10);
-            draw_checkbox_opengl_widget(win, "zoom to fit", img.zoom_to_fit);
-            end_header_opengl_widget(win);
-        }
-        if (begin_header_opengl_widget(win, "adjust")) {
-            edited += draw_slider_opengl_widget(
-                win, "exposure", img.exposure, -5, 5);
-            edited += draw_checkbox_opengl_widget(win, "filmic", img.filmic);
-            edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
-            end_header_opengl_widget(win);
-        }
-        if (begin_header_opengl_widget(win, "inspect")) {
-            auto mouse_pos = get_opengl_mouse_pos(win);
-            auto ij        = get_image_coords(mouse_pos, img.image_center,
-                img.image_scale, {img.img.width, img.img.height});
-            draw_dragger_opengl_widget(win, "mouse", ij);
-            auto img_pixel = zero4f, display_pixel = zero4f;
-            if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
-                ij.y < img.img.height) {
-                img_pixel     = at(img.img, ij.x, ij.y);
-                display_pixel = at(img.display, ij.x, ij.y);
+            if (begin_tabitem_opengl_widget(win, "adjust")) {
+                edited += draw_slider_opengl_widget(
+                    win, "exposure", img.exposure, -5, 5);
+                edited += draw_checkbox_opengl_widget(
+                    win, "filmic", img.filmic);
+                edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
+                end_tabitem_opengl_widget(win);
             }
-            draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
-            draw_dragger_opengl_widget(win, "pixel value", display_pixel);
-            auto stats = (img.stats_done) ? img.stats : image_stats{};
-            draw_dragger_opengl_widget(win, "pxl min", stats.pxl_bounds.min);
-            draw_dragger_opengl_widget(win, "pxl max", stats.pxl_bounds.max);
-            draw_dragger_opengl_widget(win, "lum min", stats.lum_bounds.min);
-            draw_dragger_opengl_widget(win, "lum max", stats.lum_bounds.max);
-            end_header_opengl_widget(win);
+            if (begin_tabitem_opengl_widget(win, "inspect")) {
+                auto mouse_pos = get_opengl_mouse_pos(win);
+                auto ij        = get_image_coords(mouse_pos, img.image_center,
+                    img.image_scale, {img.img.width, img.img.height});
+                draw_dragger_opengl_widget(win, "mouse", ij);
+                auto img_pixel = zero4f, display_pixel = zero4f;
+                if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
+                    ij.y < img.img.height) {
+                    img_pixel     = at(img.img, ij.x, ij.y);
+                    display_pixel = at(img.display, ij.x, ij.y);
+                }
+                draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
+                draw_dragger_opengl_widget(win, "pixel value", display_pixel);
+                auto stats = (img.stats_done) ? img.stats : image_stats{};
+                draw_dragger_opengl_widget(
+                    win, "pxl min", stats.pxl_bounds.min);
+                draw_dragger_opengl_widget(
+                    win, "pxl max", stats.pxl_bounds.max);
+                draw_dragger_opengl_widget(
+                    win, "lum min", stats.lum_bounds.min);
+                draw_dragger_opengl_widget(
+                    win, "lum max", stats.lum_bounds.max);
+                end_tabitem_opengl_widget(win);
+            }
+            end_tabbar_opengl_widget(win);
         }
     }
     end_opengl_widgets_frame(win);

@@ -428,7 +428,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
     const string& lbl, yocto_scene& scene, pair<type_index, int>& sel,
     vector<pair<type_index, int>>& update_list, int height) {
     if (sel.first == typeid(void)) return false;
-    begin_child_opengl_widget(win, "scrolling scene inspector", {0, height});
 
     auto update_len = update_list.size();
 
@@ -465,7 +464,6 @@ inline bool draw_opengl_widgets_scene_inspector(const opengl_window& win,
                 win, scene.animations[sel.second], scene))
             update_list.push_back({typeid(yocto_animation), sel.second});
 
-    end_child_opengl_widget(win);
     return update_list.size() != update_len;
 }
 

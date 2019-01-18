@@ -724,7 +724,7 @@ void begin_opengl_widgets_frame(const opengl_window& win) {
     ImGui::NewFrame();
     if (first_time) {
         ImGui::SetNextWindowPos({0, 0});
-        ImGui::SetNextWindowSize({320, 0});
+        ImGui::SetNextWindowSize({320, 360});
         ImGui::SetNextWindowCollapsed(true);
         first_time = false;
     }
@@ -746,6 +746,26 @@ bool begin_header_opengl_widget(const opengl_window& win, const char* lbl) {
     return true;
 }
 void end_header_opengl_widget(const opengl_window& win) { ImGui::PopID(); }
+
+bool begin_tabbar_opengl_widget(const opengl_window& win, const char* lbl) {
+    if (!ImGui::BeginTabBar(lbl)) return false;
+    ImGui::PushID(lbl);
+    return true;
+}
+void end_tabbar_opengl_widget(const opengl_window& win) {
+    ImGui::PopID();
+    ImGui::EndTabBar();
+}
+
+bool begin_tabitem_opengl_widget(const opengl_window& win, const char* lbl) {
+    if (!ImGui::BeginTabItem(lbl)) return false;
+    ImGui::PushID(lbl);
+    return true;
+}
+void end_tabitem_opengl_widget(const opengl_window& win) {
+    ImGui::PopID();
+    ImGui::EndTabItem();
+}
 
 bool draw_button_opengl_widget(const opengl_window& win, const char* lbl) {
     return ImGui::Button(lbl);

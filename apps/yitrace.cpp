@@ -196,88 +196,95 @@ void draw_opengl_widgets(const opengl_window& win) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
     begin_opengl_widgets_frame(win);
     if (begin_opengl_widgets_window(win, "yitrace")) {
-        if (begin_header_opengl_widget(win, "scene")) {
-            draw_label_opengl_widget(win, "scene", get_filename(app.filename));
-            if (draw_button_opengl_widget(win, "load")) {
-                stop_rendering_async(app);
-                load_scene_async(app);
-            }
-            draw_label_opengl_widget(win, "filename", app.filename);
-            draw_label_opengl_widget(win, "status", app.status);
-            end_header_opengl_widget(win);
-        }
-        if (begin_header_opengl_widget(win, "trace")) {
-            draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                app.image.width, app.image.height, (int)app.trace_sample);
-            auto cam_names = vector<string>();
-            for (auto& camera : app.scene.cameras)
-                cam_names.push_back(camera.name);
-            auto edited = 0;
-            if (app.load_done) {
-                edited += draw_combobox_opengl_widget(
-                    win, "camera", app.trace_options.camera_id, cam_names);
-            }
-            edited += draw_slider_opengl_widget(
-                win, "width", app.trace_options.image_width, 0, 4096);
-            edited += draw_slider_opengl_widget(
-                win, "height", app.trace_options.image_height, 0, 4096);
-            edited += draw_slider_opengl_widget(
-                win, "nsamples", app.trace_options.num_samples, 16, 4096);
-            edited += draw_combobox_opengl_widget(win, "tracer",
-                (int&)app.trace_options.sampler_type, trace_sampler_type_names);
-            edited += draw_slider_opengl_widget(
-                win, "nbounces", app.trace_options.max_bounces, 1, 10);
-            edited += draw_checkbox_opengl_widget(
-                win, "double sided", app.trace_options.double_sided);
-            edited += draw_slider_opengl_widget(
-                win, "seed", (int&)app.trace_options.random_seed, 0, 1000000);
-            edited += draw_slider_opengl_widget(
-                win, "pratio", app.preview_ratio, 1, 64);
-            if (edited) app.update_list.push_back({typeid(app_state), -1});
-            draw_label_opengl_widget(win, "time/sample", "%0.3lf",
-                (app.trace_sample) ? (get_time() - app.trace_start) /
-                                         (1000000000.0 * app.trace_sample) :
-                                     0.0);
-            draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
-            draw_checkbox_opengl_widget(win, "filmic", app.filmic);
-            draw_checkbox_opengl_widget(win, "srgb", app.srgb);
-            draw_slider_opengl_widget(win, "zoom", app.image_scale, 0.1, 10);
-            draw_checkbox_opengl_widget(win, "zoom to fit", app.zoom_to_fit);
-            continue_opengl_widget_line(win);
-            draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
-            continue_opengl_widget_line(win);
-            if (draw_button_opengl_widget(win, "print cams")) {
-                for (auto& camera : app.scene.cameras) {
-                    print("c {} {} {} {} {} {} {} {}\n", camera.name,
-                        (int)camera.orthographic, camera.film_width,
-                        camera.film_height, camera.focal_length,
-                        camera.focus_distance, camera.lens_aperture,
-                        camera.frame);
+        if (begin_tabbar_opengl_widget(win, "tabs")) {
+            if (begin_tabitem_opengl_widget(win, "scene")) {
+                draw_label_opengl_widget(
+                    win, "scene", get_filename(app.filename));
+                if (draw_button_opengl_widget(win, "load")) {
+                    stop_rendering_async(app);
+                    load_scene_async(app);
                 }
+                draw_label_opengl_widget(win, "filename", app.filename);
+                draw_label_opengl_widget(win, "status", app.status);
+                end_tabitem_opengl_widget(win);
             }
-            auto mouse_pos = get_opengl_mouse_pos(win);
-            auto ij        = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale, {app.image.width, app.image.height});
-            draw_dragger_opengl_widget(win, "mouse", ij);
-            if (ij.x >= 0 && ij.x < app.image.width && ij.y >= 0 &&
-                ij.y < app.image.height) {
-                draw_coloredit_opengl_widget(
-                    win, "pixel", at(app.image, ij.x, ij.y));
-            } else {
-                auto zero4f_ = zero4f;
-                draw_coloredit_opengl_widget(win, "pixel", zero4f_);
+            if (begin_tabitem_opengl_widget(win, "trace")) {
+                draw_label_opengl_widget(win, "image", "%d x %d @ %d",
+                    app.image.width, app.image.height, (int)app.trace_sample);
+                auto cam_names = vector<string>();
+                for (auto& camera : app.scene.cameras)
+                    cam_names.push_back(camera.name);
+                auto edited = 0;
+                if (app.load_done) {
+                    edited += draw_combobox_opengl_widget(
+                        win, "camera", app.trace_options.camera_id, cam_names);
+                }
+                edited += draw_slider_opengl_widget(
+                    win, "width", app.trace_options.image_width, 0, 4096);
+                edited += draw_slider_opengl_widget(
+                    win, "height", app.trace_options.image_height, 0, 4096);
+                edited += draw_slider_opengl_widget(
+                    win, "nsamples", app.trace_options.num_samples, 16, 4096);
+                edited += draw_combobox_opengl_widget(win, "tracer",
+                    (int&)app.trace_options.sampler_type,
+                    trace_sampler_type_names);
+                edited += draw_slider_opengl_widget(
+                    win, "nbounces", app.trace_options.max_bounces, 1, 10);
+                edited += draw_checkbox_opengl_widget(
+                    win, "double sided", app.trace_options.double_sided);
+                edited += draw_slider_opengl_widget(win, "seed",
+                    (int&)app.trace_options.random_seed, 0, 1000000);
+                edited += draw_slider_opengl_widget(
+                    win, "pratio", app.preview_ratio, 1, 64);
+                if (edited) app.update_list.push_back({typeid(app_state), -1});
+                draw_label_opengl_widget(win, "time/sample", "%0.3lf",
+                    (app.trace_sample) ? (get_time() - app.trace_start) /
+                                             (1000000000.0 * app.trace_sample) :
+                                         0.0);
+                draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
+                draw_checkbox_opengl_widget(win, "filmic", app.filmic);
+                draw_checkbox_opengl_widget(win, "srgb", app.srgb);
+                draw_slider_opengl_widget(
+                    win, "zoom", app.image_scale, 0.1, 10);
+                draw_checkbox_opengl_widget(
+                    win, "zoom to fit", app.zoom_to_fit);
+                continue_opengl_widget_line(win);
+                draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
+                continue_opengl_widget_line(win);
+                if (draw_button_opengl_widget(win, "print cams")) {
+                    for (auto& camera : app.scene.cameras) {
+                        print("c {} {} {} {} {} {} {} {}\n", camera.name,
+                            (int)camera.orthographic, camera.film_width,
+                            camera.film_height, camera.focal_length,
+                            camera.focus_distance, camera.lens_aperture,
+                            camera.frame);
+                    }
+                }
+                auto mouse_pos = get_opengl_mouse_pos(win);
+                auto ij        = get_image_coords(mouse_pos, app.image_center,
+                    app.image_scale, {app.image.width, app.image.height});
+                draw_dragger_opengl_widget(win, "mouse", ij);
+                if (ij.x >= 0 && ij.x < app.image.width && ij.y >= 0 &&
+                    ij.y < app.image.height) {
+                    draw_coloredit_opengl_widget(
+                        win, "pixel", at(app.image, ij.x, ij.y));
+                } else {
+                    auto zero4f_ = zero4f;
+                    draw_coloredit_opengl_widget(win, "pixel", zero4f_);
+                }
+                end_tabitem_opengl_widget(win);
             }
-            end_header_opengl_widget(win);
-        }
-        if (app.load_done && begin_header_opengl_widget(win, "navigate")) {
-            draw_opengl_widgets_scene_tree(
-                win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_opengl_widget(win);
-        }
-        if (app.load_done && begin_header_opengl_widget(win, "inspec")) {
-            draw_opengl_widgets_scene_inspector(
-                win, "", app.scene, app.selection, app.update_list, 200);
-            end_header_opengl_widget(win);
+            if (app.load_done && begin_tabitem_opengl_widget(win, "navigate")) {
+                draw_opengl_widgets_scene_tree(
+                    win, "", app.scene, app.selection, app.update_list, 200);
+                end_tabitem_opengl_widget(win);
+            }
+            if (app.load_done && begin_tabitem_opengl_widget(win, "inspec")) {
+                draw_opengl_widgets_scene_inspector(
+                    win, "", app.scene, app.selection, app.update_list, 200);
+                end_tabitem_opengl_widget(win);
+            }
+            end_tabbar_opengl_widget(win);
         }
     }
     end_opengl_widgets_frame(win);
