@@ -1601,6 +1601,7 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_direction = zero3f, light_direction = zero3f;
         auto next_brdf_cosine = zero3f, light_brdf_cosine = zero3f;
         auto next_direction_pdf = 0.0f, light_direction_pdf = 0.0f;
+        auto continue_pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
             next_direction   = sample_brdf_direction(point.brdf, point.normal,
                 outgoing, get_random_float(rng), get_random_vec2f(rng));
@@ -1619,6 +1620,8 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
                                       point.normal, outgoing, light_direction) +
                                   sample_lights_direction_pdf(scene, lights,
                                       bvh, point.position, light_direction);
+            continue_pdf = sample_brdf_direction_pdf(point.brdf,
+                                     point.normal, outgoing, next_direction);
         } else {
             next_direction   = sample_delta_brdf_direction(point.brdf,
                 point.normal, outgoing, get_random_float(rng),
@@ -1627,6 +1630,7 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
                 point.brdf, point.normal, outgoing, next_direction);
             next_direction_pdf = sample_delta_brdf_direction_pdf(
                 point.brdf, point.normal, outgoing, next_direction);
+            continue_pdf = next_direction_pdf;
         }
 
         // intersect points
@@ -1648,7 +1652,7 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
         // setup next iteration
         point    = next_point;
         outgoing = -next_direction;
-        weight *= next_brdf_cosine / next_direction_pdf;
+        weight *= next_brdf_cosine / continue_pdf;
 
         // russian roulette
         if (sample_russian_roulette(weight, bounce, get_random_float(rng)))
