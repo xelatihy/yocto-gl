@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -245,10 +245,10 @@ yocto_surface displace_surface(const yocto_surface& surface,
         auto qpos = surface.quads_positions[fid];
         auto qtxt = surface.quads_texturecoords[fid];
         for (auto i = 0; i < 4; i++) {
-            offset[at(qpos, i)] += displacement.height_scale *
+            offset[qpos[i]] += displacement.height_scale *
                                    mean(xyz(evaluate_texture(displacement,
-                                       surface.texturecoords[at(qtxt, i)])));
-            count[at(qpos, i)] += 1;
+                                       surface.texturecoords[qtxt[i]])));
+            count[qpos[i]] += 1;
         }
     }
     auto normals = compute_vertex_normals(
@@ -1258,11 +1258,11 @@ vec2i evaluate_texture_size(const yocto_texture& texture) {
 // Lookup a texture value
 vec4f lookup_texture(const yocto_texture& texture, int i, int j) {
     if (!empty(texture.hdr_image)) {
-        return at(texture.hdr_image, i, j);
+        return texture.hdr_image[{i,j}];
     } else if (!empty(texture.ldr_image) && !texture.ldr_as_linear) {
-        return srgb_to_linear(byte_to_float(at(texture.ldr_image, i, j)));
+        return srgb_to_linear(byte_to_float(texture.ldr_image[{i,j}]));
     } else if (!empty(texture.ldr_image) && texture.ldr_as_linear) {
-        return byte_to_float(at(texture.ldr_image, i, j));
+        return byte_to_float(texture.ldr_image[{i,j}]);
     } else {
         return zero4f;
     }
@@ -1311,7 +1311,7 @@ vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord) {
 // Lookup a texture value
 float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k) {
     if (!empty(texture.volume_data)) {
-        return at(texture.volume_data, i, j, k);
+        return texture.volume_data[{i, j, k}];
     } else {
         return 0;
     }

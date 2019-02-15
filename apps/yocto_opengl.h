@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -288,6 +288,8 @@ bool draw_textinput_opengl_widget(
 bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
     float& value, float min, float max);
 bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
+    vec1f& value, float min, float max);
+bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
     vec2f& value, float min, float max);
 bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
     vec3f& value, float min, float max);
@@ -296,6 +298,8 @@ bool draw_slider_opengl_widget(const opengl_window& win, const char* lbl,
 
 bool draw_slider_opengl_widget(
     const opengl_window& win, const char* lbl, int& value, int min, int max);
+bool draw_slider_opengl_widget(
+    const opengl_window& win, const char* lbl, vec1i& value, int min, int max);
 bool draw_slider_opengl_widget(
     const opengl_window& win, const char* lbl, vec2i& value, int min, int max);
 bool draw_slider_opengl_widget(
@@ -306,6 +310,8 @@ bool draw_slider_opengl_widget(
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     float& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec1f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec2f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec3f& value, float speed = 1.0f, float min = 0.0f, float max = 0.0f);
@@ -314,6 +320,8 @@ bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
 
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     int& value, float speed = 1, int min = 0, int max = 0);
+bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
+    vec1i& value, float speed = 1, int min = 0, int max = 0);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,
     vec2i& value, float speed = 1, int min = 0, int max = 0);
 bool draw_dragger_opengl_widget(const opengl_window& win, const char* lbl,

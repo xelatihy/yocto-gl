@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     auto [width, height] = get_camera_image_size(
         scene.cameras[trace_options.camera_id], trace_options.image_width,
         trace_options.image_height);
-    auto image = make_image(width, height, zero4f);
+    auto image = yocto::image{width, height, zero4f};
     auto state = make_trace_state(width, height, trace_options.random_seed);
 
     // render

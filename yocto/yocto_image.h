@@ -9,7 +9,7 @@
 //
 // ## Image Utilities
 //
-// Yocto/Image supports a very small set is color and image utilities including
+// Yocto/Image supports a very small set of color and image utilities including
 // color utilities, example image creation, tone mapping, image resizing, and
 // sunsky procedural images. Yocto/Image is written to support the need of a
 // global illumination renderer, rather than the need of generic image editing.
@@ -17,13 +17,13 @@
 // 4-channels byte images (assumed to be in sRGB).
 //
 //
-// 1. create images with `make_image4f()`/`make_image4b()`
+// 1. store images using the image<T> structure
 // 2. resize images with `resize_image()`
 // 3. tonemap images with `tonemap_image()` that convert from linear HDR to
 //    sRGB LDR with exposure and an optional filmic curve
 // 5. make various image examples with the `make_XXX_image()` functions
 // 6. create procedural sun-sky images with `make_sunsky_image()`
-// 7. load and save image with Yocto/ImageIO
+// 7. load and save images with Yocto/ImageIO
 // 8. many color conversion functions are available in the code below
 //
 //
@@ -31,7 +31,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -85,6 +85,7 @@
 // -----------------------------------------------------------------------------
 
 #include "yocto_math.h"
+#include "yocto_random.h"
 
 // -----------------------------------------------------------------------------
 // IMAGE DATA AND UTILITIES
@@ -92,82 +93,84 @@
 namespace yocto {
 
 // Image container.
-struct image4f {
-    int           width  = 0;
-    int           height = 0;
-    vector<vec4f> pixels = {};
+template <typename T>
+struct image {
+    // data
+    int       width  = 0;
+    int       height = 0;
+    vector<T> pixels = {};
+
+    // constructors
+    image() : width{0}, height{0}, pixels{} {}
+    image(int width, int height, const T& value = {})
+        : width{width}
+        , height{height}
+        , pixels{(size_t)width * (size_t)height, value} {}
+    image(int width, int height, const T* value)
+        : width{width}
+        , height{height}
+        , pixels{value, value + (size_t)width * (size_t)height} {}
+    image(const vec2i& size, const T& value = {})
+        : width{size.x}
+        , height{size.y}
+        , pixels{(size_t)size.x * (size_t)size.y, value} {}
+    image(const vec2i& size, const T* value)
+        : width{size.x}
+        , height{size.y}
+        , pixels{value, value + (size_t)size.x * (size_t)size.y} {}
+
+    // element access
+    T&       operator[](const vec2i& ij) { return pixels[ij.x * width + ij.y]; }
+    const T& operator[](const vec2i& ij) const {
+        return pixels[ij.x * width + ij.y];
+    }
+
+    // row access (will eventually return an array_view or span)
+    T*       operator[](int i) { return pixels.data() + i * width; }
+    const T* operator[](int i) const { return pixels.data() + i * width; }
 };
 
-// Image container.
-struct image4b {
-    int           width  = 0;
-    int           height = 0;
-    vector<vec4b> pixels = {};
-};
-
-// Image creation
-inline image4f make_image(int width, int height, const vec4f& value) {
-    return {width, height, {(size_t)(width * height), value}};
-}
-inline image4b make_image(int width, int height, const vec4b& value) {
-    return {width, height, {(size_t)(width * height), value}};
-}
-inline image4f make_image(int width, int height, const vec4f* values) {
-    return {width, height, {values, values + (size_t)(width * height)}};
-}
-inline image4b make_image(int width, int height, const vec4b* values) {
-    return {width, height, {values, values + (size_t)(width * height)}};
-}
-
-// Pixel access
-inline vec4f& at(image4f& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.width + ij.x];
-}
-inline const vec4f& at(const image4f& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.width + ij.x];
-}
-inline vec4b& at(image4b& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.width + ij.x];
-}
-inline const vec4b& at(const image4b& img, const vec2i& ij) {
-    return img.pixels[ij.y * img.width + ij.x];
-}
-inline vec4f& at(image4f& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
-inline const vec4f& at(const image4f& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
-inline vec4b& at(image4b& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
-inline const vec4b& at(const image4b& img, int i, int j) {
-    return img.pixels[j * img.width + i];
-}
+// Typedefs
+using image4f = image<vec4f>;
+using image4b = image<vec4b>;
 
 // Functions to query image data
-inline vec2i  imsize(const image4f& img) { return {img.width, img.height}; }
-inline vec2i  imsize(const image4b& img) { return {img.width, img.height}; }
-inline bool   empty(const image4f& img) { return empty(img.pixels); }
-inline bool   empty(const image4b& img) { return empty(img.pixels); }
-inline size_t size(const image4f& img) { return img.pixels.size(); }
-inline size_t size(const image4b& img) { return img.pixels.size(); }
-inline vec4f* begin(image4f& img) { return data(img.pixels); }
-inline vec4f* end(image4f& img) { return data(img.pixels) + img.pixels.size(); }
-inline const vec4f* begin(const image4f& img) { return data(img.pixels); }
-inline const vec4f* end(const image4f& img) {
+template <typename T>
+inline vec2i imsize(const image<T>& img) {
+    return {img.width, img.height};
+}
+template <typename T>
+inline bool empty(const image<T>& img) {
+    return empty(img.pixels);
+}
+template <typename T>
+inline size_t size(const image<T>& img) {
+    return img.pixels.size();
+}
+template <typename T>
+inline T* begin(image<T>& img) {
+    return data(img.pixels);
+}
+template <typename T>
+inline T* end(image<T>& img) {
     return data(img.pixels) + img.pixels.size();
 }
-inline vec4b* begin(image4b& img) { return data(img.pixels); }
-inline vec4b* end(image4b& img) { return data(img.pixels) + img.pixels.size(); }
-inline const vec4b* begin(const image4b& img) { return data(img.pixels); }
-inline const vec4b* end(const image4b& img) {
+template <typename T>
+inline const T* begin(const image<T>& img) {
+    return data(img.pixels);
+}
+template <typename T>
+inline const T* end(const image<T>& img) {
     return data(img.pixels) + img.pixels.size();
 }
-inline vec4f*       data(image4f& img) { return data(img.pixels); }
-inline vec4b*       data(image4b& img) { return data(img.pixels); }
-inline const vec4f* data(const image4f& img) { return data(img.pixels); }
-inline const vec4b* data(const image4b& img) { return data(img.pixels); }
+template <typename T>
+inline T* data(image<T>& img) {
+    return data(img.pixels);
+}
+template <typename T>
+inline const T* data(const image<T>& img) {
+    return data(img.pixels);
+}
 
 // Image region
 struct image_region {
@@ -182,8 +185,8 @@ vector<image_region> make_image_regions(
     int width, int height, int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
-image4f get_image_region(const image4f& img, const image_region& region);
-image4b get_image_region(const image4b& img, const image_region& region);
+template <typename T>
+image<T> get_image_region(const image<T>& img, const image_region& region);
 
 // Conversion from/to floats.
 image4f byte_to_float(const image4b& bt);
@@ -269,39 +272,50 @@ image4f add_image_border(const image4f& img, int border_width = 2,
 namespace yocto {
 
 // Volume container.
-struct volume1f {
+template <typename T>
+struct volume {
+    // data
     int           width  = 0;
     int           height = 0;
     int           depth  = 0;
     vector<float> voxels = {};
+
+    // constructors
+    volume() : width{0}, height{0}, depth{0}, voxels{} {}
+    volume(int width, int height, int depth, const T& value)
+        : width{width}
+        , height{height}
+        , depth{depth}
+        , voxels((size_t)width * (size_t)height * (size_t)depth, value) {}
+    volume(int width, int height, int depth, const T* value)
+        : width{width}
+        , height{height}
+        , depth{depth}
+        , voxels(
+              value, value + (size_t)width * (size_t)height * (size_t)depth) {}
+    volume(const vec3i& size, const T& value)
+        : width{size.x}
+        , height{size.y}
+        , depth{size.z}
+        , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+    volume(const vec3i& size, const T* value)
+        : width{size.x}
+        , height{size.y}
+        , depth{size.z}
+        , voxels(
+              value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+
+    // element access
+    T& operator[](const vec3i& ijk) {
+        return voxels[ijk.z * width * height + ijk.y * width + ijk.x];
+    }
+    const T& operator[](const vec3i& ijk) const {
+        return voxels[ijk.z * width * height + ijk.y * width + ijk.x];
+    }
 };
 
-// Image creation
-inline volume1f make_volume(int width, int height, int depth, float value) {
-    return {width, height, depth,
-        vector<float>((size_t)(width * height * depth), value)};
-}
-inline volume1f make_volume(
-    int width, int height, int depth, const float* values) {
-    return {width, height, depth,
-        vector<float>(values, values + (size_t)(width * height * depth))};
-}
-
-// Pixel access
-inline float& at(volume1f& vol, const vec3i& ijk) {
-    return vol
-        .voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
-}
-inline const float& at(const volume1f& vol, const vec3i& ijk) {
-    return vol
-        .voxels[ijk.z * vol.width * vol.height + ijk.y * vol.width + ijk.x];
-}
-inline float& at(volume1f& vol, int i, int j, int k) {
-    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
-}
-inline const float& at(const volume1f& vol, int i, int j, int k) {
-    return vol.voxels[k * vol.width * vol.height + j * vol.width + i];
-}
+// Typedefs
+using volume1f = volume<float>;
 
 // Functions to query volume data
 inline vec3i volsize(const volume1f& vol) {
@@ -580,6 +594,43 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
     float chroma = r - (g < b ? g : b);
     return {
         fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR IMAGE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// Gets pixels in an image region
+template <typename T>
+inline image<T> get_image_region(
+    const image<T>& img, const image_region& region) {
+    auto clipped = image<T>{region.width, region.height};
+    for (auto j = 0; j < region.height; j++) {
+        for (auto i = 0; i < region.width; i++) {
+            clipped[{i, j}] = img[{i + region.offsetx, j + region.offsety}];
+        }
+    }
+    return clipped;
+}
+
+// Splits an image into an array of regions
+inline vector<image_region> make_image_regions(
+    int width, int height, int region_size, bool shuffled) {
+    auto regions = vector<image_region>{};
+    for (auto y = 0; y < height; y += region_size) {
+        for (auto x = 0; x < width; x += region_size) {
+            regions.push_back({x, y, min(region_size, width - x),
+                min(region_size, height - y)});
+        }
+    }
+    if (shuffled) {
+        auto rng = rng_state{};
+        regions  = random_shuffle(regions, rng);
+    }
+    return regions;
 }
 
 }  // namespace yocto

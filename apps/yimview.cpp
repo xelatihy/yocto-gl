@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -34,7 +34,7 @@ using namespace yocto;
 
 struct image_stats {
     bbox4f pxl_bounds = {zero4f, zero4f};
-    bbox1f lum_bounds = {0, 0};
+    bbox1f lum_bounds = {zero1f, zero1f};
 };
 
 struct app_image {
@@ -217,8 +217,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 auto img_pixel = zero4f, display_pixel = zero4f;
                 if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
                     ij.y < img.img.height) {
-                    img_pixel     = at(img.img, ij.x, ij.y);
-                    display_pixel = at(img.display, ij.x, ij.y);
+                    img_pixel     = img.img[{ij.x,ij.y}];
+                    display_pixel = img.display[{ij.x,ij.y}];
                 }
                 draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
                 draw_dragger_opengl_widget(win, "pixel value", display_pixel);
