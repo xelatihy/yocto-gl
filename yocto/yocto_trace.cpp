@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -984,7 +984,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
     auto tr = 1.0f, t = 0.0f;
     auto pos = from;
     while (true) {
-        auto step = -log(1 - get_random_float(rng)) / at(vd, channel);
+        auto step = -log(1 - get_random_float(rng)) / vd[channel];
         t += step;
         if (t >= distance) break;
         pos += dir * step;
@@ -994,7 +994,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
                 scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
-        tr *= 1.0f - max(0.0f, at(density, channel) / at(vd, channel));
+        tr *= 1.0f - max(0.0f, density[channel] / vd[channel]);
     }
     return {tr, tr, tr};
 }
@@ -1002,7 +1002,7 @@ vec3f evaluate_transmission(const yocto_scene& scene,
 float sample_distance(const yocto_scene& scene, const yocto_material& material,
     const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
     auto pos      = from;
-    auto majorant = at(material.volume_density, channel);
+    auto majorant = material.volume_density[channel];
     if (majorant == 0) return float_max;
 
     // delta tracking
@@ -1021,7 +1021,7 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
                 scene.voltextures[material.volume_density_texture];
             density *= evaluate_voltexture(volume_density_texture, pos);
         }
-        if (at(density, channel) / majorant >= get_random_float(rng))
+        if (density[channel] / majorant >= get_random_float(rng))
             return distance;
 
         // Escape from volume.
@@ -1192,15 +1192,15 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
     auto weight = zero3f;
 
     // For the sampled channel, transmission / pdf == 1.0
-    at(weight, ch) = 1.0;
+    weight[ch] = 1.0;
 
     // Compute weight for the remaining channels i.
     // In order to avoid numerical nasties (NaNs) transmission / pdf is
     // evaluated. transmission[i] = exp(-distance * vd[i]) pdf             =
     // exp(-distance * vd[channel])
-    int i = (ch + 1) % 3, j = (ch + 2) % 3;
-    at(weight, i) = exp(-distance * (at(vd, i) - at(vd, ch)));
-    at(weight, j) = exp(-distance * (at(vd, j) - at(vd, ch)));
+    auto i = (ch + 1) % 3, j = (ch + 2) % 3;
+    weight[i] = exp(-distance * (vd[i] - vd[ch]));
+    weight[j] = exp(-distance * (vd[j] - vd[ch]));
     return weight;
 }
 
@@ -1252,9 +1252,9 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // sampled spectrum.
         if (!single_channel && is_material_volume_colored(material) &&
             !is_material_volume_homogeneus(material)) {
-            at(weight, ch) *= 3;
-            at(weight, (ch + 1) % 3) = 0;
-            at(weight, (ch + 2) % 3) = 0;
+            weight[ch] *= 3;
+            weight[(ch + 1) % 3] = 0;
+            weight[(ch + 2) % 3] = 0;
             single_channel           = true;
         }
 
@@ -1386,7 +1386,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // medium interaction
         else {
             ray.o += ray.d * distance;
-            float scattering_prob = at(va, ch);
+            float scattering_prob = va[ch];
 
             // absorption and emission
             if (get_random_float(rng) >= scattering_prob) {
@@ -1946,7 +1946,7 @@ void trace_image_region(image4f& image, trace_state& state,
             }
             auto radiance   = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
             auto coverage   = (float)pixel.hits / (float)pixel.samples;
-            at(image, i, j) = {radiance.x, radiance.y, radiance.z, coverage};
+            image[{i,j}] = {radiance.x, radiance.y, radiance.z, coverage};
         }
     }
 }
@@ -2017,7 +2017,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto [width, height] = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.image_width,
         options.image_height);
-    auto image   = make_image(width, height, zero4f);
+    auto image   = yocto::image{width, height, zero4f};
     auto pixels  = make_trace_state(width, height, options.random_seed);
     auto regions = make_image_regions(
         image.width, image.height, options.region_size, true);
@@ -2091,7 +2091,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
     auto& camera         = scene.cameras.at(options.camera_id);
     auto [width, height] = get_camera_image_size(
         camera, options.image_width, options.image_height);
-    image        = make_image(width, height, zero4f);
+    image        = {width, height, zero4f};
     state        = make_trace_state(width, height, options.random_seed);
     auto regions = make_image_regions(
         image.width, image.height, options.region_size, true);

@@ -1,7 +1,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
@@ -99,8 +99,8 @@ void start_rendering_async(app_state& app) {
     tie(app.image_width, app.image_height) = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
         app.trace_options.image_width, app.trace_options.image_height);
-    app.image   = make_image(app.image_width, app.image_height, zero4f);
-    app.display = make_image(app.image_width, app.image_height, zero4f);
+    app.image   = {app.image_width, app.image_height, zero4f};
+    app.display = {app.image_width, app.image_height, zero4f};
     app.state   = make_trace_state(
         app.image_width, app.image_height, app.trace_options.random_seed);
 
@@ -111,14 +111,14 @@ void start_rendering_async(app_state& app) {
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = tonemap_image(
         app.preview, app.exposure, app.filmic, app.srgb);
-    auto large_preview = make_image(app.image_width, app.image_height, zero4f);
+    auto large_preview = image{app.image_width, app.image_height, zero4f};
     for (auto j = 0; j < app.image_height; j++) {
         for (auto i = 0; i < app.image_width; i++) {
             auto pi = clamp(
                      i / app.preview_ratio, 0, display_preview.width - 1),
                  pj = clamp(
                      j / app.preview_ratio, 0, display_preview.height - 1);
-            at(large_preview, i, j) = at(display_preview, pi, pj);
+            large_preview[{i,j}] = display_preview[{pi,pj}];
         }
     }
     app.preview = large_preview;
@@ -267,7 +267,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 if (ij.x >= 0 && ij.x < app.image.width && ij.y >= 0 &&
                     ij.y < app.image.height) {
                     draw_coloredit_opengl_widget(
-                        win, "pixel", at(app.image, ij.x, ij.y));
+                        win, "pixel", app.image[{ij.x,ij.y}]);
                 } else {
                     auto zero4f_ = zero4f;
                     draw_coloredit_opengl_widget(win, "pixel", zero4f_);

@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -230,7 +230,7 @@ bool load_pfm_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image(width, height, (vec4f*)data(pixels));
+    img = image{width, height, (const vec4f*)data(pixels)};
     return true;
 }
 bool save_pfm_image(const string& filename, const image4f& img) {
@@ -245,8 +245,8 @@ bool save_pfm_image(const string& filename, const image4f& img) {
 // load exr image weith tiny exr
 bool load_exr_image(const string& filename, image4f& img) {
     auto width = 0, height = 0;
-    auto pixels = (vec4f*)nullptr;
-    if (LoadEXR((float**)&pixels, &width, &height, filename.c_str(), nullptr) <
+    auto pixels = (float*)nullptr;
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) <
         0) {
         log_io_error("error loading image {}", filename);
         return false;
@@ -255,7 +255,7 @@ bool load_exr_image(const string& filename, image4f& img) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image(width, height, pixels);
+    img = image{width, height, (const vec4f*)pixels};
     free(pixels);
     return true;
 }
@@ -271,25 +271,25 @@ bool save_exr_image(const string& filename, const image4f& img) {
 // load an image using stbi library
 bool load_stb_image(const string& filename, image4b& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4b*)stbi_load(
+    auto pixels = stbi_load(
         filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image(width, height, pixels);
+    img = image{width, height, (const vec4b*)pixels};
     free(pixels);
     return true;
 }
 bool load_stb_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4f*)stbi_loadf(
+    auto pixels = stbi_loadf(
         filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading image {}", filename);
         return false;
     }
-    img = make_image(width, height, pixels);
+    img = image{width, height, (const vec4f*)pixels};
     free(pixels);
     return true;
 }
@@ -339,26 +339,26 @@ bool save_hdr_image(const string& filename, const image4f& img) {
 // load an image using stbi library
 bool load_stb_image_from_memory(const byte* data, int data_size, image4b& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4b*)stbi_load_from_memory(
+    auto pixels = stbi_load_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading in-memory image");
         return false;
     }
-    img = make_image(width, height, pixels);
+    img = image{width, height, (const vec4b*)pixels};
     free(pixels);
     return true;
 }
 bool load_stbi_image_from_memory(
     const byte* data, int data_size, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = (vec4f*)stbi_loadf_from_memory(
+    auto pixels = stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading in-memory image {}");
         return false;
     }
-    img = make_image(width, height, pixels);
+    img = image{width, height, (const vec4f*)pixels};
     free(pixels);
     return true;
 }
@@ -368,7 +368,7 @@ bool apply_json_procedural(const json& js, image4f& img) {
     auto width  = get_json_value(js, "width", 1024);
     auto height = get_json_value(js, "height", 1024);
     if (type == "") {
-        img = make_image(width, height, zero4f);
+        img = image{width, height, zero4f};
     } else if (type == "grid") {
         img = make_grid_image(width, height, get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
@@ -636,7 +636,7 @@ image4f resize_image(const image4f& img, int width, int height) {
     } else if (width == 0) {
         width = (int)round(height * (float)img.width / (float)img.height);
     }
-    auto res_img = make_image(width, height, zero4f);
+    auto res_img = image{width, height, zero4f};
     stbir_resize_float_generic((float*)data(img), img.width, img.height,
         sizeof(vec4f) * img.width, (float*)data(res_img), res_img.width,
         res_img.height, sizeof(vec4f) * res_img.width, 4, 3, 0,
