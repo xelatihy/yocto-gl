@@ -709,7 +709,8 @@ void add_sky_environment(yocto_scene& scene, float sun_angle) {
     auto texture      = yocto_texture{};
     texture.name      = "<sky>";
     texture.filename  = "textures/sky.hdr";
-    texture.hdr_image = make_sunsky_image(1024, 512, sun_angle);
+    texture.hdr_image.resize(1024, 512);
+    make_sunsky_image(texture.hdr_image, sun_angle);
     scene.textures.push_back(texture);
     auto environment             = yocto_environment{};
     environment.name             = "<sky>";
