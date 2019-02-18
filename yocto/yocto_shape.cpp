@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -1177,8 +1177,8 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
     for (int face = 0; face < triangles.size(); ++face) {
         int steiner_idx[3];
         for (int k : {0, 1, 2}) {
-            int a          = at(triangles[face], k);
-            int b          = at(triangles[face], (k + 1) % 3);
+            int a          = triangles[face][k];
+            int b          = triangles[face][(k + 1) % 3];
             steiner_idx[k] = steiner_per_edge[get_edge_index(emap, {a, b})];
         }
 
@@ -1268,8 +1268,8 @@ geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
     for (int face = 0; face < triangles.size(); ++face) {
         int steiner_idx[3];
         for (int k : {0, 1, 2}) {
-            int a          = at(triangles[face], k);
-            int b          = at(triangles[face], (k + 1) % 3);
+            int a          = triangles[face][k];
+            int b          = triangles[face][(k + 1) % 3];
             steiner_idx[k] = steiner_per_edge[get_edge_index(solver, {a, b})];
         }
 

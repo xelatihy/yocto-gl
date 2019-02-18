@@ -5,7 +5,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -158,6 +158,9 @@ inline string_view_stream& operator>>(
 }
 
 // Iostream utilities for basic types
+inline string_view_stream& operator>>(string_view_stream& is, vec1f& value) {
+    return is >> value.x;
+}
 inline string_view_stream& operator>>(string_view_stream& is, vec2f& value) {
     return is >> value.x >> value.y;
 }
@@ -166,6 +169,9 @@ inline string_view_stream& operator>>(string_view_stream& is, vec3f& value) {
 }
 inline string_view_stream& operator>>(string_view_stream& is, vec4f& value) {
     return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline string_view_stream& operator>>(string_view_stream& is, vec1i& value) {
+    return is >> value.x;
 }
 inline string_view_stream& operator>>(string_view_stream& is, vec2i& value) {
     return is >> value.x >> value.y;
@@ -255,13 +261,13 @@ inline void from_json(const json& js, image4f& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<vec4f>>();
-    value       = make_image(width, height, data(pixels));
+    value       = image{width, height, (const vec4f*)data(pixels)};
 }
 inline void from_json(const json& js, image4b& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<vec4b>>();
-    value       = make_image(width, height, data(pixels));
+    value       = image{width, height, (const vec4b*)data(pixels)};
 }
 inline void to_json(json& js, const volume1f& value) {
     js           = json::object();
@@ -276,7 +282,7 @@ inline void from_json(const json& js, volume1f& value) {
     auto height = js.at("height").get<int>();
     auto depth  = js.at("depth").get<int>();
     auto voxels = js.at("voxels").get<vector<float>>();
-    value       = make_volume(width, height, depth, data(voxels));
+    value       = volume{width, height, depth, (const float*)data(voxels)};
 }
 
 // Dumps a json value
@@ -296,7 +302,7 @@ inline bool serialize_json_value(json& js, image4f& value, bool save) {
     auto width = 0, height = 0;
     if (!serialize_json_value(js, width, "width", -1, save)) return false;
     if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!save) value = make_image(width, height, zero4f);
+    if (!save) value = image{width, height, zero4f};
     if (!serialize_json_values(js, data(value), width * height, "pixels", save))
         return false;
     return true;
@@ -305,7 +311,7 @@ inline bool serialize_json_value(json& js, image4b& value, bool save) {
     auto width = 0, height = 0;
     if (!serialize_json_value(js, width, "width", -1, save)) return false;
     if (!serialize_json_value(js, height, "height", -1, save)) return false;
-    if (!save) value = make_image(width, height, zero4b);
+    if (!save) value = image{width, height, zero4b};
     if (!serialize_json_values(js, data(value), width * height, "pixels", save))
         return false;
     return true;
@@ -316,7 +322,7 @@ inline bool serialize_json_value(json& js, volume1f& value, bool save) {
     if (!serialize_json_value(js, width, "width", -1, save)) return false;
     if (!serialize_json_value(js, height, "height", -1, save)) return false;
     if (!serialize_json_value(js, depth, "depth", -1, save)) return false;
-    if (!save) value = make_volume(width, height, depth, 0.0f);
+    if (!save) value = {width, height, depth, 0.0f};
     if (!serialize_json_values(
             js, data(value), width * height * depth, "voxels", save))
         return false;

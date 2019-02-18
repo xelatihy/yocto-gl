@@ -76,7 +76,7 @@
 //
 // LICENSE:
 //
-// Copyright (c) 2016 -- 2018 Fabio Pellacini
+// Copyright (c) 2016 -- 2019 Fabio Pellacini
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -228,9 +228,11 @@ inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 namespace yocto {
 
 // Iostream utilities for basic types
+inline ostream& operator<<(ostream& os, const vec1f& value);
 inline ostream& operator<<(ostream& os, const vec2f& value);
 inline ostream& operator<<(ostream& os, const vec3f& value);
 inline ostream& operator<<(ostream& os, const vec4f& value);
+inline ostream& operator<<(ostream& os, const vec1i& value);
 inline ostream& operator<<(ostream& os, const vec2i& value);
 inline ostream& operator<<(ostream& os, const vec3i& value);
 inline ostream& operator<<(ostream& os, const vec4i& value);
@@ -247,9 +249,11 @@ inline ostream& operator<<(ostream& os, const bbox3f& value);
 inline ostream& operator<<(ostream& os, const bbox4f& value);
 
 // Iostream utilities for basic types
+inline istream& operator>>(istream& is, vec1f& value);
 inline istream& operator>>(istream& is, vec2f& value);
 inline istream& operator>>(istream& is, vec3f& value);
 inline istream& operator>>(istream& is, vec4f& value);
+inline istream& operator>>(istream& is, vec1i& value);
 inline istream& operator>>(istream& is, vec2i& value);
 inline istream& operator>>(istream& is, vec3i& value);
 inline istream& operator>>(istream& is, vec4i& value);
@@ -704,6 +708,9 @@ inline void set_log_file(const string& filename, bool append) {
 namespace yocto {
 
 // Iostream utilities for basic types
+inline ostream& operator<<(ostream& os, const vec1f& value) {
+    return os << value.x;
+}
 inline ostream& operator<<(ostream& os, const vec2f& value) {
     return os << value.x << " " << value.y;
 }
@@ -712,6 +719,9 @@ inline ostream& operator<<(ostream& os, const vec3f& value) {
 }
 inline ostream& operator<<(ostream& os, const vec4f& value) {
     return os << value.x << " " << value.y << " " << value.z << " " << value.w;
+}
+inline ostream& operator<<(ostream& os, const vec1i& value) {
+    return os << value.x;
 }
 inline ostream& operator<<(ostream& os, const vec2i& value) {
     return os << value.x << " " << value.y;
@@ -759,6 +769,9 @@ inline ostream& operator<<(ostream& os, const bbox4f& value) {
 }
 
 // Iostream utilities for basic types
+inline istream& operator>>(istream& is, vec1f& value) {
+    return is >> value.x;
+}
 inline istream& operator>>(istream& is, vec2f& value) {
     return is >> value.x >> value.y;
 }
@@ -767,6 +780,9 @@ inline istream& operator>>(istream& is, vec3f& value) {
 }
 inline istream& operator>>(istream& is, vec4f& value) {
     return is >> value.x >> value.y >> value.z >> value.w;
+}
+inline istream& operator>>(istream& is, vec1i& value) {
+    return is >> value.x;
 }
 inline istream& operator>>(istream& is, vec2i& value) {
     return is >> value.x >> value.y;
