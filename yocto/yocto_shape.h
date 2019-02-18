@@ -318,13 +318,17 @@ void ungroup_quads(vector<vector<vec4i>>& split_quads,
     const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.
-tuple<vector<vec3f>, vector<int>> weld_vertices(
+void weld_vertices(
+    vector<vec3f>& welded_positions, vector<int>& welded_indices,
     const vector<vec3f>& positions, float threshold);
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
+void weld_triangles(
+    vector<vec3i>& welded_triangles, vector<vec3f>& welded_positions, 
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold);
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold);
+void weld_quads(
+    vector<vec4i>& welded_quads, vector<vec3f>& welded_positions, 
+    const vector<vec4i>& quads, const vector<vec3f>& positions, 
+    float threshold);
 
 // Merge shape elements
 void merge_lines(

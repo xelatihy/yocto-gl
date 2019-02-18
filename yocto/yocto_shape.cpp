@@ -450,10 +450,11 @@ void ungroup_quads(vector<vector<vec4i>>& split_quads,
 }
 
 // Weld vertices within a threshold.
-tuple<vector<vec3f>, vector<int>> weld_vertices(
+void weld_vertices(
+    vector<vec3f>& welded_positions, vector<int>& welded_indices,
     const vector<vec3f>& positions, float threshold) {
-    auto welded_indices   = vector<int>(positions.size());
-    auto welded_positions = vector<vec3f>();
+    welded_indices.resize(positions.size());
+    welded_positions.clear();
     auto grid             = make_hash_grid(threshold);
     for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
         auto& position   = positions[vertex_id];
@@ -477,25 +478,27 @@ tuple<vector<vec3f>, vector<int>> weld_vertices(
     //     if (welded_indices[i] == (int)welded_positions.size())
     //         welded_positions.push_back(positions[i]);
     // }
-    return {welded_positions, welded_indices};
 }
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
+void weld_triangles(
+    vector<vec3i>& welded_triangles, vector<vec3f>& welded_positions, 
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     float threshold) {
-    auto [welded_positions, welded_indices] = weld_vertices(
+    auto welded_indices = vector<int>{};
+    weld_vertices(welded_positions, welded_indices,
         positions, threshold);
-    auto welded_triangles = vector<vec3i>{};
+    welded_triangles.clear();
     for (auto& t : triangles) {
         welded_triangles.push_back(
             {welded_indices[t.x], welded_indices[t.y], welded_indices[t.z]});
     }
-    return {welded_triangles, welded_positions};
 }
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold) {
-    auto [welded_positions, welded_indices] = weld_vertices(
+void weld_quads(
+    vector<vec4i>& welded_quads, vector<vec3f>& welded_positions, 
+    const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold) {
+    auto welded_indices = vector<int>{};
+    weld_vertices(welded_positions, welded_indices,
         positions, threshold);
-    auto welded_quads = vector<vec4i>{};
+    welded_quads.clear();
     for (auto& q : quads) {
         welded_quads.push_back({
             welded_indices[q.x],
@@ -504,7 +507,6 @@ tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
             welded_indices[q.w],
         });
     }
-    return {welded_quads, welded_positions};
 }
 
 // Merge shape elements
@@ -1813,7 +1815,8 @@ make_fvshape_quads make_cube_fvshape(
     auto quads_positions            = quads;
     auto quads_normals              = quads;
     auto quads_texturecoords        = quads;
-    tie(quads_positions, positions) = weld_quads(quads_positions, positions,
+    auto positions_ = positions;
+    weld_quads(quads_positions, positions, quads, positions_,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
     return {quads_positions, quads_normals, quads_texturecoords, positions,
