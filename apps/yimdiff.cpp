@@ -39,10 +39,9 @@ image4f compute_diff_image(const image4f& a, const image4f& b) {
     auto diff = image{a.width, a.height, zero4f};
     for (auto j = 0; j < a.height; j++) {
         for (auto i = 0; i < a.width; i++) {
-            diff[{i,j}] = {abs(a[{i,j}].x - b[{i,j}].x),
-                abs(a[{i,j}].y - b[{i,j}].y),
-                abs(a[{i,j}].z - b[{i,j}].z),
-                abs(a[{i,j}].w - b[{i,j}].w)};
+            diff[{i, j}] = {abs(a[{i, j}].x - b[{i, j}].x),
+                abs(a[{i, j}].y - b[{i, j}].y), abs(a[{i, j}].z - b[{i, j}].z),
+                abs(a[{i, j}].w - b[{i, j}].w)};
         }
     }
     return diff;
@@ -61,8 +60,8 @@ image4f display_diff(const image4f& diff) {
     auto display = image{diff.width, diff.height, zero4f};
     for (auto j = 0; j < diff.height; j++) {
         for (auto i = 0; i < diff.width; i++) {
-            auto diff_value   = max(diff[{i,j}]);
-            display[{i,j}] = {diff_value, diff_value, diff_value, 1};
+            auto diff_value = max(diff[{i, j}]);
+            display[{i, j}] = {diff_value, diff_value, diff_value, 1};
         }
     }
     return display;

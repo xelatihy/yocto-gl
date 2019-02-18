@@ -318,7 +318,8 @@ vector<int> find_nearest_neightbors(
 namespace yocto {
 
 // Convert quads to triangles
-void convert_quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads) {
+void convert_quads_to_triangles(
+    vector<vec3i>& triangles, const vector<vec4i>& quads) {
     triangles.clear();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
@@ -329,8 +330,8 @@ void convert_quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& q
 
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-void convert_quads_to_triangles(vector<vec3i>& triangles,
-    const vector<vec4i>& quads, int row_length) {
+void convert_quads_to_triangles(
+    vector<vec3i>& triangles, const vector<vec4i>& quads, int row_length) {
     triangles.clear();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
@@ -354,14 +355,16 @@ void convert_quads_to_triangles(vector<vec3i>& triangles,
 }
 
 // Convert triangles to quads by creating degenerate quads
-void convert_triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles) {
+void convert_triangles_to_quads(
+    vector<vec4i>& quads, const vector<vec3i>& triangles) {
     quads.clear();
     quads.reserve(triangles.size());
     for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
-void convert_bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers) {
+void convert_bezier_to_lines(
+    vector<vec2i>& lines, const vector<vec4i>& beziers) {
     lines.clear();
     lines.reserve(beziers.size() * 3);
     for (auto b : beziers) {
@@ -428,9 +431,9 @@ void convert_face_varying(vector<vec4i>& split_quads,
 
 // Split primitives per id
 template <typename T>
-void ungroup_elems(vector<vector<T>>& split_elems,
-    const vector<T>& elems, const vector<int>& ids) {
-    auto max_id      = *max_element(ids.begin(), ids.end());
+void ungroup_elems(vector<vector<T>>& split_elems, const vector<T>& elems,
+    const vector<int>& ids) {
+    auto max_id = *max_element(ids.begin(), ids.end());
     split_elems.resize(max_id + 1);
     for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
         split_elems[ids[elem_id]].push_back(elems[elem_id]);
@@ -450,12 +453,11 @@ void ungroup_quads(vector<vector<vec4i>>& split_quads,
 }
 
 // Weld vertices within a threshold.
-void weld_vertices(
-    vector<vec3f>& welded_positions, vector<int>& welded_indices,
+void weld_vertices(vector<vec3f>& welded_positions, vector<int>& welded_indices,
     const vector<vec3f>& positions, float threshold) {
     welded_indices.resize(positions.size());
     welded_positions.clear();
-    auto grid             = make_hash_grid(threshold);
+    auto grid = make_hash_grid(threshold);
     for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
         auto& position   = positions[vertex_id];
         auto  neighboors = find_nearest_neightbors(grid, position, threshold);
@@ -479,25 +481,22 @@ void weld_vertices(
     //         welded_positions.push_back(positions[i]);
     // }
 }
-void weld_triangles(
-    vector<vec3i>& welded_triangles, vector<vec3f>& welded_positions, 
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    float threshold) {
+void weld_triangles(vector<vec3i>& welded_triangles,
+    vector<vec3f>& welded_positions, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold) {
     auto welded_indices = vector<int>{};
-    weld_vertices(welded_positions, welded_indices,
-        positions, threshold);
+    weld_vertices(welded_positions, welded_indices, positions, threshold);
     welded_triangles.clear();
     for (auto& t : triangles) {
         welded_triangles.push_back(
             {welded_indices[t.x], welded_indices[t.y], welded_indices[t.z]});
     }
 }
-void weld_quads(
-    vector<vec4i>& welded_quads, vector<vec3f>& welded_positions, 
-    const vector<vec4i>& quads, const vector<vec3f>& positions, float threshold) {
+void weld_quads(vector<vec4i>& welded_quads, vector<vec3f>& welded_positions,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
+    float threshold) {
     auto welded_indices = vector<int>{};
-    weld_vertices(welded_positions, welded_indices,
-        positions, threshold);
+    weld_vertices(welded_positions, welded_indices, positions, threshold);
     welded_quads.clear();
     for (auto& q : quads) {
         welded_quads.push_back({
@@ -1812,10 +1811,10 @@ make_fvshape_quads make_cube_fvshape(
     const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
     auto [quads, positions, normals, texturecoords] = make_cube_shape(
         steps, size, uvsize);
-    auto quads_positions            = quads;
-    auto quads_normals              = quads;
-    auto quads_texturecoords        = quads;
-    auto positions_ = positions;
+    auto quads_positions     = quads;
+    auto quads_normals       = quads;
+    auto quads_texturecoords = quads;
+    auto positions_          = positions;
     weld_quads(quads_positions, positions, quads, positions_,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));

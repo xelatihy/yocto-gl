@@ -1255,7 +1255,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             weight[ch] *= 3;
             weight[(ch + 1) % 3] = 0;
             weight[(ch + 2) % 3] = 0;
-            single_channel           = true;
+            single_channel       = true;
         }
 
         // TODO: FIXME REMOVING BBOX
@@ -1620,8 +1620,8 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
                                       point.normal, outgoing, light_direction) +
                                   sample_lights_direction_pdf(scene, lights,
                                       bvh, point.position, light_direction);
-            continue_pdf = sample_brdf_direction_pdf(point.brdf,
-                                     point.normal, outgoing, next_direction);
+            continue_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
         } else {
             next_direction   = sample_delta_brdf_direction(point.brdf,
                 point.normal, outgoing, get_random_float(rng),
@@ -1944,9 +1944,9 @@ void trace_image_region(image4f& image, trace_state& state,
                 pixel.hits += hit ? 1 : 0;
                 pixel.samples += 1;
             }
-            auto radiance   = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
-            auto coverage   = (float)pixel.hits / (float)pixel.samples;
-            image[{i,j}] = {radiance.x, radiance.y, radiance.z, coverage};
+            auto radiance = pixel.hits ? pixel.radiance / pixel.hits : zero3f;
+            auto coverage = (float)pixel.hits / (float)pixel.samples;
+            image[{i, j}] = {radiance.x, radiance.y, radiance.z, coverage};
         }
     }
 }
@@ -2129,7 +2129,8 @@ void trace_image_async_start(image4f& image, trace_state& state,
             current_sample   = sample;
             auto num_samples = min(options.samples_per_batch,
                 options.num_samples - current_sample);
-            parallel_foreach(regions,
+            parallel_foreach(
+                regions,
                 [num_samples, &options, &image, &scene, &lights, &bvh, &state,
                     &queue](const image_region& region) {
                     trace_image_region(image, state, scene, bvh, lights, region,

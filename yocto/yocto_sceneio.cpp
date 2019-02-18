@@ -389,7 +389,8 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
 
     // load images
     atomic<bool> exit_error(false);
-    parallel_foreach(scene.textures,
+    parallel_foreach(
+        scene.textures,
         [&exit_error, &options, &dirname](yocto_texture& texture) {
             if (exit_error) return;
             if (texture.filename == "" || !empty(texture.hdr_image) ||
@@ -416,7 +417,8 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
     if (exit_error) return false;
 
     // load volumes
-    parallel_foreach(scene.voltextures,
+    parallel_foreach(
+        scene.voltextures,
         [&exit_error, &options, &dirname](yocto_voltexture& texture) {
             if (exit_error) return;
             if (texture.filename == "" || !empty(texture.volume_data)) return;
@@ -474,7 +476,8 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
 
     // save images
     atomic<bool> exit_error(false);
-    parallel_foreach(scene.textures,
+    parallel_foreach(
+        scene.textures,
         [&exit_error, &options, &dirname](const yocto_texture& texture) {
             if (exit_error) return;
             if (empty(texture.hdr_image) && empty(texture.ldr_image)) return;
@@ -499,7 +502,8 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
     if (exit_error) return false;
 
     // save volumes
-    parallel_foreach(scene.voltextures,
+    parallel_foreach(
+        scene.voltextures,
         [&exit_error, &options, &dirname](const yocto_voltexture& texture) {
             if (exit_error) return;
             if (empty(texture.volume_data)) return;
@@ -866,13 +870,11 @@ bool apply_json_procedural(
     if (type == "sky" && width < height * 2) width = height * 2;
     value.hdr_image.resize(width, height);
     if (type == "grid") {
-        make_grid_image(value.hdr_image,
-            get_json_value(js, "tile", 8),
+        make_grid_image(value.hdr_image, get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "checker") {
-        make_checker_image(value.hdr_image,
-            get_json_value(js, "tile", 8),
+        make_checker_image(value.hdr_image, get_json_value(js, "tile", 8),
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
@@ -893,20 +895,17 @@ bool apply_json_procedural(
             get_json_value(js, "sun_intensity", 1.0f),
             get_json_value(js, "sun_temperature", 0.0f),
             get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
-        is_hdr          = true;
+        is_hdr = true;
     } else if (type == "noise") {
-        make_noise_image(value.hdr_image,
-            get_json_value(js, "scale", 1.0f),
+        make_noise_image(value.hdr_image, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(value.hdr_image,
-            get_json_value(js, "scale", 1.0f),
+        make_fbm_image(value.hdr_image, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
             get_json_value(js, "wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(value.hdr_image,
-            get_json_value(js, "scale", 1.0f),
+        make_ridge_image(value.hdr_image, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f),
             get_json_value(js, "offset", 1.0f),
@@ -922,8 +921,7 @@ bool apply_json_procedural(
         return false;
     }
     if (get_json_value(js, "border", false)) {
-        add_image_border(value.hdr_image,
-            get_json_value(js, "border_width", 2),
+        add_image_border(value.hdr_image, get_json_value(js, "border_width", 2),
             get_json_value(js, "border_color", vec4f{0, 0, 0, 1}));
     }
     if (get_json_value(js, "bump_to_normal", false)) {
@@ -993,8 +991,7 @@ bool apply_json_procedural(
     auto depth  = get_json_value(js, "depth", 512);
     value.volume_data.resize(width, height, depth);
     if (type == "test_volume") {
-        make_test_volume(value.volume_data,
-            get_json_value(js, "scale", 10.0f),
+        make_test_volume(value.volume_data, get_json_value(js, "scale", 10.0f),
             get_json_value(js, "exponent", 6.0f));
     } else {
         log_error("unknown texture type {}", type);
@@ -1833,7 +1830,8 @@ bool load_json_meshes(yocto_scene& scene, const string& dirname,
 
     // load shapes
     atomic<bool> exit_error(false);
-    parallel_foreach(scene.shapes,
+    parallel_foreach(
+        scene.shapes,
         [&exit_error, &options, &dirname](yocto_shape& shape) {
             if (exit_error) return;
             if (shape.filename == "" || !empty(shape.positions)) return;
@@ -1851,7 +1849,8 @@ bool load_json_meshes(yocto_scene& scene, const string& dirname,
     if (exit_error) return false;
 
     // load surfaces
-    parallel_foreach(scene.surfaces,
+    parallel_foreach(
+        scene.surfaces,
         [&exit_error, &options, &dirname](yocto_surface& surface) {
             if (exit_error) return;
             if (surface.filename == "" || !empty(surface.positions)) return;
@@ -1918,7 +1917,8 @@ bool save_json_meshes(const yocto_scene& scene, const string& dirname,
 
     // save shapes
     atomic<bool> exit_error(false);
-    parallel_foreach(scene.shapes,
+    parallel_foreach(
+        scene.shapes,
         [&exit_error, &options, &dirname](const yocto_shape& shape) {
             if (exit_error) return;
             if (shape.filename == "") return;
@@ -1936,7 +1936,8 @@ bool save_json_meshes(const yocto_scene& scene, const string& dirname,
     if (exit_error) return false;
 
     // save surfaces
-    parallel_foreach(scene.surfaces,
+    parallel_foreach(
+        scene.surfaces,
         [&exit_error, &options, &dirname](const yocto_surface& surface) {
             if (exit_error) return;
             if (surface.filename == "") return;

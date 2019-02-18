@@ -101,7 +101,8 @@ void update_display_async(app_image& img) {
     img.display_done = false;
     img.texture_done = false;
     auto regions     = make_image_regions(img.img.width, img.img.height);
-    parallel_foreach(regions,
+    parallel_foreach(
+        regions,
         [&img](const image_region& region) {
             tonemap_image_region(img.display, region, img.img, img.exposure,
                 img.filmic, img.srgb);
@@ -217,8 +218,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 auto img_pixel = zero4f, display_pixel = zero4f;
                 if (ij.x >= 0 && ij.x < img.img.width && ij.y >= 0 &&
                     ij.y < img.img.height) {
-                    img_pixel     = img.img[{ij.x,ij.y}];
-                    display_pixel = img.display[{ij.x,ij.y}];
+                    img_pixel     = img.img[{ij.x, ij.y}];
+                    display_pixel = img.display[{ij.x, ij.y}];
                 }
                 draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
                 draw_dragger_opengl_widget(win, "pixel value", display_pixel);

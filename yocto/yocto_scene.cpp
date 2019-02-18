@@ -75,7 +75,7 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
 
 // Compute vertex normals
 vector<vec3f> compute_shape_normals(const yocto_shape& shape) {
-    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1}); 
+    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1});
     if (!empty(shape.points)) {
     } else if (!empty(shape.lines)) {
         compute_vertex_tangents(normals, shape.lines, shape.positions);
@@ -91,7 +91,7 @@ vector<vec3f> compute_shape_normals(const yocto_shape& shape) {
 
 // Compute vertex normals
 vector<vec3f> compute_surface_normals(const yocto_surface& shape) {
-    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1}); 
+    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1});
     if (!empty(shape.quads_positions)) {
         compute_vertex_normals(normals, shape.quads_positions, shape.positions);
     } else {
@@ -251,14 +251,13 @@ yocto_surface displace_surface(const yocto_surface& surface,
         auto qtxt = surface.quads_texturecoords[fid];
         for (auto i = 0; i < 4; i++) {
             offset[qpos[i]] += displacement.height_scale *
-                                   mean(xyz(evaluate_texture(displacement,
-                                       surface.texturecoords[qtxt[i]])));
+                               mean(xyz(evaluate_texture(displacement,
+                                   surface.texturecoords[qtxt[i]])));
             count[qpos[i]] += 1;
         }
     }
     auto normals = vector<vec3f>{surface.positions.size()};
-    compute_vertex_normals(normals,
-        surface.quads_positions, surface.positions);
+    compute_vertex_normals(normals, surface.quads_positions, surface.positions);
     for (auto vid = 0; vid < surface.positions.size(); vid++) {
         displaced_surface.positions[vid] += normals[vid] * offset[vid] /
                                             count[vid];
@@ -663,8 +662,8 @@ void add_missing_tangent_space(yocto_scene& scene) {
         if (!empty(shape.triangles)) {
             if (empty(shape.normals)) {
                 shape.normals.resize(shape.positions.size());
-                compute_vertex_normals(shape.normals,
-                    shape.triangles, shape.positions);
+                compute_vertex_normals(
+                    shape.normals, shape.triangles, shape.positions);
             }
             shape.tangentspaces.resize(shape.positions.size());
             compute_tangent_spaces(shape.tangentspaces, shape.triangles,
@@ -715,9 +714,9 @@ void add_missing_cameras(yocto_scene& scene) {
 
 // Add a sky environment
 void add_sky_environment(yocto_scene& scene, float sun_angle) {
-    auto texture      = yocto_texture{};
-    texture.name      = "<sky>";
-    texture.filename  = "textures/sky.hdr";
+    auto texture     = yocto_texture{};
+    texture.name     = "<sky>";
+    texture.filename = "textures/sky.hdr";
     texture.hdr_image.resize(1024, 512);
     make_sunsky_image(texture.hdr_image, sun_angle);
     scene.textures.push_back(texture);
@@ -1268,11 +1267,11 @@ vec2i evaluate_texture_size(const yocto_texture& texture) {
 // Lookup a texture value
 vec4f lookup_texture(const yocto_texture& texture, int i, int j) {
     if (!empty(texture.hdr_image)) {
-        return texture.hdr_image[{i,j}];
+        return texture.hdr_image[{i, j}];
     } else if (!empty(texture.ldr_image) && !texture.ldr_as_linear) {
-        return srgb_to_linear(byte_to_float(texture.ldr_image[{i,j}]));
+        return srgb_to_linear(byte_to_float(texture.ldr_image[{i, j}]));
     } else if (!empty(texture.ldr_image) && texture.ldr_as_linear) {
-        return byte_to_float(texture.ldr_image[{i,j}]);
+        return byte_to_float(texture.ldr_image[{i, j}]);
     } else {
         return zero4f;
     }

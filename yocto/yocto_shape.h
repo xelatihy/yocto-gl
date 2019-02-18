@@ -205,8 +205,8 @@ void compute_vertex_tangents(vector<vec3f>& tangents,
     const vector<vec2i>& lines, const vector<vec3f>& positions);
 void compute_vertex_normals(vector<vec3f>& normals,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void compute_vertex_normals(vector<vec3f>& normals,
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
+void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+    const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
 // Tangent space is defined by a four component vector.
@@ -214,21 +214,19 @@ void compute_vertex_normals(vector<vec3f>& normals,
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
 void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
-    const vector<vec3i>& triangles, const vector<vec3f>& positions, 
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-void compute_skinning(
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals, 
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms);
+void compute_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-void compute_matrix_skinning(
-    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals, 
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms);
+void compute_matrix_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms);
 
 }  // namespace yocto
 
@@ -289,23 +287,27 @@ vector<int> find_nearest_neightbors(
 namespace yocto {
 
 // Convert quads to triangles
-void convert_quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads);
+void convert_quads_to_triangles(
+    vector<vec3i>& triangles, const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-void convert_quads_to_triangles(vector<vec3i>& triangles,
-    const vector<vec4i>& quads, int row_length);
+void convert_quads_to_triangles(
+    vector<vec3i>& triangles, const vector<vec4i>& quads, int row_length);
 // Convert triangles to quads by creating degenerate quads
-void convert_triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles);
+void convert_triangles_to_quads(
+    vector<vec4i>& quads, const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
-void convert_bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers);
+void convert_bezier_to_lines(
+    vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
 // with ids, it also plits the faces per id.
-void convert_face_varying(
-    vector<vec4i>& split_quads, vector<vec3f>& split_positions, vector<vec3f>& split_normals, vector<vec2f>& split_texturecoords,
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
+void convert_face_varying(vector<vec4i>& split_quads,
+    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
+    vector<vec2f>& split_texturecoords, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
@@ -318,16 +320,13 @@ void ungroup_quads(vector<vector<vec4i>>& split_quads,
     const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.
-void weld_vertices(
-    vector<vec3f>& welded_positions, vector<int>& welded_indices,
+void weld_vertices(vector<vec3f>& welded_positions, vector<int>& welded_indices,
     const vector<vec3f>& positions, float threshold);
-void weld_triangles(
-    vector<vec3i>& welded_triangles, vector<vec3f>& welded_positions, 
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    float threshold);
-void weld_quads(
-    vector<vec4i>& welded_quads, vector<vec3f>& welded_positions, 
-    const vector<vec4i>& quads, const vector<vec3f>& positions, 
+void weld_triangles(vector<vec3i>& welded_triangles,
+    vector<vec3f>& welded_positions, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions, float threshold);
+void weld_quads(vector<vec4i>& welded_quads, vector<vec3f>& welded_positions,
+    const vector<vec4i>& quads, const vector<vec3f>& positions,
     float threshold);
 
 // Merge shape elements

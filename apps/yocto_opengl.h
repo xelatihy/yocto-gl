@@ -357,21 +357,24 @@ template <typename T>
 inline bool draw_combobox_opengl_widget(const opengl_window& win,
     const char* lbl, int& idx, const vector<T*>& vals,
     bool include_null = false) {
-    return draw_combobox_opengl_widget(win, lbl, idx, (int)vals.size(),
+    return draw_combobox_opengl_widget(
+        win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx]->name.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox_opengl_widget(const opengl_window& win,
     const char* lbl, int& idx, const vector<T>& vals,
     bool include_null = false) {
-    return draw_combobox_opengl_widget(win, lbl, idx, (int)vals.size(),
+    return draw_combobox_opengl_widget(
+        win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 template <typename T>
 inline bool draw_combobox_opengl_widget(const opengl_window& win,
     const char* lbl, int& idx, const deque<T>& vals,
     bool include_null = false) {
-    return draw_combobox_opengl_widget(win, lbl, idx, (int)vals.size(),
+    return draw_combobox_opengl_widget(
+        win, lbl, idx, (int)vals.size(),
         [&](int idx) { return vals[idx].name.c_str(); }, include_null);
 }
 

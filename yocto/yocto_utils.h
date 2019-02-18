@@ -497,14 +497,16 @@ inline void parallel_for(int num, const Func& func,
 template <typename T, typename Func>
 inline void parallel_foreach(vector<T>& values, const Func& func,
     atomic<bool>* cancel = nullptr, bool serial = false) {
-    parallel_for(0, (int)values.size(),
-        [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+    parallel_for(
+        0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
+        cancel, serial);
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, const Func& func,
     atomic<bool>* cancel = nullptr, bool serial = false) {
-    parallel_for(0, (int)values.size(),
-        [&func, &values](int idx) { func(values[idx]); }, cancel, serial);
+    parallel_for(
+        0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
+        cancel, serial);
 }
 
 }  // namespace yocto
@@ -769,9 +771,7 @@ inline ostream& operator<<(ostream& os, const bbox4f& value) {
 }
 
 // Iostream utilities for basic types
-inline istream& operator>>(istream& is, vec1f& value) {
-    return is >> value.x;
-}
+inline istream& operator>>(istream& is, vec1f& value) { return is >> value.x; }
 inline istream& operator>>(istream& is, vec2f& value) {
     return is >> value.x >> value.y;
 }
@@ -781,9 +781,7 @@ inline istream& operator>>(istream& is, vec3f& value) {
 inline istream& operator>>(istream& is, vec4f& value) {
     return is >> value.x >> value.y >> value.z >> value.w;
 }
-inline istream& operator>>(istream& is, vec1i& value) {
-    return is >> value.x;
-}
+inline istream& operator>>(istream& is, vec1i& value) { return is >> value.x; }
 inline istream& operator>>(istream& is, vec2i& value) {
     return is >> value.x >> value.y;
 }

@@ -246,8 +246,7 @@ bool save_pfm_image(const string& filename, const image4f& img) {
 bool load_exr_image(const string& filename, image4f& img) {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
-    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) <
-        0) {
+    if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) {
         log_io_error("error loading image {}", filename);
         return false;
     }
@@ -271,8 +270,7 @@ bool save_exr_image(const string& filename, const image4f& img) {
 // load an image using stbi library
 bool load_stb_image(const string& filename, image4b& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load(
-        filename.c_str(), &width, &height, &ncomp, 4);
+    auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading image {}", filename);
         return false;
@@ -283,8 +281,7 @@ bool load_stb_image(const string& filename, image4b& img) {
 }
 bool load_stb_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf(
-        filename.c_str(), &width, &height, &ncomp, 4);
+    auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         log_io_error("error loading image {}", filename);
         return false;
@@ -380,8 +377,7 @@ bool apply_json_procedural(const json& js, image4f& img) {
             get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
             get_json_value(js, "c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(
-            img, get_json_value(js, "tile", 8));
+        make_bumpdimple_image(img, get_json_value(js, "tile", 8));
     } else if (type == "uvramp") {
         make_uvramp_image(img);
     } else if (type == "gammaramp") {
@@ -391,8 +387,7 @@ bool apply_json_procedural(const json& js, image4f& img) {
     } else if (type == "uvgrid") {
         make_uvgrid_image(img);
     } else if (type == "sky") {
-        make_sunsky_image(img,
-            get_json_value(js, "sun_angle", pif / 4),
+        make_sunsky_image(img, get_json_value(js, "sun_angle", pif / 4),
             get_json_value(js, "turbidity", 3.0f),
             get_json_value(js, "has_sun", false),
             get_json_value(js, "sun_intensity", 1.0f),
@@ -413,8 +408,7 @@ bool apply_json_procedural(const json& js, image4f& img) {
             get_json_value(js, "offset", 1.0f),
             get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(img,
-            get_json_value(js, "scale", 1.0f),
+        make_turbulence_image(img, get_json_value(js, "scale", 1.0f),
             get_json_value(js, "lacunarity", 2.0f),
             get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
             get_json_value(js, "wrap", true));

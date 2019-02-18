@@ -705,9 +705,8 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
     }
     // split
     mid = (int)(std::partition(data(prims) + start, data(prims) + end,
-                    [split_axis, middle](auto& a) {
-                        return a.center[split_axis] < middle;
-                    }) -
+                    [split_axis, middle](
+                        auto& a) { return a.center[split_axis] < middle; }) -
                 data(prims));
 
     // if we were not able to split, just break the primitives in half
@@ -784,9 +783,8 @@ pair<int, int> split_bvh_node_middle(
     auto cmiddle = (cbbox.max + cbbox.min) / 2;
     auto middle  = cmiddle[largest_axis];
     mid          = (int)(std::partition(data(prims) + start, data(prims) + end,
-                    [split_axis, middle](auto& a) {
-                        return a.center[split_axis] < middle;
-                    }) -
+                    [split_axis, middle](
+                        auto& a) { return a.center[split_axis] < middle; }) -
                 data(prims));
 
     // if we were not able to split, just break the primitives in half
