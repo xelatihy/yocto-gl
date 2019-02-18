@@ -253,8 +253,7 @@ void make_lights_image(image4f& img, const vec3f& le = {1, 1, 1},
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-void make_noise_image(
-    image4f& img, int width, int height, float scale = 1, bool wrap = true);
+void make_noise_image(image4f& img, float scale = 1, bool wrap = true);
 void make_fbm_image(image4f& img, float scale = 1, float lacunarity = 2,
     float gain = 0.5f, int octaves = 6, bool wrap = true);
 void make_ridge_image(image4f& img, float scale = 1, float lacunarity = 2,
