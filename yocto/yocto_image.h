@@ -123,14 +123,10 @@ struct image {
     void resize(int width, int height);
 
     // element access
-    T&       operator[](const vec2i& ij) { return pixels[ij.x * width + ij.y]; }
+    T&       operator[](const vec2i& ij) { return pixels[ij.y * width + ij.x]; }
     const T& operator[](const vec2i& ij) const {
-        return pixels[ij.x * width + ij.y];
+        return pixels[ij.y * width + ij.x];
     }
-
-    // row access (will eventually return an array_view or span)
-    T*       operator[](int i) { return pixels.data() + i * width; }
-    const T* operator[](int i) const { return pixels.data() + i * width; }
 };
 
 // Typedefs
