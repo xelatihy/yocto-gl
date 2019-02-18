@@ -75,24 +75,29 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
 
 // Compute vertex normals
 vector<vec3f> compute_shape_normals(const yocto_shape& shape) {
+    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1}); 
     if (!empty(shape.points)) {
-        return vector<vec3f>(shape.positions.size(), {0, 0, 1});
     } else if (!empty(shape.lines)) {
-        return compute_vertex_tangents(shape.lines, shape.positions);
+        compute_vertex_tangents(normals, shape.lines, shape.positions);
     } else if (!empty(shape.triangles)) {
-        return compute_vertex_normals(shape.triangles, shape.positions);
+        compute_vertex_normals(normals, shape.triangles, shape.positions);
+    } else if (!empty(shape.quads)) {
+        compute_vertex_normals(normals, shape.quads, shape.positions);
     } else {
         return {};
     }
+    return normals;
 }
 
 // Compute vertex normals
 vector<vec3f> compute_surface_normals(const yocto_surface& shape) {
+    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1}); 
     if (!empty(shape.quads_positions)) {
-        return compute_vertex_normals(shape.quads_positions, shape.positions);
+        compute_vertex_normals(normals, shape.quads_positions, shape.positions);
     } else {
         return {};
     }
+    return normals;
 }
 
 // Apply subdivision and displacement rules.
@@ -251,7 +256,8 @@ yocto_surface displace_surface(const yocto_surface& surface,
             count[qpos[i]] += 1;
         }
     }
-    auto normals = compute_vertex_normals(
+    auto normals = vector<vec3f>{surface.positions.size()};
+    compute_vertex_normals(normals,
         surface.quads_positions, surface.positions);
     for (auto vid = 0; vid < surface.positions.size(); vid++) {
         displaced_surface.positions[vid] += normals[vid] * offset[vid] /
@@ -655,10 +661,13 @@ void add_missing_tangent_space(yocto_scene& scene) {
         if (!empty(shape.tangentspaces) || empty(shape.texturecoords)) continue;
         if (material.normal_texture < 0 && material.bump_texture < 0) continue;
         if (!empty(shape.triangles)) {
-            if (empty(shape.normals))
-                shape.normals = compute_vertex_normals(
+            if (empty(shape.normals)) {
+                shape.normals.resize(shape.positions.size());
+                compute_vertex_normals(shape.normals,
                     shape.triangles, shape.positions);
-            shape.tangentspaces = compute_tangent_spaces(shape.triangles,
+            }
+            shape.tangentspaces.resize(shape.positions.size());
+            compute_tangent_spaces(shape.tangentspaces, shape.triangles,
                 shape.positions, shape.normals, shape.texturecoords);
         } else {
             log_error("type not supported");

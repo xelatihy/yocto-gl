@@ -201,11 +201,11 @@ inline T interpolate_bezier_derivative(
 namespace yocto {
 
 // Compute per-vertex normals/tangents for lines/triangles/quads.
-vector<vec3f> compute_vertex_tangents(
+void compute_vertex_tangents(vector<vec3f>& tangents,
     const vector<vec2i>& lines, const vector<vec3f>& positions);
-vector<vec3f> compute_vertex_normals(
+void compute_vertex_normals(vector<vec3f>& normals,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-vector<vec3f> compute_vertex_normals(
+void compute_vertex_normals(vector<vec3f>& normals,
     const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Compute per-vertex tangent space for triangle meshes.
@@ -213,17 +213,19 @@ vector<vec3f> compute_vertex_normals(
 // The first three components are the tangent with respect to the u texcoord.
 // The fourth component is the sign of the tangent wrt the v texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords);
+void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions, 
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
 // Apply skinning to vertex position and normals.
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
+void compute_skinning(
+    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals, 
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<frame3f>& xforms);
 // Apply skinning as specified in Khronos glTF.
-tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
+void compute_matrix_skinning(
+    vector<vec3f>& skinned_positions, vector<vec3f>& skinned_normals, 
     const vector<vec3f>& positions, const vector<vec3f>& normals,
     const vector<vec4f>& weights, const vector<vec4i>& joints,
     const vector<mat4f>& xforms);
