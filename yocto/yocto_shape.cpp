@@ -179,29 +179,6 @@ void compute_matrix_skinning(
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Creates an edge map
-edge_map make_edge_map(const vector<vec3i>& triangles) {
-    auto emap = edge_map{};
-    for (int i = 0; i < triangles.size(); i++) {
-        auto& t = triangles[i];
-        insert_edge(emap, {t.x, t.y});
-        insert_edge(emap, {t.y, t.z});
-        insert_edge(emap, {t.z, t.x});
-    }
-    return emap;
-}
-edge_map make_edge_map(const vector<vec4i>& quads) {
-    auto emap = edge_map{};
-    for (int i = 0; i < quads.size(); i++) {
-        auto& q = quads[i];
-        insert_edge(emap, {q.x, q.y});
-        insert_edge(emap, {q.y, q.z});
-        if (q.z != q.w) insert_edge(emap, {q.z, q.w});
-        insert_edge(emap, {q.w, q.x});
-    }
-    return emap;
-}
-
 // Create key entry for edge_map
 inline vec2i make_edgemap_edge(const vec2i& e) {
     return e.x < e.y ? e : vec2i{e.y, e.x};
@@ -250,20 +227,23 @@ int get_edge_index(const edge_map& emap, const vec2i& edge) {
     return iterator->second;
 }
 // Get a list of edges, boundary edges, boundary vertices
-vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
-vector<vec2i> get_boundary(const edge_map& emap) {
-    auto boundary = vector<vec2i>();
+void get_edges(const edge_map& emap, vector<vec2i>& edges) { edges = emap.edges; }
+void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
+    boundary.clear();
     for (auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
         if (emap.num_faces[edge_index] < 2)
             boundary.push_back(emap.edges[edge_index]);
     }
-    return boundary;
 }
-vector<vec2i> get_edges(const vector<vec3i>& triangles) {
-    return get_edges(make_edge_map(triangles));
+void get_edges(const vector<vec3i>& triangles, vector<vec2i>& edges) {
+    auto emap = edge_map{};
+    insert_edges(emap, triangles);
+    get_edges(emap, edges);
 }
-vector<vec2i> get_edges(const vector<vec4i>& quads) {
-    return get_edges(make_edge_map(quads));
+void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges) {
+    auto emap = edge_map{};
+    insert_edges(emap, quads);
+    get_edges(emap, edges);
 }
 
 // Gets the cell index
@@ -656,8 +636,10 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
     // early exit
     if (empty(triangles) || empty(vert)) return {triangles, vert};
     // get edges
-    auto emap  = make_edge_map(triangles);
-    auto edges = get_edges(emap);
+    auto emap  = edge_map{};
+    insert_edges(emap, triangles);
+    auto edges = vector<vec2i>{};
+    get_edges(emap, edges);
     // number of elements
     auto nverts = (int)vert.size();
     auto nedges = (int)edges.size();
@@ -710,8 +692,10 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
     // early exit
     if (empty(quads) || empty(vert)) return {quads, vert};
     // get edges
-    auto emap  = make_edge_map(quads);
-    auto edges = get_edges(emap);
+    auto emap  = edge_map{};
+    insert_edges(emap, quads);
+    auto edges = vector<vec2i>{};
+    get_edges(emap, edges);
     // number of elements
     auto nverts = (int)vert.size();
     auto nedges = (int)edges.size();
@@ -837,9 +821,11 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     // early exit
     if (empty(quads) || empty(vert)) return {quads, vert};
     // get edges
-    auto emap     = make_edge_map(quads);
-    auto edges    = get_edges(emap);
-    auto boundary = get_boundary(emap);
+    auto emap = edge_map{};
+    insert_edges(emap, quads);
+    auto edges = vector<vec2i>{}, boundary = vector<vec2i>{};
+    get_edges(emap, edges);
+    get_boundary(emap, boundary);
     // number of elements
     auto nverts    = (int)vert.size();
     auto nedges    = (int)edges.size();
@@ -1157,14 +1143,15 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
 
     for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
 
-    auto emap = make_edge_map(triangles);
-    for (auto& edge : get_edges(emap)) {
+    auto emap = edge_map{};
+    insert_edges(emap, triangles);
+    auto edges = vector<vec2i>{};
+    get_edges(emap, edges);
+    for (auto& edge : edges) {
         add_undirected_arc(solver, edge.x, edge.y);
     }
 
     if (!use_steiner_points) return solver;
-
-    auto edges = get_edges(emap);
 
     solver.graph.reserve(size(positions) + size(edges));
     auto steiner_per_edge = vector<int>(get_num_edges(emap));

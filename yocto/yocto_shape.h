@@ -247,9 +247,6 @@ struct edge_map {
     vector<int>               num_faces  = {};
 };
 
-// initializes an edge map
-edge_map make_edge_map(const vector<vec3i>& triangles);
-edge_map make_edge_map(const vector<vec4i>& quads);
 // Initialize an edge map with elements.
 void insert_edges(edge_map& emap, const vector<vec3i>& triangles);
 void insert_edges(edge_map& emap, const vector<vec4i>& quads);
@@ -258,11 +255,11 @@ int insert_edge(edge_map& emap, const vec2i& edge);
 // Get the edge index / insertion count
 int get_edge_index(const edge_map& emap, const vec2i& edge);
 // Get list of edges / boundary edges
-int           get_num_edges(const edge_map& emap);
-vector<vec2i> get_edges(const edge_map& emap);
-vector<vec2i> get_boundary(const edge_map& emap);
-vector<vec2i> get_edges(const vector<vec3i>& triangles);
-vector<vec2i> get_edges(const vector<vec4i>& quads);
+int  get_num_edges(const edge_map& emap);
+void get_edges(const edge_map& emap, vector<vec2i>& edges);
+void get_boundary(const edge_map& emap, vector<vec2i>& edges);
+void get_edges(const vector<vec3i>& triangles, vector<vec2i>& edges);
+void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges);
 
 // A sparse grid of cells, containing list of points. Cells are stored in
 // a dictionary to get sparsing. Helpful for nearest neighboor lookups.
