@@ -367,6 +367,7 @@ bool apply_json_procedural(const json& js, image4f& img) {
     auto type   = get_json_value(js, "type", ""s);
     auto width  = get_json_value(js, "width", 1024);
     auto height = get_json_value(js, "height", 1024);
+    if (type == "sky" && width < height * 2) width = height * 2;
     img.resize(width, height);
     if (type == "") {
         img = image{width, height, zero4f};
@@ -390,7 +391,6 @@ bool apply_json_procedural(const json& js, image4f& img) {
     } else if (type == "uvgrid") {
         make_uvgrid_image(img);
     } else if (type == "sky") {
-        if (width < height * 2) width = height * 2;
         make_sunsky_image(img,
             get_json_value(js, "sun_angle", pif / 4),
             get_json_value(js, "turbidity", 3.0f),

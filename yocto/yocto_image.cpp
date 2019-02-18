@@ -291,6 +291,9 @@ void make_sunsky_image(image4f& img, float theta_sun, float turbidity,
         }
     }
 
+    // clear image
+    for(auto& p : img.pixels) p = {0, 0, 0, 1};
+
     // sun-sky
     auto sun_direction = vec3f{0, sin(theta_sun), cos(theta_sun)};
     auto integral      = zero3f;

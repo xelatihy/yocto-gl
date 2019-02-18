@@ -289,32 +289,32 @@ vector<int> find_nearest_neightbors(
 namespace yocto {
 
 // Convert quads to triangles
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads);
+void convert_quads_to_triangles(vector<vec3i>& triangles, const vector<vec4i>& quads);
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(
+void convert_quads_to_triangles(vector<vec3i>& triangles,
     const vector<vec4i>& quads, int row_length);
 // Convert triangles to quads by creating degenerate quads
-vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles);
+void convert_triangles_to_quads(vector<vec4i>& quads, const vector<vec3i>& triangles);
 
 // Convert beziers to lines using 3 lines for each bezier.
-vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers);
+void convert_bezier_to_lines(vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
 // and face ids and filled vectors for pos, norm and texcoord. When used
 // with ids, it also plits the faces per id.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-convert_face_varying(const vector<vec4i>& quads_positions,
-    const vector<vec4i>&                  quads_normals,
+void convert_face_varying(
+    vector<vec4i>& split_quads, vector<vec3f>& split_positions, vector<vec3f>& split_normals, vector<vec2f>& split_texturecoords,
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords);
 
 // Split primitives per id
-vector<vector<vec2i>> ungroup_lines(
+void ungroup_lines(vector<vector<vec2i>>& split_lines,
     const vector<vec2i>& lines, const vector<int>& ids);
-vector<vector<vec3i>> ungroup_triangles(
+void ungroup_triangles(vector<vector<vec3i>>& split_triangles,
     const vector<vec3i>& triangles, const vector<int>& ids);
-vector<vector<vec4i>> ungroup_quads(
+void ungroup_quads(vector<vector<vec4i>>& split_quads,
     const vector<vec4i>& quads, const vector<int>& ids);
 
 // Weld vertices within a threshold.

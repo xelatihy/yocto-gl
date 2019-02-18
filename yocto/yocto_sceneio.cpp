@@ -523,11 +523,13 @@ void merge_triangles_and_quads(
     vector<vec3i>& triangles, vector<vec4i>& quads, bool force_triangles) {
     if (empty(quads)) return;
     if (force_triangles) {
-        auto qtriangles = convert_quads_to_triangles(quads);
+        auto qtriangles = vector<vec3i>{};
+        convert_quads_to_triangles(qtriangles, quads);
         triangles.insert(triangles.end(), qtriangles.begin(), qtriangles.end());
         quads = {};
     } else {
-        auto tquads = convert_triangles_to_quads(triangles);
+        auto tquads = vector<vec4i>{};
+        convert_triangles_to_quads(tquads, triangles);
         quads.insert(quads.end(), tquads.begin(), tquads.end());
         triangles = {};
     }
@@ -861,6 +863,7 @@ bool apply_json_procedural(
     auto is_hdr = false;
     auto width  = get_json_value(js, "width", 1024);
     auto height = get_json_value(js, "height", 1024);
+    if (type == "sky" && width < height * 2) width = height * 2;
     value.hdr_image.resize(width, height);
     if (type == "grid") {
         make_grid_image(value.hdr_image,
@@ -883,7 +886,6 @@ bool apply_json_procedural(
     } else if (type == "uvgrid") {
         make_uvgrid_image(value.hdr_image);
     } else if (type == "sky") {
-        if (width < height * 2) width = height * 2;
         make_sunsky_image(value.hdr_image,
             get_json_value(js, "sun_angle", pif / 4),
             get_json_value(js, "turbidity", 3.0f),
@@ -1266,8 +1268,8 @@ bool apply_json_procedural(
             get_json_value(js, "shell_thickness", 0.0f));
     }
     if (!value.quads.empty() && get_json_value(js, "as_triangles", false)) {
-        value.triangles = convert_quads_to_triangles(value.quads);
-        value.quads     = {};
+        convert_quads_to_triangles(value.triangles, value.quads);
+        value.quads = {};
     }
     if (get_json_value(js, "flipyz", false)) {
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
@@ -3880,7 +3882,8 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
             pjs["mode"] = 4;
         }
         if (!empty(shape.quads)) {
-            auto triangles = convert_quads_to_triangles(shape.quads);
+            auto triangles = vector<vec3i>{};
+            convert_quads_to_triangles(triangles, shape.quads);
             pjs["indices"] = add_accessor(
                 (int)triangles.size() * 3, "SCALAR", true);
             pjs["mode"] = 4;
@@ -3952,7 +3955,9 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     write_values(fs, shape.points);
     write_values(fs, shape.lines);
     write_values(fs, shape.triangles);
-    write_values(fs, convert_quads_to_triangles(shape.quads));
+    auto qtriangles = vector<vec3i>{};
+    convert_quads_to_triangles(qtriangles, shape.quads);
+    write_values(fs, qtriangles);
 
     if (!fs) {
         log_io_error("cannot write {}", filename);

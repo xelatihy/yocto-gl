@@ -606,7 +606,9 @@ namespace yocto {
 template <typename T>
 inline void image<T>::resize(int width, int height) {
     if (width * height != this->width * this->height) {
-        pixels.resize((size_t)width * (size_t)height);
+        this->width = width;
+        this->height = height;
+        this->pixels.resize((size_t)width * (size_t)height);
     }
 }
 
@@ -651,7 +653,10 @@ namespace yocto {
 template <typename T>
 inline void volume<T>::resize(int width, int height, int depth) {
     if (width * height * depth != this->width * this->height * this->depth) {
-        voxels.resize((size_t)width * (size_t)height * (size_t)depth);
+        this->width = width;
+        this->height = height;
+        this->depth = depth;
+        this->voxels.resize((size_t)width * (size_t)height * (size_t)depth);
     }
 }
 
