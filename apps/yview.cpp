@@ -150,8 +150,10 @@ struct app_state {
 bool load_scene_sync(app_state& app) {
     // scene loading
     app.status = "loading scene";
-    if (!load_scene(app.filename, app.scene, app.load_options)) {
-        log_fatal("cannot load scene " + app.filename);
+    try {
+        load_scene(app.filename, app.scene, app.load_options);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
         return false;
     }
 
@@ -162,7 +164,7 @@ bool load_scene_sync(app_state& app) {
     // add components
     add_missing_cameras(app.scene);
     add_missing_names(app.scene);
-    log_validation_errors(app.scene);
+    print_validation_errors(app.scene);
 
     // init renderer
     app.status = "initializing lights";
@@ -170,7 +172,7 @@ bool load_scene_sync(app_state& app) {
 
     // fix renderer type if no lights
     if (empty(app.lights) && !app.draw_options.eyelight) {
-        log_info("no lights presents, switching to eyelight shader\n");
+        printf("no lights presents, switching to eyelight shader\n");
         app.draw_options.eyelight = true;
     }
 
@@ -189,8 +191,7 @@ bool load_scene_sync(app_state& app) {
 
 void load_scene_async(app_state& app) {
     if (app.load_running) {
-        log_error("already loading");
-        return;
+        throw runtime_error("already loading");
     }
     app.load_done    = false;
     app.load_running = true;
@@ -613,7 +614,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         check_opengl_error();
     }
 #endif
-        if (options.edges) log_error("edges are momentarily disabled");
+        if (options.edges)
+            throw runtime_error("edges are momentarily disabled");
 
         // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
     } else if (instance.surface >= 0) {
@@ -699,7 +701,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             }
         }
 
-        if (options.edges) log_error("edges are momentarily disabled");
+        if (options.edges)
+            throw runtime_error("edges are momentarily disabled");
 
         // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
     }
@@ -760,7 +763,7 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         set_opengl_uniform(state.program, "lamb", zero3f);
         set_opengl_uniform(state.program, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
-            auto is = to_string(i);
+            auto is = std::to_string(i);
             set_opengl_uniform(
                 state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
             set_opengl_uniform(
@@ -800,7 +803,7 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
                 !texture.ldr_as_linear, true, true);
         } else {
-            log_error("bad texture");
+            throw runtime_error("bad texture");
         }
     }
     state.shapes.resize(scene.shapes.size());
@@ -953,7 +956,7 @@ void draw_widgets(const opengl_window& win) {
                 draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
-                        print("c {} {} {} {} {} {} {} {}\n", camera.name,
+                        println_values(stdout, "c", camera.name,
                             (int)camera.orthographic, camera.film_width,
                             camera.film_height, camera.focal_length,
                             camera.focus_distance, camera.lens_aperture,
@@ -1004,15 +1007,15 @@ void update(app_state& app) {
     for (auto& [type, index] : app.update_list) {
         if (type == typeid(yocto_texture)) {
             // TODO: update texture
-            log_error("texture update not supported\n");
+            throw runtime_error("texture update not supported\n");
         }
         if (type == typeid(yocto_surface)) {
             // TODO: update subdiv
-            log_error("subdiv update not supported\n");
+            throw runtime_error("subdiv update not supported\n");
         }
         if (type == typeid(yocto_shape)) {
             // TODO: update shape
-            log_error("shape update not supported\n");
+            throw runtime_error("shape update not supported\n");
         }
         if (type == typeid(yocto_scene_node) ||
             type == typeid(yocto_animation) || app.time != last_time) {
@@ -1100,24 +1103,19 @@ void run_ui(app_state& app) {
 // Load INI file. The implementation does not handle escaping.
 unordered_map<string, unordered_map<string, string>> load_ini(
     const string& filename) {
-    auto f = ifstream(filename);
-    if (!f) {
-        log_error("cannot open {}", filename);
-        return {};
-    }
+    auto fs        = input_file(filename);
     auto ret       = unordered_map<string, unordered_map<string, string>>();
     auto cur_group = string();
     ret[""]        = {};
 
     auto line = ""s;
-    while (getline(f, line)) {
+    while (read_line(fs, line)) {
         if (empty(line)) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;
         if (line.front() == '[') {
             if (line.back() != ']') {
-                log_error("bad INI format");
-                return {};
+                throw io_error("bad INI format");
             }
             cur_group      = line.substr(1, line.length() - 2);
             ret[cur_group] = {};
@@ -1126,8 +1124,7 @@ unordered_map<string, unordered_map<string, string>> load_ini(
             auto value           = line.substr(line.find('=') + 1);
             ret[cur_group][name] = value;
         } else {
-            log_error("bad INI format");
-            return {};
+            throw io_error("bad INI format");
         }
     }
 

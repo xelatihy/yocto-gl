@@ -1325,11 +1325,6 @@ void log_geodesic_solver_stats(const geodesic_solver& solver) {
         }
     }
     avg_length /= num_edges;
-    log_trace("graph size {} {} {}", solver.graph.size(),
-        solver.positions.size(), num_edges);
-    log_trace(
-        "adjacents {} {} {}", min_adjacents, avg_adjacents, max_adjacents);
-    log_trace("edge length {} {} {}", min_length, avg_length, max_length);
 }
 
 void update_edge_distances(geodesic_solver& solver) {
@@ -1342,7 +1337,6 @@ void update_edge_distances(geodesic_solver& solver) {
 
 void init_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto scope = log_trace_scoped("make edge graph");
     make_edge_solver_fast(solver, triangles, positions, true);
     // auto solver = make_edge_solver_slow(triangles, positions, true);
     log_geodesic_solver_stats(solver);
@@ -1350,8 +1344,6 @@ void init_geodesic_solver(geodesic_solver& solver,
 
 void compute_geodesic_distances(geodesic_solver& graph,
     vector<float>& distances, const vector<int>& sources) {
-    auto scope = log_trace_scoped("computing geodesics");
-
     // preallocated
     distances.resize(graph.positions.size());
     for (auto& d : distances) d = float_max;

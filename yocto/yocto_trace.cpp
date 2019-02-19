@@ -863,7 +863,7 @@ vec3f sample_instance_direction(const yocto_scene& scene,
                              scene, instance, element_id, element_uv) -
                          p);
     } else {
-        log_error("empty instance");
+        throw io_error("empty instance");
         return zero3f;
     }
 }
@@ -1878,7 +1878,7 @@ trace_sampler_func get_trace_sampler_func(trace_sampler_type type) {
         case trace_sampler_type::debug_roughness: return trace_debug_roughness;
         case trace_sampler_type::debug_highlight: return trace_debug_highlight;
         default: {
-            log_error("sampler unknown");
+            throw runtime_error("sampler unknown");
             return {};
         }
     }
@@ -1904,7 +1904,7 @@ bool is_trace_sampler_lit(const trace_image_options& options) {
         case trace_sampler_type::debug_roughness:
         case trace_sampler_type::debug_highlight: return false;
         default: {
-            log_error("sampler unknown");
+            throw runtime_error("sampler unknown");
             return false;
         }
     }
@@ -1935,7 +1935,7 @@ void trace_image_region(image4f& image, trace_state& state,
                     pixel.rng, options.max_bounces,
                     options.environments_hidden);
                 if (!isfinite(radiance)) {
-                    log_error("NaN detected");
+                    printf("NaN detected\n");
                     radiance = zero3f;
                 }
                 if (max(radiance) > options.pixel_clamp)
@@ -1967,8 +1967,7 @@ void init_trace_state(
 
 // Init trace lights
 void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
-    auto scope = log_trace_scoped("making trace lights");
-    lights     = {};
+    lights = {};
 
     lights.shape_elements_cdf.resize(scene.shapes.size());
     lights.surface_elements_cdf.resize(scene.surfaces.size());
@@ -2010,7 +2009,6 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 // Progressively compute an image by calling trace_samples multiple times.
 image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const trace_image_options& options) {
-    auto scope           = log_trace_scoped("tracing image");
     auto [width, height] = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.image_width,
         options.image_height);
@@ -2053,8 +2051,6 @@ int trace_image_samples(image4f& image, trace_state& state,
     auto regions = vector<image_region>{};
     make_image_regions(
         regions, image.width, image.height, options.region_size, true);
-    auto scope = log_trace_scoped(
-        "tracing samples {}-{}", current_sample, options.num_samples);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
     if (options.run_serially) {
@@ -2087,7 +2083,6 @@ void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<thread>& threads, atomic<int>& current_sample,
     concurrent_queue<image_region>& queue, const trace_image_options& options) {
-    log_trace("start tracing async");
     auto& camera         = scene.cameras.at(options.camera_id);
     auto [width, height] = get_camera_image_size(
         camera, options.image_width, options.image_height);
@@ -2395,7 +2390,7 @@ void print_integrate_func_test(function<float(float)> f, float a, float b,
     float expected, int nsamples, function<float(float)> pdf,
     function<float(float)> warp) {
     auto rng = rng_state();
-    cout << "nsamples base base-err stratified-err importance-err\n";
+    printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func_stratified(f, a, b, ns, rng);
@@ -2404,8 +2399,8 @@ void print_integrate_func_test(function<float(float)> f, float a, float b,
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
-        cout << ns << " " << integral_base << " " << error_base << " "
-             << error_stratified << " " << error_importance << "\n";
+        printf("%d %g %g %g %g\n", ns, integral_base, error_base,
+            error_stratified, error_importance);
     }
 }
 
@@ -2460,7 +2455,7 @@ void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
     float expected, int nsamples, function<float(vec2f)> pdf,
     function<vec2f(vec2f)> warp) {
     auto rng = rng_state();
-    cout << "nsamples base base-err stratified-err importance-err\n";
+    printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func2_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func2_stratified(f, a, b, ns, rng);
@@ -2469,8 +2464,8 @@ void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
-        cout << ns << " " << integral_base << " " << error_base << " "
-             << error_stratified << " " << error_importance << "\n";
+        printf("%d %g %g %g %g\n", ns, integral_base, error_base,
+            error_stratified, error_importance);
     }
 }
 

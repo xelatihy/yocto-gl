@@ -41,7 +41,7 @@ Image make_image_grid(const vector<Image>& imgs, int tilex) {
     auto img_idx = 0;
     for (auto& img : imgs) {
         if (extents(img) != extents(imgs[0])) {
-            log_fatal("images of different sizes are not accepted");
+            exit_error("images of different sizes are not accepted");
         }
         auto ox = (img_idx % tilex) * img.width,
              oy = (img_idx / tilex) * img.height;
@@ -160,15 +160,22 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = image4f();
-    if (!load_image(filename, img)) log_fatal("cannot load image {}", filename);
+    try {
+        load_image(filename, img);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
 
     // set alpha
     if (alpha_filename != "") {
         auto alpha = image4f();
-        if (!load_image(alpha_filename, alpha))
-            log_fatal("cannot load image {}", alpha_filename);
+        try {
+            load_image(alpha_filename, alpha);
+        } catch (const std::exception& e) {
+            exit_error(e.what());
+        }
         if (img.width != alpha.width || img.height != alpha.height) {
-            log_fatal("bad image size");
+            exit_error("bad image size");
             exit(1);
         }
         for (auto j = 0; j < img.height; j++)
@@ -179,10 +186,13 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = image4f();
-        if (!load_image(coloralpha_filename, alpha))
-            log_fatal("cannot load image {}", coloralpha_filename);
+        try {
+            load_image(coloralpha_filename, alpha);
+        } catch (const std::exception& e) {
+            exit_error(e.what());
+        }
         if (img.width != alpha.width || img.height != alpha.height) {
-            log_fatal("bad image size");
+            exit_error("bad image size");
             exit(1);
         }
         for (auto j = 0; j < img.height; j++)
@@ -204,7 +214,11 @@ int main(int argc, char* argv[]) {
     if (tonemap) img = tonemap_image(img, exposure, filmic, srgb);
 
     // save
-    if (!save_image(output, img)) log_fatal("cannot save image {}", output);
+    try {
+        save_image(output, img);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
 
     // done
     return 0;

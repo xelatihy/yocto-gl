@@ -83,22 +83,28 @@ int main(int argc, char* argv[]) {
 
     // check image type
     auto img1 = image4f{}, img2 = image4f{};
-    if (!load_image(filename1, img1))
-        log_fatal("cannot open image {}", filename1);
-    if (!load_image(filename2, img2))
-        log_fatal("cannot open image {}", filename2);
+    try {
+        load_image(filename1, img1);
+        load_image(filename2, img2);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
     if (img1.width != img2.width || img1.height != img2.height)
-        log_fatal("image size differs");
+        exit_error("image size differs");
     auto diff     = compute_diff_image(img1, img2);
     auto max_diff = max_diff_value(diff);
     if (!empty(output)) {
         auto display = display_diff(diff);
-        if (!save_image(output, display))
-            log_fatal("cannot save image {}", output);
+        try {
+            save_image(output, display);
+        } catch (const std::exception& e) {
+            exit_error(e.what());
+        }
     }
     if (max(max_diff) > threshold) {
-        log_info("image max difference: {}", max_diff);
-        log_fatal("image content differs");
+        printf("image max difference: %f %f %f %f\n", max_diff.x, max_diff.y,
+            max_diff.z, max_diff.w);
+        exit_error("image content differs");
     }
 
     // done

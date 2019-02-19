@@ -133,8 +133,13 @@ void start_rendering_async(app_state& app) {
 bool load_scene_sync(app_state& app) {
     // scene loading
     app.status = "loading scene";
-    if (!load_scene(app.filename, app.scene, app.load_options)) {
-        log_fatal("cannot load scene " + app.filename);
+    try {
+        load_scene(app.filename, app.scene, app.load_options);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+        return false;
+    } catch (const io_error& e) {
+        exit_error(e.what());
         return false;
     }
 
@@ -148,7 +153,7 @@ bool load_scene_sync(app_state& app) {
     // add components
     add_missing_cameras(app.scene);
     add_missing_names(app.scene);
-    log_validation_errors(app.scene);
+    print_validation_errors(app.scene);
 
     // build bvh
     app.status = "computing bvh";
@@ -161,7 +166,7 @@ bool load_scene_sync(app_state& app) {
     // fix renderer type if no lights
     if (empty(app.lights.instances) && empty(app.lights.environments) &&
         is_trace_sampler_lit(app.trace_options)) {
-        log_info("no lights presents, switching to eyelight shader\n");
+        printf("no lights presents, switching to eyelight shader\n");
         app.trace_options.sampler_type = trace_sampler_type::eyelight;
     }
 
@@ -179,7 +184,7 @@ bool load_scene_sync(app_state& app) {
 
 void load_scene_async(app_state& app) {
     if (app.load_running) {
-        log_error("already loading");
+        printf("error: already loading\n");
         return;
     }
     app.load_done    = false;
@@ -253,7 +258,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
-                        print("c {} {} {} {} {} {} {} {}\n", camera.name,
+                        println_values(stdout, "c", camera.name,
                             (int)camera.orthographic, camera.film_width,
                             camera.film_height, camera.focal_length,
                             camera.focus_distance, camera.lens_aperture,

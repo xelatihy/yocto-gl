@@ -48,10 +48,13 @@ int main(int argc, char** argv) {
 
     // load mesh
     auto shape = yocto_shape{};
-    if (!load_mesh(filename, shape.points, shape.lines, shape.triangles,
+    try {
+        load_mesh(filename, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius, true))
-        log_fatal("cannot load scene {}", filename);
+            shape.colors, shape.radius, true);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
 
     // compute geodesics and store them as colors
     if (geodesic_source >= 0) {
@@ -64,10 +67,13 @@ int main(int argc, char** argv) {
     }
 
     // save mesh
-    if (!save_mesh(output, shape.points, shape.lines, shape.triangles,
+    try {
+        save_mesh(output, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius))
-        log_fatal("cannot save scene {}", output);
+            shape.colors, shape.radius);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
 
     // done
     return 0;

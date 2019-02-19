@@ -3,15 +3,17 @@
 //
 //
 // Yocto/Utils is a collection of utilities used in writing other Yocto/GL
-// libraries and example applications. We support printing and parsing builting
-// and Yocto/Math values, parsing command line arguments, simple path
+// libraries and example applications. We support printing builtin and 
+// Yocto/Math values, parsing command line arguments, simple path
 // manipulation, file lading/saving and basic concurrency utilities.
 //
 //
 // ## Printing and parsing values
 //
-// Use `format()` to format a string using `{}` as placeholder and `print()`
-// to print it. Use `parse()` to parse a value from a string.
+// Use `print_value()` to write a string in a stream or `println_values()` 
+// to print a line of values. Use `format_duraction()` and `format_num()`
+// for pretty printing times and numbers. These will change once lib `fmt`
+// is accepted in the standard. 
 //
 //
 // ## Python-like iterators and collection helpers
@@ -63,6 +65,8 @@
 //
 // 1. load and save text files with `load_text()` and `save_text()`
 // 2. load and save binary files with `load_binary()` and `save_binary()`
+// 3. use `input_file` and `output_file` as RIIA FILE* wrappers
+// 4. use `read_XXX()` and `write_XXX()` to read/write to this files
 //
 //
 // ## Concurrency utilities
@@ -112,12 +116,8 @@
 #include <chrono>
 #include <cstdio>
 #include <deque>
-#include <fstream>
-#include <iostream>
-#include <istream>
+#include <future>
 #include <mutex>
-#include <ostream>
-#include <sstream>
 #include <string>
 #include <thread>
 
@@ -130,147 +130,230 @@ using std::deque;
 using std::lock_guard;
 using std::mutex;
 using std::thread;
-using std::ostream;
-using std::istream;
-using std::stringstream;
-using std::ifstream;
-using std::ofstream;
-using std::fstream;
-using std::cout;
+using std::future;
+using std::async;
+using std::runtime_error;
 using namespace std::chrono_literals;
-
-using std::getline;
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// PRINT/PARSE UTILITIES
+// APPLICATION UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Formats a string `fmt` with values taken from `args`. Uses `{}` as
-// placeholder.
-template <typename... Args>
-inline string format(const string& fmt, const Args&... args);
-
-// Converts to string.
-template <typename T>
-inline string to_string(const T& value);
-
-// Prints a formatted string to stdout or file.
-template <typename... Args>
-inline bool print(const string& fmt, const Args&... args);
-template <typename... Args>
-inline bool print(FILE* fs, const string& fmt, const Args&... args);
-template <typename... Args>
-inline bool print(ostream& stream, const string& fmt, const Args&... args);
+// Log info/error/fatal/trace message
+inline void exit_error(const char* msg) {
+    printf("%s\n", msg);
+    exit(1);
+}
+inline void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
 
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
 // Format a large integer number in human readable form
 inline string format_num(uint64_t num);
 
-// Parse a list of space separated values.
-template <typename... Args>
-inline bool parse(const string& str, Args&... args);
-template <typename... Args>
-inline bool parse(const istream& stream, Args&... args);
-
 // get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time();
+inline int64_t get_time() {
+    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
+}
 
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
-// LOGGING UTILITIES
+// FILE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Log info/error/fatal/trace message
-template <typename... Args>
-inline void log_info(const string& fmt, const Args&... args);
-template <typename... Args>
-inline void log_error(const string& fmt, const Args&... args);
-template <typename... Args>
-inline void log_warning(const string& fmt, const Args&... args);
-template <typename... Args>
-inline void log_fatal(const string& fmt, const Args&... args);
-
-// log levels
-enum struct log_level {
-    fatal   = 0,
-    error   = 1,
-    warning = 2,
-    info    = 3,
-    trace   = 4
+// io error
+struct io_error : runtime_error {
+    explicit io_error(const char* msg) : runtime_error{msg} {}
+    explicit io_error(const std::string& msg) : runtime_error{msg} {}
 };
 
-// Setup logging
-inline void set_log_level(log_level level);
-inline void set_log_console(bool enabled);
-inline void set_log_file(const string& filename, bool append = false);
+// file inout stream
+struct input_file {
+    input_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file           = fopen(filename.c_str(), binary ? "rb" : "rt");
+        if (!file) throw io_error("could not open " + filename);
+    }
+    input_file(FILE* fs) {
+        file  = fs;
+        owned = false;
+    }
 
-// Log traces for timing and program debugging
-struct log_scope;
-template <typename... Args>
-inline void log_trace(const string& fmt, const Args&... args);
-template <typename... Args>
-inline log_scope log_trace_begin(const string& fmt, const Args&... args);
-template <typename... Args>
-inline void log_trace_end(log_scope& scope);
-template <typename... Args>
-inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
+    input_file(const input_file&) = delete;
+    input_file& operator=(const input_file&) = delete;
+
+    ~input_file() {
+        if (file && owned) fclose(file);
+    }
+
+    string filename = "";
+    FILE*  file     = nullptr;
+    bool   owned    = true;
+};
+
+// file writer
+struct output_file {
+    output_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file           = fopen(filename.c_str(), binary ? "wb" : "wt");
+        if (!file) throw io_error("could not open " + filename);
+    }
+    output_file(FILE* fs) {
+        file  = fs;
+        owned = false;
+    }
+
+    output_file(const output_file&) = delete;
+    output_file& operator=(const output_file&) = delete;
+
+    ~output_file() {
+        if (file && owned) fclose(file);
+    }
+
+    string filename = "";
+    FILE*  file     = nullptr;
+    bool   owned    = true;
+};
+
+// write a value to a file
+template <typename T>
+inline void write_value(const output_file& fs, const T& value) {
+    if (fwrite(&value, sizeof(value), 1, fs.file) != 1) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// write values to a file
+template <typename T>
+inline void write_values(const output_file& fs, const vector<T>& values) {
+    if (empty(values)) return;
+    if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// write text to a file
+inline void write_text(const output_file& fs, const std::string& str) {
+    if (fprintf(fs.file, "%s", str.c_str()) < 0) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// read a value from a file
+template <typename T>
+inline void read_value(const input_file& fs, T& value) {
+    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+
+// read values from a file
+template <typename T>
+inline void read_values(const input_file& fs, T* values, size_t count) {
+    if (!count) return;
+    if (fread(values, sizeof(values[0]), count, fs.file) != count) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+template <typename T>
+inline void read_values(const input_file& fs, vector<T>& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+// read characters from a file
+inline void read_values(const input_file& fs, string& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+
+// read a line of text
+inline bool read_line(const input_file& fs, string& str) {
+    char buffer[4096];
+    if (fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
+    str = buffer;
+    return true;
+}
+inline bool read_line(const input_file& fs, char* buffer, size_t size) {
+    if (fgets(buffer, size, fs.file) == nullptr) return false;
+    return true;
+}
+
+// Printing values
+inline void print_value(const output_file& fs, int value) {
+    if (fprintf(fs.file, "%d", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, bool value) {
+    if (fprintf(fs.file, "%d", (int)value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, float value) {
+    if (fprintf(fs.file, "%g", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, char value) {
+    if (fprintf(fs.file, "%c", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, const char* value) {
+    if (fprintf(fs.file, "%s", value) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, const string& value) {
+    if (fprintf(fs.file, "%s", value.c_str()) < 0)
+        throw io_error("cannot write to file " + fs.filename);
+}
+template <typename T, int N>
+inline void print_value(const output_file& fs, const vec<T, N>& value) {
+    for (auto i = 0; i < N; i++) {
+        if (i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
+}
+template <typename T, int N, int M>
+inline void print_value(const output_file& fs, const mat<T, N, M>& value) {
+    for (auto i = 0; i < M; i++) {
+        if (i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
+}
+template <typename T, int N>
+inline void print_value(const output_file& fs, const frame<T, N>& value) {
+    for (auto i = 0; i < N + 1; i++) {
+        if (i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
+}
+
+// print values to file
+template <typename Arg, typename... Args>
+inline void println_values(
+    const output_file& fs, const Arg& value, const Args&... values) {
+    print_value(fs, value);
+    if constexpr (sizeof...(values) > 0) {
+        print_value(fs, ' ');
+        println_values(fs, values...);
+    } else {
+        print_value(fs, '\n');
+    }
+}
 
 }  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IOSTREAM UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Iostream utilities for basic types
-inline ostream& operator<<(ostream& os, const vec1f& value);
-inline ostream& operator<<(ostream& os, const vec2f& value);
-inline ostream& operator<<(ostream& os, const vec3f& value);
-inline ostream& operator<<(ostream& os, const vec4f& value);
-inline ostream& operator<<(ostream& os, const vec1i& value);
-inline ostream& operator<<(ostream& os, const vec2i& value);
-inline ostream& operator<<(ostream& os, const vec3i& value);
-inline ostream& operator<<(ostream& os, const vec4i& value);
-inline ostream& operator<<(ostream& os, const mat2f& value);
-inline ostream& operator<<(ostream& os, const mat3f& value);
-inline ostream& operator<<(ostream& os, const mat4f& value);
-inline ostream& operator<<(ostream& os, const frame2f& value);
-inline ostream& operator<<(ostream& os, const frame3f& value);
-inline ostream& operator<<(ostream& os, const ray2f& value);
-inline ostream& operator<<(ostream& os, const ray3f& value);
-inline ostream& operator<<(ostream& os, const bbox1f& value);
-inline ostream& operator<<(ostream& os, const bbox2f& value);
-inline ostream& operator<<(ostream& os, const bbox3f& value);
-inline ostream& operator<<(ostream& os, const bbox4f& value);
-
-// Iostream utilities for basic types
-inline istream& operator>>(istream& is, vec1f& value);
-inline istream& operator>>(istream& is, vec2f& value);
-inline istream& operator>>(istream& is, vec3f& value);
-inline istream& operator>>(istream& is, vec4f& value);
-inline istream& operator>>(istream& is, vec1i& value);
-inline istream& operator>>(istream& is, vec2i& value);
-inline istream& operator>>(istream& is, vec3i& value);
-inline istream& operator>>(istream& is, vec4i& value);
-inline istream& operator>>(istream& is, mat2f& value);
-inline istream& operator>>(istream& is, mat3f& value);
-inline istream& operator>>(istream& is, mat4f& value);
-inline istream& operator>>(istream& is, frame2f& value);
-inline istream& operator>>(istream& is, frame3f& value);
-inline istream& operator>>(istream& is, ray2f& value);
-inline istream& operator>>(istream& is, ray3f& value);
-inline istream& operator>>(istream& is, bbox1f& value);
-inline istream& operator>>(istream& is, bbox2f& value);
-inline istream& operator>>(istream& is, bbox3f& value);
-inline istream& operator>>(istream& is, bbox4f& value);
-
-}
 
 // -----------------------------------------------------------------------------
 // PYTHON-LIKE ITERATORS
@@ -452,12 +535,12 @@ inline bool exists_file(const string& filename);
 namespace yocto {
 
 // Load/save a text file
-inline bool load_text(const string& filename, string& str);
-inline bool save_text(const string& filename, const string& str);
+inline void load_text(const string& filename, string& str);
+inline void save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-inline bool load_binary(const string& filename, vector<byte>& data);
-inline bool save_binary(const string& filename, const vector<byte>& data);
+inline void load_binary(const string& filename, vector<byte>& data);
+inline void save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
@@ -520,316 +603,6 @@ inline void parallel_foreach(const vector<T>& values, const Func& func,
 // ---------------------------------------------------------------------------//
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF STRING/TIME UTILITIES FOR CLI APPLICATIONS
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Print a value
-template <typename T>
-inline bool print_value(stringstream& stream, const T& value) {
-    stream << value;
-    return (bool)stream;
-}
-
-// Prints a string.
-inline bool print_next(stringstream& stream, const string& fmt) {
-    return print_value(stream, fmt);
-}
-template <typename Arg, typename... Args>
-inline bool print_next(stringstream& stream, const string& fmt, const Arg& arg,
-    const Args&... args) {
-    auto pos = fmt.find("{}");
-    if (pos == string::npos) return print_value(stream, fmt);
-    if (!print_value(stream, fmt.substr(0, pos))) return false;
-    if (!print_value(stream, arg)) return false;
-    return print_next(stream, fmt.substr(pos + 2), args...);
-}
-
-// Formats a string `fmt` with values taken from `args`. Uses `{}` as
-// placeholder.
-template <typename... Args>
-inline string format(const string& fmt, const Args&... args) {
-    auto stream = stringstream();
-    print_next(stream, fmt, args...);
-    return stream.str();
-}
-
-// Prints a string.
-template <typename... Args>
-inline bool print(const string& fmt, const Args&... args) {
-    return print(stdout, fmt, args...);
-}
-template <typename... Args>
-inline bool print(FILE* fs, const string& fmt, const Args&... args) {
-    auto str = format(fmt, args...);
-    return fprintf(fs, "%s", str.c_str()) >= 0;
-}
-template <typename... Args>
-inline bool print(ostream& stream, const string& fmt, const Args&... args) {
-    auto str = format(fmt, args...);
-    stream << str;
-    return (bool)stream;
-}
-
-// Converts to string.
-template <typename T>
-inline string to_string(const T& value) {
-    auto stream = stringstream();
-    stream << value;
-    return stream.str();
-}
-
-// Parse a list of space separated values.
-template <typename... Args>
-inline bool parse(const string& str, Args&... args) {
-    auto stream = stringstream{str};
-    if (!parse_next(stream, args...)) return false;
-    stream >> std::ws;
-    return stream.get() == EOF;
-}
-
-// get time in nanoseconds - useful only to compute difference of times
-inline int64_t get_time() {
-    return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF LOGGING UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Logging configutation
-inline bool& _log_console() {
-    static auto _log_console = true;
-    return _log_console;
-}
-inline ofstream& _log_filestream() {
-    static auto _log_filestream = ofstream();
-    return _log_filestream;
-}
-inline log_level& _log_level() {
-    static auto _log_level = log_level::info;
-    return _log_level;
-}
-inline bool is_log_level_skipped(log_level level) {
-    return level > _log_level();
-}
-
-// Logs a message
-inline void log_message(log_level level, const char* msg) {
-    static const char* labels[] = {"FATAL", "ERROR", "WARN ", "INFO ", "TRACE"};
-    if (_log_console()) {
-        cout << msg << "\n";
-        fflush(stdout);
-    }
-    if (_log_filestream()) {
-        _log_filestream() << labels[(int)level] << " " << msg << "\n";
-    }
-}
-
-// Log info/error/fatal/trace message
-template <typename... Args>
-inline void log_info(const string& fmt, const Args&... args) {
-    if (is_log_level_skipped(log_level::info)) return;
-    log_message(log_level::info, format(fmt, args...).c_str());
-}
-template <typename... Args>
-inline void log_error(const string& fmt, const Args&... args) {
-    if (is_log_level_skipped(log_level::error)) return;
-    log_message(log_level::error, format(fmt, args...).c_str());
-}
-template <typename... Args>
-inline void log_warning(const string& fmt, const Args&... args) {
-    if (is_log_level_skipped(log_level::warning)) return;
-    log_message(log_level::warning, format(fmt, args...).c_str());
-}
-template <typename... Args>
-inline void log_fatal(const string& fmt, const Args&... args) {
-    if (is_log_level_skipped(log_level::fatal)) return;
-    log_message(log_level::fatal, format(fmt, args...).c_str());
-    exit(1);
-}
-
-// Log traces for timing and program debugging
-struct log_scope {
-    string  message    = "";
-    int64_t start_time = -1;
-    bool    scoped     = false;
-    ~log_scope();
-};
-template <typename... Args>
-inline void log_trace(const string& fmt, const Args&... args) {
-    if (is_log_level_skipped(log_level::trace)) return;
-    log_message(log_level::trace, format(fmt, args...).c_str());
-}
-template <typename... Args>
-inline log_scope log_trace_begin(const string& fmt, const Args&... args) {
-    if (is_log_level_skipped(log_level::trace)) return {"", -1, false};
-    auto message = format(fmt, args...);
-    log_trace(message + " [started]");
-    return {message, get_time(), false};
-}
-template <typename... Args>
-inline void log_trace_end(log_scope& scope) {
-    if (is_log_level_skipped(log_level::trace)) return;
-    if (scope.start_time >= 0) {
-        log_trace(scope.message + " [ended: " +
-                  format_duration(get_time() - scope.start_time) + "]");
-    } else {
-        log_trace(scope.message + " [ended]");
-    }
-}
-template <typename... Args>
-inline log_scope log_trace_scoped(const string& fmt, const Args&... args) {
-    if (is_log_level_skipped(log_level::trace)) return {"", -1, false};
-    auto message = format(fmt, args...);
-    log_trace(message + " [started]");
-    return {message, get_time(), true};
-}
-inline log_scope::~log_scope() {
-    if (scoped) log_trace_end(*this);
-}
-
-// Configure the logging
-inline void set_log_level(log_level level) { _log_level() = level; }
-inline void set_log_console(bool enabled) { _log_console() = enabled; }
-inline void set_log_file(const string& filename, bool append) {
-    if (_log_filestream()) {
-        _log_filestream().close();
-        _log_filestream() = {};
-    }
-    if (empty(filename)) return;
-    _log_filestream().open(filename, append ? std::ios::app : std::ios::out);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IOSTREAM UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Iostream utilities for basic types
-inline ostream& operator<<(ostream& os, const vec1f& value) {
-    return os << value.x;
-}
-inline ostream& operator<<(ostream& os, const vec2f& value) {
-    return os << value.x << " " << value.y;
-}
-inline ostream& operator<<(ostream& os, const vec3f& value) {
-    return os << value.x << " " << value.y << " " << value.z;
-}
-inline ostream& operator<<(ostream& os, const vec4f& value) {
-    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
-}
-inline ostream& operator<<(ostream& os, const vec1i& value) {
-    return os << value.x;
-}
-inline ostream& operator<<(ostream& os, const vec2i& value) {
-    return os << value.x << " " << value.y;
-}
-inline ostream& operator<<(ostream& os, const vec3i& value) {
-    return os << value.x << " " << value.y << " " << value.z;
-}
-inline ostream& operator<<(ostream& os, const vec4i& value) {
-    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
-}
-inline ostream& operator<<(ostream& os, const mat2f& value) {
-    return os << value.x << " " << value.y;
-}
-inline ostream& operator<<(ostream& os, const mat3f& value) {
-    return os << value.x << " " << value.y << " " << value.z;
-}
-inline ostream& operator<<(ostream& os, const mat4f& value) {
-    return os << value.x << " " << value.y << " " << value.z << " " << value.w;
-}
-inline ostream& operator<<(ostream& os, const frame2f& value) {
-    return os << value.x << " " << value.y << " " << value.o;
-}
-inline ostream& operator<<(ostream& os, const frame3f& value) {
-    return os << value.x << " " << value.y << " " << value.z << " " << value.o;
-}
-inline ostream& operator<<(ostream& os, const ray2f& value) {
-    return os << value.o << " " << value.d << " " << value.tmin << " "
-              << value.tmax;
-}
-inline ostream& operator<<(ostream& os, const ray3f& value) {
-    return os << value.o << " " << value.d << " " << value.tmin << " "
-              << value.tmax;
-}
-inline ostream& operator<<(ostream& os, const bbox1f& value) {
-    return os << value.min << " " << value.max;
-}
-inline ostream& operator<<(ostream& os, const bbox2f& value) {
-    return os << value.min << " " << value.max;
-}
-inline ostream& operator<<(ostream& os, const bbox3f& value) {
-    return os << value.min << " " << value.max;
-}
-inline ostream& operator<<(ostream& os, const bbox4f& value) {
-    return os << value.min << " " << value.max;
-}
-
-// Iostream utilities for basic types
-inline istream& operator>>(istream& is, vec1f& value) { return is >> value.x; }
-inline istream& operator>>(istream& is, vec2f& value) {
-    return is >> value.x >> value.y;
-}
-inline istream& operator>>(istream& is, vec3f& value) {
-    return is >> value.x >> value.y >> value.z;
-}
-inline istream& operator>>(istream& is, vec4f& value) {
-    return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline istream& operator>>(istream& is, vec1i& value) { return is >> value.x; }
-inline istream& operator>>(istream& is, vec2i& value) {
-    return is >> value.x >> value.y;
-}
-inline istream& operator>>(istream& is, vec3i& value) {
-    return is >> value.x >> value.y >> value.z;
-}
-inline istream& operator>>(istream& is, vec4i& value) {
-    return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline istream& operator>>(istream& is, mat2f& value) {
-    return is >> value.x >> value.y;
-}
-inline istream& operator>>(istream& is, mat3f& value) {
-    return is >> value.x >> value.y >> value.z;
-}
-inline istream& operator>>(istream& is, mat4f& value) {
-    return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline istream& operator>>(istream& is, frame2f& value) {
-    return is >> value.x >> value.y >> value.o;
-}
-inline istream& operator>>(istream& is, frame3f& value) {
-    return is >> value.x >> value.y >> value.z >> value.o;
-}
-inline istream& operator>>(istream& is, ray2f& value) {
-    return is >> value.o >> value.d >> value.tmin >> value.tmax;
-}
-inline istream& operator>>(istream& is, ray3f& value) {
-    return is >> value.o >> value.d >> value.tmin >> value.tmax;
-}
-inline istream& operator>>(istream& is, bbox1f& value) {
-    return is >> value.min >> value.max;
-}
-inline istream& operator>>(istream& is, bbox2f& value) {
-    return is >> value.min >> value.max;
-}
-inline istream& operator>>(istream& is, bbox3f& value) {
-    return is >> value.min >> value.max;
-}
-inline istream& operator>>(istream& is, bbox4f& value) {
-    return is >> value.min >> value.max;
-}
-
-}
-
-// -----------------------------------------------------------------------------
 // IMPLEMENTATION OF STRING FORMAT UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -866,12 +639,11 @@ namespace yocto {
 inline void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
     const string& usage, const string& cmd, bool add_help_flag,
     bool add_logging_flags) {
-    parser                   = {};
-    parser.args              = {argv + 1, argv + argc};
-    parser.help_command      = (empty(cmd)) ? argv[0] : cmd;
-    parser.help_usage        = usage;
-    parser.add_help_flag     = add_help_flag;
-    parser.add_logging_flags = add_logging_flags;
+    parser               = {};
+    parser.args          = {argv + 1, argv + argc};
+    parser.help_command  = (empty(cmd)) ? argv[0] : cmd;
+    parser.help_usage    = usage;
+    parser.add_help_flag = add_help_flag;
 }
 
 // check if option or argument
@@ -914,13 +686,12 @@ inline vector<pair<string, string>> get_flag_names(const string& name) {
 // get default string
 template <typename T>
 inline string get_option_default_string(const T& value) {
-    auto stream = stringstream{};
-    stream << value;
-    return stream.str();
+    return std::to_string(value);
 }
 inline string get_option_default_string(const bool& value) {
     return (value) ? "true"s : "false"s;
 }
+inline string get_option_default_string(const string& value) { return value; }
 template <typename T>
 inline string get_option_default_string(const vector<T>& values) {
     auto defs = string();
@@ -987,7 +758,7 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
         usage += "options:\n" + parser.help_options + "\n";
     if (!empty(parser.help_arguments))
         usage += "arguments:\n" + parser.help_arguments + "\n";
-    cout << usage;
+    printf("%s\n", usage.c_str());
 }
 
 // Parse a flag. Name should start with either "--" or "-".
@@ -1004,17 +775,6 @@ inline void check_cmdline_parser(cmdline_parser& parser) {
             exit(0);
         }
     }
-    if (parser.add_logging_flags) {
-        auto verbose = false, quiet = false;
-        if (parse_flag_argument(
-                parser, "--verbose,-v", verbose, "use verbose output", false)) {
-            set_log_level(log_level::trace);
-        }
-        if (parse_flag_argument(
-                parser, "--quiet,-q", quiet, "use quiet output", false)) {
-            set_log_level(log_level::error);
-        }
-    }
     if (!empty(parser.args)) {
         auto found = false;
         for (auto& name : parser.args) {
@@ -1027,7 +787,7 @@ inline void check_cmdline_parser(cmdline_parser& parser) {
         if (!found) parser.error += "unmatched arguments remaining\n";
     }
     if (!empty(parser.error)) {
-        cout << "error: " + parser.error + "\n";
+        printf("error: %s\n", parser.error.c_str());
         print_cmdline_usage(parser);
         exit(1);
     }
@@ -1038,12 +798,17 @@ inline bool parse_option_value(const string& vals, string& val) {
     val = vals;
     return true;
 }
-template <typename T>
-inline bool parse_option_value(const string& vals, T& val) {
-    auto stream = stringstream{vals};
-    stream >> val;
-    if (stream.fail()) return false;
+inline bool parse_option_value(const string& vals, int& val) {
+    return sscanf(vals.c_str(), "%d", &val) > 0;
+}
+inline bool parse_option_value(const string& vals, bool& val) {
+    auto vali = 0;
+    if (sscanf(vals.c_str(), "%d", &vali) < 0) return false;
+    val = (bool)vali;
     return true;
+}
+inline bool parse_option_value(const string& vals, float& val) {
+    return sscanf(vals.c_str(), "%f", &val) > 0;
 }
 
 // Parse an option string. Name should start with "--" or "-".
@@ -1275,12 +1040,12 @@ string normalize_path(const string& filename_) {
     for (auto& c : filename)
         if (c == '\\') c = '/';
     if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-        log_error("absolute paths are not supported");
+        throw std::invalid_argument("absolute paths are not supported");
         return filename_;
     }
     if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
         filename[3] == '/') {
-        log_error("absolute paths are not supported");
+        throw std::invalid_argument("absolute paths are not supported");
         return filename_;
     }
     auto pos = (size_t)0;
@@ -1338,103 +1103,38 @@ bool exists_file(const string& filename) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// log io error
-template <typename... Args>
-inline void log_io_error(const string& fmt, const Args&... args) {
-    log_error(fmt, args...);
-}
-
-// write value to a stream
-template <typename T>
-inline ostream& write_value(ostream& stream, const T& value) {
-    return stream.write((char*)&value, sizeof(T));
-}
-
-// write values to a stream
-template <typename T>
-inline ostream& write_values(ostream& stream, const vector<T>& values) {
-    if (values.empty()) return stream;
-    return stream.write((char*)values.data(), values.size() * sizeof(T));
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-inline istream& read_value(istream& stream, T& value) {
-    return stream.read((char*)&value, sizeof(T));
-}
-
-// Read binary data to fill the whole buffer
-template <typename T>
-inline istream& read_values(istream& stream, vector<T>& values) {
-    if (values.empty()) return stream;
-    return stream.read((char*)values.data(), values.size() * sizeof(T));
-}
-
 // Load a text file
-inline bool load_text(const string& filename, string& str) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto stream = ifstream(filename);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stringstream buffer;
-    buffer << stream.rdbuf();
-    if (stream.fail()) {
-        log_io_error("cannot read file {}", filename);
-        return false;
-    }
-    str = buffer.str();
-    return true;
+inline void load_text(const string& filename, string& str) {
+    // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+    auto fs = input_file(filename);
+    fseek(fs.file, 0, SEEK_END);
+    auto length = ftell(fs.file);
+    fseek(fs.file, 0, SEEK_SET);
+    str.resize(length);
+    read_values(fs, str);
 }
 
 // Save a text file
-inline bool save_text(const string& filename, const string& str) {
-    auto stream = ofstream(filename);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stream << str;
-    if (!stream) {
-        log_io_error("cannot write file {}", filename);
-        return false;
-    }
-    return true;
+inline void save_text(const string& filename, const string& str) {
+    auto fs = output_file(filename);
+    write_text(fs, str);
 }
 
 // Load a binary file
-inline bool load_binary(const string& filename, vector<byte>& data) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto stream = ifstream(filename, std::ios::binary);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stringstream buffer;
-    buffer << stream.rdbuf();
-    if (stream.fail()) {
-        log_io_error("cannot read file {}", filename);
-        return false;
-    }
-    auto str = buffer.str();
-    data     = vector<byte>((byte*)str.data(), (byte*)str.data() + str.size());
-    return true;
+inline void load_binary(const string& filename, vector<byte>& data) {
+    // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+    auto fs = input_file(filename, true);
+    fseek(fs.file, 0, SEEK_END);
+    auto length = ftell(fs.file);
+    fseek(fs.file, 0, SEEK_SET);
+    data.resize(length);
+    read_values(fs, data);
 }
 
 // Save a binary file
-inline bool save_binary(const string& filename, const vector<byte>& data) {
-    auto stream = ofstream(filename, std::ios::binary);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stream.write((char*)data.data(), data.size());
-    if (!stream) {
-        log_io_error("cannot write file {}", filename);
-        return false;
-    }
-    return true;
+inline void save_binary(const string& filename, const vector<byte>& data) {
+    auto fs = output_file(filename, true);
+    write_values(fs, data);
 }
 
 }  // namespace yocto
@@ -1449,13 +1149,15 @@ template <typename T>
 inline concurrent_queue<T>::concurrent_queue() {}
 template <typename T>
 inline concurrent_queue<T>::concurrent_queue(const concurrent_queue<T>& other) {
-    if (!empty(other._queue)) log_error("cannot copy full queue");
+    if (!empty(other._queue))
+        throw std::invalid_argument("cannot copy full queue");
     clear();
 }
 template <typename T>
 inline concurrent_queue<T>& concurrent_queue<T>::operator=(
     const concurrent_queue<T>& other) {
-    if (!empty(other._queue)) log_error("cannot copy full queue");
+    if (!empty(other._queue))
+        throw std::invalid_argument("cannot copy full queue");
     clear();
 }
 
@@ -1494,20 +1196,21 @@ inline void parallel_for(
             func(idx);
         }
     } else {
-        auto        threads  = vector<thread>{};
+        auto        futures  = vector<future<void>>{};
         auto        nthreads = thread::hardware_concurrency();
         atomic<int> next_idx(begin);
         for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-            threads.emplace_back([&func, &next_idx, cancel, end]() {
-                while (true) {
-                    if (cancel && *cancel) break;
-                    auto idx = next_idx.fetch_add(1);
-                    if (idx >= end) break;
-                    func(idx);
-                }
-            });
+            futures.emplace_back(
+                async(std::launch::async, [&func, &next_idx, cancel, end]() {
+                    while (true) {
+                        if (cancel && *cancel) break;
+                        auto idx = next_idx.fetch_add(1);
+                        if (idx >= end) break;
+                        func(idx);
+                    }
+                }));
         }
-        for (auto& t : threads) t.join();
+        for (auto& f : futures) f.get();
     }
 }
 

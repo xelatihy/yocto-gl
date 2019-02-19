@@ -56,6 +56,11 @@ struct GLFWwindow;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+struct gl_error : runtime_error {
+    explicit gl_error(const char* msg) : runtime_error{msg} {}
+    explicit gl_error(const string& msg) : runtime_error{msg} {}
+};
+
 void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth = true);
 
 void set_opengl_viewport(int x, int y, int w, int h);
@@ -73,7 +78,7 @@ struct opengl_program {
     operator bool() const { return (bool)program_id; }
 };
 
-bool init_opengl_program(
+void init_opengl_program(
     opengl_program& program, const char* vertex, const char* fragment);
 
 void delete_opengl_program(opengl_program& program);
@@ -89,7 +94,7 @@ struct opengl_texture {
     operator bool() const { return (bool)texture_id; }
 };
 
-bool init_opengl_texture(opengl_texture& texture, int width, int height,
+void init_opengl_texture(opengl_texture& texture, int width, int height,
     bool as_float, bool as_srgb, bool linear, bool mipmap);
 
 void update_opengl_texture(
@@ -97,29 +102,25 @@ void update_opengl_texture(
 void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
     const image_region& region, bool mipmap);
 
-inline bool init_opengl_texture(opengl_texture& texture, const image4f& img,
+inline void init_opengl_texture(opengl_texture& texture, const image4f& img,
     bool as_float, bool linear, bool mipmap) {
-    if (!init_opengl_texture(
-            texture, img.width, img.height, as_float, false, linear, mipmap))
-        return false;
+    init_opengl_texture(
+        texture, img.width, img.height, as_float, false, linear, mipmap);
     update_opengl_texture(texture, img, mipmap);
-    return true;
 }
 
-bool init_opengl_texture(opengl_texture& texture, const image4b& img,
+void init_opengl_texture(opengl_texture& texture, const image4b& img,
     bool as_srgb, bool linear, bool mipmap);
 void update_opengl_texture(
     opengl_texture& texture, const image4b& img, bool mipmap);
 void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
     const image_region& region, bool mipmap);
 
-inline bool init_opengl_texture(opengl_texture& texture, const image4b& img,
+inline void init_opengl_texture(opengl_texture& texture, const image4b& img,
     bool as_srgb, bool linear, bool mipmap) {
-    if (!init_opengl_texture(
-            texture, img.width, img.height, false, as_srgb, linear, mipmap))
-        return false;
+    init_opengl_texture(
+        texture, img.width, img.height, false, as_srgb, linear, mipmap);
     update_opengl_texture(texture, img, mipmap);
-    return true;
 }
 
 void delete_opengl_texture(opengl_texture& texture);
@@ -140,22 +141,22 @@ struct opengl_elementbuffer {
     operator bool() const { return (bool)buffer_id; }
 };
 
-bool init_opengl_array_buffer(opengl_array_buffer& buffer,
+void init_opengl_array_buffer(opengl_array_buffer& buffer,
     const vector<float>& data, bool dynamic = false);
-bool init_opengl_array_buffer(opengl_array_buffer& buffer,
+void init_opengl_array_buffer(opengl_array_buffer& buffer,
     const vector<vec2f>& data, bool dynamic = false);
-bool init_opengl_array_buffer(opengl_array_buffer& buffer,
+void init_opengl_array_buffer(opengl_array_buffer& buffer,
     const vector<vec3f>& data, bool dynamic = false);
-bool init_opengl_array_buffer(opengl_array_buffer& buffer,
+void init_opengl_array_buffer(opengl_array_buffer& buffer,
     const vector<vec4f>& data, bool dynamic = false);
 
 void delete_opengl_array_buffer(opengl_array_buffer& buffer);
 
-bool init_opengl_elementbuffer(opengl_elementbuffer& buffer,
+void init_opengl_elementbuffer(opengl_elementbuffer& buffer,
     const vector<int>& data, bool dynamic = false);
-bool init_opengl_elementbuffer(opengl_elementbuffer& buffer,
+void init_opengl_elementbuffer(opengl_elementbuffer& buffer,
     const vector<vec2i>& data, bool dynamic = false);
-bool init_opengl_elementbuffer(opengl_elementbuffer& buffer,
+void init_opengl_elementbuffer(opengl_elementbuffer& buffer,
     const vector<vec3i>& data, bool dynamic = false);
 
 void delete_opengl_elementbuffer(opengl_elementbuffer& buffer);
@@ -230,7 +231,7 @@ struct opengl_window {
     drop_opengl_callback    drop_cb    = {};
 };
 
-bool init_opengl_window(opengl_window& win, const vec2i& size,
+void init_opengl_window(opengl_window& win, const vec2i& size,
     const string& title, void* user_pointer,
     refresh_opengl_callback refresh_cb);
 void delete_opengl_window(opengl_window& win);

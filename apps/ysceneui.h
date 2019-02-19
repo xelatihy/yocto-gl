@@ -116,7 +116,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     auto cid = 0;
     for (auto ch : value.children) {
         draw_opengl_widgets_scene_tree(
-            win, "child" + to_string(cid++), scene, ch, scene.nodes, sel);
+            win, "child" + std::to_string(cid++), scene, ch, scene.nodes, sel);
     }
 }
 inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
@@ -125,7 +125,7 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
     auto tid = 0;
     for (auto tg : value.node_targets) {
         draw_opengl_widgets_scene_tree(
-            win, "target" + to_string(tid++), scene, tg, scene.nodes, sel);
+            win, "target" + std::to_string(tid++), scene, tg, scene.nodes, sel);
     }
 }
 

@@ -1014,13 +1014,13 @@ struct frame<T, 3> {
     vec<T, 3> z = {0, 0, 1};
     vec<T, 3> o = {0, 0, 0};
 
-    frame() : x{}, y{}, z{}, o{o} {}
+    frame() : x{}, y{}, z{}, o{} {}
     frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
         const vec<T, 3>& o)
         : x{x}, y{y}, z{z}, o{o} {}
 
-    vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+    vec<T, 3>&       operator[](int i) { return (&x)[i]; }
+    const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Typedefs

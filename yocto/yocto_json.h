@@ -68,53 +68,8 @@ using nlohmann::json;
 namespace yocto {
 
 // Load/save a text file
-inline bool load_json(const string& filename, json& js);
-inline bool save_json(const string& filename, const json& js);
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// JSON SERIALIZATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Serialize/deserialize basic types
-inline bool serialize_json_value(json& js, int& value, bool save);
-inline bool serialize_json_value(json& js, bool& value, bool save);
-inline bool serialize_json_value(json& js, unsigned char& value, bool save);
-inline bool serialize_json_value(json& js, float& value, bool save);
-inline bool serialize_json_value(json& js, double& value, bool save);
-inline bool serialize_json_value(json& js, string& value, bool save);
-inline bool serialize_json_value(json& js, vec2f& value, bool save);
-inline bool serialize_json_value(json& js, vec3f& value, bool save);
-inline bool serialize_json_value(json& js, vec4f& value, bool save);
-inline bool serialize_json_value(json& js, vec2i& value, bool save);
-inline bool serialize_json_value(json& js, vec3i& value, bool save);
-inline bool serialize_json_value(json& js, vec4i& value, bool save);
-inline bool serialize_json_value(json& js, vec4b& value, bool save);
-inline bool serialize_json_value(json& js, mat2f& value, bool save);
-inline bool serialize_json_value(json& js, mat3f& value, bool save);
-inline bool serialize_json_value(json& js, mat4f& value, bool save);
-inline bool serialize_json_value(json& js, frame2f& value, bool save);
-inline bool serialize_json_value(json& js, frame3f& value, bool save);
-inline bool serialize_json_value(json& js, bbox3f& value, bool save);
-
-// Serialize/deserialize compound types
-template <typename T>
-inline bool serialize_json_value(json& js, vector<T>& value, bool save);
-
-// Serialize/deserialize values as keys in a JSON object
-template <typename T>
-inline bool serialize_json_value(
-    json& js, T& value, const char* name, const T& def, bool save);
-
-// Check if a JSON value has a key
-inline bool has_json_key(const json& js, const char* key);
-
-// Get a value from a JSON key or a default value if any error occurs
-template <typename T>
-inline T get_json_value(
-    const json& js, const char* key, const T& default_value);
+inline void load_json(const string& filename, json& js);
+inline void save_json(const string& filename, const json& js);
 
 }  // namespace yocto
 
@@ -130,28 +85,16 @@ inline T get_json_value(
 namespace yocto {
 
 // Load a JSON object
-inline bool load_json(const string& filename, json& js) {
+inline void load_json(const string& filename, json& js) {
     auto text = ""s;
-    if (!load_text(filename, text)) return false;
-    try {
-        js = json::parse(text.begin(), text.end());
-    } catch (...) {
-        log_io_error("could not parse json {}", filename);
-        return false;
-    }
-    return true;
+    load_text(filename, text);
+    js = json::parse(text.begin(), text.end());
 }
 
 // Save a JSON object
-inline bool save_json(const string& filename, const json& js) {
-    auto str = ""s;
-    try {
-        str = js.dump(4);
-    } catch (...) {
-        log_io_error("could not dump json {}", filename);
-        return false;
-    }
-    return save_text(filename, str);
+inline void save_json(const string& filename, const json& js) {
+    auto str = js.dump(4);
+    save_text(filename, str);
 }
 
 }  // namespace yocto
@@ -161,276 +104,40 @@ inline bool save_json(const string& filename, const json& js) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline void to_json_array(json& js, const float* vals, int N) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) js.push_back(vals[i]);
+template <typename T, int N>
+inline void to_json(json& js, const vec<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N>&)val);
 }
-inline void to_json_array(json& js, const int* vals, int N) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) js.push_back(vals[i]);
-}
-inline void to_json_array(json& js, const byte* vals, int N) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) js.push_back((int)vals[i]);
-}
-inline void from_json_array(const json& js, float* vals, int N) {
-    if (js.is_array()) throw std::runtime_error("canot convert json");
-    if (js.size() != N) throw std::runtime_error("canot convert json");
-    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<float>();
-}
-inline void from_json_array(const json& js, int* vals, int N) {
-    if (js.is_array()) throw std::runtime_error("canot convert json");
-    if (js.size() != N) throw std::runtime_error("canot convert json");
-    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<int>();
-}
-inline void from_json_array(const json& js, byte* vals, int N) {
-    if (js.is_array()) throw std::runtime_error("canot convert json");
-    if (js.size() != N) throw std::runtime_error("canot convert json");
-    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<int>();
+template <typename T, int N>
+inline void from_json(const json& js, vec<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N>&)val);
 }
 
-inline void to_json(json& js, const vec2f& val) {
-    to_json_array(js, &val.x, 2);
+template <typename T, int N>
+inline void to_json(json& js, const frame<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N*(N + 1)>&)val);
 }
-inline void from_json(const json& js, vec2f& val) {
-    from_json_array(js, &val.x, 2);
-}
-inline void to_json(json& js, const vec3f& val) {
-    to_json_array(js, &val.x, 3);
-}
-inline void from_json(const json& js, vec3f& val) {
-    from_json_array(js, &val.x, 3);
-}
-inline void to_json(json& js, const vec4f& val) {
-    to_json_array(js, &val.x, 4);
-}
-inline void from_json(const json& js, vec4f& val) {
-    from_json_array(js, &val.x, 4);
+template <typename T, int N>
+inline void from_json(const json& js, frame<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N*(N + 1)>&)val);
 }
 
-inline void to_json(json& js, const vec2i& val) {
-    to_json_array(js, &val.x, 2);
+template <typename T, int N, int M>
+inline void to_json(json& js, const mat<T, N, M>& val) {
+    nlohmann::to_json(js, (const std::array<T, N * M>&)val);
 }
-inline void from_json(const json& js, vec2i& val) {
-    from_json_array(js, &val.x, 2);
-}
-inline void to_json(json& js, const vec3i& val) {
-    to_json_array(js, &val.x, 3);
-}
-inline void from_json(const json& js, vec3i& val) {
-    from_json_array(js, &val.x, 3);
-}
-inline void to_json(json& js, const vec4i& val) {
-    to_json_array(js, &val.x, 4);
-}
-inline void from_json(const json& js, vec4i& val) {
-    from_json_array(js, &val.x, 4);
-}
-inline void to_json(json& js, const vec4b& val) {
-    to_json_array(js, &val.x, 4);
-}
-inline void from_json(const json& js, vec4b& val) {
-    from_json_array(js, &val.x, 4);
+template <typename T, int N, int M>
+inline void from_json(const json& js, mat<T, N, M>& val) {
+    nlohmann::from_json(js, (std::array<T, N * M>&)val);
 }
 
-inline void to_json(json& js, const frame3f& val) {
-    to_json_array(js, &val.x.x, 12);
+template <typename T, int N>
+inline void to_json(json& js, const bbox<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N * 2>&)val);
 }
-inline void from_json(const json& js, frame3f& val) {
-    from_json_array(js, &val.x.x, 12);
-}
-
-inline void to_json(json& js, const mat4f& val) {
-    to_json_array(js, &val.x.x, 16);
-}
-inline void from_json(const json& js, mat4f& val) {
-    from_json_array(js, &val.x.x, 16);
-}
-
-inline void to_json(json& js, const bbox3f& val) {
-    to_json_array(js, &val.min.x, 6);
-}
-inline void from_json(const json& js, bbox3f& val) {
-    from_json_array(js, &val.min.x, 6);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR JSON SERIALIZATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Dumps a json value
-inline bool serialize_json_value(json& js, int& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number_integer()) return false;
-        value = js.get<int>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, bool& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_boolean()) return false;
-        value = js.get<bool>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, unsigned char& value, bool save) {
-    if (save) {
-        js = (int)value;
-        return true;
-    } else {
-        if (!js.is_number_integer()) return false;
-        value = (unsigned char)js.get<int>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, float& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number()) return false;
-        value = js.get<float>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, double& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number()) return false;
-        value = js.get<float>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, string& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_string()) return false;
-        value = js.get<string>();
-        return true;
-    }
-}
-
-template <typename T>
-inline bool serialize_json_values(json& js, T* values, int num, bool save) {
-    if (save) {
-        js = json::array();
-        for (auto i = 0; i < num; i++) {
-            js.push_back({});
-            if (!serialize_json_value(js.back(), values[i], save)) return false;
-        }
-        return true;
-    } else {
-        if (!js.is_array()) return false;
-        if (js.size() != num) return false;
-        for (auto i = 0; i < num; i++)
-            if (!serialize_json_value(js.at(i), values[i], save)) return false;
-        return true;
-    }
-}
-
-template <typename T>
-inline bool serialize_json_value(json& js, vector<T>& value, bool save) {
-    if (save) {
-        js = json::array();
-        for (auto i = 0; i < value.size(); i++) {
-            js.push_back({});
-            if (!serialize_json_value(js.back(), value[i], save)) return false;
-        }
-        return true;
-    } else {
-        if (!js.is_array()) return false;
-        value.resize(js.size());
-        for (auto i = 0; i < value.size(); i++)
-            if (!serialize_json_value(js.at(i), value[i], save)) return false;
-        return true;
-    }
-}
-
-inline bool serialize_json_value(json& js, vec1f& value, bool save) {
-    return serialize_json_values(js, &value.x, 1, save);
-}
-inline bool serialize_json_value(json& js, vec2f& value, bool save) {
-    return serialize_json_values(js, &value.x, 2, save);
-}
-inline bool serialize_json_value(json& js, vec3f& value, bool save) {
-    return serialize_json_values(js, &value.x, 3, save);
-}
-inline bool serialize_json_value(json& js, vec4f& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-inline bool serialize_json_value(json& js, vec2i& value, bool save) {
-    return serialize_json_values(js, &value.x, 2, save);
-}
-inline bool serialize_json_value(json& js, vec3i& value, bool save) {
-    return serialize_json_values(js, &value.x, 3, save);
-}
-inline bool serialize_json_value(json& js, vec4i& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-inline bool serialize_json_value(json& js, vec4b& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-inline bool serialize_json_value(json& js, mat2f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 4, save);
-}
-inline bool serialize_json_value(json& js, mat3f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 9, save);
-}
-inline bool serialize_json_value(json& js, mat4f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 16, save);
-}
-inline bool serialize_json_value(json& js, frame2f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 6, save);
-}
-inline bool serialize_json_value(json& js, frame3f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 12, save);
-}
-inline bool serialize_json_value(json& js, bbox3f& value, bool save) {
-    return serialize_json_values(js, &value.min.x, 6, save);
-}
-
-// Dumps a json value
-template <typename T>
-inline bool serialize_json_value(
-    json& js, T& value, const char* name, const T& def, bool save) {
-    if (save) {
-        if (value == def) return true;
-        return serialize_json_value(js[name], value, save);
-    } else {
-        if (!js.count(name)) return true;
-        value = def;
-        return serialize_json_value(js.at(name), value, save);
-    }
-}
-
-// Check if a JSON value has a key
-inline bool has_json_key(const json& js, const char* key) {
-    return js.is_object() && js.count(key) > 0;
-}
-
-// Get a value from a JSON key or a default value if any error occurs
-template <typename T>
-inline T get_json_value(
-    const json& js, const char* key, const T& default_value) {
-    if (!js.is_object()) return default_value;
-    if (js.count(key) <= 0) return default_value;
-    auto value = default_value;
-    if (!serialize_json_value((json&)js.at(key), value, false))
-        return default_value;
-    return value;
+template <typename T, int N>
+inline void from_json(const json& js, bbox<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N * 2>&)val);
 }
 
 }  // namespace yocto

@@ -81,9 +81,12 @@ int main(int argc, char** argv) {
     auto scene = yocto_scene{};
     for (auto& filename : filenames) {
         auto to_merge = yocto_scene{};
-        if (!load_scene(filename, to_merge, load_options))
-            log_fatal("cannot load scene {}", filename);
-        log_validation_errors(to_merge, true);
+        try {
+            load_scene(filename, to_merge, load_options);
+        } catch (const std::exception& e) {
+            exit_error(e.what());
+        }
+        print_validation_errors(to_merge, true);
         if (scene_postfix) {
             auto postfix = "{" + get_filename(filename) + "}";
             for (auto& val : to_merge.cameras) val.name += postfix;
@@ -101,10 +104,10 @@ int main(int argc, char** argv) {
     }
 
     // validate scene
-    log_validation_errors(scene, true);
+    print_validation_errors(scene, true);
 
     // print info
-    if (print_info) cout << print_scene_stats(scene) << "\n";
+    if (print_info) printf("%s\n", print_scene_stats(scene).c_str());
 
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')
@@ -144,12 +147,15 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     if (!mkdir(get_dirname(output))) {
-        log_fatal("cannot create directory {}", get_dirname(output));
+        exit_error("cannot create directory " + get_dirname(output));
     }
 
     // save scene
-    if (!save_scene(output, scene, save_options))
-        log_fatal("cannot save scene {}", output);
+    try {
+        save_scene(output, scene, save_options);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
 
     // done
     return 0;

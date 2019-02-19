@@ -44,7 +44,7 @@
 namespace yocto {
 
 void check_opengl_error() {
-    if (glGetError() != GL_NO_ERROR) log_error("gl error");
+    if (glGetError() != GL_NO_ERROR) printf("gl error\n");
 }
 
 void clear_opengl_lframebuffer(const vec4f& color, bool clear_depth) {
@@ -81,7 +81,7 @@ void set_opengl_blending(bool enabled) {
     }
 }
 
-bool init_opengl_program(
+void init_opengl_program(
     opengl_program& program, const char* vertex, const char* fragment) {
     assert(glGetError() == GL_NO_ERROR);
     glGenVertexArrays(1, &program.vertex_array_object_id);
@@ -99,8 +99,7 @@ bool init_opengl_program(
     glGetShaderiv(program.vertex_shader_id, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(program.vertex_shader_id, 10000, 0, errbuf);
-        log_error("shader not compiled with error\n{}", errbuf);
-        return false;
+        throw gl_error("shader not compiled with error\n"s + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -112,8 +111,7 @@ bool init_opengl_program(
     glGetShaderiv(program.fragment_shader_id, GL_COMPILE_STATUS, &errflags);
     if (!errflags) {
         glGetShaderInfoLog(program.fragment_shader_id, 10000, 0, errbuf);
-        log_error("shader not compiled with error\n{}", errbuf);
-        return false;
+        throw gl_error("shader not compiled with error\n"s + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
 
@@ -127,17 +125,14 @@ bool init_opengl_program(
     glGetProgramiv(program.program_id, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
-        log_error("program not linked with error\n{}", errbuf);
-        return false;
+        throw io_error("program not linked with error\n"s + errbuf);
     }
     glGetProgramiv(program.program_id, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
-        log_error("program not linked with error\n{}", errbuf);
-        return false;
+        throw gl_error("program not linked with error\n"s + errbuf);
     }
     assert(glGetError() == GL_NO_ERROR);
-    return true;
 }
 
 void delete_opengl_program(opengl_program& program) {
@@ -148,7 +143,7 @@ void delete_opengl_program(opengl_program& program) {
     program = {};
 }
 
-bool init_opengl_texture(opengl_texture& texture, int width, int height,
+void init_opengl_texture(opengl_texture& texture, int width, int height,
     bool as_float, bool as_srgb, bool linear, bool mipmap) {
     texture = opengl_texture();
     assert(glGetError() == GL_NO_ERROR);
@@ -178,7 +173,6 @@ bool init_opengl_texture(opengl_texture& texture, int width, int height,
             (linear) ? GL_LINEAR : GL_NEAREST);
     }
     assert(glGetError() == GL_NO_ERROR);
-    return true;
 }
 
 void update_opengl_texture(
@@ -230,7 +224,7 @@ void delete_opengl_texture(opengl_texture& texture) {
 }
 
 template <typename T>
-bool init_opengl_array_buffer_impl(
+void init_opengl_array_buffer_impl(
     opengl_array_buffer& buffer, const vector<T>& array, bool dynamic) {
     buffer           = opengl_array_buffer{};
     buffer.num       = size(array);
@@ -241,24 +235,23 @@ bool init_opengl_array_buffer_impl(
     glBufferData(GL_ARRAY_BUFFER, size(array) * sizeof(T), data(array),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return true;
 }
 
-bool init_opengl_array_buffer(
+void init_opengl_array_buffer(
     opengl_array_buffer& buffer, const vector<float>& data, bool dynamic) {
-    return init_opengl_array_buffer_impl(buffer, data, dynamic);
+    init_opengl_array_buffer_impl(buffer, data, dynamic);
 }
-bool init_opengl_array_buffer(
+void init_opengl_array_buffer(
     opengl_array_buffer& buffer, const vector<vec2f>& data, bool dynamic) {
-    return init_opengl_array_buffer_impl(buffer, data, dynamic);
+    init_opengl_array_buffer_impl(buffer, data, dynamic);
 }
-bool init_opengl_array_buffer(
+void init_opengl_array_buffer(
     opengl_array_buffer& buffer, const vector<vec3f>& data, bool dynamic) {
-    return init_opengl_array_buffer_impl(buffer, data, dynamic);
+    init_opengl_array_buffer_impl(buffer, data, dynamic);
 }
-bool init_opengl_array_buffer(
+void init_opengl_array_buffer(
     opengl_array_buffer& buffer, const vector<vec4f>& data, bool dynamic) {
-    return init_opengl_array_buffer_impl(buffer, data, dynamic);
+    init_opengl_array_buffer_impl(buffer, data, dynamic);
 }
 
 void delete_opengl_array_buffer(opengl_array_buffer& buffer) {
@@ -268,7 +261,7 @@ void delete_opengl_array_buffer(opengl_array_buffer& buffer) {
 }
 
 template <typename T>
-bool init_opengl_elementbuffer_impl(
+void init_opengl_elementbuffer_impl(
     opengl_elementbuffer& buffer, const vector<T>& array, bool dynamic) {
     buffer           = opengl_elementbuffer{};
     buffer.num       = size(array);
@@ -279,20 +272,19 @@ bool init_opengl_elementbuffer_impl(
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, size(array) * sizeof(T), data(array),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
-    return true;
 }
 
-bool init_opengl_elementbuffer(
+void init_opengl_elementbuffer(
     opengl_elementbuffer& buffer, const vector<int>& data, bool dynamic) {
-    return init_opengl_elementbuffer_impl(buffer, data, dynamic);
+    init_opengl_elementbuffer_impl(buffer, data, dynamic);
 }
-bool init_opengl_elementbuffer(
+void init_opengl_elementbuffer(
     opengl_elementbuffer& buffer, const vector<vec2i>& data, bool dynamic) {
-    return init_opengl_elementbuffer_impl(buffer, data, dynamic);
+    init_opengl_elementbuffer_impl(buffer, data, dynamic);
 }
-bool init_opengl_elementbuffer(
+void init_opengl_elementbuffer(
     opengl_elementbuffer& buffer, const vector<vec3i>& data, bool dynamic) {
-    return init_opengl_elementbuffer_impl(buffer, data, dynamic);
+    init_opengl_elementbuffer_impl(buffer, data, dynamic);
 }
 
 void delete_opengl_elementbuffer(opengl_elementbuffer& buffer) {
@@ -605,11 +597,11 @@ void _glfw_drop_callback(GLFWwindow* glfw, int num, const char** paths) {
     }
 }
 
-bool init_opengl_window(opengl_window& win, const vec2i& size,
+void init_opengl_window(opengl_window& win, const vec2i& size,
     const string& title, void* user_pointer,
     refresh_opengl_callback refresh_cb) {
     // init glfw
-    if (!glfwInit()) log_fatal("cannot initialize windowing system");
+    if (!glfwInit()) throw gl_error("cannot initialize windowing system");
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -620,7 +612,7 @@ bool init_opengl_window(opengl_window& win, const vec2i& size,
     // create window
     win     = opengl_window();
     win.win = glfwCreateWindow(size.x, size.y, title.c_str(), nullptr, nullptr);
-    if (!win.win) return false;
+    if (!win.win) throw gl_error("cannot initialize windowing system");
     glfwMakeContextCurrent(win.win);
     glfwSwapInterval(1);  // Enable vsync
 
@@ -631,9 +623,7 @@ bool init_opengl_window(opengl_window& win, const vec2i& size,
     win.refresh_cb = refresh_cb;
 
     // init gl extensions
-    if (!gladLoadGL()) log_fatal("cannot initialize OpenGL extensions");
-
-    return true;
+    if (!gladLoadGL()) exit_error("cannot initialize OpenGL extensions");
 }
 
 void delete_opengl_window(opengl_window& win) {

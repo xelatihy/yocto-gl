@@ -351,7 +351,7 @@ void add_missing_cameras(yocto_scene& scene);
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
 
 // Checks for validity of the scene.
-void log_validation_errors(
+void print_validation_errors(
     const yocto_scene& scene, bool skip_textures = false);
 
 // Queries on objects

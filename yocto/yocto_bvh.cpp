@@ -387,23 +387,25 @@ void clear_scene_bvh_embree(bvh_scene& bvh) {
 #if YOCTO_EMBREE
 void embree_error(void* ctx, RTCError code, const char* str) {
     switch (code) {
-        case RTC_ERROR_UNKNOWN: log_error("RTC_ERROR_UNKNOWN: {}", str); break;
+        case RTC_ERROR_UNKNOWN:
+            throw runtime_error("RTC_ERROR_UNKNOWN: "s + str);
+            break;
         case RTC_ERROR_INVALID_ARGUMENT:
-            log_error("RTC_ERROR_INVALID_ARGUMENT: {}", str);
+            throw runtime_error("RTC_ERROR_INVALID_ARGUMENT: "s + str);
             break;
         case RTC_ERROR_INVALID_OPERATION:
-            log_error("RTC_ERROR_INVALID_OPERATION: {}", str);
+            throw runtime_error("RTC_ERROR_INVALID_OPERATION: "s + str);
             break;
         case RTC_ERROR_OUT_OF_MEMORY:
-            log_error("RTC_ERROR_OUT_OF_MEMORY: {}", str);
+            throw runtime_error("RTC_ERROR_OUT_OF_MEMORY: "s + str);
             break;
         case RTC_ERROR_UNSUPPORTED_CPU:
-            log_error("RTC_ERROR_UNSUPPORTED_CPU: {}", str);
+            throw runtime_error("RTC_ERROR_UNSUPPORTED_CPU: "s + str);
             break;
         case RTC_ERROR_CANCELLED:
-            log_error("RTC_ERROR_CANCELLED: {}", str);
+            throw runtime_error("RTC_ERROR_CANCELLED: "s + str);
             break;
-        default: log_error("invalid error code"); break;
+        default: throw runtime_error("invalid error code"); break;
     }
 }
 
@@ -435,9 +437,9 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
     // rtcSetSceneBuildQuality(embree_scene, RTC_BUILD_QUALITY_HIGH);
     bvh.embree_bvh = embree_scene;
     if (!empty(bvh.points)) {
-        log_error("embree does not support points");
+        throw runtime_error("embree does not support points");
     } else if (!empty(bvh.lines)) {
-        log_error("not yet implemented");
+        throw runtime_error("not yet implemented");
     } else if (!empty(bvh.triangles)) {
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -470,7 +472,7 @@ void build_shape_embree_bvh(bvh_shape& bvh, const build_bvh_options& options) {
         rtcCommitGeometry(embree_geom);
         rtcAttachGeometryByID(embree_scene, embree_geom, 0);
     } else {
-        log_error("empty bvh");
+        throw runtime_error("empty bvh");
     }
     rtcCommitScene(embree_scene);
 }
@@ -510,7 +512,7 @@ void build_scene_embree_instanced_bvh(
             rtcSetGeometryInstancedScene(embree_geom,
                 (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
         } else {
-            log_error("empty instance");
+            throw runtime_error("empty instance");
         }
         rtcSetGeometryTransform(
             embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
@@ -556,9 +558,9 @@ void build_scene_embree_flattened_bvh(
                 p = transform_point(instance.frame, p);
         }
         if (!empty(shape_bvh.points)) {
-            log_error("embree does not support points");
+            throw runtime_error("embree does not support points");
         } else if (!empty(shape_bvh.lines)) {
-            log_error("not yet implemented");
+            throw runtime_error("not yet implemented");
         } else if (!empty(shape_bvh.triangles)) {
             auto embree_geom = rtcNewGeometry(
                 embree_device, RTC_GEOMETRY_TYPE_TRIANGLE);
@@ -592,7 +594,7 @@ void build_scene_embree_flattened_bvh(
             rtcCommitGeometry(embree_geom);
             rtcAttachGeometryByID(embree_scene, embree_geom, instance_id);
         } else {
-            log_error("empty bvh");
+            throw runtime_error("empty bvh");
         }
     }
     rtcCommitScene(embree_scene);
@@ -600,8 +602,12 @@ void build_scene_embree_flattened_bvh(
 }
 // Refit a BVH using Embree. Calls `refit_scene_bvh()` if Embree is not
 // available.
-void refit_embree_bvh(bvh_shape& bvh) { log_error("not yet implemented"); }
-void refit_embree_bvh(bvh_scene& bvh) { log_error("not yet implemented"); }
+void refit_embree_bvh(bvh_shape& bvh) {
+    throw runtime_error("not yet implemented");
+}
+void refit_embree_bvh(bvh_scene& bvh) {
+    throw runtime_error("not yet implemented");
+}
 bvh_shape_intersection intersect_embree_bvh(
     const bvh_shape& bvh, const ray3f& ray, bool find_any) {
     RTCRayHit embree_ray;
@@ -711,7 +717,7 @@ pair<int, int> split_bvh_node_sah(vector<bvh_prim>& prims, int start, int end) {
 
     // if we were not able to split, just break the primitives in half
     if (mid == start || mid == end) {
-        log_error("bad bvh split");
+        throw runtime_error("bad bvh split");
         split_axis = 0;
         mid        = (start + end) / 2;
     }
@@ -750,7 +756,7 @@ pair<int, int> split_bvh_node_balanced(
 
     // if we were not able to split, just break the primitives in half
     if (mid == start || mid == end) {
-        log_error("bad bvh split");
+        throw runtime_error("bad bvh split");
         split_axis = 0;
         mid        = (start + end) / 2;
     }
@@ -789,7 +795,7 @@ pair<int, int> split_bvh_node_middle(
 
     // if we were not able to split, just break the primitives in half
     if (mid == start || mid == end) {
-        log_error("bad bvh split");
+        throw runtime_error("bad bvh split");
         split_axis = 0;
         mid        = (start + end) / 2;
     }
@@ -1099,7 +1105,7 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
                         {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
                 }
             } else {
-                log_warning("empty instance");
+                printf("empty instance");
                 prims.push_back({invalid_bbox3f});
             }
         }
@@ -1163,7 +1169,7 @@ void refit_shape_bvh_rec(bvh_shape& bvh, int nodeid) {
             node.bbox += point_bounds(bvh.positions[p], bvh.radius[p]);
         }
     } else {
-        log_warning("empty bvh");
+        printf("empty bvh");
     }
 }
 
@@ -1185,7 +1191,7 @@ void refit_scene_bvh_rec(bvh_scene& bvh, int nodeid) {
                 instance.frame, sbvh.nodes.front().bbox);
         }
     } else {
-        log_warning("empty bvh");
+        printf("empty bvh");
     }
 }
 
@@ -1526,7 +1532,7 @@ bvh_scene_intersection overlap_scene_bvh(
                 max_distance = intersection.distance;
             }
         } else {
-            log_error("empty bvh");
+            throw runtime_error("empty bvh");
         }
 
         // check for early exit

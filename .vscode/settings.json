@@ -74,7 +74,8 @@
         "numeric": "cpp",
         "ostream": "cpp",
         "streambuf": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "future": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled",
     "cmake.buildDirectory": "${workspaceRoot}/build/vscode",

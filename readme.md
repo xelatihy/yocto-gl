@@ -137,16 +137,12 @@ explicit data is both more hackable and easier to understand.
 
 The use of templates in Yocto was the reason for many refactorings, going
 from no template to heavy template use. After many changes, we settled
-on using as few templates as possibles in contrast the C++ STL. We do this
-since we find that writing correct generic code is remarkably hard and 
-even harder for a casual user to extend the library.
+on using templates just like the C++ STL. We do this to avoid code duplication
+and since in some cases templates are the natural way of modeling some types.
 
-We do not use exception for error reporting. While this makes the code 
-more verbose, it follows the stardard practice in many large codebases since
-writing exception-safe code remains very hard in C++, even harder if one
-wants to quickly extend the library.
+We use exception for error reporting to reduce code size and make it seimpler to 
+write mroe robust io code. This follows the stardard practice in the C++ STL.
 
 Finally, we import math symbols from the standard library rather than
 using the `std::name` pattern into the `yocto` namespace. This makes math code 
-easier to read, and allows us to override come function implementation when
-desired.
+easier to read, and allows us to override functions or types if desired.

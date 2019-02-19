@@ -171,6 +171,16 @@ inline const T* data(const image<T>& img) {
     return data(img.pixels);
 }
 
+// equality
+template <typename T>
+inline bool operator==(const image<T>& a, const image<T>& b) {
+    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
+}
+template <typename T>
+inline bool operator!=(const image<T>& a, const image<T>& b) {
+    return a.width != b.width || a.height != b.height || a.pixels != b.pixels;
+}
+
 // Image region
 struct image_region {
     int offsetx = 0;
@@ -333,6 +343,18 @@ inline const float* end(const volume1f& vol) {
 }
 inline float*       data(volume1f& vol) { return data(vol.voxels); }
 inline const float* data(const volume1f& vol) { return data(vol.voxels); }
+
+// equality
+template <typename T>
+inline bool operator==(const volume<T>& a, const volume<T>& b) {
+    return a.width == b.width && a.height == b.height && a.depth == b.depth &&
+           a.voxels == b.voxels;
+}
+template <typename T>
+inline bool operator!=(const volume<T>& a, const volume<T>& b) {
+    return a.width != b.width && a.height != b.height && a.depth != b.depth &&
+           a.voxels != b.voxels;
+}
 
 // make a simple example volume
 void make_test_volume(volume1f& vol, float scale = 10, float exponent = 6);

@@ -94,24 +94,31 @@ int main(int argc, char* argv[]) {
     }
 
     // scene loading
-    log_info("loading scene");
-    auto scene = yocto_scene{};
-    if (!load_scene(filename, scene, load_options))
-        log_fatal("cannot load scene {}", filename);
+    printf("loading scene");
+    auto start_load = get_time();
+    auto scene      = yocto_scene{};
+    try {
+        load_scene(filename, scene, load_options);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
+    printf(" [%s]\n", format_duration(get_time() - start_load).c_str());
 
     // tesselate
     tesselate_shapes_and_surfaces(scene);
 
     // add components
-    log_validation_errors(scene);
+    print_validation_errors(scene);
 
     // add sky
     if (add_skyenv) add_sky_environment(scene);
 
     // build bvh
-    log_info("building bvh");
-    auto bvh = bvh_scene{};
+    printf("building bvh");
+    auto start_bvh = get_time();
+    auto bvh       = bvh_scene{};
     build_scene_bvh(scene, bvh, bvh_options);
+    printf(" [%s]\n", format_duration(get_time() - start_bvh).c_str());
 
     // init renderer
     auto lights = trace_lights{};
@@ -120,7 +127,7 @@ int main(int argc, char* argv[]) {
     // fix renderer type if no lights
     if ((empty(lights.instances) && empty(lights.environments)) &&
         is_trace_sampler_lit(trace_options)) {
-        log_info("no lights presents, switching to eyelight shader");
+        printf("no lights presents, switching to eyelight shader\n");
         trace_options.sampler_type = trace_sampler_type::eyelight;
     }
 
@@ -133,27 +140,36 @@ int main(int argc, char* argv[]) {
     init_trace_state(state, width, height, trace_options.random_seed);
 
     // render
-    auto scope = log_trace_begin("rendering image");
     for (auto sample = 0; sample < trace_options.num_samples;
          sample += trace_options.samples_per_batch) {
         auto nsamples = min(trace_options.samples_per_batch,
             trace_options.num_samples - sample);
-        log_info("rendering image [{}/{}]", sample, trace_options.num_samples);
+        printf("rendering image [%d/%d]", sample, trace_options.num_samples);
+        auto start_batch = get_time();
         trace_image_samples(
             image, state, scene, bvh, lights, sample, trace_options);
+        printf(" [%s]\n", format_duration(get_time() - start_batch).c_str());
         if (save_batch) {
-            auto filename = replace_extension(imfilename,
-                to_string(sample + nsamples) + "." + get_extension(imfilename));
-            if (!save_tonemapped_image(filename, image, exposure, filmic, srgb))
-                log_fatal("cannot save image " + filename);
+            auto filename = replace_extension(
+                imfilename, std::to_string(sample + nsamples) + "." +
+                                get_extension(imfilename));
+            try {
+                save_tonemapped_image(filename, image, exposure, filmic, srgb);
+            } catch (const std::exception& e) {
+                exit_error(e.what());
+            }
         }
     }
-    log_trace_end(scope);
 
     // save image
-    log_info("saving image");
-    if (!save_tonemapped_image(imfilename, image, exposure, filmic, srgb))
-        log_fatal("cannot save image " + imfilename);
+    printf("saving image");
+    auto start_save = get_time();
+    try {
+        save_tonemapped_image(imfilename, image, exposure, filmic, srgb);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
+    printf(" [%s]\n", format_duration(get_time() - start_save).c_str());
 
     // done
     return 0;

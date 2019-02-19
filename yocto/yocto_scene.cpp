@@ -102,7 +102,7 @@ void compute_surface_normals(
 void subdivide_shape(yocto_shape& shape) {
     if (!shape.subdivision_level) return;
     if (!empty(shape.points)) {
-        log_error("point subdivision not supported");
+        throw runtime_error("point subdivision not supported");
     } else if (!empty(shape.lines)) {
         for (auto l = 0; l < shape.subdivision_level; l++) {
             subdivide_lines(shape.lines, shape.positions, shape.normals,
@@ -168,7 +168,7 @@ void subdivide_surface(yocto_surface& surface) {
 }
 void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
     if (empty(shape.texturecoords)) {
-        log_error("missing texture coordinates");
+        throw runtime_error("missing texture coordinates");
         return;
     }
     auto normals = shape.normals;
@@ -186,7 +186,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
 void displace_surface(
     yocto_surface& surface, const yocto_texture& displacement) {
     if (empty(surface.texturecoords)) {
-        log_error("missing texture coordinates");
+        throw runtime_error("missing texture coordinates");
         return;
     }
     auto offset = vector<float>(surface.positions.size(), 0);
@@ -215,7 +215,6 @@ void displace_surface(
 
 // Updates tesselation.
 void tesselate_shapes_and_surfaces(yocto_scene& scene) {
-    auto scope = log_trace_scoped("tesselating surfaces");
     for (auto& shape : scene.shapes) {
         auto& material = scene.materials[shape.material];
         if (!shape.subdivision_level && material.displacement_texture < 0)
@@ -262,7 +261,7 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
                 value = evaluate_keyframed_bezier(animation.keyframes_times,
                     animation.translation_keyframes, time);
                 break;
-            default: log_error("should not have been here");
+            default: throw runtime_error("should not have been here");
         }
         for (auto target : animation.node_targets)
             scene.nodes[target].translation = value;
@@ -441,7 +440,7 @@ void compute_environment_texels_cdf(const yocto_scene& scene,
             if (i) texels_cdf[i] += texels_cdf[i - 1];
         }
     } else {
-        log_error("empty texture");
+        throw runtime_error("empty texture");
     }
 }
 
@@ -486,8 +485,6 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 // Build a scene BVH
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const build_bvh_options& options) {
-    auto scope = log_trace_scoped("building scene bvh");
-
     // shapes
     auto shape_bvhs = vector<bvh_shape>();
     for (auto& shape : scene.shapes) {
@@ -600,7 +597,7 @@ void add_missing_tangent_space(yocto_scene& scene) {
             compute_tangent_spaces(shape.tangentspaces, shape.triangles,
                 shape.positions, shape.normals, shape.texturecoords);
         } else {
-            log_error("type not supported");
+            throw runtime_error("type not supported");
         }
     }
 }
@@ -696,9 +693,9 @@ vector<string> validate_scene(const yocto_scene& scene, bool skip_textures) {
 }
 
 // Logs validations errors
-void log_validation_errors(const yocto_scene& scene, bool skip_textures) {
+void print_validation_errors(const yocto_scene& scene, bool skip_textures) {
     for (auto err : validate_scene(scene, skip_textures))
-        log_error(err + " [validation]");
+        printf("%s [validation]\n", err.c_str());
 }
 
 }  // namespace yocto
@@ -976,7 +973,7 @@ vec3f evaluate_instance_position(const yocto_scene& scene,
             evaluate_surface_position(
                 scene.surfaces[instance.surface], element_id, element_uv));
     } else {
-        log_error("empty instance");
+        throw runtime_error("empty instance");
         return zero3f;
     }
 }
@@ -991,7 +988,7 @@ vec3f evaluate_instance_normal(const yocto_scene& scene,
             evaluate_surface_normal(
                 scene.surfaces[instance.surface], element_id, element_uv));
     } else {
-        log_error("empty instance");
+        throw runtime_error("empty instance");
         return zero3f;
     }
 }
@@ -1006,7 +1003,7 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
             evaluate_surface_perturbed_normal(scene,
                 scene.surfaces[instance.surface], element_id, element_uv));
     } else {
-        log_error("empty instance");
+        throw runtime_error("empty instance");
         return zero3f;
     }
 }
@@ -1019,7 +1016,7 @@ vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
         return evaluate_surface_texturecoord(
             scene.surfaces[instance.surface], element_id, element_uv);
     } else {
-        log_error("empty instance");
+        throw runtime_error("empty instance");
         return zero2f;
     }
 }
@@ -1031,7 +1028,7 @@ vec4f evaluate_instance_color(const yocto_scene& scene,
     } else if (instance.surface >= 0) {
         return {1, 1, 1, 1};
     } else {
-        log_error("empty instance");
+        throw runtime_error("empty instance");
         return {1, 1, 1, 1};
     }
 }
@@ -1047,7 +1044,7 @@ vec3f evaluate_instance_element_normal(
             instance.frame, evaluate_surface_element_normal(
                                 scene.surfaces[instance.surface], element_id));
     } else {
-        log_error("empty instance");
+        throw runtime_error("empty instance");
         return zero3f;
     }
 }
@@ -1066,6 +1063,7 @@ vec3f evaluate_instance_emission(const yocto_scene& scene,
             scene.materials[get_surface_element_material(surface, element_id)],
             evaluate_surface_texturecoord(surface, element_id, element_uv));
     } else {
+        throw runtime_error("empty instance");
         return zero3f;
     }
 }
@@ -1792,54 +1790,54 @@ string print_scene_stats(const yocto_scene& scene) {
     }
     memory_vols = voxel_hdr * sizeof(float);
 
-    auto stream = stringstream{};
+    auto str = ""s;
 
-    stream << "num_cameras: " << num_cameras << "\n";
-    stream << "num_shapes: " << num_shapes << "\n";
-    stream << "num_surface: " << num_surfaces << "\n";
-    stream << "num_instances: " << num_instances << "\n";
-    stream << "num_materials: " << num_materials << "\n";
-    stream << "num_textures: " << num_textures << "\n";
-    stream << "num_voltextures: " << num_voltextures << "\n";
-    stream << "num_environments: " << num_environments << "\n";
-    stream << "num_nodes: " << num_nodes << "\n";
-    stream << "num_animations: " << num_animations << "\n";
+    str += "num_cameras: " + std::to_string(num_cameras) + "\n";
+    str += "num_shapes: " + std::to_string(num_shapes) + "\n";
+    str += "num_surface: " + std::to_string(num_surfaces) + "\n";
+    str += "num_instances: " + std::to_string(num_instances) + "\n";
+    str += "num_materials: " + std::to_string(num_materials) + "\n";
+    str += "num_textures: " + std::to_string(num_textures) + "\n";
+    str += "num_voltextures: " + std::to_string(num_voltextures) + "\n";
+    str += "num_environments: " + std::to_string(num_environments) + "\n";
+    str += "num_nodes: " + std::to_string(num_nodes) + "\n";
+    str += "num_animations: " + std::to_string(num_animations) + "\n";
 
-    stream << "elem_points: " << elem_points << "\n";
-    stream << "elem_lines: " << elem_lines << "\n";
-    stream << "elem_triangles: " << elem_triangles << "\n";
-    stream << "elem_quads: " << elem_quads << "\n";
-    stream << "vert_pos: " << vert_pos << "\n";
-    stream << "vert_norm: " << vert_norm << "\n";
-    stream << "vert_texcoord: " << vert_texcoord << "\n";
-    stream << "vert_color: " << vert_color << "\n";
-    stream << "vert_radius: " << vert_radius << "\n";
-    stream << "vert_tangsp: " << vert_tangsp << "\n";
+    str += "elem_points: " + std::to_string(elem_points) + "\n";
+    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
+    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
+    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
+    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
+    str += "vert_norm: " + std::to_string(vert_norm) + "\n";
+    str += "vert_texcoord: " + std::to_string(vert_texcoord) + "\n";
+    str += "vert_color: " + std::to_string(vert_color) + "\n";
+    str += "vert_radius: " + std::to_string(vert_radius) + "\n";
+    str += "vert_tangsp: " + std::to_string(vert_tangsp) + "\n";
 
-    stream << "elem_points: " << elem_points << "\n";
-    stream << "elem_lines: " << elem_lines << "\n";
-    stream << "elem_triangles: " << elem_triangles << "\n";
-    stream << "elem_quads: " << elem_quads << "\n";
-    stream << "vert_pos: " << vert_pos << "\n";
-    stream << "vert_norm: " << vert_norm << "\n";
-    stream << "vert_texcoord: " << vert_texcoord << "\n";
+    str += "elem_points: " + std::to_string(elem_points) + "\n";
+    str += "elem_lines: " + std::to_string(elem_lines) + "\n";
+    str += "elem_triangles: " + std::to_string(elem_triangles) + "\n";
+    str += "elem_quads: " + std::to_string(elem_quads) + "\n";
+    str += "vert_pos: " + std::to_string(vert_pos) + "\n";
+    str += "vert_norm: " + std::to_string(vert_norm) + "\n";
+    str += "vert_texcoord: " + std::to_string(vert_texcoord) + "\n";
 
-    stream << "texel_hdr: " << texel_hdr << "\n";
-    stream << "texel_ldr: " << texel_ldr << "\n";
+    str += "texel_hdr: " + std::to_string(texel_hdr) + "\n";
+    str += "texel_ldr: " + std::to_string(texel_ldr) + "\n";
 
-    stream << "memory_imgs: " << memory_imgs << "\n";
-    stream << "memory_vols: " << memory_vols << "\n";
-    stream << "memory_elems: " << memory_elems << "\n";
-    stream << "memory_verts: " << memory_verts << "\n";
-    stream << "memory_fvelems: " << memory_fvelems << "\n";
-    stream << "memory_fvverts: " << memory_fvverts << "\n";
+    str += "memory_imgs: " + std::to_string(memory_imgs) + "\n";
+    str += "memory_vols: " + std::to_string(memory_vols) + "\n";
+    str += "memory_elems: " + std::to_string(memory_elems) + "\n";
+    str += "memory_verts: " + std::to_string(memory_verts) + "\n";
+    str += "memory_fvelems: " + std::to_string(memory_fvelems) + "\n";
+    str += "memory_fvverts: " + std::to_string(memory_fvverts) + "\n";
 
-    stream << "bbox min: " << bbox.min.x << " " << bbox.min.y << " "
-           << bbox.min.z << "\n";
-    stream << "bbox max: " << bbox.max.x << " " << bbox.max.y << " "
-           << bbox.max.z << "\n";
+    str += "bbox min: " + std::to_string(bbox.min.x) + " " +
+           std::to_string(bbox.min.y) + " " + std::to_string(bbox.min.z) + "\n";
+    str += "bbox max: " + std::to_string(bbox.max.x) + " " +
+           std::to_string(bbox.max.y) + " " + std::to_string(bbox.max.z) + "\n";
 
-    return stream.str();
+    return str;
 }
 
 }  // namespace yocto

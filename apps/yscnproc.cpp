@@ -77,14 +77,17 @@ int main(int argc, char** argv) {
 
     // load scene
     auto scene = yocto_scene{};
-    if (!load_scene(filename, scene, load_options))
-        log_fatal("cannot load scene {}", filename);
+    try {
+        load_scene(filename, scene, load_options);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
 
     // validate scene
-    log_validation_errors(scene, true);
+    print_validation_errors(scene, true);
 
     // print info
-    if (print_info) cout << print_scene_stats(scene) << "\n";
+    if (print_info) printf("%s\n", print_scene_stats(scene).c_str());
 
     // change texture names
     if (uniform_txt) {
@@ -95,13 +98,13 @@ int main(int argc, char** argv) {
                 if (ext == "pfm")
                     replace_extension(filename, "hdr");
                 else
-                    log_error("unknown texture format {}", ext);
+                    throw io_error("unknown texture format " + ext);
             } else {
                 if (ext == "png" || ext == "jpg") continue;
                 if (ext == "tga" || ext == "bmp")
                     replace_extension(filename, "png");
                 else
-                    log_error("unknown texture format {}", ext);
+                    throw io_error("unknown texture format " + ext);
             }
         }
     }
@@ -130,12 +133,15 @@ int main(int argc, char** argv) {
 
     // make a directory if needed
     if (!mkdir(get_dirname(output))) {
-        log_fatal("cannot create directory {}", get_dirname(output));
+        exit_error("cannot create directory " + get_dirname(output));
     }
 
     // save scene
-    if (!save_scene(output, scene, save_options))
-        log_fatal("cannot save scene {}", output);
+    try {
+        save_scene(output, scene, save_options);
+    } catch (const std::exception& e) {
+        exit_error(e.what());
+    }
 
     // done
     return 0;
