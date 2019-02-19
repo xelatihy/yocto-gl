@@ -95,7 +95,7 @@ struct trace_lights {
 };
 
 // Initialize lights.
-trace_lights make_trace_lights(const yocto_scene& scene);
+void make_trace_lights(trace_lights& lights, const yocto_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
@@ -111,7 +111,7 @@ struct trace_state {
 };
 
 // Initialize state of the renderer.
-trace_state make_trace_state(
+void make_trace_state(trace_state& state,
     int width, int height, uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use

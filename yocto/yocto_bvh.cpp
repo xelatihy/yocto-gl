@@ -1034,35 +1034,31 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 }
 
 // Build a BVH from the given set of shape primitives.
-bvh_shape make_shape_bvh(const vector<int>& points,
+void make_shape_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
-    auto bvh      = bvh_shape{};
+    bvh      = {};
     bvh.points    = points;
     bvh.positions = positions;
     bvh.radius    = radius;
-    return bvh;
 }
-bvh_shape make_shape_bvh(const vector<vec2i>& lines,
+void make_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
-    auto bvh      = bvh_shape{};
+    bvh      = {};
     bvh.lines     = lines;
     bvh.positions = positions;
     bvh.radius    = radius;
-    return bvh;
 }
-bvh_shape make_shape_bvh(
+void make_shape_bvh(bvh_shape& bvh, 
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto bvh      = bvh_shape{};
+    bvh      = {};
     bvh.triangles = triangles;
     bvh.positions = positions;
-    return bvh;
 }
-bvh_shape make_shape_bvh(
+void make_shape_bvh(bvh_shape& bvh, 
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
-    auto bvh      = bvh_shape{};
+    bvh      = {};
     bvh.quads     = quads;
     bvh.positions = positions;
-    return bvh;
 }
 
 // Build a BVH from a set of primitives.
@@ -1124,14 +1120,13 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 }
 
 // Build a BVH from the given set of instances.
-bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
+void make_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
     const vector<bvh_shape>&                         shape_bvhs,
     const vector<bvh_shape>&                         surface_bvhs) {
-    auto bvh         = bvh_scene{};
+    bvh         = {};
     bvh.instances    = instances;
     bvh.shape_bvhs   = shape_bvhs;
     bvh.surface_bvhs = surface_bvhs;
-    return bvh;
 }
 
 // Recursively recomputes the node bounds for a shape bvh

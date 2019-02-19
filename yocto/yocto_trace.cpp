@@ -1952,8 +1952,8 @@ void trace_image_region(image4f& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-trace_state make_trace_state(int width, int height, uint64_t seed) {
-    auto state = trace_state{
+void make_trace_state(trace_state& state, int width, int height, uint64_t seed) {
+    state = trace_state{
         width, height, vector<trace_pixel>(width * height, trace_pixel{})};
     auto rng = make_rng(1301081);
     for (auto j = 0; j < state.height; j++) {
@@ -1962,13 +1962,12 @@ trace_state make_trace_state(int width, int height, uint64_t seed) {
             pixel.rng   = make_rng(seed, get_random_int(rng, 1 << 31) / 2 + 1);
         }
     }
-    return state;
 }
 
 // Init trace lights
-trace_lights make_trace_lights(const yocto_scene& scene) {
+void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     auto scope  = log_trace_scoped("making trace lights");
-    auto lights = trace_lights{};
+    lights = {};
 
     lights.shape_elements_cdf.resize(scene.shapes.size());
     lights.surface_elements_cdf.resize(scene.surfaces.size());
@@ -1982,14 +1981,12 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
             auto& shape = scene.shapes[instance.shape];
             if (empty(shape.triangles) && empty(shape.quads)) continue;
             lights.instances.push_back(instance_id);
-            lights.shape_elements_cdf[instance.shape] =
-                compute_shape_elements_cdf(shape);
+            compute_shape_elements_cdf(shape, lights.shape_elements_cdf[instance.shape]);
         } else if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
             if (empty(surface.quads_positions)) continue;
             lights.instances.push_back(instance_id);
-            lights.surface_elements_cdf[instance.surface] =
-                compute_surface_elements_cdf(surface);
+            compute_surface_elements_cdf(surface, lights.surface_elements_cdf[instance.surface]);
         } else {
             continue;
         }
@@ -2005,9 +2002,6 @@ trace_lights make_trace_lights(const yocto_scene& scene) {
                 compute_environment_texels_cdf(scene, environment);
         }
     }
-
-    if (empty(lights.instances) && empty(lights.environments)) return {};
-    return lights;
 }
 
 // Progressively compute an image by calling trace_samples multiple times.
@@ -2018,7 +2012,8 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
         scene.cameras.at(options.camera_id), options.image_width,
         options.image_height);
     auto image   = yocto::image{width, height, zero4f};
-    auto pixels  = make_trace_state(width, height, options.random_seed);
+    auto pixels  = trace_state{};
+    make_trace_state(pixels, width, height, options.random_seed);
     auto regions = make_image_regions(
         image.width, image.height, options.region_size, true);
 
@@ -2092,7 +2087,8 @@ void trace_image_async_start(image4f& image, trace_state& state,
     auto [width, height] = get_camera_image_size(
         camera, options.image_width, options.image_height);
     image        = {width, height, zero4f};
-    state        = make_trace_state(width, height, options.random_seed);
+    state        = trace_state{};
+    make_trace_state(state, width, height, options.random_seed);
     auto regions = make_image_regions(
         image.width, image.height, options.region_size, true);
     if (options.cancel_flag) *options.cancel_flag = false;

@@ -101,7 +101,7 @@ void start_rendering_async(app_state& app) {
         app.trace_options.image_width, app.trace_options.image_height);
     app.image   = {app.image_width, app.image_height, zero4f};
     app.display = {app.image_width, app.image_height, zero4f};
-    app.state   = make_trace_state(
+    make_trace_state(app.state,
         app.image_width, app.image_height, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
@@ -152,11 +152,11 @@ bool load_scene_sync(app_state& app) {
 
     // build bvh
     app.status = "computing bvh";
-    app.bvh    = make_scene_bvh(app.scene, app.bvh_options);
+    make_scene_bvh(app.scene, app.bvh, app.bvh_options);
 
     // init renderer
     app.status = "initializing lights";
-    app.lights = make_trace_lights(app.scene);
+    make_trace_lights(app.lights, app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights.instances) && empty(app.lights.environments) &&

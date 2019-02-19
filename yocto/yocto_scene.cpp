@@ -74,8 +74,8 @@ bbox3f compute_scene_bounds(const yocto_scene& scene) {
 }
 
 // Compute vertex normals
-vector<vec3f> compute_shape_normals(const yocto_shape& shape) {
-    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1});
+void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals) {
+    normals.assign(shape.positions.size(), {0, 0, 1});
     if (!empty(shape.points)) {
     } else if (!empty(shape.lines)) {
         compute_vertex_tangents(normals, shape.lines, shape.positions);
@@ -84,66 +84,59 @@ vector<vec3f> compute_shape_normals(const yocto_shape& shape) {
     } else if (!empty(shape.quads)) {
         compute_vertex_normals(normals, shape.quads, shape.positions);
     } else {
-        return {};
     }
-    return normals;
 }
 
 // Compute vertex normals
-vector<vec3f> compute_surface_normals(const yocto_surface& shape) {
-    auto normals = vector<vec3f>(shape.positions.size(), {0, 0, 1});
+void compute_surface_normals(const yocto_surface& shape, vector<vec3f>& normals) {
+    normals.assign(shape.positions.size(), {0, 0, 1});
     if (!empty(shape.quads_positions)) {
         compute_vertex_normals(normals, shape.quads_positions, shape.positions);
     } else {
-        return {};
+        return;
     }
-    return normals;
 }
 
 // Apply subdivision and displacement rules.
-yocto_shape subdivide_shape(const yocto_shape& shape, int subdivision_level,
-    bool catmull_clark, bool compute_normals) {
-    if (!subdivision_level) return shape;
-    auto subdivided = shape;
-    if (!empty(subdivided.points)) {
+void subdivide_shape(yocto_shape& shape) {
+    if (!shape.subdivision_level) return;
+    if (!empty(shape.points)) {
         log_error("point subdivision not supported");
-    } else if (!empty(subdivided.lines)) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_lines(subdivided.lines, subdivided.positions,
-                subdivided.normals, subdivided.texturecoords, subdivided.colors,
-                subdivided.radius);
+    } else if (!empty(shape.lines)) {
+        for (auto l = 0; l < shape.subdivision_level; l++) {
+            subdivide_lines(shape.lines, shape.positions,
+                shape.normals, shape.texturecoords, shape.colors,
+                shape.radius);
         }
-    } else if (!empty(subdivided.triangles)) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_triangles(subdivided.triangles, subdivided.positions,
-                subdivided.normals, subdivided.texturecoords, subdivided.colors,
-                subdivided.radius);
+    } else if (!empty(shape.triangles)) {
+        for (auto l = 0; l < shape.subdivision_level; l++) {
+            subdivide_triangles(shape.triangles, shape.positions,
+                shape.normals, shape.texturecoords, shape.colors,
+                shape.radius);
         }
-    } else if (!empty(subdivided.quads) && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_quads(subdivided.quads, subdivided.positions,
-                subdivided.normals, subdivided.texturecoords, subdivided.colors,
-                subdivided.radius);
+    } else if (!empty(shape.quads) && !shape.catmull_clark) {
+        for (auto l = 0; l < shape.subdivision_level; l++) {
+            subdivide_quads(shape.quads, shape.positions,
+                shape.normals, shape.texturecoords, shape.colors,
+                shape.radius);
         }
-    } else if (!empty(subdivided.quads) && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_catmullclark(subdivided.quads, subdivided.positions,
-                subdivided.normals, subdivided.texturecoords, subdivided.colors,
-                subdivided.radius);
+    } else if (!empty(shape.quads) && shape.catmull_clark) {
+        for (auto l = 0; l < shape.subdivision_level; l++) {
+            subdivide_catmullclark(shape.quads, shape.positions,
+                shape.normals, shape.texturecoords, shape.colors,
+                shape.radius);
         }
     }
 
-    if (compute_normals) {
-        subdivided.normals = compute_shape_normals(subdivided);
+    if (shape.compute_vertex_normals) {
+        compute_shape_normals(shape, shape.normals);
     }
 
-    return subdivided;
+    shape.subdivision_level = 0;
 }
 // Apply subdivision and displacement rules.
-yocto_surface subdivide_surface(const yocto_surface& surface,
-    int subdivision_level, bool catmull_clark, bool compute_normals) {
-    if (!subdivision_level) return surface;
-    auto subdivided    = surface;
+void subdivide_surface(yocto_surface& surface) {
+    if (!surface.subdivision_level) return;
     auto subdivide_ids = [](const vector<vec4i>& quads, vector<int>& ids) {
         if (empty(ids)) return;
         auto new_ids = vector<int>();
@@ -154,61 +147,54 @@ yocto_surface subdivide_surface(const yocto_surface& surface,
         }
         swap(new_ids, ids);
     };
-    if (!empty(subdivided.quads_positions) && !catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
-            subdivide_ids(
-                subdivided.quads_positions, subdivided.quads_materials);
-            subdivide_quads(subdivided.quads_positions, subdivided.positions);
-            subdivide_quads(subdivided.quads_normals, subdivided.normals);
-            subdivide_quads(
-                subdivided.quads_texturecoords, subdivided.texturecoords);
+    if (!empty(surface.quads_positions) && !surface.catmull_clark) {
+        for (auto l = 0; l < surface.subdivision_level; l++) {
+            subdivide_ids(surface.quads_positions, surface.quads_materials);
+            subdivide_quads(surface.quads_positions, surface.positions);
+            subdivide_quads(surface.quads_normals, surface.normals);
+            subdivide_quads(surface.quads_texturecoords, surface.texturecoords);
         }
-    } else if (!empty(subdivided.quads_positions) && catmull_clark) {
-        for (auto l = 0; l < subdivision_level; l++) {
+    } else if (!empty(surface.quads_positions) && surface.catmull_clark) {
+        for (auto l = 0; l < surface.subdivision_level; l++) {
             subdivide_ids(
-                subdivided.quads_positions, subdivided.quads_materials);
+                surface.quads_positions, surface.quads_materials);
             subdivide_catmullclark(
-                subdivided.quads_positions, subdivided.positions);
+                surface.quads_positions, surface.positions);
             subdivide_catmullclark(
-                subdivided.quads_texturecoords, subdivided.texturecoords, true);
+                surface.quads_texturecoords, surface.texturecoords, true);
         }
     }
 
-    if (compute_normals) {
-        if (!empty(subdivided.quads_positions))
-            subdivided.quads_normals = subdivided.quads_positions;
-        subdivided.normals = compute_surface_normals(subdivided);
+    if (surface.compute_vertex_normals) {
+        if (!empty(surface.quads_positions))
+            surface.quads_normals = surface.quads_positions;
+        compute_surface_normals(surface, surface.normals);
     }
-
-    return subdivided;
 }
-yocto_shape displace_shape(const yocto_shape& shape,
-    const yocto_texture& displacement, bool compute_normals) {
+void displace_shape(yocto_shape& shape,
+    const yocto_texture& displacement) {
     if (empty(shape.texturecoords)) {
         log_error("missing texture coordinates");
-        return shape;
+        return;
     }
-    auto displaced_shape = shape;
-    auto normals = (empty(shape.normals)) ? compute_shape_normals(shape) :
-                                            shape.normals;
+    auto normals = shape.normals;
+    if (empty(shape.normals)) compute_shape_normals(shape, normals);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-        displaced_shape.positions[vid] +=
+        shape.positions[vid] +=
             normals[vid] * displacement.height_scale *
             mean(xyz(evaluate_texture(displacement, shape.texturecoords[vid])));
     }
 
-    if (compute_normals)
-        displaced_shape.normals = compute_shape_normals(displaced_shape);
-
-    return displaced_shape;
+    if (shape.compute_vertex_normals || !empty(shape.normals)) {
+        compute_shape_normals(shape, shape.normals);
+    }
 }
-yocto_surface displace_surface(const yocto_surface& surface,
-    const yocto_texture& displacement, bool compute_normals) {
+void displace_surface(yocto_surface& surface,
+    const yocto_texture& displacement) {
     if (empty(surface.texturecoords)) {
         log_error("missing texture coordinates");
-        return surface;
+        return;
     }
-    auto displaced_surface = surface;
     auto offset            = vector<float>(surface.positions.size(), 0);
     auto count             = vector<int>(surface.positions.size(), 0);
     for (auto fid = 0; fid < surface.quads_positions.size(); fid++) {
@@ -224,16 +210,14 @@ yocto_surface displace_surface(const yocto_surface& surface,
     auto normals = vector<vec3f>{surface.positions.size()};
     compute_vertex_normals(normals, surface.quads_positions, surface.positions);
     for (auto vid = 0; vid < surface.positions.size(); vid++) {
-        displaced_surface.positions[vid] += normals[vid] * offset[vid] /
+        surface.positions[vid] += normals[vid] * offset[vid] /
                                             count[vid];
     }
 
-    if (compute_normals) {
-        displaced_surface.quads_normals = displaced_surface.quads_positions;
-        displaced_surface.normals = compute_surface_normals(displaced_surface);
+    if (surface.compute_vertex_normals || !empty(surface.normals)) {
+        surface.quads_normals = surface.quads_positions;
+        compute_surface_normals(surface, surface.normals);
     }
-
-    return displaced_surface;
 }
 
 // Updates tesselation.
@@ -243,39 +227,24 @@ void tesselate_shapes_and_surfaces(yocto_scene& scene) {
         auto& material = scene.materials[shape.material];
         if (!shape.subdivision_level && material.displacement_texture < 0)
             continue;
-        auto tesselated_shape = shape;
         if (shape.subdivision_level) {
-            tesselated_shape = subdivide_shape(tesselated_shape,
-                tesselated_shape.subdivision_level,
-                tesselated_shape.catmull_clark,
-                tesselated_shape.compute_vertex_normals);
-            tesselated_shape.subdivision_level = 0;
+            subdivide_shape(shape);
         }
         if (material.displacement_texture >= 0) {
-            tesselated_shape = displace_shape(tesselated_shape,
-                scene.textures[material.displacement_texture],
-                shape.compute_vertex_normals);
+            displace_shape(shape,
+                scene.textures[material.displacement_texture]);
         }
-        shape = tesselated_shape;
     }
     for (auto& surface : scene.surfaces) {
         auto& material = scene.materials[surface.materials.front()];
         if (!surface.subdivision_level && material.displacement_texture < 0)
             continue;
-        auto tesselated_surface = surface;
         if (surface.subdivision_level) {
-            tesselated_surface = subdivide_surface(tesselated_surface,
-                tesselated_surface.subdivision_level,
-                tesselated_surface.catmull_clark,
-                tesselated_surface.compute_vertex_normals);
-            tesselated_surface.subdivision_level = 0;
+            subdivide_surface(surface);
         }
         if (material.displacement_texture >= 0) {
-            tesselated_surface = displace_surface(tesselated_surface,
-                scene.textures[material.displacement_texture],
-                surface.compute_vertex_normals);
+            displace_surface(surface, scene.textures[material.displacement_texture]);
         }
-        surface = tesselated_surface;
     }
 }
 
@@ -390,8 +359,8 @@ vec2f compute_animation_range(
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-vector<float> compute_shape_elements_cdf(const yocto_shape& shape) {
-    auto cdf = vector<float>{};
+void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf) {
+    cdf.clear();
     if (!empty(shape.triangles)) {
         sample_triangles_element_cdf(cdf, shape.triangles, shape.positions);
     } else if (!empty(shape.quads)) {
@@ -402,7 +371,6 @@ vector<float> compute_shape_elements_cdf(const yocto_shape& shape) {
         sample_points_element_cdf(cdf, shape.points.size());
     } else {
     }
-    return cdf;
 }
 
 // Sample a shape based on a distribution.
@@ -431,14 +399,13 @@ float sample_shape_element_pdf(const yocto_shape& shape,
 }
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
-vector<float> compute_surface_elements_cdf(const yocto_surface& surface) {
-    auto cdf = vector<float>{};
+void compute_surface_elements_cdf(const yocto_surface& surface, vector<float>& cdf) {
+    cdf.clear();
     if (!empty(surface.quads_positions)) {
         sample_quads_element_cdf(
             cdf, surface.quads_positions, surface.positions);
     } else {
     }
-    return cdf;
 }
 
 // Sample a shape based on a distribution.
@@ -520,8 +487,8 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a scene BVH
-bvh_scene make_scene_bvh(
-    const yocto_scene& scene, const build_bvh_options& options) {
+void make_scene_bvh(
+    const yocto_scene& scene, bvh_scene& bvh, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
 
     // shapes
@@ -530,15 +497,15 @@ bvh_scene make_scene_bvh(
         // make bvh
         auto shape_bvh = bvh_shape{};
         if (!empty(shape.points)) {
-            shape_bvh = make_shape_bvh(
+            make_shape_bvh(shape_bvh,
                 shape.points, shape.positions, shape.radius);
         } else if (!empty(shape.lines)) {
-            shape_bvh = make_shape_bvh(
+            make_shape_bvh(shape_bvh,
                 shape.lines, shape.positions, shape.radius);
         } else if (!empty(shape.triangles)) {
-            shape_bvh = make_shape_bvh(shape.triangles, shape.positions);
+            make_shape_bvh(shape_bvh, shape.triangles, shape.positions);
         } else if (!empty(shape.quads)) {
-            shape_bvh = make_shape_bvh(shape.quads, shape.positions);
+            make_shape_bvh(shape_bvh, shape.quads, shape.positions);
         } else {
             shape_bvh = {};
         }
@@ -551,7 +518,7 @@ bvh_scene make_scene_bvh(
         // make bvh
         auto surface_bvh = bvh_shape{};
         if (!empty(surface.quads_positions)) {
-            surface_bvh = make_shape_bvh(
+            make_shape_bvh(surface_bvh, 
                 surface.quads_positions, surface.positions);
         } else {
             surface_bvh = {};
@@ -567,9 +534,9 @@ bvh_scene make_scene_bvh(
     }
 
     // build bvh
-    auto bvh = make_scene_bvh(bvh_instances, shape_bvhs, surface_bvhs);
+    bvh = {};
+    make_scene_bvh(bvh, bvh_instances, shape_bvhs, surface_bvhs);
     build_scene_bvh(bvh, options);
-    return bvh;
 }
 
 // Refits a scene BVH
