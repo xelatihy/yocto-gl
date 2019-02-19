@@ -1769,7 +1769,10 @@ bool apply_json_procedural(
             num_shapes++;
         }
 
-        auto [pos, norm, texcoord] = sample_triangles_points(base.triangles,
+        auto pos = vector<vec3f>{};
+        auto norm = vector<vec3f>{};
+        auto texcoord = vector<vec2f>{};
+        sample_triangles_points(pos, norm, texcoord, base.triangles,
             base.positions, base.normals, base.texturecoords, num, seed);
 
         auto rng = make_rng(seed, 17);

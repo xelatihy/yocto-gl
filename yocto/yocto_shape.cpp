@@ -1074,13 +1074,15 @@ pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+void sample_triangles_points(
+    vector<vec3f>& sampled_positions, 
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed) {
-    auto sampled_positions     = vector<vec3f>(npoints);
-    auto sampled_normals       = vector<vec3f>(npoints);
-    auto sampled_texturecoords = vector<vec2f>(npoints);
+    sampled_positions.resize(npoints);
+    sampled_normals.resize(npoints);
+    sampled_texturecoords.resize(npoints);
     auto cdf = vector<float>{};
     sample_triangles_element_cdf(cdf, triangles, positions);
     auto rng = make_rng(seed);
@@ -1105,19 +1107,19 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
             sampled_texturecoords[i] = zero2f;
         }
     }
-    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+void sample_quads_points(vector<vec3f>& sampled_positions, 
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed) {
-    auto sampled_positions     = vector<vec3f>(npoints);
-    auto sampled_normals       = vector<vec3f>(npoints);
-    auto sampled_texturecoords = vector<vec2f>(npoints);
+    sampled_positions.resize(npoints);
+    sampled_normals.resize(npoints);
+    sampled_texturecoords.resize(npoints);
     auto cdf                   = vector<float>{};
     sample_quads_element_cdf(cdf, quads, positions);
     auto rng                   = make_rng(seed);
@@ -1143,7 +1145,6 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
             sampled_texturecoords[i] = zero2f;
         }
     }
-    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 }  // namespace yocto
@@ -1172,9 +1173,10 @@ inline void add_undirected_arc(geodesic_solver& solver, int na, int nb) {
     add_directed_arc(solver, nb, na);
 }
 
-geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
+void make_edge_solver_slow(
+    geodesic_solver& solver,
+    const vector<vec3i>& triangles,
     const vector<vec3f>& positions, bool use_steiner_points) {
-    auto solver = geodesic_solver();
     solver.graph.reserve(positions.size());
 
     for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
@@ -1187,7 +1189,7 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
         add_undirected_arc(solver, edge.x, edge.y);
     }
 
-    if (!use_steiner_points) return solver;
+    if (!use_steiner_points) return;
 
     solver.graph.reserve(size(positions) + size(edges));
     auto steiner_per_edge = vector<int>(get_num_edges(emap));
@@ -1222,8 +1224,6 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
         add_undirected_arc(solver, steiner_idx[0], steiner_idx[2]);
         add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
     }
-
-    return solver;
 }
 
 inline void add_half_edge(geodesic_solver& solver, const vec2i& edge) {
@@ -1258,9 +1258,9 @@ inline int get_edge_index(const geodesic_solver& solver, const vec2i& edge) {
     return -1;
 }
 
-geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
+void make_edge_solver_fast(    geodesic_solver& solver,
+    const vector<vec3i>& triangles,
     const vector<vec3f>& positions, bool use_steiner_points) {
-    auto solver      = geodesic_solver();
     solver.positions = positions;
     solver.graph.resize(size(positions));
     solver.edge_index.resize(size(positions));
@@ -1272,7 +1272,7 @@ geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
         add_edge(solver, {t.z, t.x});
     }
 
-    if (!use_steiner_points) return solver;
+    if (!use_steiner_points) return;
 
     auto edges = solver.edges;
     solver.graph.resize(size(positions) + size(edges));
@@ -1313,8 +1313,6 @@ geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
         add_edge(solver, {steiner_idx[1], steiner_idx[2]});
         add_edge(solver, {steiner_idx[2], steiner_idx[0]});
     }
-
-    return solver;
 }
 
 void log_geodesic_solver_stats(const geodesic_solver& solver) {
@@ -1350,21 +1348,21 @@ void update_edge_distances(geodesic_solver& solver) {
     }
 }
 
-geodesic_solver make_geodesic_solver(
+void make_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope  = log_trace_scoped("make edge graph");
-    auto solver = make_edge_solver_fast(triangles, positions, true);
+    make_edge_solver_fast(solver, triangles, positions, true);
     // auto solver = make_edge_solver_slow(triangles, positions, true);
     log_geodesic_solver_stats(solver);
-    return solver;
 }
 
-vector<float> compute_geodesic_distances(
+void compute_geodesic_distances(vector<float>& distances,
     geodesic_solver& graph, const vector<int>& sources) {
     auto scope = log_trace_scoped("computing geodesics");
 
     // preallocated
-    auto distances = vector<float>(graph.positions.size(), float_max);
+    distances.resize(graph.positions.size());
+    for(auto& d : distances) d = float_max;
 
     // Small Label Fisrt + Large Label Last
     // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -1430,16 +1428,15 @@ vector<float> compute_geodesic_distances(
             distances[neighbor] = new_distance;
         }
     }
-    return distances;
 }
 
-vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
-    auto colors = vector<vec4f>(distances.size());
+void convert_distance_to_color(vector<vec4f>& colors, 
+    const vector<float>& distances) {
+    colors.resize(distances.size());
     for (auto idx = 0; idx < distances.size(); idx++) {
         auto distance = fmod(distances[idx] * 10, 1.0f);
         colors[idx]   = {distance, distance, distance, 1};
     }
-    return colors;
 }
 
 }  // namespace yocto
@@ -2427,7 +2424,10 @@ make_shape_lines make_hair_shape(const vec2i& steps,
     convert_quads_to_triangles(quads_triangles, squads);
     alltriangles.insert(
         alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
-    auto [bpos, bnorm, btexcoord] = sample_triangles_points(
+    auto bpos = vector<vec3f>{};
+    auto bnorm = vector<vec3f>{};
+    auto btexcoord = vector<vec2f>{}; 
+    sample_triangles_points(bpos, bnorm, btexcoord,
         alltriangles, spos, snorm, stexcoord, steps.y, seed);
 
     auto rng  = make_rng(seed, 3);

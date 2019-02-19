@@ -54,9 +54,12 @@ int main(int argc, char** argv) {
 
     // compute geodesics and store them as colors
     if (geodesic_source >= 0) {
-        auto graph     = make_geodesic_solver(shape.triangles, shape.positions);
-        auto distances = compute_geodesic_distances(graph, {geodesic_source});
-        shape.colors   = convert_distance_to_color(distances);
+        auto solver     = geodesic_solver{};
+        make_geodesic_solver(solver, shape.triangles, shape.positions);
+        auto distances = vector<float>{};
+        compute_geodesic_distances(distances, solver, {geodesic_source});
+        shape.colors   = vector<vec4f>{};
+        convert_distance_to_color(shape.colors, distances);
     }
 
     // save mesh

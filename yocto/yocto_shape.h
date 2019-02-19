@@ -441,11 +441,14 @@ pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
 
 // Samples a set of points over a triangle/quad mesh uniformly. Returns pos,
 // norm and texcoord of the sampled points.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+void sample_triangles_points(vector<vec3f>& sampled_positions, 
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed = 7);
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+void sample_quads_points(
+    vector<vec3f>& sampled_positions, vector<vec3f>& sampled_normals, 
+    vector<vec2f>& sampled_texturecoords,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed = 7);
@@ -474,11 +477,12 @@ struct geodesic_solver {
 };
 
 // Construct an edge graph
-geodesic_solver make_geodesic_solver(
+void make_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-vector<float> compute_geodesic_distances(
-    geodesic_solver& graph, const vector<int>& sources);
-vector<vec4f> convert_distance_to_color(const vector<float>& distances);
+void compute_geodesic_distances(vector<float>& distances,
+    geodesic_solver& solver, const vector<int>& sources);
+void convert_distance_to_color(vector<vec4f>& colors, 
+    const vector<float>& distances);
 
 }  // namespace yocto
 
