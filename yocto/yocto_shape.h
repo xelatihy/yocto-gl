@@ -269,8 +269,8 @@ struct hash_grid {
 };
 
 // Create a hash_grid
-void make_hash_grid(hash_grid& grid, float cell_size);
-void make_hash_grid(
+void init_hash_grid(hash_grid& grid, float cell_size);
+void init_hash_grid(
     hash_grid& grid, const vector<vec3f>& positions, float cell_size);
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position);
@@ -475,7 +475,7 @@ struct geodesic_solver {
 };
 
 // Construct an edge graph
-void make_geodesic_solver(geodesic_solver& solver,
+void init_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 void compute_geodesic_distances(geodesic_solver& solver,
     vector<float>& distances, const vector<int>& sources);

@@ -35,15 +35,15 @@ using namespace yocto;
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser = make_cmdline_parser(
+    auto parser = cmdline_parser{}; init_cmdline_parser(parser, 
         argc, argv, "Applies operations on a triangle mesh", "ymshproc");
-    auto geodesic_source = parse_argument(
+    auto geodesic_source = parse_cmdline_argument(
         parser, "--geodesic-source,-g", -1, "Geodesic source");
-    auto output = parse_argument(
+    auto output = parse_cmdline_argument(
         parser, "--output,-o", "out.ply"s, "output mesh", true);
-    auto filename = parse_argument(
+    auto filename = parse_cmdline_argument(
         parser, "mesh", "mesh.ply"s, "input mesh", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // load mesh
     auto shape = yocto_shape{};
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     // compute geodesics and store them as colors
     if (geodesic_source >= 0) {
         auto solver = geodesic_solver{};
-        make_geodesic_solver(solver, shape.triangles, shape.positions);
+        init_geodesic_solver(solver, shape.triangles, shape.positions);
         auto distances = vector<float>{};
         compute_geodesic_distances(solver, distances, {geodesic_source});
         shape.colors = vector<vec4f>{};

@@ -1952,7 +1952,7 @@ void trace_image_region(image4f& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-void make_trace_state(trace_state& state, int width, int height, uint64_t seed) {
+void init_trace_state(trace_state& state, int width, int height, uint64_t seed) {
     state = trace_state{
         width, height, vector<trace_pixel>(width * height, trace_pixel{})};
     auto rng = make_rng(1301081);
@@ -1965,7 +1965,7 @@ void make_trace_state(trace_state& state, int width, int height, uint64_t seed) 
 }
 
 // Init trace lights
-void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
+void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     auto scope  = log_trace_scoped("making trace lights");
     lights = {};
 
@@ -1998,8 +1998,7 @@ void make_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         if (environment.emission == zero3f) continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {
-            lights.environment_texture_cdf[environment.emission_texture] =
-                compute_environment_texels_cdf(scene, environment);
+            compute_environment_texels_cdf(scene, environment, lights.environment_texture_cdf[environment.emission_texture]);
         }
     }
 }
@@ -2013,8 +2012,9 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
         options.image_height);
     auto image   = yocto::image{width, height, zero4f};
     auto pixels  = trace_state{};
-    make_trace_state(pixels, width, height, options.random_seed);
-    auto regions = make_image_regions(
+    init_trace_state(pixels, width, height, options.random_seed);
+    auto regions = vector<image_region>{};
+    make_image_regions(regions,
         image.width, image.height, options.region_size, true);
 
     if (options.run_serially) {
@@ -2046,7 +2046,8 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_image_samples(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
-    auto regions = make_image_regions(
+    auto regions = vector<image_region>{};
+    make_image_regions(regions,
         image.width, image.height, options.region_size, true);
     auto scope = log_trace_scoped(
         "tracing samples {}-{}", current_sample, options.num_samples);
@@ -2088,8 +2089,9 @@ void trace_image_async_start(image4f& image, trace_state& state,
         camera, options.image_width, options.image_height);
     image        = {width, height, zero4f};
     state        = trace_state{};
-    make_trace_state(state, width, height, options.random_seed);
-    auto regions = make_image_regions(
+    init_trace_state(state, width, height, options.random_seed);
+    auto regions = vector<image_region>{};
+    make_image_regions(regions,
         image.width, image.height, options.region_size, true);
     if (options.cancel_flag) *options.cancel_flag = false;
 

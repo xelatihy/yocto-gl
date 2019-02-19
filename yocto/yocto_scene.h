@@ -27,7 +27,7 @@
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
 // 4. for ray-intersection and closest point queries, create a BVH with
-//    `make_scene_bvh()` and intersect with with `intersect_scene_bvh()`;
+//    `build_scene_bvh()` and intersect with with `intersect_scene_bvh()`;
 //     you can also update the BVH with `refit_scene_bvh()`
 //
 //
@@ -330,7 +330,7 @@ void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
 void compute_surface_normals(const yocto_surface& surface, vector<vec3f>& normals);
 
 // Low level make/update bvh functions.
-void make_scene_bvh(
+void build_scene_bvh(
     const yocto_scene& scene, bvh_scene& bvh, const build_bvh_options& options = {});
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
@@ -522,8 +522,9 @@ vec3f evaluate_environment_emission(
     const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
-vector<float> compute_environment_texels_cdf(
-    const yocto_scene& scene, const yocto_environment& environment);
+void compute_environment_texels_cdf(
+    const yocto_scene& scene, const yocto_environment& environment, 
+    vector<float>& texels_cdf);
 vec3f sample_environment_direction(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv);

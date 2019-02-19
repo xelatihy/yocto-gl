@@ -180,7 +180,7 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(
+void make_image_regions(vector<image_region>& regions,
     int width, int height, int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
@@ -626,9 +626,9 @@ inline image<T> get_image_region(
 }
 
 // Splits an image into an array of regions
-inline vector<image_region> make_image_regions(
+inline void make_image_regions(vector<image_region>& regions,
     int width, int height, int region_size, bool shuffled) {
-    auto regions = vector<image_region>{};
+    regions.clear();
     for (auto y = 0; y < height; y += region_size) {
         for (auto x = 0; x < width; x += region_size) {
             regions.push_back({x, y, min(region_size, width - x),
@@ -637,9 +637,8 @@ inline vector<image_region> make_image_regions(
     }
     if (shuffled) {
         auto rng = rng_state{};
-        regions  = random_shuffle(regions, rng);
+        random_shuffle(regions, rng);
     }
-    return regions;
 }
 
 }  // namespace yocto

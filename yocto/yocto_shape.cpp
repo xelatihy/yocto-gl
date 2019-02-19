@@ -253,12 +253,12 @@ vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
 }
 
 // Create a hash_grid
-void make_hash_grid(hash_grid& grid, float cell_size) {
+void init_hash_grid(hash_grid& grid, float cell_size) {
     grid               = hash_grid{};
     grid.cell_size     = cell_size;
     grid.cell_inv_size = 1 / cell_size;
 }
-void make_hash_grid(
+void init_hash_grid(
     hash_grid& grid, const vector<vec3f>& positions, float cell_size) {
     grid               = hash_grid{};
     grid.cell_size     = cell_size;
@@ -456,7 +456,7 @@ void weld_vertices(
     indices.resize(positions.size());
     auto welded_positions = vector<vec3f>{};
     auto grid             = hash_grid{};
-    make_hash_grid(grid, threshold);
+    init_hash_grid(grid, threshold);
     auto neighboors = vector<int>{};
     for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
         auto& position = positions[vertex_id];
@@ -1340,7 +1340,7 @@ void update_edge_distances(geodesic_solver& solver) {
     }
 }
 
-void make_geodesic_solver(geodesic_solver& solver,
+void init_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     auto scope = log_trace_scoped("make edge graph");
     make_edge_solver_fast(solver, triangles, positions, true);

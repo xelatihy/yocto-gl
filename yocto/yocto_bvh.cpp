@@ -1034,27 +1034,27 @@ void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options) {
 }
 
 // Build a BVH from the given set of shape primitives.
-void make_shape_bvh(bvh_shape& bvh, const vector<int>& points,
+void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius) {
     bvh      = {};
     bvh.points    = points;
     bvh.positions = positions;
     bvh.radius    = radius;
 }
-void make_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
+void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius) {
     bvh      = {};
     bvh.lines     = lines;
     bvh.positions = positions;
     bvh.radius    = radius;
 }
-void make_shape_bvh(bvh_shape& bvh, 
+void init_shape_bvh(bvh_shape& bvh, 
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
     bvh      = {};
     bvh.triangles = triangles;
     bvh.positions = positions;
 }
-void make_shape_bvh(bvh_shape& bvh, 
+void init_shape_bvh(bvh_shape& bvh, 
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
     bvh      = {};
     bvh.quads     = quads;
@@ -1120,7 +1120,7 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 }
 
 // Build a BVH from the given set of instances.
-void make_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
+void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
     const vector<bvh_shape>&                         shape_bvhs,
     const vector<bvh_shape>&                         surface_bvhs) {
     bvh         = {};

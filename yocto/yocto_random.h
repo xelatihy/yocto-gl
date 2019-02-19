@@ -270,13 +270,7 @@ inline vec3f get_random_vec3f(rng_state& rng) {
 
 // Shuffles a sequence of elements
 template <typename T>
-inline vector<T> random_shuffle(const vector<T>& vals, rng_state& rng) {
-    auto shuffled = vals;
-    random_shuffle_inplace(shuffled, rng);
-    return shuffled;
-}
-template <typename T>
-inline void random_shuffle_inplace(vector<T>& vals, rng_state& rng) {
+inline void random_shuffle(vector<T>& vals, rng_state& rng) {
     // https://en.wikipedia.org/wiki/Fisher–Yates_shuffle
     using std::swap;
     for (auto i = (int)vals.size() - 1; i > 0; i--) {

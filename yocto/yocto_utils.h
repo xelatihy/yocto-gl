@@ -36,14 +36,14 @@
 // support option and position arguments, automatic help generation, and
 // error checking.
 //
-// 1. initialize the parser with `make_cmdline_parser(argc, argv, help)`
-// 2. read a value with `value = parse_argument(parser, name, default, help)`
+// 1. initialize the parser with `init_cmdline_parser(parser, argc, argv, help)`
+// 2. read a value with `value = parse_cmdline_argument(parser, name, default, help)`
 //    - is name starts with '--' or '-' then it is an option
 //    - otherwise it is a positional arguments
 //    - options and arguments may be intermixed
 //    - the type of each option is determined by the default value `default`
 //    - the value is parsed on the stop
-// 3. finished parsing with `check_cmdline(parser)`
+// 3. finished parsing with `check_cmdline_parser(parser)`
 //    - if an error occurred, the parser will exit and print a usage message
 //
 //
@@ -372,11 +372,11 @@ struct cmdline_parser {
 };
 
 // Initialize a command line parser.
-inline cmdline_parser make_cmdline_parser(int argc, char** argv,
+inline void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
     const string& usage, const string& cmd = "", bool add_help_flag = true,
     bool add_logging_flags = true);
 // check if any error occurred and exit appropriately
-inline void check_cmdline(cmdline_parser& parser);
+inline void check_cmdline_parser(cmdline_parser& parser);
 
 // Parse an int, float, string, vecXX and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -386,17 +386,17 @@ inline void check_cmdline(cmdline_parser& parser);
 // that we have both options available. You can also use the parse flag function
 // in which case only one name is used and the flag will flip the value passed.
 template <typename T>
-inline T    parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T    parse_cmdline_argument(cmdline_parser& parser, const string& name, T def,
        const string& usage, bool req = false);
-inline bool parse_argument_flag(
+inline bool parse_cmdline_argument_flag(
     cmdline_parser& parser, const string& name, bool def, const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
-inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
+inline vector<T> parse_cmdline_arguments(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
-inline T parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T parse_cmdline_argument(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req = false);
 
 // Parse an int, float, string, vecXX and bool option or positional argument.
@@ -407,17 +407,17 @@ inline T parse_argument(cmdline_parser& parser, const string& name, T def,
 // that we have both options available. You can also use the parse flag function
 // in which case only one name is used and the flag will flip the value passed.
 template <typename T>
-inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
+inline bool parse_cmdline_argument_ref(cmdline_parser& parser, const string& name,
     T& val, const string& usage, bool req = false);
-inline bool parse_argument_flag(
+inline bool parse_cmdline_argument_flag(
     cmdline_parser& parser, const string& name, bool& val, const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
-inline bool parse_arguments_ref(cmdline_parser& parser, const string& name,
+inline bool parse_cmdline_arguments_ref(cmdline_parser& parser, const string& name,
     vector<T>& val, const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
-inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
+inline bool parse_cmdline_argument_ref(cmdline_parser& parser, const string& name,
     T& val, const string& usage, const vector<string>& labels,
     bool req = false);
 
@@ -861,16 +861,15 @@ inline string format_num(uint64_t num) {
 namespace yocto {
 
 // initialize a command line parser
-inline cmdline_parser make_cmdline_parser(int argc, char** argv,
+inline void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
     const string& usage, const string& cmd, bool add_help_flag,
     bool add_logging_flags) {
-    auto parser              = cmdline_parser{};
+    parser              = {};
     parser.args              = {argv + 1, argv + argc};
     parser.help_command      = (empty(cmd)) ? argv[0] : cmd;
     parser.help_usage        = usage;
     parser.add_help_flag     = add_help_flag;
     parser.add_logging_flags = add_logging_flags;
-    return parser;
 }
 
 // check if option or argument
@@ -994,7 +993,7 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
     bool& value, const string& usage, bool req);
 
 // check if any error occurred and exit appropriately
-inline void check_cmdline(cmdline_parser& parser) {
+inline void check_cmdline_parser(cmdline_parser& parser) {
     if (parser.add_help_flag) {
         auto help = false;
         if (parse_flag_argument(
@@ -1170,7 +1169,7 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
 template <typename T>
-inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
+inline bool parse_cmdline_argument_ref(cmdline_parser& parser, const string& name,
     T& value, const string& usage, bool req) {
     if (is_optional_argument(name)) {
         return parse_option_argument(parser, name, value, usage, req, {});
@@ -1179,7 +1178,7 @@ inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
     }
 }
 template <>
-inline bool parse_argument_ref<bool>(cmdline_parser& parser, const string& name,
+inline bool parse_cmdline_argument_ref<bool>(cmdline_parser& parser, const string& name,
     bool& value, const string& usage, bool req) {
     if (is_optional_flag(name)) {
         return parse_flag_argument(parser, name, value, usage, req);
@@ -1198,7 +1197,7 @@ inline bool parse_argument_flag_ref(cmdline_parser& parser, const string& name,
 }
 
 template <typename T>
-inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
+inline bool parse_cmdline_argument_ref(cmdline_parser& parser, const string& name,
     T& value, const string& usage, const vector<string>& labels, bool req) {
     auto values = labels.at((int)value);
     auto parsed = false;
@@ -1218,7 +1217,7 @@ inline bool parse_argument_ref(cmdline_parser& parser, const string& name,
 
 // Parser an argument
 template <typename T>
-inline bool parse_arguments_ref(cmdline_parser& parser, const string& name,
+inline bool parse_cmdline_arguments_ref(cmdline_parser& parser, const string& name,
     vector<T>& values, const string& usage, bool req) {
     return parse_positional_arguments(parser, name, values, usage, req);
 }
@@ -1226,15 +1225,15 @@ inline bool parse_arguments_ref(cmdline_parser& parser, const string& name,
 // Parse an integer, float, string. If name starts with "--" or "-", then it is
 // an option, otherwise it is a position argument.
 template <typename T>
-inline T parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T parse_cmdline_argument(cmdline_parser& parser, const string& name, T def,
     const string& usage, bool req) {
     auto value = def;
-    if (!parse_argument_ref(parser, name, value, usage, req)) return def;
+    if (!parse_cmdline_argument_ref(parser, name, value, usage, req)) return def;
     return value;
 }
 
 // Parse a boolean flag.
-inline bool parse_argument_flag(
+inline bool parse_cmdline_argument_flag(
     cmdline_parser& parser, const string& name, bool def, const string& usage) {
     auto value = def;
     if (!parse_argument_flag_ref(parser, name, value, usage)) return def;
@@ -1242,20 +1241,20 @@ inline bool parse_argument_flag(
 }
 
 template <typename T>
-inline T parse_argument(cmdline_parser& parser, const string& name, T def,
+inline T parse_cmdline_argument(cmdline_parser& parser, const string& name, T def,
     const string& usage, const vector<string>& labels, bool req) {
     auto value = def;
-    if (!parse_argument_ref(parser, name, value, usage, labels, req))
+    if (!parse_cmdline_argument_ref(parser, name, value, usage, labels, req))
         return def;
     return value;
 }
 
 // Parser an argument
 template <typename T>
-inline vector<T> parse_arguments(cmdline_parser& parser, const string& name,
+inline vector<T> parse_cmdline_arguments(cmdline_parser& parser, const string& name,
     const vector<T>& def, const string& usage, bool req) {
     auto values = vector<T>{};
-    if (!parse_arguments_ref(parser, name, values, usage, req)) return def;
+    if (!parse_cmdline_arguments_ref(parser, name, values, usage, req)) return def;
     return values;
 }
 

@@ -428,24 +428,26 @@ float sample_surface_element_pdf(const yocto_surface& surface,
 }
 
 // Update environment CDF for sampling.
-vector<float> compute_environment_texels_cdf(
-    const yocto_scene& scene, const yocto_environment& environment) {
-    if (environment.emission_texture < 0) return {};
+void compute_environment_texels_cdf(
+    const yocto_scene& scene, const yocto_environment& environment, vector<float>& texels_cdf) {
+    if (environment.emission_texture < 0) {
+        texels_cdf.clear();
+        return;
+    }
     auto& texture  = scene.textures[environment.emission_texture];
     auto  size     = evaluate_texture_size(texture);
-    auto  elem_cdf = vector<float>(size.x * size.y);
+    texels_cdf.resize(size.x * size.y);
     if (size != zero2i) {
-        for (auto i = 0; i < elem_cdf.size(); i++) {
+        for (auto i = 0; i < texels_cdf.size(); i++) {
             auto ij     = vec2i{i % size.x, i / size.x};
             auto th     = (ij.y + 0.5f) * pif / size.y;
             auto value  = lookup_texture(texture, ij.x, ij.y);
-            elem_cdf[i] = max(xyz(value)) * sin(th);
-            if (i) elem_cdf[i] += elem_cdf[i - 1];
+            texels_cdf[i] = max(xyz(value)) * sin(th);
+            if (i) texels_cdf[i] += texels_cdf[i - 1];
         }
     } else {
         log_error("empty texture");
     }
-    return elem_cdf;
 }
 
 // Sample an environment based on texels
@@ -487,7 +489,7 @@ float sample_environment_direction_pdf(const yocto_scene& scene,
 }
 
 // Build a scene BVH
-void make_scene_bvh(
+void build_scene_bvh(
     const yocto_scene& scene, bvh_scene& bvh, const build_bvh_options& options) {
     auto scope = log_trace_scoped("building scene bvh");
 
@@ -497,15 +499,15 @@ void make_scene_bvh(
         // make bvh
         auto shape_bvh = bvh_shape{};
         if (!empty(shape.points)) {
-            make_shape_bvh(shape_bvh,
+            init_shape_bvh(shape_bvh,
                 shape.points, shape.positions, shape.radius);
         } else if (!empty(shape.lines)) {
-            make_shape_bvh(shape_bvh,
+            init_shape_bvh(shape_bvh,
                 shape.lines, shape.positions, shape.radius);
         } else if (!empty(shape.triangles)) {
-            make_shape_bvh(shape_bvh, shape.triangles, shape.positions);
+            init_shape_bvh(shape_bvh, shape.triangles, shape.positions);
         } else if (!empty(shape.quads)) {
-            make_shape_bvh(shape_bvh, shape.quads, shape.positions);
+            init_shape_bvh(shape_bvh, shape.quads, shape.positions);
         } else {
             shape_bvh = {};
         }
@@ -518,7 +520,7 @@ void make_scene_bvh(
         // make bvh
         auto surface_bvh = bvh_shape{};
         if (!empty(surface.quads_positions)) {
-            make_shape_bvh(surface_bvh, 
+            init_shape_bvh(surface_bvh, 
                 surface.quads_positions, surface.positions);
         } else {
             surface_bvh = {};
@@ -535,7 +537,7 @@ void make_scene_bvh(
 
     // build bvh
     bvh = {};
-    make_scene_bvh(bvh, bvh_instances, shape_bvhs, surface_bvhs);
+    init_scene_bvh(bvh, bvh_instances, shape_bvhs, surface_bvhs);
     build_scene_bvh(bvh, options);
 }
 

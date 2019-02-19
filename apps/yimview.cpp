@@ -100,7 +100,8 @@ void update_display_async(app_image& img) {
     auto scope       = log_trace_scoped("computing display image");
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = make_image_regions(img.img.width, img.img.height);
+    auto regions     = vector<image_region>{};
+    make_image_regions(regions, img.img.width, img.img.height);
     parallel_foreach(
         regions,
         [&img](const image_region& region) {
@@ -338,20 +339,20 @@ int main(int argc, char* argv[]) {
     auto app = app_state();
 
     // command line options
-    auto parser   = make_cmdline_parser(argc, argv, "view images", "yimview");
-    auto exposure = parse_argument(
+    auto parser = cmdline_parser{}; init_cmdline_parser(parser, argc, argv, "view images", "yimview");
+    auto exposure = parse_cmdline_argument(
         parser, "--exposure,-e", 0.0f, "display exposure");
-    auto filmic = parse_argument(
+    auto filmic = parse_cmdline_argument(
         parser, "--filmic/--no-filmic", false, "display filmic");
-    auto srgb = parse_argument(
+    auto srgb = parse_cmdline_argument(
         parser, "--srgb/--no-srgb", true, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
-    auto outfilename = parse_argument(
+    auto outfilename = parse_cmdline_argument(
         parser, "--out,-o", ""s, "image out filename");
-    auto filenames = parse_arguments(
+    auto filenames = parse_cmdline_arguments(
         parser, "images", vector<string>{}, "image filenames", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // loading images
     for (auto filename : filenames)

@@ -130,31 +130,31 @@ image4f filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser  = make_cmdline_parser(argc, argv, "Process images", "yimproc");
-    auto tonemap = parse_argument(
+    auto parser = cmdline_parser{}; init_cmdline_parser(parser, argc, argv, "Process images", "yimproc");
+    auto tonemap = parse_cmdline_argument(
         parser, "--tonemap/--no-tonemap,-t", false, "Tonemap image");
-    auto exposure = parse_argument(
+    auto exposure = parse_cmdline_argument(
         parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto srgb   = parse_argument(parser, "--srgb", true, "Tonemap to sRGB.");
-    auto filmic = parse_argument(
+    auto srgb   = parse_cmdline_argument(parser, "--srgb", true, "Tonemap to sRGB.");
+    auto filmic = parse_cmdline_argument(
         parser, "--filmic/--no-filmic,-f", false, "Tonemap uses filmic curve");
-    auto resize_width = parse_argument(
+    auto resize_width = parse_cmdline_argument(
         parser, "--resize-width", 0, "resize size (0 to maintain aspect)");
-    auto resize_height = parse_argument(
+    auto resize_height = parse_cmdline_argument(
         parser, "--resize-height", 0, "resize size (0 to maintain aspect)");
-    auto spatial_sigma = parse_argument(
+    auto spatial_sigma = parse_cmdline_argument(
         parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
-    auto range_sigma = parse_argument(
+    auto range_sigma = parse_cmdline_argument(
         parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
-    auto alpha_filename = parse_argument(
+    auto alpha_filename = parse_cmdline_argument(
         parser, "--set-alpha", ""s, "set alpha as this image alpha");
-    auto coloralpha_filename = parse_argument(
+    auto coloralpha_filename = parse_cmdline_argument(
         parser, "--set-color-as-alpha", ""s, "set alpha as this image color");
-    auto output = parse_argument(
+    auto output = parse_cmdline_argument(
         parser, "--output,-o", "out.png"s, "output image filename", true);
-    auto filename = parse_argument(
+    auto filename = parse_cmdline_argument(
         parser, "filename", "img.hdr"s, "input image filename", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // load
     auto img = image4f();
