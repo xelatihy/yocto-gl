@@ -46,15 +46,16 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser = cmdline_parser{}; init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
     auto skip_textures = parse_cmdline_argument(parser,
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
     auto skip_meshes   = parse_cmdline_argument(
         parser, "--skip-meshes/--no-skip-meshes", false, "Disable meshes.");
     auto mesh_filenames = parse_cmdline_argument(parser,
         "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
-    auto mesh_directory = parse_cmdline_argument(parser, "--mesh-directory", "models/"s,
-        "Mesh directory when adding names.");
+    auto mesh_directory = parse_cmdline_argument(parser, "--mesh-directory",
+        "models/"s, "Mesh directory when adding names.");
     auto uniform_txt    = parse_cmdline_argument(parser,
         "--uniform-texture/--no-uniform-textures", false,
         "uniform texture formats");

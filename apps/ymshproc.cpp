@@ -35,8 +35,9 @@ using namespace yocto;
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser = cmdline_parser{}; init_cmdline_parser(parser, 
-        argc, argv, "Applies operations on a triangle mesh", "ymshproc");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv,
+        "Applies operations on a triangle mesh", "ymshproc");
     auto geodesic_source = parse_cmdline_argument(
         parser, "--geodesic-source,-g", -1, "Geodesic source");
     auto output = parse_cmdline_argument(

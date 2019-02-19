@@ -179,10 +179,10 @@ void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius);
 void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
-void init_shape_bvh(bvh_shape& bvh, 
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void init_shape_bvh(bvh_shape& bvh, 
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
+void init_shape_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions);
+void init_shape_bvh(
+    bvh_shape& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Build a BVH from the given set of instances.
 void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,

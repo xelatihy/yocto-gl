@@ -130,12 +130,14 @@ image4f filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = cmdline_parser{}; init_cmdline_parser(parser, argc, argv, "Process images", "yimproc");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Process images", "yimproc");
     auto tonemap = parse_cmdline_argument(
         parser, "--tonemap/--no-tonemap,-t", false, "Tonemap image");
     auto exposure = parse_cmdline_argument(
         parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto srgb   = parse_cmdline_argument(parser, "--srgb", true, "Tonemap to sRGB.");
+    auto srgb = parse_cmdline_argument(
+        parser, "--srgb", true, "Tonemap to sRGB.");
     auto filmic = parse_cmdline_argument(
         parser, "--filmic/--no-filmic,-f", false, "Tonemap uses filmic curve");
     auto resize_width = parse_cmdline_argument(

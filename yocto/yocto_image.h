@@ -180,8 +180,8 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions,
-    int width, int height, int region_size = 32, bool shuffled = false);
+void make_image_regions(vector<image_region>& regions, int width, int height,
+    int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
@@ -626,8 +626,8 @@ inline image<T> get_image_region(
 }
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<image_region>& regions,
-    int width, int height, int region_size, bool shuffled) {
+inline void make_image_regions(vector<image_region>& regions, int width,
+    int height, int region_size, bool shuffled) {
     regions.clear();
     for (auto y = 0; y < height; y += region_size) {
         for (auto x = 0; x < width; x += region_size) {

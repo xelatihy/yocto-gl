@@ -111,8 +111,8 @@ struct trace_state {
 };
 
 // Initialize state of the renderer.
-void init_trace_state(trace_state& state,
-    int width, int height, uint64_t random_seed = trace_default_seed);
+void init_trace_state(trace_state& state, int width, int height,
+    uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {

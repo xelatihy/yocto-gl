@@ -101,8 +101,8 @@ void start_rendering_async(app_state& app) {
         app.trace_options.image_width, app.trace_options.image_height);
     app.image   = {app.image_width, app.image_height, zero4f};
     app.display = {app.image_width, app.image_height, zero4f};
-    init_trace_state(app.state,
-        app.image_width, app.image_height, app.trace_options.random_seed);
+    init_trace_state(app.state, app.image_width, app.image_height,
+        app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
     preview_options.image_width /= app.preview_ratio;
@@ -447,8 +447,9 @@ int main(int argc, char* argv[]) {
     app.trace_options.samples_per_batch = 1;
 
     // parse command line
-    auto parser = cmdline_parser{}; init_cmdline_parser(parser, 
-        argc, argv, "progressive path tracing", "yitrace");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(
+        parser, argc, argv, "progressive path tracing", "yitrace");
     app.trace_options.camera_id = parse_cmdline_argument(
         parser, "--camera", 0, "Camera index.");
     app.trace_options.image_width = parse_cmdline_argument(
@@ -457,8 +458,9 @@ int main(int argc, char* argv[]) {
         parser, "--vres,-r", 720, "Image vertical resolution.");
     app.trace_options.num_samples = parse_cmdline_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.trace_options.sampler_type = parse_cmdline_argument(parser, "--tracer,-t",
-        trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
+    app.trace_options.sampler_type = parse_cmdline_argument(parser,
+        "--tracer,-t", trace_sampler_type::path, "Tracer type.",
+        trace_sampler_type_names);
     app.trace_options.max_bounces  = parse_cmdline_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     app.trace_options.pixel_clamp = parse_cmdline_argument(
@@ -468,9 +470,9 @@ int main(int argc, char* argv[]) {
     app.trace_options.environments_hidden = parse_cmdline_argument(parser,
         "--env-hidden/--no-env-hidden", false,
         "Environments are hidden in renderer");
-    auto no_parallel = parse_cmdline_argument(parser, "--parallel/--no-parallel", false,
-        "Disable parallel execution.");
-    app.bvh_options.use_embree = parse_cmdline_argument(
+    auto no_parallel                      = parse_cmdline_argument(parser,
+        "--parallel/--no-parallel", false, "Disable parallel execution.");
+    app.bvh_options.use_embree            = parse_cmdline_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
     app.bvh_options.flatten_embree = parse_cmdline_argument(parser,
         "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");

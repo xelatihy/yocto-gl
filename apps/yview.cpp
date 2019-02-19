@@ -1139,8 +1139,9 @@ int main(int argc, char* argv[]) {
     app_state app{};
 
     // parse command line
-    auto parser = cmdline_parser{}; init_cmdline_parser(parser, 
-        argc, argv, "views scenes inteactively", "yview");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(
+        parser, argc, argv, "views scenes inteactively", "yview");
     app.draw_options.camera_id = parse_cmdline_argument(
         parser, "--camera", 0, "Camera index.");
     app.draw_options.image_width = parse_cmdline_argument(
@@ -1154,8 +1155,8 @@ int main(int argc, char* argv[]) {
         "Double-sided rendering.");
     auto highlight_filename = parse_cmdline_argument(
         parser, "--highlights", ""s, "Highlight filename");
-    auto no_parallel = parse_cmdline_argument(parser, "--parallel/--no-parallel", false,
-        "Disable parallel execution.");
+    auto no_parallel = parse_cmdline_argument(parser,
+        "--parallel/--no-parallel", false, "Disable parallel execution.");
     app.imfilename   = parse_cmdline_argument(
         parser, "--output-image,-o", "out.png"s, "Image filename");
     app.filename = parse_cmdline_argument(

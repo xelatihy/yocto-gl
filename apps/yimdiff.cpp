@@ -69,8 +69,8 @@ image4f display_diff(const image4f& diff) {
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = cmdline_parser{}; init_cmdline_parser(parser, 
-        argc, argv, "Compares two images", "yimdiff");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Compares two images", "yimdiff");
     auto threshold = parse_cmdline_argument(
         parser, "--threshold,-t", 0.1f, "Thhhreshold");
     auto output = parse_cmdline_argument(

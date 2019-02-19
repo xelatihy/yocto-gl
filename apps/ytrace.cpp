@@ -40,8 +40,8 @@ int main(int argc, char* argv[]) {
     trace_image_options trace_options = {};
 
     // parse command line
-    auto parser = cmdline_parser{}; init_cmdline_parser(parser, 
-        argc, argv, "Offline path tracing", "ytrace");
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Offline path tracing", "ytrace");
     trace_options.camera_id = parse_cmdline_argument(
         parser, "--camera", 0, "Camera index.");
     trace_options.image_width = parse_cmdline_argument(
@@ -56,8 +56,8 @@ int main(int argc, char* argv[]) {
         parser, "--nbounces", 8, "Maximum number of bounces.");
     trace_options.pixel_clamp = parse_cmdline_argument(
         parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
-    auto no_parallel = parse_cmdline_argument(parser, "--parallel/--no-parallel", false,
-        "Disable parallel execution.");
+    auto no_parallel          = parse_cmdline_argument(parser,
+        "--parallel/--no-parallel", false, "Disable parallel execution.");
     trace_options.random_seed = parse_cmdline_argument(
         parser, "--seed", 13, "Seed for the random number generators.");
     trace_options.samples_per_batch = parse_cmdline_argument(
@@ -72,8 +72,9 @@ int main(int argc, char* argv[]) {
         parser, "--save-batch", false, "Save images progressively");
     auto exposure = parse_cmdline_argument(
         parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto filmic = parse_cmdline_argument(parser, "--filmic", false, "Hdr filmic");
-    auto srgb   = parse_cmdline_argument(parser, "--no-srgb", true, "No srgb");
+    auto filmic = parse_cmdline_argument(
+        parser, "--filmic", false, "Hdr filmic");
+    auto srgb = parse_cmdline_argument(parser, "--no-srgb", true, "No srgb");
     bvh_options.use_embree = parse_cmdline_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
     bvh_options.flatten_embree = parse_cmdline_argument(parser,
