@@ -79,37 +79,20 @@ inline bool save_json(const string& filename, const json& js);
 namespace yocto {
 
 // Serialize/deserialize basic types
-inline bool serialize_json_value(json& js, int& value, bool save);
-inline bool serialize_json_value(json& js, bool& value, bool save);
-inline bool serialize_json_value(json& js, unsigned char& value, bool save);
-inline bool serialize_json_value(json& js, float& value, bool save);
-inline bool serialize_json_value(json& js, double& value, bool save);
-inline bool serialize_json_value(json& js, string& value, bool save);
-template<typename T, int N>
-inline bool serialize_json_value(json& js, vec<T, N>& value, bool save);
-template<typename T, int N, int M>
-inline bool serialize_json_value(json& js, mat<T, N, M>& value, bool save);
-template<typename T, int N>
-inline bool serialize_json_value(json& js, frame<T, N>& value, bool save);
-template<typename T, int N>
-inline bool serialize_json_value(json& js, bbox3f& value, bool save);
-
-// Serialize/deserialize compound types
-template <typename T>
-inline bool serialize_json_value(json& js, vector<T>& value, bool save);
+template<typename T>
+inline void serialize_json_value(json& js, T& value, bool save);
 
 // Serialize/deserialize values as keys in a JSON object
 template <typename T>
-inline bool serialize_json_value(
+inline void serialize_json_value(
     json& js, T& value, const char* name, const T& def, bool save);
 
 // Check if a JSON value has a key
 inline bool has_json_key(const json& js, const char* key);
 
-// Get a value from a JSON key or a default value if any error occurs
+// Get a value from a JSON key or a default value if the key does not exists
 template <typename T>
-inline T get_json_value(
-    const json& js, const char* key, const T& default_value);
+inline T get_json_value(const json& js, const char* key, const T& default_value);
 
 }  // namespace yocto
 
@@ -179,7 +162,7 @@ inline void to_json(json& js, const mat<T, N, M>& val) {
     nlohmann::to_json(js, (const std::array<T, N*M>&)val);
 }
 template<typename T, int N, int M>
-inline void from_json(const json& js, mat4f& val) {
+inline void from_json(const json& js, mat<T, N, M>& val) {
     nlohmann::from_json(js, (std::array<T, N*M>&)val);
 }
 
@@ -200,131 +183,41 @@ inline void from_json(const json& js, bbox<T, N>& val) {
 namespace yocto {
 
 // Dumps a json value
-inline bool serialize_json_value(json& js, int& value, bool save) {
+template<typename T>
+inline void serialize_json_value(json& js, T& value, bool save) {
     if (save) {
         js = value;
-        return true;
     } else {
-        if (!js.is_number_integer()) return false;
-        value = js.get<int>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, bool& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_boolean()) return false;
-        value = js.get<bool>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, unsigned char& value, bool save) {
-    if (save) {
-        js = (int)value;
-        return true;
-    } else {
-        if (!js.is_number_integer()) return false;
-        value = (unsigned char)js.get<int>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, float& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number()) return false;
-        value = js.get<float>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, double& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_number()) return false;
-        value = js.get<float>();
-        return true;
-    }
-}
-inline bool serialize_json_value(json& js, string& value, bool save) {
-    if (save) {
-        js = value;
-        return true;
-    } else {
-        if (!js.is_string()) return false;
-        value = js.get<string>();
-        return true;
+        js.get_to<T>(value);
     }
 }
 
 template <typename T>
-inline bool serialize_json_values(json& js, T* values, int num, bool save) {
+inline void serialize_json_values(json& js, T* values, int num, bool save) {
     if (save) {
         js = json::array();
         for (auto i = 0; i < num; i++) {
             js.push_back({});
-            if (!serialize_json_value(js.back(), values[i], save)) return false;
+            serialize_json_value(js.back(), values[i], save);
         }
-        return true;
     } else {
-        if (!js.is_array()) return false;
-        if (js.size() != num) return false;
-        for (auto i = 0; i < num; i++)
-            if (!serialize_json_value(js.at(i), values[i], save)) return false;
-        return true;
-    }
-}
-
-template <typename T>
-inline bool serialize_json_value(json& js, vector<T>& value, bool save) {
-    if (save) {
-        js = json::array();
-        for (auto i = 0; i < value.size(); i++) {
-            js.push_back({});
-            if (!serialize_json_value(js.back(), value[i], save)) return false;
+        for (auto i = 0; i < num; i++) {
+            serialize_json_value(js.at(i), values[i], save);
         }
-        return true;
-    } else {
-        if (!js.is_array()) return false;
-        value.resize(js.size());
-        for (auto i = 0; i < value.size(); i++)
-            if (!serialize_json_value(js.at(i), value[i], save)) return false;
-        return true;
     }
-}
-
-template<typename T, int N>
-inline bool serialize_json_value(json& js, vec<T, N>& value, bool save) {
-    return serialize_json_values(js, &value.x, N, save);
-}
-template<typename T, int N, int M>
-inline bool serialize_json_value(json& js, mat<T, N, M>& value, bool save) {
-    return serialize_json_values(js, &value.x.x, N*M, save);
-}
-template<typename T, int N>
-inline bool serialize_json_value(json& js, frame<T, N>& value, bool save) {
-    return serialize_json_values(js, &value.x.x, N*(N+1), save);
-}
-template<typename T, int N>
-inline bool serialize_json_value(json& js, bbox<T, N>& value, bool save) {
-    return serialize_json_values(js, &value.min.x, N*2, save);
 }
 
 // Dumps a json value
 template <typename T>
-inline bool serialize_json_value(
+inline void serialize_json_value(
     json& js, T& value, const char* name, const T& def, bool save) {
     if (save) {
-        if (value == def) return true;
-        return serialize_json_value(js[name], value, save);
+        if (value == def) return;
+        serialize_json_value(js[name], value, save);
     } else {
-        if (!js.count(name)) return true;
+        if (!js.count(name)) return;
         value = def;
-        return serialize_json_value(js.at(name), value, save);
+        serialize_json_value(js.at(name), value, save);
     }
 }
 
@@ -337,11 +230,10 @@ inline bool has_json_key(const json& js, const char* key) {
 template <typename T>
 inline T get_json_value(
     const json& js, const char* key, const T& default_value) {
-    if (!js.is_object()) return default_value;
-    if (js.count(key) <= 0) return default_value;
+    auto& ojs = js.get_ref<const json::object_t&>();
+    if (ojs.count(key) <= 0) return default_value;
     auto value = default_value;
-    if (!serialize_json_value((json&)js.at(key), value, false))
-        return default_value;
+    serialize_json_value((json&)ojs.at(key), value, false);
     return value;
 }
 
