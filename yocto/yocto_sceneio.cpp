@@ -681,7 +681,7 @@ void serialize_json_objref(
         if (value < 0) return;
         serialize_json_objref(js[name], value, refs, save);
     } else {
-        if (!has_json_key(js, name)) return;
+        if (!js.count(name)) return;
         value = -1;
         serialize_json_objref(js.at(name), value, refs, save);
     }
@@ -695,7 +695,7 @@ void serialize_json_objref(json& js, vector<int>& value, const char* name,
         if (empty(value)) return;
         serialize_json_objref(js[name], value, refs, save);
     } else {
-        if (!has_json_key(js, name)) return;
+        if (!js.count(name)) return;
         value = {};
         serialize_json_objref(js.at(name), value, refs, save);
     }
@@ -738,7 +738,7 @@ void serialize_json_objarray(json& js, vector<T>& value, const char* name,
         if (empty(value)) return;
         serialize_json_objarray(js[name], value, scene, save);
     } else {
-        if (!has_json_key(js, name)) return;
+        if (!js.count(name)) return;
         value = {};
         serialize_json_objarray(js.at(name), value, scene, save);
     }
@@ -751,7 +751,7 @@ void serialize_json_procedural(const json& js, T& value, const char* name,
     if (save) {
         return;
     } else {
-        if (!has_json_key(js, name)) return;
+        if (!js.count(name)) return;
         apply_json_procedural(js.at(name), value, scene);
     }
 }
@@ -760,7 +760,7 @@ void serialize_json_procedural(const json& js, T& value, const char* name,
 void apply_json_procedural(
     const json& js, yocto_camera& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
-    if (has_json_key(js, "from") || has_json_key(js, "to")) {
+    if (js.count("from") || js.count("to")) {
         auto from            = get_json_value(js, "from", zero3f);
         auto to              = get_json_value(js, "to", zero3f);
         auto up              = get_json_value(js, "up", vec3f{0, 1, 0});
@@ -1382,14 +1382,14 @@ void serialize_json_object(
 void apply_json_procedural(
     const json& js, yocto_instance& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
-    if (has_json_key(js, "from")) {
+    if (js.count("from")) {
         auto from   = get_json_value(js, "from", zero3f);
         auto to     = get_json_value(js, "to", zero3f);
         auto up     = get_json_value(js, "up", vec3f{0, 1, 0});
         value.frame = make_lookat_frame(from, to, up, true);
     }
-    if (has_json_key(js, "translation") || has_json_key(js, "rotation") ||
-        has_json_key(js, "scale")) {
+    if (js.count("translation") || js.count("rotation") ||
+        js.count("scale")) {
         auto translation = get_json_value(js, "translation", zero3f);
         auto rotation    = get_json_value(js, "rotation", zero4f);
         auto scaling     = get_json_value(js, "scale", vec3f{1, 1, 1});
@@ -1415,7 +1415,7 @@ void serialize_json_object(
 void apply_json_procedural(
     const json& js, yocto_environment& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
-    if (has_json_key(js, "rotation")) {
+    if (js.count("rotation")) {
         auto rotation = get_json_value(js, "rotation", zero4f);
         value.frame   = make_rotation_frame(xyz(rotation), rotation.w);
     }
@@ -1438,7 +1438,7 @@ void serialize_json_object(
 void apply_json_procedural(
     const json& js, yocto_scene_node& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
-    if (has_json_key(js, "from")) {
+    if (js.count("from")) {
         auto from   = get_json_value(js, "from", zero3f);
         auto to     = get_json_value(js, "to", zero3f);
         auto up     = get_json_value(js, "up", vec3f{0, 1, 0});
@@ -1520,7 +1520,7 @@ void serialize_json_object(
 void apply_json_procedural(
     const json& js, yocto_animation& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
-    if (has_json_key(js, "make_rotation_axisangle")) {
+    if (js.count("make_rotation_axisangle")) {
         for (auto& j : js.at("make_rotation_axisangle")) {
             value.rotation_keyframes.push_back(
                 make_rotation_quat(j.get<vec4f>()));
@@ -1532,7 +1532,7 @@ void apply_json_procedural(
 void apply_json_procedural(
     const json& js, yocto_scene& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
-    if (has_json_key(js, "random_instances")) {
+    if (js.count("random_instances")) {
         auto& jjs          = js.at("random_instances");
         auto  num          = get_json_value(jjs, "num", 100);
         auto  seed         = get_json_value(jjs, "seed", 13);
@@ -2852,7 +2852,7 @@ static bool startswith(const string& str, const string& substr) {
 void gltf_to_scene(
     yocto_scene& scene, const json& gltf, const string& dirname) {
     // convert textures
-    if (has_json_key(gltf, "images")) {
+    if (gltf.count("images")) {
         for (auto instance_id = 0; instance_id < gltf.at("images").size();
              instance_id++) {
             auto& gimg       = gltf.at("images").at(instance_id);
@@ -2868,7 +2868,7 @@ void gltf_to_scene(
 
     // load buffers
     auto bmap = vector<vector<byte>>();
-    if (has_json_key(gltf, "buffers")) {
+    if (gltf.count("buffers")) {
         bmap.resize(gltf.at("buffers").size());
         for (auto bid = 0; bid < gltf.at("buffers").size(); bid++) {
             auto& gbuf = gltf.at("buffers").at(bid);
@@ -2897,14 +2897,14 @@ void gltf_to_scene(
 
     // add a texture
     auto add_texture = [&scene, &gltf](const json& ginfo, bool force_linear) {
-        if (!has_json_key(gltf, "images") || !has_json_key(gltf, "textures"))
+        if (!gltf.count("images") || !gltf.count("textures"))
             return -1;
         if (ginfo.is_null() || empty(ginfo)) return -1;
         if (ginfo.value("index", -1) < 0) return -1;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
         if (empty(gtxt) || gtxt.value("source", -1) < 0) return -1;
         auto texture_id = gtxt.value("source", -1);
-        if (!has_json_key(gltf, "samplers") || gtxt.value("sampler", -1) < 0)
+        if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
             return texture_id;
         auto& gsmp = gltf.at("samplers").at(gtxt.value("sampler", -1));
         scene.textures[texture_id].clamp_to_edge = get_json_value(gsmp, "wrapS",
@@ -2922,16 +2922,16 @@ void gltf_to_scene(
     };
 
     // convert materials
-    if (has_json_key(gltf, "materials")) {
+    if (gltf.count("materials")) {
         for (auto mid = 0; mid < gltf.at("materials").size(); mid++) {
             auto& gmat        = gltf.at("materials").at(mid);
             auto  material    = yocto_material();
             material.name     = get_json_value(gmat, "name", ""s);
             material.emission = get_json_value(gmat, "emissiveFactor", zero3f);
-            if (has_json_key(gmat, "emissiveTexture"))
+            if (gmat.count("emissiveTexture"))
                 material.emission_texture = add_texture(
                     gmat.at("emissiveTexture"), false);
-            if (has_json_key(gmat, "extensions") &&
+            if (gmat.count("extensions") &&
                 gmat.at("extensions")
                     .count("KHR_materials_pbrSpecularGlossiness")) {
                 material.base_metallic = false;
@@ -2946,14 +2946,14 @@ void gltf_to_scene(
                     gsg, "specularFactor", vec3f{1, 1, 1});
                 material.roughness = 1 - get_json_value(
                                              gsg, "glossinessFactor", 1.0f);
-                if (has_json_key(gsg, "diffuseTexture"))
+                if (gsg.count("diffuseTexture"))
                     material.diffuse_texture = add_texture(
                         gsg.at("diffuseTexture"), false);
-                if (has_json_key(gsg, "specularGlossinessTexture"))
+                if (gsg.count("specularGlossinessTexture"))
                     material.specular_texture = add_texture(
                         gsg.at("specularGlossinessTexture"), false);
                 material.roughness_texture = material.specular_texture;
-            } else if (has_json_key(gmat, "pbrMetallicRoughness")) {
+            } else if (gmat.count("pbrMetallicRoughness")) {
                 material.base_metallic = true;
                 material.gltf_textures = true;
                 auto& gmr              = gmat.at("pbrMetallicRoughness");
@@ -2965,18 +2965,18 @@ void gltf_to_scene(
                 material.specular = {km, km, km};
                 material.roughness = get_json_value(
                     gmr, "roughnessFactor", 1.0f);
-                if (has_json_key(gmr, "baseColorTexture"))
+                if (gmr.count("baseColorTexture"))
                     material.diffuse_texture = add_texture(
                         gmr.at("baseColorTexture"), false);
-                if (has_json_key(gmr, "metallicRoughnessTexture"))
+                if (gmr.count("metallicRoughnessTexture"))
                     material.specular_texture = add_texture(
                         gmr.at("metallicRoughnessTexture"), true);
                 material.roughness_texture = material.specular_texture;
             }
-            if (has_json_key(gmat, "occlusionTexture"))
+            if (gmat.count("occlusionTexture"))
                 material.occlusion_texture = add_texture(
                     gmat.at("occlusionTexture"), true);
-            if (has_json_key(gmat, "normalTexture"))
+            if (gmat.count("normalTexture"))
                 material.normal_texture = add_texture(
                     gmat.at("normalTexture"), true);
             scene.materials.push_back(material);
@@ -3042,13 +3042,13 @@ void gltf_to_scene(
 
     // convert meshes
     auto meshes = vector<vector<int>>();
-    if (has_json_key(gltf, "meshes")) {
+    if (gltf.count("meshes")) {
         for (auto mid = 0; mid < gltf.at("meshes").size(); mid++) {
             auto& gmesh = gltf.at("meshes").at(mid);
             meshes.push_back({});
             auto sid = 0;
             for (auto& gprim : gmesh.value("primitives", json::array())) {
-                if (!has_json_key(gprim, "attributes")) continue;
+                if (!gprim.count("attributes")) continue;
                 auto shape = yocto_shape();
                 shape.name = get_json_value(gmesh, "name", ""s) +
                              ((sid) ? std::to_string(sid) : string());
@@ -3098,7 +3098,7 @@ void gltf_to_scene(
                 }
                 // indices
                 auto mode = get_json_value(gprim, "mode", 4);
-                if (!has_json_key(gprim, "indices")) {
+                if (!gprim.count("indices")) {
                     if (mode == 4) {
                         // triangles
                         shape.triangles.reserve(shape.positions.size() / 3);
@@ -3190,7 +3190,7 @@ void gltf_to_scene(
                         log_error("unknown primitive type");
                     }
                 }
-                shape.material = has_json_key(gprim, "material") ?
+                shape.material = gprim.count("material") ?
                                      gprim.value("material", -1) :
                                      -1;
                 scene.shapes.push_back(shape);
@@ -3200,7 +3200,7 @@ void gltf_to_scene(
     }
 
     // convert cameras
-    if (has_json_key(gltf, "cameras")) {
+    if (gltf.count("cameras")) {
         for (auto cid = 0; cid < gltf.at("cameras").size(); cid++) {
             auto& gcam          = gltf.at("cameras").at(cid);
             auto  camera        = yocto_camera{};
@@ -3228,7 +3228,7 @@ void gltf_to_scene(
     }
 
     // convert cameras
-    if (has_json_key(gltf, "environments")) {
+    if (gltf.count("environments")) {
         for (auto eid = 0; eid < gltf.at("environments").size(); eid++) {
             auto& genv           = gltf.at("environments").at(eid);
             auto  environment    = yocto_environment{};
@@ -3242,14 +3242,14 @@ void gltf_to_scene(
     }
 
     // convert nodes
-    if (has_json_key(gltf, "nodes")) {
+    if (gltf.count("nodes")) {
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
             auto  node = yocto_scene_node{};
             node.name  = get_json_value(gnde, "name", ""s);
-            if (has_json_key(gnde, "camera"))
+            if (gnde.count("camera"))
                 node.camera = get_json_value(gnde, "camera", 0);
-            if (has_json_key(gnde, "environment"))
+            if (gnde.count("environment"))
                 node.environment = get_json_value(gnde, "environment", 0);
             node.translation = get_json_value(gnde, "translation", zero3f);
             node.rotation = get_json_value(gnde, "rotation", vec4f{0, 0, 0, 1});
@@ -3262,7 +3262,7 @@ void gltf_to_scene(
         // set up parent pointers
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            if (!has_json_key(gnde, "children")) continue;
+            if (!gnde.count("children")) continue;
             for (auto& cid : gnde.at("children"))
                 scene.nodes[cid.get<int>()].parent = nid;
         }
@@ -3270,7 +3270,7 @@ void gltf_to_scene(
         // set up instances
         for (auto nid = 0; nid < gltf.at("nodes").size(); nid++) {
             auto& gnde = gltf.at("nodes").at(nid);
-            if (!has_json_key(gnde, "mesh")) continue;
+            if (!gnde.count("mesh")) continue;
             auto& node = scene.nodes[nid];
             auto& shps = meshes.at(get_json_value(gnde, "mesh", 0));
             if (empty(shps)) continue;
@@ -3298,7 +3298,7 @@ void gltf_to_scene(
     }
 
     // convert animations
-    if (has_json_key(gltf, "animations")) {
+    if (gltf.count("animations")) {
         for (auto& ganm : gltf.at("animations")) {
             auto aid         = 0;
             auto sampler_map = unordered_map<vec2i, int>();
@@ -3314,7 +3314,7 @@ void gltf_to_scene(
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
                     auto animation = yocto_animation{};
-                    animation.name = (has_json_key(ganm, "name") ?
+                    animation.name = (ganm.count("name") ?
                                              get_json_value(ganm, "name", ""s) :
                                              "anim") +
                                      std::to_string(aid++);
@@ -4158,19 +4158,19 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     mat_map[material.name] = (int)scene.materials.size() - 1;
                 }
                 auto type = "uber"s;
-                if (has_json_key(jcmd, "type"))
+                if (jcmd.count("type"))
                     type = jcmd.at("type").get<string>();
                 if (type == "uber") {
-                    if (has_json_key(jcmd, "Kd"))
+                    if (jcmd.count("Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
-                    if (has_json_key(jcmd, "Ks"))
+                    if (jcmd.count("Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
-                    if (has_json_key(jcmd, "Kt"))
+                    if (jcmd.count("Kt"))
                         get_scaled_texture(jcmd.at("Kt"), material.transmission,
                             material.transmission_texture);
-                    if (has_json_key(jcmd, "opacity")) {
+                    if (jcmd.count("opacity")) {
                         auto op     = vec3f{0, 0, 0};
                         auto op_txt = -1;
                         get_scaled_texture(jcmd.at("opacity"), op, op_txt);
@@ -4179,26 +4179,26 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     }
                     material.roughness = 0;
                 } else if (type == "plastic") {
-                    if (has_json_key(jcmd, "Kd"))
+                    if (jcmd.count("Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
-                    if (has_json_key(jcmd, "Ks"))
+                    if (jcmd.count("Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "translucent") {
-                    if (has_json_key(jcmd, "Kd"))
+                    if (jcmd.count("Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
-                    if (has_json_key(jcmd, "Ks"))
+                    if (jcmd.count("Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
-                    auto matname1 = (has_json_key(jcmd, "namedmaterial1")) ?
+                    auto matname1 = (jcmd.count("namedmaterial1")) ?
                                         jcmd.at("namedmaterial1").get<string>() :
                                         ""s;
-                    auto matname2 = (has_json_key(jcmd, "namedmaterial2")) ?
+                    auto matname2 = (jcmd.count("namedmaterial2")) ?
                                         jcmd.at("namedmaterial2").get<string>() :
                                         ""s;
                     // auto amount = get_vec3f(jcmd.at("amount"));
@@ -4211,7 +4211,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     }
                 } else if (type == "matte") {
                     material.diffuse = {1, 1, 1};
-                    if (has_json_key(jcmd, "Kd"))
+                    if (jcmd.count("Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
                     material.roughness = 1;
@@ -4225,27 +4225,27 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.specular  = pbrt_fresnel_metal(1, eta, k);
                     material.roughness = 0;
                 } else if (type == "substrate") {
-                    if (has_json_key(jcmd, "Kd"))
+                    if (jcmd.count("Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
                             material.diffuse_texture);
                     material.specular = {0.04f, 0.04f, 0.04f};
-                    if (has_json_key(jcmd, "Ks"))
+                    if (jcmd.count("Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "glass") {
                     material.specular     = {0.04f, 0.04f, 0.04f};
                     material.transmission = {1, 1, 1};
-                    if (has_json_key(jcmd, "Ks"))
+                    if (jcmd.count("Ks"))
                         get_scaled_texture(jcmd.at("Ks"), material.specular,
                             material.specular_texture);
-                    if (has_json_key(jcmd, "Kt"))
+                    if (jcmd.count("Kt"))
                         get_scaled_texture(jcmd.at("Kt"), material.transmission,
                             material.transmission_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
                     log_warning("mix material not properly supported");
-                    if (has_json_key(jcmd, "namedmaterial1")) {
+                    if (jcmd.count("namedmaterial1")) {
                         auto mat1 = jcmd.at("namedmaterial1").get<string>();
                         auto saved_name = material.name;
                         material        = scene.materials[mat_map.at(mat1)];
@@ -4257,18 +4257,18 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     material.diffuse = {1, 0, 0};
                     log_error("{} material not supported", type);
                 }
-                if (has_json_key(jcmd, "uroughness")) {
-                    auto remap = has_json_key(js, "remaproughness") &&
+                if (jcmd.count("uroughness")) {
+                    auto remap = js.count("remaproughness") &&
                                  js.at("remaproughness").get<bool>();
-                    if (has_json_key(jcmd, "uroughness"))
+                    if (jcmd.count("uroughness"))
                         material.roughness = jcmd.at("uroughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
                     if (remap) log_error("remap roughness not supported");
                 }
-                if (has_json_key(jcmd, "roughness")) {
-                    auto remap = has_json_key(js, "remaproughness") &&
+                if (jcmd.count("roughness")) {
+                    auto remap = js.count("remaproughness") &&
                                  js.at("remaproughness").get<bool>();
-                    if (has_json_key(jcmd, "roughness"))
+                    if (jcmd.count("roughness"))
                         material.roughness = jcmd.at("roughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
                     if (remap) log_error("remap roughness not supported");
@@ -4307,13 +4307,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
             } else if (type == "trianglemesh") {
                 shape.name     = "mesh" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
-                if (has_json_key(jcmd, "indices"))
+                if (jcmd.count("indices"))
                     shape.triangles = get_vector_vec3i(jcmd.at("indices"));
-                if (has_json_key(jcmd, "P"))
+                if (jcmd.count("P"))
                     shape.positions = get_vector_vec3f(jcmd.at("P"));
-                if (has_json_key(jcmd, "N"))
+                if (jcmd.count("N"))
                     shape.normals = get_vector_vec3f(jcmd.at("N"));
-                if (has_json_key(jcmd, "uv")) {
+                if (jcmd.count("uv")) {
                     shape.texturecoords = get_vector_vec2f(jcmd.at("uv"));
                     for (auto& uv : shape.texturecoords) uv.y = 1 - uv.y;
                 }
@@ -4321,7 +4321,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.name     = "sphere" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
                 auto radius    = 1.0f;
-                if (has_json_key(jcmd, "radius"))
+                if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 make_uvsphere_shape(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords, {64, 32}, 2 * radius, {1, 1});
@@ -4329,7 +4329,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.name     = "disk" + std::to_string(sid++);
                 shape.filename = "models/" + shape.name + ".ply";
                 auto radius    = 1.0f;
-                if (has_json_key(jcmd, "radius"))
+                if (jcmd.count("radius"))
                     radius = jcmd.at("radius").get<float>();
                 make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords, {32, 16}, 2 * radius, {1, 1});
@@ -4391,9 +4391,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 environment.emission = {1, 1, 1};
                 // log_info("stack frame: {}", stack.back().frame);
                 // log_info("env   frame: {}", environment.frame);
-                if (has_json_key(jcmd, "scale"))
+                if (jcmd.count("scale"))
                     environment.emission *= get_vec3f(jcmd.at("scale"));
-                if (has_json_key(jcmd, "mapname")) {
+                if (jcmd.count("mapname")) {
                     auto texture     = yocto_texture{};
                     texture.filename = jcmd.at("mapname").get<string>();
                     texture.name     = environment.name;
@@ -4408,9 +4408,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& shape = scene.shapes.back();
                 shape.name  = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
-                if (has_json_key(jcmd, "from"))
+                if (jcmd.count("from"))
                     from = get_vec3f(jcmd.at("from"));
-                if (has_json_key(jcmd, "to")) to = get_vec3f(jcmd.at("to"));
+                if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir  = normalize(from - to);
                 auto size = distant_dist * sin(5 * pif / 180);
                 make_quad_shape(shape.quads, shape.positions, shape.normals,
@@ -4420,9 +4420,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.material    = scene.materials.size() - 1;
                 material.name     = shape.name;
                 material.emission = {1, 1, 1};
-                if (has_json_key(jcmd, "L"))
+                if (jcmd.count("L"))
                     material.emission *= get_emission_vec3f(jcmd.at("L"));
-                if (has_json_key(jcmd, "scale"))
+                if (jcmd.count("scale"))
                     material.emission *= get_vec3f(jcmd.at("scale"));
                 material.emission *= (distant_dist * distant_dist) /
                                      (size * size);

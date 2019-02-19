@@ -87,9 +87,6 @@ template <typename T>
 inline void serialize_json_value(
     json& js, T& value, const char* name, const T& def, bool save);
 
-// Check if a JSON value has a key
-inline bool has_json_key(const json& js, const char* key);
-
 // Get a value from a JSON key or a default value if the key does not exists
 template <typename T>
 inline T get_json_value(const json& js, const char* key, const T& default_value);
@@ -207,11 +204,6 @@ inline void serialize_json_value(
         value = def;
         serialize_json_value(js.at(name), value, save);
     }
-}
-
-// Check if a JSON value has a key
-inline bool has_json_key(const json& js, const char* key) {
-    return js.is_object() && js.count(key) > 0;
 }
 
 // Get a value from a JSON key or a default value if any error occurs
