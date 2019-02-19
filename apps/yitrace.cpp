@@ -133,8 +133,10 @@ void start_rendering_async(app_state& app) {
 bool load_scene_sync(app_state& app) {
     // scene loading
     app.status = "loading scene";
-    if (!load_scene(app.filename, app.scene, app.load_options)) {
-        log_fatal("cannot load scene " + app.filename);
+    try {
+        load_scene(app.filename, app.scene, app.load_options);
+    } catch(const std::exception& e) {
+        log_fatal(e.what());
         return false;
     }
 

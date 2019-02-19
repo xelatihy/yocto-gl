@@ -96,8 +96,7 @@ int main(int argc, char* argv[]) {
     // scene loading
     log_info("loading scene");
     auto scene = yocto_scene{};
-    if (!load_scene(filename, scene, load_options))
-        log_fatal("cannot load scene {}", filename);
+    try { load_scene(filename, scene, load_options); } catch(const std::exception& e) { log_fatal(e.what()); }
 
     // tesselate
     tesselate_shapes_and_surfaces(scene);
@@ -144,16 +143,22 @@ int main(int argc, char* argv[]) {
         if (save_batch) {
             auto filename = replace_extension(imfilename,
                 to_string(sample + nsamples) + "." + get_extension(imfilename));
-            if (!save_tonemapped_image(filename, image, exposure, filmic, srgb))
-                log_fatal("cannot save image " + filename);
+            try {
+                save_tonemapped_image(filename, image, exposure, filmic, srgb);
+            } catch(const std::exception& e) {
+                log_fatal(e.what());
+            }
         }
     }
     log_trace_end(scope);
 
     // save image
     log_info("saving image");
-    if (!save_tonemapped_image(imfilename, image, exposure, filmic, srgb))
-        log_fatal("cannot save image " + imfilename);
+    try {
+        save_tonemapped_image(imfilename, image, exposure, filmic, srgb);
+    } catch(const std::exception& e) {
+        log_fatal(e.what());
+    }
 
     // done
     return 0;

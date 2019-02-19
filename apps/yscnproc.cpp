@@ -77,8 +77,7 @@ int main(int argc, char** argv) {
 
     // load scene
     auto scene = yocto_scene{};
-    if (!load_scene(filename, scene, load_options))
-        log_fatal("cannot load scene {}", filename);
+    try { load_scene(filename, scene, load_options); } catch(const std::exception& e) { log_fatal(e.what()); }
 
     // validate scene
     log_validation_errors(scene, true);
@@ -134,8 +133,11 @@ int main(int argc, char** argv) {
     }
 
     // save scene
-    if (!save_scene(output, scene, save_options))
-        log_fatal("cannot save scene {}", output);
+    try {
+        save_scene(output, scene, save_options);
+    } catch(const std::exception& e) {
+        log_fatal(e.what());
+    }
 
     // done
     return 0;

@@ -121,8 +121,10 @@ void load_image_async(app_image& img) {
     img.texture_done = false;
     img.error_msg    = "";
     img.img          = {};
-    if (!load_image(img.filename, img.img)) {
-        img.error_msg = "cannot load image";
+    try { 
+        load_image(img.filename, img.img);
+    } catch(const std::exception& e) {
+        img.error_msg = e.what();
         return;
     }
     img.load_done      = true;
@@ -134,14 +136,14 @@ void load_image_async(app_image& img) {
 
 // save an image
 void save_image_async(app_image& img) {
-    if (!is_hdr_filename(img.outname)) {
-        if (!save_image(img.outname, float_to_byte(img.display))) {
-            img.error_msg = "error saving image";
+    try { 
+        if (!is_hdr_filename(img.outname)) {
+            save_image(img.outname, float_to_byte(img.display));
+        } else {
+            save_image(img.outname, srgb_to_linear(img.display));
         }
-    } else {
-        if (!save_image(img.outname, srgb_to_linear(img.display))) {
-            img.error_msg = "error saving image";
-        }
+    } catch( const std::exception& e) {
+        img.error_msg = e.what();
     }
 }
 

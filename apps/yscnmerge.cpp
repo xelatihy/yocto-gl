@@ -81,8 +81,11 @@ int main(int argc, char** argv) {
     auto scene = yocto_scene{};
     for (auto& filename : filenames) {
         auto to_merge = yocto_scene{};
-        if (!load_scene(filename, to_merge, load_options))
-            log_fatal("cannot load scene {}", filename);
+        try {
+            load_scene(filename, to_merge, load_options);
+        } catch(const std::exception& e) {
+            log_fatal(e.what());
+        }
         log_validation_errors(to_merge, true);
         if (scene_postfix) {
             auto postfix = "{" + get_filename(filename) + "}";
@@ -148,8 +151,11 @@ int main(int argc, char** argv) {
     }
 
     // save scene
-    if (!save_scene(output, scene, save_options))
-        log_fatal("cannot save scene {}", output);
+    try {
+        save_scene(output, scene, save_options);
+    } catch(const std::exception& e) {
+        log_fatal(e.what());
+    }
 
     // done
     return 0;

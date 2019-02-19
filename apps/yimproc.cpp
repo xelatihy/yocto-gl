@@ -160,13 +160,20 @@ int main(int argc, char* argv[]) {
 
     // load
     auto img = image4f();
-    if (!load_image(filename, img)) log_fatal("cannot load image {}", filename);
+    try {
+        load_image(filename, img);
+     } catch(const std::exception& e) { 
+         log_fatal(e.what());
+     }
 
     // set alpha
     if (alpha_filename != "") {
         auto alpha = image4f();
-        if (!load_image(alpha_filename, alpha))
-            log_fatal("cannot load image {}", alpha_filename);
+        try {
+            load_image(alpha_filename, alpha);
+        } catch( const std::exception& e) {
+            log_fatal(e.what());
+        }
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size");
             exit(1);
@@ -179,8 +186,11 @@ int main(int argc, char* argv[]) {
     // set alpha
     if (coloralpha_filename != "") {
         auto alpha = image4f();
-        if (!load_image(coloralpha_filename, alpha))
-            log_fatal("cannot load image {}", coloralpha_filename);
+        try {
+            load_image(coloralpha_filename, alpha);
+        } catch( const std::exception& e) {
+            log_fatal("{}", e.what());
+        }
         if (img.width != alpha.width || img.height != alpha.height) {
             log_fatal("bad image size");
             exit(1);
@@ -204,7 +214,11 @@ int main(int argc, char* argv[]) {
     if (tonemap) img = tonemap_image(img, exposure, filmic, srgb);
 
     // save
-    if (!save_image(output, img)) log_fatal("cannot save image {}", output);
+    try {
+        save_image(output, img);
+    } catch(const std::exception& e) {
+        log_fatal("{}", e.what());
+    }
 
     // done
     return 0;

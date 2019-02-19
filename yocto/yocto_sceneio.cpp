@@ -243,21 +243,21 @@ inline bool is_whitespace(string_view_stream& str) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-template<typename T>
+template <typename T>
 inline void to_json(json& js, const image<T>& value) {
     js           = json::object();
     js["width"]  = value.width;
     js["height"] = value.height;
     js["pixels"] = value.pixels;
 }
-template<typename T>
+template <typename T>
 inline void from_json(const json& js, image<T>& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<T>>();
     value       = image{width, height, (const T*)data(pixels)};
 }
-template<typename T>
+template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
     js           = json::object();
     js["width"]  = value.width;
@@ -265,7 +265,7 @@ inline void to_json(json& js, const volume<T>& value) {
     js["depth"]  = value.depth;
     js["voxels"] = value.voxels;
 }
-template<typename T>
+template <typename T>
 inline void from_json(const json& js, volume<T>& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
@@ -287,7 +287,7 @@ inline void serialize_json_values(
     }
 }
 
-template<typename T>
+template <typename T>
 inline void serialize_json_value(json& js, image<T>& value, bool save) {
     auto width = 0, height = 0;
     serialize_json_value(js, width, "width", -1, save);
@@ -302,7 +302,8 @@ inline bool serialize_json_value(json& js, volume<T>& value, bool save) {
     serialize_json_value(js, height, "height", -1, save);
     serialize_json_value(js, depth, "depth", -1, save);
     if (!save) value = {width, height, depth, T{}};
-    serialize_json_values(js, data(value), width * height * depth, "voxels", save);
+    serialize_json_values(
+        js, data(value), width * height * depth, "voxels", save);
 }
 
 }  // namespace yocto
@@ -313,55 +314,53 @@ inline bool serialize_json_value(json& js, volume<T>& value, bool save) {
 namespace yocto {
 
 // Load a scene
-bool load_scene(const string& filename, yocto_scene& scene,
+void load_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
-        return load_json_scene(filename, scene, options);
+        load_json_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
-        return load_obj_scene(filename, scene, options);
+        load_obj_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
-        return load_gltf_scene(filename, scene, options);
+        load_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
-        return load_pbrt_scene(filename, scene, options);
+        load_pbrt_scene(filename, scene, options);
     } else if (ext == "ybin" || ext == "YBIN") {
-        return load_ybin_scene(filename, scene, options);
+        load_ybin_scene(filename, scene, options);
     } else if (ext == "ply" || ext == "PLY") {
-        return load_ply_scene(filename, scene, options);
+        load_ply_scene(filename, scene, options);
     } else {
         scene = {};
-        log_io_error("unsupported scene format {}", ext);
-        return false;
+        throw io_error("unsupported scene format " + ext);
     }
 }
 
 // Save a scene
-bool save_scene(const string& filename, const yocto_scene& scene,
+void save_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     auto ext = get_extension(filename);
     if (ext == "json" || ext == "JSON") {
-        return save_json_scene(filename, scene, options);
+        save_json_scene(filename, scene, options);
     } else if (ext == "obj" || ext == "OBJ") {
-        return save_obj_scene(filename, scene, options);
+        save_obj_scene(filename, scene, options);
     } else if (ext == "gltf" || ext == "GLTF") {
-        return save_gltf_scene(filename, scene, options);
+        save_gltf_scene(filename, scene, options);
     } else if (ext == "pbrt" || ext == "PBRT") {
-        return save_pbrt_scene(filename, scene, options);
+        save_pbrt_scene(filename, scene, options);
     } else if (ext == "ybin" || ext == "YBIN") {
-        return save_ybin_scene(filename, scene, options);
+        save_ybin_scene(filename, scene, options);
     } else {
-        log_io_error("unsupported scene format {}", ext);
-        return false;
+        throw io_error("unsupported scene format " + ext);
     }
 }
 
-bool load_image_nolog(const string& filename, image4f& img);
-bool load_image_nolog(const string& filename, image4b& img);
-bool load_volume_nolog(const string& filename, volume1f& vol);
+void load_image_nolog(const string& filename, image4f& img);
+void load_image_nolog(const string& filename, image4b& img);
+void load_volume_nolog(const string& filename, volume1f& vol);
 
-bool load_scene_textures(yocto_scene& scene, const string& dirname,
+void load_scene_textures(yocto_scene& scene, const string& dirname,
     const load_scene_options& options) {
-    if (options.skip_textures) return true;
+    if (options.skip_textures) return;
 
     // load images
     atomic<bool> exit_error(false);
@@ -373,24 +372,20 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
                 !empty(texture.ldr_image))
                 return;
             auto filename = normalize_path(dirname + texture.filename);
-            if (is_hdr_filename(filename)) {
-                if (!load_image_nolog(filename, texture.hdr_image)) {
-                    if (options.exit_on_error) {
-                        exit_error = true;
-                        return;
-                    }
+            try {
+                if (is_hdr_filename(filename)) {
+                    load_image_nolog(filename, texture.hdr_image);
+                } else {
+                    load_image_nolog(filename, texture.ldr_image);
                 }
-            } else {
-                if (!load_image_nolog(filename, texture.ldr_image)) {
-                    if (options.exit_on_error) {
-                        exit_error = true;
-                        return;
-                    }
+            } catch (...) {
+                if (!options.exit_on_error) {
+                    exit_error = true;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
 
     // load volumes
     parallel_foreach(
@@ -399,15 +394,16 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (texture.filename == "" || !empty(texture.volume_data)) return;
             auto filename = normalize_path(dirname + texture.filename);
-            if (!load_volume_nolog(filename, texture.volume_data)) {
-                if (options.exit_on_error) {
+            try {
+                load_volume_nolog(filename, texture.volume_data);
+            } catch (...) {
+                if (!options.exit_on_error) {
                     exit_error = true;
-                    return;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
 
     // assign opacity texture if needed
     if (options.assign_texture_opacity) {
@@ -436,19 +432,16 @@ bool load_scene_textures(yocto_scene& scene, const string& dirname,
                 material.opacity_texture = material.diffuse_texture;
         }
     }
-
-    // done
-    return true;
 }
 
-bool save_image_nolog(const string& filename, const image4f& img);
-bool save_image_nolog(const string& filename, const image4b& img);
-bool save_volume_nolog(const string& filename, const volume1f& vol);
+void save_image_nolog(const string& filename, const image4f& img);
+void save_image_nolog(const string& filename, const image4b& img);
+void save_volume_nolog(const string& filename, const volume1f& vol);
 
 // helper to save textures
-bool save_scene_textures(const yocto_scene& scene, const string& dirname,
+void save_scene_textures(const yocto_scene& scene, const string& dirname,
     const save_scene_options& options) {
-    if (options.skip_textures) return true;
+    if (options.skip_textures) return;
 
     // save images
     atomic<bool> exit_error(false);
@@ -458,24 +451,20 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (empty(texture.hdr_image) && empty(texture.ldr_image)) return;
             auto filename = normalize_path(dirname + texture.filename);
-            if (is_hdr_filename(filename)) {
-                if (!save_image_nolog(filename, texture.hdr_image)) {
-                    if (options.exit_on_error) {
-                        exit_error = true;
-                        return;
-                    }
+            try {
+                if (is_hdr_filename(filename)) {
+                    save_image_nolog(filename, texture.hdr_image);
+                } else {
+                    save_image_nolog(filename, texture.ldr_image);
                 }
-            } else {
-                if (!save_image_nolog(filename, texture.ldr_image)) {
-                    if (options.exit_on_error) {
-                        exit_error = true;
-                        return;
-                    }
+            } catch (...) {
+                if (!options.exit_on_error) {
+                    exit_error = true;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
 
     // save volumes
     parallel_foreach(
@@ -484,18 +473,16 @@ bool save_scene_textures(const yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (empty(texture.volume_data)) return;
             auto filename = normalize_path(dirname + texture.filename);
-            if (!save_volume_nolog(filename, texture.volume_data)) {
-                if (options.exit_on_error) {
+            try {
+                save_volume_nolog(filename, texture.volume_data);
+            } catch (...) {
+                if (!options.exit_on_error) {
                     exit_error = true;
-                    return;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
-
-    // done
-    return true;
 }
 
 // merge quads and triangles
@@ -749,11 +736,11 @@ void serialize_json_objarray(json& js, vector<T>& value, const char* name,
     const yocto_scene& scene, bool save) {
     if (save) {
         if (empty(value)) return;
-         serialize_json_objarray(js[name], value, scene, save);
+        serialize_json_objarray(js[name], value, scene, save);
     } else {
         if (!has_json_key(js, name)) return;
         value = {};
-         serialize_json_objarray(js.at(name), value, scene, save);
+        serialize_json_objarray(js.at(name), value, scene, save);
     }
 }
 
@@ -790,17 +777,17 @@ void serialize_json_object(
     serialize_json_value(js, value.name, "name", def.name, save);
     serialize_json_value(js, value.frame, "frame", def.frame, save);
     serialize_json_value(
-            js, value.orthographic, "orthographic", def.orthographic, save);
+        js, value.orthographic, "orthographic", def.orthographic, save);
     serialize_json_value(
-            js, value.film_width, "film_width", def.film_width, save);
+        js, value.film_width, "film_width", def.film_width, save);
     serialize_json_value(
-            js, value.film_height, "film_height", def.film_height, save);
+        js, value.film_height, "film_height", def.film_height, save);
     serialize_json_value(
-            js, value.focal_length, "focal_length", def.focal_length, save);
-    serialize_json_value(js, value.focus_distance, "focus_distance",
-            def.focus_distance, save);
+        js, value.focal_length, "focal_length", def.focal_length, save);
     serialize_json_value(
-            js, value.lens_aperture, "lens_aperture", def.lens_aperture, save);
+        js, value.focus_distance, "focus_distance", def.focus_distance, save);
+    serialize_json_value(
+        js, value.lens_aperture, "lens_aperture", def.lens_aperture, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
 
@@ -809,7 +796,8 @@ void apply_json_procedural(
     const json& js, yocto_texture& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
+    if (type == "")
+        throw std::invalid_argument("unknown procedural type " + type);
     auto is_hdr = false;
     auto width  = get_json_value(js, "width", 1024);
     auto height = get_json_value(js, "height", 1024);
@@ -895,21 +883,20 @@ void serialize_json_object(
     static const auto def = yocto_texture();
     serialize_json_objbegin(js, save);
     serialize_json_value(js, value.name, "name", def.name, save);
+    serialize_json_value(js, value.filename, "filename", def.filename, save);
     serialize_json_value(
-            js, value.filename, "filename", def.filename, save);
+        js, value.clamp_to_edge, "clamp_to_edge", def.clamp_to_edge, save);
     serialize_json_value(
-            js, value.clamp_to_edge, "clamp_to_edge", def.clamp_to_edge, save);
-    serialize_json_value(
-            js, value.height_scale, "height_scale", def.height_scale, save);
+        js, value.height_scale, "height_scale", def.height_scale, save);
     serialize_json_value(js, value.no_interpolation, "no_interpolation",
-            def.no_interpolation, save);
+        def.no_interpolation, save);
     serialize_json_value(
-            js, value.ldr_as_linear, "ldr_as_linear", def.ldr_as_linear, save);
+        js, value.ldr_as_linear, "ldr_as_linear", def.ldr_as_linear, save);
     if (value.filename == "" || !save) {
         serialize_json_value(
-                js, value.hdr_image, "hdr_image", def.hdr_image, save);
+            js, value.hdr_image, "hdr_image", def.hdr_image, save);
         serialize_json_value(
-                js, value.ldr_image, "ldr_image", def.ldr_image, save);
+            js, value.ldr_image, "ldr_image", def.ldr_image, save);
     }
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
@@ -919,7 +906,8 @@ void apply_json_procedural(
     const json& js, yocto_voltexture& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
+    if (type == "")
+        throw std::invalid_argument("unknown procedural type " + type);
     auto width  = get_json_value(js, "width", 512);
     auto height = get_json_value(js, "height", 512);
     auto depth  = get_json_value(js, "depth", 512);
@@ -942,12 +930,11 @@ void serialize_json_object(
     static const auto def = yocto_voltexture();
     serialize_json_objbegin(js, save);
     serialize_json_value(js, value.name, "name", def.name, save);
+    serialize_json_value(js, value.filename, "filename", def.filename, save);
     serialize_json_value(
-            js, value.filename, "filename", def.filename, save);
-    serialize_json_value(
-            js, value.clamp_to_edge, "clamp_to_edge", def.clamp_to_edge, save);
+        js, value.clamp_to_edge, "clamp_to_edge", def.clamp_to_edge, save);
     serialize_json_value(js, value.no_interpolation, "no_interpolation",
-            def.no_interpolation, save);
+        def.no_interpolation, save);
     if (value.filename == "") {
         if (!empty(value.volume_data)) js["vol"] = value.volume_data;
     }
@@ -970,38 +957,37 @@ void serialize_json_object(
         js["base_metallic"] = value.base_metallic;
     if (value.gltf_textures != def.gltf_textures)
         js["gltf_textures"] = value.gltf_textures;
-    serialize_json_value(
-            js, value.emission, "emission", def.emission, save);
+    serialize_json_value(js, value.emission, "emission", def.emission, save);
     serialize_json_value(js, value.diffuse, "diffuse", def.diffuse, save);
+    serialize_json_value(js, value.specular, "specular", def.specular, save);
     serialize_json_value(
-            js, value.specular, "specular", def.specular, save);
-    serialize_json_value(
-            js, value.transmission, "transmission", def.transmission, save);
-    serialize_json_value(
-            js, value.roughness, "roughness", def.roughness, save);
+        js, value.transmission, "transmission", def.transmission, save);
+    serialize_json_value(js, value.roughness, "roughness", def.roughness, save);
     serialize_json_value(js, value.opacity, "opacity", def.opacity, save);
     serialize_json_value(js, value.fresnel, "fresnel", def.fresnel, save);
     serialize_json_value(js, value.refract, "refract", def.refract, save);
-    serialize_json_objref(js, value.emission_texture, "emission_texture",
-            scene.textures, save);
     serialize_json_objref(
-            js, value.diffuse_texture, "diffuse_texture", scene.textures, save);
-    serialize_json_objref(js, value.specular_texture, "specular_texture",
-            scene.textures, save);
+        js, value.emission_texture, "emission_texture", scene.textures, save);
+    serialize_json_objref(
+        js, value.diffuse_texture, "diffuse_texture", scene.textures, save);
+    serialize_json_objref(
+        js, value.specular_texture, "specular_texture", scene.textures, save);
     serialize_json_objref(js, value.transmission_texture,
-            "transmission_texture", scene.textures, save);
-    serialize_json_objref(js, value.roughness_texture, "roughness_texture",
-            scene.textures, save);
-    serialize_json_objref(js, value.opacity_texture, "opacity_texture", scene.textures, save);
-    serialize_json_objref(js, value.occlusion_texture, "occlusion_texture",
-            scene.textures, save);
-    serialize_json_objref(js, value.bump_texture, "bump_texture", scene.textures, save);
-    serialize_json_objref(js, value.displacement_texture,
-            "displacement_texture", scene.textures, save);
+        "transmission_texture", scene.textures, save);
     serialize_json_objref(
-            js, value.normal_texture, "normal_texture", scene.textures, save);
+        js, value.roughness_texture, "roughness_texture", scene.textures, save);
+    serialize_json_objref(
+        js, value.opacity_texture, "opacity_texture", scene.textures, save);
+    serialize_json_objref(
+        js, value.occlusion_texture, "occlusion_texture", scene.textures, save);
+    serialize_json_objref(
+        js, value.bump_texture, "bump_texture", scene.textures, save);
+    serialize_json_objref(js, value.displacement_texture,
+        "displacement_texture", scene.textures, save);
+    serialize_json_objref(
+        js, value.normal_texture, "normal_texture", scene.textures, save);
     serialize_json_objref(js, value.volume_density_texture,
-            "volume_density_texture", scene.voltextures, save);
+        "volume_density_texture", scene.voltextures, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
 
@@ -1010,7 +996,8 @@ void apply_json_procedural(
     const json& js, yocto_shape& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
+    if (type == "")
+        throw std::invalid_argument("unknown procedural type " + type);
     value.points        = {};
     value.lines         = {};
     value.triangles     = {};
@@ -1170,32 +1157,30 @@ void serialize_json_object(
     static const auto def = yocto_shape();
     serialize_json_objbegin(js, save);
     serialize_json_value(js, value.name, "name", def.name, save);
-    serialize_json_value(
-            js, value.filename, "filename", def.filename, save);
+    serialize_json_value(js, value.filename, "filename", def.filename, save);
     serialize_json_objref(
-            js, value.material, "material", scene.materials, save);
+        js, value.material, "material", scene.materials, save);
     serialize_json_value(js, value.subdivision_level, "subdivision_level",
-            def.subdivision_level, save);
+        def.subdivision_level, save);
     serialize_json_value(
-            js, value.catmull_clark, "catmull_clark", def.catmull_clark, save);
+        js, value.catmull_clark, "catmull_clark", def.catmull_clark, save);
     serialize_json_value(js, value.compute_vertex_normals,
-            "compute_vertex_normals", def.compute_vertex_normals, save);
+        "compute_vertex_normals", def.compute_vertex_normals, save);
     if (value.filename == "" || !save) {
         serialize_json_value(js, value.points, "points", def.points, save);
         serialize_json_value(js, value.lines, "lines", def.lines, save);
         serialize_json_value(
-                js, value.triangles, "triangles", def.triangles, save);
+            js, value.triangles, "triangles", def.triangles, save);
         serialize_json_value(js, value.quads, "quads", def.quads, save);
         serialize_json_value(
-                js, value.positions, "positions", def.positions, save);
+            js, value.positions, "positions", def.positions, save);
+        serialize_json_value(js, value.normals, "normals", def.normals, save);
         serialize_json_value(
-                js, value.normals, "normals", def.normals, save);
-        serialize_json_value(js, value.texturecoords, "texturecoords",
-                def.texturecoords, save);
+            js, value.texturecoords, "texturecoords", def.texturecoords, save);
         serialize_json_value(js, value.colors, "colors", def.colors, save);
         serialize_json_value(js, value.radius, "radius", def.radius, save);
-        serialize_json_value(js, value.tangentspaces, "tangent_spaces",
-                def.tangentspaces, save);
+        serialize_json_value(
+            js, value.tangentspaces, "tangent_spaces", def.tangentspaces, save);
     }
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
@@ -1205,7 +1190,8 @@ void apply_json_procedural(
     const json& js, yocto_surface& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
+    if (type == "")
+        throw std::invalid_argument("unknown procedural type " + type);
     value.quads_positions     = {};
     value.quads_normals       = {};
     value.quads_texturecoords = {};
@@ -1365,31 +1351,29 @@ void serialize_json_object(
     static const auto def = yocto_surface();
     serialize_json_objbegin(js, save);
     serialize_json_value(js, value.name, "name", def.name, save);
-    serialize_json_value(
-            js, value.filename, "filename", def.filename, save);
+    serialize_json_value(js, value.filename, "filename", def.filename, save);
     serialize_json_objref(
-            js, value.materials, "materials", scene.materials, save);
+        js, value.materials, "materials", scene.materials, save);
     serialize_json_value(js, value.subdivision_level, "subdivision_level",
-            def.subdivision_level, save);
+        def.subdivision_level, save);
     serialize_json_value(
-            js, value.catmull_clark, "catmull_clark", def.catmull_clark, save);
+        js, value.catmull_clark, "catmull_clark", def.catmull_clark, save);
     serialize_json_value(js, value.compute_vertex_normals,
-            "compute_vertex_normals", def.compute_vertex_normals, save);
+        "compute_vertex_normals", def.compute_vertex_normals, save);
     if (value.filename == "" || !save) {
         serialize_json_value(js, value.quads_positions, "quads_positions",
-                def.quads_positions, save);
-        serialize_json_value(js, value.quads_normals, "quads_normals",
-                def.quads_normals, save);
+            def.quads_positions, save);
+        serialize_json_value(
+            js, value.quads_normals, "quads_normals", def.quads_normals, save);
         serialize_json_value(js, value.quads_texturecoords,
-                "quads_texturecoords", def.quads_texturecoords, save);
+            "quads_texturecoords", def.quads_texturecoords, save);
         serialize_json_value(js, value.quads_materials, "quads_materials",
-                def.quads_materials, save);
+            def.quads_materials, save);
         serialize_json_value(
-                js, value.positions, "positions", def.positions, save);
+            js, value.positions, "positions", def.positions, save);
+        serialize_json_value(js, value.normals, "normals", def.normals, save);
         serialize_json_value(
-                js, value.normals, "normals", def.normals, save);
-        serialize_json_value(js, value.texturecoords, "texturecoords",
-                def.texturecoords, save);
+            js, value.texturecoords, "texturecoords", def.texturecoords, save);
     }
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
@@ -1423,8 +1407,7 @@ void serialize_json_object(
     serialize_json_value(js, value.name, "name", def.name, save);
     serialize_json_value(js, value.frame, "frame", def.frame, save);
     serialize_json_objref(js, value.shape, "shape", scene.shapes, save);
-    serialize_json_objref(
-            js, value.surface, "surface", scene.surfaces, save);
+    serialize_json_objref(js, value.surface, "surface", scene.surfaces, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
 
@@ -1445,10 +1428,9 @@ void serialize_json_object(
     serialize_json_objbegin(js, save);
     serialize_json_value(js, value.name, "name", def.name, save);
     serialize_json_value(js, value.frame, "frame", def.frame, save);
-    serialize_json_value(
-            js, value.emission, "emission", def.emission, save);
-    serialize_json_objref(js, value.emission_texture, "emission_texture",
-            scene.textures, save);
+    serialize_json_value(js, value.emission, "emission", def.emission, save);
+    serialize_json_objref(
+        js, value.emission_texture, "emission_texture", scene.textures, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
 
@@ -1471,14 +1453,17 @@ void serialize_json_object(
     serialize_json_objbegin(js, save);
     serialize_json_value(js, value.name, "name", def.name, save);
     serialize_json_value(js, value.local, "local", def.local, save);
-    serialize_json_value(js, value.translation, "translation", def.translation, save);
+    serialize_json_value(
+        js, value.translation, "translation", def.translation, save);
     serialize_json_value(js, value.rotation, "rotation", def.rotation, save);
     serialize_json_value(js, value.scale, "scale", def.scale, save);
     serialize_json_value(js, value.weights, "weights", def.weights, save);
     serialize_json_objref(js, value.parent, "parent", scene.nodes, save);
     serialize_json_objref(js, value.camera, "camera", scene.cameras, save);
-    serialize_json_objref(js, value.instance, "instance", scene.instances, save);
-    serialize_json_objref(js, value.environment, "environment", scene.environments, save);
+    serialize_json_objref(
+        js, value.instance, "instance", scene.instances, save);
+    serialize_json_objref(
+        js, value.environment, "environment", scene.environments, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
 
@@ -1511,24 +1496,23 @@ void serialize_json_object(
     static const auto def = yocto_animation();
     serialize_json_objbegin(js, save);
     serialize_json_value(js, value.name, "name", def.name, save);
-    serialize_json_value(
-            js, value.filename, "filename", def.filename, save);
+    serialize_json_value(js, value.filename, "filename", def.filename, save);
     serialize_json_value(js, value.animation_group, "animation_group",
-            def.animation_group, save);
+        def.animation_group, save);
     serialize_json_value(
-            js, value.interpolation_type, "type", def.interpolation_type, save);
+        js, value.interpolation_type, "type", def.interpolation_type, save);
     if (value.filename == "" || !save) {
         serialize_json_value(js, value.keyframes_times, "keyframes_times",
-                def.keyframes_times, save);
+            def.keyframes_times, save);
         serialize_json_value(js, value.translation_keyframes,
-                "translation_keyframes", def.translation_keyframes, save);
-        serialize_json_value(js, value.rotation_keyframes,
-                "rotation_keyframes", def.rotation_keyframes, save);
+            "translation_keyframes", def.translation_keyframes, save);
+        serialize_json_value(js, value.rotation_keyframes, "rotation_keyframes",
+            def.rotation_keyframes, save);
         serialize_json_value(js, value.scale_keyframes, "scale_keyframes",
-                def.scale_keyframes, save);
+            def.scale_keyframes, save);
     }
     serialize_json_objref(
-            js, value.node_targets, "node_targets", scene.nodes, save);
+        js, value.node_targets, "node_targets", scene.nodes, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
 
@@ -1587,17 +1571,15 @@ void serialize_json_object(
     serialize_json_value(js, value.name, "name", def.name, save);
     serialize_json_objarray(js, value.cameras, "cameras", scene, save);
     serialize_json_objarray(js, value.textures, "textures", scene, save);
-    serialize_json_objarray(
-            js, value.voltextures, "voltextures", scene, save);
+    serialize_json_objarray(js, value.voltextures, "voltextures", scene, save);
     serialize_json_objarray(js, value.materials, "materials", scene, save);
     serialize_json_objarray(js, value.shapes, "shapes", scene, save);
     serialize_json_objarray(js, value.surfaces, "surfaces", scene, save);
     serialize_json_objarray(js, value.instances, "instances", scene, save);
     serialize_json_objarray(
-            js, value.environments, "environments", scene, save);
+        js, value.environments, "environments", scene, save);
     serialize_json_objarray(js, value.nodes, "nodes", scene, save);
-    serialize_json_objarray(
-            js, value.animations, "animations", scene, save);
+    serialize_json_objarray(js, value.animations, "animations", scene, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
 }
 
@@ -1606,9 +1588,9 @@ void serialize_json_object(json& js, yocto_scene& value, bool save) {
 }
 
 // Load json meshes
-bool load_json_meshes(yocto_scene& scene, const string& dirname,
+void load_json_meshes(yocto_scene& scene, const string& dirname,
     const load_scene_options& options) {
-    if (options.skip_meshes) return true;
+    if (options.skip_meshes) return;
 
     // load shapes
     atomic<bool> exit_error(false);
@@ -1618,17 +1600,18 @@ bool load_json_meshes(yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (shape.filename == "" || !empty(shape.positions)) return;
             auto filename = normalize_path(dirname + shape.filename);
-            if (!load_mesh(filename, shape.points, shape.lines, shape.triangles,
+            try {
+                load_mesh(filename, shape.points, shape.lines, shape.triangles,
                     shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius, false)) {
-                if (options.exit_on_error) {
+                    shape.texturecoords, shape.colors, shape.radius, false);
+            } catch (...) {
+                if (!options.exit_on_error) {
                     exit_error = true;
-                    return;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
 
     // load surfaces
     parallel_foreach(
@@ -1637,41 +1620,44 @@ bool load_json_meshes(yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (surface.filename == "" || !empty(surface.positions)) return;
             auto filename = normalize_path(dirname + surface.filename);
-            if (!load_facevarying_mesh(filename, surface.quads_positions,
+            try {
+                load_facevarying_mesh(filename, surface.quads_positions,
                     surface.quads_normals, surface.quads_texturecoords,
                     surface.positions, surface.normals, surface.texturecoords,
-                    surface.quads_materials)) {
-                if (options.exit_on_error) {
+                    surface.quads_materials);
+            } catch (...) {
+                if (!options.exit_on_error) {
                     exit_error = true;
-                    return;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
-
-    // done
-    return true;
 }
 
 // Load a scene in the builtin JSON format.
-bool load_json_scene(const string& filename, yocto_scene& scene,
+void load_json_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     // initialize
     scene = {};
 
-    // load jsonz
-    auto js = json();
-    load_json(filename, js);
+    // wrap to rethrow better error
+    try {
+        // load jsonz
+        auto js = json();
+        load_json(filename, js);
 
-    // deserialize json
-    serialize_json_object(js, scene, false);
+        // deserialize json
+        serialize_json_object(js, scene, false);
 
-    // load meshes and textures
-    auto dirname = get_dirname(filename);
-    if (!load_json_meshes(scene, dirname, options)) return false;
-    if (!load_scene_textures(scene, dirname, options)) return false;
+        // load meshes and textures
+        auto dirname = get_dirname(filename);
+        load_json_meshes(scene, dirname, options);
+        load_scene_textures(scene, dirname, options);
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
+    }
 
     // fix scene
     if (scene.name == "") scene.name = get_filename(filename);
@@ -1679,15 +1665,12 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
     add_missing_materials(scene);
     add_missing_names(scene);
     update_transforms(scene);
-
-    // done
-    return true;
 }
 
 // Save json meshes
-bool save_json_meshes(const yocto_scene& scene, const string& dirname,
+void save_json_meshes(const yocto_scene& scene, const string& dirname,
     const save_scene_options& options) {
-    if (options.skip_meshes) return true;
+    if (options.skip_meshes) return;
 
     // save shapes
     atomic<bool> exit_error(false);
@@ -1697,17 +1680,18 @@ bool save_json_meshes(const yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (shape.filename == "") return;
             auto filename = normalize_path(dirname + shape.filename);
-            if (!save_mesh(filename, shape.points, shape.lines, shape.triangles,
+            try {
+                save_mesh(filename, shape.points, shape.lines, shape.triangles,
                     shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius)) {
-                if (options.exit_on_error) {
+                    shape.texturecoords, shape.colors, shape.radius);
+            } catch (...) {
+                if (!options.exit_on_error) {
                     exit_error = true;
-                    return;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
 
     // save surfaces
     parallel_foreach(
@@ -1716,43 +1700,42 @@ bool save_json_meshes(const yocto_scene& scene, const string& dirname,
             if (exit_error) return;
             if (surface.filename == "") return;
             auto filename = normalize_path(dirname + surface.filename);
-            if (!save_facevarying_mesh(filename, surface.quads_positions,
+            try {
+                save_facevarying_mesh(filename, surface.quads_positions,
                     surface.quads_normals, surface.quads_texturecoords,
                     surface.positions, surface.normals, surface.texturecoords,
-                    surface.quads_materials)) {
-                if (options.exit_on_error) {
+                    surface.quads_materials);
+            } catch (...) {
+                if (!options.exit_on_error) {
                     exit_error = true;
-                    return;
+                    throw;
                 }
             }
         },
         options.cancel_flag, options.run_serially);
-    if (exit_error) return false;
-
-    // done
-    return true;
 }
 
 // Save a scene in the builtin JSON format.
-bool save_json_scene(const string& filename, const yocto_scene& scene,
+void save_json_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     auto scope = log_trace_scoped("saving scene {}", filename);
-    // save json
-    auto js = json::object();
-    js["asset"]           = json::object();
-    js["asset"]["format"] = "Yocto/Scene";
-    js["asset"]["generator"] =
-        "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-    serialize_json_object(js, (yocto_scene&)scene, true);
-    save_json(filename, js);
+    try {
+        // save json
+        auto js               = json::object();
+        js["asset"]           = json::object();
+        js["asset"]["format"] = "Yocto/Scene";
+        js["asset"]["generator"] =
+            "Yocto/GL - https://github.com/xelatihy/yocto-gl";
+        serialize_json_object(js, (yocto_scene&)scene, true);
+        save_json(filename, js);
 
-    // save meshes and textures
-    auto dirname = get_dirname(filename);
-    if (!save_json_meshes(scene, dirname, options)) return false;
-    if (!save_scene_textures(scene, dirname, options)) return false;
-
-    // done
-    return true;
+        // save meshes and textures
+        auto dirname = get_dirname(filename);
+        save_json_meshes(scene, dirname, options);
+        save_scene_textures(scene, dirname, options);
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
+    }
 }
 
 }  // namespace yocto
@@ -1827,13 +1810,12 @@ inline string_view_stream& operator>>(
 }
 
 // Load obj materials
-bool load_mtl(const string& filename, const obj_callbacks& cb,
+void load_mtl(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
     auto fs = ifstream(filename);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // currently parsed material
@@ -1921,19 +1903,15 @@ bool load_mtl(const string& filename, const obj_callbacks& cb,
 
     // issue current material
     if (!first && cb.material) cb.material(material);
-
-    // done
-    return true;
 }
 
 // Load obj extensions
-bool load_objx(const string& filename, const obj_callbacks& cb,
+void load_objx(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
     auto fs = ifstream(filename);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // read the file line by line
@@ -1981,19 +1959,15 @@ bool load_objx(const string& filename, const obj_callbacks& cb,
             // unused
         }
     }
-
-    // done
-    return true;
 }
 
 // Load obj scene
-bool load_obj(const string& filename, const obj_callbacks& cb,
+void load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
     auto fs = ifstream(filename);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // track vertex size
@@ -2069,9 +2043,7 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
             view >> mtlname;
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + mtlname;
-            if (!load_mtl(mtlpath, cb, options)) {
-                if (options.exit_on_error) return false;
-            }
+            load_mtl(mtlpath, cb, options);
         } else {
             // unused
         }
@@ -2082,16 +2054,13 @@ bool load_obj(const string& filename, const obj_callbacks& cb,
         auto extname    = replace_extension(filename, "objx");
         auto ext_exists = exists_file(extname);
         if (ext_exists) {
-            if (!load_objx(extname, cb, options)) return false;
+            load_objx(extname, cb, options);
         }
     }
-
-    // done
-    return true;
 }
 
 // Loads an OBJ
-bool load_obj_scene(const string& filename, yocto_scene& scene,
+void load_obj_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = {};
@@ -2457,28 +2426,33 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
         scene.instances.push_back(instance);
     };
 
-    // Parse obj
-    auto obj_options          = load_obj_options();
-    obj_options.exit_on_error = options.exit_on_error;
-    obj_options.geometry_only = false;
-    if (!load_obj(filename, cb, obj_options)) return false;
+    try {
+        // Parse obj
+        auto obj_options          = load_obj_options();
+        obj_options.exit_on_error = options.exit_on_error;
+        obj_options.geometry_only = false;
+        load_obj(filename, cb, obj_options);
 
-    // cleanup empty
-    for (auto idx = 0; idx < scene.instances.size(); idx++) {
-        if (!is_instance_empty(scene, scene.instances[idx])) continue;
-        scene.instances.erase(scene.instances.begin() + idx);
-        idx--;
+        // cleanup empty
+        for (auto idx = 0; idx < scene.instances.size(); idx++) {
+            if (!is_instance_empty(scene, scene.instances[idx])) continue;
+            scene.instances.erase(scene.instances.begin() + idx);
+            idx--;
+        }
+
+        // merging quads and triangles
+        for (auto& shape : scene.shapes) {
+            if (empty(shape.triangles) || empty(shape.quads)) continue;
+            merge_triangles_and_quads(shape.triangles, shape.quads, false);
+        }
+
+        // load textures
+        auto dirname = get_dirname(filename);
+        load_scene_textures(scene, dirname, options);
+
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
-
-    // merging quads and triangles
-    for (auto& shape : scene.shapes) {
-        if (empty(shape.triangles) || empty(shape.quads)) continue;
-        merge_triangles_and_quads(shape.triangles, shape.quads, false);
-    }
-
-    // load textures
-    auto dirname = get_dirname(filename);
-    if (!load_scene_textures(scene, dirname, options)) return false;
 
     // fix scene
     scene.name = get_filename(filename);
@@ -2486,18 +2460,14 @@ bool load_obj_scene(const string& filename, yocto_scene& scene,
     add_missing_materials(scene);
     add_missing_names(scene);
     update_transforms(scene);
-
-    // done
-    return true;
 }
 
-bool save_mtl(
+void save_mtl(
     const string& filename, const yocto_scene& scene, bool flip_tr = true) {
     // open file
     auto fs = ofstream(filename);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // for each material, dump all the values
@@ -2561,20 +2531,15 @@ bool save_mtl(
 
     // check for errors
     if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
+        throw io_error("cannot write file " + filename);
     }
-
-    // done
-    return true;
 }
 
-bool save_objx(const string& filename, const yocto_scene& scene) {
+void save_objx(const string& filename, const yocto_scene& scene) {
     // open file
     auto fs = ofstream(filename);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // cameras
@@ -2599,12 +2564,8 @@ bool save_objx(const string& filename, const yocto_scene& scene) {
 
     // check for errors
     if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
+        throw io_error("cannot write file " + filename);
     }
-
-    // done
-    return true;
 }
 
 string to_string(const obj_vertex& v) {
@@ -2618,13 +2579,12 @@ string to_string(const obj_vertex& v) {
     return s;
 }
 
-bool save_obj(const string& filename, const yocto_scene& scene,
+void save_obj(const string& filename, const yocto_scene& scene,
     bool flip_texcoord = true) {
     // open file
     auto fs = ofstream(filename);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     print(fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
@@ -2807,32 +2767,28 @@ bool save_obj(const string& filename, const yocto_scene& scene,
 
     // check for errors
     if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
+        io_error("cannot write file " + filename);
     }
-
-    return true;
 }
 
-bool save_obj_scene(const string& filename, const yocto_scene& scene,
+void save_obj_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     auto scope = log_trace_scoped("saving scene {}", filename);
-    if (!save_obj(filename, scene, true)) return false;
-    if (!empty(scene.materials)) {
-        if (!save_mtl(replace_extension(filename, ".mtl"), scene, true))
-            return false;
-    }
-    if (!empty(scene.cameras) || !empty(scene.environments)) {
-        if (!save_objx(replace_extension(filename, ".objx"), scene))
-            return false;
-    }
+    try {
+        save_obj(filename, scene, true);
+        if (!empty(scene.materials)) {
+            save_mtl(replace_extension(filename, ".mtl"), scene, true);
+        }
+        if (!empty(scene.cameras) || !empty(scene.environments)) {
+            save_objx(replace_extension(filename, ".objx"), scene);
+        }
 
-    // skip textures if needed
-    auto dirname = get_dirname(filename);
-    if (!save_scene_textures(scene, dirname, options)) return false;
-
-    // done
-    return true;
+        // skip textures if needed
+        auto dirname = get_dirname(filename);
+        save_scene_textures(scene, dirname, options);
+    } catch (const std::exception& e) {
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
+    }
 }
 
 }  // namespace yocto
@@ -2842,23 +2798,27 @@ bool save_obj_scene(const string& filename, const yocto_scene& scene,
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool load_ply_scene(const string& filename, yocto_scene& scene,
+void load_ply_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     scene = {};
 
-    // load ply mesh
-    scene.shapes.push_back({});
-    auto& shape = scene.shapes.back();
-    if (!load_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
+    try {
+        // load ply mesh
+        scene.shapes.push_back({});
+        auto& shape = scene.shapes.back();
+        load_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius, false))
-        return false;
+            shape.colors, shape.radius, false);
 
-    // add instance
-    auto instance  = yocto_instance{};
-    instance.name  = shape.name;
-    instance.shape = 0;
-    scene.instances.push_back(instance);
+        // add instance
+        auto instance  = yocto_instance{};
+        instance.name  = shape.name;
+        instance.shape = 0;
+        scene.instances.push_back(instance);
+
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
+    }
 
     // fix scene
     scene.name = get_filename(filename);
@@ -2866,18 +2826,21 @@ bool load_ply_scene(const string& filename, yocto_scene& scene,
     add_missing_materials(scene);
     add_missing_names(scene);
     update_transforms(scene);
-
-    return true;
 }
-bool save_ply_scene(const string& filename, const yocto_scene& scene,
+
+void save_ply_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
-    if (scene.shapes.empty()) return false;
-    auto& shape = scene.shapes.front();
-    if (!save_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
+    if (scene.shapes.empty()) {
+        throw io_error("cannot save empty scene " + filename);
+    }
+    try {
+        auto& shape = scene.shapes.front();
+        save_ply_mesh(filename, shape.points, shape.lines, shape.triangles,
             shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius))
-        return false;
-    return true;
+            shape.colors, shape.radius);
+    } catch (const std::exception& e) {
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
+    }
 }
 
 }  // namespace yocto
@@ -2895,7 +2858,7 @@ static bool startswith(const string& str, const string& substr) {
 }
 
 // convert gltf to scene
-bool gltf_to_scene(
+void gltf_to_scene(
     yocto_scene& scene, const json& gltf, const string& dirname) {
     // convert textures
     if (has_json_key(gltf, "images")) {
@@ -2925,7 +2888,7 @@ bool gltf_to_scene(
                 // assume it is base64 and find ','
                 auto pos = uri.find(',');
                 if (pos == uri.npos) {
-                    return false;
+                    throw io_error("bad gltf buffer");
                 }
                 // decode
                 auto data_char = base64_decode(uri.substr(pos + 1));
@@ -2936,7 +2899,7 @@ bool gltf_to_scene(
                 load_binary(filename, data);
             }
             if (gbuf.value("byteLength", -1) != data.size()) {
-                return false;
+                throw io_error("bad gltf buffer");
             }
         }
     }
@@ -3440,7 +3403,7 @@ bool gltf_to_scene(
 #endif
                         } break;
                         default: {
-                            return false;
+                            throw io_error("bad gltf animation");
                         }
                     }
                     sampler_map[{gchannel.at("sampler").get<int>(), path}] =
@@ -3455,24 +3418,27 @@ bool gltf_to_scene(
             }
         }
     }
-
-    return true;
 }
 
 // Load a scene
-bool load_gltf_scene(const string& filename, yocto_scene& scene,
+void load_gltf_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     // initialization
     scene = {};
 
-    // convert json
-    auto js = json();
-    load_json(filename, js);
-    gltf_to_scene(scene, js, get_dirname(filename));
+    try {
+        // convert json
+        auto js = json();
+        load_json(filename, js);
+        gltf_to_scene(scene, js, get_dirname(filename));
 
-    // load textures
-    auto dirname = get_dirname(filename);
-    if (!load_scene_textures(scene, dirname, options)) return false;
+        // load textures
+        auto dirname = get_dirname(filename);
+        load_scene_textures(scene, dirname, options);
+
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
+    }
 
     // fix scene
     scene.name = get_filename(filename);
@@ -3488,13 +3454,10 @@ bool load_gltf_scene(const string& filename, yocto_scene& scene,
         auto distance = dot(-camera.frame.z, center - camera.frame.o);
         if (distance > 0) camera.focus_distance = distance;
     }
-
-    // done
-    return true;
 }
 
 // convert gltf scene to json
-bool scene_to_gltf(const yocto_scene& scene, json& js) {
+void scene_to_gltf(const yocto_scene& scene, json& js) {
     // init to emprt object
     js = json::object();
 
@@ -3694,19 +3657,15 @@ bool scene_to_gltf(const yocto_scene& scene, json& js) {
             js["nodes"].push_back(njs);
         }
     }
-
-    // done
-    return true;
 }
 
 // save gltf mesh
-bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
+void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     auto scope = log_trace_scoped("saving scene {}", filename);
     // open file
     auto fs = ofstream(filename, std::ios::binary);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     write_values(fs, shape.positions);
@@ -3722,41 +3681,43 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     write_values(fs, qtriangles);
 
     if (!fs) {
-        log_io_error("cannot write {}", filename);
-        return false;
+        throw io_error("cannot write " + filename);
     }
-
-    return true;
 }
 
 // Save gltf json
-bool save_gltf_scene(const string& filename, const yocto_scene& scene,
+void save_gltf_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
-    // save json
-    auto js = json::object();
+    try {
+        // save json
+        auto js               = json::object();
         js["asset"]           = json::object();
         js["asset"]["format"] = "Yocto/Scene";
         js["asset"]["generator"] =
             "Yocto/GL - https://github.com/xelatihy/yocto-gl";
         scene_to_gltf(scene, js);
-    save_json(filename, js);
+        save_json(filename, js);
 
-    // meshes
-    auto dirname = get_dirname(filename);
-    for (auto& shape : scene.shapes) {
-        if (shape.filename == "") continue;
-        auto filename = normalize_path(dirname + shape.filename);
-        filename      = replace_extension(filename, ".bin");
-        if (!save_gltf_mesh(filename, shape)) {
-            if (options.exit_on_error) return false;
+        // meshes
+        auto dirname = get_dirname(filename);
+        for (auto& shape : scene.shapes) {
+            if (shape.filename == "") continue;
+            auto filename = normalize_path(dirname + shape.filename);
+            filename      = replace_extension(filename, ".bin");
+            try {
+                save_gltf_mesh(filename, shape);
+            } catch (...) {
+                if (!options.exit_on_error) {
+                    throw;
+                }
+            }
         }
+
+        // save textures
+        save_scene_textures(scene, dirname, options);
+    } catch (const std::exception& e) {
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
-
-    // save textures
-    if (!save_scene_textures(scene, dirname, options)) return false;
-
-    // done
-    return true;
 }
 
 }  // namespace yocto
@@ -3767,7 +3728,7 @@ bool save_gltf_scene(const string& filename, const yocto_scene& scene,
 namespace yocto {
 
 // convert pbrt to json
-bool pbrt_to_json(const string& filename, json& js) {
+void pbrt_to_json(const string& filename, json& js) {
     auto split = [](const string& str) {
         auto ret = vector<string>();
         if (empty(str)) return ret;
@@ -3859,8 +3820,7 @@ bool pbrt_to_json(const string& filename, json& js) {
 
     auto fs = ifstream(filename);
     if (!fs) {
-        log_io_error("cannot open {}", filename);
-        return false;
+        throw io_error("cannot open " + filename);
     }
 
     auto pbrt = ""s;
@@ -3922,7 +3882,6 @@ bool pbrt_to_json(const string& filename, json& js) {
     }
     // auto fstr = std::fstream(filename + ".json");
     // fstr << js;
-    return true;
 }
 
 // Compute the fresnel term for dielectrics. Implementation from
@@ -3981,16 +3940,16 @@ vec3f pbrt_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 }
 
 // load pbrt scenes
-bool load_pbrt_scene(const string& filename, yocto_scene& scene,
+void load_pbrt_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = yocto_scene{};
     // convert to json
     auto js = json();
     try {
-        if (!pbrt_to_json(filename, js)) return false;
-    } catch (...) {
-        return false;
+        pbrt_to_json(filename, js);
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     auto dirname_ = get_dirname(filename);
@@ -4352,11 +4311,10 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 shape.name     = get_filename(filename);
                 shape.filename = filename;
                 if (!options.skip_meshes) {
-                    if (!load_ply_mesh(dirname_ + filename, shape.points,
-                            shape.lines, shape.triangles, shape.quads,
-                            shape.positions, shape.normals, shape.texturecoords,
-                            shape.colors, shape.radius, false))
-                        return false;
+                    load_ply_mesh(dirname_ + filename, shape.points,
+                        shape.lines, shape.triangles, shape.quads,
+                        shape.positions, shape.normals, shape.texturecoords,
+                        shape.colors, shape.radius, false);
                 }
             } else if (type == "trianglemesh") {
                 shape.name     = "mesh" + std::to_string(sid++);
@@ -4513,7 +4471,7 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     // load textures
     auto dirname = get_dirname(filename);
-    if (!load_scene_textures(scene, dirname, options)) return false;
+    load_scene_textures(scene, dirname, options);
 
     // fix scene
     scene.name = get_filename(filename);
@@ -4521,17 +4479,14 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
     add_missing_materials(scene);
     add_missing_names(scene);
     update_transforms(scene);
-
-    return true;
 }
 
 // Convert a scene to pbrt format
-bool save_pbrt(const string& filename, const yocto_scene& scene) {
+void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto scope = log_trace_scoped("saving scene {}", filename);
     auto fs    = ofstream(filename);
     if (!fs) {
-        log_io_error("cannot open {}", filename);
-        return false;
+        throw io_error("cannot open " + filename);
     }
 
 #if 0
@@ -4634,37 +4589,39 @@ WorldEnd
 
     // check for errors
     if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
+        throw io_error("cannot write file " + filename);
     }
-
-    // done
-    return true;
 }
 
 // Save a pbrt scene
-bool save_pbrt_scene(const string& filename, const yocto_scene& scene,
+void save_pbrt_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
-    // save json
-    if (!save_pbrt(filename, scene)) return false;
+    try {
+        // save json
+        save_pbrt(filename, scene);
 
-    // save meshes
-    auto dirname = get_dirname(filename);
-    for (auto& shape : scene.shapes) {
-        if (shape.filename == "") continue;
-        auto filename = normalize_path(dirname + shape.filename);
-        if (!save_mesh(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius)) {
-            if (options.exit_on_error) return false;
+        // save meshes
+        auto dirname = get_dirname(filename);
+        for (auto& shape : scene.shapes) {
+            if (shape.filename == "") continue;
+            auto filename = normalize_path(dirname + shape.filename);
+            try {
+                save_mesh(filename, shape.points, shape.lines, shape.triangles,
+                    shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius);
+            } catch (...) {
+                if (!options.exit_on_error) {
+                    throw;
+                }
+            }
         }
+
+        // skip textures
+        save_scene_textures(scene, dirname, options);
+
+    } catch (const std::exception& e) {
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
-
-    // skip textures
-    if (!save_scene_textures(scene, dirname, options)) return false;
-
-    // done
-    return true;
 }
 
 // Attempt to fix pbrt z-up.
@@ -4694,360 +4651,313 @@ namespace yocto {
 
 // Serialize type or struct with no allocated resource
 template <typename T>
-bool serialize_bin_value(T& value, fstream& fs, bool save) {
+void serialize_bin_value(T& value, fstream& fs, bool save) {
     if (save) {
-        return (bool)write_value(fs, value);
+        write_value(fs, value);
     } else {
-        return (bool)read_value(fs, value);
+        read_value(fs, value);
     }
 }
 
 // Serialize vector
 template <typename T>
-bool serialize_bin_value(vector<T>& vec, fstream& fs, bool save) {
+void serialize_bin_value(vector<T>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        if (!write_value(fs, count)) return false;
-        if (!write_values(fs, vec)) return false;
-        return true;
+        write_value(fs, count);
+        write_values(fs, vec);
     } else {
         auto count = (size_t)0;
-        if (!read_value(fs, count)) return false;
+        read_value(fs, count);
         vec = vector<T>(count);
-        if (!read_values(fs, vec)) return false;
-        return true;
+        read_values(fs, vec);
     }
 }
 
 // Serialize string
-bool serialize_bin_value(string& str, fstream& fs, bool save) {
+void serialize_bin_value(string& str, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)str.size();
-        if (!write_value(fs, count)) return false;
+        write_value(fs, count);
         auto vec = vector<char>(str.begin(), str.end());
-        if (!write_values(fs, vec)) return false;
-        return true;
+        write_values(fs, vec);
     } else {
         auto count = (size_t)0;
-        if (!read_value(fs, count)) return false;
+        read_value(fs, count);
         auto vec = vector<char>(count);
-        if (!read_values(fs, vec)) return false;
+        read_values(fs, vec);
         str = {vec.begin(), vec.end()};
-        return true;
     }
 }
 
 // Serialize image
-bool serialize_bin_value(image4f& img, fstream& fs, bool save) {
+void serialize_bin_value(image4f& img, fstream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, img.width)) return false;
-        if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.pixels)) return false;
-        return true;
+        write_value(fs, img.width);
+        write_value(fs, img.height);
+        write_values(fs, img.pixels);
     } else {
-        if (!read_value(fs, img.width)) return false;
-        if (!read_value(fs, img.height)) return false;
+        read_value(fs, img.width);
+        read_value(fs, img.height);
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.pixels)) return false;
-        return true;
+        read_values(fs, img.pixels);
     }
 }
-bool serialize_bin_value(image4b& img, fstream& fs, bool save) {
+void serialize_bin_value(image4b& img, fstream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, img.width)) return false;
-        if (!write_value(fs, img.height)) return false;
-        if (!write_values(fs, img.pixels)) return false;
-        return true;
+        write_value(fs, img.width);
+        write_value(fs, img.height);
+        write_values(fs, img.pixels);
     } else {
-        if (!read_value(fs, img.width)) return false;
-        if (!read_value(fs, img.height)) return false;
+        read_value(fs, img.width);
+        read_value(fs, img.height);
         img.pixels.resize(img.width * img.height);
-        if (!read_values(fs, img.pixels)) return false;
-        return true;
+        read_values(fs, img.pixels);
     }
 }
 
 // Serialize image
-bool serialize_bin_value(volume1f& vol, fstream& fs, bool save) {
+void serialize_bin_value(volume1f& vol, fstream& fs, bool save) {
     if (save) {
-        if (!write_value(fs, vol.width)) return false;
-        if (!write_value(fs, vol.height)) return false;
-        if (!write_value(fs, vol.depth)) return false;
-        if (!write_values(fs, vol.voxels)) return false;
-        return true;
+        write_value(fs, vol.width);
+        write_value(fs, vol.height);
+        write_value(fs, vol.depth);
+        write_values(fs, vol.voxels);
     } else {
-        if (!read_value(fs, vol.width)) return false;
-        if (!read_value(fs, vol.height)) return false;
-        if (!read_value(fs, vol.depth)) return false;
+        read_value(fs, vol.width);
+        read_value(fs, vol.height);
+        read_value(fs, vol.depth);
         vol.voxels.resize(vol.width * vol.height * vol.depth);
-        if (!read_values(fs, vol.voxels)) return false;
-        return true;
+        read_values(fs, vol.voxels);
     }
 }
 
 // Serialize vector of pointers
 template <typename T>
-bool serialize_bin_object(vector<T*>& vec, fstream& fs, bool save) {
+void serialize_bin_objects(vector<T*>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        if (!serialize_bin_value(count, fs, true)) return false;
+        serialize_bin_value(count, fs, true);
         for (auto i = 0; i < vec.size(); ++i) {
-            if (!serialize_bin_object(vec[i], fs, true)) return false;
+            serialize_bin_object(vec[i], fs, true);
         }
-        return true;
     } else {
         auto count = (size_t)0;
-        if (!serialize_bin_value(count, fs, false)) return false;
+        serialize_bin_value(count, fs, false);
         vec = vector<T*>(count);
         for (auto i = 0; i < vec.size(); ++i) {
             vec[i] = new T();
-            if (!serialize_bin_object(vec[i], fs, false)) return false;
+            serialize_bin_object(vec[i], fs, false);
         }
-        return true;
     }
 }
 
 // Serialize vector of pointers
 template <typename T>
-bool serialize_bin_object(vector<T>& vec, fstream& fs, bool save) {
+void serialize_bin_objects(vector<T>& vec, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        if (!serialize_bin_value(count, fs, true)) return false;
+        serialize_bin_value(count, fs, true);
         for (auto i = 0; i < vec.size(); ++i) {
-            if (!serialize_bin_object(vec[i], fs, true)) return false;
+            serialize_bin_object(vec[i], fs, true);
         }
-        return true;
     } else {
         auto count = (size_t)0;
-        if (!serialize_bin_value(count, fs, false)) return false;
+        serialize_bin_value(count, fs, false);
         vec = vector<T>(count);
         for (auto i = 0; i < vec.size(); ++i) {
             vec[i] = T{};
-            if (!serialize_bin_object(vec[i], fs, false)) return false;
+            serialize_bin_object(vec[i], fs, false);
         }
-        return true;
     }
 }
 
 // Serialize vector of objects
 template <typename T>
-bool serialize_bin_object(
+void serialize_bin_objects(
     vector<T>& vec, const yocto_scene& scene, fstream& fs, bool save) {
     if (save) {
         auto count = (size_t)vec.size();
-        if (!serialize_bin_value(count, fs, true)) return false;
+        serialize_bin_value(count, fs, true);
         for (auto i = 0; i < vec.size(); ++i) {
-            if (!serialize_bin_object(vec[i], scene, fs, true)) return false;
+            serialize_bin_object(vec[i], scene, fs, true);
         }
-        return true;
     } else {
         auto count = (size_t)0;
-        if (!serialize_bin_value(count, fs, false)) return false;
+        serialize_bin_value(count, fs, false);
         vec = vector<T>(count);
         for (auto i = 0; i < vec.size(); ++i) {
             vec[i] = T{};
-            if (!serialize_bin_object(vec[i], scene, fs, false)) return false;
+            serialize_bin_object(vec[i], scene, fs, false);
         }
-        return true;
     }
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-bool serialize_bin_object(yocto_camera& camera, fstream& fs, bool save) {
-    if (!serialize_bin_value(camera.name, fs, save)) return false;
-    if (!serialize_bin_value(camera.frame, fs, save)) return false;
-    if (!serialize_bin_value(camera.orthographic, fs, save)) return false;
-    if (!serialize_bin_value(camera.film_width, fs, save)) return false;
-    if (!serialize_bin_value(camera.film_height, fs, save)) return false;
-    if (!serialize_bin_value(camera.focal_length, fs, save)) return false;
-    if (!serialize_bin_value(camera.focus_distance, fs, save)) return false;
-    if (!serialize_bin_value(camera.lens_aperture, fs, save)) return false;
-    return true;
+void serialize_bin_object(yocto_camera& camera, fstream& fs, bool save) {
+    serialize_bin_value(camera.name, fs, save);
+    serialize_bin_value(camera.frame, fs, save);
+    serialize_bin_value(camera.orthographic, fs, save);
+    serialize_bin_value(camera.film_width, fs, save);
+    serialize_bin_value(camera.film_height, fs, save);
+    serialize_bin_value(camera.focal_length, fs, save);
+    serialize_bin_value(camera.focus_distance, fs, save);
+    serialize_bin_value(camera.lens_aperture, fs, save);
 }
 
-bool serialize_bin_object(bvh_shape& bvh, fstream& fs, bool save) {
-    if (!serialize_bin_value(bvh.positions, fs, save)) return false;
-    if (!serialize_bin_value(bvh.radius, fs, save)) return false;
-    if (!serialize_bin_value(bvh.points, fs, save)) return false;
-    if (!serialize_bin_value(bvh.lines, fs, save)) return false;
-    if (!serialize_bin_value(bvh.triangles, fs, save)) return false;
-    if (!serialize_bin_value(bvh.quads, fs, save)) return false;
-    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
-    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
-    return true;
+void serialize_bin_object(bvh_shape& bvh, fstream& fs, bool save) {
+    serialize_bin_value(bvh.positions, fs, save);
+    serialize_bin_value(bvh.radius, fs, save);
+    serialize_bin_value(bvh.points, fs, save);
+    serialize_bin_value(bvh.lines, fs, save);
+    serialize_bin_value(bvh.triangles, fs, save);
+    serialize_bin_value(bvh.quads, fs, save);
+    serialize_bin_value(bvh.nodes, fs, save);
+    serialize_bin_value(bvh.nodes, fs, save);
 }
 
-bool serialize_bin_object(bvh_scene& bvh, fstream& fs, bool save) {
-    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
-    if (!serialize_bin_value(bvh.instances, fs, save)) return false;
-    if (!serialize_bin_object(bvh.shape_bvhs, fs, save)) return false;
-    if (!serialize_bin_value(bvh.nodes, fs, save)) return false;
-    return true;
+void serialize_bin_object(bvh_scene& bvh, fstream& fs, bool save) {
+    serialize_bin_value(bvh.nodes, fs, save);
+    serialize_bin_value(bvh.instances, fs, save);
+    serialize_bin_objects(bvh.shape_bvhs, fs, save);
+    serialize_bin_value(bvh.nodes, fs, save);
 }
 
-bool serialize_bin_object(
+void serialize_bin_object(
     yocto_shape& shape, const yocto_scene& scene, fstream& fs, bool save) {
-    if (!serialize_bin_value(shape.name, fs, save)) return false;
-    if (!serialize_bin_value(shape.filename, fs, save)) return false;
-    if (!serialize_bin_value(shape.material, fs, save)) return false;
-    if (!serialize_bin_value(shape.subdivision_level, fs, save)) return false;
-    if (!serialize_bin_value(shape.catmull_clark, fs, save)) return false;
-    if (!serialize_bin_value(shape.compute_vertex_normals, fs, save))
-        return false;
-    if (!serialize_bin_value(shape.points, fs, save)) return false;
-    if (!serialize_bin_value(shape.lines, fs, save)) return false;
-    if (!serialize_bin_value(shape.triangles, fs, save)) return false;
-    if (!serialize_bin_value(shape.quads, fs, save)) return false;
-    if (!serialize_bin_value(shape.positions, fs, save)) return false;
-    if (!serialize_bin_value(shape.normals, fs, save)) return false;
-    if (!serialize_bin_value(shape.texturecoords, fs, save)) return false;
-    if (!serialize_bin_value(shape.colors, fs, save)) return false;
-    if (!serialize_bin_value(shape.radius, fs, save)) return false;
-    if (!serialize_bin_value(shape.tangentspaces, fs, save)) return false;
-    return true;
+    serialize_bin_value(shape.name, fs, save);
+    serialize_bin_value(shape.filename, fs, save);
+    serialize_bin_value(shape.material, fs, save);
+    serialize_bin_value(shape.subdivision_level, fs, save);
+    serialize_bin_value(shape.catmull_clark, fs, save);
+    serialize_bin_value(shape.compute_vertex_normals, fs, save);
+    serialize_bin_value(shape.points, fs, save);
+    serialize_bin_value(shape.lines, fs, save);
+    serialize_bin_value(shape.triangles, fs, save);
+    serialize_bin_value(shape.quads, fs, save);
+    serialize_bin_value(shape.positions, fs, save);
+    serialize_bin_value(shape.normals, fs, save);
+    serialize_bin_value(shape.texturecoords, fs, save);
+    serialize_bin_value(shape.colors, fs, save);
+    serialize_bin_value(shape.radius, fs, save);
+    serialize_bin_value(shape.tangentspaces, fs, save);
 }
 
-bool serialize_bin_object(
+void serialize_bin_object(
     yocto_surface& surface, const yocto_scene& scene, fstream& fs, bool save) {
-    if (!serialize_bin_value(surface.name, fs, save)) return false;
-    if (!serialize_bin_value(surface.filename, fs, save)) return false;
-    if (!serialize_bin_value(surface.materials, fs, save)) return false;
-    if (!serialize_bin_value(surface.subdivision_level, fs, save)) return false;
-    if (!serialize_bin_value(surface.catmull_clark, fs, save)) return false;
-    if (!serialize_bin_value(surface.compute_vertex_normals, fs, save))
-        return false;
-    if (!serialize_bin_value(surface.quads_positions, fs, save)) return false;
-    if (!serialize_bin_value(surface.quads_normals, fs, save)) return false;
-    if (!serialize_bin_value(surface.quads_texturecoords, fs, save))
-        return false;
-    if (!serialize_bin_value(surface.quads_materials, fs, save)) return false;
-    if (!serialize_bin_value(surface.positions, fs, save)) return false;
-    if (!serialize_bin_value(surface.normals, fs, save)) return false;
-    if (!serialize_bin_value(surface.texturecoords, fs, save)) return false;
-    return true;
+    serialize_bin_value(surface.name, fs, save);
+    serialize_bin_value(surface.filename, fs, save);
+    serialize_bin_value(surface.materials, fs, save);
+    serialize_bin_value(surface.subdivision_level, fs, save);
+    serialize_bin_value(surface.catmull_clark, fs, save);
+    serialize_bin_value(surface.compute_vertex_normals, fs, save);
+    serialize_bin_value(surface.quads_positions, fs, save);
+    serialize_bin_value(surface.quads_normals, fs, save);
+    serialize_bin_value(surface.quads_texturecoords, fs, save);
+    serialize_bin_value(surface.quads_materials, fs, save);
+    serialize_bin_value(surface.positions, fs, save);
+    serialize_bin_value(surface.normals, fs, save);
+    serialize_bin_value(surface.texturecoords, fs, save);
 }
 
-bool serialize_bin_object(yocto_texture& texture, fstream& fs, bool save) {
-    if (!serialize_bin_value(texture.name, fs, save)) return false;
-    if (!serialize_bin_value(texture.filename, fs, save)) return false;
-    if (!serialize_bin_value(texture.hdr_image, fs, save)) return false;
-    if (!serialize_bin_value(texture.ldr_image, fs, save)) return false;
-    if (!serialize_bin_value(texture.clamp_to_edge, fs, save)) return false;
-    if (!serialize_bin_value(texture.height_scale, fs, save)) return false;
-    if (!serialize_bin_value(texture.no_interpolation, fs, save)) return false;
-    if (!serialize_bin_value(texture.ldr_as_linear, fs, save)) return false;
-    return true;
+void serialize_bin_object(yocto_texture& texture, fstream& fs, bool save) {
+    serialize_bin_value(texture.name, fs, save);
+    serialize_bin_value(texture.filename, fs, save);
+    serialize_bin_value(texture.hdr_image, fs, save);
+    serialize_bin_value(texture.ldr_image, fs, save);
+    serialize_bin_value(texture.clamp_to_edge, fs, save);
+    serialize_bin_value(texture.height_scale, fs, save);
+    serialize_bin_value(texture.no_interpolation, fs, save);
+    serialize_bin_value(texture.ldr_as_linear, fs, save);
 }
 
-bool serialize_bin_object(yocto_voltexture& texture, fstream& fs, bool save) {
-    if (!serialize_bin_value(texture.name, fs, save)) return false;
-    if (!serialize_bin_value(texture.filename, fs, save)) return false;
-    if (!serialize_bin_value(texture.volume_data, fs, save)) return false;
-    if (!serialize_bin_value(texture.clamp_to_edge, fs, save)) return false;
-    return true;
+void serialize_bin_object(yocto_voltexture& texture, fstream& fs, bool save) {
+    serialize_bin_value(texture.name, fs, save);
+    serialize_bin_value(texture.filename, fs, save);
+    serialize_bin_value(texture.volume_data, fs, save);
+    serialize_bin_value(texture.clamp_to_edge, fs, save);
 }
 
-bool serialize_bin_object(yocto_environment& environment,
+void serialize_bin_object(yocto_environment& environment,
     const yocto_scene& scene, fstream& fs, bool save) {
-    if (!serialize_bin_value(environment.name, fs, save)) return false;
-    if (!serialize_bin_value(environment.frame, fs, save)) return false;
-    if (!serialize_bin_value(environment.emission, fs, save)) return false;
-    if (!serialize_bin_value(environment.emission_texture, fs, save))
-        return false;
-    return true;
+    serialize_bin_value(environment.name, fs, save);
+    serialize_bin_value(environment.frame, fs, save);
+    serialize_bin_value(environment.emission, fs, save);
+    serialize_bin_value(environment.emission_texture, fs, save);
 }
 
-bool serialize_bin_object(yocto_material& material, const yocto_scene& scene,
+void serialize_bin_object(yocto_material& material, const yocto_scene& scene,
     fstream& fs, bool save) {
-    if (!serialize_bin_value(material.name, fs, save)) return false;
-    if (!serialize_bin_value(material.base_metallic, fs, save)) return false;
-    if (!serialize_bin_value(material.gltf_textures, fs, save)) return false;
-    if (!serialize_bin_value(material.emission, fs, save)) return false;
-    if (!serialize_bin_value(material.diffuse, fs, save)) return false;
-    if (!serialize_bin_value(material.specular, fs, save)) return false;
-    if (!serialize_bin_value(material.transmission, fs, save)) return false;
-    if (!serialize_bin_value(material.roughness, fs, save)) return false;
-    if (!serialize_bin_value(material.opacity, fs, save)) return false;
-    if (!serialize_bin_value(material.fresnel, fs, save)) return false;
-    if (!serialize_bin_value(material.refract, fs, save)) return false;
-    if (!serialize_bin_value(material.emission_texture, fs, save)) return false;
-    if (!serialize_bin_value(material.diffuse_texture, fs, save)) return false;
-    if (!serialize_bin_value(material.specular_texture, fs, save)) return false;
-    if (!serialize_bin_value(material.transmission_texture, fs, save))
-        return false;
-    if (!serialize_bin_value(material.roughness_texture, fs, save))
-        return false;
-    if (!serialize_bin_value(material.opacity_texture, fs, save)) return false;
-    if (!serialize_bin_value(material.occlusion_texture, fs, save))
-        return false;
-    if (!serialize_bin_value(material.bump_texture, fs, save)) return false;
-    if (!serialize_bin_value(material.displacement_texture, fs, save))
-        return false;
-    if (!serialize_bin_value(material.normal_texture, fs, save)) return false;
-    if (!serialize_bin_value(material.volume_emission, fs, save)) return false;
-    if (!serialize_bin_value(material.volume_albedo, fs, save)) return false;
-    if (!serialize_bin_value(material.volume_density, fs, save)) return false;
-    if (!serialize_bin_value(material.volume_phaseg, fs, save)) return false;
-    if (!serialize_bin_value(material.volume_density_texture, fs, save))
-        return false;
-    return true;
+    serialize_bin_value(material.name, fs, save);
+    serialize_bin_value(material.base_metallic, fs, save);
+    serialize_bin_value(material.gltf_textures, fs, save);
+    serialize_bin_value(material.emission, fs, save);
+    serialize_bin_value(material.diffuse, fs, save);
+    serialize_bin_value(material.specular, fs, save);
+    serialize_bin_value(material.transmission, fs, save);
+    serialize_bin_value(material.roughness, fs, save);
+    serialize_bin_value(material.opacity, fs, save);
+    serialize_bin_value(material.fresnel, fs, save);
+    serialize_bin_value(material.refract, fs, save);
+    serialize_bin_value(material.emission_texture, fs, save);
+    serialize_bin_value(material.diffuse_texture, fs, save);
+    serialize_bin_value(material.specular_texture, fs, save);
+    serialize_bin_value(material.transmission_texture, fs, save);
+    serialize_bin_value(material.roughness_texture, fs, save);
+    serialize_bin_value(material.opacity_texture, fs, save);
+    serialize_bin_value(material.occlusion_texture, fs, save);
+    serialize_bin_value(material.bump_texture, fs, save);
+    serialize_bin_value(material.displacement_texture, fs, save);
+    serialize_bin_value(material.normal_texture, fs, save);
+    serialize_bin_value(material.volume_emission, fs, save);
+    serialize_bin_value(material.volume_albedo, fs, save);
+    serialize_bin_value(material.volume_density, fs, save);
+    serialize_bin_value(material.volume_phaseg, fs, save);
+    serialize_bin_value(material.volume_density_texture, fs, save);
 };
 
-bool serialize_bin_object(yocto_instance& instance, const yocto_scene& scene,
+void serialize_bin_object(yocto_instance& instance, const yocto_scene& scene,
     fstream& fs, bool save) {
-    if (!serialize_bin_value(instance.name, fs, save)) return false;
-    if (!serialize_bin_value(instance.frame, fs, save)) return false;
-    if (!serialize_bin_value(instance.shape, fs, save)) return false;
-    if (!serialize_bin_value(instance.surface, fs, save)) return false;
-    return true;
+    serialize_bin_value(instance.name, fs, save);
+    serialize_bin_value(instance.frame, fs, save);
+    serialize_bin_value(instance.shape, fs, save);
+    serialize_bin_value(instance.surface, fs, save);
 };
 
-bool serialize_scene(yocto_scene& scene, fstream& fs, bool save) {
-    if (!serialize_bin_value(scene.name, fs, save)) return false;
-    if (!serialize_bin_object(scene.cameras, fs, save)) return false;
-    if (!serialize_bin_object(scene.shapes, scene, fs, save)) return false;
-    if (!serialize_bin_object(scene.surfaces, scene, fs, save)) return false;
-    if (!serialize_bin_object(scene.textures, fs, save)) return false;
-    if (!serialize_bin_object(scene.voltextures, fs, save)) return false;
-    if (!serialize_bin_object(scene.materials, scene, fs, save)) return false;
-    if (!serialize_bin_object(scene.instances, scene, fs, save)) return false;
-    if (!serialize_bin_object(scene.environments, scene, fs, save))
-        return false;
-    return true;
+void serialize_scene(yocto_scene& scene, fstream& fs, bool save) {
+    serialize_bin_value(scene.name, fs, save);
+    serialize_bin_objects(scene.cameras, fs, save);
+    serialize_bin_objects(scene.shapes, scene, fs, save);
+    serialize_bin_objects(scene.surfaces, scene, fs, save);
+    serialize_bin_objects(scene.textures, fs, save);
+    serialize_bin_objects(scene.voltextures, fs, save);
+    serialize_bin_objects(scene.materials, scene, fs, save);
+    serialize_bin_objects(scene.instances, scene, fs, save);
+    serialize_bin_objects(scene.environments, scene, fs, save);
 }
 
 // Load/save a binary dump useful for very fast scene IO.
-bool load_ybin_scene(const string& filename, yocto_scene& scene,
+void load_ybin_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
-    auto fs    = fstream(filename, std::ios::in | std::ios::binary);
-    if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+    scene      = {};
+    try {
+        auto fs = fstream(filename, std::ios::in | std::ios::binary);
+        serialize_scene(scene, fs, false);
+    } catch (const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
-    scene = {};
-    serialize_scene(scene, fs, false);
-    if (!fs) {
-        log_io_error("cannot reada file {}", filename);
-        return false;
-    }
-    return true;
 }
 
 // Load/save a binary dump useful for very fast scene IO.
-bool save_ybin_scene(const string& filename, const yocto_scene& scene,
+void save_ybin_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
-    auto fs = fstream(filename, std::ios::out | std::ios::binary);
-    if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+    try {
+        auto fs = fstream(filename, std::ios::out | std::ios::binary);
+        serialize_scene((yocto_scene&)scene, fs, true);
+    } catch (const std::exception& e) {
+        throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
-    serialize_scene((yocto_scene&)scene, fs, true);
-    if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
-    }
-    return true;
 }
 
 }  // namespace yocto
@@ -5074,37 +4984,37 @@ void reset_mesh_data(vector<int>& points, vector<vec2i>& lines,
 }
 
 // hack for CyHair data
-bool load_cyhair_mesh(const string& filename, vector<int>& points,
+void load_cyhair_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
     bool force_triangles, bool flip_texcoord = true);
 
 // Load ply mesh
-bool load_mesh(const string& filename, vector<int>& points,
+void load_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius,
     bool force_triangles) {
     auto ext = get_extension(filename);
     if (ext == "ply" || ext == "PLY") {
-        return load_ply_mesh(filename, points, lines, triangles, quads,
-            positions, normals, texturecoords, colors, radius, force_triangles);
+        load_ply_mesh(filename, points, lines, triangles, quads, positions,
+            normals, texturecoords, colors, radius, force_triangles);
     } else if (ext == "obj" || ext == "OBJ") {
-        return load_obj_mesh(filename, points, lines, triangles, quads,
-            positions, normals, texturecoords, force_triangles);
+        load_obj_mesh(filename, points, lines, triangles, quads, positions,
+            normals, texturecoords, force_triangles);
     } else if (ext == "hair" || ext == "HAIR") {
-        return load_cyhair_mesh(filename, points, lines, triangles, quads,
-            positions, normals, texturecoords, colors, radius, force_triangles);
+        load_cyhair_mesh(filename, points, lines, triangles, quads, positions,
+            normals, texturecoords, colors, radius, force_triangles);
     } else {
         reset_mesh_data(points, lines, triangles, quads, positions, normals,
             texturecoords, colors, radius);
-        return false;
+        throw io_error("unsupported mesh type " + ext);
     }
 }
 
 // Save ply mesh
-bool save_mesh(const string& filename, const vector<int>& points,
+void save_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
@@ -5117,11 +5027,11 @@ bool save_mesh(const string& filename, const vector<int>& points,
         return save_obj_mesh(filename, points, lines, triangles, quads,
             positions, normals, texturecoords);
     } else {
-        return false;
+        throw io_error("unsupported mesh type " + ext);
     }
 }
 
-bool load_ply_mesh(const string& filename, vector<int>& points,
+void load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
@@ -5130,97 +5040,98 @@ bool load_ply_mesh(const string& filename, vector<int>& points,
     reset_mesh_data(points, lines, triangles, quads, positions, normals,
         texturecoords, color, radius);
 
-    // load ply
-    auto ply = ply_data{};
-    if (!load_ply(filename, ply)) {
-        log_io_error("empty ply file {}", filename);
-        return false;
-    }
+    try {
+        // load ply
+        auto ply = ply_data{};
+        load_ply(filename, ply);
 
-    // copy vertex data
-    for (auto& elem : ply.elements) {
-        if (elem.name != "vertex") continue;
-        auto count = elem.count;
-        for (auto& prop : elem.properties) {
-            auto vals        = data(prop.scalars);
-            auto copy_floats = [vals, count](auto& vert, const auto& def,
-                                   int stride, int offset) {
-                if (vert.size() != count) vert.resize(count, def);
-                auto dst = (float*)data(vert);
-                for (auto i = 0; i < count; i++)
-                    dst[i * stride + offset] = vals[i];
-            };
-            if (prop.name == "x") copy_floats(positions, zero3f, 3, 0);
-            if (prop.name == "y") copy_floats(positions, zero3f, 3, 1);
-            if (prop.name == "z") copy_floats(positions, zero3f, 3, 2);
-            if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
-            if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
-            if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
-            if (prop.name == "u" || prop.name == "s")
-                copy_floats(texturecoords, zero2f, 2, 0);
-            if (prop.name == "v" || prop.name == "t")
-                copy_floats(texturecoords, zero2f, 2, 1);
-            if (prop.name == "red") copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
-            if (prop.name == "green")
-                copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);
-            if (prop.name == "blue")
-                copy_floats(color, vec4f{0, 0, 0, 1}, 4, 2);
-            if (prop.name == "alpha")
-                copy_floats(color, vec4f{0, 0, 0, 1}, 4, 3);
-            if (prop.name == "radius") copy_floats(radius, 0.0f, 1, 0);
+        // copy vertex data
+        for (auto& elem : ply.elements) {
+            if (elem.name != "vertex") continue;
+            auto count = elem.count;
+            for (auto& prop : elem.properties) {
+                auto vals        = data(prop.scalars);
+                auto copy_floats = [vals, count](auto& vert, const auto& def,
+                                       int stride, int offset) {
+                    if (vert.size() != count) vert.resize(count, def);
+                    auto dst = (float*)data(vert);
+                    for (auto i = 0; i < count; i++)
+                        dst[i * stride + offset] = vals[i];
+                };
+                if (prop.name == "x") copy_floats(positions, zero3f, 3, 0);
+                if (prop.name == "y") copy_floats(positions, zero3f, 3, 1);
+                if (prop.name == "z") copy_floats(positions, zero3f, 3, 2);
+                if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
+                if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
+                if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
+                if (prop.name == "u" || prop.name == "s")
+                    copy_floats(texturecoords, zero2f, 2, 0);
+                if (prop.name == "v" || prop.name == "t")
+                    copy_floats(texturecoords, zero2f, 2, 1);
+                if (prop.name == "red")
+                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
+                if (prop.name == "green")
+                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);
+                if (prop.name == "blue")
+                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 2);
+                if (prop.name == "alpha")
+                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 3);
+                if (prop.name == "radius") copy_floats(radius, 0.0f, 1, 0);
+            }
         }
-    }
 
-    // fix texture coordinated
-    if (flip_texcoord && !empty(texturecoords)) {
-        for (auto& uv : texturecoords) uv.y = 1 - uv.y;
-    }
+        // fix texture coordinated
+        if (flip_texcoord && !empty(texturecoords)) {
+            for (auto& uv : texturecoords) uv.y = 1 - uv.y;
+        }
 
-    // copy face data
-    for (auto& elem : ply.elements) {
-        if (elem.name != "face") continue;
-        auto count = elem.count;
-        for (auto& prop : elem.properties) {
-            if (prop.name == "vertex_indices") {
-                for (auto fid = 0; fid < count; fid++) {
-                    auto& list = prop.lists[fid];
-                    auto  num  = (int)prop.scalars[fid];
-                    if (num == 4) {
-                        quads.push_back({list[0], list[1], list[2], list[3]});
-                    } else {
-                        for (auto i = 2; i < num; i++)
-                            triangles.push_back(
-                                {list[0], list[i - 1], list[i]});
+        // copy face data
+        for (auto& elem : ply.elements) {
+            if (elem.name != "face") continue;
+            auto count = elem.count;
+            for (auto& prop : elem.properties) {
+                if (prop.name == "vertex_indices") {
+                    for (auto fid = 0; fid < count; fid++) {
+                        auto& list = prop.lists[fid];
+                        auto  num  = (int)prop.scalars[fid];
+                        if (num == 4) {
+                            quads.push_back(
+                                {list[0], list[1], list[2], list[3]});
+                        } else {
+                            for (auto i = 2; i < num; i++)
+                                triangles.push_back(
+                                    {list[0], list[i - 1], list[i]});
+                        }
                     }
                 }
             }
         }
-    }
 
-    // copy face data
-    for (auto& elem : ply.elements) {
-        if (elem.name != "line") continue;
-        auto count = elem.count;
-        for (auto& prop : elem.properties) {
-            if (prop.name == "vertex_indices") {
-                for (auto fid = 0; fid < count; fid++) {
-                    auto& list = prop.lists[fid];
-                    auto  num  = (int)prop.scalars[fid];
-                    for (auto i = 1; i < num; i++)
-                        lines.push_back({list[i], list[i - 1]});
+        // copy face data
+        for (auto& elem : ply.elements) {
+            if (elem.name != "line") continue;
+            auto count = elem.count;
+            for (auto& prop : elem.properties) {
+                if (prop.name == "vertex_indices") {
+                    for (auto fid = 0; fid < count; fid++) {
+                        auto& list = prop.lists[fid];
+                        auto  num  = (int)prop.scalars[fid];
+                        for (auto i = 1; i < num; i++)
+                            lines.push_back({list[i], list[i - 1]});
+                    }
                 }
             }
         }
+
+        merge_triangles_and_quads(triangles, quads, force_triangles);
+
+    } catch (const std::exception& e) {
+        throw io_error("cannot load mesh " + filename + "\n" + e.what());
     }
-
-    merge_triangles_and_quads(triangles, quads, force_triangles);
-
-    // done
-    return true;
 }
 
 // Save ply mesh
-bool save_ply_mesh(const string& filename, const vector<int>& points,
+void save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
@@ -5228,8 +5139,7 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
     bool flip_texcoord) {
     auto fs = ofstream(filename, std::ios::binary);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // header
@@ -5326,16 +5236,12 @@ bool save_ply_mesh(const string& filename, const vector<int>& points,
 
     // check for errors
     if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
+        throw io_error("cannot write file " + filename);
     }
-
-    // done
-    return true;
 }
 
 // Load ply mesh
-bool load_obj_mesh(const string& filename, vector<int>& points,
+void load_obj_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, bool force_triangles, bool flip_texcoord) {
@@ -5394,30 +5300,31 @@ bool load_obj_mesh(const string& filename, vector<int>& points,
             points.push_back(vertex_map.at(verts[i]));
     };
 
-    // load obj
-    auto obj_options          = load_obj_options();
-    obj_options.exit_on_error = false;
-    obj_options.geometry_only = true;
-    obj_options.flip_texcoord = flip_texcoord;
-    if (!load_obj(filename, cb, obj_options)) return false;
+    try {
+        // load obj
+        auto obj_options          = load_obj_options();
+        obj_options.exit_on_error = false;
+        obj_options.geometry_only = true;
+        obj_options.flip_texcoord = flip_texcoord;
+        load_obj(filename, cb, obj_options);
 
-    // merging quads and triangles
-    merge_triangles_and_quads(triangles, quads, force_triangles);
+        // merging quads and triangles
+        merge_triangles_and_quads(triangles, quads, force_triangles);
 
-    // done
-    return true;
+    } catch (const std::exception& e) {
+        throw io_error("cannot load mesh " + filename + "\n" + e.what());
+    }
 }
 
 // Load ply mesh
-bool save_obj_mesh(const string& filename, const vector<int>& points,
+void save_obj_mesh(const string& filename, const vector<int>& points,
     const vector<vec2i>& lines, const vector<vec3i>& triangles,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     bool flip_texcoord) {
     auto fs = ofstream(filename);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     print(fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
@@ -5457,11 +5364,8 @@ bool save_obj_mesh(const string& filename, const vector<int>& points,
 
     // check for errors
     if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
+        throw io_error("cannot write file " + filename);
     }
-
-    return true;
 }
 
 // Reset mesh data
@@ -5479,7 +5383,7 @@ void reset_facevarying_mesh_data(vector<vec4i>& quads_positions,
 }
 
 // Load ply mesh
-bool load_facevarying_mesh(const string& filename,
+void load_facevarying_mesh(const string& filename,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
@@ -5493,12 +5397,12 @@ bool load_facevarying_mesh(const string& filename,
         reset_facevarying_mesh_data(quads_positions, quads_normals,
             quads_texturecoords, positions, normals, texturecoords,
             quads_materials);
-        return false;
+        throw io_error("unsupported mesh type " + ext);
     }
 }
 
 // Save ply mesh
-bool save_facevarying_mesh(const string& filename,
+void save_facevarying_mesh(const string& filename,
     const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
@@ -5509,12 +5413,12 @@ bool save_facevarying_mesh(const string& filename,
             quads_normals, quads_texturecoords, positions, normals,
             texturecoords, quads_materials);
     } else {
-        return false;
+        throw io_error("unsupported mesh type " + ext);
     }
 }
 
 // Load ply mesh
-bool load_obj_facevarying_mesh(const string& filename,
+void load_obj_facevarying_mesh(const string& filename,
     vector<vec4i>& quads_positions, vector<vec4i>& quads_normals,
     vector<vec4i>& quads_texturecoords, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords,
@@ -5636,79 +5540,81 @@ bool load_obj_facevarying_mesh(const string& filename,
         }
     };
 
-    // load obj
-    auto obj_options          = load_obj_options();
-    obj_options.exit_on_error = false;
-    obj_options.geometry_only = true;
-    obj_options.flip_texcoord = flip_texcoord;
-    if (!load_obj(filename, cb, obj_options)) return false;
+    try {
+        // load obj
+        auto obj_options          = load_obj_options();
+        obj_options.exit_on_error = false;
+        obj_options.geometry_only = true;
+        obj_options.flip_texcoord = flip_texcoord;
+        load_obj(filename, cb, obj_options);
 
-    // cleanup materials ids
-    if (std::all_of(quads_materials.begin(), quads_materials.end(),
-            [b = quads_materials.front()](auto a) { return a == b; })) {
-        quads_materials.clear();
-    }
-
-    // done
-    return true;
-}
-
-// Load ply mesh
-bool save_obj_facevarying_mesh(const string& filename,
-    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
-    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
-    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
-    const vector<int>& quads_materials, bool flip_texcoord) {
-    auto fs = ofstream(filename);
-    if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-
-    print(fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
-
-    for (auto& p : positions) print(fs, "v {}\n", p);
-    for (auto& n : normals) print(fs, "vn {}\n", n);
-    for (auto& t : texturecoords)
-        print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
-
-    auto fvmask = obj_vertex{
-        1, empty(texturecoords) ? 0 : 1, empty(normals) ? 0 : 1};
-    auto fvvert = [fvmask](int pi, int ti, int ni) {
-        return obj_vertex{(pi + 1) * fvmask.position,
-            (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
-    };
-    auto last_material_id = -1;
-    for (auto i = 0; i < quads_positions.size(); i++) {
-        if (!empty(quads_materials) && quads_materials[i] != last_material_id) {
-            last_material_id = quads_materials[i];
-            print(fs, "usemtl material_{}\n", last_material_id);
+        // cleanup materials ids
+        if (std::all_of(quads_materials.begin(), quads_materials.end(),
+                [b = quads_materials.front()](auto a) { return a == b; })) {
+            quads_materials.clear();
         }
-        auto qp = quads_positions.at(i);
-        auto qt = !empty(quads_texturecoords) ? quads_texturecoords.at(i) :
-                                                vec4i{-1, -1, -1, -1};
-        auto qn = !empty(quads_normals) ? quads_normals.at(i) :
-                                          vec4i{-1, -1, -1, -1};
-        if (qp.z != qp.w) {
-            print(fs, "f {} {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
-                to_string(fvvert(qp.y, qt.y, qn.y)),
-                to_string(fvvert(qp.z, qt.z, qn.z)),
-                to_string(fvvert(qp.w, qt.w, qn.w)));
-        } else {
-            print(fs, "f {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
-                to_string(fvvert(qp.y, qt.y, qn.y)),
-                to_string(fvvert(qp.z, qt.z, qn.z)));
+    } catch (const std::exception& e) {
+            throw io_error("cannot load mesh " + filename + "\n" + e.what());
         }
     }
 
-    // check for errors
-    if (!fs) {
-        log_io_error("cannot write file {}", filename);
-        return false;
-    }
+    // Load ply mesh
+    void save_obj_facevarying_mesh(const string& filename,
+        const vector<vec4i>&                     quads_positions,
+        const vector<vec4i>&                     quads_normals,
+        const vector<vec4i>&                     quads_texturecoords,
+        const vector<vec3f>& positions, const vector<vec3f>& normals,
+        const vector<vec2f>& texturecoords, const vector<int>& quads_materials,
+        bool flip_texcoord) {
+        auto fs = ofstream(filename);
+        if (!fs) {
+            throw io_error("cannot open file " + filename);
+        }
 
-    return true;
-}
+        print(fs,
+            "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
+
+        for (auto& p : positions) print(fs, "v {}\n", p);
+        for (auto& n : normals) print(fs, "vn {}\n", n);
+        for (auto& t : texturecoords)
+            print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+
+        auto fvmask = obj_vertex{
+            1, empty(texturecoords) ? 0 : 1, empty(normals) ? 0 : 1};
+        auto fvvert = [fvmask](int pi, int ti, int ni) {
+            return obj_vertex{(pi + 1) * fvmask.position,
+                (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
+        };
+        auto last_material_id = -1;
+        for (auto i = 0; i < quads_positions.size(); i++) {
+            if (!empty(quads_materials) &&
+                quads_materials[i] != last_material_id) {
+                last_material_id = quads_materials[i];
+                print(fs, "usemtl material_{}\n", last_material_id);
+            }
+            auto qp = quads_positions.at(i);
+            auto qt = !empty(quads_texturecoords) ? quads_texturecoords.at(i) :
+                                                    vec4i{-1, -1, -1, -1};
+            auto qn = !empty(quads_normals) ? quads_normals.at(i) :
+                                              vec4i{-1, -1, -1, -1};
+            if (qp.z != qp.w) {
+                print(fs, "f {} {} {} {}\n",
+                    to_string(fvvert(qp.x, qt.x, qn.x)),
+                    to_string(fvvert(qp.y, qt.y, qn.y)),
+                    to_string(fvvert(qp.z, qt.z, qn.z)),
+                    to_string(fvvert(qp.w, qt.w, qn.w)));
+            } else {
+                print(fs, "f {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
+                    to_string(fvvert(qp.y, qt.y, qn.y)),
+                    to_string(fvvert(qp.z, qt.z, qn.z)));
+            }
+        }
+
+        // check for errors
+        if (!fs) {
+            throw io_error("cannot write file " + filename);
+        }
+    }
 
 }  // namespace yocto
 
@@ -5723,13 +5629,12 @@ namespace yocto {}
 namespace yocto {
 
 // Load ply mesh
-bool load_ply(const string& filename, ply_data& ply) {
+void load_ply(const string& filename, ply_data& ply) {
     // open file
     ply     = {};
     auto fs = ifstream(filename, std::ios::binary);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // parse header
@@ -5756,7 +5661,7 @@ bool load_ply(const string& filename, ply_data& ply) {
                 ascii      = false;
                 big_endian = true;
             } else {
-                return false;
+                throw io_error("bad ply header");
             }
         } else if (cmd == "element") {
             auto elem = ply_element();
@@ -5784,7 +5689,7 @@ bool load_ply(const string& filename, ply_data& ply) {
             } else if (type == "int") {
                 prop.type = ply_type::ply_int;
             } else {
-                return false;
+                throw io_error("unsupported ply format");
             }
             view >> prop.name;
             prop.scalars.resize(ply.elements.back().count);
@@ -5794,7 +5699,7 @@ bool load_ply(const string& filename, ply_data& ply) {
         } else if (cmd == "end_header") {
             break;
         } else {
-            return false;
+            throw io_error("unsupported ply format");
         }
     }
 
@@ -5802,7 +5707,7 @@ bool load_ply(const string& filename, ply_data& ply) {
     if (ascii) {
         for (auto& elem : ply.elements) {
             for (auto vid = 0; vid < elem.count; vid++) {
-                if (!getline(fs, line)) return false;
+                getline(fs, line);
                 auto view = string_view_stream{line};
                 for (auto pid = 0; pid < elem.properties.size(); pid++) {
                     auto& prop = elem.properties[pid];
@@ -5832,7 +5737,7 @@ bool load_ply(const string& filename, ply_data& ply) {
                             prop.lists[vid][i] = v;
                         }
                     } else {
-                        return false;
+                        throw io_error("unsupported ply format");
                     }
                 }
             }
@@ -5852,37 +5757,35 @@ bool load_ply(const string& filename, ply_data& ply) {
                     auto& prop = elem.properties[pid];
                     if (prop.type == ply_type::ply_float) {
                         auto v = 0.0f;
-                        if (!read_value(fs, v)) return false;
+                        read_value(fs, v);
                         if (big_endian) v = byte_swap(v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_int) {
                         auto v = 0;
-                        if (!read_value(fs, v)) return false;
+                        read_value(fs, v);
                         if (big_endian) v = byte_swap(v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_uchar) {
                         auto vc = (unsigned char)0;
-                        if (!read_value(fs, vc)) return false;
+                        read_value(fs, vc);
                         prop.scalars[vid] = vc / 255.0f;
                     } else if (prop.type == ply_type::ply_int_list) {
                         auto vc = (unsigned char)0;
-                        if (!read_value(fs, vc)) return false;
+                        read_value(fs, vc);
                         prop.scalars[vid] = vc;
                         for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
                             auto v = 0;
-                            if (!read_value(fs, v)) return false;
+                            read_value(fs, v);
                             if (big_endian) v = byte_swap(v);
                             prop.lists[vid][i] = v;
                         }
                     } else {
-                        return false;
+                        throw io_error("unsupported ply format");
                     }
                 }
             }
         }
     }
-
-    return true;
 }
 
 }  // namespace yocto
@@ -5906,13 +5809,12 @@ struct cyhair_data {
     vec3f                 default_color        = zero3f;
 };
 
-bool load_cyhair(const string& filename, cyhair_data& hair) {
+void load_cyhair(const string& filename, cyhair_data& hair) {
     // open file
     hair    = {};
     auto fs = ifstream(filename, std::ios::binary);
     if (!fs) {
-        log_io_error("cannot open file {}", filename);
-        return false;
+        throw io_error("cannot open file " + filename);
     }
 
     // Bytes 0-3    Must be "HAIR" in ascii code (48 41 49 52)
@@ -5953,20 +5855,16 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
     fs.read((char*)&header, sizeof(header));
     if (!fs) {
         log_io_error("had header in file {}", filename);
-        return false;
     }
     if (!fs || header.magic[0] != 'H' || header.magic[1] != 'A' ||
         header.magic[2] != 'I' || header.magic[3] != 'R')
-        return false;
+        throw io_error("bad cyhair header");
 
     // helper for reading vector data
-    auto read_vector = [filename](auto& fs, auto& data) -> bool {
+    auto read_vector = [filename](auto& fs, auto& data) {
         fs.read((char*)data.data(), data.size() * sizeof(data[0]));
         if (!fs) {
-            log_io_error("cannot read file {}", filename);
-            return false;
-        } else {
-            return true;
+            throw io_error("cannot read file " + filename);
         }
     };
 
@@ -5980,7 +5878,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
     auto segments = vector<unsigned short>();
     if (header.flags & 1) {
         segments.resize(header.num_strands);
-        if (!read_vector(fs, segments)) return false;
+        read_vector(fs, segments);
     } else {
         segments.assign(header.num_strands, header.default_segments);
     }
@@ -5989,8 +5887,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
     auto total_length = 0;
     for (auto segment : segments) total_length += segment + 1;
     if (total_length != header.num_points) {
-        log_io_error("bad cyhair file");
-        return false;
+        throw io_error("bad cyhair file");
     }
 
     // read positions data
@@ -5998,8 +5895,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].positions.resize(strand_size);
-            if (!read_vector(fs, hair.strands[strand_id].positions))
-                return false;
+            read_vector(fs, hair.strands[strand_id].positions);
         }
     }
     // read radius data
@@ -6007,7 +5903,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].radius.resize(strand_size);
-            if (!read_vector(fs, hair.strands[strand_id].radius)) return false;
+            read_vector(fs, hair.strands[strand_id].radius);
         }
     }
     // read transparency data
@@ -6015,8 +5911,7 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].transparency.resize(strand_size);
-            if (!read_vector(fs, hair.strands[strand_id].transparency))
-                return false;
+            read_vector(fs, hair.strands[strand_id].transparency);
         }
     }
     // read color data
@@ -6024,21 +5919,19 @@ bool load_cyhair(const string& filename, cyhair_data& hair) {
         for (auto strand_id = 0; strand_id < header.num_strands; strand_id++) {
             auto strand_size = (int)segments[strand_id] + 1;
             hair.strands[strand_id].color.resize(strand_size);
-            if (!read_vector(fs, hair.strands[strand_id].color)) return false;
+            read_vector(fs, hair.strands[strand_id].color);
         }
     }
-
-    return true;
 }
 
-bool load_cyhair_mesh(const string& filename, vector<int>& points,
+void load_cyhair_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
     vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
     bool force_triangles, bool flip_texcoord) {
     // load hair file
     auto hair = cyhair_data();
-    if (!load_cyhair(filename, hair)) return false;
+    load_cyhair(filename, hair);
 
     // generate curve data
     for (auto& strand : hair.strands) {
@@ -6077,8 +5970,6 @@ bool load_cyhair_mesh(const string& filename, vector<int>& points,
 
     // fix colors
     for (auto& c : color) c = srgb_to_linear(c);
-
-    return true;
 }
 
 }  // namespace yocto
