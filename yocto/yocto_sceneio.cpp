@@ -1813,10 +1813,7 @@ inline string_view_stream& operator>>(
 void load_mtl(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = ifstream(filename);
-    if (!fs) {
-        throw io_error("cannot open file " + filename);
-    }
+    auto fs = input_file(filename);
 
     // currently parsed material
     auto material = obj_material();
@@ -1824,7 +1821,7 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     auto line = ""s;
-    while (getline(fs, line)) {
+    while (read_line(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = string_view_stream{line};
@@ -1909,14 +1906,11 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
 void load_objx(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = ifstream(filename);
-    if (!fs) {
-        throw io_error("cannot open file " + filename);
-    }
+    auto fs = input_file(filename);
 
     // read the file line by line
     auto line = ""s;
-    while (getline(fs, line)) {
+    while (read_line(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = string_view_stream{line.c_str()};
@@ -1965,10 +1959,7 @@ void load_objx(const string& filename, const obj_callbacks& cb,
 void load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = ifstream(filename);
-    if (!fs) {
-        throw io_error("cannot open file " + filename);
-    }
+    auto fs = input_file(filename);
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -1976,7 +1967,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     auto line = ""s;
-    while (getline(fs, line)) {
+    while (read_line(fs, line)) {
         // line
         if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
         auto view = string_view_stream{line.c_str()};
@@ -3818,14 +3809,11 @@ void pbrt_to_json(const string& filename, json& js) {
         if (tokens[i][0] == ']') i++;
     };
 
-    auto fs = ifstream(filename);
-    if (!fs) {
-        throw io_error("cannot open " + filename);
-    }
+    auto fs = input_file(filename);
 
     auto pbrt = ""s;
     auto line = ""s;
-    while (getline(fs, line)) {
+    while (read_line(fs, line)) {
         if (line.find('#') == line.npos)
             pbrt += line + "\n";
         else

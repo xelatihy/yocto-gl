@@ -313,11 +313,19 @@ inline void read_values(input_file& fs, vector<T>& values) {
     }
 }
 // read characters from a file
-inline void read_values(input_file& fs, std::string& values) {
+inline void read_values(input_file& fs, string& values) {
     if (values.empty()) return;
     if(fread(values.data(), sizeof(values[0]), values.size(), fs.file) != values.size()){
         throw io_error("cannot read from " + fs.filename);
     }
+}
+
+// read a line of text
+inline bool read_line(input_file& fs, string& str) {
+    char buffer[4096];
+    if(fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
+    str = buffer;
+    return true;
 }
 
 }  // namespace yocto
