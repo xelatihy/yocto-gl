@@ -434,8 +434,8 @@ float sample_shape_element_pdf(const yocto_shape& shape,
 vector<float> compute_surface_elements_cdf(const yocto_surface& surface) {
     auto cdf = vector<float>{};
     if (!empty(surface.quads_positions)) {
-        sample_quads_element_cdf(cdf,
-            surface.quads_positions, surface.positions);
+        sample_quads_element_cdf(
+            cdf, surface.quads_positions, surface.positions);
     } else {
     }
     return cdf;

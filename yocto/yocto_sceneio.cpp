@@ -1196,8 +1196,7 @@ bool apply_json_procedural(
             get_json_value(js, "radius", 0.15f));
     } else if (type == "sphere_geodesic") {
         make_geodesic_sphere_shape(value.triangles, value.positions,
-            value.normals, 
-            get_json_value(js, "tesselation", 4),
+            value.normals, get_json_value(js, "tesselation", 4),
             get_json_value(js, "size", 2.0f));
     } else if (type == "floor") {
         make_floor_shape(value.quads, value.positions, value.normals,
@@ -1216,15 +1215,16 @@ bool apply_json_procedural(
             get_json_value(js, "size", 2.0f),
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "hairball") {
-        auto base_quads = vector<vec4i>{};
-        auto base_positions = vector<vec3f>{};
-        auto base_normals = vector<vec3f>{};
+        auto base_quads         = vector<vec4i>{};
+        auto base_positions     = vector<vec3f>{};
+        auto base_normals       = vector<vec3f>{};
         auto base_texturecoords = vector<vec2f>{};
-        make_sphere_shape(base_quads, base_positions, base_normals, base_texturecoords, 32,
-            get_json_value(js, "size", 2.0f) * 0.8f, 1);
-        make_hair_shape(value.lines, value.positions, value.normals, value.texturecoords,
-            value.radius, get_json_value(js, "steps", vec2i{4, 65536}),
-            {}, base_quads, base_positions, base_normals, base_texturecoords,
+        make_sphere_shape(base_quads, base_positions, base_normals,
+            base_texturecoords, 32, get_json_value(js, "size", 2.0f) * 0.8f, 1);
+        make_hair_shape(value.lines, value.positions, value.normals,
+            value.texturecoords, value.radius,
+            get_json_value(js, "steps", vec2i{4, 65536}), {}, base_quads,
+            base_positions, base_normals, base_texturecoords,
             get_json_value(js, "length", vec2f{0.2f, 0.2f}),
             get_json_value(js, "radius", vec2f{0.001f, 0.001f}),
             get_json_value(js, "noise", vec2f{0, 0}),
@@ -1234,15 +1234,15 @@ bool apply_json_procedural(
             value.texturecoords, 32, get_json_value(js, "size", 2.0f) * 0.8f,
             1);
     } else if (type == "suzanne") {
-        make_suzanne_shape(value.quads, value.positions,
-            get_json_value(js, "size", 2.0f));
+        make_suzanne_shape(
+            value.quads, value.positions, get_json_value(js, "size", 2.0f));
     } else if (type == "cube_posonly") {
         auto ignore1 = vector<vec4i>{};
         auto ignore2 = vector<vec4i>{};
         auto ignore3 = vector<vec3f>{};
         auto ignore4 = vector<vec2f>{};
-        make_cube_fvshape(value.quads, ignore1, ignore2, value.positions, ignore3,
-            ignore4, get_json_value(js, "steps", vec3i{1, 1, 1}),
+        make_cube_fvshape(value.quads, ignore1, ignore2, value.positions,
+            ignore3, ignore4, get_json_value(js, "steps", vec3i{1, 1, 1}),
             get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
@@ -1251,7 +1251,7 @@ bool apply_json_procedural(
     }
     if (!value.quads.empty() &&
         get_json_value(js, "shell_thickness", 0.0f) > 0) {
-        make_shell_shape(value.quads, value.positions, value.normals, 
+        make_shell_shape(value.quads, value.positions, value.normals,
             value.texturecoords, get_json_value(js, "shell_thickness", 0.0f));
     }
     if (!value.quads.empty() && get_json_value(js, "as_triangles", false)) {
@@ -1412,8 +1412,7 @@ bool apply_json_procedural(
             get_json_value(js, "radius", 0.15f));
     } else if (type == "floor") {
         make_floor_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, get_json_value(js, "steps",
-                                                        vec2i{1, 1}),
+            value.texturecoords, get_json_value(js, "steps", vec2i{1, 1}),
             get_json_value(js, "size", vec2f{40, 40}),
             get_json_value(js, "uvsize", vec2f{20, 20}));
     } else if (type == "floor_bent") {
@@ -1430,8 +1429,8 @@ bool apply_json_procedural(
             get_json_value(js, "uvsize", 1.0f));
     } else if (type == "hairball_interior") {
         make_sphere_shape(value.quads_positions, value.positions, value.normals,
-            value.texturecoords, 32,
-            get_json_value(js, "size", 2.0f) * 0.8f, 1);
+            value.texturecoords, 32, get_json_value(js, "size", 2.0f) * 0.8f,
+            1);
     } else if (type == "suzanne") {
         make_suzanne_shape(value.quads_positions, value.positions,
             get_json_value(js, "size", 2.0f));
@@ -4690,11 +4689,10 @@ bool load_pbrt_scene(const string& filename, yocto_scene& scene,
                 if (has_json_key(jcmd, "from"))
                     from = get_vec3f(jcmd.at("from"));
                 if (has_json_key(jcmd, "to")) to = get_vec3f(jcmd.at("to"));
-                auto dir                 = normalize(from - to);
-                auto size                = distant_dist * sin(5 * pif / 180);
+                auto dir  = normalize(from - to);
+                auto size = distant_dist * sin(5 * pif / 180);
                 make_quad_shape(shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, {1, 1}, {size, size},
-                    {1, 1});
+                    shape.texturecoords, {1, 1}, {size, size}, {1, 1});
                 scene.materials.push_back({});
                 auto& material    = scene.materials.back();
                 shape.material    = scene.materials.size() - 1;

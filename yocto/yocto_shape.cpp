@@ -254,12 +254,13 @@ vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
 
 // Create a hash_grid
 void make_hash_grid(hash_grid& grid, float cell_size) {
-    grid          = hash_grid{};
+    grid               = hash_grid{};
     grid.cell_size     = cell_size;
     grid.cell_inv_size = 1 / cell_size;
 }
-void make_hash_grid(hash_grid& grid, const vector<vec3f>& positions, float cell_size) {
-    grid          = hash_grid{};
+void make_hash_grid(
+    hash_grid& grid, const vector<vec3f>& positions, float cell_size) {
+    grid               = hash_grid{};
     grid.cell_size     = cell_size;
     grid.cell_inv_size = 1 / cell_size;
     for (auto& position : positions) insert_vertex(grid, position);
@@ -275,8 +276,8 @@ int insert_vertex(hash_grid& grid, const vec3f& position) {
 // Finds the nearest neighboors within a given radius
 void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
     const vec3f& position, float max_radius, int skip_id) {
-    auto cell               = get_cell_index(grid, position);
-    auto cell_radius        = (int)(max_radius * grid.cell_inv_size) + 1;
+    auto cell        = get_cell_index(grid, position);
+    auto cell_radius = (int)(max_radius * grid.cell_inv_size) + 1;
     neighboors.clear();
     auto max_radius_squared = max_radius * max_radius;
     for (auto k = -cell_radius; k <= cell_radius; k++) {
@@ -297,13 +298,13 @@ void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
         }
     }
 }
-void find_nearest_neightbors(
-    const hash_grid& grid, vector<int>& neighboors, const vec3f& position, float max_radius) {
-     find_nearest_neightbors(grid, neighboors, position, max_radius, -1);
+void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
+    const vec3f& position, float max_radius) {
+    find_nearest_neightbors(grid, neighboors, position, max_radius, -1);
 }
-void find_nearest_neightbors(
-    const hash_grid& grid, vector<int>& neighboors, int vertex_id, float max_radius) {
-     find_nearest_neightbors(
+void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
+    int vertex_id, float max_radius) {
+    find_nearest_neightbors(
         grid, neighboors, grid.positions[vertex_id], max_radius, vertex_id);
 }
 
@@ -458,7 +459,7 @@ void weld_vertices(
     make_hash_grid(grid, threshold);
     auto neighboors = vector<int>{};
     for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
-        auto& position   = positions[vertex_id];
+        auto& position = positions[vertex_id];
         find_nearest_neightbors(grid, neighboors, position, threshold);
         if (neighboors.empty()) {
             welded_positions.push_back(position);
@@ -1347,8 +1348,8 @@ void make_geodesic_solver(geodesic_solver& solver,
     log_geodesic_solver_stats(solver);
 }
 
-void compute_geodesic_distances(
-    geodesic_solver& graph, vector<float>& distances,const vector<int>& sources) {
+void compute_geodesic_distances(geodesic_solver& graph,
+    vector<float>& distances, const vector<int>& sources) {
     auto scope = log_trace_scoped("computing geodesics");
 
     // preallocated
@@ -1818,9 +1819,9 @@ void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
 }
 
 // Make a geodesic sphere.
-void make_geodesic_sphere_shape(
-    vector<vec3i>& triangles, vector<vec3f>& positions, vector<vec3f>& normals,
-    int tesselation, float size) {
+void make_geodesic_sphere_shape(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, int tesselation,
+    float size) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X                = 0.525731112119133606f;
     const float Z                = 0.850650808352039932f;
@@ -1831,8 +1832,8 @@ void make_geodesic_sphere_shape(
         {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
         {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
         {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    positions        = sphere_pos;
-    triangles        = sphere_triangles;
+    positions                    = sphere_pos;
+    triangles                    = sphere_triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
         subdivide_triangles(triangles, positions);
     }
