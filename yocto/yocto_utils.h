@@ -224,6 +224,105 @@ inline log_scope log_trace_scoped(const string& fmt, const Args&... args);
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
+// FILE UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// io error
+struct io_error : std::runtime_error {
+    explicit io_error(const char* msg) : std::runtime_error{msg} { }
+    explicit io_error(const std::string& msg) : std::runtime_error{msg} { }
+};
+
+// file inout stream
+struct input_file {
+    input_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file = fopen(filename.c_str(), binary ? "rb" : "rt");
+        if(!file) throw io_error("could not open " + filename);
+    }
+
+    input_file(const input_file&) = delete;
+    input_file& operator=(const input_file&) = delete;
+
+    ~input_file() {
+        if(file) fclose(file);
+    }
+
+    string filename = "";
+    FILE* file = nullptr;
+};
+
+// file writer
+struct output_file {
+    output_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file = fopen(filename.c_str(), binary ? "wb" : "wt");
+        if(!file) throw io_error("could not open " + filename);
+    }
+
+    output_file(const output_file&) = delete;
+    output_file& operator=(const output_file&) = delete;
+
+    ~output_file() {
+        if(file) fclose(file);
+    }
+
+    string filename = "";
+    FILE* file = nullptr;
+};
+
+// write a value to a file
+template<typename T>
+inline void write_value(output_file& fs, const T& value) {
+    if(fwrite(&value, sizeof(value), 1, fs.file) != 1) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// write values to a file
+template<typename T>
+inline void write_values(output_file& fs, const vector<T>& values) {
+    if(empty(values)) return;
+    if(fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) != values.size()) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// write text to a file
+inline void write_text(output_file& fs, const std::string& str) {
+    if(fprintf(fs.file, "%s", str.c_str()) < 0) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+
+// read a value from a file
+template <typename T>
+inline void read_value(input_file& fs, T& value) {
+    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+
+// read values from a file
+template <typename T>
+inline void read_values(input_file& fs, vector<T>& values) {
+    if (values.empty()) return;
+    if(fread(values.data(), sizeof(values[0]), values.size(), fs.file) != values.size()){
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+// read characters from a file
+inline void read_values(input_file& fs, std::string& values) {
+    if (values.empty()) return;
+    if(fread(values.data(), sizeof(values[0]), values.size(), fs.file) != values.size()){
+        throw io_error("cannot read from " + fs.filename);
+    }
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
 // IOSTREAM UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
@@ -452,12 +551,12 @@ inline bool exists_file(const string& filename);
 namespace yocto {
 
 // Load/save a text file
-inline bool load_text(const string& filename, string& str);
-inline bool save_text(const string& filename, const string& str);
+inline void load_text(const string& filename, string& str);
+inline void save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-inline bool load_binary(const string& filename, vector<byte>& data);
-inline bool save_binary(const string& filename, const vector<byte>& data);
+inline void load_binary(const string& filename, vector<byte>& data);
+inline void save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
@@ -1371,70 +1470,37 @@ inline istream& read_values(istream& stream, vector<T>& values) {
 }
 
 // Load a text file
-inline bool load_text(const string& filename, string& str) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto stream = ifstream(filename);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stringstream buffer;
-    buffer << stream.rdbuf();
-    if (stream.fail()) {
-        log_io_error("cannot read file {}", filename);
-        return false;
-    }
-    str = buffer.str();
-    return true;
+inline void load_text(const string& filename, string& str) {
+    // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+    auto fs = input_file(filename);
+    fseek(fs.file, 0, SEEK_END);
+    auto length = ftell(fs.file);
+    fseek(fs.file, 0, SEEK_SET);
+    str.resize(length);
+    read_values(fs, str);
 }
 
 // Save a text file
-inline bool save_text(const string& filename, const string& str) {
-    auto stream = ofstream(filename);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stream << str;
-    if (!stream) {
-        log_io_error("cannot write file {}", filename);
-        return false;
-    }
-    return true;
+inline void save_text(const string& filename, const string& str) {
+    auto fs = output_file(filename);
+    write_text(fs, str);
 }
 
 // Load a binary file
-inline bool load_binary(const string& filename, vector<byte>& data) {
-    // https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-    auto stream = ifstream(filename, std::ios::binary);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stringstream buffer;
-    buffer << stream.rdbuf();
-    if (stream.fail()) {
-        log_io_error("cannot read file {}", filename);
-        return false;
-    }
-    auto str = buffer.str();
-    data     = vector<byte>((byte*)str.data(), (byte*)str.data() + str.size());
-    return true;
+inline void load_binary(const string& filename, vector<byte>& data) {
+    // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
+    auto fs = input_file(filename, true);
+    fseek(fs.file, 0, SEEK_END);
+    auto length = ftell(fs.file);
+    fseek(fs.file, 0, SEEK_SET);
+    data.resize(length);
+    read_values(fs, data);
 }
 
 // Save a binary file
-inline bool save_binary(const string& filename, const vector<byte>& data) {
-    auto stream = ofstream(filename, std::ios::binary);
-    if (!stream) {
-        log_io_error("cannot open file {}", filename);
-        return false;
-    }
-    stream.write((char*)data.data(), data.size());
-    if (!stream) {
-        log_io_error("cannot write file {}", filename);
-        return false;
-    }
-    return true;
+inline void save_binary(const string& filename, const vector<byte>& data) {
+    auto fs = output_file(filename, true);
+    write_values(fs, data);
 }
 
 }  // namespace yocto

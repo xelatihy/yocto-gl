@@ -1663,15 +1663,10 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
 
     // load jsonz
     auto js = json();
-    if (!load_json(filename, js)) return false;
+    load_json(filename, js);
 
     // deserialize json
-    try {
-        serialize_json_object(js, scene, false);
-    } catch (...) {
-        log_io_error("could not deserialize json {}", filename);
-        return false;
-    }
+    serialize_json_object(js, scene, false);
 
     // load meshes and textures
     auto dirname = get_dirname(filename);
@@ -1743,19 +1738,13 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     auto scope = log_trace_scoped("saving scene {}", filename);
     // save json
-    auto js = json();
-    try {
-        js                    = json::object();
-        js["asset"]           = json::object();
-        js["asset"]["format"] = "Yocto/Scene";
-        js["asset"]["generator"] =
-            "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-        serialize_json_object(js, (yocto_scene&)scene, true);
-    } catch (...) {
-        log_io_error("could not serialize json {}", filename);
-        return false;
-    }
-    if (!save_json(filename, js)) return false;
+    auto js = json::object();
+    js["asset"]           = json::object();
+    js["asset"]["format"] = "Yocto/Scene";
+    js["asset"]["generator"] =
+        "Yocto/GL - https://github.com/xelatihy/yocto-gl";
+    serialize_json_object(js, (yocto_scene&)scene, true);
+    save_json(filename, js);
 
     // save meshes and textures
     auto dirname = get_dirname(filename);
@@ -2944,7 +2933,7 @@ bool gltf_to_scene(
                     (unsigned char*)data_char.c_str() + data_char.length());
             } else {
                 auto filename = normalize_path(dirname + uri);
-                if (!load_binary(filename, data)) return false;
+                load_binary(filename, data);
             }
             if (gbuf.value("byteLength", -1) != data.size()) {
                 return false;
@@ -3478,12 +3467,8 @@ bool load_gltf_scene(const string& filename, yocto_scene& scene,
 
     // convert json
     auto js = json();
-    if (!load_json(filename, js)) return false;
-    try {
-        if (!gltf_to_scene(scene, js, get_dirname(filename))) return false;
-    } catch (...) {
-        return false;
-    }
+    load_json(filename, js);
+    gltf_to_scene(scene, js, get_dirname(filename));
 
     // load textures
     auto dirname = get_dirname(filename);
@@ -3748,18 +3733,13 @@ bool save_gltf_mesh(const string& filename, const yocto_shape& shape) {
 bool save_gltf_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     // save json
-    auto js = json();
-    try {
-        js                    = json::object();
+    auto js = json::object();
         js["asset"]           = json::object();
         js["asset"]["format"] = "Yocto/Scene";
         js["asset"]["generator"] =
             "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-        if (!scene_to_gltf(scene, js)) return false;
-    } catch (...) {
-        return false;
-    }
-    if (!save_json(filename, js)) return false;
+        scene_to_gltf(scene, js);
+    save_json(filename, js);
 
     // meshes
     auto dirname = get_dirname(filename);

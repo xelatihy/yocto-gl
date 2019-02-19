@@ -68,8 +68,8 @@ using nlohmann::json;
 namespace yocto {
 
 // Load/save a text file
-inline bool load_json(const string& filename, json& js);
-inline bool save_json(const string& filename, const json& js);
+inline void load_json(const string& filename, json& js);
+inline void save_json(const string& filename, const json& js);
 
 }  // namespace yocto
 
@@ -108,28 +108,16 @@ inline T get_json_value(const json& js, const char* key, const T& default_value)
 namespace yocto {
 
 // Load a JSON object
-inline bool load_json(const string& filename, json& js) {
+inline void load_json(const string& filename, json& js) {
     auto text = ""s;
-    if (!load_text(filename, text)) return false;
-    try {
-        js = json::parse(text.begin(), text.end());
-    } catch (...) {
-        log_io_error("could not parse json {}", filename);
-        return false;
-    }
-    return true;
+    load_text(filename, text);
+    js = json::parse(text.begin(), text.end());
 }
 
 // Save a JSON object
-inline bool save_json(const string& filename, const json& js) {
-    auto str = ""s;
-    try {
-        str = js.dump(4);
-    } catch (...) {
-        log_io_error("could not dump json {}", filename);
-        return false;
-    }
-    return save_text(filename, str);
+inline void save_json(const string& filename, const json& js) {
+    auto str = js.dump(4);
+    save_text(filename, str);
 }
 
 }  // namespace yocto

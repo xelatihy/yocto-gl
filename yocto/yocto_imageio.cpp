@@ -360,7 +360,7 @@ bool load_stbi_image_from_memory(
     return true;
 }
 
-bool apply_json_procedural(const json& js, image4f& img) {
+void apply_json_procedural(const json& js, image4f& img) {
     auto type   = get_json_value(js, "type", ""s);
     auto width  = get_json_value(js, "width", 1024);
     auto height = get_json_value(js, "height", 1024);
@@ -413,8 +413,7 @@ bool apply_json_procedural(const json& js, image4f& img) {
             get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
             get_json_value(js, "wrap", true));
     } else {
-        log_error("unknown image type {}", type);
-        return false;
+        throw std::invalid_argument("unknown image type" + type);
     }
     if (get_json_value(js, "border", false)) {
         add_image_border(img, get_json_value(js, "border_width", 2),
@@ -424,30 +423,26 @@ bool apply_json_procedural(const json& js, image4f& img) {
         auto buffer = img;
         bump_to_normal_map(img, buffer, get_json_value(js, "bump_scale", 1.0f));
     }
-    return true;
 }
 
-bool apply_json_procedural(const json& js, image4b& img) {
+void apply_json_procedural(const json& js, image4b& img) {
     auto imgf = image4f{};
-    if (!apply_json_procedural(js, imgf)) return false;
+    apply_json_procedural(js, imgf);
     auto srgb = get_json_value(js, "srgb", true);
     if (srgb) imgf = linear_to_srgb(imgf);
     img = float_to_byte(imgf);
-    return true;
 }
 
 // load a JSON image
-bool load_json_image(const string& filename, image4f& img) {
+void load_json_image(const string& filename, image4f& img) {
     auto js = json();
-    if (!load_json(filename, js)) return false;
-    if (!apply_json_procedural(js, img)) return false;
-    return true;
+    load_json(filename, js);
+    apply_json_procedural(js, img);
 }
-bool load_json_image(const string& filename, image4b& img) {
+void load_json_image(const string& filename, image4b& img) {
     auto js = json();
-    if (!load_json(filename, js)) return false;
-    if (!apply_json_procedural(js, img)) return false;
-    return true;
+    load_json(filename, js);
+    apply_json_procedural(js, img);
 }
 
 // check hdr extensions
@@ -486,7 +481,8 @@ bool load_image_nolog(const string& filename, image4f& img) {
         img = srgb_to_linear(byte_to_float(img8));
         return true;
     } else if (ext == "json" || ext == "JSON") {
-        return load_json_image(filename, img);
+        load_json_image(filename, img);
+        return true;
     } else {
         log_io_error("unsupported image format {}", ext);
         return false;
@@ -561,7 +557,8 @@ bool load_image_nolog(const string& filename, image4b& img) {
     } else if (ext == "bmp" || ext == "BMP") {
         return load_stb_image(filename, img);
     } else if (ext == "json" || ext == "JSON") {
-        return load_json_image(filename, img);
+        load_json_image(filename, img);
+        return true;
     } else {
         log_io_error("unsupported image format {}", ext);
         return false;
