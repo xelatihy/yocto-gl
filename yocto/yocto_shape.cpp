@@ -583,10 +583,9 @@ namespace yocto {
 
 // Subdivide lines.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines_impl(
-    const vector<vec2i>& lines, const vector<T>& vert) {
+void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert) {
     // early exit
-    if (empty(lines) || empty(vert)) return {lines, vert};
+    if (empty(lines) || empty(vert)) return;
     // sizes
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
@@ -604,32 +603,28 @@ tuple<vector<vec2i>, vector<T>> subdivide_lines_impl(
         tlines[i * 2 + 0] = {l.x, nverts + i};
         tlines[i * 2 + 0] = {nverts + i, l.y};
     }
-    return {tlines, tvert};
+    swap(tlines, lines);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<float>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
-tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
-tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
-tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
 
 // Subdivide triangle.
 template <typename T>
-tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
-    const vector<vec3i>& triangles, const vector<T>& vert) {
+void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert) {
     // early exit
-    if (empty(triangles) || empty(vert)) return {triangles, vert};
+    if (empty(triangles) || empty(vert)) return;
     // get edges
     auto emap = edge_map{};
     insert_edges(emap, triangles);
@@ -660,32 +655,28 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
             nverts + get_edge_index(emap, {t.y, t.z}),
             nverts + get_edge_index(emap, {t.z, t.x})};
     }
-    return {ttriangles, tvert};
+    swap(ttriangles, triangles);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
-tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
-tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
-tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
 
 // Subdivide quads.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
-    const vector<vec4i>& quads, const vector<T>& vert) {
+void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert) {
     // early exit
-    if (empty(quads) || empty(vert)) return {quads, vert};
+    if (empty(quads) || empty(vert)) return;
     // get edges
     auto emap = edge_map{};
     insert_edges(emap, quads);
@@ -738,32 +729,28 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
     }
     tquads.resize(qi);
     // done
-    return {tquads, tvert};
+    swap(tquads, quads);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<float>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
-tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
-tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
-tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
 
 // Subdivide beziers.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_beziers_impl(
-    const vector<vec4i>& beziers, const vector<T>& vert) {
+void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert) {
     // early exit
-    if (empty(beziers) || empty(vert)) return {beziers, vert};
+    if (empty(beziers) || empty(vert)) return;
     // get edges
     auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
@@ -789,32 +776,29 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers_impl(
     }
 
     // done
-    return {tbeziers, tvert};
+    swap(tbeziers, beziers);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
-tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
-tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
-tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
 
 // Subdivide catmullclark.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
-    const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
+void subdivide_catmullclark_impl(
+    vector<vec4i>& quads, vector<T>& vert, bool lock_boundary) {
     // early exit
-    if (empty(quads) || empty(vert)) return {quads, vert};
+    if (empty(quads) || empty(vert)) return;
     // get edges
     auto emap = edge_map{};
     insert_edges(emap, quads);
@@ -933,24 +917,83 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     tvert = avert;
 
     // done
-    return {tquads, tvert};
+    swap(tquads, quads);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<float>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
-tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec2f>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
-tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec3f>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
-tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec4f>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
+}
+
+template <typename T, typename SubdivideFunc>
+void subdivide_elems_impl(vector<T>& elems, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius, const SubdivideFunc&& subdivied_func) {
+    if (!empty(normals)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, normals);
+    }
+    if (!empty(texturecoords)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, texturecoords);
+    }
+    if (!empty(colors)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, colors);
+    }
+    if (!empty(radius)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, radius);
+    }
+    subdivied_func(elems, positions);
+}
+
+void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(lines, positions, normals, texturecoords, colors,
+        radius, [](auto& lines, auto& vert) { subdivide_lines(lines, vert); });
+}
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(triangles, positions, normals, texturecoords, colors,
+        radius, [](auto& triangles, auto& vert) {
+            subdivide_triangles(triangles, vert);
+        });
+}
+void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(quads, positions, normals, texturecoords, colors,
+        radius, [](auto& quads, auto& vert) { subdivide_quads(quads, vert); });
+}
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(beziers, positions, normals, texturecoords, colors,
+        radius,
+        [](auto& beziers, auto& vert) { subdivide_beziers(beziers, vert); });
+}
+void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(quads, positions, normals, texturecoords, colors,
+        radius,
+        [](auto& quads, auto& vert) { subdivide_catmullclark(quads, vert); });
 }
 
 }  // namespace yocto
@@ -1799,7 +1842,7 @@ tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
     auto        positions        = sphere_pos;
     auto        triangles        = sphere_triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        tie(triangles, positions) = subdivide_triangles(triangles, positions);
+        subdivide_triangles(triangles, positions);
     }
     for (auto& p : positions) p = normalize(p) * size / 2;
     auto normals = positions;

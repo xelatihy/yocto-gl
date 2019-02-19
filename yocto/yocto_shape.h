@@ -361,56 +361,51 @@ void merge_quads(vector<vec4i>& quads, vector<vec3f>& positions,
 namespace yocto {
 
 // Subdivide lines by splitting each line in half.
-tuple<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vert);
-tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vert);
-tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vert);
-tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vert);
+void subdivide_lines(vector<vec2i>& lines, vector<float>& vert);
+void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert);
+void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert);
+void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert);
+void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions, 
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors, 
+    vector<float>& radius);
 // Subdivide triangle by splitting each triangle in four, creating new
 // vertices for each edge.
-tuple<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vert);
-tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vert);
-tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vert);
-tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions, 
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors, 
+    vector<float>& radius);
 // Subdivide quads by splitting each quads in four, creating new
 // vertices for each edge and for each face.
-tuple<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vert);
-tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vert);
-tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vert);
-tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vert);
+void subdivide_quads(vector<vec4i>& quads, vector<float>& vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions, 
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors, 
+    vector<float>& radius);
 // Subdivide beziers by splitting each segment in two.
-tuple<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vert);
-tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vert);
-tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vert);
-tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions, 
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors, 
+    vector<float>& radius);
 // Subdivide quads using Carmull-Clark subdivision rules.
-tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vert,
-    bool lock_boundary = false);
-tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vert,
-    bool lock_boundary = false);
-tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vert,
-    bool lock_boundary = false);
-tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vert,
-    bool lock_boundary = false);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<float>& vert, bool lock_boundary = false);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec2f>& vert, bool lock_boundary = false);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec3f>& vert, bool lock_boundary = false);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec4f>& vert, bool lock_boundary = false);
+void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions, 
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors, 
+    vector<float>& radius);
 
 }  // namespace yocto
 
