@@ -85,18 +85,13 @@ inline bool serialize_json_value(json& js, unsigned char& value, bool save);
 inline bool serialize_json_value(json& js, float& value, bool save);
 inline bool serialize_json_value(json& js, double& value, bool save);
 inline bool serialize_json_value(json& js, string& value, bool save);
-inline bool serialize_json_value(json& js, vec2f& value, bool save);
-inline bool serialize_json_value(json& js, vec3f& value, bool save);
-inline bool serialize_json_value(json& js, vec4f& value, bool save);
-inline bool serialize_json_value(json& js, vec2i& value, bool save);
-inline bool serialize_json_value(json& js, vec3i& value, bool save);
-inline bool serialize_json_value(json& js, vec4i& value, bool save);
-inline bool serialize_json_value(json& js, vec4b& value, bool save);
-inline bool serialize_json_value(json& js, mat2f& value, bool save);
-inline bool serialize_json_value(json& js, mat3f& value, bool save);
-inline bool serialize_json_value(json& js, mat4f& value, bool save);
-inline bool serialize_json_value(json& js, frame2f& value, bool save);
-inline bool serialize_json_value(json& js, frame3f& value, bool save);
+template<typename T, int N>
+inline bool serialize_json_value(json& js, vec<T, N>& value, bool save);
+template<typename T, int N, int M>
+inline bool serialize_json_value(json& js, mat<T, N, M>& value, bool save);
+template<typename T, int N>
+inline bool serialize_json_value(json& js, frame<T, N>& value, bool save);
+template<typename T, int N>
 inline bool serialize_json_value(json& js, bbox3f& value, bool save);
 
 // Serialize/deserialize compound types
@@ -161,97 +156,40 @@ inline bool save_json(const string& filename, const json& js) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline void to_json_array(json& js, const float* vals, int N) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) js.push_back(vals[i]);
+template<typename T, int N>
+inline void to_json(json& js, const vec<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N>&)val);
 }
-inline void to_json_array(json& js, const int* vals, int N) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) js.push_back(vals[i]);
-}
-inline void to_json_array(json& js, const byte* vals, int N) {
-    js = json::array();
-    for (auto i = 0; i < N; i++) js.push_back((int)vals[i]);
-}
-inline void from_json_array(const json& js, float* vals, int N) {
-    if (js.is_array()) throw std::runtime_error("canot convert json");
-    if (js.size() != N) throw std::runtime_error("canot convert json");
-    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<float>();
-}
-inline void from_json_array(const json& js, int* vals, int N) {
-    if (js.is_array()) throw std::runtime_error("canot convert json");
-    if (js.size() != N) throw std::runtime_error("canot convert json");
-    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<int>();
-}
-inline void from_json_array(const json& js, byte* vals, int N) {
-    if (js.is_array()) throw std::runtime_error("canot convert json");
-    if (js.size() != N) throw std::runtime_error("canot convert json");
-    for (auto i = 0; i < N; i++) vals[i] = js.at(i).get<int>();
+template<typename T, int N>
+inline void from_json(const json& js, vec<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N>&)val);
 }
 
-inline void to_json(json& js, const vec2f& val) {
-    to_json_array(js, &val.x, 2);
+template<typename T, int N>
+inline void to_json(json& js, const frame<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N*(N+1)>&)val);
 }
-inline void from_json(const json& js, vec2f& val) {
-    from_json_array(js, &val.x, 2);
-}
-inline void to_json(json& js, const vec3f& val) {
-    to_json_array(js, &val.x, 3);
-}
-inline void from_json(const json& js, vec3f& val) {
-    from_json_array(js, &val.x, 3);
-}
-inline void to_json(json& js, const vec4f& val) {
-    to_json_array(js, &val.x, 4);
-}
-inline void from_json(const json& js, vec4f& val) {
-    from_json_array(js, &val.x, 4);
+template<typename T, int N>
+inline void from_json(const json& js, frame<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N*(N+1)>&)val);
 }
 
-inline void to_json(json& js, const vec2i& val) {
-    to_json_array(js, &val.x, 2);
+template<typename T, int N, int M>
+inline void to_json(json& js, const mat<T, N, M>& val) {
+    nlohmann::to_json(js, (const std::array<T, N*M>&)val);
 }
-inline void from_json(const json& js, vec2i& val) {
-    from_json_array(js, &val.x, 2);
-}
-inline void to_json(json& js, const vec3i& val) {
-    to_json_array(js, &val.x, 3);
-}
-inline void from_json(const json& js, vec3i& val) {
-    from_json_array(js, &val.x, 3);
-}
-inline void to_json(json& js, const vec4i& val) {
-    to_json_array(js, &val.x, 4);
-}
-inline void from_json(const json& js, vec4i& val) {
-    from_json_array(js, &val.x, 4);
-}
-inline void to_json(json& js, const vec4b& val) {
-    to_json_array(js, &val.x, 4);
-}
-inline void from_json(const json& js, vec4b& val) {
-    from_json_array(js, &val.x, 4);
-}
-
-inline void to_json(json& js, const frame3f& val) {
-    to_json_array(js, &val.x.x, 12);
-}
-inline void from_json(const json& js, frame3f& val) {
-    from_json_array(js, &val.x.x, 12);
-}
-
-inline void to_json(json& js, const mat4f& val) {
-    to_json_array(js, &val.x.x, 16);
-}
+template<typename T, int N, int M>
 inline void from_json(const json& js, mat4f& val) {
-    from_json_array(js, &val.x.x, 16);
+    nlohmann::from_json(js, (std::array<T, N*M>&)val);
 }
 
-inline void to_json(json& js, const bbox3f& val) {
-    to_json_array(js, &val.min.x, 6);
+template<typename T, int N>
+inline void to_json(json& js, const bbox<T, N>& val) {
+    nlohmann::from_json(js, (std::array<T, N*2>&)val);
 }
-inline void from_json(const json& js, bbox3f& val) {
-    from_json_array(js, &val.min.x, 6);
+template<typename T, int N>
+inline void from_json(const json& js, bbox<T, N>& val) {
+    nlohmann::to_json(js, (const std::array<T, N*2>&)val);
 }
 
 }  // namespace yocto
@@ -359,47 +297,21 @@ inline bool serialize_json_value(json& js, vector<T>& value, bool save) {
     }
 }
 
-inline bool serialize_json_value(json& js, vec1f& value, bool save) {
-    return serialize_json_values(js, &value.x, 1, save);
+template<typename T, int N>
+inline bool serialize_json_value(json& js, vec<T, N>& value, bool save) {
+    return serialize_json_values(js, &value.x, N, save);
 }
-inline bool serialize_json_value(json& js, vec2f& value, bool save) {
-    return serialize_json_values(js, &value.x, 2, save);
+template<typename T, int N, int M>
+inline bool serialize_json_value(json& js, mat<T, N, M>& value, bool save) {
+    return serialize_json_values(js, &value.x.x, N*M, save);
 }
-inline bool serialize_json_value(json& js, vec3f& value, bool save) {
-    return serialize_json_values(js, &value.x, 3, save);
+template<typename T, int N>
+inline bool serialize_json_value(json& js, frame<T, N>& value, bool save) {
+    return serialize_json_values(js, &value.x.x, N*(N+1), save);
 }
-inline bool serialize_json_value(json& js, vec4f& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-inline bool serialize_json_value(json& js, vec2i& value, bool save) {
-    return serialize_json_values(js, &value.x, 2, save);
-}
-inline bool serialize_json_value(json& js, vec3i& value, bool save) {
-    return serialize_json_values(js, &value.x, 3, save);
-}
-inline bool serialize_json_value(json& js, vec4i& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-inline bool serialize_json_value(json& js, vec4b& value, bool save) {
-    return serialize_json_values(js, &value.x, 4, save);
-}
-inline bool serialize_json_value(json& js, mat2f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 4, save);
-}
-inline bool serialize_json_value(json& js, mat3f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 9, save);
-}
-inline bool serialize_json_value(json& js, mat4f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 16, save);
-}
-inline bool serialize_json_value(json& js, frame2f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 6, save);
-}
-inline bool serialize_json_value(json& js, frame3f& value, bool save) {
-    return serialize_json_values(js, &value.x.x, 12, save);
-}
-inline bool serialize_json_value(json& js, bbox3f& value, bool save) {
-    return serialize_json_values(js, &value.min.x, 6, save);
+template<typename T, int N>
+inline bool serialize_json_value(json& js, bbox<T, N>& value, bool save) {
+    return serialize_json_values(js, &value.min.x, N*2, save);
 }
 
 // Dumps a json value
