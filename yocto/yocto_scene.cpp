@@ -391,17 +391,18 @@ vec2f compute_animation_range(
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
 vector<float> compute_shape_elements_cdf(const yocto_shape& shape) {
+    auto cdf = vector<float>{};
     if (!empty(shape.triangles)) {
-        return sample_triangles_element_cdf(shape.triangles, shape.positions);
+        sample_triangles_element_cdf(cdf, shape.triangles, shape.positions);
     } else if (!empty(shape.quads)) {
-        return sample_quads_element_cdf(shape.quads, shape.positions);
+        sample_quads_element_cdf(cdf, shape.quads, shape.positions);
     } else if (!empty(shape.lines)) {
-        return sample_lines_element_cdf(shape.lines, shape.positions);
+        sample_lines_element_cdf(cdf, shape.lines, shape.positions);
     } else if (!empty(shape.points)) {
-        return sample_points_element_cdf(shape.points.size());
+        sample_points_element_cdf(cdf, shape.points.size());
     } else {
-        return {};
     }
+    return cdf;
 }
 
 // Sample a shape based on a distribution.
@@ -431,12 +432,13 @@ float sample_shape_element_pdf(const yocto_shape& shape,
 
 // Generate a distribution for sampling a shape uniformly based on area/length.
 vector<float> compute_surface_elements_cdf(const yocto_surface& surface) {
+    auto cdf = vector<float>{};
     if (!empty(surface.quads_positions)) {
-        return sample_quads_element_cdf(
+        sample_quads_element_cdf(cdf,
             surface.quads_positions, surface.positions);
     } else {
-        return {};
     }
+    return cdf;
 }
 
 // Sample a shape based on a distribution.

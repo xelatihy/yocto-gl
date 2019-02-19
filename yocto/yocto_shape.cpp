@@ -1007,25 +1007,23 @@ namespace yocto {
 int sample_points_element(int npoints, float re) {
     return sample_uniform_index(npoints, re);
 }
-vector<float> sample_points_element_cdf(int npoints) {
-    auto cdf = vector<float>(npoints);
+void sample_points_element_cdf(vector<float>& cdf, int npoints) {
+    cdf.resize(npoints);
     for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
-    return cdf;
 }
 int sample_points_element(const vector<float>& cdf, float re) {
     return sample_discrete_distribution(cdf, re);
 }
 
 // Pick a point on lines uniformly.
-vector<float> sample_lines_element_cdf(
+void sample_lines_element_cdf(vector<float>& cdf, 
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(lines.size());
+    cdf.resize(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
         auto w = line_length(positions[l.x], positions[l.y]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 pair<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru) {
@@ -1033,15 +1031,14 @@ pair<int, float> sample_lines_element(
 }
 
 // Pick a point on a triangle mesh uniformly.
-vector<float> sample_triangles_element_cdf(
+void sample_triangles_element_cdf(vector<float>& cdf, 
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(triangles.size());
+    cdf.resize(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
         auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 pair<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -1050,16 +1047,15 @@ pair<int, vec2f> sample_triangles_element(
 }
 
 // Pick a point on a quad mesh uniformly.
-vector<float> sample_quads_element_cdf(
+void sample_quads_element_cdf(vector<float>& cdf, 
     const vector<vec4i>& quads, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(quads.size());
+    cdf.resize(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
         auto w = quad_area(
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 pair<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -1085,7 +1081,8 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
     auto sampled_positions     = vector<vec3f>(npoints);
     auto sampled_normals       = vector<vec3f>(npoints);
     auto sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf = sample_triangles_element_cdf(triangles, positions);
+    auto cdf = vector<float>{};
+    sample_triangles_element_cdf(cdf, triangles, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto [triangle_id, triangle_uv] = sample_triangles_element(cdf,
@@ -1121,7 +1118,8 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
     auto sampled_positions     = vector<vec3f>(npoints);
     auto sampled_normals       = vector<vec3f>(npoints);
     auto sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf                   = sample_quads_element_cdf(quads, positions);
+    auto cdf                   = vector<float>{};
+    sample_quads_element_cdf(cdf, quads, positions);
     auto rng                   = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto [quad_id, quad_uv] = sample_quads_element(cdf,

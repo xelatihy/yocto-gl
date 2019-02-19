@@ -416,23 +416,23 @@ namespace yocto {
 
 // Pick a point in a point set uniformly.
 int           sample_points_element(int npoints, float re);
-vector<float> sample_points_element_cdf(int npoints);
+void sample_points_element_cdf(vector<float>& cdf, int npoints);
 int           sample_points_element(const vector<float>& cdf, float re);
 
 // Pick a point on lines uniformly.
-vector<float> sample_lines_element_cdf(
+void sample_lines_element_cdf(vector<float>& cdf, 
     const vector<vec2i>& lines, const vector<vec3f>& positions);
 pair<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru);
 
 // Pick a point on a triangle mesh uniformly.
-vector<float> sample_triangles_element_cdf(
+void sample_triangles_element_cdf(vector<float>& cdf, 
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
 pair<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv);
 
 // Pick a point on a quad mesh uniformly.
-vector<float> sample_quads_element_cdf(
+void sample_quads_element_cdf(vector<float>& cdf, 
     const vector<vec4i>& quads, const vector<vec3f>& positions);
 pair<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv);
