@@ -646,26 +646,14 @@ string base64_decode(string const& encoded_string) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-bool operator==(const image4f& a, const image4f& b) {
-    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
-}
-bool operator==(const image4b& a, const image4b& b) {
-    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
-}
-bool operator==(const volume1f& a, const volume1f& b) {
-    return a.width == b.width && a.height == b.height && a.depth == b.depth &&
-           a.voxels == b.voxels;
-}
-
 // Dumps a json value
 template <typename T>
-bool serialize_json_objref(
+void serialize_json_objref(
     json& js, int& value, const vector<T>& refs, bool save) {
     if (save) {
         auto vals = value >= 0 ? refs[value].name : ""s;
         serialize_json_value(js, vals, save);
     } else {
-        if (!js.is_string()) return false;
         auto name = ""s;
         serialize_json_value(js, name, save);
         value = -1;
@@ -675,14 +663,13 @@ bool serialize_json_objref(
                 break;
             }
         }
-        if (value < 0) return false;
+        if (value < 0) throw std::runtime_error("invalid object reference");
     }
-    return true;
 }
 
 // Dumps a json value
 template <typename T>
-bool serialize_json_objref(
+void serialize_json_objref(
     json& js, vector<int>& value, const vector<T>& refs, bool save) {
     if (save) {
         js = json::array();
@@ -690,109 +677,100 @@ bool serialize_json_objref(
             js.push_back({});
             serialize_json_objref(js.back(), v, refs, save);
         }
-        return true;
     } else {
-        if (!js.is_array()) return false;
-        for (auto& j : js) {
+        auto& ajs = (json::array_t&)js.get_ref<const json::array_t&>();
+        for (auto& j : ajs) {
             value.push_back(-1);
             serialize_json_objref(j, value.back(), refs, save);
         }
-        return true;
     }
 }
 
 // Dumps a json value
 template <typename T>
-bool serialize_json_objref(
+void serialize_json_objref(
     json& js, int& value, const char* name, const vector<T>& refs, bool save) {
     if (save) {
-        if (value < 0) return true;
+        if (value < 0) return;
         serialize_json_objref(js[name], value, refs, save);
     } else {
-        if (!has_json_key(js, name)) return true;
+        if (!has_json_key(js, name)) return;
         value = -1;
         serialize_json_objref(js.at(name), value, refs, save);
     }
-    return true;
 }
 
 // Dumps a json value
 template <typename T>
-bool serialize_json_objref(json& js, vector<int>& value, const char* name,
+void serialize_json_objref(json& js, vector<int>& value, const char* name,
     const vector<T>& refs, bool save) {
     if (save) {
-        if (empty(value)) return true;
+        if (empty(value)) return;
         serialize_json_objref(js[name], value, refs, save);
     } else {
-        if (!has_json_key(js, name)) return true;
+        if (!has_json_key(js, name)) return;
         value = {};
         serialize_json_objref(js.at(name), value, refs, save);
     }
-    return true;
 }
 
 // Starts a json object
-bool serialize_json_objbegin(json& js, bool save) {
+void serialize_json_objbegin(json& js, bool save) {
     if (save) {
         js = json::object();
-        return true;
     } else {
         // forces an exception if not working
         js.get_ref<const json::object_t&>();
-        return true;
     }
 }
 
 // Dumps a json value
 template <typename T>
-bool serialize_json_objarray(
+void serialize_json_objarray(
     json& js, vector<T>& value, const yocto_scene& scene, bool save) {
     if (save) {
         js = json::array();
         for (auto& v : value) {
             js.push_back({});
-            if (!serialize_json_object(js.back(), v, scene, save)) return false;
+            serialize_json_object(js.back(), v, scene, save);
         }
-        return true;
     } else {
-        if (!js.is_array()) return false;
-        for (auto& j : js) {
+        auto& ajs = (json::array_t&)js.get_ref<const json::array_t&>();
+        for (auto& j : ajs) {
             value.push_back(T{});
-            if (!serialize_json_object(j, value.back(), scene, save))
-                return false;
+            serialize_json_object(j, value.back(), scene, save);
         }
-        return true;
     }
 }
 
 // Dumps a json value
 template <typename T>
-bool serialize_json_objarray(json& js, vector<T>& value, const char* name,
+void serialize_json_objarray(json& js, vector<T>& value, const char* name,
     const yocto_scene& scene, bool save) {
     if (save) {
-        if (empty(value)) return true;
-        return serialize_json_objarray(js[name], value, scene, save);
+        if (empty(value)) return;
+         serialize_json_objarray(js[name], value, scene, save);
     } else {
-        if (!has_json_key(js, name)) return true;
+        if (!has_json_key(js, name)) return;
         value = {};
-        return serialize_json_objarray(js.at(name), value, scene, save);
+         serialize_json_objarray(js.at(name), value, scene, save);
     }
 }
 
 // Parses and applied a JSON procedural
 template <typename T>
-bool serialize_json_procedural(const json& js, T& value, const char* name,
+void serialize_json_procedural(const json& js, T& value, const char* name,
     const yocto_scene& scene, bool save) {
     if (save) {
-        return true;
+        return;
     } else {
-        if (!has_json_key(js, name)) return true;
-        return apply_json_procedural(js.at(name), value, scene);
+        if (!has_json_key(js, name)) return;
+        apply_json_procedural(js.at(name), value, scene);
     }
 }
 
 // Procedural commands for cameras
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_camera& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     if (has_json_key(js, "from") || has_json_key(js, "to")) {
@@ -802,11 +780,10 @@ bool apply_json_procedural(
         value.frame          = make_lookat_frame(from, to, up);
         value.focus_distance = length(from - to);
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_camera& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_camera();
     serialize_json_objbegin(js, save);
@@ -825,15 +802,14 @@ bool serialize_json_object(
     serialize_json_value(
             js, value.lens_aperture, "lens_aperture", def.lens_aperture, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for textures
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_texture& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "") return true;
+    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
     auto is_hdr = false;
     auto width  = get_json_value(js, "width", 1024);
     auto height = get_json_value(js, "height", 1024);
@@ -887,8 +863,7 @@ bool apply_json_procedural(
             get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
             get_json_value(js, "wrap", true));
     } else {
-        log_error("unknown texture type {}", type);
-        return false;
+        throw std::invalid_argument("unknown procedural type " + type);
     }
     if (get_json_value(js, "border", false)) {
         add_image_border(value.hdr_image, get_json_value(js, "border_width", 2),
@@ -912,11 +887,10 @@ bool apply_json_procedural(
         auto ext       = (is_hdr) ? string("hdr") : string("png");
         value.filename = "textures/" + value.name + "." + ext;
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_texture& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_texture();
     serialize_json_objbegin(js, save);
@@ -938,15 +912,14 @@ bool serialize_json_object(
                 js, value.ldr_image, "ldr_image", def.ldr_image, save);
     }
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for textures
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_voltexture& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "") return true;
+    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
     auto width  = get_json_value(js, "width", 512);
     auto height = get_json_value(js, "height", 512);
     auto depth  = get_json_value(js, "depth", 512);
@@ -955,18 +928,16 @@ bool apply_json_procedural(
         make_test_volume(value.volume_data, get_json_value(js, "scale", 10.0f),
             get_json_value(js, "exponent", 6.0f));
     } else {
-        log_error("unknown texture type {}", type);
-        return false;
+        throw std::invalid_argument("unknown procedural type " + type);
     }
     if (value.filename == "") {
         auto ext       = string("vol");
         value.filename = "textures/" + value.name + "." + ext;
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_voltexture& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_voltexture();
     serialize_json_objbegin(js, save);
@@ -981,18 +952,16 @@ bool serialize_json_object(
         if (!empty(value.volume_data)) js["vol"] = value.volume_data;
     }
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_material& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_material& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_material();
     serialize_json_objbegin(js, save);
@@ -1034,15 +1003,14 @@ bool serialize_json_object(
     serialize_json_objref(js, value.volume_density_texture,
             "volume_density_texture", scene.voltextures, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_shape& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "") return true;
+    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
     value.points        = {};
     value.lines         = {};
     value.triangles     = {};
@@ -1179,8 +1147,7 @@ bool apply_json_procedural(
             get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
-        log_error("unknown shape type {}", type);
-        return false;
+        throw std::invalid_argument("unknown procedural type " + type);
     }
     if (!value.quads.empty() &&
         get_json_value(js, "shell_thickness", 0.0f) > 0) {
@@ -1195,11 +1162,10 @@ bool apply_json_procedural(
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
         for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_shape& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_shape();
     serialize_json_objbegin(js, save);
@@ -1232,15 +1198,14 @@ bool serialize_json_object(
                 def.tangentspaces, save);
     }
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_surface& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     auto type = get_json_value(js, "type", ""s);
-    if (type == "") return true;
+    if (type == "")         throw std::invalid_argument("unknown procedural type " + type);
     value.quads_positions     = {};
     value.quads_normals       = {};
     value.quads_texturecoords = {};
@@ -1382,8 +1347,7 @@ bool apply_json_procedural(
             get_json_value(js, "size", vec3f{2, 2, 2}),
             get_json_value(js, "uvsize", vec3f{1, 1, 1}));
     } else {
-        log_error("unknown shape type {}", type);
-        return false;
+        throw std::invalid_argument("unknown procedural type " + type);
     }
     if (empty(value.quads_normals) && !empty(value.normals))
         value.quads_normals = value.quads_positions;
@@ -1393,11 +1357,10 @@ bool apply_json_procedural(
         for (auto& p : value.positions) p = {p.x, p.z, p.y};
         for (auto& n : value.normals) n = {n.x, n.z, n.y};
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_surface& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_surface();
     serialize_json_objbegin(js, save);
@@ -1429,11 +1392,10 @@ bool serialize_json_object(
                 def.texturecoords, save);
     }
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for instances
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_instance& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     if (has_json_key(js, "from")) {
@@ -1451,11 +1413,10 @@ bool apply_json_procedural(
                       make_scaling_frame(scaling) *
                       make_rotation_frame(xyz(rotation), rotation.w);
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_instance& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_instance();
     serialize_json_objbegin(js, save);
@@ -1465,22 +1426,20 @@ bool serialize_json_object(
     serialize_json_objref(
             js, value.surface, "surface", scene.surfaces, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for materials
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_environment& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     if (has_json_key(js, "rotation")) {
         auto rotation = get_json_value(js, "rotation", zero4f);
         value.frame   = make_rotation_frame(xyz(rotation), rotation.w);
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_environment& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_environment();
     serialize_json_objbegin(js, save);
@@ -1491,11 +1450,10 @@ bool serialize_json_object(
     serialize_json_objref(js, value.emission_texture, "emission_texture",
             scene.textures, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for nodes
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_scene_node& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     if (has_json_key(js, "from")) {
@@ -1504,11 +1462,10 @@ bool apply_json_procedural(
         auto up     = get_json_value(js, "up", vec3f{0, 1, 0});
         value.local = make_lookat_frame(from, to, up, true);
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_scene_node& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_scene_node();
     serialize_json_objbegin(js, save);
@@ -1523,11 +1480,10 @@ bool serialize_json_object(
     serialize_json_objref(js, value.instance, "instance", scene.instances, save);
     serialize_json_objref(js, value.environment, "environment", scene.environments, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Serialize enum
-bool serialize_json_value(
+void serialize_json_value(
     json& js, yocto_interpolation_type& value, bool save) {
     if (save) {
         static auto names = unordered_map<int, string>{
@@ -1537,7 +1493,6 @@ bool serialize_json_value(
         };
         auto vals = names.at((int)value);
         serialize_json_value(js, vals, save);
-        return true;
     } else {
         static auto names = unordered_map<string, int>{
             {"linear", (int)yocto_interpolation_type::linear},
@@ -1546,17 +1501,12 @@ bool serialize_json_value(
         };
         auto vals = ""s;
         serialize_json_value(js, vals, save);
-        try {
-            value = (yocto_interpolation_type)names.at(vals);
-        } catch (...) {
-            return false;
-        }
-        return true;
+        value = (yocto_interpolation_type)names.at(vals);
     }
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_animation& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_animation();
     serialize_json_objbegin(js, save);
@@ -1580,11 +1530,10 @@ bool serialize_json_object(
     serialize_json_objref(
             js, value.node_targets, "node_targets", scene.nodes, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
 // Procedural commands for animations
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_animation& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     if (has_json_key(js, "make_rotation_axisangle")) {
@@ -1593,11 +1542,10 @@ bool apply_json_procedural(
                 make_rotation_quat(j.get<vec4f>()));
         }
     }
-    return true;
 }
 
 // Procedural commands for scenes
-bool apply_json_procedural(
+void apply_json_procedural(
     const json& js, yocto_scene& value, const yocto_scene& scene) {
     serialize_json_objbegin((json&)js, false);
     if (has_json_key(js, "random_instances")) {
@@ -1629,11 +1577,10 @@ bool apply_json_procedural(
             value.instances.back().shape = shape + shape_offset;
         }
     }
-    return true;
 }
 
 // Serialize struct
-bool serialize_json_object(
+void serialize_json_object(
     json& js, yocto_scene& value, const yocto_scene& scene, bool save) {
     static const auto def = yocto_scene();
     serialize_json_objbegin(js, save);
@@ -1652,10 +1599,9 @@ bool serialize_json_object(
     serialize_json_objarray(
             js, value.animations, "animations", scene, save);
     serialize_json_procedural(js, value, "!!proc", scene, save);
-    return true;
 }
 
-bool serialize_json_object(json& js, yocto_scene& value, bool save) {
+void serialize_json_object(json& js, yocto_scene& value, bool save) {
     return serialize_json_object(js, value, value, save);
 }
 
@@ -1721,10 +1667,7 @@ bool load_json_scene(const string& filename, yocto_scene& scene,
 
     // deserialize json
     try {
-        if (!serialize_json_object(js, scene, false)) {
-            log_io_error("could not deserialize json {}", filename);
-            return false;
-        }
+        serialize_json_object(js, scene, false);
     } catch (...) {
         log_io_error("could not deserialize json {}", filename);
         return false;
@@ -1807,10 +1750,7 @@ bool save_json_scene(const string& filename, const yocto_scene& scene,
         js["asset"]["format"] = "Yocto/Scene";
         js["asset"]["generator"] =
             "Yocto/GL - https://github.com/xelatihy/yocto-gl";
-        if (!serialize_json_object(js, (yocto_scene&)scene, true)) {
-            log_io_error("could not serialize json {}", filename);
-            return false;
-        }
+        serialize_json_object(js, (yocto_scene&)scene, true);
     } catch (...) {
         log_io_error("could not serialize json {}", filename);
         return false;

@@ -175,9 +175,9 @@
             "material": "obj4",
             "!!proc": {
                 "type": "quad_bulged",
-                "steps": [64, 32],
+                "steps": 32,
                 "size": 1,
-                "uvsize": [1, 1]
+                "uvsize": 1
             }
         },
         {
