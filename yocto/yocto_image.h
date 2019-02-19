@@ -119,15 +119,14 @@ struct image {
         , height{size.y}
         , pixels{value, value + (size_t)size.x * (size_t)size.y} {}
 
-    // element access
-    T&       operator[](const vec2i& ij) { return pixels[ij.x * width + ij.y]; }
-    const T& operator[](const vec2i& ij) const {
-        return pixels[ij.x * width + ij.y];
-    }
+    // size
+    void resize(int width, int height);
 
-    // row access (will eventually return an array_view or span)
-    T*       operator[](int i) { return pixels.data() + i * width; }
-    const T* operator[](int i) const { return pixels.data() + i * width; }
+    // element access
+    T&       operator[](const vec2i& ij) { return pixels[ij.y * width + ij.x]; }
+    const T& operator[](const vec2i& ij) const {
+        return pixels[ij.y * width + ij.x];
+    }
 };
 
 // Typedefs
@@ -181,8 +180,8 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-vector<image_region> make_image_regions(
-    int width, int height, int region_size = 32, bool shuffled = false);
+void make_image_regions(vector<image_region>& regions, int width, int height,
+    int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
@@ -216,52 +215,50 @@ image4f resize_image(const image4f& img, int width, int height);
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Make example images in linear color space.
-image4f make_grid_image(int width, int height, int tile = 8,
+// Make example images in linear color space. Takes as input images allocated
+// to the desired size and fill the pixel with expected values.
+void make_grid_image(image4f& img, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
-image4f make_checker_image(int width, int height, int tile = 8,
+void make_checker_image(image4f& img, int tile = 8,
     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
     const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
-image4f make_bumpdimple_image(int width, int height, int tile = 8);
-image4f make_ramp_image(int width, int height, const vec4f& c0, const vec4f& c1,
-    float srgb = false);
-image4f make_gammaramp_image(int width, int height);
-image4f make_uvramp_image(int width, int height);
-image4f make_uvgrid_image(
-    int width, int height, int tile = 8, bool colored = true);
-image4f make_blackbodyramp_image(int width, int height,
-    float start_temperature = 1000, float end_temperature = 12000);
+void make_bumpdimple_image(image4f& img, int tile = 8);
+void make_ramp_image(
+    image4f& img, const vec4f& c0, const vec4f& c1, float srgb = false);
+void make_gammaramp_image(image4f& img);
+void make_uvramp_image(image4f& img);
+void make_uvgrid_image(image4f& img, int tile = 8, bool colored = true);
+void make_blackbodyramp_image(image4f& img, float start_temperature = 1000,
+    float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
-image4f bump_to_normal_map(const image4f& img, float scale = 1);
+void bump_to_normal_map(image4f& norm, const image4f& img, float scale = 1);
 
 // Make a sunsky HDR model with sun at sun_angle elevation in [0,pif/2],
 // turbidity in [1.7,10] with or without sun. The sun can be enabled or
 // disabled with has_sun. The sun parameters can be slightly modified by
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
-image4f make_sunsky_image(int width, int height, float sun_angle,
-    float turbidity = 3, bool has_sun = false, float sun_intensity = 1.0f,
-    float sun_temperature = 0, const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
+void make_sunsky_image(image4f& img, float sun_angle, float turbidity = 3,
+    bool has_sun = false, float sun_intensity = 1.0f, float sun_temperature = 0,
+    const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
-image4f make_lights_image(int width, int height, const vec3f& le = {1, 1, 1},
+void make_lights_image(image4f& img, const vec3f& le = {1, 1, 1},
     int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
     float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
-image4f make_noise_image(
-    int width, int height, float scale = 1, bool wrap = true);
-image4f make_fbm_image(int width, int height, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
-image4f make_ridge_image(int width, int height, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, float offset = 1.0f,
-    int octaves = 6, bool wrap = true);
-image4f make_turbulence_image(int width, int height, float scale = 1,
-    float lacunarity = 2, float gain = 0.5f, int octaves = 6, bool wrap = true);
+void make_noise_image(image4f& img, float scale = 1, bool wrap = true);
+void make_fbm_image(image4f& img, float scale = 1, float lacunarity = 2,
+    float gain = 0.5f, int octaves = 6, bool wrap = true);
+void make_ridge_image(image4f& img, float scale = 1, float lacunarity = 2,
+    float gain = 0.5f, float offset = 1.0f, int octaves = 6, bool wrap = true);
+void make_turbulence_image(image4f& img, float scale = 1, float lacunarity = 2,
+    float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 // Add a border to an image
-image4f add_image_border(const image4f& img, int border_width = 2,
+void add_image_border(image4f& img, int border_width = 2,
     const vec4f& border_color = {0, 0, 0, 1});
 
 }  // namespace yocto
@@ -302,8 +299,11 @@ struct volume {
         : width{size.x}
         , height{size.y}
         , depth{size.z}
-        , voxels(
-              value, value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+        , voxels(value,
+              value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+
+    // size
+    void resize(int width, int height, int depth);
 
     // element access
     T& operator[](const vec3i& ijk) {
@@ -335,8 +335,7 @@ inline float*       data(volume1f& vol) { return data(vol.voxels); }
 inline const float* data(const volume1f& vol) { return data(vol.voxels); }
 
 // make a simple example volume
-volume1f make_test_volume(
-    int width, int height, int depth, float scale = 10, float exponent = 6);
+void make_test_volume(volume1f& vol, float scale = 10, float exponent = 6);
 
 }  // namespace yocto
 
@@ -603,6 +602,16 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Image resize
+template <typename T>
+inline void image<T>::resize(int width, int height) {
+    if (width * height != this->width * this->height) {
+        this->width  = width;
+        this->height = height;
+        this->pixels.resize((size_t)width * (size_t)height);
+    }
+}
+
 // Gets pixels in an image region
 template <typename T>
 inline image<T> get_image_region(
@@ -617,9 +626,9 @@ inline image<T> get_image_region(
 }
 
 // Splits an image into an array of regions
-inline vector<image_region> make_image_regions(
-    int width, int height, int region_size, bool shuffled) {
-    auto regions = vector<image_region>{};
+inline void make_image_regions(vector<image_region>& regions, int width,
+    int height, int region_size, bool shuffled) {
+    regions.clear();
     for (auto y = 0; y < height; y += region_size) {
         for (auto x = 0; x < width; x += region_size) {
             regions.push_back({x, y, min(region_size, width - x),
@@ -628,9 +637,26 @@ inline vector<image_region> make_image_regions(
     }
     if (shuffled) {
         auto rng = rng_state{};
-        regions  = random_shuffle(regions, rng);
+        random_shuffle(regions, rng);
     }
-    return regions;
+}
+
+}  // namespace yocto
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION FOR VOLUME UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+// size
+template <typename T>
+inline void volume<T>::resize(int width, int height, int depth) {
+    if (width * height * depth != this->width * this->height * this->depth) {
+        this->width  = width;
+        this->height = height;
+        this->depth  = depth;
+        this->voxels.resize((size_t)width * (size_t)height * (size_t)depth);
+    }
 }
 
 }  // namespace yocto

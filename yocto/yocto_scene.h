@@ -27,7 +27,7 @@
 // 3. compute interpolated values over scene elements with `evaluate_XXX()`
 //    functions
 // 4. for ray-intersection and closest point queries, create a BVH with
-//    `make_scene_bvh()` and intersect with with `intersect_scene_bvh()`;
+//    `build_scene_bvh()` and intersect with with `intersect_scene_bvh()`;
 //     you can also update the BVH with `refit_scene_bvh()`
 //
 //
@@ -326,12 +326,13 @@ bbox3f compute_shape_bounds(const yocto_shape& shape);
 bbox3f compute_scene_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
-vector<vec3f> compute_shape_normals(const yocto_shape& shape);
-vector<vec3f> compute_surface_normals(const yocto_surface& surface);
+void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
+void compute_surface_normals(
+    const yocto_surface& surface, vector<vec3f>& normals);
 
 // Low level make/update bvh functions.
-bvh_scene make_scene_bvh(
-    const yocto_scene& scene, const build_bvh_options& options = {});
+void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
+    const build_bvh_options& options = {});
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
     const vector<int>& updated_instances, const vector<int>& updated_shapes,
     const vector<int>& updated_surfaces);
@@ -377,7 +378,7 @@ pair<vec3f, bool> evaluate_shape_element_tangentspace(
     const yocto_shape& shape, int element_id, const vec2f& element_uv = zero2f);
 
 // Sample a shape element based on area/length.
-vector<float>    compute_shape_elements_cdf(const yocto_shape& shape);
+void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf);
 pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float            sample_shape_element_pdf(const yocto_shape& shape,
@@ -402,7 +403,8 @@ pair<vec3f, bool> evaluate_surface_element_tangentspace(
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
-vector<float>    compute_surface_elements_cdf(const yocto_surface& surface);
+void compute_surface_elements_cdf(
+    const yocto_surface& surface, vector<float>& cdf);
 pair<int, vec2f> sample_surface_element(const yocto_surface& surface,
     const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float            sample_surface_element_pdf(const yocto_surface& surface,
@@ -522,8 +524,8 @@ vec3f evaluate_environment_emission(
     const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
-vector<float> compute_environment_texels_cdf(
-    const yocto_scene& scene, const yocto_environment& environment);
+void  compute_environment_texels_cdf(const yocto_scene& scene,
+     const yocto_environment& environment, vector<float>& texels_cdf);
 vec3f sample_environment_direction(const yocto_scene& scene,
     const yocto_environment& environment, const vector<float>& texels_cdf,
     float re, const vec2f& ruv);

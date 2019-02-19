@@ -39,10 +39,9 @@ image4f compute_diff_image(const image4f& a, const image4f& b) {
     auto diff = image{a.width, a.height, zero4f};
     for (auto j = 0; j < a.height; j++) {
         for (auto i = 0; i < a.width; i++) {
-            diff[{i,j}] = {abs(a[{i,j}].x - b[{i,j}].x),
-                abs(a[{i,j}].y - b[{i,j}].y),
-                abs(a[{i,j}].z - b[{i,j}].z),
-                abs(a[{i,j}].w - b[{i,j}].w)};
+            diff[{i, j}] = {abs(a[{i, j}].x - b[{i, j}].x),
+                abs(a[{i, j}].y - b[{i, j}].y), abs(a[{i, j}].z - b[{i, j}].z),
+                abs(a[{i, j}].w - b[{i, j}].w)};
         }
     }
     return diff;
@@ -61,8 +60,8 @@ image4f display_diff(const image4f& diff) {
     auto display = image{diff.width, diff.height, zero4f};
     for (auto j = 0; j < diff.height; j++) {
         for (auto i = 0; i < diff.width; i++) {
-            auto diff_value   = max(diff[{i,j}]);
-            display[{i,j}] = {diff_value, diff_value, diff_value, 1};
+            auto diff_value = max(diff[{i, j}]);
+            display[{i, j}] = {diff_value, diff_value, diff_value, 1};
         }
     }
     return display;
@@ -70,17 +69,17 @@ image4f display_diff(const image4f& diff) {
 
 int main(int argc, char* argv[]) {
     // parse command line
-    auto parser = make_cmdline_parser(
-        argc, argv, "Compares two images", "yimdiff");
-    auto threshold = parse_argument(
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Compares two images", "yimdiff");
+    auto threshold = parse_cmdline_argument(
         parser, "--threshold,-t", 0.1f, "Thhhreshold");
-    auto output = parse_argument(
+    auto output = parse_cmdline_argument(
         parser, "--output,-o", ""s, "output image filename", false);
-    auto filename1 = parse_argument(
+    auto filename1 = parse_cmdline_argument(
         parser, "filename1", "in1.png"s, "input image filename", true);
-    auto filename2 = parse_argument(
+    auto filename2 = parse_cmdline_argument(
         parser, "filename2", "in2.png"s, "input image filename", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // check image type
     auto img1 = image4f{}, img2 = image4f{};

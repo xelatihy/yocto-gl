@@ -38,9 +38,11 @@
 namespace yocto {
 
 // Compute per-vertex tangents for lines.
-vector<vec3f> compute_vertex_tangents(
+void compute_vertex_tangents(vector<vec3f>& tangents,
     const vector<vec2i>& lines, const vector<vec3f>& positions) {
-    auto tangents = vector<vec3f>{positions.size()};
+    if (tangents.size() != positions.size()) {
+        throw std::out_of_range("array should be the same length");
+    }
     for (auto& tangent : tangents) tangent = zero3f;
     for (auto& l : lines) {
         auto tangent = line_tangent(positions[l.x], positions[l.y]);
@@ -49,13 +51,14 @@ vector<vec3f> compute_vertex_tangents(
         tangents[l.y] += tangent * length;
     }
     for (auto& tangent : tangents) tangent = normalize(tangent);
-    return tangents;
 }
 
 // Compute per-vertex normals for triangles.
-vector<vec3f> compute_vertex_normals(
+void compute_vertex_normals(vector<vec3f>& normals,
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto normals = vector<vec3f>{positions.size()};
+    if (normals.size() != positions.size()) {
+        throw std::out_of_range("array should be the same length");
+    }
     for (auto& normal : normals) normal = zero3f;
     for (auto& t : triangles) {
         auto normal = triangle_normal(
@@ -67,13 +70,14 @@ vector<vec3f> compute_vertex_normals(
         normals[t.z] += normal * area;
     }
     for (auto& normal : normals) normal = normalize(normal);
-    return normals;
 }
 
 // Compute per-vertex normals for quads.
-vector<vec3f> compute_vertex_normals(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
-    auto normals = vector<vec3f>{positions.size()};
+void compute_vertex_normals(vector<vec3f>& normals, const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+    if (normals.size() != positions.size()) {
+        throw std::out_of_range("array should be the same length");
+    }
     for (auto& normal : normals) normal = zero3f;
     for (auto& q : quads) {
         auto normal = quad_normal(
@@ -86,7 +90,6 @@ vector<vec3f> compute_vertex_normals(
         if (q.z != q.w) normals[q.w] += normal * area;
     }
     for (auto& normal : normals) normal = normalize(normal);
-    return normals;
 }
 
 // Compute per-vertex tangent frame for triangle meshes.
@@ -94,9 +97,9 @@ vector<vec3f> compute_vertex_normals(
 // The first three components are the tangent with respect to the U texcoord.
 // The fourth component is the sign of the tangent wrt the V texcoord.
 // Tangent frame is useful in normal mapping.
-vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords) {
+void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords) {
     auto tangu = vector<vec3f>(positions.size(), zero3f);
     auto tangv = vector<vec3f>(positions.size(), zero3f);
     for (auto t : triangles) {
@@ -110,23 +113,24 @@ vector<vec4f> compute_tangent_spaces(const vector<vec3i>& triangles,
     }
     for (auto& t : tangu) t = normalize(t);
     for (auto& t : tangv) t = normalize(t);
-    auto tangentspaces = vector<vec4f>(positions.size(), zero4f);
+    for (auto& tangent : tangent_spaces) tangent = zero4f;
     for (auto i = 0; i < positions.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], normals[i]);
         auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f :
                                                                     1.0f;
-        tangentspaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
+        tangent_spaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
-    return tangentspaces;
 }
 
 // Apply skinning
-tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<frame3f>& xforms) {
-    auto skinned_positions = vector<vec3f>{positions.size()};
-    auto skinned_normals   = vector<vec3f>{normals};
+void compute_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<frame3f>& xforms) {
+    if (skinned_positions.size() != positions.size() ||
+        skinned_normals.size() != normals.size()) {
+        throw std::out_of_range("arrays should be the same size");
+    }
     for (auto i = 0; i < positions.size(); i++) {
         skinned_positions[i] =
             transform_point(xforms[joints[i].x], positions[i]) * weights[i].x +
@@ -134,7 +138,7 @@ tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
             transform_point(xforms[joints[i].z], positions[i]) * weights[i].z +
             transform_point(xforms[joints[i].w], positions[i]) * weights[i].w;
     }
-    for (auto i = 0; i < positions.size(); i++) {
+    for (auto i = 0; i < normals.size(); i++) {
         skinned_normals[i] = normalize(
             transform_direction(xforms[joints[i].x], normals[i]) *
                 weights[i].x +
@@ -145,16 +149,17 @@ tuple<vector<vec3f>, vector<vec3f>> compute_skinning(
             transform_direction(xforms[joints[i].w], normals[i]) *
                 weights[i].w);
     }
-    return {skinned_positions, skinned_normals};
 }
 
 // Apply skinning as specified in Khronos glTF
-tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec4f>& weights, const vector<vec4i>& joints,
-    const vector<mat4f>& xforms) {
-    auto skinned_positions = vector<vec3f>{positions.size()};
-    auto skinned_normals   = vector<vec3f>{normals};
+void compute_matrix_skinning(vector<vec3f>& skinned_positions,
+    vector<vec3f>& skinned_normals, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec4f>& weights,
+    const vector<vec4i>& joints, const vector<mat4f>& xforms) {
+    if (skinned_positions.size() != positions.size() ||
+        skinned_normals.size() != normals.size()) {
+        throw std::out_of_range("arrays should be the same size");
+    }
     for (auto i = 0; i < positions.size(); i++) {
         auto xform = xforms[joints[i].x] * weights[i].x +
                      xforms[joints[i].y] * weights[i].y +
@@ -163,7 +168,6 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
         skinned_positions[i] = transform_point(xform, positions[i]);
         skinned_normals[i] = normalize(transform_direction(xform, normals[i]));
     }
-    return {skinned_positions, skinned_normals};
 }
 
 }  // namespace yocto
@@ -172,29 +176,6 @@ tuple<vector<vec3f>, vector<vec3f>> compute_matrix_skinning(
 // IMPLEMENTATION OF EDGE AND GRID DATA STRUCTURES
 // -----------------------------------------------------------------------------
 namespace yocto {
-
-// Creates an edge map
-edge_map make_edge_map(const vector<vec3i>& triangles) {
-    auto emap = edge_map{};
-    for (int i = 0; i < triangles.size(); i++) {
-        auto& t = triangles[i];
-        insert_edge(emap, {t.x, t.y});
-        insert_edge(emap, {t.y, t.z});
-        insert_edge(emap, {t.z, t.x});
-    }
-    return emap;
-}
-edge_map make_edge_map(const vector<vec4i>& quads) {
-    auto emap = edge_map{};
-    for (int i = 0; i < quads.size(); i++) {
-        auto& q = quads[i];
-        insert_edge(emap, {q.x, q.y});
-        insert_edge(emap, {q.y, q.z});
-        if (q.z != q.w) insert_edge(emap, {q.z, q.w});
-        insert_edge(emap, {q.w, q.x});
-    }
-    return emap;
-}
 
 // Create key entry for edge_map
 inline vec2i make_edgemap_edge(const vec2i& e) {
@@ -244,20 +225,25 @@ int get_edge_index(const edge_map& emap, const vec2i& edge) {
     return iterator->second;
 }
 // Get a list of edges, boundary edges, boundary vertices
-vector<vec2i> get_edges(const edge_map& emap) { return emap.edges; }
-vector<vec2i> get_boundary(const edge_map& emap) {
-    auto boundary = vector<vec2i>();
+void get_edges(const edge_map& emap, vector<vec2i>& edges) {
+    edges = emap.edges;
+}
+void get_boundary(const edge_map& emap, vector<vec2i>& boundary) {
+    boundary.clear();
     for (auto edge_index = 0; edge_index < emap.edges.size(); edge_index++) {
         if (emap.num_faces[edge_index] < 2)
             boundary.push_back(emap.edges[edge_index]);
     }
-    return boundary;
 }
-vector<vec2i> get_edges(const vector<vec3i>& triangles) {
-    return get_edges(make_edge_map(triangles));
+void get_edges(const vector<vec3i>& triangles, vector<vec2i>& edges) {
+    auto emap = edge_map{};
+    insert_edges(emap, triangles);
+    get_edges(emap, edges);
 }
-vector<vec2i> get_edges(const vector<vec4i>& quads) {
-    return get_edges(make_edge_map(quads));
+void get_edges(const vector<vec4i>& quads, vector<vec2i>& edges) {
+    auto emap = edge_map{};
+    insert_edges(emap, quads);
+    get_edges(emap, edges);
 }
 
 // Gets the cell index
@@ -267,18 +253,17 @@ vec3i get_cell_index(const hash_grid& grid, const vec3f& position) {
 }
 
 // Create a hash_grid
-hash_grid make_hash_grid(float cell_size) {
-    auto grid          = hash_grid{};
+void init_hash_grid(hash_grid& grid, float cell_size) {
+    grid               = hash_grid{};
     grid.cell_size     = cell_size;
     grid.cell_inv_size = 1 / cell_size;
-    return grid;
 }
-hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size) {
-    auto grid          = hash_grid{};
+void init_hash_grid(
+    hash_grid& grid, const vector<vec3f>& positions, float cell_size) {
+    grid               = hash_grid{};
     grid.cell_size     = cell_size;
     grid.cell_inv_size = 1 / cell_size;
     for (auto& position : positions) insert_vertex(grid, position);
-    return grid;
 }
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position) {
@@ -289,11 +274,11 @@ int insert_vertex(hash_grid& grid, const vec3f& position) {
     return vertex_id;
 }
 // Finds the nearest neighboors within a given radius
-vector<int> find_nearest_neightbors(const hash_grid& grid,
+void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
     const vec3f& position, float max_radius, int skip_id) {
-    auto cell               = get_cell_index(grid, position);
-    auto cell_radius        = (int)(max_radius * grid.cell_inv_size) + 1;
-    auto neighboors         = vector<int>{};
+    auto cell        = get_cell_index(grid, position);
+    auto cell_radius = (int)(max_radius * grid.cell_inv_size) + 1;
+    neighboors.clear();
     auto max_radius_squared = max_radius * max_radius;
     for (auto k = -cell_radius; k <= cell_radius; k++) {
         for (auto j = -cell_radius; j <= cell_radius; j++) {
@@ -312,16 +297,15 @@ vector<int> find_nearest_neightbors(const hash_grid& grid,
             }
         }
     }
-    return neighboors;
 }
-vector<int> find_nearest_neightbors(
-    const hash_grid& grid, const vec3f& position, float max_radius) {
-    return find_nearest_neightbors(grid, position, max_radius, -1);
+void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
+    const vec3f& position, float max_radius) {
+    find_nearest_neightbors(grid, neighboors, position, max_radius, -1);
 }
-vector<int> find_nearest_neightbors(
-    const hash_grid& grid, int vertex_id, float max_radius) {
-    return find_nearest_neightbors(
-        grid, grid.positions[vertex_id], max_radius, vertex_id);
+void find_nearest_neightbors(const hash_grid& grid, vector<int>& neighboors,
+    int vertex_id, float max_radius) {
+    find_nearest_neightbors(
+        grid, neighboors, grid.positions[vertex_id], max_radius, vertex_id);
 }
 
 }  // namespace yocto
@@ -332,21 +316,21 @@ vector<int> find_nearest_neightbors(
 namespace yocto {
 
 // Convert quads to triangles
-vector<vec3i> convert_quads_to_triangles(const vector<vec4i>& quads) {
-    auto triangles = vector<vec3i>();
+void convert_quads_to_triangles(
+    vector<vec3i>& triangles, const vector<vec4i>& quads) {
+    triangles.clear();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
         if (q.z != q.w) triangles.push_back({q.z, q.w, q.y});
     }
-    return triangles;
 }
 
 // Convert quads to triangles with a diamond-like topology.
 // Quads have to be consecutive one row after another.
-vector<vec3i> convert_quads_to_triangles(
-    const vector<vec4i>& quads, int row_length) {
-    auto triangles = vector<vec3i>();
+void convert_quads_to_triangles(
+    vector<vec3i>& triangles, const vector<vec4i>& quads, int row_length) {
+    triangles.clear();
     triangles.reserve(quads.size() * 2);
     for (auto& q : quads) {
         triangles.push_back({q.x, q.y, q.w});
@@ -366,39 +350,39 @@ vector<vec3i> convert_quads_to_triangles(
     //         }
     //     }
     // }
-    return triangles;
 }
 
 // Convert triangles to quads by creating degenerate quads
-vector<vec4i> convert_triangles_to_quads(const vector<vec3i>& triangles) {
-    auto quads = vector<vec4i>();
+void convert_triangles_to_quads(
+    vector<vec4i>& quads, const vector<vec3i>& triangles) {
+    quads.clear();
     quads.reserve(triangles.size());
     for (auto& t : triangles) quads.push_back({t.x, t.y, t.z, t.z});
-    return quads;
 }
 
 // Convert beziers to lines using 3 lines for each bezier.
-vector<vec2i> convert_bezier_to_lines(const vector<vec4i>& beziers) {
-    auto lines = vector<vec2i>();
+void convert_bezier_to_lines(
+    vector<vec2i>& lines, const vector<vec4i>& beziers) {
+    lines.clear();
     lines.reserve(beziers.size() * 3);
     for (auto b : beziers) {
         lines.push_back({b.x, b.y});
         lines.push_back({b.y, b.z});
         lines.push_back({b.z, b.w});
     }
-    return lines;
 }
 
 // Convert face varying data to single primitives. Returns the quads indices
 // and filled vectors for pos, norm and texcoord.
-tuple<vector<vec4i>, vector<vec3f>, vector<vec3f>, vector<vec2f>>
-convert_face_varying(const vector<vec4i>& quads_positions,
-    const vector<vec4i>&                  quads_normals,
+void convert_face_varying(vector<vec4i>& split_quads,
+    vector<vec3f>& split_positions, vector<vec3f>& split_normals,
+    vector<vec2f>& split_texturecoords, const vector<vec4i>& quads_positions,
+    const vector<vec4i>& quads_normals,
     const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords) {
     // make faces unique
     unordered_map<vec3i, int> vert_map;
-    auto split_quads = vector<vec4i>(quads_positions.size());
+    split_quads.resize(quads_positions.size());
     for (auto fid = 0; fid < quads_positions.size(); fid++) {
         for (auto c = 0; c < 4; c++) {
             auto v = vec3i{
@@ -420,72 +404,72 @@ convert_face_varying(const vector<vec4i>& quads_positions,
     }
 
     // fill vert data
-    auto split_positions = vector<vec3f>{};
+    split_positions.clear();
     if (!empty(positions)) {
         split_positions.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_positions[index] = positions[vert.x];
         }
     }
-    auto split_normals = vector<vec3f>{};
+    split_normals.clear();
     if (!empty(normals)) {
         split_normals.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_normals[index] = normals[vert.y];
         }
     }
-    auto split_texcturecoords = vector<vec2f>{};
+    split_texturecoords.clear();
     if (!empty(texturecoords)) {
-        split_texcturecoords.resize(vert_map.size());
+        split_texturecoords.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
-            split_texcturecoords[index] = texturecoords[vert.z];
+            split_texturecoords[index] = texturecoords[vert.z];
         }
     }
-
-    return {split_quads, split_positions, split_normals, split_texcturecoords};
 }
 
 // Split primitives per id
 template <typename T>
-vector<vector<T>> ungroup_elems(
-    const vector<T>& elems, const vector<int>& ids) {
-    auto max_id      = *max_element(ids.begin(), ids.end());
-    auto split_elems = vector<vector<T>>(max_id + 1);
+void ungroup_elems(vector<vector<T>>& split_elems, const vector<T>& elems,
+    const vector<int>& ids) {
+    auto max_id = *max_element(ids.begin(), ids.end());
+    split_elems.resize(max_id + 1);
     for (auto elem_id = 0; elem_id < elems.size(); elem_id++) {
         split_elems[ids[elem_id]].push_back(elems[elem_id]);
     }
-    return split_elems;
 }
-vector<vector<vec2i>> ungroup_lines(
+void ungroup_lines(vector<vector<vec2i>>& split_lines,
     const vector<vec2i>& lines, const vector<int>& ids) {
-    return ungroup_elems(lines, ids);
+    ungroup_elems(split_lines, lines, ids);
 }
-vector<vector<vec3i>> ungroup_triangles(
+void ungroup_triangles(vector<vector<vec3i>>& split_triangles,
     const vector<vec3i>& triangles, const vector<int>& ids) {
-    return ungroup_elems(triangles, ids);
+    ungroup_elems(split_triangles, triangles, ids);
 }
-vector<vector<vec4i>> ungroup_quads(
+void ungroup_quads(vector<vector<vec4i>>& split_quads,
     const vector<vec4i>& quads, const vector<int>& ids) {
-    return ungroup_elems(quads, ids);
+    ungroup_elems(split_quads, quads, ids);
 }
 
 // Weld vertices within a threshold.
-tuple<vector<vec3f>, vector<int>> weld_vertices(
-    const vector<vec3f>& positions, float threshold) {
-    auto welded_indices   = vector<int>(positions.size());
-    auto welded_positions = vector<vec3f>();
-    auto grid             = make_hash_grid(threshold);
+void weld_vertices(
+    vector<vec3f>& positions, vector<int>& indices, float threshold) {
+    indices.resize(positions.size());
+    auto welded_positions = vector<vec3f>{};
+    auto grid             = hash_grid{};
+    init_hash_grid(grid, threshold);
+    auto neighboors = vector<int>{};
     for (auto vertex_id = 0; vertex_id < positions.size(); vertex_id++) {
-        auto& position   = positions[vertex_id];
-        auto  neighboors = find_nearest_neightbors(grid, position, threshold);
+        auto& position = positions[vertex_id];
+        find_nearest_neightbors(grid, neighboors, position, threshold);
         if (neighboors.empty()) {
             welded_positions.push_back(position);
-            welded_indices[vertex_id] = (int)welded_positions.size() - 1;
+            indices[vertex_id] = (int)welded_positions.size() - 1;
             insert_vertex(grid, position);
         } else {
-            welded_indices[vertex_id] = neighboors.front();
+            indices[vertex_id] = neighboors.front();
         }
     }
+    swap(welded_positions, positions);
     // for (auto i = 0; i < positions.size(); i++) {
     //     welded_indices[i] = (int)welded_positions.size();
     //     for (auto j = 0; j < welded_positions.size(); j++) {
@@ -497,34 +481,25 @@ tuple<vector<vec3f>, vector<int>> weld_vertices(
     //     if (welded_indices[i] == (int)welded_positions.size())
     //         welded_positions.push_back(positions[i]);
     // }
-    return {welded_positions, welded_indices};
 }
-tuple<vector<vec3i>, vector<vec3f>> weld_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions,
-    float threshold) {
-    auto [welded_positions, welded_indices] = weld_vertices(
-        positions, threshold);
-    auto welded_triangles = vector<vec3i>{};
-    for (auto& t : triangles) {
-        welded_triangles.push_back(
-            {welded_indices[t.x], welded_indices[t.y], welded_indices[t.z]});
-    }
-    return {welded_triangles, welded_positions};
+void weld_triangles(
+    vector<vec3i>& triangles, vector<vec3f>& positions, float threshold) {
+    auto indices = vector<int>{};
+    weld_vertices(positions, indices, threshold);
+    for (auto& t : triangles) t = {indices[t.x], indices[t.y], indices[t.z]};
 }
-tuple<vector<vec4i>, vector<vec3f>> weld_quads(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, float threshold) {
-    auto [welded_positions, welded_indices] = weld_vertices(
-        positions, threshold);
+void weld_quads(
+    vector<vec4i>& quads, vector<vec3f>& positions, float threshold) {
+    auto indices = vector<int>{};
+    weld_vertices(positions, indices, threshold);
     auto welded_quads = vector<vec4i>{};
-    for (auto& q : quads) {
-        welded_quads.push_back({
-            welded_indices[q.x],
-            welded_indices[q.y],
-            welded_indices[q.z],
-            welded_indices[q.w],
-        });
-    }
-    return {welded_quads, welded_positions};
+    for (auto& q : quads)
+        q = {
+            indices[q.x],
+            indices[q.y],
+            indices[q.z],
+            indices[q.w],
+        };
 }
 
 // Merge shape elements
@@ -602,10 +577,9 @@ namespace yocto {
 
 // Subdivide lines.
 template <typename T>
-tuple<vector<vec2i>, vector<T>> subdivide_lines_impl(
-    const vector<vec2i>& lines, const vector<T>& vert) {
+void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert) {
     // early exit
-    if (empty(lines) || empty(vert)) return {lines, vert};
+    if (empty(lines) || empty(vert)) return;
     // sizes
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
@@ -623,35 +597,33 @@ tuple<vector<vec2i>, vector<T>> subdivide_lines_impl(
         tlines[i * 2 + 0] = {l.x, nverts + i};
         tlines[i * 2 + 0] = {nverts + i, l.y};
     }
-    return {tlines, tvert};
+    swap(tlines, lines);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec2i>, vector<float>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<float>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<float>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
-tuple<vector<vec2i>, vector<vec2f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec2f>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<vec2f>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
-tuple<vector<vec2i>, vector<vec3f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec3f>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
-tuple<vector<vec2i>, vector<vec4f>> subdivide_lines(
-    const vector<vec2i>& lines, const vector<vec4f>& vert) {
+void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert) {
     return subdivide_lines_impl(lines, vert);
 }
 
 // Subdivide triangle.
 template <typename T>
-tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
-    const vector<vec3i>& triangles, const vector<T>& vert) {
+void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert) {
     // early exit
-    if (empty(triangles) || empty(vert)) return {triangles, vert};
+    if (empty(triangles) || empty(vert)) return;
     // get edges
-    auto emap  = make_edge_map(triangles);
-    auto edges = get_edges(emap);
+    auto emap = edge_map{};
+    insert_edges(emap, triangles);
+    auto edges = vector<vec2i>{};
+    get_edges(emap, edges);
     // number of elements
     auto nverts = (int)vert.size();
     auto nedges = (int)edges.size();
@@ -677,35 +649,33 @@ tuple<vector<vec3i>, vector<T>> subdivide_triangles_impl(
             nverts + get_edge_index(emap, {t.y, t.z}),
             nverts + get_edge_index(emap, {t.z, t.x})};
     }
-    return {ttriangles, tvert};
+    swap(ttriangles, triangles);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec3i>, vector<float>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<float>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<float>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
-tuple<vector<vec3i>, vector<vec2f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec2f>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec2f>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
-tuple<vector<vec3i>, vector<vec3f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec3f>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
-tuple<vector<vec3i>, vector<vec4f>> subdivide_triangles(
-    const vector<vec3i>& triangles, const vector<vec4f>& vert) {
-    return subdivide_triangles_impl(triangles, vert);
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert) {
+    subdivide_triangles_impl(triangles, vert);
 }
 
 // Subdivide quads.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
-    const vector<vec4i>& quads, const vector<T>& vert) {
+void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert) {
     // early exit
-    if (empty(quads) || empty(vert)) return {quads, vert};
+    if (empty(quads) || empty(vert)) return;
     // get edges
-    auto emap  = make_edge_map(quads);
-    auto edges = get_edges(emap);
+    auto emap = edge_map{};
+    insert_edges(emap, quads);
+    auto edges = vector<vec2i>{};
+    get_edges(emap, edges);
     // number of elements
     auto nverts = (int)vert.size();
     auto nedges = (int)edges.size();
@@ -753,32 +723,28 @@ tuple<vector<vec4i>, vector<T>> subdivide_quads_impl(
     }
     tquads.resize(qi);
     // done
-    return {tquads, tvert};
+    swap(tquads, quads);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec4i>, vector<float>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<float>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<float>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
-tuple<vector<vec4i>, vector<vec2f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec2f>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec2f>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
-tuple<vector<vec4i>, vector<vec3f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec3f>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
-tuple<vector<vec4i>, vector<vec4f>> subdivide_quads(
-    const vector<vec4i>& quads, const vector<vec4f>& vert) {
-    return subdivide_quads_impl(quads, vert);
+void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert) {
+    subdivide_quads_impl(quads, vert);
 }
 
 // Subdivide beziers.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_beziers_impl(
-    const vector<vec4i>& beziers, const vector<T>& vert) {
+void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert) {
     // early exit
-    if (empty(beziers) || empty(vert)) return {beziers, vert};
+    if (empty(beziers) || empty(vert)) return;
     // get edges
     auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
@@ -804,36 +770,35 @@ tuple<vector<vec4i>, vector<T>> subdivide_beziers_impl(
     }
 
     // done
-    return {tbeziers, tvert};
+    swap(tbeziers, beziers);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec4i>, vector<float>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<float>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<float>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
-tuple<vector<vec4i>, vector<vec2f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec2f>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec2f>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
-tuple<vector<vec4i>, vector<vec3f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec3f>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
-tuple<vector<vec4i>, vector<vec4f>> subdivide_beziers(
-    const vector<vec4i>& beziers, const vector<vec4f>& vert) {
-    return subdivide_beziers_impl(beziers, vert);
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec4f>& vert) {
+    subdivide_beziers_impl(beziers, vert);
 }
 
 // Subdivide catmullclark.
 template <typename T>
-tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
-    const vector<vec4i>& quads, const vector<T>& vert, bool lock_boundary) {
+void subdivide_catmullclark_impl(
+    vector<vec4i>& quads, vector<T>& vert, bool lock_boundary) {
     // early exit
-    if (empty(quads) || empty(vert)) return {quads, vert};
+    if (empty(quads) || empty(vert)) return;
     // get edges
-    auto emap     = make_edge_map(quads);
-    auto edges    = get_edges(emap);
-    auto boundary = get_boundary(emap);
+    auto emap = edge_map{};
+    insert_edges(emap, quads);
+    auto edges = vector<vec2i>{}, boundary = vector<vec2i>{};
+    get_edges(emap, edges);
+    get_boundary(emap, boundary);
     // number of elements
     auto nverts    = (int)vert.size();
     auto nedges    = (int)edges.size();
@@ -946,24 +911,83 @@ tuple<vector<vec4i>, vector<T>> subdivide_catmullclark_impl(
     tvert = avert;
 
     // done
-    return {tquads, tvert};
+    swap(tquads, quads);
+    swap(tvert, vert);
 }
 
-tuple<vector<vec4i>, vector<float>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<float>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<float>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
-tuple<vector<vec4i>, vector<vec2f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec2f>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec2f>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
-tuple<vector<vec4i>, vector<vec3f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec3f>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec3f>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
 }
-tuple<vector<vec4i>, vector<vec4f>> subdivide_catmullclark(
-    const vector<vec4i>& quads, const vector<vec4f>& vert, bool lock_boundary) {
-    return subdivide_catmullclark_impl(quads, vert, lock_boundary);
+void subdivide_catmullclark(
+    vector<vec4i>& quads, vector<vec4f>& vert, bool lock_boundary) {
+    subdivide_catmullclark_impl(quads, vert, lock_boundary);
+}
+
+template <typename T, typename SubdivideFunc>
+void subdivide_elems_impl(vector<T>& elems, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius, const SubdivideFunc&& subdivied_func) {
+    if (!empty(normals)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, normals);
+    }
+    if (!empty(texturecoords)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, texturecoords);
+    }
+    if (!empty(colors)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, colors);
+    }
+    if (!empty(radius)) {
+        auto elems_ = elems;
+        subdivied_func(elems_, radius);
+    }
+    subdivied_func(elems, positions);
+}
+
+void subdivide_lines(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(lines, positions, normals, texturecoords, colors,
+        radius, [](auto& lines, auto& vert) { subdivide_lines(lines, vert); });
+}
+void subdivide_triangles(vector<vec3i>& triangles, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(triangles, positions, normals, texturecoords, colors,
+        radius, [](auto& triangles, auto& vert) {
+            subdivide_triangles(triangles, vert);
+        });
+}
+void subdivide_quads(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(quads, positions, normals, texturecoords, colors,
+        radius, [](auto& quads, auto& vert) { subdivide_quads(quads, vert); });
+}
+void subdivide_beziers(vector<vec4i>& beziers, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(beziers, positions, normals, texturecoords, colors,
+        radius,
+        [](auto& beziers, auto& vert) { subdivide_beziers(beziers, vert); });
+}
+void subdivide_catmullclark(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
+    vector<float>& radius) {
+    subdivide_elems_impl(quads, positions, normals, texturecoords, colors,
+        radius,
+        [](auto& quads, auto& vert) { subdivide_catmullclark(quads, vert); });
 }
 
 }  // namespace yocto
@@ -977,25 +1001,23 @@ namespace yocto {
 int sample_points_element(int npoints, float re) {
     return sample_uniform_index(npoints, re);
 }
-vector<float> sample_points_element_cdf(int npoints) {
-    auto cdf = vector<float>(npoints);
+void sample_points_element_cdf(vector<float>& cdf, int npoints) {
+    cdf.resize(npoints);
     for (auto i = 0; i < cdf.size(); i++) cdf[i] = 1 + (i ? cdf[i - 1] : 0);
-    return cdf;
 }
 int sample_points_element(const vector<float>& cdf, float re) {
     return sample_discrete_distribution(cdf, re);
 }
 
 // Pick a point on lines uniformly.
-vector<float> sample_lines_element_cdf(
-    const vector<vec2i>& lines, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(lines.size());
+void sample_lines_element_cdf(vector<float>& cdf, const vector<vec2i>& lines,
+    const vector<vec3f>& positions) {
+    cdf.resize(lines.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto l = lines[i];
         auto w = line_length(positions[l.x], positions[l.y]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 pair<int, float> sample_lines_element(
     const vector<float>& cdf, float re, float ru) {
@@ -1003,15 +1025,14 @@ pair<int, float> sample_lines_element(
 }
 
 // Pick a point on a triangle mesh uniformly.
-vector<float> sample_triangles_element_cdf(
+void sample_triangles_element_cdf(vector<float>& cdf,
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(triangles.size());
+    cdf.resize(triangles.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto t = triangles[i];
         auto w = triangle_area(positions[t.x], positions[t.y], positions[t.z]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 pair<int, vec2f> sample_triangles_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -1020,16 +1041,15 @@ pair<int, vec2f> sample_triangles_element(
 }
 
 // Pick a point on a quad mesh uniformly.
-vector<float> sample_quads_element_cdf(
-    const vector<vec4i>& quads, const vector<vec3f>& positions) {
-    auto cdf = vector<float>(quads.size());
+void sample_quads_element_cdf(vector<float>& cdf, const vector<vec4i>& quads,
+    const vector<vec3f>& positions) {
+    cdf.resize(quads.size());
     for (auto i = 0; i < cdf.size(); i++) {
         auto q = quads[i];
         auto w = quad_area(
             positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         cdf[i] = w + (i ? cdf[i - 1] : 0);
     }
-    return cdf;
 }
 pair<int, vec2f> sample_quads_element(
     const vector<float>& cdf, float re, const vec2f& ruv) {
@@ -1048,14 +1068,16 @@ pair<int, vec2f> sample_quads_element(const vector<vec4i>& quads,
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
+void sample_triangles_points(vector<vec3f>& sampled_positions,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
     const vector<vec3i>& triangles, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed) {
-    auto sampled_positions     = vector<vec3f>(npoints);
-    auto sampled_normals       = vector<vec3f>(npoints);
-    auto sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf = sample_triangles_element_cdf(triangles, positions);
+    sampled_positions.resize(npoints);
+    sampled_normals.resize(npoints);
+    sampled_texturecoords.resize(npoints);
+    auto cdf = vector<float>{};
+    sample_triangles_element_cdf(cdf, triangles, positions);
     auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto [triangle_id, triangle_uv] = sample_triangles_element(cdf,
@@ -1078,21 +1100,22 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_triangles_points(
             sampled_texturecoords[i] = zero2f;
         }
     }
-    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 // Samples a set of points over a triangle mesh uniformly. The rng function
 // takes the point index and returns vec3f numbers uniform directibuted in
 // [0,1]^3. unorm and texcoord are optional.
-tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
+void sample_quads_points(vector<vec3f>& sampled_positions,
+    vector<vec3f>& sampled_normals, vector<vec2f>& sampled_texturecoords,
     const vector<vec4i>& quads, const vector<vec3f>& positions,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     int npoints, int seed) {
-    auto sampled_positions     = vector<vec3f>(npoints);
-    auto sampled_normals       = vector<vec3f>(npoints);
-    auto sampled_texturecoords = vector<vec2f>(npoints);
-    auto cdf                   = sample_quads_element_cdf(quads, positions);
-    auto rng                   = make_rng(seed);
+    sampled_positions.resize(npoints);
+    sampled_normals.resize(npoints);
+    sampled_texturecoords.resize(npoints);
+    auto cdf = vector<float>{};
+    sample_quads_element_cdf(cdf, quads, positions);
+    auto rng = make_rng(seed);
     for (auto i = 0; i < npoints; i++) {
         auto [quad_id, quad_uv] = sample_quads_element(cdf,
             get_random_float(rng),
@@ -1115,7 +1138,6 @@ tuple<vector<vec3f>, vector<vec3f>, vector<vec2f>> sample_quads_points(
             sampled_texturecoords[i] = zero2f;
         }
     }
-    return {sampled_positions, sampled_normals, sampled_texturecoords};
 }
 
 }  // namespace yocto
@@ -1144,21 +1166,22 @@ inline void add_undirected_arc(geodesic_solver& solver, int na, int nb) {
     add_directed_arc(solver, nb, na);
 }
 
-geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, bool use_steiner_points) {
-    auto solver = geodesic_solver();
+void make_edge_solver_slow(geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    bool use_steiner_points) {
     solver.graph.reserve(positions.size());
 
     for (int i = 0; i < positions.size(); i++) add_node(solver, positions[i]);
 
-    auto emap = make_edge_map(triangles);
-    for (auto& edge : get_edges(emap)) {
+    auto emap = edge_map{};
+    insert_edges(emap, triangles);
+    auto edges = vector<vec2i>{};
+    get_edges(emap, edges);
+    for (auto& edge : edges) {
         add_undirected_arc(solver, edge.x, edge.y);
     }
 
-    if (!use_steiner_points) return solver;
-
-    auto edges = get_edges(emap);
+    if (!use_steiner_points) return;
 
     solver.graph.reserve(size(positions) + size(edges));
     auto steiner_per_edge = vector<int>(get_num_edges(emap));
@@ -1193,8 +1216,6 @@ geodesic_solver make_edge_solver_slow(const vector<vec3i>& triangles,
         add_undirected_arc(solver, steiner_idx[0], steiner_idx[2]);
         add_undirected_arc(solver, steiner_idx[1], steiner_idx[2]);
     }
-
-    return solver;
 }
 
 inline void add_half_edge(geodesic_solver& solver, const vec2i& edge) {
@@ -1229,9 +1250,9 @@ inline int get_edge_index(const geodesic_solver& solver, const vec2i& edge) {
     return -1;
 }
 
-geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
-    const vector<vec3f>& positions, bool use_steiner_points) {
-    auto solver      = geodesic_solver();
+void make_edge_solver_fast(geodesic_solver& solver,
+    const vector<vec3i>& triangles, const vector<vec3f>& positions,
+    bool use_steiner_points) {
     solver.positions = positions;
     solver.graph.resize(size(positions));
     solver.edge_index.resize(size(positions));
@@ -1243,7 +1264,7 @@ geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
         add_edge(solver, {t.z, t.x});
     }
 
-    if (!use_steiner_points) return solver;
+    if (!use_steiner_points) return;
 
     auto edges = solver.edges;
     solver.graph.resize(size(positions) + size(edges));
@@ -1284,8 +1305,6 @@ geodesic_solver make_edge_solver_fast(const vector<vec3i>& triangles,
         add_edge(solver, {steiner_idx[1], steiner_idx[2]});
         add_edge(solver, {steiner_idx[2], steiner_idx[0]});
     }
-
-    return solver;
 }
 
 void log_geodesic_solver_stats(const geodesic_solver& solver) {
@@ -1321,21 +1340,21 @@ void update_edge_distances(geodesic_solver& solver) {
     }
 }
 
-geodesic_solver make_geodesic_solver(
+void init_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions) {
-    auto scope  = log_trace_scoped("make edge graph");
-    auto solver = make_edge_solver_fast(triangles, positions, true);
+    auto scope = log_trace_scoped("make edge graph");
+    make_edge_solver_fast(solver, triangles, positions, true);
     // auto solver = make_edge_solver_slow(triangles, positions, true);
     log_geodesic_solver_stats(solver);
-    return solver;
 }
 
-vector<float> compute_geodesic_distances(
-    geodesic_solver& graph, const vector<int>& sources) {
+void compute_geodesic_distances(geodesic_solver& graph,
+    vector<float>& distances, const vector<int>& sources) {
     auto scope = log_trace_scoped("computing geodesics");
 
     // preallocated
-    auto distances = vector<float>(graph.positions.size(), float_max);
+    distances.resize(graph.positions.size());
+    for (auto& d : distances) d = float_max;
 
     // Small Label Fisrt + Large Label Last
     // https://en.wikipedia.org/wiki/Shortest_Path_Faster_Algorithm
@@ -1401,16 +1420,15 @@ vector<float> compute_geodesic_distances(
             distances[neighbor] = new_distance;
         }
     }
-    return distances;
 }
 
-vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
-    auto colors = vector<vec4f>(distances.size());
+void convert_distance_to_color(
+    vector<vec4f>& colors, const vector<float>& distances) {
+    colors.resize(distances.size());
     for (auto idx = 0; idx < distances.size(); idx++) {
         auto distance = fmod(distances[idx] * 10, 1.0f);
         colors[idx]   = {distance, distance, distance, 1};
     }
-    return colors;
 }
 
 }  // namespace yocto
@@ -1421,11 +1439,12 @@ vector<vec4f> convert_distance_to_color(const vector<float>& distances) {
 namespace yocto {
 
 // Make a quad.
-make_shape_quads make_quad_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
-    auto positions     = vector<vec3f>((steps.x + 1) * (steps.y + 1));
-    auto normals       = vector<vec3f>((steps.x + 1) * (steps.y + 1));
-    auto texturecoords = vector<vec2f>((steps.x + 1) * (steps.y + 1));
+void make_quad_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize) {
+    positions.resize((steps.x + 1) * (steps.y + 1));
+    normals.resize((steps.x + 1) * (steps.y + 1));
+    texturecoords.resize((steps.x + 1) * (steps.y + 1));
     for (auto j = 0; j <= steps.y; j++) {
         for (auto i = 0; i <= steps.x; i++) {
             auto uv = vec2f{i / (float)steps.x, j / (float)steps.y};
@@ -1438,7 +1457,7 @@ make_shape_quads make_quad_shape(
 
     for (auto& uv : texturecoords) uv.y = 1 - uv.y;
 
-    auto quads = vector<vec4i>(steps.x * steps.y);
+    quads.resize(steps.x * steps.y);
     for (auto j = 0; j < steps.y; j++) {
         for (auto i = 0; i < steps.x; i++) {
             quads[j * steps.x + i] = {j * (steps.x + 1) + i,
@@ -1457,23 +1476,23 @@ make_shape_quads make_quad_shape(
     //             (j + 1) * (steps.x + 1) + i};
     //     }
     // }
-    return {quads, positions, normals, texturecoords};
 }
 
-make_shape_quads make_floor_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, size, uvsize);
+void make_floor_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize) {
+    make_quad_shape(
+        quads, positions, normals, texturecoords, steps, size, uvsize);
     for (auto& p : positions) p = {p.x, p.z, p.y};
     for (auto& normal : normals) normal = {normal.x, normal.z, normal.y};
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a rounded cube.
-make_shape_quads make_floor_bent_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize, float radius) {
-    auto [quads, positions, normals, texturecoords] = make_floor_shape(
-        steps, size, uvsize);
+void make_floor_bent_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize, float radius) {
+    make_floor_shape(
+        quads, positions, normals, texturecoords, steps, size, uvsize);
     auto start = (size.y / 2 - radius) / 2;
     auto end   = start + radius;
     for (auto i = 0; i < positions.size(); i++) {
@@ -1489,93 +1508,95 @@ make_shape_quads make_floor_bent_shape(
         } else {
         }
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a stack of quads
-make_shape_quads make_quad_stack_shape(
-    const vec3i& steps, const vec3f& size, const vec2f& uvsize) {
-    auto quads         = vector<vec4i>{};
-    auto positions     = vector<vec3f>{};
-    auto normals       = vector<vec3f>{};
-    auto texturecoords = vector<vec2f>{};
+void make_quad_stack_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec3f& size, const vec2f& uvsize) {
+    quads.clear();
+    positions.clear();
+    normals.clear();
+    texturecoords.clear();
+    auto qquads         = vector<vec4i>{};
+    auto qpositions     = vector<vec3f>{};
+    auto qnormals       = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
     for (auto i = 0; i <= steps.z; i++) {
-        auto [qquads, qpositions, qnormals, qtexturecoords] = make_quad_shape(
+        make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
             {steps.x, steps.y}, {size.x, size.y}, uvsize);
         for (auto& p : qpositions) p.z = (-0.5f + (float)i / steps.z) * size.z;
         merge_quads(quads, positions, normals, texturecoords, qquads,
             qpositions, qnormals, qtexturecoords);
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a cube.
-make_shape_quads make_cube_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto quads         = vector<vec4i>{};
-    auto positions     = vector<vec3f>{};
-    auto normals       = vector<vec3f>{};
-    auto texturecoords = vector<vec2f>{};
+void make_cube_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize) {
+    quads.clear();
+    positions.clear();
+    normals.clear();
+    texturecoords.clear();
+    auto qquads         = vector<vec4i>{};
+    auto qpositions     = vector<vec3f>{};
+    auto qnormals       = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
     // + z
-    auto [pz_quads, pz_positions, pz_normals,
-        pz_texturecoords] = make_quad_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y});
-    for (auto& p : pz_positions) p = {p.x, p.y, size.z / 2};
-    for (auto& n : pz_normals) n = {0, 0, 1};
-    merge_quads(quads, positions, normals, texturecoords, pz_quads,
-        pz_positions, pz_normals, pz_texturecoords);
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
+    for (auto& p : qpositions) p = {p.x, p.y, size.z / 2};
+    for (auto& n : qnormals) n = {0, 0, 1};
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // - z
-    auto [nz_quads, nz_positions, nz_normals,
-        nz_texturecoords] = make_quad_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y});
-    for (auto& p : nz_positions) p = {-p.x, p.y, -size.z / 2};
-    for (auto& n : nz_normals) n = {0, 0, -1};
-    merge_quads(quads, positions, normals, texturecoords, nz_quads,
-        nz_positions, nz_normals, nz_texturecoords);
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
+    for (auto& p : qpositions) p = {-p.x, p.y, -size.z / 2};
+    for (auto& n : qnormals) n = {0, 0, -1};
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // + x
-    auto [px_quads, px_positions, px_normals,
-        px_texturecoords] = make_quad_shape({steps.z, steps.y},
-        {size.z, size.y}, {uvsize.z, uvsize.y});
-    for (auto& p : px_positions) p = {size.x / 2, p.y, -p.x};
-    for (auto& n : px_normals) n = {1, 0, 0};
-    merge_quads(quads, positions, normals, texturecoords, px_quads,
-        px_positions, px_normals, px_texturecoords);
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y});
+    for (auto& p : qpositions) p = {size.x / 2, p.y, -p.x};
+    for (auto& n : qnormals) n = {1, 0, 0};
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // - x
-    auto [nx_quads, nx_positions, nx_normals,
-        nx_texturecoords] = make_quad_shape({steps.z, steps.y},
-        {size.z, size.y}, {uvsize.z, uvsize.y});
-    for (auto& p : nx_positions) p = {-size.x / 2, p.y, p.x};
-    for (auto& n : nx_normals) n = {-1, 0, 0};
-    merge_quads(quads, positions, normals, texturecoords, nx_quads,
-        nx_positions, nx_normals, nx_texturecoords);
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.z, steps.y}, {size.z, size.y}, {uvsize.z, uvsize.y});
+    for (auto& p : qpositions) p = {-size.x / 2, p.y, p.x};
+    for (auto& n : qnormals) n = {-1, 0, 0};
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // + y
-    auto [py_quads, py_positions, py_normals,
-        py_texturecoords] = make_quad_shape({steps.x, steps.z},
-        {size.x, size.z}, {uvsize.x, uvsize.z});
-    for (auto i = 0; i < py_positions.size(); i++) {
-        py_positions[i] = {py_positions[i].x, size.y / 2, -py_positions[i].y};
-        py_normals[i]   = {0, 1, 0};
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {qpositions[i].x, size.y / 2, -qpositions[i].y};
+        qnormals[i]   = {0, 1, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, py_quads,
-        py_positions, py_normals, py_texturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // - y
-    auto [ny_quads, ny_positions, ny_normals,
-        ny_texturecoords] = make_quad_shape({steps.x, steps.z},
-        {size.x, size.z}, {uvsize.x, uvsize.z});
-    for (auto i = 0; i < ny_positions.size(); i++) {
-        ny_positions[i] = {ny_positions[i].x, -size.y / 2, ny_positions[i].y};
-        ny_normals[i]   = {0, -1, 0};
+    make_quad_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.z}, {size.x, size.z}, {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i] = {qpositions[i].x, -size.y / 2, qpositions[i].y};
+        qnormals[i]   = {0, -1, 0};
     }
-    merge_quads(quads, positions, normals, texturecoords, ny_quads,
-        ny_positions, ny_normals, ny_texturecoords);
-    return {quads, positions, normals, texturecoords};
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
 }
 
 // Make a rounded cube.
-make_shape_quads make_cube_rounded_shape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize, float radius) {
-    auto [quads, positions, normals, texturecoords] = make_cube_shape(
-        steps, size, uvsize);
+void make_cube_rounded_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec3f& size, const vec3f& uvsize, float radius) {
+    make_cube_shape(
+        quads, positions, normals, texturecoords, steps, size, uvsize);
     auto c = size / 2 - vec3f{radius, radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto pc = vec3f{
@@ -1605,14 +1626,14 @@ make_shape_quads make_cube_rounded_shape(
         positions[i] *= ps;
         normals[i] *= ps;
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a sphere.
-make_shape_quads make_uvsphere_shape(
-    const vec2i& steps, float size, const vec2f& uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, {1, 1}, {1, 1});
+void make_uvsphere_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    float size, const vec2f& uvsize) {
+    make_quad_shape(
+        quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
         auto uv = texturecoords[i];
         auto a  = vec2f{2 * pif * uv.x, pif * (1 - uv.y)};
@@ -1621,26 +1642,27 @@ make_shape_quads make_uvsphere_shape(
         normals[i]       = normalize(p);
         texturecoords[i] = uv * uvsize;
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a spherecube.
-make_shape_quads make_sphere_shape(int steps, float size, float uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_cube_shape(
+void make_sphere_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
+    float uvsize) {
+    make_cube_shape(quads, positions, normals, texturecoords,
         {steps, steps, steps}, {1, 1, 1}, {uvsize, uvsize, uvsize});
     for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
         positions[i] = normalize(p) * (size / 2);
         normals[i]   = normalize(p);
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a flipped sphere. This is not watertight.
-make_shape_quads make_uvsphere_flipcap_shape(
-    const vec2i& steps, float size, const vec2f& uvsize, const vec2f& zflip) {
-    auto [quads, positions, normals, texturecoords] = make_uvsphere_shape(
-        steps, size, uvsize);
+void make_uvsphere_flipcap_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    float size, const vec2f& uvsize, const vec2f& zflip) {
+    make_uvsphere_shape(
+        quads, positions, normals, texturecoords, steps, size, uvsize);
     for (auto i = 0; i < positions.size(); i++) {
         if (positions[i].z > zflip.y) {
             positions[i].z = 2 * zflip.y - positions[i].z;
@@ -1652,14 +1674,14 @@ make_shape_quads make_uvsphere_flipcap_shape(
             normals[i].y   = -normals[i].y;
         }
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a disk.
-make_shape_quads make_uvdisk_shape(
-    const vec2i& steps, float size, const vec2f& uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, {1, 1}, {1, 1});
+void make_uvdisk_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    float size, const vec2f& uvsize) {
+    make_quad_shape(
+        quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
         auto uv      = texturecoords[i];
         auto phi     = 2 * pif * uv.x;
@@ -1668,13 +1690,14 @@ make_shape_quads make_uvdisk_shape(
         normals[i]       = {0, 0, 1};
         texturecoords[i] = uv * uvsize;
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a disk from a quad.
-make_shape_quads make_disk_shape(int steps, float size, float uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        {steps, steps}, {2, 2}, {uvsize, uvsize});
+void make_disk_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
+    float uvsize) {
+    make_quad_shape(quads, positions, normals, texturecoords, {steps, steps},
+        {2, 2}, {uvsize, uvsize});
     for (auto i = 0; i < positions.size(); i++) {
         // Analytical Methods for Squaring the Disc, by C. Fong
         // https://arxiv.org/abs/1509.06344
@@ -1683,15 +1706,15 @@ make_shape_quads make_disk_shape(int steps, float size, float uvsize) {
             xy.x * sqrt(1 - xy.y * xy.y / 2), xy.y * sqrt(1 - xy.x * xy.x / 2)};
         positions[i] = {uv.x * size / 2, uv.y * size / 2, 0};
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a bulged disk from a quad.
-make_shape_quads make_disk_bulged_shape(
-    int steps, float size, float uvsize, float height) {
-    auto [quads, positions, normals, texturecoords] = make_disk_shape(
-        steps, size, uvsize);
-    if (height == 0) return {quads, positions, normals, texturecoords};
+void make_disk_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
+    float uvsize, float height) {
+    make_disk_shape(
+        quads, positions, normals, texturecoords, steps, size, uvsize);
+    if (height == 0) return;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
     for (auto i = 0; i < positions.size(); i++) {
@@ -1699,15 +1722,15 @@ make_shape_quads make_disk_bulged_shape(
         positions[i] = center + pn * radius;
         normals[i]   = pn;
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a bulged quad.
-make_shape_quads make_quad_bulged_shape(
-    int steps, float size, float uvsize, float height) {
-    auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        {steps, steps}, {size, size}, {uvsize, uvsize});
-    if (height == 0) return {quads, positions, normals, texturecoords};
+void make_quad_bulged_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, int steps, float size,
+    float uvsize, float height) {
+    make_quad_shape(quads, positions, normals, texturecoords, {steps, steps},
+        {size, size}, {uvsize, uvsize});
+    if (height == 0) return;
     auto radius = (size * size / 4 + height * height) / (2 * height);
     auto center = vec3f{0, 0, -radius + height};
     for (auto i = 0; i < positions.size(); i++) {
@@ -1715,14 +1738,14 @@ make_shape_quads make_quad_bulged_shape(
         positions[i] = center + pn * radius;
         normals[i]   = pn;
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a cylinder (side-only).
-make_shape_quads make_cylinder_side_shape(
-    const vec2i& steps, const vec2f& size, const vec2f& uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_quad_shape(
-        steps, {1, 1}, {1, 1});
+void make_cylinder_side_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec2i& steps,
+    const vec2f& size, const vec2f& uvsize) {
+    make_quad_shape(
+        quads, positions, normals, texturecoords, steps, {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
         auto uv          = texturecoords[i];
         auto phi         = 2 * pif * uv.x;
@@ -1731,51 +1754,52 @@ make_shape_quads make_cylinder_side_shape(
         normals[i]       = {cos(phi), sin(phi), 0};
         texturecoords[i] = uv * uvsize;
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a cylinder.
-make_shape_quads make_uvcylinder_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize) {
-    auto quads         = vector<vec4i>{};
-    auto positions     = vector<vec3f>{};
-    auto normals       = vector<vec3f>{};
-    auto texturecoords = vector<vec2f>{};
+void make_uvcylinder_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, const vec3i& steps,
+    const vec2f& size, const vec3f& uvsize) {
+    quads.clear();
+    positions.clear();
+    normals.clear();
+    texturecoords.clear();
+    auto qquads         = vector<vec4i>{};
+    auto qpositions     = vector<vec3f>{};
+    auto qnormals       = vector<vec3f>{};
+    auto qtexturecoords = vector<vec2f>{};
     // side
-    auto [side_quads, side_positions, side_normals,
-        side_texturecoords] = make_cylinder_side_shape({steps.x, steps.y},
-        {size.x, size.y}, {uvsize.x, uvsize.y});
-    merge_quads(quads, positions, normals, texturecoords, side_quads,
-        side_positions, side_normals, side_texturecoords);
+    make_cylinder_side_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.y}, {size.x, size.y}, {uvsize.x, uvsize.y});
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // top
-    auto [top_quads, top_positions, top_normals,
-        top_texturecoords] = make_uvdisk_shape({steps.x, steps.z}, size.x,
-        {uvsize.x, uvsize.z});
-    for (auto i = 0; i < top_positions.size(); i++) {
-        top_positions[i].z = size.y / 2;
+    make_uvdisk_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i].z = size.y / 2;
     }
-    merge_quads(quads, positions, normals, texturecoords, top_quads,
-        top_positions, top_normals, top_texturecoords);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
     // bottom
-    auto [bottom_quads, bottom_positions, bottom_normals,
-        bottom_texturecoords] = make_uvdisk_shape({steps.x, steps.z}, size.x,
-        {uvsize.x, uvsize.z});
-    for (auto i = 0; i < bottom_positions.size(); i++) {
-        bottom_positions[i].z = -size.y / 2;
-        bottom_normals[i]     = -bottom_normals[i];
+    make_uvdisk_shape(qquads, qpositions, qnormals, qtexturecoords,
+        {steps.x, steps.z}, size.x, {uvsize.x, uvsize.z});
+    for (auto i = 0; i < qpositions.size(); i++) {
+        qpositions[i].z = -size.y / 2;
+        qnormals[i]     = -qnormals[i];
     }
-    for (auto i = 0; i < bottom_quads.size(); i++)
-        swap(bottom_quads[i].x, bottom_quads[i].z);
-    merge_quads(quads, positions, normals, texturecoords, bottom_quads,
-        bottom_positions, bottom_normals, bottom_texturecoords);
-    return {quads, positions, normals, texturecoords};
+    for (auto i = 0; i < qquads.size(); i++) swap(qquads[i].x, qquads[i].z);
+    merge_quads(quads, positions, normals, texturecoords, qquads, qpositions,
+        qnormals, qtexturecoords);
 }
 
 // Make a rounded cylinder.
-make_shape_quads make_uvcylinder_rounded_shape(
-    const vec3i& steps, const vec2f& size, const vec3f& uvsize, float radius) {
-    auto [quads, positions, normals, texturecoords] = make_uvcylinder_shape(
-        steps, size, uvsize);
+void make_uvcylinder_rounded_shape(vector<vec4i>& quads,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec2f& size,
+    const vec3f& uvsize, float radius) {
+    make_uvcylinder_shape(
+        quads, positions, normals, texturecoords, steps, size, uvsize);
     auto c = size / 2 - vec2f{radius, radius};
     for (auto i = 0; i < positions.size(); i++) {
         auto phi = atan2(positions[i].y, positions[i].x);
@@ -1792,12 +1816,12 @@ make_shape_quads make_uvcylinder_rounded_shape(
             continue;
         }
     }
-    return {quads, positions, normals, texturecoords};
 }
 
 // Make a geodesic sphere.
-tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
-    int tesselation, float size) {
+void make_geodesic_sphere_shape(vector<vec3i>& triangles,
+    vector<vec3f>& positions, vector<vec3f>& normals, int tesselation,
+    float size) {
     // https://stackoverflow.com/questions/17705621/algorithm-for-a-geodesic-sphere
     const float X                = 0.525731112119133606f;
     const float Z                = 0.850650808352039932f;
@@ -1808,50 +1832,52 @@ tuple<vector<vec3i>, vector<vec3f>, vector<vec3f>> make_geodesic_sphere_shape(
         {9, 4, 5}, {4, 8, 5}, {4, 1, 8}, {8, 1, 10}, {8, 10, 3}, {5, 8, 3},
         {5, 3, 2}, {2, 3, 7}, {7, 3, 10}, {7, 10, 6}, {7, 6, 11}, {11, 6, 0},
         {0, 6, 1}, {6, 10, 1}, {9, 11, 0}, {9, 2, 11}, {9, 5, 2}, {7, 11, 2}};
-    auto        positions        = sphere_pos;
-    auto        triangles        = sphere_triangles;
+    positions                    = sphere_pos;
+    triangles                    = sphere_triangles;
     for (auto l = 0; l < max(0, tesselation - 2); l++) {
-        tie(triangles, positions) = subdivide_triangles(triangles, positions);
+        subdivide_triangles(triangles, positions);
     }
     for (auto& p : positions) p = normalize(p) * size / 2;
-    auto normals = positions;
-    return {triangles, positions, normals};
+    normals = positions;
 }
 
 // Make a facevarying cube.
-make_fvshape_quads make_cube_fvshape(
-    const vec3i& steps, const vec3f& size, const vec3f& uvsize) {
-    auto [quads, positions, normals, texturecoords] = make_cube_shape(
-        steps, size, uvsize);
-    auto quads_positions            = quads;
-    auto quads_normals              = quads;
-    auto quads_texturecoords        = quads;
-    tie(quads_positions, positions) = weld_quads(quads_positions, positions,
+void make_cube_fvshape(vector<vec4i>& quads_positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, const vec3i& steps, const vec3f& size,
+    const vec3f& uvsize) {
+    make_cube_shape(quads_positions, positions, normals, texturecoords, steps,
+        size, uvsize);
+    quads_normals       = quads_positions;
+    quads_texturecoords = quads_positions;
+    auto positions_     = positions;
+    weld_quads(quads_positions, positions,
         min(0.1f * size /
             vec3f{(float)steps.x, (float)steps.y, (float)steps.z}));
-    return {quads_positions, quads_normals, quads_texturecoords, positions,
-        normals, texturecoords};
 }
 
 // Make a faceavrying spherecube.
-make_fvshape_quads make_sphere_fvshape(int steps, float size, float uvsize) {
-    auto [quads_positions, quads_normals, quads_texturecoords, positions,
-        normals, texturecoords] = make_cube_fvshape({steps, steps, steps},
-        {1, 1, 1}, {uvsize, uvsize, uvsize});
-    quads_normals               = quads_positions;
-    normals                     = positions;
+void make_sphere_fvshape(vector<vec4i>& quads_positions,
+    vector<vec4i>& quads_normals, vector<vec4i>& quads_texturecoords,
+    vector<vec3f>& positions, vector<vec3f>& normals,
+    vector<vec2f>& texturecoords, int steps, float size, float uvsize) {
+    make_cube_fvshape(quads_positions, quads_normals, quads_texturecoords,
+        positions, normals, texturecoords, {steps, steps, steps}, {1, 1, 1},
+        {uvsize, uvsize, uvsize});
+    quads_normals = quads_positions;
+    normals       = positions;
     for (auto i = 0; i < positions.size(); i++) {
         auto p       = positions[i];
         positions[i] = normalize(p) * (size / 2);
         normals[i]   = normalize(p);
     }
-    return {quads_positions, quads_normals, quads_texturecoords, positions,
-        normals, texturecoords};
 }
 
 // Make a suzanne monkey model for testing. Note that some quads are
 // degenerate.
-tuple<vector<vec4i>, vector<vec3f>> make_suzanne_shape(float size) {
+void make_suzanne_shape(
+    vector<vec4i>& quads, vector<vec3f>& positions, float size) {
     static auto suzanne_pos       = vector<vec3f>{{0.4375, 0.1640625, 0.765625},
         {-0.4375, 0.1640625, 0.765625}, {0.5, 0.09375, 0.6875},
         {-0.5, 0.09375, 0.6875}, {0.546875, 0.0546875, 0.578125},
@@ -2270,41 +2296,42 @@ tuple<vector<vec4i>, vector<vec3f>> make_suzanne_shape(float size) {
         {388, 382, 314, 506}, {313, 505, 503, 321}, {504, 506, 314, 322},
         {319, 321, 503, 389}, {504, 322, 320, 390}};
 
-    auto positions = suzanne_pos;
+    positions = suzanne_pos;
     for (auto& p : positions) p *= size / 2;
-    auto quads = suzanne_quads;
+    quads = suzanne_quads;
     for (auto& t : suzanne_triangles) {
         quads.push_back({t.x, t.y, t.z, t.z});
     }
-    return {quads, positions};
 }
 
 // Watertight cube
-tuple<vector<vec4i>, vector<vec3f>> make_cube_shape(const vec3f& size) {
+void make_cube_shape(
+    vector<vec4i>& quads, vector<vec3f>& positions, const vec3f& size) {
     static auto cube_pos     = vector<vec3f>{{-1, -1, -1}, {-1, +1, -1},
         {+1, +1, -1}, {+1, -1, -1}, {-1, -1, +1}, {-1, +1, +1}, {+1, +1, +1},
         {+1, -1, +1}};
     static auto cube_quads   = vector<vec4i>{{0, 1, 2, 3}, {7, 6, 5, 4},
         {4, 5, 1, 0}, {6, 7, 3, 2}, {2, 1, 5, 6}, {0, 3, 7, 4}};
     static auto cube_quad_uv = vector<vec2f>{{0, 0}, {1, 0}, {1, 1}, {0, 1}};
-    auto        positions    = cube_pos;
+    positions                = cube_pos;
     for (auto& p : positions) p *= size / 2;
-    auto quads = cube_quads;
-    return {quads, positions};
+    quads = cube_quads;
 }
 
 // Generate lines set along a quad.
-make_shape_lines make_lines_shape(const vec2i& steps, const vec2f& size,
-    const vec2f& uvsize, const vec2f& line_radius) {
+void make_lines_shape(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    const vec2i& steps, const vec2f& size, const vec2f& uvsize,
+    const vec2f& line_radius) {
     auto nverts = (steps.x + 1) * steps.y;
     auto nlines = steps.x * steps.y;
     auto vid    = [steps](int i, int j) { return j * (steps.x + 1) + i; };
     auto fid    = [steps](int i, int j) { return j * steps.x + i; };
 
-    auto positions     = vector<vec3f>(nverts);
-    auto normals       = vector<vec3f>(nverts);
-    auto texturecoords = vector<vec2f>(nverts);
-    auto radius        = vector<float>(nverts);
+    positions.resize(nverts);
+    normals.resize(nverts);
+    texturecoords.resize(nverts);
+    radius.resize(nverts);
     if (steps.y > 1) {
         for (auto j = 0; j < steps.y; j++) {
             for (auto i = 0; i <= steps.x; i++) {
@@ -2325,50 +2352,51 @@ make_shape_lines make_lines_shape(const vec2i& steps, const vec2f& size,
         }
     }
 
-    auto lines = vector<vec2i>(nlines);
+    lines.resize(nlines);
     for (int j = 0; j < steps.y; j++) {
         for (int i = 0; i < steps.x; i++) {
             lines[fid(i, j)] = {vid(i, j), vid(i + 1, j)};
         }
     }
-
-    return {lines, positions, normals, texturecoords, radius};
 }
 
 // Generate a point set with points placed at the origin with texcoords
 // varying along u.
-make_shape_points make_points_shape(int num, float uvsize, float point_radius) {
-    auto points = vector<int>(num);
+void make_points_shape(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    int num, float uvsize, float point_radius) {
+    points.resize(num);
     for (auto i = 0; i < num; i++) points[i] = i;
-    auto positions     = vector<vec3f>(num, {0, 0, 0});
-    auto normals       = vector<vec3f>(num, {0, 0, 1});
-    auto texturecoords = vector<vec2f>(num, {0, 0});
-    auto radius        = vector<float>(num, point_radius);
+    positions.assign(num, {0, 0, 0});
+    normals.assign(num, {0, 0, 1});
+    texturecoords.assign(num, {0, 0});
+    radius.assign(num, point_radius);
     for (auto i = 0; i < texturecoords.size(); i++)
         texturecoords[i] = {(float)i / (float)num, 0};
-    return {points, positions, normals, texturecoords, radius};
 }
 
 // Generate a point set.
-make_shape_points make_random_points_shape(int num, const vec3f& size,
-    float uvsize, float point_radius, uint64_t seed) {
-    auto [points, positions, normals, texturecoords,
-        radius] = make_points_shape(num, uvsize, point_radius);
-    auto rng    = make_rng(seed);
+void make_random_points_shape(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    int num, const vec3f& size, float uvsize, float point_radius,
+    uint64_t seed) {
+    make_points_shape(points, positions, normals, texturecoords, radius, num,
+        uvsize, point_radius);
+    auto rng = make_rng(seed);
     for (auto i = 0; i < positions.size(); i++) {
         positions[i] = (get_random_vec3f(rng) - vec3f{0.5f, 0.5f, 0.5f}) * size;
     }
-    return {points, positions, normals, texturecoords, radius};
 }
 
 // Make a point.
-make_shape_points make_point_shape(float point_radius) {
-    auto points        = vector<int>{0};
-    auto positions     = vector<vec3f>{{0, 0, 0}};
-    auto normals       = vector<vec3f>{{0, 0, 1}};
-    auto texturecoords = vector<vec2f>{{0, 0}};
-    auto radius        = vector<float>{point_radius};
-    return {points, positions, normals, texturecoords, radius};
+void make_point_shape(vector<int>& points, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    float point_radius) {
+    points        = {0};
+    positions     = {{0, 0, 0}};
+    normals       = {{0, 0, 1}};
+    texturecoords = {{0, 0}};
+    radius        = {point_radius};
 }
 
 // Make a bezier circle. Returns bezier, pos.
@@ -2387,17 +2415,23 @@ tuple<vector<vec4i>, vector<vec3f>> make_bezier_circle_shape(float size) {
 }
 
 // Make a hair ball around a shape
-make_shape_lines make_hair_shape(const vec2i& steps,
-    const vector<vec3i>& striangles, const vector<vec4i>& squads,
-    const vector<vec3f>& spos, const vector<vec3f>& snorm,
-    const vector<vec2f>& stexcoord, const vec2f& len, const vec2f& rad,
-    const vec2f& noise, const vec2f& clump, const vec2f& rotation, int seed) {
+void make_hair_shape(vector<vec2i>& lines, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<float>& radius,
+    const vec2i& steps, const vector<vec3i>& striangles,
+    const vector<vec4i>& squads, const vector<vec3f>& spos,
+    const vector<vec3f>& snorm, const vector<vec2f>& stexcoord,
+    const vec2f& len, const vec2f& rad, const vec2f& noise, const vec2f& clump,
+    const vec2f& rotation, int seed) {
     auto alltriangles    = striangles;
-    auto quads_triangles = convert_quads_to_triangles(squads);
+    auto quads_triangles = vector<vec3i>{};
+    convert_quads_to_triangles(quads_triangles, squads);
     alltriangles.insert(
         alltriangles.end(), quads_triangles.begin(), quads_triangles.end());
-    auto [bpos, bnorm, btexcoord] = sample_triangles_points(
-        alltriangles, spos, snorm, stexcoord, steps.y, seed);
+    auto bpos      = vector<vec3f>{};
+    auto bnorm     = vector<vec3f>{};
+    auto btexcoord = vector<vec2f>{};
+    sample_triangles_points(bpos, bnorm, btexcoord, alltriangles, spos, snorm,
+        stexcoord, steps.y, seed);
 
     auto rng  = make_rng(seed, 3);
     auto blen = vector<float>(bpos.size());
@@ -2418,8 +2452,8 @@ make_shape_lines make_hair_shape(const vec2i& steps,
         }
     }
 
-    auto [lines, positions, normals, texturecoords, radius] = make_lines_shape(
-        steps, {1, 1}, {1, 1});
+    make_lines_shape(lines, positions, normals, texturecoords, radius, steps,
+        {1, 1}, {1, 1});
     for (auto i = 0; i < positions.size(); i++) {
         auto u       = texturecoords[i].x;
         auto bidx    = i / (steps.x + 1);
@@ -2443,22 +2477,16 @@ make_shape_lines make_hair_shape(const vec2i& steps,
         }
     }
 
-    if (clump.x > 0 || noise.x > 0 || rotation.x > 0)
-        normals = compute_vertex_tangents(lines, positions);
-
-    return {lines, positions, normals, texturecoords, radius};
+    if (clump.x > 0 || noise.x > 0 || rotation.x > 0) {
+        compute_vertex_tangents(normals, lines, positions);
+    }
 }
 
 // Thickens a shape by copy9ing the shape content, rescaling it and flipping its
 // normals. Note that this is very much not robust and only useful for trivial
 // cases.
-make_shape_quads make_shell_shape(const vector<vec4i>& quads,
-    const vector<vec3f>& positions, const vector<vec3f>& normals,
-    const vector<vec2f>& texturecoords, float thickness) {
-    auto shell_quads         = quads;
-    auto shell_positions     = positions;
-    auto shell_normals       = normals;
-    auto shell_texturecoords = texturecoords;
+void make_shell_shape(vector<vec4i>& quads, vector<vec3f>& positions,
+    vector<vec3f>& normals, vector<vec2f>& texturecoords, float thickness) {
     auto bbox                = make_bbox(positions);
     auto center              = bbox_center(bbox);
     auto inner_quads         = quads;
@@ -2467,18 +2495,8 @@ make_shape_quads make_shell_shape(const vector<vec4i>& quads,
     auto inner_texturecoords = texturecoords;
     for (auto& p : inner_positions) p = (1 - thickness) * (p - center) + center;
     for (auto& n : inner_normals) n = -n;
-    merge_quads(shell_quads, shell_positions, shell_normals,
-        shell_texturecoords, inner_quads, inner_positions, inner_normals,
-        inner_texturecoords);
-    return {shell_quads, shell_positions, shell_normals, shell_texturecoords};
-}
-
-// Make a shape face-varying.
-make_fvshape_quads make_faceavrying_shape(const make_shape_quads& shape) {
-    auto& [quads, positions, normals, texturecoords] = shape;
-    return {quads, normals.empty() ? vector<vec4i>{} : quads,
-        texturecoords.empty() ? vector<vec4i>{} : quads, positions, normals,
-        texturecoords};
+    merge_quads(quads, positions, normals, texturecoords, inner_quads,
+        inner_positions, inner_normals, inner_texturecoords);
 }
 
 }  // namespace yocto

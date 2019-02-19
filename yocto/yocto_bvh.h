@@ -34,7 +34,7 @@
 // We support working either on the whole scene or on a single shape. In the
 // description below yoi will see this dual API defined.
 //
-// 1. create shape/scene bvhs using `make_shape_bvh()`/`make_scene_bvh()`
+// 1. create shape/scene bvhs using `init_shape_bvh()`/`build_scene_bvh()`
 // 3. build the shape/scene BVH with `build_shape_bvh()`/`build_scene_bvh()`;
 //    for the scene build, we will build appropriately the shape bvhs
 // 4. perform ray-shape intersection with `intersect_shape_bvh()` and
@@ -175,17 +175,17 @@ struct build_bvh_options {
 };
 
 // Build a BVH from the given set of shape primitives.
-bvh_shape make_shape_bvh(const vector<int>& points,
+void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
     const vector<vec3f>& positions, const vector<float>& radius);
-bvh_shape make_shape_bvh(const vector<vec2i>& lines,
+void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
     const vector<vec3f>& positions, const vector<float>& radius);
-bvh_shape make_shape_bvh(
-    const vector<vec3i>& triangles, const vector<vec3f>& positions);
-bvh_shape make_shape_bvh(
-    const vector<vec4i>& quads, const vector<vec3f>& positions);
+void init_shape_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
+    const vector<vec3f>& positions);
+void init_shape_bvh(
+    bvh_shape& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
 
 // Build a BVH from the given set of instances.
-bvh_scene make_scene_bvh(const vector<bvh_instance>& instances,
+void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
     const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs);
 
 // Build the bvh acceleration structure.

@@ -828,7 +828,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             init_opengl_elementbuffer(
                 vbos.triangles_buffer, shape.triangles, false);
         if (!empty(shape.quads)) {
-            auto triangles = convert_quads_to_triangles(shape.quads);
+            auto triangles = vector<vec3i>{};
+            convert_quads_to_triangles(triangles, shape.quads);
             init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
         }
         state.shapes[shape_id] = vbos;
@@ -836,17 +837,21 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     state.surfaces.resize(scene.surfaces.size());
     for (auto surface_id = 0; surface_id < scene.surfaces.size();
          surface_id++) {
-        auto& surface = scene.surfaces[surface_id];
-        auto  vbos    = drawgl_shape();
-        auto [quads, positions, normals, texturecoords] = convert_face_varying(
+        auto& surface       = scene.surfaces[surface_id];
+        auto  vbos          = drawgl_shape();
+        auto  quads         = vector<vec4i>{};
+        auto  positions     = vector<vec3f>{};
+        auto  normals       = vector<vec3f>{};
+        auto  texturecoords = vector<vec2f>{};
+        convert_face_varying(quads, positions, normals, texturecoords,
             surface.quads_positions, surface.quads_normals,
             surface.quads_texturecoords, surface.positions, surface.normals,
             surface.texturecoords);
         auto split_quads = vector<vector<vec4i>>();
         if (surface.materials.size() > 1 && !empty(surface.quads_materials)) {
-            split_quads = ungroup_quads(quads, surface.quads_materials);
+            ungroup_quads(split_quads, quads, surface.quads_materials);
         } else {
-            split_quads = {quads};
+            split_quads.push_back(quads);
         }
         if (!empty(positions))
             init_opengl_array_buffer(vbos.positions_buffer, positions, false);
@@ -858,7 +863,8 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         vbos.split_quads_buffer = {};
         for (auto& quads : split_quads) {
             if (!empty(quads)) vbos.split_quads_buffer.push_back({});
-            auto triangles = convert_quads_to_triangles(quads);
+            auto triangles = vector<vec3i>{};
+            convert_quads_to_triangles(triangles, quads);
             init_opengl_elementbuffer(
                 vbos.split_quads_buffer.back(), triangles, false);
         }
@@ -1133,28 +1139,29 @@ int main(int argc, char* argv[]) {
     app_state app{};
 
     // parse command line
-    auto parser = make_cmdline_parser(
-        argc, argv, "views scenes inteactively", "yview");
-    app.draw_options.camera_id = parse_argument(
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(
+        parser, argc, argv, "views scenes inteactively", "yview");
+    app.draw_options.camera_id = parse_cmdline_argument(
         parser, "--camera", 0, "Camera index.");
-    app.draw_options.image_width = parse_argument(
+    app.draw_options.image_width = parse_cmdline_argument(
         parser, "--hres,-R", 1280, "Image horizontal resolution.");
-    app.draw_options.image_height = parse_argument(
+    app.draw_options.image_height = parse_cmdline_argument(
         parser, "--vres,-r", 720, "Image vertical resolution.");
-    app.draw_options.eyelight = parse_argument(
+    app.draw_options.eyelight = parse_cmdline_argument(
         parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
-    app.double_sided        = parse_argument(parser,
+    app.double_sided        = parse_cmdline_argument(parser,
         "--double-sided/--no-double-sided,-D", false,
         "Double-sided rendering.");
-    auto highlight_filename = parse_argument(
+    auto highlight_filename = parse_cmdline_argument(
         parser, "--highlights", ""s, "Highlight filename");
-    auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
-        "Disable parallel execution.");
-    app.imfilename   = parse_argument(
+    auto no_parallel = parse_cmdline_argument(parser,
+        "--parallel/--no-parallel", false, "Disable parallel execution.");
+    app.imfilename   = parse_cmdline_argument(
         parser, "--output-image,-o", "out.png"s, "Image filename");
-    app.filename = parse_argument(
+    app.filename = parse_cmdline_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // fix parallel code
     if (no_parallel) {

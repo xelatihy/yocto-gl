@@ -46,25 +46,26 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // parse command line
-    auto parser = make_cmdline_parser(argc, argv, "Process scene", "yscnproc");
-    auto skip_textures = parse_argument(parser,
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
+    auto skip_textures = parse_cmdline_argument(parser,
         "--skip-textures/--no-skip-textures", false, "Disable textures.");
-    auto skip_meshes   = parse_argument(
+    auto skip_meshes   = parse_cmdline_argument(
         parser, "--skip-meshes/--no-skip-meshes", false, "Disable meshes.");
-    auto mesh_filenames = parse_argument(parser,
+    auto mesh_filenames = parse_cmdline_argument(parser,
         "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
-    auto mesh_directory = parse_argument(parser, "--mesh-directory", "models/"s,
-        "Mesh directory when adding names.");
-    auto uniform_txt    = parse_argument(parser,
+    auto mesh_directory = parse_cmdline_argument(parser, "--mesh-directory",
+        "models/"s, "Mesh directory when adding names.");
+    auto uniform_txt    = parse_cmdline_argument(parser,
         "--uniform-texture/--no-uniform-textures", false,
         "uniform texture formats");
-    auto print_info     = parse_argument(
+    auto print_info     = parse_cmdline_argument(
         parser, "--print-info,-i", false, "print scene info");
-    auto output = parse_argument(
+    auto output = parse_cmdline_argument(
         parser, "--output,-o", "out.json"s, "output scene", true);
-    auto filename = parse_argument(
+    auto filename = parse_cmdline_argument(
         parser, "scene", "scene.json"s, "input scene", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // fix options
     auto load_options          = load_scene_options();

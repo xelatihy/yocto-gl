@@ -24,8 +24,8 @@
 // environment is used.
 //
 // 1. prepare the ray-tracing acceleration structure with `build_scene_bvh()`
-// 2. prepare lights for rendering with `make_trace_lights()`
-// 3. create the random number generators with `make_trace_state()`
+// 2. prepare lights for rendering with `init_trace_lights()`
+// 3. create the random number generators with `init_trace_state()`
 // 4. render blocks of samples with `trace_samples()`
 // 5. you can also start an asynchronous renderer with `trace_asynch_start()`
 //
@@ -95,7 +95,7 @@ struct trace_lights {
 };
 
 // Initialize lights.
-trace_lights make_trace_lights(const yocto_scene& scene);
+void init_trace_lights(trace_lights& lights, const yocto_scene& scene);
 
 // State of a pixel during tracing
 struct trace_pixel {
@@ -111,8 +111,8 @@ struct trace_state {
 };
 
 // Initialize state of the renderer.
-trace_state make_trace_state(
-    int width, int height, uint64_t random_seed = trace_default_seed);
+void init_trace_state(trace_state& state, int width, int height,
+    uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {

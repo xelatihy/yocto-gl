@@ -40,51 +40,52 @@ int main(int argc, char* argv[]) {
     trace_image_options trace_options = {};
 
     // parse command line
-    auto parser = make_cmdline_parser(
-        argc, argv, "Offline path tracing", "ytrace");
-    trace_options.camera_id = parse_argument(
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(parser, argc, argv, "Offline path tracing", "ytrace");
+    trace_options.camera_id = parse_cmdline_argument(
         parser, "--camera", 0, "Camera index.");
-    trace_options.image_width = parse_argument(
+    trace_options.image_width = parse_cmdline_argument(
         parser, "--hres,-R", 1280, "Image horizontal resolution.");
-    trace_options.image_height = parse_argument(
+    trace_options.image_height = parse_cmdline_argument(
         parser, "--vres,-r", 720, "Image vertical resolution.");
-    trace_options.num_samples = parse_argument(
+    trace_options.num_samples = parse_cmdline_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
+    trace_options.sampler_type = parse_cmdline_argument(parser, "--tracer,-t",
         trace_sampler_type::path, "Trace type.", trace_sampler_type_names);
-    trace_options.max_bounces  = parse_argument(
+    trace_options.max_bounces  = parse_cmdline_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
-    trace_options.pixel_clamp = parse_argument(
+    trace_options.pixel_clamp = parse_cmdline_argument(
         parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
-    auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
-        "Disable parallel execution.");
-    trace_options.random_seed = parse_argument(
+    auto no_parallel          = parse_cmdline_argument(parser,
+        "--parallel/--no-parallel", false, "Disable parallel execution.");
+    trace_options.random_seed = parse_cmdline_argument(
         parser, "--seed", 13, "Seed for the random number generators.");
-    trace_options.samples_per_batch = parse_argument(
+    trace_options.samples_per_batch = parse_cmdline_argument(
         parser, "--nbatch,-b", 16, "Samples per batch.");
-    trace_options.environments_hidden = parse_argument(parser,
+    trace_options.environments_hidden = parse_cmdline_argument(parser,
         "--env-hidden/--no-env-hidden", false,
         "Environments are hidden in renderer");
-    trace_options.double_sided        = parse_argument(parser,
+    trace_options.double_sided        = parse_cmdline_argument(parser,
         "--double-sided/--no-double-sided,-D", false,
         "Double-sided rendering.");
-    auto save_batch                   = parse_argument(
+    auto save_batch                   = parse_cmdline_argument(
         parser, "--save-batch", false, "Save images progressively");
-    auto exposure = parse_argument(
+    auto exposure = parse_cmdline_argument(
         parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto filmic = parse_argument(parser, "--filmic", false, "Hdr filmic");
-    auto srgb   = parse_argument(parser, "--no-srgb", true, "No srgb");
-    bvh_options.use_embree = parse_argument(
+    auto filmic = parse_cmdline_argument(
+        parser, "--filmic", false, "Hdr filmic");
+    auto srgb = parse_cmdline_argument(parser, "--no-srgb", true, "No srgb");
+    bvh_options.use_embree = parse_cmdline_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    bvh_options.flatten_embree = parse_argument(parser,
+    bvh_options.flatten_embree = parse_cmdline_argument(parser,
         "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
-    auto add_skyenv            = parse_argument(
+    auto add_skyenv            = parse_cmdline_argument(
         parser, "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
-    auto imfilename = parse_argument(
+    auto imfilename = parse_cmdline_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    auto filename = parse_argument(
+    auto filename = parse_cmdline_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // fix parallel code
     if (no_parallel) {
@@ -109,10 +110,12 @@ int main(int argc, char* argv[]) {
 
     // build bvh
     log_info("building bvh");
-    auto bvh = make_scene_bvh(scene, bvh_options);
+    auto bvh = bvh_scene{};
+    build_scene_bvh(scene, bvh, bvh_options);
 
     // init renderer
-    auto lights = make_trace_lights(scene);
+    auto lights = trace_lights{};
+    init_trace_lights(lights, scene);
 
     // fix renderer type if no lights
     if ((empty(lights.instances) && empty(lights.environments)) &&
@@ -126,7 +129,8 @@ int main(int argc, char* argv[]) {
         scene.cameras[trace_options.camera_id], trace_options.image_width,
         trace_options.image_height);
     auto image = yocto::image{width, height, zero4f};
-    auto state = make_trace_state(width, height, trace_options.random_seed);
+    auto state = trace_state{};
+    init_trace_state(state, width, height, trace_options.random_seed);
 
     // render
     auto scope = log_trace_begin("rendering image");

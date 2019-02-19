@@ -101,8 +101,8 @@ void start_rendering_async(app_state& app) {
         app.trace_options.image_width, app.trace_options.image_height);
     app.image   = {app.image_width, app.image_height, zero4f};
     app.display = {app.image_width, app.image_height, zero4f};
-    app.state   = make_trace_state(
-        app.image_width, app.image_height, app.trace_options.random_seed);
+    init_trace_state(app.state, app.image_width, app.image_height,
+        app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
     preview_options.image_width /= app.preview_ratio;
@@ -118,7 +118,7 @@ void start_rendering_async(app_state& app) {
                      i / app.preview_ratio, 0, display_preview.width - 1),
                  pj = clamp(
                      j / app.preview_ratio, 0, display_preview.height - 1);
-            large_preview[{i,j}] = display_preview[{pi,pj}];
+            large_preview[{i, j}] = display_preview[{pi, pj}];
         }
     }
     app.preview = large_preview;
@@ -152,11 +152,11 @@ bool load_scene_sync(app_state& app) {
 
     // build bvh
     app.status = "computing bvh";
-    app.bvh    = make_scene_bvh(app.scene, app.bvh_options);
+    build_scene_bvh(app.scene, app.bvh, app.bvh_options);
 
     // init renderer
     app.status = "initializing lights";
-    app.lights = make_trace_lights(app.scene);
+    init_trace_lights(app.lights, app.scene);
 
     // fix renderer type if no lights
     if (empty(app.lights.instances) && empty(app.lights.environments) &&
@@ -267,7 +267,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 if (ij.x >= 0 && ij.x < app.image.width && ij.y >= 0 &&
                     ij.y < app.image.height) {
                     draw_coloredit_opengl_widget(
-                        win, "pixel", app.image[{ij.x,ij.y}]);
+                        win, "pixel", app.image[{ij.x, ij.y}]);
                 } else {
                     auto zero4f_ = zero4f;
                     draw_coloredit_opengl_widget(win, "pixel", zero4f_);
@@ -447,42 +447,44 @@ int main(int argc, char* argv[]) {
     app.trace_options.samples_per_batch = 1;
 
     // parse command line
-    auto parser = make_cmdline_parser(
-        argc, argv, "progressive path tracing", "yitrace");
-    app.trace_options.camera_id = parse_argument(
+    auto parser = cmdline_parser{};
+    init_cmdline_parser(
+        parser, argc, argv, "progressive path tracing", "yitrace");
+    app.trace_options.camera_id = parse_cmdline_argument(
         parser, "--camera", 0, "Camera index.");
-    app.trace_options.image_width = parse_argument(
+    app.trace_options.image_width = parse_cmdline_argument(
         parser, "--hres,-R", 1280, "Image horizontal resolution.");
-    app.trace_options.image_height = parse_argument(
+    app.trace_options.image_height = parse_cmdline_argument(
         parser, "--vres,-r", 720, "Image vertical resolution.");
-    app.trace_options.num_samples = parse_argument(
+    app.trace_options.num_samples = parse_cmdline_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.trace_options.sampler_type = parse_argument(parser, "--tracer,-t",
-        trace_sampler_type::path, "Tracer type.", trace_sampler_type_names);
-    app.trace_options.max_bounces  = parse_argument(
+    app.trace_options.sampler_type = parse_cmdline_argument(parser,
+        "--tracer,-t", trace_sampler_type::path, "Tracer type.",
+        trace_sampler_type_names);
+    app.trace_options.max_bounces  = parse_cmdline_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
-    app.trace_options.pixel_clamp = parse_argument(
+    app.trace_options.pixel_clamp = parse_cmdline_argument(
         parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
-    app.trace_options.random_seed = parse_argument(
+    app.trace_options.random_seed = parse_cmdline_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
-    app.trace_options.environments_hidden = parse_argument(parser,
+    app.trace_options.environments_hidden = parse_cmdline_argument(parser,
         "--env-hidden/--no-env-hidden", false,
         "Environments are hidden in renderer");
-    auto no_parallel = parse_argument(parser, "--parallel/--no-parallel", false,
-        "Disable parallel execution.");
-    app.bvh_options.use_embree = parse_argument(
+    auto no_parallel                      = parse_cmdline_argument(parser,
+        "--parallel/--no-parallel", false, "Disable parallel execution.");
+    app.bvh_options.use_embree            = parse_cmdline_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    app.bvh_options.flatten_embree = parse_argument(parser,
+    app.bvh_options.flatten_embree = parse_cmdline_argument(parser,
         "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
-    app.trace_options.double_sided = parse_argument(parser,
+    app.trace_options.double_sided = parse_cmdline_argument(parser,
         "--double-sided/--no-double-sided", false, "Double-sided rendering.");
-    app.add_skyenv                 = parse_argument(
+    app.add_skyenv                 = parse_cmdline_argument(
         parser, "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
-    app.imfilename = parse_argument(
+    app.imfilename = parse_cmdline_argument(
         parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    app.filename = parse_argument(
+    app.filename = parse_cmdline_argument(
         parser, "scene", "scene.json"s, "Scene filename", true);
-    check_cmdline(parser);
+    check_cmdline_parser(parser);
 
     // fix parallel code
     if (no_parallel) {
