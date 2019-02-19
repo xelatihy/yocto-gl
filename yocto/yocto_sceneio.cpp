@@ -243,91 +243,66 @@ inline bool is_whitespace(string_view_stream& str) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-inline void to_json(json& js, const image4f& value) {
+template<typename T>
+inline void to_json(json& js, const image<T>& value) {
     js           = json::object();
     js["width"]  = value.width;
     js["height"] = value.height;
-    js["pixels"] = vector<vec4f>{
-        data(value), data(value) + value.width * value.height};
+    js["pixels"] = value.pixels;
 }
-inline void to_json(json& js, const image4b& value) {
-    js           = json::object();
-    js["width"]  = value.width;
-    js["height"] = value.height;
-    js["pixels"] = vector<vec4b>{
-        data(value), data(value) + value.width * value.height};
-}
-inline void from_json(const json& js, image4f& value) {
+template<typename T>
+inline void from_json(const json& js, image<T>& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
-    auto pixels = js.at("pixels").get<vector<vec4f>>();
-    value       = image{width, height, (const vec4f*)data(pixels)};
+    auto pixels = js.at("pixels").get<vector<T>>();
+    value       = image{width, height, (const T*)data(pixels)};
 }
-inline void from_json(const json& js, image4b& value) {
-    auto width  = js.at("width").get<int>();
-    auto height = js.at("height").get<int>();
-    auto pixels = js.at("pixels").get<vector<vec4b>>();
-    value       = image{width, height, (const vec4b*)data(pixels)};
-}
-inline void to_json(json& js, const volume1f& value) {
+template<typename T>
+inline void to_json(json& js, const volume<T>& value) {
     js           = json::object();
     js["width"]  = value.width;
     js["height"] = value.height;
     js["depth"]  = value.depth;
-    js["voxels"] = vector<float>{
-        data(value), data(value) + value.width * value.height * value.depth};
+    js["voxels"] = value.voxels;
 }
-inline void from_json(const json& js, volume1f& value) {
+template<typename T>
+inline void from_json(const json& js, volume<T>& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto depth  = js.at("depth").get<int>();
-    auto voxels = js.at("voxels").get<vector<float>>();
-    value       = volume{width, height, depth, (const float*)data(voxels)};
+    auto voxels = js.at("voxels").get<vector<T>>();
+    value       = volume{width, height, depth, (const T*)data(voxels)};
 }
 
 // Dumps a json value
 template <typename T>
-inline bool serialize_json_values(
+inline void serialize_json_values(
     json& js, T* values, int num, const char* name, bool save) {
     if (save) {
-        if (!values || num == 0) return true;
+        if (!values || num == 0) return;
         serialize_json_values(js[name], values, num, save);
     } else {
-        if (!js.count(name)) return true;
+        if (!js.count(name)) return;
         serialize_json_values(js.at(name), values, num, save);
     }
-    return true;
 }
 
-inline bool serialize_json_value(json& js, image4f& value, bool save) {
+template<typename T>
+inline void serialize_json_value(json& js, image<T>& value, bool save) {
     auto width = 0, height = 0;
     serialize_json_value(js, width, "width", -1, save);
     serialize_json_value(js, height, "height", -1, save);
-    if (!save) value = image{width, height, zero4f};
-    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
-        return false;
-    return true;
-}
-inline bool serialize_json_value(json& js, image4b& value, bool save) {
-    auto width = 0, height = 0;
-    serialize_json_value(js, width, "width", -1, save);
-    serialize_json_value(js, height, "height", -1, save);
-    if (!save) value = image{width, height, zero4b};
-    if (!serialize_json_values(js, data(value), width * height, "pixels", save))
-        return false;
-    return true;
+    if (!save) value = {width, height, T{}};
+    serialize_json_values(js, data(value), width * height, "pixels", save);
 }
 template <typename T>
-inline bool serialize_json_value(json& js, volume1f& value, bool save) {
+inline bool serialize_json_value(json& js, volume<T>& value, bool save) {
     auto width = 0, height = 0, depth = 0;
     serialize_json_value(js, width, "width", -1, save);
     serialize_json_value(js, height, "height", -1, save);
     serialize_json_value(js, depth, "depth", -1, save);
-    if (!save) value = {width, height, depth, 0.0f};
-    if (!serialize_json_values(
-            js, data(value), width * height * depth, "voxels", save))
-        return false;
-    return true;
+    if (!save) value = {width, height, depth, T{}};
+    serialize_json_values(js, data(value), width * height * depth, "voxels", save);
 }
 
 }  // namespace yocto
