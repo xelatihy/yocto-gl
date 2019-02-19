@@ -269,15 +269,15 @@ struct hash_grid {
 };
 
 // Create a hash_grid
-hash_grid make_hash_grid(float cell_size);
-hash_grid make_hash_grid(const vector<vec3f>& positions, float cell_size);
+void make_hash_grid(hash_grid& grid, float cell_size);
+void make_hash_grid(hash_grid& grid, const vector<vec3f>& positions, float cell_size);
 // Inserts a point into the grid
 int insert_vertex(hash_grid& grid, const vec3f& position);
 // Finds the nearest neighboors within a given radius
-vector<int> find_nearest_neightbors(
-    const hash_grid& grid, const vec3f& position, float max_radius);
-vector<int> find_nearest_neightbors(
-    const hash_grid& grid, int vertex_id, float max_radius);
+void find_nearest_neightbors(
+    const hash_grid& grid, vector<int>& neighboors, const vec3f& position, float max_radius);
+void find_nearest_neightbors(
+    const hash_grid& grid, vector<int>& neighboors, int vertex_id, float max_radius);
 
 }  // namespace yocto
 
@@ -477,8 +477,9 @@ struct geodesic_solver {
 // Construct an edge graph
 void make_geodesic_solver(geodesic_solver& solver,
     const vector<vec3i>& triangles, const vector<vec3f>& positions);
-void compute_geodesic_distances(vector<float>& distances,
-    geodesic_solver& solver, const vector<int>& sources);
+void compute_geodesic_distances(
+    geodesic_solver& solver, vector<float>& distances,
+    const vector<int>& sources);
 void convert_distance_to_color(vector<vec4f>& colors, 
     const vector<float>& distances);
 
