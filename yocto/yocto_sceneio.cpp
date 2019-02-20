@@ -1964,7 +1964,7 @@ void load_mtl(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     // open file
     auto fs = input_file(filename);
-    
+
     // options
     auto flip_tr = true;
 
@@ -2002,8 +2002,7 @@ void load_mtl(const string& filename, yocto_scene& scene,
             parse_value(line, material.transmission);
         } else if (cmd == "Tf") {
             parse_value(line, material.transmission);
-            if (flip_tr)
-                material.transmission = 1 - material.transmission;
+            if (flip_tr) material.transmission = 1 - material.transmission;
         } else if (cmd == "Tr") {
             parse_value(line, material.opacity);
             if (flip_tr) material.opacity = 1 - material.opacity;
@@ -2138,7 +2137,7 @@ void load_obj(const string& filename, yocto_scene& scene,
 
     // options
     auto flip_texcoord = true;
-    
+
     // splitting policy
     auto split_material        = options.obj_split_shapes;
     auto split_group           = options.obj_split_shapes;
@@ -2165,6 +2164,17 @@ void load_obj(const string& filename, yocto_scene& scene,
     // track vertex size
     auto vert_size = obj_vertex();
     auto verts     = vector<obj_vertex>();  // buffer to avoid reallocation
+
+    // helpers
+    auto add_instance = [&]() {
+                auto instance = yocto_instance();
+                instance.name = !empty(oname) ? oname : gname;
+                scene.instances.push_back(instance);
+                vertex_map.clear();
+                pos_map.clear();
+                norm_map.clear();
+                texcoord_map.clear();
+    };
 
     // read the file line by line
     char buffer[4096];
@@ -2200,13 +2210,7 @@ void load_obj(const string& filename, yocto_scene& scene,
             if (empty(scene.instances) ||
                 (cmd == "l" && scene.instances.back().surface >= 0) ||
                 (cmd == "p" && scene.instances.back().surface >= 0)) {
-                auto instance = yocto_instance();
-                instance.name = !empty(oname) ? oname : gname;
-                scene.instances.push_back(instance);
-                vertex_map.clear();
-                pos_map.clear();
-                norm_map.clear();
-                texcoord_map.clear();
+                    add_instance();
             }
             if (scene.instances.back().shape < 0 &&
                 scene.instances.back().surface < 0) {
@@ -2217,12 +2221,15 @@ void load_obj(const string& filename, yocto_scene& scene,
                     scene.surfaces.push_back({});
                     scene.surfaces.back().name = scene.instances.back().name;
                     scene.surfaces.back().materials.push_back(-1);
-                    set_obj_material(matname, scene.surfaces.back().materials.back(), scene);
-                    scene.instances.back().surface = (int)scene.surfaces.size() - 1;
+                    set_obj_material(
+                        matname, scene.surfaces.back().materials.back(), scene);
+                    scene.instances.back().surface =
+                        (int)scene.surfaces.size() - 1;
                 } else {
                     scene.shapes.push_back({});
-                    scene.shapes.back().name     = scene.instances.back().name;
-                    set_obj_material(matname, scene.shapes.back().material, scene);
+                    scene.shapes.back().name = scene.instances.back().name;
+                    set_obj_material(
+                        matname, scene.shapes.back().material, scene);
                     scene.instances.back().shape = (int)scene.shapes.size() - 1;
                 }
             }
@@ -2275,7 +2282,7 @@ void load_obj(const string& filename, yocto_scene& scene,
                 for (auto& vert : verts) {
                     auto it = vertex_map.find(vert);
                     if (it != vertex_map.end()) continue;
-                    auto  nverts = (int)shape.positions.size();
+                    auto nverts = (int)shape.positions.size();
                     vertex_map.insert(it, {vert, nverts});
                     if (vert.position)
                         shape.positions.push_back(opos.at(vert.position - 1));
@@ -2364,48 +2371,18 @@ void load_obj(const string& filename, yocto_scene& scene,
             matname   = "";
             smoothing = true;
             parse_value(line, oname, true);
-            auto instance = yocto_instance();
-            instance.name = !empty(oname) ? oname : gname;
-            scene.instances.push_back(instance);
-            vertex_map.clear();
-            pos_map.clear();
-            norm_map.clear();
-            texcoord_map.clear();
+            add_instance();
         } else if (cmd == "g") {
             parse_value(line, gname, true);
-            if (split_group) {
-                auto instance = yocto_instance();
-                instance.name = !empty(oname) ? oname : gname;
-                scene.instances.push_back(instance);
-                vertex_map.clear();
-                pos_map.clear();
-                norm_map.clear();
-                texcoord_map.clear();
-            }
+            if (split_group) add_instance();
         } else if (cmd == "usemtl") {
             parse_value(line, matname, true);
-            if (split_material) {
-                auto instance = yocto_instance();
-                instance.name = !empty(oname) ? oname : gname;
-                scene.instances.push_back(instance);
-                vertex_map.clear();
-                pos_map.clear();
-                norm_map.clear();
-                texcoord_map.clear();
-            }
+            if (split_material) add_instance();
         } else if (cmd == "s") {
             auto name = ""s;
             parse_value(line, name, true);
             smoothing = (name == "on");
-            if (split_smoothing) {
-                auto instance = yocto_instance();
-                instance.name = !empty(oname) ? oname : gname;
-                scene.instances.push_back(instance);
-                vertex_map.clear();
-                pos_map.clear();
-                norm_map.clear();
-                texcoord_map.clear();
-            }
+            if (split_smoothing) add_instance();
         } else if (cmd == "mtllib") {
             auto mtlname = ""s;
             parse_value(line, mtlname);
@@ -2426,10 +2403,8 @@ void load_obj(const string& filename, yocto_scene& scene,
     // cleanup empty
     for (auto idx = 0; idx < scene.instances.size(); idx++) {
         auto& instance = scene.instances[idx];
-        auto is_empty = true;
-        if (instance.shape >= 0) is_empty = empty(scene.shapes[instance.shape].positions);
-        if (instance.surface >= 0) is_empty = empty(scene.surfaces[instance.surface].positions);
-        if (!is_empty) continue;
+        if (instance.shape >= 0 && !empty(scene.shapes[instance.shape].positions)) continue;
+        if (instance.surface >= 0 && !empty(scene.surfaces[instance.surface].positions)) continue;
         scene.instances.erase(scene.instances.begin() + idx);
         idx--;
     }
@@ -2442,7 +2417,7 @@ void load_obj(const string& filename, yocto_scene& scene,
 }
 
 // Loads an OBJ
-void load_obj_scene_(const string& filename, yocto_scene& scene,
+void load_obj_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = {};
@@ -2842,18 +2817,18 @@ void load_obj_scene_(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
-void load_obj_scene(const string& filename, yocto_scene& scene,
-                    const load_scene_options& options) {
+void load_obj_scene_(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = {};
     try {
         // Parse obj
         load_obj(filename, scene, options);
-        
+
         // load textures
         auto dirname = get_dirname(filename);
         load_scene_textures(scene, dirname, options);
-    } catch(const std::exception& e) {
+    } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
 
@@ -2864,7 +2839,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
     add_missing_names(scene);
     update_transforms(scene);
 }
-    
+
 void save_mtl(
     const string& filename, const yocto_scene& scene, bool flip_tr = true) {
     // open file
