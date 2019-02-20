@@ -64,7 +64,7 @@ struct app_state {
     image4f                  preview = {};
     atomic<bool>             trace_stop;
     atomic<int>              trace_sample;
-    vector<thread>           trace_threads = {};
+    vector<future<void>>     trace_futures = {};
     concurrent_queue<bbox2i> trace_queue   = {};
 
     // view image
@@ -86,7 +86,7 @@ struct app_state {
 
 void stop_rendering_async(app_state& app) {
     trace_image_async_stop(
-        app.trace_threads, app.trace_queue, app.trace_options);
+        app.trace_futures, app.trace_queue, app.trace_options);
 }
 
 void start_rendering_async(app_state& app) {
@@ -127,7 +127,7 @@ void start_rendering_async(app_state& app) {
 
     app.trace_options.cancel_flag = &app.trace_stop;
     trace_image_async_start(app.image, app.state, app.scene, app.bvh,
-        app.lights, app.trace_threads, app.trace_sample, app.trace_queue,
+        app.lights, app.trace_futures, app.trace_sample, app.trace_queue,
         app.trace_options);
 }
 
@@ -372,7 +372,7 @@ bool update(app_state& app) {
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
     trace_image_async_stop(
-        app.trace_threads, app.trace_queue, app.trace_options);
+        app.trace_futures, app.trace_queue, app.trace_options);
     app.filename = paths.front();
     load_scene_async(app);
 }
@@ -513,7 +513,7 @@ int main(int argc, char* argv[]) {
 
     // cleanup
     trace_image_async_stop(
-        app.trace_threads, app.trace_queue, app.trace_options);
+        app.trace_futures, app.trace_queue, app.trace_options);
 
     // done
     return 0;

@@ -129,9 +129,9 @@ namespace yocto {
 using std::deque;
 using std::lock_guard;
 using std::mutex;
-using std::thread;
 using std::future;
-using std::async;
+using std::atomic;
+using std::thread;
 using namespace std::chrono_literals;
 
 }  // namespace yocto
@@ -571,6 +571,17 @@ struct concurrent_queue {
     mutex    _mutex;
     deque<T> _queue;
 };
+
+// Runs a rask as an asycnrhonous operation.
+template <typename Function>
+inline auto async(Function&& function) {
+    return std::async(std::launch::async, std::forward<Function>(function));
+}
+template <typename Function, typename... Args>
+inline auto async(Function&& function, Args&&... args) {
+    return std::async(std::launch::async, std::forward<Function>(function),
+        std::forward<Args>(args)...);
+}
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
@@ -1206,15 +1217,14 @@ inline void parallel_for(
         auto        nthreads = thread::hardware_concurrency();
         atomic<int> next_idx(begin);
         for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-            futures.emplace_back(
-                async(std::launch::async, [&func, &next_idx, cancel, end]() {
-                    while (true) {
-                        if (cancel && *cancel) break;
-                        auto idx = next_idx.fetch_add(1);
-                        if (idx >= end) break;
-                        func(idx);
-                    }
-                }));
+            futures.emplace_back(async([&func, &next_idx, cancel, end]() {
+                while (true) {
+                    if (cancel && *cancel) break;
+                    auto idx = next_idx.fetch_add(1);
+                    if (idx >= end) break;
+                    func(idx);
+                }
+            }));
         }
         for (auto& f : futures) f.get();
     }
