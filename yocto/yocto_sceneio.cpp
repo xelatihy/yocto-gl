@@ -258,26 +258,17 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
     if (options.skip_textures) return;
 
     // load images
-    atomic<bool> exit_error(false);
     parallel_foreach(
         scene.textures,
-        [&exit_error, &options, &dirname](yocto_texture& texture) {
-            if (exit_error) return;
+        [&dirname](yocto_texture& texture) {
             if (texture.filename == "" || !empty(texture.hdr_image) ||
                 !empty(texture.ldr_image))
                 return;
             auto filename = normalize_path(dirname + texture.filename);
-            try {
-                if (is_hdr_filename(filename)) {
-                    load_image_nolog(filename, texture.hdr_image);
-                } else {
-                    load_image_nolog(filename, texture.ldr_image);
-                }
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
+            if (is_hdr_filename(filename)) {
+                load_image_nolog(filename, texture.hdr_image);
+            } else {
+                load_image_nolog(filename, texture.ldr_image);
             }
         },
         options.cancel_flag, options.run_serially);
@@ -285,18 +276,10 @@ void load_scene_textures(yocto_scene& scene, const string& dirname,
     // load volumes
     parallel_foreach(
         scene.voltextures,
-        [&exit_error, &options, &dirname](yocto_voltexture& texture) {
-            if (exit_error) return;
+        [&dirname](yocto_voltexture& texture) {
             if (texture.filename == "" || !empty(texture.volume_data)) return;
             auto filename = normalize_path(dirname + texture.filename);
-            try {
-                load_volume_nolog(filename, texture.volume_data);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
-            }
+            load_volume_nolog(filename, texture.volume_data);
         },
         options.cancel_flag, options.run_serially);
 
@@ -339,24 +322,15 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
     if (options.skip_textures) return;
 
     // save images
-    atomic<bool> exit_error(false);
     parallel_foreach(
         scene.textures,
-        [&exit_error, &options, &dirname](const yocto_texture& texture) {
-            if (exit_error) return;
+        [&dirname](const yocto_texture& texture) {
             if (empty(texture.hdr_image) && empty(texture.ldr_image)) return;
             auto filename = normalize_path(dirname + texture.filename);
-            try {
-                if (is_hdr_filename(filename)) {
-                    save_image_nolog(filename, texture.hdr_image);
-                } else {
-                    save_image_nolog(filename, texture.ldr_image);
-                }
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
+            if (is_hdr_filename(filename)) {
+                save_image_nolog(filename, texture.hdr_image);
+            } else {
+                save_image_nolog(filename, texture.ldr_image);
             }
         },
         options.cancel_flag, options.run_serially);
@@ -364,18 +338,10 @@ void save_scene_textures(const yocto_scene& scene, const string& dirname,
     // save volumes
     parallel_foreach(
         scene.voltextures,
-        [&exit_error, &options, &dirname](const yocto_voltexture& texture) {
-            if (exit_error) return;
+        [&dirname](const yocto_voltexture& texture) {
             if (empty(texture.volume_data)) return;
             auto filename = normalize_path(dirname + texture.filename);
-            try {
-                save_volume_nolog(filename, texture.volume_data);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
-            }
+            save_volume_nolog(filename, texture.volume_data);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -1533,44 +1499,27 @@ void load_json_meshes(yocto_scene& scene, const string& dirname,
     if (options.skip_meshes) return;
 
     // load shapes
-    atomic<bool> exit_error(false);
     parallel_foreach(
         scene.shapes,
-        [&exit_error, &options, &dirname](yocto_shape& shape) {
-            if (exit_error) return;
+        [&dirname](yocto_shape& shape) {
             if (shape.filename == "" || !empty(shape.positions)) return;
             auto filename = normalize_path(dirname + shape.filename);
-            try {
-                load_mesh(filename, shape.points, shape.lines, shape.triangles,
-                    shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius, false);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
-            }
+            load_mesh(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius, false);
         },
         options.cancel_flag, options.run_serially);
 
     // load surfaces
     parallel_foreach(
         scene.surfaces,
-        [&exit_error, &options, &dirname](yocto_surface& surface) {
-            if (exit_error) return;
+        [&dirname](yocto_surface& surface) {
             if (surface.filename == "" || !empty(surface.positions)) return;
             auto filename = normalize_path(dirname + surface.filename);
-            try {
-                load_facevarying_mesh(filename, surface.quads_positions,
-                    surface.quads_normals, surface.quads_texturecoords,
-                    surface.positions, surface.normals, surface.texturecoords,
-                    surface.quads_materials);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
-            }
+            load_facevarying_mesh(filename, surface.quads_positions,
+                surface.quads_normals, surface.quads_texturecoords,
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -1613,44 +1562,27 @@ void save_json_meshes(const yocto_scene& scene, const string& dirname,
     if (options.skip_meshes) return;
 
     // save shapes
-    atomic<bool> exit_error(false);
     parallel_foreach(
         scene.shapes,
-        [&exit_error, &options, &dirname](const yocto_shape& shape) {
-            if (exit_error) return;
+        [&dirname](const yocto_shape& shape) {
             if (shape.filename == "") return;
             auto filename = normalize_path(dirname + shape.filename);
-            try {
-                save_mesh(filename, shape.points, shape.lines, shape.triangles,
-                    shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
-            }
+            save_mesh(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius);
         },
         options.cancel_flag, options.run_serially);
 
     // save surfaces
     parallel_foreach(
         scene.surfaces,
-        [&exit_error, &options, &dirname](const yocto_surface& surface) {
-            if (exit_error) return;
+        [&dirname](const yocto_surface& surface) {
             if (surface.filename == "") return;
             auto filename = normalize_path(dirname + surface.filename);
-            try {
-                save_facevarying_mesh(filename, surface.quads_positions,
-                    surface.quads_normals, surface.quads_texturecoords,
-                    surface.positions, surface.normals, surface.texturecoords,
-                    surface.quads_materials);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    exit_error = true;
-                    throw;
-                }
-            }
+            save_facevarying_mesh(filename, surface.quads_positions,
+                surface.quads_normals, surface.quads_texturecoords,
+                surface.positions, surface.normals, surface.texturecoords,
+                surface.quads_materials);
         },
         options.cancel_flag, options.run_serially);
 }
@@ -2361,7 +2293,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
     try {
         // Parse obj
         auto obj_options          = load_obj_options();
-        obj_options.exit_on_error = options.exit_on_error;
         obj_options.geometry_only = false;
         load_obj(filename, cb, obj_options);
 
@@ -2381,7 +2312,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         // load textures
         auto dirname = get_dirname(filename);
         load_scene_textures(scene, dirname, options);
-
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -3618,13 +3548,7 @@ void save_gltf_scene(const string& filename, const yocto_scene& scene,
             if (shape.filename == "") continue;
             auto filename = normalize_path(dirname + shape.filename);
             filename      = replace_extension(filename, ".bin");
-            try {
-                save_gltf_mesh(filename, shape);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    throw;
-                }
-            }
+            save_gltf_mesh(filename, shape);
         }
 
         // save textures
@@ -4514,15 +4438,9 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         for (auto& shape : scene.shapes) {
             if (shape.filename == "") continue;
             auto filename = normalize_path(dirname + shape.filename);
-            try {
-                save_mesh(filename, shape.points, shape.lines, shape.triangles,
-                    shape.quads, shape.positions, shape.normals,
-                    shape.texturecoords, shape.colors, shape.radius);
-            } catch (...) {
-                if (!options.exit_on_error) {
-                    throw;
-                }
-            }
+            save_mesh(filename, shape.points, shape.lines, shape.triangles,
+                shape.quads, shape.positions, shape.normals,
+                shape.texturecoords, shape.colors, shape.radius);
         }
 
         // skip textures

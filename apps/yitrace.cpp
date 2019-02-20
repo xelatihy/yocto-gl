@@ -138,6 +138,9 @@ bool load_scene_sync(app_state& app) {
     } catch(const std::exception& e) {
         log_fatal(e.what());
         return false;
+    } catch(const io_error& e) {
+        log_fatal(e.what());
+        return false;
     }
 
     // tesselate

@@ -120,6 +120,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <future>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -137,6 +138,8 @@ using std::ifstream;
 using std::ofstream;
 using std::fstream;
 using std::cout;
+using std::future;
+using std::async;
 using namespace std::chrono_literals;
 
 using std::getline;
@@ -1572,20 +1575,20 @@ inline void parallel_for(
             func(idx);
         }
     } else {
-        auto        threads  = vector<thread>{};
+        auto        futures  = vector<future<void>>{};
         auto        nthreads = thread::hardware_concurrency();
         atomic<int> next_idx(begin);
         for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-            threads.emplace_back([&func, &next_idx, cancel, end]() {
+            futures.emplace_back(async(std::launch::async, [&func, &next_idx, cancel, end]() {
                 while (true) {
                     if (cancel && *cancel) break;
                     auto idx = next_idx.fetch_add(1);
                     if (idx >= end) break;
                     func(idx);
                 }
-            });
+            }));
         }
-        for (auto& t : threads) t.join();
+        for (auto& f : futures) f.get();
     }
 }
 

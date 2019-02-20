@@ -61,13 +61,13 @@
 // -----------------------------------------------------------------------------
 // SCENE IO FUNCTIONS
 // -----------------------------------------------------------------------------
+
 namespace yocto {
 
 // Scene load options
 struct load_scene_options {
     bool          skip_textures             = false;
     bool          skip_meshes               = false;
-    bool          exit_on_error             = false;
     bool          obj_split_shapes          = true;
     bool          obj_preserve_face_varying = false;
     bool          assign_texture_opacity    = true;
@@ -78,7 +78,6 @@ struct load_scene_options {
 struct save_scene_options {
     bool          skip_textures = false;
     bool          skip_meshes   = false;
-    bool          exit_on_error = false;
     atomic<bool>* cancel_flag   = nullptr;
     bool          run_serially  = false;
 };
