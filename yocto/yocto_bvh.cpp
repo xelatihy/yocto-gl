@@ -749,8 +749,8 @@ pair<int, int> split_bvh_node_balanced(
     // bounding box and split along this one right in the middle
     split_axis = largest_axis;
     mid        = (start + end) / 2;
-    std::nth_element(prims.data() + start, prims.data() + mid, prims.data() + end,
-        [split_axis](auto& a, auto& b) {
+    std::nth_element(prims.data() + start, prims.data() + mid,
+        prims.data() + end, [split_axis](auto& a, auto& b) {
             return a.center[split_axis] < b.center[split_axis];
         });
 
@@ -788,7 +788,7 @@ pair<int, int> split_bvh_node_middle(
     split_axis   = largest_axis;
     auto cmiddle = (cbbox.max + cbbox.min) / 2;
     auto middle  = cmiddle[largest_axis];
-    mid          = (int)(std::partition(prims.data() + start, prims.data() + end,
+    mid = (int)(std::partition(prims.data() + start, prims.data() + end,
                     [split_axis, middle](
                         auto& a) { return a.center[split_axis] < middle; }) -
                 prims.data());

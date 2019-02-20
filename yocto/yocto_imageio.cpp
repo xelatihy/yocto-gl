@@ -230,8 +230,8 @@ void load_pfm_image(const string& filename, image4f& img) {
     img = image{{width, height}, (const vec4f*)pixels.data()};
 }
 void save_pfm_image(const string& filename, const image4f& img) {
-    if (!save_pfm(
-            filename.c_str(), img.size().x, img.size().y, 4, (float*)img.data())) {
+    if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -250,8 +250,8 @@ void load_exr_image(const string& filename, image4f& img) {
     free(pixels);
 }
 void save_exr_image(const string& filename, const image4f& img) {
-    if (!SaveEXR(
-            (float*)img.data(), img.size().x, img.size().y, 4, filename.c_str())) {
+    if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
+            filename.c_str())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -278,8 +278,8 @@ void load_stb_image(const string& filename, image4f& img) {
 
 // save an image with stbi
 void save_png_image(const string& filename, const image4b& img) {
-    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4, img.data(),
-            img.size().x * 4)) {
+    if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
+            img.data(), img.size().x * 4)) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -302,8 +302,8 @@ void save_bmp_image(const string& filename, const image4b& img) {
     }
 }
 void save_hdr_image(const string& filename, const image4f& img) {
-    if (!stbi_write_hdr(
-            filename.c_str(), img.size().x, img.size().y, 4, (float*)img.data())) {
+    if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
+            (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -572,7 +572,7 @@ namespace yocto {
 
 // Loads volume data from binary format.
 void load_volume(const string& filename, volume1f& vol) {
-    auto fs = input_file(filename, true);
+    auto fs   = input_file(filename, true);
     auto size = zero3i;
     read_value(fs, size);
     vol.resize(size);

@@ -98,39 +98,38 @@ struct image {
     // constructors
     image() : _size{0, 0}, _pixels{} {}
     image(const vec2i& size, const T& value = {})
-        : _size{size}
-        , _pixels{(size_t)size.x * (size_t)size.y, value} {}
+        : _size{size}, _pixels{(size_t)size.x * (size_t)size.y, value} {}
     image(const vec2i& size, const T* value)
         : _size{size}
         , _pixels{value, value + (size_t)size.x * (size_t)size.y} {}
 
     // size
-    bool empty() const { return _pixels.empty(); }
+    bool  empty() const { return _pixels.empty(); }
     vec2i size() const { return _size; }
-    void resize(const vec2i& size) {
+    void  resize(const vec2i& size) {
         if (size == _size) return;
-        _size  = size;
+        _size = size;
         _pixels.resize((size_t)size.x * (size_t)size.y);
     }
 
     // element access
-    T&       operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
+    T& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
     const T& operator[](const vec2i& ij) const {
         return _pixels[ij.y * _size.x + ij.x];
     }
 
     // data access
-    T* data() { return _pixels.data(); }
+    T*       data() { return _pixels.data(); }
     const T* data() const { return _pixels.data(); }
 
     // iteration
-    T* begin() { return _pixels.data(); }
-    T* end() { return _pixels.data() + _pixels.size(); }
+    T*       begin() { return _pixels.data(); }
+    T*       end() { return _pixels.data() + _pixels.size(); }
     const T* begin() const { return _pixels.data(); }
     const T* end() const { return _pixels.data() + _pixels.size(); }
 
     // data
-    vec2i     _size  = zero2i;
+    vec2i     _size   = zero2i;
     vector<T> _pixels = {};
 };
 
@@ -249,7 +248,7 @@ namespace yocto {
 template <typename T>
 struct volume {
     // constructors
-    volume() : _size{0,0,0}, _voxels{} {}
+    volume() : _size{0, 0, 0}, _voxels{} {}
     volume(const vec3i& size, const T& value = {})
         : _size{size}
         , _voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
@@ -259,11 +258,11 @@ struct volume {
               value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
 
     // size
-    bool empty() const { return _voxels.empty(); }
+    bool  empty() const { return _voxels.empty(); }
     vec3i size() const { return _size; }
-    void resize(const vec3i& size) {
+    void  resize(const vec3i& size) {
         if (size == _size) return;
-        _size  = size;
+        _size = size;
         _voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
     }
 
@@ -276,17 +275,17 @@ struct volume {
     }
 
     // data access
-    T* data() { return _voxels.data(); }
+    T*       data() { return _voxels.data(); }
     const T* data() const { return _voxels.data(); }
 
     // iteration
-    T* begin() { return _voxels.data(); }
-    T* end() { return _voxels.data() + _voxels.size(); }
+    T*       begin() { return _voxels.data(); }
+    T*       end() { return _voxels.data() + _voxels.size(); }
     const T* begin() const { return _voxels.data(); }
     const T* end() const { return _voxels.data() + _voxels.size(); }
 
     // data
-    vec3i           _size  = zero3i;
+    vec3i         _size   = zero3i;
     vector<float> _voxels = {};
 };
 
@@ -296,13 +295,11 @@ using volume1f = volume<float>;
 // equality
 template <typename T>
 inline bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.size() == b.size() &&
-           a._voxels == b._voxels;
+    return a.size() == b.size() && a._voxels == b._voxels;
 }
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-    return a.size() != b.size() &&
-           a._voxels != b._voxels;
+    return a.size() != b.size() && a._voxels != b._voxels;
 }
 
 // make a simple example volume
@@ -587,7 +584,8 @@ inline image<T> get_image_region(
 }
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<image_region>& regions, const vec2i& size, int region_size, bool shuffled) {
+inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
+    int region_size, bool shuffled) {
     regions.clear();
     for (auto y = 0; y < size.y; y += region_size) {
         for (auto x = 0; x < size.x; x += region_size) {

@@ -215,7 +215,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             if (begin_tabitem_opengl_widget(win, "trace")) {
                 draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                    app.image.size().x, app.image.size().y, (int)app.trace_sample);
+                    app.image.size().x, app.image.size().y,
+                    (int)app.trace_sample);
                 auto cam_names = vector<string>();
                 for (auto& camera : app.scene.cameras)
                     cam_names.push_back(camera.name);
@@ -301,12 +302,13 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(get_opengl_framebuffer_size(win));
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
-        update_image_view(app.image_center, app.image_scale,
-            app.image.size(), win_size, app.zoom_to_fit);
+        update_image_view(app.image_center, app.image_scale, app.image.size(),
+            win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_width != 0 || app.image_height != 0) {
-                init_opengl_texture(app.display_texture, {app.image_width,
-                    app.image_height}, false, false, false, false);
+                init_opengl_texture(app.display_texture,
+                    {app.image_width, app.image_height}, false, false, false,
+                    false);
             }
         } else {
             auto region = image_region{};
@@ -418,14 +420,14 @@ void run_ui(app_state& app) {
         // selection
         if (app.load_done && (mouse_left || mouse_right) && alt_down &&
             !widgets_active) {
-            auto ij = get_image_coords(mouse_pos, app.image_center,
-                app.image_scale, app.image.size());
+            auto ij = get_image_coords(
+                mouse_pos, app.image_center, app.image_scale, app.image.size());
             if (ij.x < 0 || ij.x >= app.image.size().x || ij.y < 0 ||
                 ij.y >= app.image.size().y) {
                 auto& camera = app.scene.cameras.at(
                     app.trace_options.camera_id);
-                auto ray  = evaluate_camera_ray(camera, ij,
-                    app.image.size(), {0.5f, 0.5f}, zero2f);
+                auto ray = evaluate_camera_ray(
+                    camera, ij, app.image.size(), {0.5f, 0.5f}, zero2f);
                 auto isec = intersect_scene_bvh(app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {typeid(yocto_instance), isec.instance_id};

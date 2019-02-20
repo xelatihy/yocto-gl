@@ -3,17 +3,17 @@
 //
 //
 // Yocto/Utils is a collection of utilities used in writing other Yocto/GL
-// libraries and example applications. We support printing builtin and 
+// libraries and example applications. We support printing builtin and
 // Yocto/Math values, parsing command line arguments, simple path
 // manipulation, file lading/saving and basic concurrency utilities.
 //
 //
 // ## Printing and parsing values
 //
-// Use `print_value()` to write a string in a stream or `println_values()` 
+// Use `print_value()` to write a string in a stream or `println_values()`
 // to print a line of values. Use `format_duraction()` and `format_num()`
 // for pretty printing times and numbers. These will change once lib `fmt`
-// is accepted in the standard. 
+// is accepted in the standard.
 //
 //
 // ## Python-like iterators and collection helpers
@@ -243,8 +243,7 @@ inline void write_values(const output_file& fs, const vector<T>& values) {
 template <typename T>
 inline void write_values(const output_file& fs, const T* values, size_t count) {
     if (!count) return;
-    if (fwrite(values, sizeof(values[0]), count, fs.file) !=
-        count) {
+    if (fwrite(values, sizeof(values[0]), count, fs.file) != count) {
         throw io_error("cannot write to " + fs.filename);
     }
 }

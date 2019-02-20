@@ -585,7 +585,8 @@ void add_missing_names(yocto_scene& scene) {
 void add_missing_tangent_space(yocto_scene& scene) {
     for (auto& shape : scene.shapes) {
         auto& material = scene.materials[shape.material];
-        if (!shape.tangentspaces.empty() || shape.texturecoords.empty()) continue;
+        if (!shape.tangentspaces.empty() || shape.texturecoords.empty())
+            continue;
         if (material.normal_texture < 0 && material.bump_texture < 0) continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty()) {

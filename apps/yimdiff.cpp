@@ -89,8 +89,7 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
-    if (img1.size() != img2.size())
-        exit_error("image size differs");
+    if (img1.size() != img2.size()) exit_error("image size differs");
     auto diff     = compute_diff_image(img1, img2);
     auto max_diff = max_diff_value(diff);
     if (!output.empty()) {

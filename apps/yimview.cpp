@@ -196,8 +196,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 else
                     status = "done";
                 draw_label_opengl_widget(win, "status", status.c_str());
-                draw_label_opengl_widget(
-                    win, "size", "%d x %d ", img.img.size().x, img.img.size().y);
+                draw_label_opengl_widget(win, "size", "%d x %d ",
+                    img.img.size().x, img.img.size().y);
                 draw_slider_opengl_widget(
                     win, "zoom", img.image_scale, 0.1, 10);
                 draw_checkbox_opengl_widget(
@@ -260,8 +260,8 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(fb_size);
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
-        update_image_view(img.image_center, img.image_scale,
-            img.display.size(), win_size, img.zoom_to_fit);
+        update_image_view(img.image_center, img.image_scale, img.display.size(),
+            win_size, img.zoom_to_fit);
         draw_opengl_image_background(img.gl_txt, win_size.x, win_size.y,
             img.image_center, img.image_scale);
         set_opengl_blending(true);
@@ -277,8 +277,8 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(img.gl_txt, img.display.size(),
-                false, false, false, false);
+            init_opengl_texture(
+                img.gl_txt, img.display.size(), false, false, false, false);
         } else {
             auto region = image_region{};
             while (img.display_queue.try_pop(region)) {

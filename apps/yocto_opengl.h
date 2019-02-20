@@ -87,8 +87,8 @@ void bind_opengl_program(opengl_program& program);
 void unbind_opengl_program();
 
 struct opengl_texture {
-    uint texture_id = 0;
-    vec2i  size      = {0, 0};
+    uint  texture_id = 0;
+    vec2i size       = {0, 0};
 
     operator bool() const { return (bool)texture_id; }
 };

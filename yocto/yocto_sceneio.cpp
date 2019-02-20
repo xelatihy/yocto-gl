@@ -3922,7 +3922,8 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
     }
 
     // animations not supported yet
-    if (!scene.animations.empty()) throw io_error("animation not supported yet");
+    if (!scene.animations.empty())
+        throw io_error("animation not supported yet");
 
     // nodes from instances
     if (scene.nodes.empty()) {
@@ -4906,14 +4907,15 @@ void read_value(input_file& fs, image<T>& img) {
     auto size = zero2i;
     read_value(fs, size);
     img = {size};
-    read_values(fs, img.data(), size.x*size.y);
+    read_values(fs, img.data(), size.x * size.y);
 }
 
 // Serialize image
 template <typename T>
 void write_value(output_file& fs, const volume<T>& vol) {
     write_value(fs, vol.size());
-    write_values(fs, vol.data(), (size_t)vol.size().x*(size_t)vol.size().y*(size_t)vol.size().z);
+    write_values(fs, vol.data(),
+        (size_t)vol.size().x * (size_t)vol.size().y * (size_t)vol.size().z);
 }
 template <typename T>
 void read_value(input_file& fs, volume<T>& vol) {
@@ -4922,7 +4924,7 @@ void read_value(input_file& fs, volume<T>& vol) {
     read_value(fs, size.y);
     read_value(fs, size.z);
     vol = {size};
-    read_values(fs, vol.data(), size.x*size.y*size.z);
+    read_values(fs, vol.data(), size.x * size.y * size.z);
 }
 
 // Serialize vector of pointers
@@ -5847,15 +5849,16 @@ void save_obj_facevarying_mesh(const string& filename,
     };
     auto last_material_id = -1;
     for (auto i = 0; i < quads_positions.size(); i++) {
-        if (!quads_materials.empty() && quads_materials[i] != last_material_id) {
+        if (!quads_materials.empty() &&
+            quads_materials[i] != last_material_id) {
             last_material_id = quads_materials[i];
             println_values(fs, "usemtl material_{}\n", last_material_id);
         }
         auto qp = quads_positions.at(i);
         auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i) :
-                                                vec4i{-1, -1, -1, -1};
+                                                 vec4i{-1, -1, -1, -1};
         auto qn = !quads_normals.empty() ? quads_normals.at(i) :
-                                          vec4i{-1, -1, -1, -1};
+                                           vec4i{-1, -1, -1, -1};
         if (qp.z != qp.w) {
             println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
                 fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),

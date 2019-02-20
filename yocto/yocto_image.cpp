@@ -194,8 +194,8 @@ void make_gammaramp_image(image4f& img) {
 void make_uvramp_image(image4f& img) {
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
-            img[{i, j}] = {
-                i / (float)(img.size().x - 1), j / (float)(img.size().y - 1), 0, 1};
+            img[{i, j}] = {i / (float)(img.size().x - 1),
+                j / (float)(img.size().y - 1), 0, 1};
         }
     }
 }
@@ -465,7 +465,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
             for (int i = 0; i < img.size().x; i++) {
                 auto pxl   = img[{i, j}];
                 auto le    = vec3f{pxl.x, pxl.y, pxl.z};
-                auto angle = sin(theta) * 4 * pif / (img.size().x * img.size().y);
+                auto angle = sin(theta) * 4 * pif /
+                             (img.size().x * img.size().y);
                 ground += le * (ground_albedo / pif) * cos(theta) * angle;
             }
         }
@@ -504,7 +505,8 @@ void make_noise_image(image4f& img, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
                      scale;
             auto g      = perlin_noise(p, wrap3i);
             g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -519,7 +521,8 @@ void make_fbm_image(image4f& img, float scale, float lacunarity, float gain,
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
                      scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
@@ -534,7 +537,8 @@ void make_ridge_image(image4f& img, float scale, float lacunarity, float gain,
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
                      scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
@@ -550,7 +554,8 @@ void make_turbulence_image(image4f& img, float scale, float lacunarity,
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
+                         0.5f} *
                      scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
@@ -565,13 +570,13 @@ void add_image_border(
     image4f& img, int border_width, const vec4f& border_color) {
     for (auto j = 0; j < img.size().y; j++) {
         for (auto b = 0; b < border_width; b++) {
-            img[{b, j}]                 = border_color;
+            img[{b, j}]                    = border_color;
             img[{img.size().x - 1 - b, j}] = border_color;
         }
     }
     for (auto i = 0; i < img.size().x; i++) {
         for (auto b = 0; b < border_width; b++) {
-            img[{i, b}]                  = border_color;
+            img[{i, b}]                    = border_color;
             img[{i, img.size().y - 1 - b}] = border_color;
         }
     }
@@ -589,7 +594,7 @@ void make_test_volume(volume1f& vol, float scale, float exponent) {
     for (auto k = 0; k < vol.size().z; k++) {
         for (auto j = 0; j < vol.size().y; j++) {
             for (auto i = 0; i < vol.size().x; i++) {
-                auto p     = vec3f{i / (float)vol.size().x, j / (float)vol.size().y,
+                auto p = vec3f{i / (float)vol.size().x, j / (float)vol.size().y,
                     k / (float)vol.size().z};
                 auto value = pow(
                     max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
