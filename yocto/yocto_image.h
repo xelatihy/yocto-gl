@@ -147,21 +147,13 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
     return a.size() != b.size() || a._pixels != b._pixels;
 }
 
-// Image region
-struct image_region {
-    int offsetx = 0;
-    int offsety = 0;
-    int width   = 0;
-    int height  = 0;
-};
-
 // Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions, const vec2i& size,
+void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
     int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
-void get_image_region(image<T>& clipped, const image<T>& img, const image_region& region);
+void get_image_region(image<T>& clipped, const image<T>& img, const bbox2i& region);
 
 // Conversion from/to floats.
 void byte_to_float(image4f& fl, const image4b& bt);
@@ -182,7 +174,7 @@ void tonemap_image(image4f& ldr,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 void tonemap_image(image4b& ldr,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image4f& ldr, const image_region& region,
+void tonemap_image_region(image4f& ldr, const bbox2i& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
@@ -578,23 +570,23 @@ namespace yocto {
 // Gets pixels in an image region
 template <typename T>
 inline void get_image_region(image<T>& clipped,
-    const image<T>& img, const image_region& region) {
-    clipped.resize({region.width, region.height});
-    for (auto j = 0; j < region.height; j++) {
-        for (auto i = 0; i < region.width; i++) {
-            clipped[{i, j}] = img[{i + region.offsetx, j + region.offsety}];
+    const image<T>& img, const bbox2i& region) {
+    clipped.resize(region.size());
+    for (auto j = 0; j < region.size().y; j++) {
+        for (auto i = 0; i < region.size().x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
         }
     }
 }
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
+inline void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
     int region_size, bool shuffled) {
     regions.clear();
     for (auto y = 0; y < size.y; y += region_size) {
         for (auto x = 0; x < size.x; x += region_size) {
-            regions.push_back({x, y, min(region_size, size.x - x),
-                min(region_size, size.y - y)});
+            regions.push_back({{x, y}, {min(x + region_size, size.x),
+                min(y + region_size, size.y)}});
         }
     }
     if (shuffled) {

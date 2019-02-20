@@ -128,10 +128,10 @@ void tonemap_image(image4b& ldr,
 }
 
 // Tonemap image
-void tonemap_image_region(image4f& ldr, const image_region& region,
+void tonemap_image_region(image4f& ldr, const bbox2i& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb) {
-    for (auto j = region.offsety; j < region.offsety + region.height; j++) {
-        for (auto i = region.offsetx; i < region.offsetx + region.width; i++) {
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
             ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
         }
     }

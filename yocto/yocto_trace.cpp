@@ -1918,12 +1918,12 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 // Trace a block of samples
 void trace_image_region(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const image_region& region, int num_samples,
+    const bbox2i& region, int num_samples,
     const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
     auto  sampler = get_trace_sampler_func(options.sampler_type);
-    for (auto j = region.offsety; j < region.offsety + region.height; j++) {
-        for (auto i = region.offsetx; i < region.offsetx + region.width; i++) {
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
             auto& pixel = get_trace_pixel(state, i, j);
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
@@ -2014,7 +2014,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto image  = yocto::image{{width, height}, zero4f};
     auto pixels = trace_state{};
     init_trace_state(pixels, width, height, options.random_seed);
-    auto regions = vector<image_region>{};
+    auto regions = vector<bbox2i>{};
     make_image_regions(regions, image.size(), options.region_size, true);
 
     if (options.run_serially) {
@@ -2046,7 +2046,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_image_samples(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
-    auto regions = vector<image_region>{};
+    auto regions = vector<bbox2i>{};
     make_image_regions(regions, image.size(), options.region_size, true);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
@@ -2079,14 +2079,14 @@ int trace_image_samples(image4f& image, trace_state& state,
 void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<thread>& threads, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     auto& camera         = scene.cameras.at(options.camera_id);
     auto [width, height] = get_camera_image_size(
         camera, options.image_width, options.image_height);
     image = {{width, height}, zero4f};
     state = trace_state{};
     init_trace_state(state, width, height, options.random_seed);
-    auto regions = vector<image_region>{};
+    auto regions = vector<bbox2i>{};
     make_image_regions(regions, image.size(), options.region_size, true);
     if (options.cancel_flag) *options.cancel_flag = false;
 
@@ -2125,7 +2125,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
             parallel_foreach(
                 regions,
                 [num_samples, &options, &image, &scene, &lights, &bvh, &state,
-                    &queue](const image_region& region) {
+                    &queue](const bbox2i& region) {
                     trace_image_region(image, state, scene, bvh, lights, region,
                         num_samples, options);
                     queue.push(region);
@@ -2139,7 +2139,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
 
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
-    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     if (options.cancel_flag) *options.cancel_flag = true;
     for (auto& t : threads) t.join();
     threads.clear();
