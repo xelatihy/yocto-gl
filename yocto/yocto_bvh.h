@@ -176,17 +176,20 @@ struct build_bvh_options {
 
 // Build a BVH from the given set of shape primitives.
 void init_shape_bvh(bvh_shape& bvh, const vector<int>& points,
-    const vector<vec3f>& positions, const vector<float>& radius);
+                    const vector<vec3f>& positions,
+                    const vector<float>& radius);
 void init_shape_bvh(bvh_shape& bvh, const vector<vec2i>& lines,
-    const vector<vec3f>& positions, const vector<float>& radius);
+                    const vector<vec3f>& positions,
+                    const vector<float>& radius);
 void init_shape_bvh(bvh_shape& bvh, const vector<vec3i>& triangles,
-    const vector<vec3f>& positions);
-void init_shape_bvh(
-    bvh_shape& bvh, const vector<vec4i>& quads, const vector<vec3f>& positions);
+                    const vector<vec3f>& positions);
+void init_shape_bvh(bvh_shape& bvh, const vector<vec4i>& quads,
+                    const vector<vec3f>& positions);
 
 // Build a BVH from the given set of instances.
 void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs);
+                    const vector<bvh_shape>& shape_bvhs,
+                    const vector<bvh_shape>& surface_bvhs);
 
 // Build the bvh acceleration structure.
 void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
@@ -195,7 +198,7 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options = {});
 // Update the node data for shape and scene bvhs.
 void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions);
 void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
-    const vector<float>& radius);
+                      const vector<float>& radius);
 void update_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances);
 bvh_shape& get_shape_bvh(bvh_scene& bvh, int shape_id);
 bvh_shape& get_surface_bvh(bvh_scene& bvh, int surface_id);
@@ -203,7 +206,8 @@ bvh_shape& get_surface_bvh(bvh_scene& bvh, int surface_id);
 // Refit bvh data
 void refit_shape_bvh(bvh_shape& bvh);
 void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const vector<int>& updated_surfaces);
+                     const vector<int>& updated_shapes,
+                     const vector<int>& updated_surfaces);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
@@ -227,21 +231,26 @@ struct bvh_scene_intersection {
 // Intersect ray with a bvh returning either the first or any intersection
 // depending on `find_any`. Returns the ray distance , the instance id,
 // the shape element index and the element barycentric coordinates.
-bvh_shape_intersection intersect_shape_bvh(
-    const bvh_shape& bvh, const ray3f& ray, bool find_any = false);
-bvh_scene_intersection intersect_scene_bvh(
-    const bvh_scene& bvh, const ray3f& ray, bool find_any = false);
+bvh_shape_intersection intersect_shape_bvh(const bvh_shape& bvh,
+                                           const ray3f&     ray,
+                                           bool             find_any = false);
+bvh_scene_intersection intersect_scene_bvh(const bvh_scene& bvh,
+                                           const ray3f&     ray,
+                                           bool             find_any = false);
 bvh_scene_intersection intersect_instance_bvh(const bvh_scene& bvh,
-    int instance_id, const ray3f& ray, bool find_any = false);
+                                              int instance_id, const ray3f& ray,
+                                              bool find_any = false);
 
 // Find a shape element that overlaps a point within a given distance
 // max distance, returning either the closest or any overlap depending on
 // `find_any`. Returns the point distance, the instance id, the shape element
 // index and the element barycentric coordinates.
 bvh_shape_intersection overlap_shape_bvh(const bvh_shape& bvh, const vec3f& pos,
-    float max_distance, bool find_any = false);
+                                         float max_distance,
+                                         bool  find_any = false);
 bvh_scene_intersection overlap_scene_bvh(const bvh_scene& bvh, const vec3f& pos,
-    float max_distance, bool find_any = false);
+                                         float max_distance,
+                                         bool  find_any = false);
 
 }  // namespace yocto
 
@@ -259,26 +268,27 @@ struct bvh_element_intersection {
 
 // Intersect a ray with a point (approximate).
 // Based on http://geomalgorithms.com/a02-lines.html.
-bvh_element_intersection intersect_point(
-    const ray3f& ray, const vec3f& p, float r);
+bvh_element_intersection intersect_point(const ray3f& ray, const vec3f& p,
+                                         float r);
 
 // Intersect a ray with a line (approximate).
 // Based on http://geomalgorithms.com/a05-intersect-1.html and
 // http://geomalgorithms.com/a07-distance.html#
 //     dist3D_Segment_to_Segment
-bvh_element_intersection intersect_line(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, float r0, float r1);
+bvh_element_intersection intersect_line(const ray3f& ray, const vec3f& p0,
+                                        const vec3f& p1, float r0, float r1);
 
 // Intersect a ray with a triangle.
-bvh_element_intersection intersect_triangle(
-    const ray3f& ray, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+bvh_element_intersection intersect_triangle(const ray3f& ray, const vec3f& p0,
+                                            const vec3f& p1, const vec3f& p2);
 
 // Intersect a ray with a quad represented as two triangles (0,1,3) and
 // (2,3,1), with the uv coordinates of the second triangle corrected by u =
 // 1-u' and v = 1-v' to produce a quad parametrization where u and v go from 0
 // to 1. This is equivalent to Intel's Embree.
 bvh_element_intersection intersect_quad(const ray3f& ray, const vec3f& p0,
-    const vec3f& p1, const vec3f& p2, const vec3f& p3);
+                                        const vec3f& p1, const vec3f& p2,
+                                        const vec3f& p3);
 
 // Intersect a ray with a axis-aligned bounding box.
 bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
@@ -287,39 +297,42 @@ bool intersect_bbox(const ray3f& ray, const bbox3f& bbox);
 // "Robust BVH Ray Traversal" by T. Ize published at
 // http://jcgt.org/published/0002/02/02/paper.pdf
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
+                    const vec3i& ray_dsign, const bbox3f& bbox);
 
 // Intersect a ray with a axis-aligned bounding box, implemented as
 // "A Ray-Box Intersection Algorithm and Efficient Dynamic Voxel Rendering" at
 // http://jcgt.org/published/0007/03/04/
 // but using the Wald implementation
 bool intersect_bbox(const ray3f& ray, const vec3f& ray_dinv,
-    const vec3i& ray_dsign, const bbox3f& bbox);
+                    const vec3i& ray_dsign, const bbox3f& bbox);
 
 // Check if a point overlaps a position within a max distance.
-bvh_element_intersection overlap_point(
-    const vec3f& pos, float dist_max, const vec3f& p0, float r0);
+bvh_element_intersection overlap_point(const vec3f& pos, float dist_max,
+                                       const vec3f& p0, float r0);
 
 // Find closest line point to a position.
 float closestuv_line(const vec3f& pos, const vec3f& p0, const vec3f& p1);
 
 // Check if a line overlaps a position within a max distance.
 bvh_element_intersection overlap_line(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, float r0, float r1);
+                                      const vec3f& p0, const vec3f& p1,
+                                      float r0, float r1);
 
 // Find closest triangle point to a position.
-vec2f closestuv_triangle(
-    const vec3f& pos, const vec3f& p0, const vec3f& p1, const vec3f& p2);
+vec2f closestuv_triangle(const vec3f& pos, const vec3f& p0, const vec3f& p1,
+                         const vec3f& p2);
 
 // Check if a triangle overlaps a position within a max distance.
 bvh_element_intersection overlap_triangle(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, float r0, float r1,
-    float r2);
+                                          const vec3f& p0, const vec3f& p1,
+                                          const vec3f& p2, float r0, float r1,
+                                          float r2);
 
 // Check if a quad overlaps a position within a max distance.
 bvh_element_intersection overlap_quad(const vec3f& pos, float dist_max,
-    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec3f& p3,
-    float r0, float r1, float r2, float r3);
+                                      const vec3f& p0, const vec3f& p1,
+                                      const vec3f& p2, const vec3f& p3,
+                                      float r0, float r1, float r2, float r3);
 
 // Check if a bounding box overlaps a position within a max distance.
 bool overlap_bbox(const vec3f& pos, float dist_max, const bbox3f& bbox);

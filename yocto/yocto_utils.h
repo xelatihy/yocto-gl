@@ -348,8 +348,8 @@ inline void print_value(const output_file& fs, const frame<T, N>& value) {
 
 // print values to file
 template <typename Arg, typename... Args>
-inline void println_values(
-    const output_file& fs, const Arg& value, const Args&... values) {
+inline void println_values(const output_file& fs, const Arg& value,
+                           const Args&... values) {
     print_value(fs, value);
     if constexpr (sizeof...(values) > 0) {
         print_value(fs, ' ');
@@ -463,8 +463,9 @@ struct cmdline_parser {
 
 // Initialize a command line parser.
 inline void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
-    const string& usage, const string& cmd = "", bool add_help_flag = true,
-    bool add_logging_flags = true);
+                                const string& usage, const string& cmd = "",
+                                bool add_help_flag     = true,
+                                bool add_logging_flags = true);
 // check if any error occurred and exit appropriately
 inline void check_cmdline_parser(cmdline_parser& parser);
 
@@ -477,18 +478,21 @@ inline void check_cmdline_parser(cmdline_parser& parser);
 // in which case only one name is used and the flag will flip the value passed.
 template <typename T>
 inline T    parse_cmdline_argument(cmdline_parser& parser, const string& name,
-       T def, const string& usage, bool req = false);
-inline bool parse_cmdline_argument_flag(
-    cmdline_parser& parser, const string& name, bool def, const string& usage);
+                                   T def, const string& usage, bool req = false);
+inline bool parse_cmdline_argument_flag(cmdline_parser& parser,
+                                        const string& name, bool def,
+                                        const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
-inline vector<T> parse_cmdline_arguments(cmdline_parser& parser,
-    const string& name, const vector<T>& def, const string& usage,
-    bool req = false);
+inline vector<T> parse_cmdline_arguments(cmdline_parser&  parser,
+                                         const string&    name,
+                                         const vector<T>& def,
+                                         const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
 inline T parse_cmdline_argument(cmdline_parser& parser, const string& name,
-    T def, const string& usage, const vector<string>& labels, bool req = false);
+                                T def, const string& usage,
+                                const vector<string>& labels, bool req = false);
 
 // Parse an int, float, string, vecXX and bool option or positional argument.
 // Options's names starts with "--" or "-", otherwise they are arguments.
@@ -499,18 +503,23 @@ inline T parse_cmdline_argument(cmdline_parser& parser, const string& name,
 // in which case only one name is used and the flag will flip the value passed.
 template <typename T>
 inline bool parse_cmdline_argument_ref(cmdline_parser& parser,
-    const string& name, T& val, const string& usage, bool req = false);
-inline bool parse_cmdline_argument_flag(
-    cmdline_parser& parser, const string& name, bool& val, const string& usage);
+                                       const string& name, T& val,
+                                       const string& usage, bool req = false);
+inline bool parse_cmdline_argument_flag(cmdline_parser& parser,
+                                        const string& name, bool& val,
+                                        const string& usage);
 // Parse all arguments left on the command line.
 template <typename T>
 inline bool parse_cmdline_arguments_ref(cmdline_parser& parser,
-    const string& name, vector<T>& val, const string& usage, bool req = false);
+                                        const string& name, vector<T>& val,
+                                        const string& usage, bool req = false);
 // Parse a labeled enum, with enum values that are successive integers.
 template <typename T>
 inline bool parse_cmdline_argument_ref(cmdline_parser& parser,
-    const string& name, T& val, const string& usage,
-    const vector<string>& labels, bool req = false);
+                                       const string& name, T& val,
+                                       const string&         usage,
+                                       const vector<string>& labels,
+                                       bool                  req = false);
 
 }  // namespace yocto
 
@@ -580,17 +589,17 @@ inline auto async(Function&& function) {
 template <typename Function, typename... Args>
 inline auto async(Function&& function, Args&&... args) {
     return std::async(std::launch::async, std::forward<Function>(function),
-        std::forward<Args>(args)...);
+                      std::forward<Args>(args)...);
 }
 
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
 inline void parallel_for(int begin, int end, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false);
+                         atomic<bool>* cancel = nullptr, bool serial = false);
 template <typename Func>
 inline void parallel_for(int num, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
+                         atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(0, num, func, cancel, serial);
 }
 
@@ -598,14 +607,16 @@ inline void parallel_for(int num, const Func& func,
 // parallel algorithms. `Func` takes a reference to a `T`.
 template <typename T, typename Func>
 inline void parallel_foreach(vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
+                             atomic<bool>* cancel = nullptr,
+                             bool          serial = false) {
     parallel_for(
         0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
         cancel, serial);
 }
 template <typename T, typename Func>
 inline void parallel_foreach(const vector<T>& values, const Func& func,
-    atomic<bool>* cancel = nullptr, bool serial = false) {
+                             atomic<bool>* cancel = nullptr,
+                             bool          serial = false) {
     parallel_for(
         0, (int)values.size(), [&func, &values](int idx) { func(values[idx]); },
         cancel, serial);
@@ -654,8 +665,8 @@ namespace yocto {
 
 // initialize a command line parser
 inline void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
-    const string& usage, const string& cmd, bool add_help_flag,
-    bool add_logging_flags) {
+                                const string& usage, const string& cmd,
+                                bool add_help_flag, bool add_logging_flags) {
     parser               = {};
     parser.args          = {argv + 1, argv + argc};
     parser.help_command  = (cmd.empty()) ? argv[0] : cmd;
@@ -692,7 +703,7 @@ inline vector<pair<string, string>> get_flag_names(const string& name) {
     for (auto& name : get_option_names(name)) {
         if (name.find('/')) {
             names.push_back({name.substr(0, name.find('/')),
-                name.substr(name.find('/') + 1)});
+                             name.substr(name.find('/') + 1)});
         } else {
             names.push_back({name, ""});
         }
@@ -741,7 +752,8 @@ inline string get_option_typename<string>() {
 // add help
 template <typename T>
 inline string get_option_usage(const string& name, const string& usage,
-    const T& def_, bool req, const vector<string>& choices) {
+                               const T& def_, bool req,
+                               const vector<string>& choices) {
     auto def = ""s;
     if (!req) {
         def = get_option_default_string(def_);
@@ -753,7 +765,7 @@ inline string get_option_usage(const string& name, const string& usage,
     }
     char buffer[4096];
     sprintf(buffer, "  %-24s %s %s\n", nametype.c_str(), usage.c_str(),
-        def.c_str());
+            def.c_str());
     auto usagelines = string(buffer);
     if (!choices.empty()) {
         usagelines += "        accepted values:";
@@ -780,14 +792,14 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
 
 // Parse a flag. Name should start with either "--" or "-".
 inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
-    bool& value, const string& usage, bool req);
+                                bool& value, const string& usage, bool req);
 
 // check if any error occurred and exit appropriately
 inline void check_cmdline_parser(cmdline_parser& parser) {
     if (parser.add_help_flag) {
         auto help = false;
-        if (parse_flag_argument(
-                parser, "--help,-?", help, "print help", false)) {
+        if (parse_flag_argument(parser, "--help,-?", help, "print help",
+                                false)) {
             print_cmdline_usage(parser);
             exit(0);
         }
@@ -831,14 +843,15 @@ inline bool parse_option_value(const string& vals, float& val) {
 // Parse an option string. Name should start with "--" or "-".
 template <typename T>
 inline bool parse_option_argument(cmdline_parser& parser, const string& name,
-    T& value, const string& usage, bool req, const vector<string>& choices) {
+                                  T& value, const string& usage, bool req,
+                                  const vector<string>& choices) {
     parser.help_options += get_option_usage(name, usage, value, req, choices);
     if (parser.error != "") return false;
     auto names = get_option_names(name);
     auto pos   = parser.args.end();
     for (auto& name : names) {
-        pos = std::min(
-            pos, std::find(parser.args.begin(), parser.args.end(), name));
+        pos = std::min(pos,
+                       std::find(parser.args.begin(), parser.args.end(), name));
     }
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name + "\n";
@@ -867,12 +880,13 @@ inline bool parse_option_argument(cmdline_parser& parser, const string& name,
 // Parse an argument string. Name should not start with "--" or "-".
 template <typename T>
 inline bool parse_positional_argument(cmdline_parser& parser,
-    const string& name, T& value, const string& usage, bool req,
-    const vector<string>& choices) {
+                                      const string& name, T& value,
+                                      const string& usage, bool req,
+                                      const vector<string>& choices) {
     parser.help_arguments += get_option_usage(name, usage, value, req, choices);
     if (parser.error != "") return false;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
-        [](auto& v) { return v[0] != '-'; });
+                            [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name + "\n";
         return false;
@@ -896,11 +910,12 @@ inline bool parse_positional_argument(cmdline_parser& parser,
 // Parse all left argument strings. Name should not start with "--" or "-".
 template <typename T>
 inline bool parse_positional_arguments(cmdline_parser& parser,
-    const string& name, vector<T>& values, const string& usage, bool req) {
+                                       const string& name, vector<T>& values,
+                                       const string& usage, bool req) {
     parser.help_arguments += get_option_usage(name, usage, values, req, {});
     if (parser.error != "") return false;
     auto pos = std::find_if(parser.args.begin(), parser.args.end(),
-        [](auto& v) { return v[0] != '-'; });
+                            [](auto& v) { return v[0] != '-'; });
     if (pos == parser.args.end()) {
         if (req) parser.error += "missing value for " + name + "\n";
         return false;
@@ -921,7 +936,7 @@ inline bool parse_positional_arguments(cmdline_parser& parser,
 
 // Parse a flag. Name should start with either "--" or "-".
 inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
-    bool& value, const string& usage, bool req) {
+                                bool& value, const string& usage, bool req) {
     parser.help_options += get_option_usage(name, usage, false, false, {});
     if (parser.error != "") return false;
     auto names     = get_flag_names(name);
@@ -954,7 +969,8 @@ inline bool parse_flag_argument(cmdline_parser& parser, const string& name,
 // an option, otherwise it is a position argument.
 template <typename T>
 inline bool parse_cmdline_argument_ref(cmdline_parser& parser,
-    const string& name, T& value, const string& usage, bool req) {
+                                       const string& name, T& value,
+                                       const string& usage, bool req) {
     if (is_optional_argument(name)) {
         return parse_option_argument(parser, name, value, usage, req, {});
     } else {
@@ -963,7 +979,8 @@ inline bool parse_cmdline_argument_ref(cmdline_parser& parser,
 }
 template <>
 inline bool parse_cmdline_argument_ref<bool>(cmdline_parser& parser,
-    const string& name, bool& value, const string& usage, bool req) {
+                                             const string& name, bool& value,
+                                             const string& usage, bool req) {
     if (is_optional_flag(name)) {
         return parse_flag_argument(parser, name, value, usage, req);
     } else if (is_optional_argument(name)) {
@@ -975,23 +992,24 @@ inline bool parse_cmdline_argument_ref<bool>(cmdline_parser& parser,
 
 // Parse a boolean flag.
 inline bool parse_argument_flag_ref(cmdline_parser& parser, const string& name,
-    bool& value, const string& usage) {
+                                    bool& value, const string& usage) {
     auto new_name = (!value) ? name : "/" + name;
     return parse_flag_argument(parser, new_name, value, usage, false);
 }
 
 template <typename T>
 inline bool parse_cmdline_argument_ref(cmdline_parser& parser,
-    const string& name, T& value, const string& usage,
-    const vector<string>& labels, bool req) {
+                                       const string& name, T& value,
+                                       const string&         usage,
+                                       const vector<string>& labels, bool req) {
     auto values = labels.at((int)value);
     auto parsed = false;
     if (is_optional_argument(name)) {
-        parsed = parse_option_argument(
-            parser, name, values, usage, req, labels);
+        parsed =
+            parse_option_argument(parser, name, values, usage, req, labels);
     } else {
-        parsed = parse_positional_argument(
-            parser, name, values, usage, req, labels);
+        parsed =
+            parse_positional_argument(parser, name, values, usage, req, labels);
     }
     if (!parsed) return false;
     auto pos = std::find(labels.begin(), labels.end(), values);
@@ -1003,7 +1021,8 @@ inline bool parse_cmdline_argument_ref(cmdline_parser& parser,
 // Parser an argument
 template <typename T>
 inline bool parse_cmdline_arguments_ref(cmdline_parser& parser,
-    const string& name, vector<T>& values, const string& usage, bool req) {
+                                        const string& name, vector<T>& values,
+                                        const string& usage, bool req) {
     return parse_positional_arguments(parser, name, values, usage, req);
 }
 
@@ -1011,7 +1030,7 @@ inline bool parse_cmdline_arguments_ref(cmdline_parser& parser,
 // an option, otherwise it is a position argument.
 template <typename T>
 inline T parse_cmdline_argument(cmdline_parser& parser, const string& name,
-    T def, const string& usage, bool req) {
+                                T def, const string& usage, bool req) {
     auto value = def;
     if (!parse_cmdline_argument_ref(parser, name, value, usage, req))
         return def;
@@ -1019,8 +1038,9 @@ inline T parse_cmdline_argument(cmdline_parser& parser, const string& name,
 }
 
 // Parse a boolean flag.
-inline bool parse_cmdline_argument_flag(
-    cmdline_parser& parser, const string& name, bool def, const string& usage) {
+inline bool parse_cmdline_argument_flag(cmdline_parser& parser,
+                                        const string& name, bool def,
+                                        const string& usage) {
     auto value = def;
     if (!parse_argument_flag_ref(parser, name, value, usage)) return def;
     return value;
@@ -1028,7 +1048,8 @@ inline bool parse_cmdline_argument_flag(
 
 template <typename T>
 inline T parse_cmdline_argument(cmdline_parser& parser, const string& name,
-    T def, const string& usage, const vector<string>& labels, bool req) {
+                                T def, const string& usage,
+                                const vector<string>& labels, bool req) {
     auto value = def;
     if (!parse_cmdline_argument_ref(parser, name, value, usage, labels, req))
         return def;
@@ -1037,8 +1058,10 @@ inline T parse_cmdline_argument(cmdline_parser& parser, const string& name,
 
 // Parser an argument
 template <typename T>
-inline vector<T> parse_cmdline_arguments(cmdline_parser& parser,
-    const string& name, const vector<T>& def, const string& usage, bool req) {
+inline vector<T> parse_cmdline_arguments(cmdline_parser&  parser,
+                                         const string&    name,
+                                         const vector<T>& def,
+                                         const string& usage, bool req) {
     auto values = vector<T>{};
     if (!parse_cmdline_arguments_ref(parser, name, values, usage, req))
         return def;
@@ -1205,8 +1228,8 @@ inline bool concurrent_queue<T>::try_pop(T& value) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms.
 template <typename Func>
-inline void parallel_for(
-    int begin, int end, const Func& func, atomic<bool>* cancel, bool serial) {
+inline void parallel_for(int begin, int end, const Func& func,
+                         atomic<bool>* cancel, bool serial) {
     if (serial) {
         for (auto idx = begin; idx < end; idx++) {
             if (cancel && *cancel) break;

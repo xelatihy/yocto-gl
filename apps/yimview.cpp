@@ -105,7 +105,7 @@ void update_display_async(app_image& img) {
         regions,
         [&img](const bbox2i& region) {
             tonemap_image_region(img.display, region, img.img, img.exposure,
-                img.filmic, img.srgb);
+                                 img.filmic, img.srgb);
             img.display_queue.push(region);
         },
         &img.display_stop);
@@ -152,14 +152,13 @@ void save_image_async(app_image& img) {
 
 // add a new image
 void add_new_image(app_state& app, const string& filename,
-    const string& outname, float exposure = 0, bool filmic = false,
-    bool srgb = true) {
+                   const string& outname, float exposure = 0,
+                   bool filmic = false, bool srgb = true) {
     app.imgs.emplace_back();
     auto& img    = app.imgs.back();
     img.filename = filename;
-    img.outname  = (outname == "") ?
-                      replace_extension(filename, ".display.png") :
-                      outname;
+    img.outname  = (outname == "") ? replace_extension(filename, ".display.png")
+                                  : outname;
     img.name         = get_filename(filename);
     img.exposure     = exposure;
     img.filmic       = filmic;
@@ -179,15 +178,15 @@ void draw_opengl_widgets(const opengl_window& win) {
         auto& img = app.imgs.at(app.img_id);
         if (begin_tabbar_opengl_widget(win, "tabs")) {
             if (begin_tabitem_opengl_widget(win, "image")) {
-                draw_combobox_opengl_widget(
-                    win, "image", app.img_id, app.imgs, false);
-                draw_label_opengl_widget(
-                    win, "filename", "%s", img.filename.c_str());
+                draw_combobox_opengl_widget(win, "image", app.img_id, app.imgs,
+                                            false);
+                draw_label_opengl_widget(win, "filename", "%s",
+                                         img.filename.c_str());
                 draw_textinput_opengl_widget(win, "outname", img.outname);
                 if (draw_button_opengl_widget(win, "save display")) {
                     if (img.display_done) {
-                        img.save_thread = thread(
-                            [&img]() { save_image_async(img); });
+                        img.save_thread =
+                            thread([&img]() { save_image_async(img); });
                     }
                 }
                 auto status = string();
@@ -201,25 +200,25 @@ void draw_opengl_widgets(const opengl_window& win) {
                     status = "done";
                 draw_label_opengl_widget(win, "status", status.c_str());
                 draw_label_opengl_widget(win, "size", "%d x %d ",
-                    img.img.size().x, img.img.size().y);
-                draw_slider_opengl_widget(
-                    win, "zoom", img.image_scale, 0.1, 10);
-                draw_checkbox_opengl_widget(
-                    win, "zoom to fit", img.zoom_to_fit);
+                                         img.img.size().x, img.img.size().y);
+                draw_slider_opengl_widget(win, "zoom", img.image_scale, 0.1,
+                                          10);
+                draw_checkbox_opengl_widget(win, "zoom to fit",
+                                            img.zoom_to_fit);
                 end_tabitem_opengl_widget(win);
             }
             if (begin_tabitem_opengl_widget(win, "adjust")) {
-                edited += draw_slider_opengl_widget(
-                    win, "exposure", img.exposure, -5, 5);
-                edited += draw_checkbox_opengl_widget(
-                    win, "filmic", img.filmic);
+                edited += draw_slider_opengl_widget(win, "exposure",
+                                                    img.exposure, -5, 5);
+                edited +=
+                    draw_checkbox_opengl_widget(win, "filmic", img.filmic);
                 edited += draw_checkbox_opengl_widget(win, "srgb", img.srgb);
                 end_tabitem_opengl_widget(win);
             }
             if (begin_tabitem_opengl_widget(win, "inspect")) {
                 auto mouse_pos = get_opengl_mouse_pos(win);
                 auto ij        = get_image_coords(mouse_pos, img.image_center,
-                    img.image_scale, img.img.size());
+                                           img.image_scale, img.img.size());
                 draw_dragger_opengl_widget(win, "mouse", ij);
                 auto img_pixel = zero4f, display_pixel = zero4f;
                 if (ij.x >= 0 && ij.x < img.img.size().x && ij.y >= 0 &&
@@ -230,14 +229,14 @@ void draw_opengl_widgets(const opengl_window& win) {
                 draw_coloredit_opengl_widget(win, "pixel color", img_pixel);
                 draw_dragger_opengl_widget(win, "pixel value", display_pixel);
                 auto stats = (img.stats_done) ? img.stats : image_stats{};
-                draw_dragger_opengl_widget(
-                    win, "pxl min", stats.pxl_bounds.min);
-                draw_dragger_opengl_widget(
-                    win, "pxl max", stats.pxl_bounds.max);
-                draw_dragger_opengl_widget(
-                    win, "lum min", stats.lum_bounds.min);
-                draw_dragger_opengl_widget(
-                    win, "lum max", stats.lum_bounds.max);
+                draw_dragger_opengl_widget(win, "pxl min",
+                                           stats.pxl_bounds.min);
+                draw_dragger_opengl_widget(win, "pxl max",
+                                           stats.pxl_bounds.max);
+                draw_dragger_opengl_widget(win, "lum min",
+                                           stats.lum_bounds.min);
+                draw_dragger_opengl_widget(win, "lum max",
+                                           stats.lum_bounds.max);
                 end_tabitem_opengl_widget(win);
             }
             end_tabbar_opengl_widget(win);
@@ -265,12 +264,12 @@ void draw(const opengl_window& win) {
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (img.gl_txt) {
         update_image_view(img.image_center, img.image_scale, img.display.size(),
-            win_size, img.zoom_to_fit);
+                          win_size, img.zoom_to_fit);
         draw_opengl_image_background(img.gl_txt, win_size.x, win_size.y,
-            img.image_center, img.image_scale);
+                                     img.image_center, img.image_scale);
         set_opengl_blending(true);
         draw_opengl_image(img.gl_txt, win_size.x, win_size.y, img.image_center,
-            img.image_scale);
+                          img.image_scale);
         set_opengl_blending(false);
     }
     draw_opengl_widgets(win);
@@ -281,13 +280,13 @@ void update(app_state& app) {
     for (auto& img : app.imgs) {
         if (!img.load_done) continue;
         if (!img.gl_txt) {
-            init_opengl_texture(
-                img.gl_txt, img.display.size(), false, false, false, false);
+            init_opengl_texture(img.gl_txt, img.display.size(), false, false,
+                                false, false);
         } else {
             auto region = bbox2i{};
             while (img.display_queue.try_pop(region)) {
-                update_opengl_texture_region(
-                    img.gl_txt, img.display, region, false);
+                update_opengl_texture_region(img.gl_txt, img.display, region,
+                                             false);
             }
         }
     }
@@ -302,8 +301,8 @@ void run_ui(app_state& app) {
     // window
     auto& img = app.imgs.at(app.img_id);
     auto  win = opengl_window();
-    init_opengl_window(
-        win, {1280, 720}, "yimview | " + app.imgs.front().name, &app, draw);
+    init_opengl_window(win, {1280, 720}, "yimview | " + app.imgs.front().name,
+                       &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
@@ -346,18 +345,18 @@ int main(int argc, char* argv[]) {
     // command line options
     auto parser = cmdline_parser{};
     init_cmdline_parser(parser, argc, argv, "view images", "yimview");
-    auto exposure = parse_cmdline_argument(
-        parser, "--exposure,-e", 0.0f, "display exposure");
-    auto filmic = parse_cmdline_argument(
-        parser, "--filmic/--no-filmic", false, "display filmic");
-    auto srgb = parse_cmdline_argument(
-        parser, "--srgb/--no-srgb", true, "display as sRGB");
+    auto exposure = parse_cmdline_argument(parser, "--exposure,-e", 0.0f,
+                                           "display exposure");
+    auto filmic = parse_cmdline_argument(parser, "--filmic/--no-filmic", false,
+                                         "display filmic");
+    auto srgb   = parse_cmdline_argument(parser, "--srgb/--no-srgb", true,
+                                       "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
-    auto outfilename = parse_cmdline_argument(
-        parser, "--out,-o", ""s, "image out filename");
-    auto filenames = parse_cmdline_arguments(
-        parser, "images", vector<string>{}, "image filenames", true);
+    auto outfilename =
+        parse_cmdline_argument(parser, "--out,-o", ""s, "image out filename");
+    auto filenames = parse_cmdline_arguments(parser, "images", vector<string>{},
+                                             "image filenames", true);
     check_cmdline_parser(parser);
 
     // loading images

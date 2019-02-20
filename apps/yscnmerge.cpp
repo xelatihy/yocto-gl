@@ -48,27 +48,30 @@ int main(int argc, char** argv) {
     // parse command line
     auto parser = cmdline_parser{};
     init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
-    auto scene_postfix     = parse_cmdline_argument(parser,
-        "--scene-postfix/no-scene-postfix", false,
+    auto scene_postfix = parse_cmdline_argument(
+        parser, "--scene-postfix/no-scene-postfix", false,
         "Append unique scene postfix to each name");
-    auto skip_textures     = parse_cmdline_argument(parser,
-        "--skip-textures/--no-skip-textures", false, "Disable textures.");
-    auto mesh_filenames    = parse_cmdline_argument(parser,
-        "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
-    auto mesh_directory    = parse_cmdline_argument(parser, "--mesh-directory",
-        "models/"s, "Mesh directory when adding names.");
-    auto texture_filenames = parse_cmdline_argument(parser,
-        "--texture-filenames/--no-texture-filenames", true,
+    auto skip_textures =
+        parse_cmdline_argument(parser, "--skip-textures/--no-skip-textures",
+                               false, "Disable textures.");
+    auto mesh_filenames =
+        parse_cmdline_argument(parser, "--mesh-filenames/--no-mesh-filenames",
+                               true, "Add mesh filenames.");
+    auto mesh_directory =
+        parse_cmdline_argument(parser, "--mesh-directory", "models/"s,
+                               "Mesh directory when adding names.");
+    auto texture_filenames = parse_cmdline_argument(
+        parser, "--texture-filenames/--no-texture-filenames", true,
         "Add texture filenames.");
-    auto texture_directory = parse_cmdline_argument(parser,
-        "--texture-directory", "textures/"s,
-        "Texture directory when adding names.");
-    auto print_info        = parse_cmdline_argument(
-        parser, "--print-info,-i", false, "print scene info");
-    auto output = parse_cmdline_argument(
-        parser, "--output,-o", "out.json"s, "output scene", true);
-    auto filenames = parse_cmdline_arguments(
-        parser, "scenes", vector<string>{}, "scene filenames", true);
+    auto texture_directory =
+        parse_cmdline_argument(parser, "--texture-directory", "textures/"s,
+                               "Texture directory when adding names.");
+    auto print_info = parse_cmdline_argument(parser, "--print-info,-i", false,
+                                             "print scene info");
+    auto output     = parse_cmdline_argument(parser, "--output,-o", "out.json"s,
+                                         "output scene", true);
+    auto filenames = parse_cmdline_arguments(parser, "scenes", vector<string>{},
+                                             "scene filenames", true);
     check_cmdline_parser(parser);
 
     // fix options

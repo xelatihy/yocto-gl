@@ -85,8 +85,8 @@ struct app_state {
 };
 
 void stop_rendering_async(app_state& app) {
-    trace_image_async_stop(
-        app.trace_futures, app.trace_queue, app.trace_options);
+    trace_image_async_stop(app.trace_futures, app.trace_queue,
+                           app.trace_options);
 }
 
 void start_rendering_async(app_state& app) {
@@ -102,7 +102,7 @@ void start_rendering_async(app_state& app) {
     app.image   = {{app.image_width, app.image_height}, zero4f};
     app.display = {{app.image_width, app.image_height}, zero4f};
     init_trace_state(app.state, app.image_width, app.image_height,
-        app.trace_options.random_seed);
+                     app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
     preview_options.image_width /= app.preview_ratio;
@@ -110,15 +110,15 @@ void start_rendering_async(app_state& app) {
     preview_options.num_samples = 1;
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = app.preview;
-    tonemap_image(
-        display_preview, app.preview, app.exposure, app.filmic, app.srgb);
+    tonemap_image(display_preview, app.preview, app.exposure, app.filmic,
+                  app.srgb);
     auto large_preview = image{{app.image_width, app.image_height}, zero4f};
     for (auto j = 0; j < app.image_height; j++) {
         for (auto i = 0; i < app.image_width; i++) {
-            auto pi = clamp(
-                     i / app.preview_ratio, 0, display_preview.size().x - 1),
-                 pj = clamp(
-                     j / app.preview_ratio, 0, display_preview.size().y - 1);
+            auto pi               = clamp(i / app.preview_ratio, 0,
+                            display_preview.size().x - 1),
+                 pj               = clamp(j / app.preview_ratio, 0,
+                            display_preview.size().y - 1);
             large_preview[{i, j}] = display_preview[{pi, pj}];
         }
     }
@@ -127,8 +127,8 @@ void start_rendering_async(app_state& app) {
 
     app.trace_options.cancel_flag = &app.trace_stop;
     trace_image_async_start(app.image, app.state, app.scene, app.bvh,
-        app.lights, app.trace_futures, app.trace_sample, app.trace_queue,
-        app.trace_options);
+                            app.lights, app.trace_futures, app.trace_sample,
+                            app.trace_queue, app.trace_options);
 }
 
 bool load_scene_sync(app_state& app) {
@@ -204,8 +204,8 @@ void draw_opengl_widgets(const opengl_window& win) {
     if (begin_opengl_widgets_window(win, "yitrace")) {
         if (begin_tabbar_opengl_widget(win, "tabs")) {
             if (begin_tabitem_opengl_widget(win, "scene")) {
-                draw_label_opengl_widget(
-                    win, "scene", get_filename(app.filename));
+                draw_label_opengl_widget(win, "scene",
+                                         get_filename(app.filename));
                 if (draw_button_opengl_widget(win, "load")) {
                     stop_rendering_async(app);
                     load_scene_async(app);
@@ -216,8 +216,8 @@ void draw_opengl_widgets(const opengl_window& win) {
             }
             if (begin_tabitem_opengl_widget(win, "trace")) {
                 draw_label_opengl_widget(win, "image", "%d x %d @ %d",
-                    app.image.size().x, app.image.size().y,
-                    (int)app.trace_sample);
+                                         app.image.size().x, app.image.size().y,
+                                         (int)app.trace_sample);
                 auto cam_names = vector<string>();
                 for (auto& camera : app.scene.cameras)
                     cam_names.push_back(camera.name);
@@ -232,49 +232,51 @@ void draw_opengl_widgets(const opengl_window& win) {
                     win, "height", app.trace_options.image_height, 0, 4096);
                 edited += draw_slider_opengl_widget(
                     win, "nsamples", app.trace_options.num_samples, 16, 4096);
-                edited += draw_combobox_opengl_widget(win, "tracer",
-                    (int&)app.trace_options.sampler_type,
+                edited += draw_combobox_opengl_widget(
+                    win, "tracer", (int&)app.trace_options.sampler_type,
                     trace_sampler_type_names);
                 edited += draw_slider_opengl_widget(
                     win, "nbounces", app.trace_options.max_bounces, 1, 10);
                 edited += draw_checkbox_opengl_widget(
                     win, "double sided", app.trace_options.double_sided);
-                edited += draw_slider_opengl_widget(win, "seed",
-                    (int&)app.trace_options.random_seed, 0, 1000000);
                 edited += draw_slider_opengl_widget(
-                    win, "pratio", app.preview_ratio, 1, 64);
+                    win, "seed", (int&)app.trace_options.random_seed, 0,
+                    1000000);
+                edited += draw_slider_opengl_widget(win, "pratio",
+                                                    app.preview_ratio, 1, 64);
                 if (edited) app.update_list.push_back({typeid(app_state), -1});
-                draw_label_opengl_widget(win, "time/sample", "%0.3lf",
+                draw_label_opengl_widget(
+                    win, "time/sample", "%0.3lf",
                     (app.trace_sample) ? (get_time() - app.trace_start) /
-                                             (1000000000.0 * app.trace_sample) :
-                                         0.0);
+                                             (1000000000.0 * app.trace_sample)
+                                       : 0.0);
                 draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
                 draw_checkbox_opengl_widget(win, "filmic", app.filmic);
                 draw_checkbox_opengl_widget(win, "srgb", app.srgb);
-                draw_slider_opengl_widget(
-                    win, "zoom", app.image_scale, 0.1, 10);
-                draw_checkbox_opengl_widget(
-                    win, "zoom to fit", app.zoom_to_fit);
+                draw_slider_opengl_widget(win, "zoom", app.image_scale, 0.1,
+                                          10);
+                draw_checkbox_opengl_widget(win, "zoom to fit",
+                                            app.zoom_to_fit);
                 continue_opengl_widget_line(win);
                 draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
                 continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
-                        println_values(stdout, "c", camera.name,
-                            (int)camera.orthographic, camera.film_width,
-                            camera.film_height, camera.focal_length,
-                            camera.focus_distance, camera.lens_aperture,
-                            camera.frame);
+                        println_values(
+                            stdout, "c", camera.name, (int)camera.orthographic,
+                            camera.film_width, camera.film_height,
+                            camera.focal_length, camera.focus_distance,
+                            camera.lens_aperture, camera.frame);
                     }
                 }
                 auto mouse_pos = get_opengl_mouse_pos(win);
                 auto ij        = get_image_coords(mouse_pos, app.image_center,
-                    app.image_scale, app.image.size());
+                                           app.image_scale, app.image.size());
                 draw_dragger_opengl_widget(win, "mouse", ij);
                 if (ij.x >= 0 && ij.x < app.image.size().x && ij.y >= 0 &&
                     ij.y < app.image.size().y) {
-                    draw_coloredit_opengl_widget(
-                        win, "pixel", app.image[{ij.x, ij.y}]);
+                    draw_coloredit_opengl_widget(win, "pixel",
+                                                 app.image[{ij.x, ij.y}]);
                 } else {
                     auto zero4f_ = zero4f;
                     draw_coloredit_opengl_widget(win, "pixel", zero4f_);
@@ -304,26 +306,26 @@ void draw(const opengl_window& win) {
     clear_opengl_lframebuffer(vec4f{0.15f, 0.15f, 0.15f, 1.0f});
     if (app.load_done) {
         update_image_view(app.image_center, app.image_scale, app.image.size(),
-            win_size, app.zoom_to_fit);
+                          win_size, app.zoom_to_fit);
         if (!app.display_texture) {
             if (app.image_width != 0 || app.image_height != 0) {
                 init_opengl_texture(app.display_texture,
-                    {app.image_width, app.image_height}, false, false, false,
-                    false);
+                                    {app.image_width, app.image_height}, false,
+                                    false, false, false);
             }
         } else {
             auto region = bbox2i{};
             auto size   = 0;
             while (app.trace_queue.try_pop(region)) {
                 if (region.size() == zero2i) {
-                    update_opengl_texture(
-                        app.display_texture, app.preview, false);
+                    update_opengl_texture(app.display_texture, app.preview,
+                                          false);
                     break;
                 } else {
                     tonemap_image_region(app.display, region, app.image,
-                        app.exposure, app.filmic, app.srgb);
-                    update_opengl_texture_region(
-                        app.display_texture, app.display, region, false);
+                                         app.exposure, app.filmic, app.srgb);
+                    update_opengl_texture_region(app.display_texture,
+                                                 app.display, region, false);
                     size += region.size().x * region.size().y;
                     if (size >= app.image.size().x * app.image.size().y) break;
                 }
@@ -331,9 +333,10 @@ void draw(const opengl_window& win) {
         }
         set_opengl_blending(true);
         draw_opengl_image_background(app.display_texture, win_size.x,
-            win_size.y, app.image_center, app.image_scale);
+                                     win_size.y, app.image_center,
+                                     app.image_scale);
         draw_opengl_image(app.display_texture, win_size.x, win_size.y,
-            app.image_center, app.image_scale);
+                          app.image_center, app.image_scale);
         set_opengl_blending(false);
     }
     draw_opengl_widgets(win);
@@ -359,7 +362,7 @@ bool update(app_state& app) {
     if (!updated_instances.empty() || !updated_shapes.empty() ||
         !updated_surfaces.empty())
         refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
-            updated_surfaces);
+                        updated_surfaces);
     app.update_list.clear();
 
     // start rendering
@@ -371,8 +374,8 @@ bool update(app_state& app) {
 
 void drop_callback(const opengl_window& win, const vector<string>& paths) {
     auto& app = *(app_state*)get_opengl_user_pointer(win);
-    trace_image_async_stop(
-        app.trace_futures, app.trace_queue, app.trace_options);
+    trace_image_async_stop(app.trace_futures, app.trace_queue,
+                           app.trace_options);
     app.filename = paths.front();
     load_scene_async(app);
 }
@@ -382,7 +385,7 @@ void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
     init_opengl_window(win, {1280, 720},
-        "yitrace | " + get_filename(app.filename), &app, draw);
+                       "yitrace | " + get_filename(app.filename), &app, draw);
     set_drop_opengl_callback(win, drop_callback);
 
     // init widgets
@@ -412,8 +415,8 @@ void run_ui(app_state& app) {
             if (mouse_left && shift_down)
                 pan = (mouse_pos - last_pos) * camera.focus_distance / 200.0f;
             pan.x = -pan.x;
-            update_camera_turntable(
-                camera.frame, camera.focus_distance, rotate, dolly, pan);
+            update_camera_turntable(camera.frame, camera.focus_distance, rotate,
+                                    dolly, pan);
             app.update_list.push_back(
                 {typeid(yocto_camera), app.trace_options.camera_id});
         }
@@ -421,14 +424,14 @@ void run_ui(app_state& app) {
         // selection
         if (app.load_done && (mouse_left || mouse_right) && alt_down &&
             !widgets_active) {
-            auto ij = get_image_coords(
-                mouse_pos, app.image_center, app.image_scale, app.image.size());
+            auto ij = get_image_coords(mouse_pos, app.image_center,
+                                       app.image_scale, app.image.size());
             if (ij.x < 0 || ij.x >= app.image.size().x || ij.y < 0 ||
                 ij.y >= app.image.size().y) {
-                auto& camera = app.scene.cameras.at(
-                    app.trace_options.camera_id);
-                auto ray = evaluate_camera_ray(
-                    camera, ij, app.image.size(), {0.5f, 0.5f}, zero2f);
+                auto& camera =
+                    app.scene.cameras.at(app.trace_options.camera_id);
+                auto ray  = evaluate_camera_ray(camera, ij, app.image.size(),
+                                               {0.5f, 0.5f}, zero2f);
                 auto isec = intersect_scene_bvh(app.bvh, ray);
                 if (isec.instance_id >= 0)
                     app.selection = {typeid(yocto_instance), isec.instance_id};
@@ -456,42 +459,45 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = cmdline_parser{};
-    init_cmdline_parser(
-        parser, argc, argv, "progressive path tracing", "yitrace");
-    app.trace_options.camera_id = parse_cmdline_argument(
-        parser, "--camera", 0, "Camera index.");
+    init_cmdline_parser(parser, argc, argv, "progressive path tracing",
+                        "yitrace");
+    app.trace_options.camera_id =
+        parse_cmdline_argument(parser, "--camera", 0, "Camera index.");
     app.trace_options.image_width = parse_cmdline_argument(
         parser, "--hres,-R", 1280, "Image horizontal resolution.");
     app.trace_options.image_height = parse_cmdline_argument(
         parser, "--vres,-r", 720, "Image vertical resolution.");
     app.trace_options.num_samples = parse_cmdline_argument(
         parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.trace_options.sampler_type = parse_cmdline_argument(parser,
-        "--tracer,-t", trace_sampler_type::path, "Tracer type.",
-        trace_sampler_type_names);
-    app.trace_options.max_bounces  = parse_cmdline_argument(
+    app.trace_options.sampler_type =
+        parse_cmdline_argument(parser, "--tracer,-t", trace_sampler_type::path,
+                               "Tracer type.", trace_sampler_type_names);
+    app.trace_options.max_bounces = parse_cmdline_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     app.trace_options.pixel_clamp = parse_cmdline_argument(
         parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
     app.trace_options.random_seed = parse_cmdline_argument(
         parser, "--seed", 7, "Seed for the random number generators.");
-    app.trace_options.environments_hidden = parse_cmdline_argument(parser,
-        "--env-hidden/--no-env-hidden", false,
-        "Environments are hidden in renderer");
-    auto no_parallel                      = parse_cmdline_argument(parser,
-        "--parallel/--no-parallel", false, "Disable parallel execution.");
-    app.bvh_options.use_embree            = parse_cmdline_argument(
+    app.trace_options.environments_hidden =
+        parse_cmdline_argument(parser, "--env-hidden/--no-env-hidden", false,
+                               "Environments are hidden in renderer");
+    auto no_parallel           = parse_cmdline_argument(parser,
+                                              "--parallel/--no-parallel", false,
+                                              "Disable parallel execution.");
+    app.bvh_options.use_embree = parse_cmdline_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    app.bvh_options.flatten_embree = parse_cmdline_argument(parser,
-        "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
-    app.trace_options.double_sided = parse_cmdline_argument(parser,
-        "--double-sided/--no-double-sided", false, "Double-sided rendering.");
-    app.add_skyenv                 = parse_cmdline_argument(
+    app.bvh_options.flatten_embree =
+        parse_cmdline_argument(parser, "--flatten-embree/--no-flatten-embree",
+                               true, "Flatten embree scene");
+    app.trace_options.double_sided =
+        parse_cmdline_argument(parser, "--double-sided/--no-double-sided",
+                               false, "Double-sided rendering.");
+    app.add_skyenv = parse_cmdline_argument(
         parser, "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
-    app.imfilename = parse_cmdline_argument(
-        parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    app.filename = parse_cmdline_argument(
-        parser, "scene", "scene.json"s, "Scene filename", true);
+    app.imfilename = parse_cmdline_argument(parser, "--output-image,-o",
+                                            "out.hdr"s, "Image filename");
+    app.filename   = parse_cmdline_argument(parser, "scene", "scene.json"s,
+                                          "Scene filename", true);
     check_cmdline_parser(parser);
 
     // fix parallel code
@@ -512,8 +518,8 @@ int main(int argc, char* argv[]) {
     run_ui(app);
 
     // cleanup
-    trace_image_async_stop(
-        app.trace_futures, app.trace_queue, app.trace_options);
+    trace_image_async_stop(app.trace_futures, app.trace_queue,
+                           app.trace_options);
 
     // done
     return 0;

@@ -76,11 +76,12 @@ drawgl_lights make_drawgl_lights(const yocto_scene& scene) {
         if (!shape.triangles.empty()) {
             for (auto t : shape.triangles)
                 area += triangle_area(shape.positions[t.x],
-                    shape.positions[t.y], shape.positions[t.z]);
+                                      shape.positions[t.y],
+                                      shape.positions[t.z]);
         } else if (!shape.quads.empty()) {
             for (auto q : shape.quads)
                 area += quad_area(shape.positions[q.x], shape.positions[q.y],
-                    shape.positions[q.z], shape.positions[q.w]);
+                                  shape.positions[q.z], shape.positions[q.w]);
         } else if (!shape.lines.empty()) {
             for (auto l : shape.lines)
                 area += line_length(shape.positions[l.x], shape.positions[l.y]);
@@ -511,8 +512,8 @@ static const char* fragment =
 
 // Draw a shape
 void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
-    const yocto_instance& instance, bool highlighted,
-    const drawgl_options& options) {
+                     const yocto_instance& instance, bool highlighted,
+                     const drawgl_options& options) {
     if (instance.shape >= 0) {
         auto& shape    = scene.shapes[instance.shape];
         auto& vbos     = state.shapes.at(instance.shape);
@@ -523,7 +524,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         set_opengl_uniform(state.program, "shape_xform", xform);
         set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
         set_opengl_uniform(state.program, "highlight",
-            (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
+                           (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
         auto mtype = 1;
         if (material.base_metallic) mtype = 2;
@@ -534,52 +535,57 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         set_opengl_uniform(state.program, "mat_ks", material.specular);
         set_opengl_uniform(state.program, "mat_rs", material.roughness);
         set_opengl_uniform(state.program, "mat_op", material.opacity);
-        set_opengl_uniform(
-            state.program, "mat_double_sided", (int)options.double_sided);
-        set_opengl_uniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
-            material.emission_texture >= 0 ?
-                state.textures.at(material.emission_texture) :
-                opengl_texture{},
+        set_opengl_uniform(state.program, "mat_double_sided",
+                           (int)options.double_sided);
+        set_opengl_uniform_texture(
+            state.program, "mat_ke_txt", "mat_ke_txt_on",
+            material.emission_texture >= 0
+                ? state.textures.at(material.emission_texture)
+                : opengl_texture{},
             0);
-        set_opengl_uniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
-            material.diffuse_texture >= 0 ?
-                state.textures.at(material.diffuse_texture) :
-                opengl_texture{},
+        set_opengl_uniform_texture(
+            state.program, "mat_kd_txt", "mat_kd_txt_on",
+            material.diffuse_texture >= 0
+                ? state.textures.at(material.diffuse_texture)
+                : opengl_texture{},
             1);
-        set_opengl_uniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
-            material.specular_texture >= 0 ?
-                state.textures.at(material.specular_texture) :
-                opengl_texture{},
+        set_opengl_uniform_texture(
+            state.program, "mat_ks_txt", "mat_ks_txt_on",
+            material.specular_texture >= 0
+                ? state.textures.at(material.specular_texture)
+                : opengl_texture{},
             2);
-        set_opengl_uniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
-            material.roughness_texture >= 0 ?
-                state.textures.at(material.roughness_texture) :
-                opengl_texture{},
+        set_opengl_uniform_texture(
+            state.program, "mat_rs_txt", "mat_rs_txt_on",
+            material.roughness_texture >= 0
+                ? state.textures.at(material.roughness_texture)
+                : opengl_texture{},
             3);
-        set_opengl_uniform_texture(state.program, "mat_op_txt", "mat_op_txt_on",
-            material.opacity_texture >= 0 ?
-                state.textures.at(material.opacity_texture) :
-                opengl_texture{},
+        set_opengl_uniform_texture(
+            state.program, "mat_op_txt", "mat_op_txt_on",
+            material.opacity_texture >= 0
+                ? state.textures.at(material.opacity_texture)
+                : opengl_texture{},
             4);
-        set_opengl_uniform_texture(state.program, "mat_norm_txt",
-            "mat_norm_txt_on",
-            material.normal_texture >= 0 ?
-                state.textures.at(material.normal_texture) :
-                opengl_texture{},
+        set_opengl_uniform_texture(
+            state.program, "mat_norm_txt", "mat_norm_txt_on",
+            material.normal_texture >= 0
+                ? state.textures.at(material.normal_texture)
+                : opengl_texture{},
             5);
 
-        set_opengl_uniform(
-            state.program, "elem_faceted", (int)shape.normals.empty());
-        set_opengl_vertexattrib(
-            state.program, "vert_pos", vbos.positions_buffer, zero3f);
-        set_opengl_vertexattrib(
-            state.program, "vert_norm", vbos.normals_buffer, zero3f);
-        set_opengl_vertexattrib(
-            state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
-        set_opengl_vertexattrib(
-            state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
+        set_opengl_uniform(state.program, "elem_faceted",
+                           (int)shape.normals.empty());
+        set_opengl_vertexattrib(state.program, "vert_pos",
+                                vbos.positions_buffer, zero3f);
+        set_opengl_vertexattrib(state.program, "vert_norm", vbos.normals_buffer,
+                                zero3f);
+        set_opengl_vertexattrib(state.program, "vert_texcoord",
+                                vbos.texturecoords_buffer, zero2f);
+        set_opengl_vertexattrib(state.program, "vert_color", vbos.colors_buffer,
+                                vec4f{1, 1, 1, 1});
         set_opengl_vertexattrib(state.program, "vert_tangsp",
-            vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
+                                vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
 
         if (vbos.points_buffer) {
             set_opengl_uniform(state.program, "elem_type", 1);
@@ -591,8 +597,8 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         }
         if (vbos.triangles_buffer) {
             set_opengl_uniform(state.program, "elem_type", 3);
-            draw_opengl_triangles(
-                vbos.triangles_buffer, vbos.triangles_buffer.num);
+            draw_opengl_triangles(vbos.triangles_buffer,
+                                  vbos.triangles_buffer.num);
         }
         if (vbos.quads_buffer) {
             set_opengl_uniform(state.program, "elem_type", 3);
@@ -630,7 +636,7 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             set_opengl_uniform(state.program, "shape_xform", xform);
             set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
             set_opengl_uniform(state.program, "highlight",
-                (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
+                               (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
             auto mtype = 1;
             if (material.base_metallic) mtype = 2;
@@ -642,62 +648,63 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
             set_opengl_uniform(state.program, "mat_ks", material.specular);
             set_opengl_uniform(state.program, "mat_rs", material.roughness);
             set_opengl_uniform(state.program, "mat_op", material.opacity);
-            set_opengl_uniform(
-                state.program, "mat_double_sided", (int)options.double_sided);
-            set_opengl_uniform_texture(state.program, "mat_ke_txt",
-                "mat_ke_txt_on",
-                material.emission_texture >= 0 ?
-                    state.textures.at(material.emission_texture) :
-                    opengl_texture{},
+            set_opengl_uniform(state.program, "mat_double_sided",
+                               (int)options.double_sided);
+            set_opengl_uniform_texture(
+                state.program, "mat_ke_txt", "mat_ke_txt_on",
+                material.emission_texture >= 0
+                    ? state.textures.at(material.emission_texture)
+                    : opengl_texture{},
                 0);
-            set_opengl_uniform_texture(state.program, "mat_kd_txt",
-                "mat_kd_txt_on",
-                material.diffuse_texture >= 0 ?
-                    state.textures.at(material.diffuse_texture) :
-                    opengl_texture{},
+            set_opengl_uniform_texture(
+                state.program, "mat_kd_txt", "mat_kd_txt_on",
+                material.diffuse_texture >= 0
+                    ? state.textures.at(material.diffuse_texture)
+                    : opengl_texture{},
                 1);
-            set_opengl_uniform_texture(state.program, "mat_ks_txt",
-                "mat_ks_txt_on",
-                material.specular_texture >= 0 ?
-                    state.textures.at(material.specular_texture) :
-                    opengl_texture{},
+            set_opengl_uniform_texture(
+                state.program, "mat_ks_txt", "mat_ks_txt_on",
+                material.specular_texture >= 0
+                    ? state.textures.at(material.specular_texture)
+                    : opengl_texture{},
                 2);
-            set_opengl_uniform_texture(state.program, "mat_rs_txt",
-                "mat_rs_txt_on",
-                material.roughness_texture >= 0 ?
-                    state.textures.at(material.roughness_texture) :
-                    opengl_texture{},
+            set_opengl_uniform_texture(
+                state.program, "mat_rs_txt", "mat_rs_txt_on",
+                material.roughness_texture >= 0
+                    ? state.textures.at(material.roughness_texture)
+                    : opengl_texture{},
                 3);
-            set_opengl_uniform_texture(state.program, "mat_op_txt",
-                "mat_op_txt_on",
-                material.opacity_texture >= 0 ?
-                    state.textures.at(material.opacity_texture) :
-                    opengl_texture{},
+            set_opengl_uniform_texture(
+                state.program, "mat_op_txt", "mat_op_txt_on",
+                material.opacity_texture >= 0
+                    ? state.textures.at(material.opacity_texture)
+                    : opengl_texture{},
                 4);
-            set_opengl_uniform_texture(state.program, "mat_norm_txt",
-                "mat_norm_txt_on",
-                material.normal_texture >= 0 ?
-                    state.textures.at(material.normal_texture) :
-                    opengl_texture{},
+            set_opengl_uniform_texture(
+                state.program, "mat_norm_txt", "mat_norm_txt_on",
+                material.normal_texture >= 0
+                    ? state.textures.at(material.normal_texture)
+                    : opengl_texture{},
                 5);
 
-            set_opengl_uniform(
-                state.program, "elem_faceted", (int)surface.normals.empty());
-            set_opengl_vertexattrib(
-                state.program, "vert_pos", vbos.positions_buffer, zero3f);
-            set_opengl_vertexattrib(
-                state.program, "vert_norm", vbos.normals_buffer, zero3f);
+            set_opengl_uniform(state.program, "elem_faceted",
+                               (int)surface.normals.empty());
+            set_opengl_vertexattrib(state.program, "vert_pos",
+                                    vbos.positions_buffer, zero3f);
+            set_opengl_vertexattrib(state.program, "vert_norm",
+                                    vbos.normals_buffer, zero3f);
             set_opengl_vertexattrib(state.program, "vert_texcoord",
-                vbos.texturecoords_buffer, zero2f);
+                                    vbos.texturecoords_buffer, zero2f);
             set_opengl_vertexattrib(state.program, "vert_color",
-                vbos.colors_buffer, vec4f{1, 1, 1, 1});
+                                    vbos.colors_buffer, vec4f{1, 1, 1, 1});
             set_opengl_vertexattrib(state.program, "vert_tangsp",
-                vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
+                                    vbos.tangentspaces_buffer,
+                                    vec4f{0, 0, 1, 1});
 
             if (vbos.split_quads_buffer[group_id]) {
                 set_opengl_uniform(state.program, "elem_type", 3);
                 draw_opengl_triangles(vbos.split_quads_buffer[group_id],
-                    vbos.split_quads_buffer[group_id].num);
+                                      vbos.split_quads_buffer[group_id].num);
             }
         }
 
@@ -710,13 +717,15 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
 
 // Display a scene
 void draw_glscene(drawgl_state& state, const yocto_scene& scene,
-    const vec2i& viewport_size, const pair<type_index, int>& highlighted,
-    const drawgl_options& options) {
+                  const vec2i&                 viewport_size,
+                  const pair<type_index, int>& highlighted,
+                  const drawgl_options&        options) {
     auto& camera      = scene.cameras.at(options.camera_id);
     auto  camera_view = frame_to_mat(inverse(camera.frame));
-    auto  camera_proj = make_perspective_mat(get_camera_fovy(camera),
-        (float)viewport_size.x / (float)viewport_size.y, options.near_plane,
-        options.far_plane);
+    auto  camera_proj =
+        make_perspective_mat(get_camera_fovy(camera),
+                             (float)viewport_size.x / (float)viewport_size.y,
+                             options.near_plane, options.far_plane);
 
     bind_opengl_program(state.program);
     set_opengl_uniform(state.program, "cam_pos", camera.frame.o);
@@ -742,16 +751,17 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
             if (!shape.triangles.empty()) {
                 for (auto t : shape.triangles)
                     area += triangle_area(shape.positions[t.x],
-                        shape.positions[t.y], shape.positions[t.z]);
+                                          shape.positions[t.y],
+                                          shape.positions[t.z]);
             } else if (!shape.quads.empty()) {
                 for (auto q : shape.quads)
-                    area += quad_area(shape.positions[q.x],
-                        shape.positions[q.y], shape.positions[q.z],
-                        shape.positions[q.w]);
+                    area +=
+                        quad_area(shape.positions[q.x], shape.positions[q.y],
+                                  shape.positions[q.z], shape.positions[q.w]);
             } else if (!shape.lines.empty()) {
                 for (auto l : shape.lines)
-                    area += line_length(
-                        shape.positions[l.x], shape.positions[l.y]);
+                    area +=
+                        line_length(shape.positions[l.x], shape.positions[l.y]);
             } else {
                 area += shape.positions.size();
             }
@@ -764,12 +774,12 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         set_opengl_uniform(state.program, "lnum", (int)lights_pos.size());
         for (auto i = 0; i < lights_pos.size(); i++) {
             auto is = std::to_string(i);
-            set_opengl_uniform(
-                state.program, ("lpos[" + is + "]").c_str(), lights_pos[i]);
-            set_opengl_uniform(
-                state.program, ("lke[" + is + "]").c_str(), lights_ke[i]);
+            set_opengl_uniform(state.program, ("lpos[" + is + "]").c_str(),
+                               lights_pos[i]);
+            set_opengl_uniform(state.program, ("lke[" + is + "]").c_str(),
+                               lights_ke[i]);
             set_opengl_uniform(state.program, ("ltype[" + is + "]").c_str(),
-                (int)lights_type[i]);
+                               (int)lights_type[i]);
         }
     }
 
@@ -779,9 +789,9 @@ void draw_glscene(drawgl_state& state, const yocto_scene& scene,
         auto& instance = scene.instances[instance_id];
         // auto& shape     = scene.shapes[instance.shape];
         // auto& material  = scene.materials[shape.material];
-        auto highlight = highlighted ==
-                         pair<type_index, int>{
-                             typeid(yocto_instance), instance_id};
+        auto highlight =
+            highlighted ==
+            pair<type_index, int>{typeid(yocto_instance), instance_id};
         draw_glinstance(state, scene, instance, highlight, options);
     }
 
@@ -798,10 +808,10 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         auto& texture = scene.textures[texture_id];
         if (!texture.hdr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.hdr_image,
-                true, true, true);
+                                true, true, true);
         } else if (!texture.ldr_image.empty()) {
             init_opengl_texture(state.textures[texture_id], texture.ldr_image,
-                !texture.ldr_as_linear, true, true);
+                                !texture.ldr_as_linear, true, true);
         } else {
             throw runtime_error("bad texture");
         }
@@ -811,25 +821,25 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         auto& shape = scene.shapes[shape_id];
         auto  vbos  = drawgl_shape();
         if (!shape.positions.empty())
-            init_opengl_array_buffer(
-                vbos.positions_buffer, shape.positions, false);
+            init_opengl_array_buffer(vbos.positions_buffer, shape.positions,
+                                     false);
         if (!shape.normals.empty())
             init_opengl_array_buffer(vbos.normals_buffer, shape.normals, false);
         if (!shape.texturecoords.empty())
-            init_opengl_array_buffer(
-                vbos.texturecoords_buffer, shape.texturecoords, false);
+            init_opengl_array_buffer(vbos.texturecoords_buffer,
+                                     shape.texturecoords, false);
         if (!shape.colors.empty())
             init_opengl_array_buffer(vbos.colors_buffer, shape.colors, false);
         if (!shape.tangentspaces.empty())
-            init_opengl_array_buffer(
-                vbos.tangentspaces_buffer, shape.tangentspaces, false);
+            init_opengl_array_buffer(vbos.tangentspaces_buffer,
+                                     shape.tangentspaces, false);
         if (!shape.points.empty())
             init_opengl_elementbuffer(vbos.points_buffer, shape.points, false);
         if (!shape.lines.empty())
             init_opengl_elementbuffer(vbos.lines_buffer, shape.lines, false);
         if (!shape.triangles.empty())
-            init_opengl_elementbuffer(
-                vbos.triangles_buffer, shape.triangles, false);
+            init_opengl_elementbuffer(vbos.triangles_buffer, shape.triangles,
+                                      false);
         if (!shape.quads.empty()) {
             auto triangles = vector<vec3i>{};
             convert_quads_to_triangles(triangles, shape.quads);
@@ -847,9 +857,9 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         auto  normals       = vector<vec3f>{};
         auto  texturecoords = vector<vec2f>{};
         convert_face_varying(quads, positions, normals, texturecoords,
-            surface.quads_positions, surface.quads_normals,
-            surface.quads_texturecoords, surface.positions, surface.normals,
-            surface.texturecoords);
+                             surface.quads_positions, surface.quads_normals,
+                             surface.quads_texturecoords, surface.positions,
+                             surface.normals, surface.texturecoords);
         auto split_quads = vector<vector<vec4i>>();
         if (surface.materials.size() > 1 && !surface.quads_materials.empty()) {
             ungroup_quads(split_quads, quads, surface.quads_materials);
@@ -861,15 +871,15 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
         if (!normals.empty())
             init_opengl_array_buffer(vbos.normals_buffer, normals, false);
         if (!texturecoords.empty())
-            init_opengl_array_buffer(
-                vbos.texturecoords_buffer, texturecoords, false);
+            init_opengl_array_buffer(vbos.texturecoords_buffer, texturecoords,
+                                     false);
         vbos.split_quads_buffer = {};
         for (auto& quads : split_quads) {
             if (!quads.empty()) vbos.split_quads_buffer.push_back({});
             auto triangles = vector<vec3i>{};
             convert_quads_to_triangles(triangles, quads);
-            init_opengl_elementbuffer(
-                vbos.split_quads_buffer.back(), triangles, false);
+            init_opengl_elementbuffer(vbos.split_quads_buffer.back(), triangles,
+                                      false);
         }
         state.surfaces[surface_id] = vbos;
     }
@@ -909,8 +919,8 @@ void draw_widgets(const opengl_window& win) {
     if (begin_opengl_widgets_window(win, "yview")) {
         if (begin_tabbar_opengl_widget(win, "tabs")) {
             if (begin_tabitem_opengl_widget(win, "scene")) {
-                draw_label_opengl_widget(
-                    win, "scene", get_filename(app.filename));
+                draw_label_opengl_widget(win, "scene",
+                                         get_filename(app.filename));
                 if (draw_button_opengl_widget(win, "load")) {
                     delete_drawgl_state(app.state);
                     load_scene_async(app);
@@ -922,33 +932,35 @@ void draw_widgets(const opengl_window& win) {
             if (begin_tabitem_opengl_widget(win, "view")) {
                 if (app.load_done) {
                     draw_combobox_opengl_widget(win, "camera",
-                        app.draw_options.camera_id, app.scene.cameras, false);
+                                                app.draw_options.camera_id,
+                                                app.scene.cameras, false);
                 }
                 draw_slider_opengl_widget(
                     win, "width", app.draw_options.image_width, 0, 4096);
                 draw_slider_opengl_widget(
                     win, "height", app.draw_options.image_height, 0, 4096);
-                draw_checkbox_opengl_widget(
-                    win, "eyelight", app.draw_options.eyelight);
+                draw_checkbox_opengl_widget(win, "eyelight",
+                                            app.draw_options.eyelight);
                 continue_opengl_widget_line(win);
-                draw_checkbox_opengl_widget(
-                    win, "wireframe", app.draw_options.wireframe);
+                draw_checkbox_opengl_widget(win, "wireframe",
+                                            app.draw_options.wireframe);
                 continue_opengl_widget_line(win);
-                draw_checkbox_opengl_widget(
-                    win, "edges", app.draw_options.edges);
+                draw_checkbox_opengl_widget(win, "edges",
+                                            app.draw_options.edges);
                 if (app.time_range != zero2f) {
                     draw_slider_opengl_widget(win, "time", app.time,
-                        app.time_range.x, app.time_range.y);
-                    draw_textinput_opengl_widget(
-                        win, "anim group", app.anim_group);
+                                              app.time_range.x,
+                                              app.time_range.y);
+                    draw_textinput_opengl_widget(win, "anim group",
+                                                 app.anim_group);
                     draw_checkbox_opengl_widget(win, "animate", app.animate);
                 }
-                draw_slider_opengl_widget(
-                    win, "exposure", app.draw_options.exposure, -10, 10);
-                draw_slider_opengl_widget(
-                    win, "gamma", app.draw_options.gamma, 0.1f, 4);
-                draw_checkbox_opengl_widget(
-                    win, "double sided", app.draw_options.double_sided);
+                draw_slider_opengl_widget(win, "exposure",
+                                          app.draw_options.exposure, -10, 10);
+                draw_slider_opengl_widget(win, "gamma", app.draw_options.gamma,
+                                          0.1f, 4);
+                draw_checkbox_opengl_widget(win, "double sided",
+                                            app.draw_options.double_sided);
                 draw_slider_opengl_widget(
                     win, "near", app.draw_options.near_plane, 0.01f, 1.0f);
                 draw_slider_opengl_widget(
@@ -956,11 +968,11 @@ void draw_widgets(const opengl_window& win) {
                 draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
-                        println_values(stdout, "c", camera.name,
-                            (int)camera.orthographic, camera.film_width,
-                            camera.film_height, camera.focal_length,
-                            camera.focus_distance, camera.lens_aperture,
-                            camera.frame);
+                        println_values(
+                            stdout, "c", camera.name, (int)camera.orthographic,
+                            camera.film_width, camera.film_height,
+                            camera.focal_length, camera.focus_distance,
+                            camera.lens_aperture, camera.frame);
                     }
                 }
                 end_tabitem_opengl_widget(win);
@@ -989,7 +1001,7 @@ void draw(const opengl_window& win) {
     set_opengl_viewport(get_opengl_framebuffer_size(win));
     if (app.load_done) {
         draw_glscene(app.state, app.scene, get_opengl_framebuffer_size(win),
-            app.selection, app.draw_options);
+                     app.selection, app.draw_options);
     }
     draw_widgets(win);
     swap_opengl_buffers(win);
@@ -1037,8 +1049,8 @@ void drop_callback(const opengl_window& win, const vector<string>& paths) {
 void run_ui(app_state& app) {
     // window
     auto win = opengl_window();
-    init_opengl_window(
-        win, {1280, 720}, "yview | " + get_filename(app.filename), &app, draw);
+    init_opengl_window(win, {1280, 720},
+                       "yview | " + get_filename(app.filename), &app, draw);
 
     // init widget
     init_opengl_widgets(win);
@@ -1069,8 +1081,8 @@ void run_ui(app_state& app) {
             if (mouse_right) dolly = (mouse_pos.x - last_pos.x) / 100.0f;
             if (mouse_left && shift_down) pan = (mouse_pos - last_pos) / 100.0f;
             auto& camera = app.scene.cameras.at(app.draw_options.camera_id);
-            update_camera_turntable(
-                camera.frame, camera.focus_distance, rotate, dolly, pan);
+            update_camera_turntable(camera.frame, camera.focus_distance, rotate,
+                                    dolly, pan);
             app.update_list.push_back(
                 {typeid(yocto_camera), app.draw_options.camera_id});
         }
@@ -1092,8 +1104,8 @@ void run_ui(app_state& app) {
         draw(win);
 
         // event hadling
-        process_opengl_events(
-            win, !((mouse_left || mouse_right) || widgets_active));
+        process_opengl_events(win,
+                              !((mouse_left || mouse_right) || widgets_active));
     }
 
     // clear
@@ -1137,27 +1149,28 @@ int main(int argc, char* argv[]) {
 
     // parse command line
     auto parser = cmdline_parser{};
-    init_cmdline_parser(
-        parser, argc, argv, "views scenes inteactively", "yview");
-    app.draw_options.camera_id = parse_cmdline_argument(
-        parser, "--camera", 0, "Camera index.");
+    init_cmdline_parser(parser, argc, argv, "views scenes inteactively",
+                        "yview");
+    app.draw_options.camera_id =
+        parse_cmdline_argument(parser, "--camera", 0, "Camera index.");
     app.draw_options.image_width = parse_cmdline_argument(
         parser, "--hres,-R", 1280, "Image horizontal resolution.");
     app.draw_options.image_height = parse_cmdline_argument(
         parser, "--vres,-r", 720, "Image vertical resolution.");
     app.draw_options.eyelight = parse_cmdline_argument(
         parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
-    app.double_sided        = parse_cmdline_argument(parser,
-        "--double-sided/--no-double-sided,-D", false,
-        "Double-sided rendering.");
-    auto highlight_filename = parse_cmdline_argument(
-        parser, "--highlights", ""s, "Highlight filename");
-    auto no_parallel = parse_cmdline_argument(parser,
-        "--parallel/--no-parallel", false, "Disable parallel execution.");
-    app.imfilename   = parse_cmdline_argument(
-        parser, "--output-image,-o", "out.png"s, "Image filename");
-    app.filename = parse_cmdline_argument(
-        parser, "scene", "scene.json"s, "Scene filename", true);
+    app.double_sided =
+        parse_cmdline_argument(parser, "--double-sided/--no-double-sided,-D",
+                               false, "Double-sided rendering.");
+    auto highlight_filename = parse_cmdline_argument(parser, "--highlights",
+                                                     ""s, "Highlight filename");
+    auto no_parallel        = parse_cmdline_argument(parser,
+                                              "--parallel/--no-parallel", false,
+                                              "Disable parallel execution.");
+    app.imfilename = parse_cmdline_argument(parser, "--output-image,-o",
+                                            "out.png"s, "Image filename");
+    app.filename   = parse_cmdline_argument(parser, "scene", "scene.json"s,
+                                          "Scene filename", true);
     check_cmdline_parser(parser);
 
     // fix parallel code

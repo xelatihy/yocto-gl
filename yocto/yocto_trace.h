@@ -114,7 +114,7 @@ struct trace_state {
 
 // Initialize state of the renderer.
 void init_trace_state(trace_state& state, int width, int height,
-    uint64_t random_seed = trace_default_seed);
+                      uint64_t random_seed = trace_default_seed);
 
 // Type of tracing algorithm to use
 enum struct trace_sampler_type {
@@ -135,16 +135,27 @@ enum struct trace_sampler_type {
     debug_highlight,     // debug - highlight
 };
 
-const auto trace_sampler_type_names = vector<string>{"path", "naive", "split",
-    "eyelight", "debug_normal", "debug_albedo", "debug_texcoord", "debug_color",
-    "debug_frontfacing", "debug_emission", "debug_diffuse", "debug_specular",
-    "debug_transmission", "debug_roughness", "debug_highlight"};
+const auto trace_sampler_type_names = vector<string>{"path",
+                                                     "naive",
+                                                     "split",
+                                                     "eyelight",
+                                                     "debug_normal",
+                                                     "debug_albedo",
+                                                     "debug_texcoord",
+                                                     "debug_color",
+                                                     "debug_frontfacing",
+                                                     "debug_emission",
+                                                     "debug_diffuse",
+                                                     "debug_specular",
+                                                     "debug_transmission",
+                                                     "debug_roughness",
+                                                     "debug_highlight"};
 
 // Tracer function
-using trace_sampler_func = function<pair<vec3f, bool>(const yocto_scene& scene,
-    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
-    const vec3f& direction, rng_state& rng, int max_bounces,
-    bool environments_hidden)>;
+using trace_sampler_func = function<pair<vec3f, bool>(
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const vec3f& position, const vec3f& direction, rng_state& rng,
+    int max_bounces, bool environments_hidden)>;
 trace_sampler_func get_trace_sampler_func(trace_sampler_type type);
 
 // Options for trace functions
@@ -168,24 +179,30 @@ struct trace_image_options {
 
 // Progressively compute an image by calling trace_samples multiple times.
 image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
-    const trace_lights& lights, const trace_image_options& options);
+                    const trace_lights&        lights,
+                    const trace_image_options& options);
 
 // Progressively compute an image by calling trace_samples multiple times.
 // Start with an empty state and then successively call this function to
 // render the next batch of samples.
 int trace_image_samples(image4f& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    int current_sample, const trace_image_options& options);
+                        const yocto_scene& scene, const bvh_scene& bvh,
+                        const trace_lights& lights, int current_sample,
+                        const trace_image_options& options);
 
 // Starts an anyncrhounous renderer. The function will keep a reference to
 // options.
 void trace_image_async_start(image4f& image, trace_state& state,
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    vector<future<void>>& futures, atomic<int>& current_sample,
-    concurrent_queue<bbox2i>& queue, const trace_image_options& options);
+                             const yocto_scene& scene, const bvh_scene& bvh,
+                             const trace_lights&        lights,
+                             vector<future<void>>&      futures,
+                             atomic<int>&               current_sample,
+                             concurrent_queue<bbox2i>&  queue,
+                             const trace_image_options& options);
 // Stop the asynchronous renderer.
-void trace_image_async_stop(vector<future<void>>& futures,
-    concurrent_queue<bbox2i>& queue, const trace_image_options& options);
+void trace_image_async_stop(vector<future<void>>&      futures,
+                            concurrent_queue<bbox2i>&  queue,
+                            const trace_image_options& options);
 
 // Check is a sampler requires lights
 bool is_trace_sampler_lit(const trace_image_options& options);
@@ -206,29 +223,32 @@ namespace yocto {
 float convert_specular_exponent_to_roughness(float n);
 
 // Specular to fresnel eta.
-void compute_fresnel_from_specular(
-    const vec3f& specular, vec3f& es, vec3f& esk);
+void  compute_fresnel_from_specular(const vec3f& specular, vec3f& es,
+                                    vec3f& esk);
 float convert_specular_to_eta(const vec3f& specular);
 // Compute the fresnel term for dielectrics.
 vec3f evaluate_fresnel_dielectric(float direction_cosine, const vec3f& eta);
 // Compute the fresnel term for metals.
-vec3f evaluate_fresnel_metal(
-    float direction_cosine, const vec3f& eta, const vec3f& etak);
+vec3f evaluate_fresnel_metal(float direction_cosine, const vec3f& eta,
+                             const vec3f& etak);
 // Schlick approximation of Fresnel term, optionally weighted by roughness;
 vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine);
-vec3f evaluate_fresnel_schlick(
-    const vec3f& specular, float direction_cosine, float roughness);
+vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine,
+                               float roughness);
 
 // Evaluates the microfacet distribution and geometric term (ggx or beckman).
 float evaluate_microfacet_distribution(float roughness, const vec3f& normal,
-    const vec3f& half_vector, bool ggx = true);
+                                       const vec3f& half_vector,
+                                       bool         ggx = true);
 float evaluate_microfacet_shadowing(float roughness, const vec3f& normal,
-    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
-    bool ggx = true);
-vec3f sample_microfacet_distribution(
-    float roughness, const vec3f& normal, const vec2f& rn, bool ggx = true);
+                                    const vec3f& half_vector,
+                                    const vec3f& outgoing,
+                                    const vec3f& incoming, bool ggx = true);
+vec3f sample_microfacet_distribution(float roughness, const vec3f& normal,
+                                     const vec2f& rn, bool ggx = true);
 float sample_microfacet_distribution_pdf(float roughness, const vec3f& normal,
-    const vec3f& half_vector, bool ggx = true);
+                                         const vec3f& half_vector,
+                                         bool         ggx = true);
 
 // Evaluate and sample volume phase function.
 vec3f sample_phase_function(float vg, const vec2f& u);

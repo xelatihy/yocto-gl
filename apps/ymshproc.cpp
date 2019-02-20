@@ -37,21 +37,21 @@ int main(int argc, char** argv) {
     // parse command line
     auto parser = cmdline_parser{};
     init_cmdline_parser(parser, argc, argv,
-        "Applies operations on a triangle mesh", "ymshproc");
+                        "Applies operations on a triangle mesh", "ymshproc");
     auto geodesic_source = parse_cmdline_argument(
         parser, "--geodesic-source,-g", -1, "Geodesic source");
-    auto output = parse_cmdline_argument(
-        parser, "--output,-o", "out.ply"s, "output mesh", true);
-    auto filename = parse_cmdline_argument(
-        parser, "mesh", "mesh.ply"s, "input mesh", true);
+    auto output = parse_cmdline_argument(parser, "--output,-o", "out.ply"s,
+                                         "output mesh", true);
+    auto filename =
+        parse_cmdline_argument(parser, "mesh", "mesh.ply"s, "input mesh", true);
     check_cmdline_parser(parser);
 
     // load mesh
     auto shape = yocto_shape{};
     try {
         load_mesh(filename, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius, true);
+                  shape.quads, shape.positions, shape.normals,
+                  shape.texturecoords, shape.colors, shape.radius, true);
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
@@ -69,8 +69,8 @@ int main(int argc, char** argv) {
     // save mesh
     try {
         save_mesh(output, shape.points, shape.lines, shape.triangles,
-            shape.quads, shape.positions, shape.normals, shape.texturecoords,
-            shape.colors, shape.radius);
+                  shape.quads, shape.positions, shape.normals,
+                  shape.texturecoords, shape.colors, shape.radius);
     } catch (const std::exception& e) {
         exit_error(e.what());
     }

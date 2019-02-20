@@ -231,7 +231,7 @@ void load_pfm_image(const string& filename, image4f& img) {
 }
 void save_pfm_image(const string& filename, const image4f& img) {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
+                  (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -251,7 +251,7 @@ void load_exr_image(const string& filename, image4f& img) {
 }
 void save_exr_image(const string& filename, const image4f& img) {
     if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
-            filename.c_str())) {
+                 filename.c_str())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -279,31 +279,31 @@ void load_stb_image(const string& filename, image4f& img) {
 // save an image with stbi
 void save_png_image(const string& filename, const image4b& img) {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
-            img.data(), img.size().x * 4)) {
+                        img.data(), img.size().x * 4)) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_jpg_image(const string& filename, const image4b& img) {
-    if (!stbi_write_jpg(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
+    if (!stbi_write_jpg(filename.c_str(), img.size().x, img.size().y, 4,
+                        img.data(), 75)) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_tga_image(const string& filename, const image4b& img) {
-    if (!stbi_write_tga(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
+    if (!stbi_write_tga(filename.c_str(), img.size().x, img.size().y, 4,
+                        img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_bmp_image(const string& filename, const image4b& img) {
-    if (!stbi_write_bmp(
-            filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
+    if (!stbi_write_bmp(filename.c_str(), img.size().x, img.size().y, 4,
+                        img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_hdr_image(const string& filename, const image4f& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
-            (float*)img.data())) {
+                        (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -311,19 +311,19 @@ void save_hdr_image(const string& filename, const image4f& img) {
 // load an image using stbi library
 void load_stb_image_from_memory(const byte* data, int data_size, image4b& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_load_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
+    auto pixels =
+        stbi_load_from_memory(data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading in-memory image");
     }
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
 }
-void load_stbi_image_from_memory(
-    const byte* data, int data_size, image4f& img) {
+void load_stbi_image_from_memory(const byte* data, int data_size,
+                                 image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = stbi_loadf_from_memory(
-        data, data_size, &width, &height, &ncomp, 4);
+    auto pixels =
+        stbi_loadf_from_memory(data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading in-memory image {}");
     }
@@ -341,12 +341,12 @@ void apply_json_procedural(const json& js, image4f& img) {
         img = image{{width, height}, zero4f};
     } else if (type == "grid") {
         make_grid_image(img, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
+                        js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+                        js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "checker") {
         make_checker_image(img, js.value("tile", 8),
-            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
+                           js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+                           js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
         make_bumpdimple_image(img, js.value("tile", 8));
     } else if (type == "uvramp") {
@@ -358,31 +358,33 @@ void apply_json_procedural(const json& js, image4f& img) {
     } else if (type == "uvgrid") {
         make_uvgrid_image(img);
     } else if (type == "sky") {
-        make_sunsky_image(img, js.value("sun_angle", pif / 4),
-            js.value("turbidity", 3.0f), js.value("has_sun", false),
-            js.value("sun_intensity", 1.0f), js.value("sun_temperature", 0.0f),
+        make_sunsky_image(
+            img, js.value("sun_angle", pif / 4), js.value("turbidity", 3.0f),
+            js.value("has_sun", false), js.value("sun_intensity", 1.0f),
+            js.value("sun_temperature", 0.0f),
             js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
     } else if (type == "noise") {
         make_noise_image(img, js.value("scale", 1.0f), js.value("wrap", true));
     } else if (type == "fbm") {
         make_fbm_image(img, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
+                       js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+                       js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "ridge") {
         make_ridge_image(img, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("offset", 1.0f), js.value("octaves", 6),
-            js.value("wrap", true));
+                         js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
+                         js.value("offset", 1.0f), js.value("octaves", 6),
+                         js.value("wrap", true));
     } else if (type == "turbulence") {
         make_turbulence_image(img, js.value("scale", 1.0f),
-            js.value("lacunarity", 2.0f), js.value("gain", 0.5f),
-            js.value("octaves", 6), js.value("wrap", true));
+                              js.value("lacunarity", 2.0f),
+                              js.value("gain", 0.5f), js.value("octaves", 6),
+                              js.value("wrap", true));
     } else {
         throw std::invalid_argument("unknown image type" + type);
     }
     if (js.value("border", false)) {
         add_image_border(img, js.value("border_width", 2),
-            js.value("border_color", vec4f{0, 0, 0, 1}));
+                         js.value("border_color", vec4f{0, 0, 0, 1}));
     }
     if (js.value("bump_to_normal", false)) {
         auto buffer = img;
@@ -562,7 +564,7 @@ void load_image_from_memory(const byte* data, int data_size, image4b& img) {
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_image(const string& filename, const image4f& hdr,
-    float exposure, bool filmic, bool srgb) {
+                           float exposure, bool filmic, bool srgb) {
     if (is_hdr_filename(filename)) {
         save_image(filename, hdr);
     } else {
@@ -574,7 +576,8 @@ void save_tonemapped_image(const string& filename, const image4f& hdr,
 
 // Resize image.
 void resize_image(image4f& res_img, const image4f& img) {
-    stbir_resize_float_generic((float*)img.data(), img.size().x, img.size().y,
+    stbir_resize_float_generic(
+        (float*)img.data(), img.size().x, img.size().y,
         sizeof(vec4f) * img.size().x, (float*)res_img.data(), res_img.size().x,
         res_img.size().y, sizeof(vec4f) * res_img.size().x, 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,

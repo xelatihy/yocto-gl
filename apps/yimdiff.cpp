@@ -39,9 +39,9 @@ image4f compute_diff_image(const image4f& a, const image4f& b) {
     auto diff = image{a.size(), zero4f};
     for (auto j = 0; j < a.size().y; j++) {
         for (auto i = 0; i < a.size().x; i++) {
-            diff[{i, j}] = {abs(a[{i, j}].x - b[{i, j}].x),
-                abs(a[{i, j}].y - b[{i, j}].y), abs(a[{i, j}].z - b[{i, j}].z),
-                abs(a[{i, j}].w - b[{i, j}].w)};
+            diff[{i, j}] = {
+                abs(a[{i, j}].x - b[{i, j}].x), abs(a[{i, j}].y - b[{i, j}].y),
+                abs(a[{i, j}].z - b[{i, j}].z), abs(a[{i, j}].w - b[{i, j}].w)};
         }
     }
     return diff;
@@ -51,7 +51,7 @@ vec4f max_diff_value(const image4f& diff) {
     auto max_value = vec4f{0, 0, 0, 0};
     for (auto& c : diff) {
         max_value = {max(c.x, max_value.x), max(c.y, max_value.y),
-            max(c.z, max_value.z), max(c.w, max_value.w)};
+                     max(c.z, max_value.z), max(c.w, max_value.w)};
     }
     return max_value;
 }
@@ -71,14 +71,14 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = cmdline_parser{};
     init_cmdline_parser(parser, argc, argv, "Compares two images", "yimdiff");
-    auto threshold = parse_cmdline_argument(
-        parser, "--threshold,-t", 0.1f, "Thhhreshold");
-    auto output = parse_cmdline_argument(
-        parser, "--output,-o", ""s, "output image filename", false);
-    auto filename1 = parse_cmdline_argument(
-        parser, "filename1", "in1.png"s, "input image filename", true);
-    auto filename2 = parse_cmdline_argument(
-        parser, "filename2", "in2.png"s, "input image filename", true);
+    auto threshold =
+        parse_cmdline_argument(parser, "--threshold,-t", 0.1f, "Thhhreshold");
+    auto output    = parse_cmdline_argument(parser, "--output,-o", ""s,
+                                         "output image filename", false);
+    auto filename1 = parse_cmdline_argument(parser, "filename1", "in1.png"s,
+                                            "input image filename", true);
+    auto filename2 = parse_cmdline_argument(parser, "filename2", "in2.png"s,
+                                            "input image filename", true);
     check_cmdline_parser(parser);
 
     // check image type
@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
     }
     if (max(max_diff) > threshold) {
         printf("image max difference: %f %f %f %f\n", max_diff.x, max_diff.y,
-            max_diff.z, max_diff.w);
+               max_diff.z, max_diff.w);
         exit_error("image content differs");
     }
 
