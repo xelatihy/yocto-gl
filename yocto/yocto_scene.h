@@ -314,12 +314,12 @@ string print_scene_stats(const yocto_scene& scene);
 namespace yocto {
 
 // Update node transforms.
-void update_transforms(yocto_scene& scene, float time = 0,
-                       const string& anim_group = "");
+void update_transforms(
+    yocto_scene& scene, float time = 0, const string& anim_group = "");
 
 // Compute animation range.
-vec2f compute_animation_range(const yocto_scene& scene,
-                              const string&      anim_group = "");
+vec2f compute_animation_range(
+    const yocto_scene& scene, const string& anim_group = "");
 
 // Computes shape/scene approximate bounds.
 bbox3f compute_shape_bounds(const yocto_shape& shape);
@@ -327,16 +327,15 @@ bbox3f compute_scene_bounds(const yocto_scene& scene);
 
 // Compute shape vertex normals
 void compute_shape_normals(const yocto_shape& shape, vector<vec3f>& normals);
-void compute_surface_normals(const yocto_surface& surface,
-                             vector<vec3f>&       normals);
+void compute_surface_normals(
+    const yocto_surface& surface, vector<vec3f>& normals);
 
 // Low level make/update bvh functions.
 void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-                     const build_bvh_options& options = {});
+    const build_bvh_options& options = {});
 void refit_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
-                     const vector<int>& updated_instances,
-                     const vector<int>& updated_shapes,
-                     const vector<int>& updated_surfaces);
+    const vector<int>& updated_instances, const vector<int>& updated_shapes,
+    const vector<int>& updated_surfaces);
 
 // Apply subdivision and displacement rules.
 void tesselate_shapes_and_surfaces(yocto_scene& scene);
@@ -352,29 +351,27 @@ void add_missing_cameras(yocto_scene& scene);
 void add_sky_environment(yocto_scene& scene, float sun_angle = pif / 4);
 
 // Checks for validity of the scene.
-void print_validation_errors(const yocto_scene& scene,
-                             bool               skip_textures = false);
+void print_validation_errors(
+    const yocto_scene& scene, bool skip_textures = false);
 
 // Queries on objects
 bool is_shape_face_varying(const yocto_shape& shape);
 
 // Shape values interpolated using barycentric coordinates.
-vec3f evaluate_shape_position(const yocto_shape& shape, int element_id,
-                              const vec2f& element_uv);
-vec3f evaluate_shape_normal(const yocto_shape& shape, int element_id,
-                            const vec2f& element_uv);
-vec2f evaluate_shape_texturecoord(const yocto_shape& shape, int element_id,
-                                  const vec2f& element_uv);
-vec4f evaluate_shape_color(const yocto_shape& shape, int element_id,
-                           const vec2f& element_uv);
-float evaluate_shape_radius(const yocto_shape& shape, int element_id,
-                            const vec2f& element_uv);
-pair<vec3f, bool> evaluate_shape_tangentspace(const yocto_shape& shape,
-                                              int                element_id,
-                                              const vec2f&       element_uv);
-vec3f             evaluate_shape_perturbed_normal(const yocto_scene& scene,
-                                                  const yocto_shape& shape, int element_id,
-                                                  const vec2f& element_uv);
+vec3f evaluate_shape_position(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_shape_normal(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec2f evaluate_shape_texturecoord(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec4f evaluate_shape_color(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+float evaluate_shape_radius(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+pair<vec3f, bool> evaluate_shape_tangentspace(
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
+vec3f evaluate_shape_perturbed_normal(const yocto_scene& scene,
+    const yocto_shape& shape, int element_id, const vec2f& element_uv);
 // Shape element values.
 vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id);
 pair<vec3f, bool> evaluate_shape_element_tangentspace(
@@ -382,26 +379,23 @@ pair<vec3f, bool> evaluate_shape_element_tangentspace(
 
 // Sample a shape element based on area/length.
 void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf);
-pair<int, vec2f> sample_shape_element(const yocto_shape&   shape,
-                                      const vector<float>& elem_cdf, float re,
-                                      const vec2f& ruv);
-float            sample_shape_element_pdf(const yocto_shape&   shape,
-                                          const vector<float>& elem_cdf, int element_id,
-                                          const vec2f& element_uv);
+pair<int, vec2f> sample_shape_element(const yocto_shape& shape,
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
+float            sample_shape_element_pdf(const yocto_shape& shape,
+               const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Surface values interpolated using barycentric coordinates.
-vec3f evaluate_surface_position(const yocto_surface& surface, int element_id,
-                                const vec2f& element_uv);
-vec3f evaluate_surface_normal(const yocto_surface& surface, int element_id,
-                              const vec2f& element_uv);
-vec2f evaluate_surface_texturecoord(const yocto_surface& surface,
-                                    int element_id, const vec2f& element_uv);
-pair<vec3f, bool> evaluate_surface_tangentspace(const yocto_surface& surface,
-                                                int                  element_id,
-                                                const vec2f& element_uv);
+vec3f evaluate_surface_position(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
+vec3f evaluate_surface_normal(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
+vec2f evaluate_surface_texturecoord(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
+pair<vec3f, bool> evaluate_surface_tangentspace(
+    const yocto_surface& surface, int element_id, const vec2f& element_uv);
 // Surface element values.
-vec3f             evaluate_surface_element_normal(const yocto_surface& surface,
-                                                  int                  element_id);
+vec3f evaluate_surface_element_normal(
+    const yocto_surface& surface, int element_id);
 pair<vec3f, bool> evaluate_surface_element_tangentspace(
     const yocto_surface& surface, int element_id,
     const vec2f& element_uv = zero2f);
@@ -409,63 +403,56 @@ pair<vec3f, bool> evaluate_surface_element_tangentspace(
 int get_surface_element_material(const yocto_surface& surface, int element_id);
 
 // Sample a surface element based on area.
-void             compute_surface_elements_cdf(const yocto_surface& surface,
-                                              vector<float>&       cdf);
+void compute_surface_elements_cdf(
+    const yocto_surface& surface, vector<float>& cdf);
 pair<int, vec2f> sample_surface_element(const yocto_surface& surface,
-                                        const vector<float>& elem_cdf, float re,
-                                        const vec2f& ruv);
+    const vector<float>& elem_cdf, float re, const vec2f& ruv);
 float            sample_surface_element_pdf(const yocto_surface& surface,
-                                            const vector<float>& elem_cdf, int element_id,
-                                            const vec2f& element_uv);
+               const vector<float>& elem_cdf, int element_id, const vec2f& element_uv);
 
 // Evaluate a texture.
 vec2i evaluate_texture_size(const yocto_texture& texture);
 vec4f lookup_texture(const yocto_texture& texture, int i, int j);
 vec4f evaluate_texture(const yocto_texture& texture, const vec2f& texcoord);
 float lookup_voltexture(const yocto_voltexture& texture, int i, int j, int k);
-float evaluate_voltexture(const yocto_voltexture& texture,
-                          const vec3f&            texcoord);
+float evaluate_voltexture(
+    const yocto_voltexture& texture, const vec3f& texcoord);
 
 // Set and evaluate camera parameters. Setters take zeros as default values.
 float          get_camera_fovx(const yocto_camera& camera);
 float          get_camera_fovy(const yocto_camera& camera);
 float          get_camera_aspect(const yocto_camera& camera);
-pair<int, int> get_camera_image_size(const yocto_camera& camera, int width,
-                                     int height);
+pair<int, int> get_camera_image_size(
+    const yocto_camera& camera, int width, int height);
 void set_camera_perspective(yocto_camera& camera, float fovy, float aspect,
-                            float focus, float height = 0.024f);
+    float focus, float height = 0.024f);
 // Sets camera field of view to enclose all the bbox. Camera view direction
 // fiom size and forcal lemgth can be overridden if we pass non zero values.
 void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,
-                               const vec3f& view_direction = zero3f,
-                               float width = 0, float height = 0,
-                               float focal = 0);
+    const vec3f& view_direction = zero3f, float width = 0, float height = 0,
+    float focal = 0);
 
 // Generates a ray from a camera image coordinate and lens coordinates.
-ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2f& image_uv,
-                          const vec2f& lens_uv);
+ray3f evaluate_camera_ray(
+    const yocto_camera& camera, const vec2f& image_uv, const vec2f& lens_uv);
 // Generates a ray from a camera for pixel `image_ij`, the image size,
 // the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`
 // and the image resolution `image_size`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, const vec2i& image_ij,
-                          const vec2i& image_size, const vec2f& pixel_uv,
-                          const vec2f& lens_uv);
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 // Generates a ray from a camera for pixel index `idx`, the image size,
 // the sub-pixel coordinates `pixel_uv` and the lens coordinates `lens_uv`.
 ray3f evaluate_camera_ray(const yocto_camera& camera, int idx,
-                          const vec2i& image_size, const vec2f& pixel_uv,
-                          const vec2f& lens_uv);
+    const vec2i& image_size, const vec2f& pixel_uv, const vec2f& lens_uv);
 
 // Evaluates material parameters: emission, diffuse, specular, transmission,
 // roughness and opacity.
-vec3f evaluate_material_emission(const yocto_scene&    scene,
-                                 const yocto_material& material,
-                                 const vec2f&          texturecoord);
+vec3f evaluate_material_emission(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord);
 // float evaluate_material_opacity(const yocto_scene& scene,
 //     const yocto_material& material, const vec2f& texturecoord);
-vec3f evaluate_material_normalmap(const yocto_scene&    scene,
-                                  const yocto_material& material,
-                                  const vec2f&          texturecoord);
+vec3f evaluate_material_normalmap(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord);
 // Query material properties
 bool is_material_emissive(const yocto_material& material);
 
@@ -479,9 +466,8 @@ struct microfacet_brdf {
     bool  fresnel      = true;
     bool  refract      = false;
 };
-microfacet_brdf evaluate_material_brdf(const yocto_scene&    scene,
-                                       const yocto_material& material,
-                                       const vec2f&          texturecoord);
+microfacet_brdf evaluate_material_brdf(const yocto_scene& scene,
+    const yocto_material& material, const vec2f& texturecoord);
 bool            is_brdf_delta(const microfacet_brdf& f);
 bool            is_brdf_zero(const microfacet_brdf& f);
 
@@ -491,75 +477,61 @@ bool is_material_volume_colored(const yocto_material& vol);
 
 // Instance values interpolated using barycentric coordinates.
 // Handles defaults if data is missing.
-vec3f evaluate_instance_position(const yocto_scene&    scene,
-                                 const yocto_instance& instance, int element_id,
-                                 const vec2f& element_uv);
-vec3f evaluate_instance_normal(const yocto_scene&    scene,
-                               const yocto_instance& instance, int element_id,
-                               const vec2f& element_uv);
-vec2f evaluate_instance_texturecoord(const yocto_scene&    scene,
-                                     const yocto_instance& instance,
-                                     int element_id, const vec2f& element_uv);
-vec4f evaluate_instance_color(const yocto_scene&    scene,
-                              const yocto_instance& instance, int element_id,
-                              const vec2f& element_uv);
-vec3f evaluate_instance_perturbed_normal(const yocto_scene&    scene,
-                                         const yocto_instance& instance,
-                                         int                   element_id,
-                                         const vec2f&          element_uv);
+vec3f evaluate_instance_position(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec4f evaluate_instance_color(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
 // Instance element values.
-vec3f evaluate_instance_element_normal(const yocto_scene&    scene,
-                                       const yocto_instance& instance,
-                                       int                   element_id);
+vec3f evaluate_instance_element_normal(
+    const yocto_scene& scene, const yocto_instance& instance, int element_id);
 // Check the instance type
-bool is_instance_points(const yocto_scene&    scene,
-                        const yocto_instance& instance);
-bool is_instance_lines(const yocto_scene&    scene,
-                       const yocto_instance& instance);
-bool is_instance_faces(const yocto_scene&    scene,
-                       const yocto_instance& instance);
+bool is_instance_points(
+    const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_lines(
+    const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_faces(
+    const yocto_scene& scene, const yocto_instance& instance);
 
 // Material values
-int             get_instance_material_id(const yocto_scene&    scene,
-                                         const yocto_instance& instance, int element_id,
-                                         const vec2f& element_uv);
-vec3f           evaluate_instance_emission(const yocto_scene&    scene,
-                                           const yocto_instance& instance, int element_id,
-                                           const vec2f& element_uv);
-microfacet_brdf evaluate_instance_brdf(const yocto_scene&    scene,
-                                       const yocto_instance& instance,
-                                       int element_id, const vec2f& element_uv);
-bool            is_instance_emissive(const yocto_scene&    scene,
-                                     const yocto_instance& instance);
-bool            is_instance_normal_perturbed(const yocto_scene&    scene,
-                                             const yocto_instance& instance);
+int             get_instance_material_id(const yocto_scene& scene,
+                const yocto_instance& instance, int element_id, const vec2f& element_uv);
+vec3f           evaluate_instance_emission(const yocto_scene& scene,
+              const yocto_instance& instance, int element_id, const vec2f& element_uv);
+microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
+    const yocto_instance& instance, int element_id, const vec2f& element_uv);
+bool            is_instance_emissive(
+               const yocto_scene& scene, const yocto_instance& instance);
+bool is_instance_normal_perturbed(
+    const yocto_scene& scene, const yocto_instance& instance);
 
 // Environment texture coordinates from the incoming direction.
-vec2f evaluate_environment_texturecoord(const yocto_environment& environment,
-                                        const vec3f&             direction);
+vec2f evaluate_environment_texturecoord(
+    const yocto_environment& environment, const vec3f& direction);
 // Evaluate the incoming direction from the element_uv.
-vec3f evaluate_environment_direction(const yocto_environment& environment,
-                                     const vec2f&             environment_uv);
+vec3f evaluate_environment_direction(
+    const yocto_environment& environment, const vec2f& environment_uv);
 // Evaluate the environment emission.
-vec3f evaluate_environment_emission(const yocto_scene&       scene,
-                                    const yocto_environment& environment,
-                                    const vec3f&             direction);
-// Evaluate all environment emission.
 vec3f evaluate_environment_emission(const yocto_scene& scene,
-                                    const vec3f&       direction);
+    const yocto_environment& environment, const vec3f& direction);
+// Evaluate all environment emission.
+vec3f evaluate_environment_emission(
+    const yocto_scene& scene, const vec3f& direction);
 
 // Sample an environment based on either texel values of uniform
-void  compute_environment_texels_cdf(const yocto_scene&       scene,
-                                     const yocto_environment& environment,
-                                     vector<float>&           texels_cdf);
-vec3f sample_environment_direction(const yocto_scene&       scene,
-                                   const yocto_environment& environment,
-                                   const vector<float>& texels_cdf, float re,
-                                   const vec2f& ruv);
-float sample_environment_direction_pdf(const yocto_scene&       scene,
-                                       const yocto_environment& environment,
-                                       const vector<float>&     texels_cdf,
-                                       const vec3f&             direction);
+void  compute_environment_texels_cdf(const yocto_scene& scene,
+     const yocto_environment& environment, vector<float>& texels_cdf);
+vec3f sample_environment_direction(const yocto_scene& scene,
+    const yocto_environment& environment, const vector<float>& texels_cdf,
+    float re, const vec2f& ruv);
+float sample_environment_direction_pdf(const yocto_scene& scene,
+    const yocto_environment& environment, const vector<float>& texels_cdf,
+    const vec3f& direction);
 
 }  // namespace yocto
 
@@ -569,28 +541,28 @@ float sample_environment_direction_pdf(const yocto_scene&       scene,
 namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
-inline int evaluate_keyframed_index(const vector<float>& times,
-                                    const float&         time);
+inline int evaluate_keyframed_index(
+    const vector<float>& times, const float& time);
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
-inline T evaluate_keyframed_step(const vector<float>& times,
-                                 const vector<T>& vals, float time);
+inline T evaluate_keyframed_step(
+    const vector<float>& times, const vector<T>& vals, float time);
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f evaluate_keyframed_slerp(const vector<float>& times,
-                                      const vector<vec4f>& vals, float time);
+inline vec4f evaluate_keyframed_slerp(
+    const vector<float>& times, const vector<vec4f>& vals, float time);
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline T evaluate_keyframed_linear(const vector<float>& times,
-                                   const vector<T>& vals, float time);
+inline T evaluate_keyframed_linear(
+    const vector<float>& times, const vector<T>& vals, float time);
 
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
-inline T evaluate_keyframed_bezier(const vector<float>& times,
-                                   const vector<T>& vals, float time);
+inline T evaluate_keyframed_bezier(
+    const vector<float>& times, const vector<T>& vals, float time);
 
 }  // namespace yocto
 
@@ -600,8 +572,8 @@ inline T evaluate_keyframed_bezier(const vector<float>& times,
 namespace yocto {
 
 // Find the first keyframe value that is greater than the argument.
-inline int evaluate_keyframed_index(const vector<float>& times,
-                                    const float&         time) {
+inline int evaluate_keyframed_index(
+    const vector<float>& times, const float& time) {
     for (auto i = 0; i < times.size(); i++)
         if (times[i] > time) return i;
     return (int)times.size();
@@ -609,8 +581,8 @@ inline int evaluate_keyframed_index(const vector<float>& times,
 
 // Evaluates a keyframed value using step interpolation.
 template <typename T>
-inline T evaluate_keyframed_step(const vector<float>& times,
-                                 const vector<T>& vals, float time) {
+inline T evaluate_keyframed_step(
+    const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -620,8 +592,8 @@ inline T evaluate_keyframed_step(const vector<float>& times,
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline vec4f evaluate_keyframed_slerp(const vector<float>& times,
-                                      const vector<vec4f>& vals, float time) {
+inline vec4f evaluate_keyframed_slerp(
+    const vector<float>& times, const vector<vec4f>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -632,8 +604,8 @@ inline vec4f evaluate_keyframed_slerp(const vector<float>& times,
 
 // Evaluates a keyframed value using linear interpolation.
 template <typename T>
-inline T evaluate_keyframed_linear(const vector<float>& times,
-                                   const vector<T>& vals, float time) {
+inline T evaluate_keyframed_linear(
+    const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
@@ -644,15 +616,15 @@ inline T evaluate_keyframed_linear(const vector<float>& times,
 
 // Evaluates a keyframed value using Bezier interpolation.
 template <typename T>
-inline T evaluate_keyframed_bezier(const vector<float>& times,
-                                   const vector<T>& vals, float time) {
+inline T evaluate_keyframed_bezier(
+    const vector<float>& times, const vector<T>& vals, float time) {
     if (time <= times.front()) return vals.front();
     if (time >= times.back()) return vals.back();
     time     = clamp(time, times.front(), times.back() - 0.001f);
     auto idx = evaluate_keyframed_index(times, time);
     auto t   = (time - times.at(idx - 1)) / (times.at(idx) - times.at(idx - 1));
-    return interpolate_bezier(vals.at(idx - 3), vals.at(idx - 2),
-                              vals.at(idx - 1), vals.at(idx), t);
+    return interpolate_bezier(
+        vals.at(idx - 3), vals.at(idx - 2), vals.at(idx - 1), vals.at(idx), t);
 }
 
 }  // namespace yocto

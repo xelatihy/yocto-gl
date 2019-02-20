@@ -42,52 +42,49 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = cmdline_parser{};
     init_cmdline_parser(parser, argc, argv, "Offline path tracing", "ytrace");
-    trace_options.camera_id =
-        parse_cmdline_argument(parser, "--camera", 0, "Camera index.");
+    trace_options.camera_id = parse_cmdline_argument(
+        parser, "--camera", 0, "Camera index.");
     trace_options.image_width = parse_cmdline_argument(
         parser, "--hres,-R", 1280, "Image horizontal resolution.");
     trace_options.image_height = parse_cmdline_argument(
         parser, "--vres,-r", 720, "Image vertical resolution.");
     trace_options.num_samples = parse_cmdline_argument(
         parser, "--nsamples,-s", 256, "Number of samples.");
-    trace_options.sampler_type =
-        parse_cmdline_argument(parser, "--tracer,-t", trace_sampler_type::path,
-                               "Trace type.", trace_sampler_type_names);
-    trace_options.max_bounces = parse_cmdline_argument(
+    trace_options.sampler_type = parse_cmdline_argument(parser, "--tracer,-t",
+        trace_sampler_type::path, "Trace type.", trace_sampler_type_names);
+    trace_options.max_bounces  = parse_cmdline_argument(
         parser, "--nbounces", 8, "Maximum number of bounces.");
     trace_options.pixel_clamp = parse_cmdline_argument(
         parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
     auto no_parallel          = parse_cmdline_argument(parser,
-                                              "--parallel/--no-parallel", false,
-                                              "Disable parallel execution.");
+        "--parallel/--no-parallel", false, "Disable parallel execution.");
     trace_options.random_seed = parse_cmdline_argument(
         parser, "--seed", 13, "Seed for the random number generators.");
-    trace_options.samples_per_batch =
-        parse_cmdline_argument(parser, "--nbatch,-b", 16, "Samples per batch.");
-    trace_options.environments_hidden =
-        parse_cmdline_argument(parser, "--env-hidden/--no-env-hidden", false,
-                               "Environments are hidden in renderer");
-    trace_options.double_sided =
-        parse_cmdline_argument(parser, "--double-sided/--no-double-sided,-D",
-                               false, "Double-sided rendering.");
-    auto save_batch = parse_cmdline_argument(parser, "--save-batch", false,
-                                             "Save images progressively");
-    auto exposure =
-        parse_cmdline_argument(parser, "--exposure,-e", 0.0f, "Hdr exposure");
-    auto filmic =
-        parse_cmdline_argument(parser, "--filmic", false, "Hdr filmic");
+    trace_options.samples_per_batch = parse_cmdline_argument(
+        parser, "--nbatch,-b", 16, "Samples per batch.");
+    trace_options.environments_hidden = parse_cmdline_argument(parser,
+        "--env-hidden/--no-env-hidden", false,
+        "Environments are hidden in renderer");
+    trace_options.double_sided        = parse_cmdline_argument(parser,
+        "--double-sided/--no-double-sided,-D", false,
+        "Double-sided rendering.");
+    auto save_batch                   = parse_cmdline_argument(
+        parser, "--save-batch", false, "Save images progressively");
+    auto exposure = parse_cmdline_argument(
+        parser, "--exposure,-e", 0.0f, "Hdr exposure");
+    auto filmic = parse_cmdline_argument(
+        parser, "--filmic", false, "Hdr filmic");
     auto srgb = parse_cmdline_argument(parser, "--no-srgb", true, "No srgb");
     bvh_options.use_embree = parse_cmdline_argument(
         parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    bvh_options.flatten_embree =
-        parse_cmdline_argument(parser, "--flatten-embree/--no-flatten-embree",
-                               true, "Flatten embree scene");
-    auto add_skyenv = parse_cmdline_argument(
+    bvh_options.flatten_embree = parse_cmdline_argument(parser,
+        "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
+    auto add_skyenv            = parse_cmdline_argument(
         parser, "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
-    auto imfilename = parse_cmdline_argument(parser, "--output-image,-o",
-                                             "out.hdr"s, "Image filename");
-    auto filename   = parse_cmdline_argument(parser, "scene", "scene.json"s,
-                                           "Scene filename", true);
+    auto imfilename = parse_cmdline_argument(
+        parser, "--output-image,-o", "out.hdr"s, "Image filename");
+    auto filename = parse_cmdline_argument(
+        parser, "scene", "scene.json"s, "Scene filename", true);
     check_cmdline_parser(parser);
 
     // fix parallel code
@@ -146,11 +143,11 @@ int main(int argc, char* argv[]) {
     for (auto sample = 0; sample < trace_options.num_samples;
          sample += trace_options.samples_per_batch) {
         auto nsamples = min(trace_options.samples_per_batch,
-                            trace_options.num_samples - sample);
+            trace_options.num_samples - sample);
         printf("rendering image [%d/%d]", sample, trace_options.num_samples);
         auto start_batch = get_time();
-        trace_image_samples(image, state, scene, bvh, lights, sample,
-                            trace_options);
+        trace_image_samples(
+            image, state, scene, bvh, lights, sample, trace_options);
         printf(" [%s]\n", format_duration(get_time() - start_batch).c_str());
         if (save_batch) {
             auto filename = replace_extension(

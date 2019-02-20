@@ -145,10 +145,10 @@ inline vec3f sample_hemisphere_direction_cosine(const vec2f& ruv);
 inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction);
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_direction_cospower(float        exponent,
-                                                  const vec2f& ruv);
-inline float sample_hemisphere_direction_cospower_pdf(float        exponent,
-                                                      const vec3f& direction);
+inline vec3f sample_hemisphere_direction_cospower(
+    float exponent, const vec2f& ruv);
+inline float sample_hemisphere_direction_cospower_pdf(
+    float exponent, const vec3f& direction);
 
 // Sample a point uniformly on a disk.
 inline vec2f sample_disk_point(const vec2f& ruv);
@@ -162,11 +162,11 @@ inline float sample_cylinder_point_pdf();
 inline vec2f sample_triangle_coordinates(const vec2f& ruv);
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle_point(const vec3f& p0, const vec3f& p1,
-                                   const vec3f& p2, const vec2f& ruv);
+inline vec3f sample_triangle_point(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv);
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_point_pdf(const vec3f& p0, const vec3f& p1,
-                                       const vec3f& p2);
+inline float sample_triangle_point_pdf(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2);
 
 // Sample an index with uniform distribution.
 inline int   sample_uniform_index(int size, float r);
@@ -181,8 +181,8 @@ inline float sample_uniform_element_pdf(const vector<T>& elements);
 // Sample a discrete distribution represented by its cdf.
 inline int sample_discrete_distribution(const vector<float>& cdf, float r);
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_distribution_pdf(const vector<float>& cdf,
-                                              int                  idx);
+inline float sample_discrete_distribution_pdf(
+    const vector<float>& cdf, int idx);
 
 }  // namespace yocto
 
@@ -199,14 +199,12 @@ namespace yocto {
 // offset=1.0 (used to invert the ridges).
 inline float perlin_noise(const vec3f& p, const vec3i& wrap = zero3i);
 inline float perlin_ridge_noise(const vec3f& p, float lacunarity = 2.0f,
-                                float gain = 0.5f, float offset = 1.0f,
-                                int octaves = 6, const vec3i& wrap = zero3i);
+    float gain = 0.5f, float offset = 1.0f, int octaves = 6,
+    const vec3i& wrap = zero3i);
 inline float perlin_fbm_noise(const vec3f& p, float lacunarity = 2.0f,
-                              float gain = 0.5f, int octaves = 6,
-                              const vec3i& wrap = zero3i);
+    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
 inline float perlin_turbulence_noise(const vec3f& p, float lacunarity = 2.0f,
-                                     float gain = 0.5f, int octaves = 6,
-                                     const vec3i& wrap = zero3i);
+    float gain = 0.5f, int octaves = 6, const vec3i& wrap = zero3i);
 
 }  // namespace yocto
 
@@ -300,16 +298,16 @@ inline float sample_hemisphere_direction_pdf(const vec3f& direction) {
 }
 
 // Sample an hemispherical direction with uniform distribution.
-inline vec3f sample_hemisphere_direction(const vec3f& normal,
-                                         const vec2f& ruv) {
+inline vec3f sample_hemisphere_direction(
+    const vec3f& normal, const vec2f& ruv) {
     auto z               = ruv.y;
     auto r               = sqrt(clamp01(1 - z * z));
     auto phi             = 2 * pif * ruv.x;
     auto local_direction = vec3f{r * cos(phi), r * sin(phi), z};
     return transform_direction(make_basis_fromz(normal), local_direction);
 }
-inline float sample_hemisphere_direction_pdf(const vec3f& normal,
-                                             const vec3f& direction) {
+inline float sample_hemisphere_direction_pdf(
+    const vec3f& normal, const vec3f& direction) {
     return (dot(normal, direction) <= 0) ? 0 : 1 / (2 * pif);
 }
 
@@ -336,15 +334,15 @@ inline float sample_hemisphere_direction_cosine_pdf(const vec3f& direction) {
 }
 
 // Sample an hemispherical direction with cosine power distribution.
-inline vec3f sample_hemisphere_direction_cospower(float        exponent,
-                                                  const vec2f& ruv) {
+inline vec3f sample_hemisphere_direction_cospower(
+    float exponent, const vec2f& ruv) {
     auto z   = pow(ruv.y, 1 / (exponent + 1));
     auto r   = sqrt(1 - z * z);
     auto phi = 2 * pif * ruv.x;
     return {r * cos(phi), r * sin(phi), z};
 }
-inline float sample_hemisphere_direction_cospower_pdf(float        exponent,
-                                                      const vec3f& direction) {
+inline float sample_hemisphere_direction_cospower_pdf(
+    float exponent, const vec3f& direction) {
     return (direction.z <= 0)
                ? 0
                : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
@@ -371,14 +369,14 @@ inline vec2f sample_triangle_coordinates(const vec2f& ruv) {
 }
 
 // Sample a point uniformly on a triangle.
-inline vec3f sample_triangle_point(const vec3f& p0, const vec3f& p1,
-                                   const vec3f& p2, const vec2f& ruv) {
+inline vec3f sample_triangle_point(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2, const vec2f& ruv) {
     auto uv = sample_triangle_coordinates(ruv);
     return p0 * (1 - uv.x - uv.y) + p1 * uv.x + p2 * uv.y;
 }
 // Pdf for uniform triangle sampling, i.e. triangle area.
-inline float sample_triangle_point_pdf(const vec3f& p0, const vec3f& p1,
-                                       const vec3f& p2) {
+inline float sample_triangle_point_pdf(
+    const vec3f& p0, const vec3f& p1, const vec3f& p2) {
     return 2 / length(cross(p1 - p0, p2 - p0));
 }
 
@@ -409,8 +407,8 @@ inline int sample_discrete_distribution(const vector<float>& cdf, float r) {
     return clamp(idx, 0, (int)cdf.size() - 1);
 }
 // Pdf for uniform discrete distribution sampling.
-inline float sample_discrete_distribution_pdf(const vector<float>& cdf,
-                                              int                  idx) {
+inline float sample_discrete_distribution_pdf(
+    const vector<float>& cdf, int idx) {
     if (idx == 0) return cdf.at(0);
     return cdf.at(idx) - cdf.at(idx - 1);
 }
@@ -626,24 +624,23 @@ inline float perlin_noise(const vec3f& p, const vec3i& wrap) {
 
 // adapeted  stb_perlin.h
 inline float perlin_ridge_noise(const vec3f& p, float lacunarity, float gain,
-                                float offset, int octaves, const vec3i& wrap) {
+    float offset, int octaves, const vec3i& wrap) {
     return stb_perlin_ridge_noise3(p.x, p.y, p.z, lacunarity, gain, offset,
-                                   octaves, wrap.x, wrap.y, wrap.z);
+        octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
 inline float perlin_fbm_noise(const vec3f& p, float lacunarity, float gain,
-                              int octaves, const vec3i& wrap) {
-    return stb_perlin_fbm_noise3(p.x, p.y, p.z, lacunarity, gain, octaves,
-                                 wrap.x, wrap.y, wrap.z);
+    int octaves, const vec3i& wrap) {
+    return stb_perlin_fbm_noise3(
+        p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 // adapeted  stb_perlin.h
 inline float perlin_turbulence_noise(const vec3f& p, float lacunarity,
-                                     float gain, int octaves,
-                                     const vec3i& wrap) {
-    return stb_perlin_turbulence_noise3(p.x, p.y, p.z, lacunarity, gain,
-                                        octaves, wrap.x, wrap.y, wrap.z);
+    float gain, int octaves, const vec3i& wrap) {
+    return stb_perlin_turbulence_noise3(
+        p.x, p.y, p.z, lacunarity, gain, octaves, wrap.x, wrap.y, wrap.z);
 }
 
 }  // namespace yocto

@@ -53,17 +53,17 @@ struct trace_point {
 
 // Make a trace point
 trace_point make_trace_point(const yocto_scene& scene, int instance_id,
-                             int element_id, const vec2f& element_uv,
-                             const vec3f& shading_direction = zero3f) {
+    int element_id, const vec2f& element_uv,
+    const vec3f& shading_direction = zero3f) {
     auto& instance    = scene.instances[instance_id];
     auto  point       = trace_point();
     point.instance_id = instance_id;
     point.element_id  = element_id;
     point.element_uv  = element_uv;
-    point.position =
-        evaluate_instance_position(scene, instance, element_id, element_uv);
-    point.normal =
-        evaluate_instance_normal(scene, instance, element_id, element_uv);
+    point.position    = evaluate_instance_position(
+        scene, instance, element_id, element_uv);
+    point.normal = evaluate_instance_normal(
+        scene, instance, element_id, element_uv);
     if (is_instance_faces(scene, instance)) {
         // double-sided goes here
         if (is_instance_normal_perturbed(scene, instance))
@@ -74,14 +74,14 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     } else if (is_instance_points(scene, instance)) {
         point.normal = -shading_direction;
     }
-    point.texturecoord =
-        evaluate_instance_texturecoord(scene, instance, element_id, element_uv);
-    point.color =
-        evaluate_instance_color(scene, instance, element_id, element_uv);
-    point.emission =
-        evaluate_instance_emission(scene, instance, element_id, element_uv);
-    point.brdf =
-        evaluate_instance_brdf(scene, instance, element_id, element_uv);
+    point.texturecoord = evaluate_instance_texturecoord(
+        scene, instance, element_id, element_uv);
+    point.color = evaluate_instance_color(
+        scene, instance, element_id, element_uv);
+    point.emission = evaluate_instance_emission(
+        scene, instance, element_id, element_uv);
+    point.brdf = evaluate_instance_brdf(
+        scene, instance, element_id, element_uv);
     point.brdf.diffuse *= xyz(point.color);
     point.brdf.specular *= xyz(point.color);
     point.brdf.opacity *= point.color.w;
@@ -91,12 +91,12 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
 
 // Intersects a ray and returns a point
 trace_point trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
-                      const vec3f& position, const vec3f& direction) {
+    const vec3f& position, const vec3f& direction) {
     auto isec = intersect_scene_bvh(bvh, make_ray(position, direction));
     _trace_nrays += 1;
     if (isec.hit) {
         return make_trace_point(scene, isec.instance_id, isec.element_id,
-                                isec.element_uv, direction);
+            isec.element_uv, direction);
     } else {
         auto point     = trace_point();
         point.emission = evaluate_environment_emission(scene, direction);
@@ -107,9 +107,8 @@ trace_point trace_ray(const yocto_scene& scene, const bvh_scene& bvh,
 // Intersects a ray and returns a point accounting for opacity treated as
 // coveregae
 trace_point trace_ray_with_opacity(const yocto_scene& scene,
-                                   const bvh_scene& bvh, const vec3f& position_,
-                                   const vec3f& direction, rng_state& rng,
-                                   int max_bounces) {
+    const bvh_scene& bvh, const vec3f& position_, const vec3f& direction,
+    rng_state& rng, int max_bounces) {
     auto position = position_;
     for (auto b = 0; b < max_bounces * 10; b++) {
         auto point = trace_ray(scene, bvh, position, direction);
@@ -123,17 +122,16 @@ trace_point trace_ray_with_opacity(const yocto_scene& scene,
 
 // Sample camera
 ray3f sample_camera_ray(const yocto_camera& camera, const vec2i& ij,
-                        const vec2i& image_size, const vec2f& puv,
-                        const vec2f& luv) {
-    return evaluate_camera_ray(camera, ij, image_size, puv,
-                               sample_disk_point(luv));
+    const vec2i& image_size, const vec2f& puv, const vec2f& luv) {
+    return evaluate_camera_ray(
+        camera, ij, image_size, puv, sample_disk_point(luv));
 }
 
 #if YOCTO_TRACE_THINSHEET
 
 // Schlick approximation of the Fresnel term
-vec3f evaluate_fresnel_schlick(const vec3f& specular, const vec3f& half_vector,
-                               const vec3f& incoming) {
+vec3f evaluate_fresnel_schlick(
+    const vec3f& specular, const vec3f& half_vector, const vec3f& incoming) {
     if (specular == zero3f) return zero3f;
     return specular +
            (vec3f{1, 1, 1} - specular) *
@@ -141,24 +139,24 @@ vec3f evaluate_fresnel_schlick(const vec3f& specular, const vec3f& half_vector,
                    5.0f);
 }
 vec3f evaluate_fresnel_schlick(const vec3f& specular, const vec3f& half_vector,
-                               const vec3f& incoming, float roughness) {
+    const vec3f& incoming, float roughness) {
     if (specular == zero3f) return zero3f;
-    auto fks =
-        evaluate_fresnel_schlick(specular, fabs(dot(half_vector, incoming)));
+    auto fks = evaluate_fresnel_schlick(
+        specular, fabs(dot(half_vector, incoming)));
     return specular +
            (fks - specular) * (1 - sqrt(clamp(roughness, 0.0f, 1.0f)));
 }
 
 // Evaluates the GGX distribution and geometric term
-float evaluate_ggx_distribution(float roughness, const vec3f& normal,
-                                const vec3f& half_vector) {
+float evaluate_ggx_distribution(
+    float roughness, const vec3f& normal, const vec3f& half_vector) {
     auto di = (dot(normal, half_vector) * dot(normal, half_vector)) *
                   (roughness * roughness - 1) +
               1;
     return roughness * roughness / (pif * di * di);
 }
 float evaluate_ggx_shadowing(float roughness, const vec3f& normal,
-                             const vec3f& outgoing, const vec3f& incoming) {
+    const vec3f& outgoing, const vec3f& incoming) {
 #if 0
     // evaluate G from Heitz
     auto lambda_o = (-1 + sqrt(1 + alpha2 * (1 - ndo * ndo) / (ndo * ndo))) / 2;
@@ -167,14 +165,14 @@ float evaluate_ggx_shadowing(float roughness, const vec3f& normal,
 #else
     auto Go = (2 * fabs(dot(normal, outgoing))) /
               (fabs(dot(normal, outgoing)) +
-               sqrt(roughness * roughness + (1 - roughness * roughness) *
-                                                dot(normal, outgoing) *
-                                                dot(normal, outgoing)));
+                  sqrt(roughness * roughness + (1 - roughness * roughness) *
+                                                   dot(normal, outgoing) *
+                                                   dot(normal, outgoing)));
     auto Gi = (2 * fabs(dot(normal, incoming))) /
               (fabs(dot(normal, incoming)) +
-               sqrt(roughness * roughness + (1 - roughness * roughness) *
-                                                dot(normal, incoming) *
-                                                dot(normal, incoming)));
+                  sqrt(roughness * roughness + (1 - roughness * roughness) *
+                                                   dot(normal, incoming) *
+                                                   dot(normal, incoming)));
     return Go * Gi;
 #endif
 }
@@ -203,7 +201,7 @@ vec3f sample_ggx(float rs, const vec2f& rn) {
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
-                           const vec3f& outgoing, const vec3f& incoming) {
+    const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return zero3f;
     auto brdf_cosine = zero3f;
 
@@ -211,10 +209,9 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
     if (brdf.diffuse != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
         auto half_vector = normalize(incoming + outgoing);
-        auto fresnel =
-            (brdf.fresnel)
-                ? evaluate_fresnel_schlick(brdf.specular, half_vector, outgoing)
-                : brdf.specular;
+        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
+                                            half_vector, outgoing)
+                                      : brdf.specular;
         brdf_cosine += brdf.diffuse * (1 - fresnel) / pif;
     }
 
@@ -222,13 +219,12 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
     if (brdf.specular != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
         auto half_vector = normalize(incoming + outgoing);
-        auto fresnel =
-            (brdf.fresnel)
-                ? evaluate_fresnel_schlick(brdf.specular, half_vector, outgoing)
-                : brdf.specular;
+        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
+                                            half_vector, outgoing)
+                                      : brdf.specular;
         auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
-        auto G =
-            evaluate_ggx_shadowing(brdf.roughness, normal, outgoing, incoming);
+        auto G = evaluate_ggx_shadowing(
+            brdf.roughness, normal, outgoing, incoming);
         brdf_cosine +=
             fresnel * D * G /
             (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, incoming)));
@@ -240,10 +236,9 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
         auto ir = (dot(normal, outgoing) >= 0) ? reflect(-incoming, normal)
                                                : reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
-        auto fresnel =
-            (brdf.fresnel)
-                ? evaluate_fresnel_schlick(brdf.specular, half_vector, outgoing)
-                : brdf.specular;
+        auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
+                                            half_vector, outgoing)
+                                      : brdf.specular;
         auto D = evaluate_ggx_distribution(brdf.roughness, normal, half_vector);
         auto G = evaluate_ggx_shadowing(brdf.roughness, normal, outgoing, ir);
         brdf_cosine +=
@@ -257,8 +252,7 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal,
 // Evaluates the BRDF assuming that it is called only from the directions
 // generated by sample_brdf_direction.
 vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
-                                 const vec3f& normal, const vec3f& outgoing,
-                                 const vec3f& incoming) {
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return zero3f;
     auto microfacet_brdf = zero3f;
 
@@ -285,13 +279,13 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
 
 // Picks a direction based on the BRDF
 vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
-                            const vec3f& outgoing, float rnl, const vec2f& rn) {
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (is_brdf_delta(brdf)) return zero3f;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
-                                                             normal, outgoing)
+    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+                                        brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
-                      max(brdf.transmission * (1 - fresnel))};
+        max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return zero3f;
     prob /= prob.x + prob.y + prob.z;
 
@@ -330,11 +324,10 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal,
 
 // Picks a direction based on the BRDF
 vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
-                                  const vec3f& normal, const vec3f& outgoing,
-                                  float rnl, const vec2f& rn) {
+    const vec3f& normal, const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!is_brdf_delta(brdf)) return zero3f;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
-                                                             normal, outgoing)
+    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+                                        brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return zero3f;
@@ -353,11 +346,11 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
     else if (brdf.transmission != zero3f && brdf.refract &&
              rnl < prob.x + prob.y + prob.z) {
         if (dot(normal, outgoing) >= 0) {
-            return refract(outgoing, normal,
-                           1 / convert_specular_to_eta(brdf.specular));
+            return refract(
+                outgoing, normal, 1 / convert_specular_to_eta(brdf.specular));
         } else {
-            return refract(outgoing, -normal,
-                           convert_specular_to_eta(brdf.specular));
+            return refract(
+                outgoing, -normal, convert_specular_to_eta(brdf.specular));
         }
     }
     // no sampling
@@ -368,14 +361,13 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
 
 // Compute the weight for sampling the BRDF
 float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
-                                const vec3f& normal, const vec3f& outgoing,
-                                const vec3f& incoming) {
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return 0;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
-                                                             normal, outgoing)
+    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+                                        brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
-                      max(brdf.transmission * (1 - fresnel))};
+        max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return 0;
     prob /= prob.x + prob.y + prob.z;
 
@@ -388,8 +380,8 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     if (brdf.specular != zero3f &&
         dot(normal, outgoing) * dot(normal, incoming) > 0) {
         auto half_vector = normalize(incoming + outgoing);
-        auto d           = sample_ggx_distribution_pdf(brdf.roughness,
-                                             fabs(dot(normal, half_vector)));
+        auto d           = sample_ggx_distribution_pdf(
+            brdf.roughness, fabs(dot(normal, half_vector)));
         pdf += prob.y * d / (4 * fabs(dot(outgoing, half_vector)));
     }
     if (brdf.transmission != zero3f &&
@@ -397,8 +389,8 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
         auto ir = (dot(normal, outgoing) >= 0) ? reflect(-incoming, normal)
                                                : reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
-        auto d           = sample_ggx_distribution_pdf(brdf.roughness,
-                                             fabs(dot(normal, half_vector)));
+        auto d           = sample_ggx_distribution_pdf(
+            brdf.roughness, fabs(dot(normal, half_vector)));
         pdf += prob.z * d / (4 * fabs(dot(outgoing, half_vector)));
     }
 
@@ -407,12 +399,10 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 
 // Compute the weight for sampling the BRDF
 float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
-                                      const vec3f&           normal,
-                                      const vec3f&           outgoing,
-                                      const vec3f&           incoming) {
+    const vec3f& normal, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return 0;
-    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(brdf.specular,
-                                                             normal, outgoing)
+    auto fresnel = (brdf.fresnel) ? evaluate_fresnel_schlick(
+                                        brdf.specular, normal, outgoing)
                                   : brdf.specular;
     auto prob = vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
     if (prob == zero3f) return 0;
@@ -440,16 +430,16 @@ vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine) {
            (1 - specular) *
                pow(clamp(1 - abs(direction_cosine), 0.0f, 1.0f), 5.0f);
 }
-vec3f evaluate_fresnel_schlick(const vec3f& specular, float direction_cosine,
-                               float roughness) {
+vec3f evaluate_fresnel_schlick(
+    const vec3f& specular, float direction_cosine, float roughness) {
     auto fks = evaluate_fresnel_schlick(specular, direction_cosine);
     return specular +
            (fks - specular) * (1 - sqrt(clamp(roughness, 0.0f, 1.0f)));
 }
 
 // Evaluates the GGX distribution and geometric term
-float evaluate_microfacet_distribution(float roughness, const vec3f& normal,
-                                       const vec3f& half_vector, bool ggx) {
+float evaluate_microfacet_distribution(
+    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
     auto cosine = dot(normal, half_vector);
     if (cosine <= 0) return 0;
     auto roughness_square = roughness * roughness;
@@ -457,16 +447,15 @@ float evaluate_microfacet_distribution(float roughness, const vec3f& normal,
     auto tangent_square   = clamp01(1 - cosine_square) / cosine_square;
     if (ggx) {
         return roughness_square / (pif * cosine_square * cosine_square *
-                                   (roughness_square + tangent_square) *
-                                   (roughness_square + tangent_square));
+                                      (roughness_square + tangent_square) *
+                                      (roughness_square + tangent_square));
     } else {
         return exp(-tangent_square / roughness_square) /
                (pif * roughness_square * cosine_square * cosine_square);
     }
 }
 float evaluate_microfacet_shadowing_term(float roughness, const vec3f& normal,
-                                         const vec3f& half_vector,
-                                         const vec3f& direction, bool ggx) {
+    const vec3f& half_vector, const vec3f& direction, bool ggx) {
     auto cosine = dot(normal, direction);
     if (dot(half_vector, direction) * cosine <= 0) return 0;
     auto roughness_square = roughness * roughness;
@@ -487,16 +476,15 @@ float evaluate_microfacet_shadowing_term(float roughness, const vec3f& normal,
     }
 }
 float evaluate_microfacet_shadowing(float roughness, const vec3f& normal,
-                                    const vec3f& half_vector,
-                                    const vec3f& outgoing,
-                                    const vec3f& incoming, bool ggx) {
-    return evaluate_microfacet_shadowing_term(roughness, normal, half_vector,
-                                              outgoing, ggx) *
-           evaluate_microfacet_shadowing_term(roughness, normal, half_vector,
-                                              incoming, ggx);
+    const vec3f& half_vector, const vec3f& outgoing, const vec3f& incoming,
+    bool ggx) {
+    return evaluate_microfacet_shadowing_term(
+               roughness, normal, half_vector, outgoing, ggx) *
+           evaluate_microfacet_shadowing_term(
+               roughness, normal, half_vector, incoming, ggx);
 }
-vec3f sample_microfacet_distribution(float roughness, const vec3f& normal,
-                                     const vec2f& rn, bool ggx) {
+vec3f sample_microfacet_distribution(
+    float roughness, const vec3f& normal, const vec2f& rn, bool ggx) {
     auto phi              = 2 * pif * rn.x;
     auto roughness_square = roughness * roughness;
     auto tangent_square   = 0.0f;
@@ -505,24 +493,24 @@ vec3f sample_microfacet_distribution(float roughness, const vec3f& normal,
     } else {
         tangent_square = roughness_square * rn.y / (1 - rn.y);
     }
-    auto cosine_square = 1 / (1 + tangent_square);
-    auto cosine        = 1 / sqrt(1 + tangent_square);
-    auto radius        = sqrt(clamp01(1 - cosine_square));
-    auto local_half_vector =
-        vec3f{cos(phi) * radius, sin(phi) * radius, cosine};
+    auto cosine_square     = 1 / (1 + tangent_square);
+    auto cosine            = 1 / sqrt(1 + tangent_square);
+    auto radius            = sqrt(clamp01(1 - cosine_square));
+    auto local_half_vector = vec3f{
+        cos(phi) * radius, sin(phi) * radius, cosine};
     return transform_direction(make_basis_fromz(normal), local_half_vector);
 }
-float sample_microfacet_distribution_pdf(float roughness, const vec3f& normal,
-                                         const vec3f& half_vector, bool ggx) {
+float sample_microfacet_distribution_pdf(
+    float roughness, const vec3f& normal, const vec3f& half_vector, bool ggx) {
     auto cosine = dot(normal, half_vector);
     if (cosine < 0) return 0;
-    return evaluate_microfacet_distribution(roughness, normal, half_vector,
-                                            ggx) *
+    return evaluate_microfacet_distribution(
+               roughness, normal, half_vector, ggx) *
            cosine;
 }
 
-vec3f evaluate_brdf_fresnel(const microfacet_brdf& brdf, const vec3f& normal,
-                            const vec3f& incoming) {
+vec3f evaluate_brdf_fresnel(
+    const microfacet_brdf& brdf, const vec3f& normal, const vec3f& incoming) {
     if (brdf.specular == zero3f) return zero3f;
     if (!brdf.fresnel) return brdf.specular;
     return evaluate_fresnel_schlick(brdf.specular, dot(normal, incoming));
@@ -535,7 +523,7 @@ vec3f evaluate_brdf_fresnel(const microfacet_brdf& brdf, const vec3f& normal,
 // - "Microfacet Models for Refraction through Rough Surfaces" EGSR 07
 // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.pdf
 vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
-                           const vec3f& outgoing, const vec3f& incoming) {
+    const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return zero3f;
     auto brdf_cosine = zero3f;
 
@@ -557,10 +545,10 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
     if (brdf.specular != zero3f && outgoing_up && incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
-        auto D = evaluate_microfacet_distribution(brdf.roughness, normal,
-                                                  half_vector);
-        auto G = evaluate_microfacet_shadowing(brdf.roughness, normal,
-                                               half_vector, outgoing, incoming);
+        auto D           = evaluate_microfacet_distribution(
+            brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(
+            brdf.roughness, normal, half_vector, outgoing, incoming);
         brdf_cosine +=
             fresnel * D * G /
             (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, incoming)));
@@ -571,10 +559,10 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
         auto ir          = reflect(-incoming, normal);
         auto half_vector = normalize(ir + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, -outgoing);
-        auto D = evaluate_microfacet_distribution(brdf.roughness, normal,
-                                                  half_vector);
-        auto G = evaluate_microfacet_shadowing(brdf.roughness, normal,
-                                               half_vector, outgoing, ir);
+        auto D           = evaluate_microfacet_distribution(
+            brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(
+            brdf.roughness, normal, half_vector, outgoing, ir);
         brdf_cosine +=
             brdf.transmission * (1 - fresnel) * D * G /
             (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
@@ -583,10 +571,10 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
         auto ir          = reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
         auto fresnel     = evaluate_brdf_fresnel(brdf, half_vector, incoming);
-        auto D = evaluate_microfacet_distribution(brdf.roughness, normal,
-                                                  half_vector);
-        auto G = evaluate_microfacet_shadowing(brdf.roughness, normal,
-                                               half_vector, outgoing, ir);
+        auto D           = evaluate_microfacet_distribution(
+            brdf.roughness, normal, half_vector);
+        auto G = evaluate_microfacet_shadowing(
+            brdf.roughness, normal, half_vector, outgoing, ir);
         brdf_cosine +=
             brdf.transmission * (1 - fresnel) * D * G /
             (4 * fabs(dot(normal, outgoing)) * fabs(dot(normal, ir)));
@@ -598,8 +586,7 @@ vec3f evaluate_brdf_cosine(const microfacet_brdf& brdf, const vec3f& normal_,
 // Evaluates the BRDF assuming that it is called only from the directions
 // generated by sample_brdf_direction.
 vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
-                                 const vec3f& normal_, const vec3f& outgoing,
-                                 const vec3f& incoming) {
+    const vec3f& normal_, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return zero3f;
     auto microfacet_brdf = zero3f;
 
@@ -633,7 +620,7 @@ vec3f evaluate_delta_brdf_cosine(const microfacet_brdf& brdf,
 
 // Picks a direction based on the BRDF
 vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
-                            const vec3f& outgoing, float rnl, const vec2f& rn) {
+    const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (is_brdf_delta(brdf)) return zero3f;
 
     // flip normal if necessary
@@ -645,7 +632,7 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
     auto weights = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
-                         max(brdf.transmission * (1 - fresnel))};
+        max(brdf.transmission * (1 - fresnel))};
     if (weights == zero3f) return zero3f;
     weights /= weights.x + weights.y + weights.z;
 
@@ -656,21 +643,21 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
     // sample according to specular GGX
     else if (brdf.specular != zero3f && outgoing_up &&
              rnl < weights.x + weights.y) {
-        auto half_vector =
-            sample_microfacet_distribution(brdf.roughness, normal, rn);
+        auto half_vector = sample_microfacet_distribution(
+            brdf.roughness, normal, rn);
         return reflect(outgoing, half_vector);
     }
     // transmission hack
     else if (brdf.transmission != zero3f && outgoing_up &&
              rnl < weights.x + weights.y + weights.z) {
-        auto half_vector =
-            sample_microfacet_distribution(brdf.roughness, normal, rn);
+        auto half_vector = sample_microfacet_distribution(
+            brdf.roughness, normal, rn);
         auto ir = reflect(outgoing, half_vector);
         return reflect(-ir, -normal);
     } else if (brdf.transmission != zero3f && !outgoing_up &&
                rnl < weights.x + weights.y + weights.z) {
-        auto half_vector =
-            sample_microfacet_distribution(brdf.roughness, normal, rn);
+        auto half_vector = sample_microfacet_distribution(
+            brdf.roughness, normal, rn);
         auto ir = reflect(outgoing, half_vector);
         return reflect(-ir, normal);
     } else {
@@ -680,8 +667,7 @@ vec3f sample_brdf_direction(const microfacet_brdf& brdf, const vec3f& normal_,
 
 // Picks a direction based on the BRDF
 vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
-                                  const vec3f& normal_, const vec3f& outgoing,
-                                  float rnl, const vec2f& rn) {
+    const vec3f& normal_, const vec3f& outgoing, float rnl, const vec2f& rn) {
     if (!is_brdf_delta(brdf)) return zero3f;
 
     // flip normal if necessary
@@ -692,8 +678,8 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
 
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
-    auto weights =
-        vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
+    auto weights = vec3f{
+        0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
     if (weights == zero3f) return zero3f;
     weights /= weights.x + weights.y + weights.z;
 
@@ -712,13 +698,13 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
     // sample according to transmission
     else if (brdf.transmission != zero3f && brdf.refract && outgoing_up &&
              rnl < weights.x + weights.y + weights.z) {
-        return refract(outgoing, normal,
-                       1 / convert_specular_to_eta(brdf.specular));
+        return refract(
+            outgoing, normal, 1 / convert_specular_to_eta(brdf.specular));
 
     } else if (brdf.transmission != zero3f && brdf.refract && !outgoing_up &&
                rnl < weights.x + weights.y + weights.z) {
-        return refract(outgoing, -normal,
-                       convert_specular_to_eta(brdf.specular));
+        return refract(
+            outgoing, -normal, convert_specular_to_eta(brdf.specular));
     }
     // no sampling
     else {
@@ -728,8 +714,7 @@ vec3f sample_delta_brdf_direction(const microfacet_brdf& brdf,
 
 // Compute the weight for sampling the BRDF
 float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
-                                const vec3f& normal_, const vec3f& outgoing,
-                                const vec3f& incoming) {
+    const vec3f& normal_, const vec3f& outgoing, const vec3f& incoming) {
     if (is_brdf_delta(brdf)) return 0;
 
     // flip normal if necessary
@@ -742,7 +727,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
     auto weights = vec3f{max(brdf.diffuse * (1 - fresnel)), max(fresnel),
-                         max(brdf.transmission * (1 - fresnel))};
+        max(brdf.transmission * (1 - fresnel))};
     if (weights == zero3f) return 0;
     weights /= weights.x + weights.y + weights.z;
 
@@ -753,22 +738,22 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
     }
     if (brdf.specular != zero3f && outgoing_up && incoming_up) {
         auto half_vector = normalize(incoming + outgoing);
-        auto d = sample_microfacet_distribution_pdf(brdf.roughness, normal,
-                                                    half_vector);
+        auto d           = sample_microfacet_distribution_pdf(
+            brdf.roughness, normal, half_vector);
         pdf += weights.y * d / (4 * fabs(dot(outgoing, half_vector)));
     }
     if (brdf.transmission != zero3f && outgoing_up && !incoming_up) {
         auto ir          = reflect(-incoming, normal);
         auto half_vector = normalize(ir + outgoing);
-        auto d = sample_microfacet_distribution_pdf(brdf.roughness, normal,
-                                                    half_vector);
+        auto d           = sample_microfacet_distribution_pdf(
+            brdf.roughness, normal, half_vector);
         pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
     }
     if (brdf.transmission != zero3f && !outgoing_up && incoming_up) {
         auto ir          = reflect(-incoming, -normal);
         auto half_vector = normalize(ir + outgoing);
-        auto d = sample_microfacet_distribution_pdf(brdf.roughness, normal,
-                                                    half_vector);
+        auto d           = sample_microfacet_distribution_pdf(
+            brdf.roughness, normal, half_vector);
         pdf += weights.z * d / (4 * fabs(dot(outgoing, half_vector)));
     }
 
@@ -777,9 +762,7 @@ float sample_brdf_direction_pdf(const microfacet_brdf& brdf,
 
 // Compute the weight for sampling the BRDF
 float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
-                                      const vec3f&           normal_,
-                                      const vec3f&           outgoing,
-                                      const vec3f&           incoming) {
+    const vec3f& normal_, const vec3f& outgoing, const vec3f& incoming) {
     if (!is_brdf_delta(brdf)) return 0;
 
     // flip normal if necessary
@@ -791,8 +774,8 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
 
     // weights
     auto fresnel = evaluate_brdf_fresnel(brdf, normal, outgoing);
-    auto weights =
-        vec3f{0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
+    auto weights = vec3f{
+        0, max(fresnel), max(brdf.transmission * (1 - fresnel))};
     if (weights == zero3f) return 0;
     weights /= weights.x + weights.y + weights.z;
 
@@ -816,18 +799,16 @@ float sample_delta_brdf_direction_pdf(const microfacet_brdf& brdf,
 #endif
 
 // Sample pdf for an environment.
-float sample_environment_direction_pdf(const yocto_scene&  scene,
-                                       const trace_lights& lights,
-                                       int                 environment_id,
-                                       const vec3f&        incoming) {
+float sample_environment_direction_pdf(const yocto_scene& scene,
+    const trace_lights& lights, int environment_id, const vec3f& incoming) {
     auto& environment = scene.environments[environment_id];
     if (environment.emission_texture >= 0) {
         auto& elements_cdf =
             lights.environment_texture_cdf[environment.emission_texture];
         auto& emission_texture = scene.textures[environment.emission_texture];
         auto  size             = evaluate_texture_size(emission_texture);
-        auto  texcoord =
-            evaluate_environment_texturecoord(environment, incoming);
+        auto  texcoord         = evaluate_environment_texturecoord(
+            environment, incoming);
         auto i    = (int)(texcoord.x * size.x);
         auto j    = (int)(texcoord.y * size.y);
         auto idx  = j * size.x + i;
@@ -842,10 +823,9 @@ float sample_environment_direction_pdf(const yocto_scene&  scene,
 }
 
 // Picks a point on an environment.
-vec3f sample_environment_direction(const yocto_scene&  scene,
-                                   const trace_lights& lights,
-                                   int environment_id, float rel,
-                                   const vec2f& ruv) {
+vec3f sample_environment_direction(const yocto_scene& scene,
+    const trace_lights& lights, int environment_id, float rel,
+    const vec2f& ruv) {
     auto& environment = scene.environments[environment_id];
     if (environment.emission_texture >= 0) {
         auto& elements_cdf =
@@ -862,25 +842,25 @@ vec3f sample_environment_direction(const yocto_scene&  scene,
 }
 
 // Picks a point on a light.
-vec3f sample_instance_direction(const yocto_scene&  scene,
-                                const trace_lights& lights, int instance_id,
-                                const vec3f& p, float rel, const vec2f& ruv) {
+vec3f sample_instance_direction(const yocto_scene& scene,
+    const trace_lights& lights, int instance_id, const vec3f& p, float rel,
+    const vec2f& ruv) {
     auto& instance = scene.instances[instance_id];
     if (instance.shape >= 0) {
         auto& shape        = scene.shapes[instance.shape];
         auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        auto [element_id, element_uv] =
-            sample_shape_element(shape, elements_cdf, rel, ruv);
-        return normalize(evaluate_instance_position(scene, instance, element_id,
-                                                    element_uv) -
+        auto [element_id, element_uv] = sample_shape_element(
+            shape, elements_cdf, rel, ruv);
+        return normalize(evaluate_instance_position(
+                             scene, instance, element_id, element_uv) -
                          p);
     } else if (instance.surface >= 0) {
         auto& surface      = scene.surfaces[instance.surface];
         auto& elements_cdf = lights.surface_elements_cdf[instance.surface];
-        auto [element_id, element_uv] =
-            sample_surface_element(surface, elements_cdf, rel, ruv);
-        return normalize(evaluate_instance_position(scene, instance, element_id,
-                                                    element_uv) -
+        auto [element_id, element_uv] = sample_surface_element(
+            surface, elements_cdf, rel, ruv);
+        return normalize(evaluate_instance_position(
+                             scene, instance, element_id, element_uv) -
                          p);
     } else {
         throw io_error("empty instance");
@@ -889,10 +869,9 @@ vec3f sample_instance_direction(const yocto_scene&  scene,
 }
 
 // Sample pdf for a light point.
-float sample_instance_direction_pdf(const yocto_scene&  scene,
-                                    const trace_lights& lights, int instance_id,
-                                    const bvh_scene& bvh, const vec3f& position,
-                                    const vec3f& direction) {
+float sample_instance_direction_pdf(const yocto_scene& scene,
+    const trace_lights& lights, int instance_id, const bvh_scene& bvh,
+    const vec3f& position, const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
     if (!is_instance_emissive(scene, instance)) return 0;
     auto& elements_cdf = instance.shape >= 0
@@ -902,8 +881,8 @@ float sample_instance_direction_pdf(const yocto_scene&  scene,
     auto pdf           = 0.0f;
     auto next_position = position;
     for (auto bounce = 0; bounce < 100; bounce++) {
-        auto isec = intersect_instance_bvh(bvh, instance_id,
-                                           make_ray(next_position, direction));
+        auto isec = intersect_instance_bvh(
+            bvh, instance_id, make_ray(next_position, direction));
         if (!isec.hit) break;
         // accumulate pdf
         auto& instance       = scene.instances[isec.instance_id];
@@ -922,52 +901,50 @@ float sample_instance_direction_pdf(const yocto_scene&  scene,
 }
 
 // Sample lights wrt solid angle
-vec3f sample_lights_direction(const yocto_scene&  scene,
-                              const trace_lights& lights, const bvh_scene& bvh,
-                              const vec3f& position, float rl, float rel,
-                              const vec2f& ruv) {
+vec3f sample_lights_direction(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    float rl, float rel, const vec2f& ruv) {
     auto light_id = sample_uniform_index(
         lights.instances.size() + lights.environments.size(), rl);
     if (light_id < lights.instances.size()) {
         auto instance = lights.instances[light_id];
-        return sample_instance_direction(scene, lights, instance, position, rel,
-                                         ruv);
+        return sample_instance_direction(
+            scene, lights, instance, position, rel, ruv);
     } else {
         auto environment =
             lights.environments[light_id - (int)lights.instances.size()];
-        return sample_environment_direction(scene, lights, environment, rel,
-                                            ruv);
+        return sample_environment_direction(
+            scene, lights, environment, rel, ruv);
     }
 }
 
 // Sample lights pdf
-float sample_lights_direction_pdf(const yocto_scene&  scene,
-                                  const trace_lights& lights,
-                                  const bvh_scene& bvh, const vec3f& position,
-                                  const vec3f& direction) {
+float sample_lights_direction_pdf(const yocto_scene& scene,
+    const trace_lights& lights, const bvh_scene& bvh, const vec3f& position,
+    const vec3f& direction) {
     auto pdf = 0.0f;
     for (auto instance : lights.instances) {
-        pdf += sample_instance_direction_pdf(scene, lights, instance, bvh,
-                                             position, direction);
+        pdf += sample_instance_direction_pdf(
+            scene, lights, instance, bvh, position, direction);
     }
     for (auto environment : lights.environments) {
-        pdf += sample_environment_direction_pdf(scene, lights, environment,
-                                                direction);
+        pdf += sample_environment_direction_pdf(
+            scene, lights, environment, direction);
     }
-    pdf *= sample_uniform_index_pdf(lights.instances.size() +
-                                    lights.environments.size());
+    pdf *= sample_uniform_index_pdf(
+        lights.instances.size() + lights.environments.size());
     return pdf;
 }
 
 // Russian roulette
-bool sample_russian_roulette(const vec3f& weight, int bounce, float rr,
-                             int min_bounce = 2) {
+bool sample_russian_roulette(
+    const vec3f& weight, int bounce, float rr, int min_bounce = 2) {
     if (bounce <= min_bounce) return false;
     auto rrprob = 1.0f - min(max(weight), 0.95f);
     return rr < rrprob;
 }
-float sample_russian_roulette_pdf(const vec3f& weight, int bounce,
-                                  int min_bounce = 2) {
+float sample_russian_roulette_pdf(
+    const vec3f& weight, int bounce, int min_bounce = 2) {
     if (bounce <= min_bounce) return 1;
     auto rrprob = 1.0f - min(max(weight), 0.95f);
     return 1 - rrprob;
@@ -995,14 +972,13 @@ vec3f evaluate_transmission(const yocto_scene& scene, const bvh_scene& bvh,
 
 #endif
 
-vec3f evaluate_transmission(const yocto_scene&    scene,
-                            const yocto_material& material, const vec3f& from,
-                            const vec3f& dir, float distance, int channel,
-                            rng_state& rng) {
+vec3f evaluate_transmission(const yocto_scene& scene,
+    const yocto_material& material, const vec3f& from, const vec3f& dir,
+    float distance, int channel, rng_state& rng) {
     auto& vd = material.volume_density;
     if (is_material_volume_homogeneus(material))
         return vec3f{exp(-distance * vd.x), exp(-distance * vd.y),
-                     exp(-distance * vd.z)};
+            exp(-distance * vd.z)};
 
     // ratio tracking
     auto tr = 1.0f, t = 0.0f;
@@ -1024,8 +1000,7 @@ vec3f evaluate_transmission(const yocto_scene&    scene,
 }
 
 float sample_distance(const yocto_scene& scene, const yocto_material& material,
-                      const vec3f& from, const vec3f& dir, int channel,
-                      rng_state& rng) {
+    const vec3f& from, const vec3f& dir, int channel, rng_state& rng) {
     auto pos      = from;
     auto majorant = material.volume_density[channel];
     if (majorant == 0) return float_max;
@@ -1056,8 +1031,8 @@ float sample_distance(const yocto_scene& scene, const yocto_material& material,
 }
 
 float sample_distance(const yocto_scene& scene, const yocto_instance& instance,
-                      const bbox3f& bbox, const vec3f& from, const vec3f& dir,
-                      int channel, rng_state& rng) {
+    const bbox3f& bbox, const vec3f& from, const vec3f& dir, int channel,
+    rng_state& rng) {
     auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[shape.material];
     if (material.volume_density == zero3f) return float_max;
@@ -1065,13 +1040,13 @@ float sample_distance(const yocto_scene& scene, const yocto_instance& instance,
     // Transform coordinates so that every position in the bounding box of the
     // instance is mapped to the cube [-1,1]^3 (the same space of volume texture
     // sampling).
-    auto scale = bbox.max - bbox.min;
-    auto frame = instance.frame;
-    auto froml = transform_point_inverse(frame, from) / scale;
-    auto dirl  = transform_direction_inverse(frame, dir) / scale;
-    auto ll    = length(dirl);
-    auto distance =
-        sample_distance(scene, material, froml, dirl / ll, channel, rng);
+    auto scale    = bbox.max - bbox.min;
+    auto frame    = instance.frame;
+    auto froml    = transform_point_inverse(frame, from) / scale;
+    auto dirl     = transform_direction_inverse(frame, dir) / scale;
+    auto ll       = length(dirl);
+    auto distance = sample_distance(
+        scene, material, froml, dirl / ll, channel, rng);
     return distance * ll;
 }
 
@@ -1107,32 +1082,29 @@ float prob_direct(const microfacet_brdf& brdf) {
 // mediums.back(). pdf and incoming radiance le are returned in reference. It
 // works for both surface rendering and volume rendering.
 vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
-                          const trace_lights& lights, const vec3f& p,
-                          int channel, const vector<int>& mediums_,
-                          rng_state& rng, float& pdf, vec3f& le) {
+    const trace_lights& lights, const vec3f& p, int channel,
+    const vector<int>& mediums_, rng_state& rng, float& pdf, vec3f& le) {
     auto  incoming = zero3f;
     vec3f weight   = vec3f{1, 1, 1};
     auto  mediums  = mediums_;
 
-    auto idx = sample_uniform_index(lights.instances.size() +
-                                        lights.environments.size(),
-                                    get_random_float(rng));
-    pdf      = 1.0f / (lights.instances.size() + lights.environments.size());
+    auto idx = sample_uniform_index(
+        lights.instances.size() + lights.environments.size(),
+        get_random_float(rng));
+    pdf = 1.0f / (lights.instances.size() + lights.environments.size());
     if (idx < lights.instances.size()) {
         auto instance_id = lights.instances[idx];
         incoming = sample_instance_direction(scene, lights, instance_id, p,
-                                             get_random_float(rng),
-                                             get_random_vec2f(rng));
+            get_random_float(rng), get_random_vec2f(rng));
         auto& instance = scene.instances[instance_id];
         pdf *= 1.0 / lights.shape_elements_cdf[instance.shape].back();
     } else {
         auto environment_id =
             lights.environments[idx - lights.instances.size()];
         incoming = sample_environment_direction(scene, lights, environment_id,
-                                                get_random_float(rng),
-                                                get_random_vec2f(rng));
-        pdf *= sample_environment_direction_pdf(scene, lights, environment_id,
-                                                incoming);
+            get_random_float(rng), get_random_vec2f(rng));
+        pdf *= sample_environment_direction_pdf(
+            scene, lights, environment_id, incoming);
         auto isec = intersect_scene_bvh(bvh, make_ray(p, incoming));
         if (!isec.hit) {
             auto& environment = scene.environments[environment_id];
@@ -1146,25 +1118,23 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
     while (isec.hit) {
         auto& isec_instance = scene.instances[isec.instance_id];
         auto& isec_shape    = scene.shapes[isec_instance.shape];
-        auto  lp            = evaluate_instance_position(scene, isec_instance,
-                                             isec.element_id, isec.element_uv);
-        auto  ln            = evaluate_instance_normal(scene, isec_instance,
-                                           isec.element_id, isec.element_uv);
+        auto  lp            = evaluate_instance_position(
+            scene, isec_instance, isec.element_id, isec.element_uv);
+        auto ln = evaluate_instance_normal(
+            scene, isec_instance, isec.element_id, isec.element_uv);
         auto& isec_material = scene.materials[isec_shape.material];
-        auto  emission      = evaluate_material_emission(
-                            scene, isec_material,
+        auto  emission      = evaluate_material_emission(scene, isec_material,
                             evaluate_shape_texturecoord(
                                 isec_shape, isec.element_id, isec.element_uv)) *
-                        xyz(evaluate_shape_color(isec_shape, isec.element_id,
-                                                 isec.element_uv));
+                        xyz(evaluate_shape_color(
+                            isec_shape, isec.element_id, isec.element_uv));
 
         auto& medium_instance = scene.instances[mediums.back()];
         auto& medium_shape    = scene.shapes[medium_instance.shape];
         auto& medium_material = scene.materials[medium_shape.material];
         if (medium_material.volume_density != zero3f)
             weight *= evaluate_transmission(scene, medium_material, lp,
-                                            incoming, isec.distance, channel,
-                                            rng);
+                incoming, isec.distance, channel, rng);
 
         // Hack: Uncomment this or the result will be biased
         // If mediums refracts, the transmission ray won't reach the sampled
@@ -1177,10 +1147,9 @@ vec3f direct_illumination(const yocto_scene& scene, const bvh_scene& bvh,
             break;
         }
 
-        auto brdf = evaluate_material_brdf(
-            scene, isec_material,
-            evaluate_shape_texturecoord(isec_shape, isec.element_id,
-                                        isec.element_uv));
+        auto brdf = evaluate_material_brdf(scene, isec_material,
+            evaluate_shape_texturecoord(
+                isec_shape, isec.element_id, isec.element_uv));
         if (brdf.transmission == zero3f) {
             le = zero3f;
             break;
@@ -1238,10 +1207,8 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 
 // Iterative volume path tracing.
 pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
-                                const trace_lights& lights,
-                                const vec3f& position, const vec3f& direction,
-                                rng_state& rng, int max_bounces,
-                                bool environments_hidden) {
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     if (lights.instances.empty() && lights.environments.empty())
         return {zero3f, false};
 
@@ -1295,10 +1262,10 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // TODO: FIXME REMOVING BBOX
         // Sample distance of next absorption/scattering event in the medium.
         // dist_pdf is unknown due to delta tracking.
-        auto bbox =
-            transform_bbox(instance.frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
-        auto distance =
-            sample_distance(scene, instance, bbox, ray.o, ray.d, ch, rng);
+        auto bbox = transform_bbox(
+            instance.frame, bbox3f{{-1, -1, -1}, {1, 1, 1}});
+        auto distance = sample_distance(
+            scene, instance, bbox, ray.o, ray.d, ch, rng);
 
         // Create ray and clamp it to make the intersection faster.
         ray       = make_ray(ray.o, ray.d);
@@ -1309,8 +1276,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
         // nothing (the environment)
         //        or a medium interaction was sampled. Doing isec.distance ==
         //        maxf doesn't work, why??
-        auto scene_size =
-            max(bvh.nodes.front().bbox.max - bvh.nodes.front().bbox.min);
+        auto scene_size = max(
+            bvh.nodes.front().bbox.max - bvh.nodes.front().bbox.min);
 
         // environment
         if (!isec.hit && distance > scene_size) {
@@ -1332,10 +1299,9 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
                 scene, isec_instance, isec.element_id, isec.element_uv);
             auto normal = evaluate_instance_normal(
                 scene, isec_instance, isec.element_id, isec.element_uv);
-            auto brdf = evaluate_material_brdf(
-                scene, isec_material,
-                evaluate_shape_texturecoord(isec_shape, isec.element_id,
-                                            isec.element_uv));
+            auto brdf = evaluate_material_brdf(scene, isec_material,
+                evaluate_shape_texturecoord(
+                    isec_shape, isec.element_id, isec.element_uv));
 
             // distance sampling pdf is unknown due to delta tracking, but we do
             // know the value of transmission / pdf_dist.
@@ -1343,14 +1309,12 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 
             // emission
             if (emission)
-                radiance +=
-                    weight *
-                    evaluate_material_emission(
-                        scene, isec_material,
-                        evaluate_shape_texturecoord(isec_shape, isec.element_id,
-                                                    isec.element_uv)) *
-                    xyz(evaluate_shape_color(isec_shape, isec.element_id,
-                                             isec.element_uv));
+                radiance += weight *
+                            evaluate_material_emission(scene, isec_material,
+                                evaluate_shape_texturecoord(isec_shape,
+                                    isec.element_id, isec.element_uv)) *
+                            xyz(evaluate_shape_color(
+                                isec_shape, isec.element_id, isec.element_uv));
 
             // early exit
             if (brdf.diffuse + brdf.specular + brdf.transmission == zero3f ||
@@ -1363,11 +1327,11 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
                 // great with delta-like brdfs)
                 vec3f direct;
                 float pdf;
-                vec3f incoming = direct_illumination(scene, bvh, lights, p, ch,
-                                                     mediums, rng, pdf, direct);
+                vec3f incoming = direct_illumination(
+                    scene, bvh, lights, p, ch, mediums, rng, pdf, direct);
                 if (pdf != 0) {
-                    auto brdf_cosine =
-                        evaluate_brdf_cosine(brdf, normal, outgoing, incoming);
+                    auto brdf_cosine = evaluate_brdf_cosine(
+                        brdf, normal, outgoing, incoming);
                     radiance += weight * direct * brdf_cosine / pdf;
                     emission = false;
                 }
@@ -1378,21 +1342,19 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             vec3f incoming, brdf_cosine;
             float pdf = 0;
             if (!is_brdf_delta(brdf)) {
-                incoming = sample_brdf_direction(brdf, normal, outgoing,
-                                                 get_random_float(rng),
-                                                 get_random_vec2f(rng));
-                brdf_cosine =
-                    evaluate_brdf_cosine(brdf, normal, outgoing, incoming);
-                pdf =
-                    sample_brdf_direction_pdf(brdf, normal, outgoing, incoming);
+                incoming    = sample_brdf_direction(brdf, normal, outgoing,
+                    get_random_float(rng), get_random_vec2f(rng));
+                brdf_cosine = evaluate_brdf_cosine(
+                    brdf, normal, outgoing, incoming);
+                pdf = sample_brdf_direction_pdf(
+                    brdf, normal, outgoing, incoming);
             } else {
                 incoming = sample_delta_brdf_direction(brdf, normal, outgoing,
-                                                       get_random_float(rng),
-                                                       get_random_vec2f(rng));
-                brdf_cosine = evaluate_delta_brdf_cosine(brdf, normal, outgoing,
-                                                         incoming);
-                pdf = sample_delta_brdf_direction_pdf(brdf, normal, outgoing,
-                                                      incoming);
+                    get_random_float(rng), get_random_vec2f(rng));
+                brdf_cosine = evaluate_delta_brdf_cosine(
+                    brdf, normal, outgoing, incoming);
+                pdf = sample_delta_brdf_direction_pdf(
+                    brdf, normal, outgoing, incoming);
             }
             auto ndi = dot(normal, incoming);
             auto ndo = dot(normal, outgoing);
@@ -1442,7 +1404,7 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             vec3f direct;
             float pdf_direct;
             vec3f l = direct_illumination(scene, bvh, lights, ray.o, ch,
-                                          mediums, rng, pdf_direct, direct);
+                mediums, rng, pdf_direct, direct);
             if (pdf_direct != 0) {
                 auto f = va * evaluate_phase_function(dot(l, -ray.d), vg);
                 radiance += weight * direct * f / pdf_direct;
@@ -1452,8 +1414,8 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
             // indirect
             vec3f incoming = sample_phase_function(vg, get_random_vec2f(rng));
             weight *= va;
-            ray.d =
-                transform_direction(make_frame_fromz(zero3f, ray.d), incoming);
+            ray.d = transform_direction(
+                make_frame_fromz(zero3f, ray.d), incoming);
         }
 
         // russian roulette
@@ -1469,12 +1431,11 @@ pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
-                             const trace_lights& lights, const vec3f& position,
-                             const vec3f& direction, rng_state& rng,
-                             int max_bounces, bool environments_hidden) {
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
         if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
@@ -1497,24 +1458,23 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_direction_pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
             if (get_random_float(rng) < 0.5f) {
-                next_direction = sample_brdf_direction(
-                    point.brdf, point.normal, outgoing, get_random_float(rng),
-                    get_random_vec2f(rng));
+                next_direction = sample_brdf_direction(point.brdf, point.normal,
+                    outgoing, get_random_float(rng), get_random_vec2f(rng));
             } else {
-                next_direction = sample_lights_direction(
-                    scene, lights, bvh, point.position, get_random_float(rng),
+                next_direction = sample_lights_direction(scene, lights, bvh,
+                    point.position, get_random_float(rng),
                     get_random_float(rng), get_random_vec2f(rng));
             }
-            next_brdf_cosine = evaluate_brdf_cosine(point.brdf, point.normal,
-                                                    outgoing, next_direction);
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
             next_direction_pdf =
-                0.5f * sample_brdf_direction_pdf(point.brdf, point.normal,
-                                                 outgoing, next_direction) +
+                0.5f * sample_brdf_direction_pdf(
+                           point.brdf, point.normal, outgoing, next_direction) +
                 0.5f * sample_lights_direction_pdf(
                            scene, lights, bvh, point.position, next_direction);
         } else {
-            next_direction = sample_delta_brdf_direction(
-                point.brdf, point.normal, outgoing, get_random_float(rng),
+            next_direction   = sample_delta_brdf_direction(point.brdf,
+                point.normal, outgoing, get_random_float(rng),
                 get_random_vec2f(rng));
             next_brdf_cosine = evaluate_delta_brdf_cosine(
                 point.brdf, point.normal, outgoing, next_direction);
@@ -1548,12 +1508,11 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
-                              const trace_lights& lights, const vec3f& position,
-                              const vec3f& direction, rng_state& rng,
-                              int max_bounces, bool environments_hidden) {
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
         if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
@@ -1575,16 +1534,15 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_brdf_cosine   = zero3f;
         auto next_direction_pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
-            next_direction = sample_brdf_direction(
-                point.brdf, point.normal, outgoing, get_random_float(rng),
-                get_random_vec2f(rng));
-            next_brdf_cosine   = evaluate_brdf_cosine(point.brdf, point.normal,
-                                                    outgoing, next_direction);
+            next_direction   = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
             next_direction_pdf = sample_brdf_direction_pdf(
                 point.brdf, point.normal, outgoing, next_direction);
         } else {
-            next_direction = sample_delta_brdf_direction(
-                point.brdf, point.normal, outgoing, get_random_float(rng),
+            next_direction   = sample_delta_brdf_direction(point.brdf,
+                point.normal, outgoing, get_random_float(rng),
                 get_random_vec2f(rng));
             next_brdf_cosine = evaluate_delta_brdf_cosine(
                 point.brdf, point.normal, outgoing, next_direction);
@@ -1618,12 +1576,11 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Recursive path tracing.
 pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
-                              const trace_lights& lights, const vec3f& position,
-                              const vec3f& direction, rng_state& rng,
-                              int max_bounces, bool environments_hidden) {
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
         if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
@@ -1646,31 +1603,28 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
         auto next_direction_pdf = 0.0f, light_direction_pdf = 0.0f;
         auto continue_pdf = 0.0f;
         if (!is_brdf_delta(point.brdf)) {
-            next_direction = sample_brdf_direction(
-                point.brdf, point.normal, outgoing, get_random_float(rng),
+            next_direction   = sample_brdf_direction(point.brdf, point.normal,
+                outgoing, get_random_float(rng), get_random_vec2f(rng));
+            light_direction  = sample_lights_direction(scene, lights, bvh,
+                point.position, get_random_float(rng), get_random_float(rng),
                 get_random_vec2f(rng));
-            light_direction = sample_lights_direction(
-                scene, lights, bvh, point.position, get_random_float(rng),
-                get_random_float(rng), get_random_vec2f(rng));
-            next_brdf_cosine  = evaluate_brdf_cosine(point.brdf, point.normal,
-                                                    outgoing, next_direction);
-            light_brdf_cosine = evaluate_brdf_cosine(point.brdf, point.normal,
-                                                     outgoing, light_direction);
-            next_direction_pdf =
-                sample_brdf_direction_pdf(point.brdf, point.normal, outgoing,
-                                          next_direction) +
-                sample_lights_direction_pdf(scene, lights, bvh, point.position,
-                                            next_direction);
-            light_direction_pdf =
-                sample_brdf_direction_pdf(point.brdf, point.normal, outgoing,
-                                          light_direction) +
-                sample_lights_direction_pdf(scene, lights, bvh, point.position,
-                                            light_direction);
-            continue_pdf = sample_brdf_direction_pdf(point.brdf, point.normal,
-                                                     outgoing, next_direction);
+            next_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, next_direction);
+            light_brdf_cosine = evaluate_brdf_cosine(
+                point.brdf, point.normal, outgoing, light_direction);
+            next_direction_pdf = sample_brdf_direction_pdf(point.brdf,
+                                     point.normal, outgoing, next_direction) +
+                                 sample_lights_direction_pdf(scene, lights, bvh,
+                                     point.position, next_direction);
+            light_direction_pdf = sample_brdf_direction_pdf(point.brdf,
+                                      point.normal, outgoing, light_direction) +
+                                  sample_lights_direction_pdf(scene, lights,
+                                      bvh, point.position, light_direction);
+            continue_pdf = sample_brdf_direction_pdf(
+                point.brdf, point.normal, outgoing, next_direction);
         } else {
-            next_direction = sample_delta_brdf_direction(
-                point.brdf, point.normal, outgoing, get_random_float(rng),
+            next_direction   = sample_delta_brdf_direction(point.brdf,
+                point.normal, outgoing, get_random_float(rng),
                 get_random_vec2f(rng));
             next_brdf_cosine = evaluate_delta_brdf_cosine(
                 point.brdf, point.normal, outgoing, next_direction);
@@ -1711,13 +1665,11 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Eyelight for quick previewing.
 pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
-                                 const trace_lights& lights,
-                                 const vec3f& position, const vec3f& direction,
-                                 rng_state& rng, int max_bounces,
-                                 bool environments_hidden) {
+    const trace_lights& lights, const vec3f& position, const vec3f& direction,
+    rng_state& rng, int max_bounces, bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
         if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
@@ -1729,22 +1681,22 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     auto outgoing = -direction;
 
     // microfacet_brdf * light
-    radiance +=
-        evaluate_brdf_cosine(point.brdf, point.normal, outgoing, outgoing) *
-        pif;
+    radiance += evaluate_brdf_cosine(
+                    point.brdf, point.normal, outgoing, outgoing) *
+                pif;
 
     // done
     return {radiance, true};
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_normal(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_normal(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1752,13 +1704,13 @@ pair<vec3f, bool> trace_debug_normal(
 }
 
 // Debug frontfacing.
-pair<vec3f, bool> trace_debug_frontfacing(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_frontfacing(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1769,13 +1721,13 @@ pair<vec3f, bool> trace_debug_frontfacing(
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_albedo(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_albedo(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1785,13 +1737,13 @@ pair<vec3f, bool> trace_debug_albedo(
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_emission(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_emission(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1799,13 +1751,13 @@ pair<vec3f, bool> trace_debug_emission(
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_diffuse(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_diffuse(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1813,13 +1765,13 @@ pair<vec3f, bool> trace_debug_diffuse(
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_specular(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_specular(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1827,13 +1779,13 @@ pair<vec3f, bool> trace_debug_specular(
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_tranmission(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_tranmission(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1841,28 +1793,28 @@ pair<vec3f, bool> trace_debug_tranmission(
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_roughness(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_roughness(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
     return {{point.brdf.roughness, point.brdf.roughness, point.brdf.roughness},
-            true};
+        true};
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_texcoord(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_texcoord(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1870,15 +1822,13 @@ pair<vec3f, bool> trace_debug_texcoord(
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_color(const yocto_scene&  scene,
-                                    const bvh_scene&    bvh,
-                                    const trace_lights& lights,
-                                    const vec3f&        position,
-                                    const vec3f& direction, rng_state& rng,
-                                    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_color(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // shade
@@ -1886,13 +1836,13 @@ pair<vec3f, bool> trace_debug_color(const yocto_scene&  scene,
 }
 
 // Debug previewing.
-pair<vec3f, bool> trace_debug_highlight(
-    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const vec3f& position, const vec3f& direction, rng_state& rng,
-    int max_bounces, bool environments_hidden) {
+pair<vec3f, bool> trace_debug_highlight(const yocto_scene& scene,
+    const bvh_scene& bvh, const trace_lights& lights, const vec3f& position,
+    const vec3f& direction, rng_state& rng, int max_bounces,
+    bool environments_hidden) {
     // intersect ray
-    auto point = trace_ray_with_opacity(scene, bvh, position, direction, rng,
-                                        max_bounces);
+    auto point = trace_ray_with_opacity(
+        scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) return {zero3f, false};
 
     // initialize
@@ -1967,9 +1917,8 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 
 // Trace a block of samples
 void trace_image_region(image4f& image, trace_state& state,
-                        const yocto_scene& scene, const bvh_scene& bvh,
-                        const trace_lights& lights, const bbox2i& region,
-                        int num_samples, const trace_image_options& options) {
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    const bbox2i& region, int num_samples, const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
     auto  sampler = get_trace_sampler_func(options.sampler_type);
     for (auto j = region.min.y; j < region.max.y; j++) {
@@ -1979,11 +1928,10 @@ void trace_image_region(image4f& image, trace_state& state,
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray = sample_camera_ray(camera, {i, j}, image.size(),
-                                             get_random_vec2f(pixel.rng),
-                                             get_random_vec2f(pixel.rng));
+                    get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
                 auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
-                                               pixel.rng, options.max_bounces,
-                                               options.environments_hidden);
+                    pixel.rng, options.max_bounces,
+                    options.environments_hidden);
                 if (!isfinite(radiance)) {
                     printf("NaN detected\n");
                     radiance = zero3f;
@@ -2002,10 +1950,10 @@ void trace_image_region(image4f& image, trace_state& state,
 }
 
 // Init a sequence of random number generators.
-void init_trace_state(trace_state& state, int width, int height,
-                      uint64_t seed) {
-    state    = trace_state{width, height,
-                        vector<trace_pixel>(width * height, trace_pixel{})};
+void init_trace_state(
+    trace_state& state, int width, int height, uint64_t seed) {
+    state = trace_state{
+        width, height, vector<trace_pixel>(width * height, trace_pixel{})};
     auto rng = make_rng(1301081);
     for (auto j = 0; j < state.height; j++) {
         for (auto i = 0; i < state.width; i++) {
@@ -2050,8 +1998,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         if (environment.emission == zero3f) continue;
         lights.environments.push_back(environment_id);
         if (environment.emission_texture >= 0) {
-            compute_environment_texels_cdf(
-                scene, environment,
+            compute_environment_texels_cdf(scene, environment,
                 lights.environment_texture_cdf[environment.emission_texture]);
         }
     }
@@ -2059,11 +2006,10 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
 
 // Progressively compute an image by calling trace_samples multiple times.
 image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
-                    const trace_lights&        lights,
-                    const trace_image_options& options) {
-    auto [width, height] =
-        get_camera_image_size(scene.cameras.at(options.camera_id),
-                              options.image_width, options.image_height);
+    const trace_lights& lights, const trace_image_options& options) {
+    auto [width, height] = get_camera_image_size(
+        scene.cameras.at(options.camera_id), options.image_width,
+        options.image_height);
     auto image  = yocto::image{{width, height}, zero4f};
     auto pixels = trace_state{};
     init_trace_state(pixels, width, height, options.random_seed);
@@ -2074,7 +2020,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
         for (auto& region : regions) {
             if (options.cancel_flag && *options.cancel_flag) break;
             trace_image_region(image, pixels, scene, bvh, lights, region,
-                               options.num_samples, options);
+                options.num_samples, options);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -2086,7 +2032,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
                     if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
                     trace_image_region(image, pixels, scene, bvh, lights,
-                                       region, options.num_samples, options);
+                        region, options.num_samples, options);
                 }
             }));
         }
@@ -2097,18 +2043,17 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 
 // Progressively compute an image by calling trace_samples multiple times.
 int trace_image_samples(image4f& image, trace_state& state,
-                        const yocto_scene& scene, const bvh_scene& bvh,
-                        const trace_lights& lights, int current_sample,
-                        const trace_image_options& options) {
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    int current_sample, const trace_image_options& options) {
     auto regions = vector<bbox2i>{};
     make_image_regions(regions, image.size(), options.region_size, true);
-    auto num_samples =
-        min(options.samples_per_batch, options.num_samples - current_sample);
+    auto num_samples = min(
+        options.samples_per_batch, options.num_samples - current_sample);
     if (options.run_serially) {
         for (auto& region : regions) {
             if (options.cancel_flag && *options.cancel_flag) break;
-            trace_image_region(image, state, scene, bvh, lights, region,
-                               num_samples, options);
+            trace_image_region(
+                image, state, scene, bvh, lights, region, num_samples, options);
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
@@ -2120,7 +2065,7 @@ int trace_image_samples(image4f& image, trace_state& state,
                     if (options.cancel_flag && *options.cancel_flag) break;
                     auto& region = regions[region_id];
                     trace_image_region(image, state, scene, bvh, lights, region,
-                                       num_samples, options);
+                        num_samples, options);
                 }
             }));
         }
@@ -2131,17 +2076,14 @@ int trace_image_samples(image4f& image, trace_state& state,
 
 // Starts an anyncrhounous renderer.
 void trace_image_async_start(image4f& image, trace_state& state,
-                             const yocto_scene& scene, const bvh_scene& bvh,
-                             const trace_lights&        lights,
-                             vector<future<void>>&      futures,
-                             atomic<int>&               current_sample,
-                             concurrent_queue<bbox2i>&  queue,
-                             const trace_image_options& options) {
+    const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
+    vector<future<void>>& futures, atomic<int>& current_sample,
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     auto& camera         = scene.cameras.at(options.camera_id);
-    auto [width, height] = get_camera_image_size(camera, options.image_width,
-                                                 options.image_height);
-    image                = {{width, height}, zero4f};
-    state                = trace_state{};
+    auto [width, height] = get_camera_image_size(
+        camera, options.image_width, options.image_height);
+    image = {{width, height}, zero4f};
+    state = trace_state{};
     init_trace_state(state, width, height, options.random_seed);
     auto regions = vector<bbox2i>{};
     make_image_regions(regions, image.size(), options.region_size, true);
@@ -2172,19 +2114,19 @@ void trace_image_async_start(image4f& image, trace_state& state,
 #else
     futures.clear();
     futures.emplace_back(async([options, regions, &current_sample, &image,
-                                &scene, &lights, &bvh, &state, &queue]() {
+                                   &scene, &lights, &bvh, &state, &queue]() {
         for (auto sample = 0; sample < options.num_samples;
              sample += options.samples_per_batch) {
             if (options.cancel_flag && *options.cancel_flag) return;
             current_sample   = sample;
             auto num_samples = min(options.samples_per_batch,
-                                   options.num_samples - current_sample);
+                options.num_samples - current_sample);
             parallel_foreach(
                 regions,
                 [num_samples, &options, &image, &scene, &lights, &bvh, &state,
-                 &queue](const bbox2i& region) {
+                    &queue](const bbox2i& region) {
                     trace_image_region(image, state, scene, bvh, lights, region,
-                                       num_samples, options);
+                        num_samples, options);
                     queue.push(region);
                 },
                 options.cancel_flag, options.run_serially);
@@ -2195,9 +2137,8 @@ void trace_image_async_start(image4f& image, trace_state& state,
 }
 
 // Stop the asynchronous renderer.
-void trace_image_async_stop(vector<future<void>>&      futures,
-                            concurrent_queue<bbox2i>&  queue,
-                            const trace_image_options& options) {
+void trace_image_async_stop(vector<future<void>>& futures,
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     if (options.cancel_flag) *options.cancel_flag = true;
     for (auto& f : futures) f.get();
     futures.clear();
@@ -2226,11 +2167,11 @@ float convert_specular_exponent_to_roughness(float exponent) {
 }
 
 // Specular to fresnel eta.
-void compute_fresnel_from_specular(const vec3f& specular, vec3f& es,
-                                   vec3f& esk) {
+void compute_fresnel_from_specular(
+    const vec3f& specular, vec3f& es, vec3f& esk) {
     es  = {(1 + sqrt(specular.x)) / (1 - sqrt(specular.x)),
-          (1 + sqrt(specular.y)) / (1 - sqrt(specular.y)),
-          (1 + sqrt(specular.z)) / (1 - sqrt(specular.z))};
+        (1 + sqrt(specular.y)) / (1 - sqrt(specular.y)),
+        (1 + sqrt(specular.z)) / (1 - sqrt(specular.z))};
     esk = {0, 0, 0};
 }
 
@@ -2280,8 +2221,8 @@ vec3f evaluate_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 
     auto t0         = eta2 - etak2 - vec3f{sin2, sin2, sin2};
     auto a2plusb2_2 = t0 * t0 + 4.0f * eta2 * etak2;
-    auto a2plusb2 =
-        vec3f{sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
+    auto a2plusb2   = vec3f{
+        sqrt(a2plusb2_2.x), sqrt(a2plusb2_2.y), sqrt(a2plusb2_2.z)};
     auto t1        = a2plusb2 + vec3f{cos2, cos2, cos2};
     auto a_2       = (a2plusb2 + t0) / 2.0f;
     auto a         = vec3f{sqrt(a_2.x), sqrt(a_2.y), sqrt(a_2.z)};
@@ -2299,126 +2240,86 @@ vec3f evaluate_fresnel_metal(float cosw, const vec3f& eta, const vec3f& etak) {
 // Tabulated ior for metals
 // https://github.com/tunabrain/tungsten
 const unordered_map<string, pair<vec3f, vec3f>> metal_ior_table = {
-    {"a-C",
-     {{2.9440999183f, 2.2271502925f, 1.9681668794f},
-      {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
-    {"Ag",
-     {{0.1552646489f, 0.1167232965f, 0.1383806959f},
-      {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
-    {"Al",
-     {{1.6574599595f, 0.8803689579f, 0.5212287346f},
-      {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
-    {"AlAs",
-     {{3.6051023902f, 3.2329365777f, 2.2175611545f},
-      {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
-    {"AlSb",
-     {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
-      {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
-    {"Au",
-     {{0.1431189557f, 0.3749570432f, 1.4424785571f},
-      {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
-    {"Be",
-     {{4.1850592788f, 3.1850604423f, 2.7840913457f},
-      {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
-    {"Cr",
-     {{4.3696828663f, 2.9167024892f, 1.6547005413f},
-      {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
-    {"CsI",
-     {{2.1449030413f, 1.7023164587f, 1.6624194173f},
-      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Cu",
-     {{0.2004376970f, 0.9240334304f, 1.1022119527f},
-      {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
-    {"Cu2O",
-     {{3.5492833755f, 2.9520622449f, 2.7369202137f},
-      {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
-    {"CuO",
-     {{3.2453822204f, 2.4496293965f, 2.1974114493f},
-      {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
-    {"d-C",
-     {{2.7112524747f, 2.3185812849f, 2.2288565009f},
-      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Hg",
-     {{2.3989314904f, 1.4400254917f, 0.9095512090f},
-      {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
-    {"HgTe",
-     {{4.7795267752f, 3.2309984581f, 2.6600252401f},
-      {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
-    {"Ir",
-     {{3.0864098394f, 2.0821938440f, 1.6178866805f},
-      {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
-    {"K",
-     {{0.0640493070f, 0.0464100621f, 0.0381842017f},
-      {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
-    {"Li",
-     {{0.2657871942f, 0.1956102432f, 0.2209198538f},
-      {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
-    {"MgO",
-     {{2.0895885542f, 1.6507224525f, 1.5948759692f},
-      {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
-    {"Mo",
-     {{4.4837010280f, 3.5254578255f, 2.7760769438f},
-      {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
-    {"Na",
-     {{0.0602665320f, 0.0561412435f, 0.0619909494f},
-      {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
-    {"Nb",
-     {{3.4201353595f, 2.7901921379f, 2.3955856658f},
-      {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
-    {"Ni",
-     {{2.3672753521f, 1.6633583302f, 1.4670554172f},
-      {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
-    {"Rh",
-     {{2.5857954933f, 1.8601866068f, 1.5544279524f},
-      {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
-    {"Se-e",
-     {{5.7242724833f, 4.1653992967f, 4.0816099264f},
-      {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
-    {"Se",
-     {{4.0592611085f, 2.8426947380f, 2.8207582835f},
-      {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
-    {"SiC",
-     {{3.1723450205f, 2.5259677964f, 2.4793623897f},
-      {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
-    {"SnTe",
-     {{4.5251865890f, 1.9811525984f, 1.2816819226f},
-      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"Ta",
-     {{2.0625846607f, 2.3930915569f, 2.6280684948f},
-      {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
-    {"Te-e",
-     {{7.5090397678f, 4.2964603080f, 2.3698732430f},
-      {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
-    {"Te",
-     {{7.3908396088f, 4.4821028985f, 2.6370708478f},
-      {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
-    {"ThF4",
-     {{1.8307187117f, 1.4422274283f, 1.3876488528f},
-      {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
-    {"TiC",
-     {{3.7004673762f, 2.8374356509f, 2.5823030278f},
-      {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
-    {"TiN",
-     {{1.6484691607f, 1.1504482522f, 1.3797795097f},
-      {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
-    {"TiO2-e",
-     {{3.1065574823f, 2.5131551146f, 2.5823844157f},
-      {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
-    {"TiO2",
-     {{3.4566203131f, 2.8017076558f, 2.9051485020f},
-      {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
-    {"VC",
-     {{3.6575665991f, 2.7527298065f, 2.5326814570f},
-      {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
-    {"VN",
-     {{2.8656011588f, 2.1191817791f, 1.9400767149f},
-      {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
-    {"V",
-     {{4.2775126218f, 3.5131538236f, 2.7611257461f},
-      {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
-    {"W",
-     {{4.3707029924f, 3.3002972445f, 2.9982666528f},
-      {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
+    {"a-C", {{2.9440999183f, 2.2271502925f, 1.9681668794f},
+                {0.8874329109f, 0.7993216383f, 0.8152862927f}}},
+    {"Ag", {{0.1552646489f, 0.1167232965f, 0.1383806959f},
+               {4.8283433224f, 3.1222459278f, 2.1469504455f}}},
+    {"Al", {{1.6574599595f, 0.8803689579f, 0.5212287346f},
+               {9.2238691996f, 6.2695232477f, 4.8370012281f}}},
+    {"AlAs", {{3.6051023902f, 3.2329365777f, 2.2175611545f},
+                 {0.0006670247f, -0.0004999400f, 0.0074261204f}}},
+    {"AlSb", {{-0.0485225705f, 4.1427547893f, 4.6697691348f},
+                 {-0.0363741915f, 0.0937665154f, 1.3007390124f}}},
+    {"Au", {{0.1431189557f, 0.3749570432f, 1.4424785571f},
+               {3.9831604247f, 2.3857207478f, 1.6032152899f}}},
+    {"Be", {{4.1850592788f, 3.1850604423f, 2.7840913457f},
+               {3.8354398268f, 3.0101260162f, 2.8690088743f}}},
+    {"Cr", {{4.3696828663f, 2.9167024892f, 1.6547005413f},
+               {5.2064337956f, 4.2313645277f, 3.7549467933f}}},
+    {"CsI", {{2.1449030413f, 1.7023164587f, 1.6624194173f},
+                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"Cu", {{0.2004376970f, 0.9240334304f, 1.1022119527f},
+               {3.9129485033f, 2.4528477015f, 2.1421879552f}}},
+    {"Cu2O", {{3.5492833755f, 2.9520622449f, 2.7369202137f},
+                 {0.1132179294f, 0.1946659670f, 0.6001681264f}}},
+    {"CuO", {{3.2453822204f, 2.4496293965f, 2.1974114493f},
+                {0.5202739621f, 0.5707372756f, 0.7172250613f}}},
+    {"d-C", {{2.7112524747f, 2.3185812849f, 2.2288565009f},
+                {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"Hg", {{2.3989314904f, 1.4400254917f, 0.9095512090f},
+               {6.3276269444f, 4.3719414152f, 3.4217899270f}}},
+    {"HgTe", {{4.7795267752f, 3.2309984581f, 2.6600252401f},
+                 {1.6319827058f, 1.5808189339f, 1.7295753852f}}},
+    {"Ir", {{3.0864098394f, 2.0821938440f, 1.6178866805f},
+               {5.5921510077f, 4.0671757150f, 3.2672611269f}}},
+    {"K", {{0.0640493070f, 0.0464100621f, 0.0381842017f},
+              {2.1042155920f, 1.3489364357f, 0.9132113889f}}},
+    {"Li", {{0.2657871942f, 0.1956102432f, 0.2209198538f},
+               {3.5401743407f, 2.3111306542f, 1.6685930000f}}},
+    {"MgO", {{2.0895885542f, 1.6507224525f, 1.5948759692f},
+                {0.0000000000f, -0.0000000000f, 0.0000000000f}}},
+    {"Mo", {{4.4837010280f, 3.5254578255f, 2.7760769438f},
+               {4.1111307988f, 3.4208716252f, 3.1506031404f}}},
+    {"Na", {{0.0602665320f, 0.0561412435f, 0.0619909494f},
+               {3.1792906496f, 2.1124800781f, 1.5790940266f}}},
+    {"Nb", {{3.4201353595f, 2.7901921379f, 2.3955856658f},
+               {3.4413817900f, 2.7376437930f, 2.5799132708f}}},
+    {"Ni", {{2.3672753521f, 1.6633583302f, 1.4670554172f},
+               {4.4988329911f, 3.0501643957f, 2.3454274399f}}},
+    {"Rh", {{2.5857954933f, 1.8601866068f, 1.5544279524f},
+               {6.7822927110f, 4.7029501026f, 3.9760892461f}}},
+    {"Se-e", {{5.7242724833f, 4.1653992967f, 4.0816099264f},
+                 {0.8713747439f, 1.1052845009f, 1.5647788766f}}},
+    {"Se", {{4.0592611085f, 2.8426947380f, 2.8207582835f},
+               {0.7543791750f, 0.6385150558f, 0.5215872029f}}},
+    {"SiC", {{3.1723450205f, 2.5259677964f, 2.4793623897f},
+                {0.0000007284f, -0.0000006859f, 0.0000100150f}}},
+    {"SnTe", {{4.5251865890f, 1.9811525984f, 1.2816819226f},
+                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"Ta", {{2.0625846607f, 2.3930915569f, 2.6280684948f},
+               {2.4080467973f, 1.7413705864f, 1.9470377016f}}},
+    {"Te-e", {{7.5090397678f, 4.2964603080f, 2.3698732430f},
+                 {5.5842076830f, 4.9476231084f, 3.9975145063f}}},
+    {"Te", {{7.3908396088f, 4.4821028985f, 2.6370708478f},
+               {3.2561412892f, 3.5273908133f, 3.2921683116f}}},
+    {"ThF4", {{1.8307187117f, 1.4422274283f, 1.3876488528f},
+                 {0.0000000000f, 0.0000000000f, 0.0000000000f}}},
+    {"TiC", {{3.7004673762f, 2.8374356509f, 2.5823030278f},
+                {3.2656905818f, 2.3515586388f, 2.1727857800f}}},
+    {"TiN", {{1.6484691607f, 1.1504482522f, 1.3797795097f},
+                {3.3684596226f, 1.9434888540f, 1.1020123347f}}},
+    {"TiO2-e", {{3.1065574823f, 2.5131551146f, 2.5823844157f},
+                   {0.0000289537f, -0.0000251484f, 0.0001775555f}}},
+    {"TiO2", {{3.4566203131f, 2.8017076558f, 2.9051485020f},
+                 {0.0001026662f, -0.0000897534f, 0.0006356902f}}},
+    {"VC", {{3.6575665991f, 2.7527298065f, 2.5326814570f},
+               {3.0683516659f, 2.1986687713f, 1.9631816252f}}},
+    {"VN", {{2.8656011588f, 2.1191817791f, 1.9400767149f},
+               {3.0323264950f, 2.0561075580f, 1.6162930914f}}},
+    {"V", {{4.2775126218f, 3.5131538236f, 2.7611257461f},
+              {3.4911844504f, 2.8893580874f, 3.1116965117f}}},
+    {"W", {{4.3707029924f, 3.3002972445f, 2.9982666528f},
+              {3.5006778591f, 2.6048652781f, 2.2731930614f}}},
 };
 
 // Get a complex ior table with keys the metal name and values (eta, etak)
@@ -2433,8 +2334,8 @@ const unordered_map<string, pair<vec3f, vec3f>>& get_metal_ior_table() {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-float integrate_func_base(function<float(float)> f, float a, float b,
-                          int nsamples, rng_state& rng) {
+float integrate_func_base(
+    function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = get_random_float(rng);
@@ -2445,8 +2346,8 @@ float integrate_func_base(function<float(float)> f, float a, float b,
     return integral;
 }
 
-float integrate_func_stratified(function<float(float)> f, float a, float b,
-                                int nsamples, rng_state& rng) {
+float integrate_func_stratified(
+    function<float(float)> f, float a, float b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = (i + get_random_float(rng)) / nsamples;
@@ -2458,9 +2359,8 @@ float integrate_func_stratified(function<float(float)> f, float a, float b,
 }
 
 float integrate_func_importance(function<float(float)> f,
-                                function<float(float)> pdf,
-                                function<float(float)> warp, int nsamples,
-                                rng_state& rng) {
+    function<float(float)> pdf, function<float(float)> warp, int nsamples,
+    rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = get_random_float(rng);
@@ -2482,26 +2382,25 @@ float integrate_func_importance(function<float(float)> f,
 // auto a = 0.0, b = (double)M_PI;
 // auto expected = (double)M_PI;
 void print_integrate_func_test(function<float(float)> f, float a, float b,
-                               float expected, int nsamples,
-                               function<float(float)> pdf,
-                               function<float(float)> warp) {
+    float expected, int nsamples, function<float(float)> pdf,
+    function<float(float)> warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func_stratified(f, a, b, ns, rng);
-        auto integral_importance =
-            integrate_func_importance(f, pdf, warp, ns, rng);
+        auto integral_importance = integrate_func_importance(
+            f, pdf, warp, ns, rng);
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
         printf("%d %g %g %g %g\n", ns, integral_base, error_base,
-               error_stratified, error_importance);
+            error_stratified, error_importance);
     }
 }
 
-float integrate_func2_base(function<float(vec2f)> f, vec2f a, vec2f b,
-                           int nsamples, rng_state& rng) {
+float integrate_func2_base(
+    function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = get_random_vec2f(rng);
@@ -2512,14 +2411,14 @@ float integrate_func2_base(function<float(vec2f)> f, vec2f a, vec2f b,
     return integral;
 }
 
-float integrate_func2_stratified(function<float(vec2f)> f, vec2f a, vec2f b,
-                                 int nsamples, rng_state& rng) {
+float integrate_func2_stratified(
+    function<float(vec2f)> f, vec2f a, vec2f b, int nsamples, rng_state& rng) {
     auto integral  = 0.0f;
     auto nsamples2 = (int)sqrt(nsamples);
     for (auto i = 0; i < nsamples2; i++) {
         for (auto j = 0; j < nsamples2; j++) {
             auto r = vec2f{(i + get_random_float(rng)) / nsamples2,
-                           (j + get_random_float(rng)) / nsamples2};
+                (j + get_random_float(rng)) / nsamples2};
             auto x = a + r * (b - a);
             integral += f(x) * (b.x - a.x) * (b.y - a.y);
         }
@@ -2529,9 +2428,8 @@ float integrate_func2_stratified(function<float(vec2f)> f, vec2f a, vec2f b,
 }
 
 float integrate_func2_importance(function<float(vec2f)> f,
-                                 function<float(vec2f)> pdf,
-                                 function<vec2f(vec2f)> warp, int nsamples,
-                                 rng_state& rng) {
+    function<float(vec2f)> pdf, function<vec2f(vec2f)> warp, int nsamples,
+    rng_state& rng) {
     auto integral = 0.0f;
     for (auto i = 0; i < nsamples; i++) {
         auto r = get_random_vec2f(rng);
@@ -2549,21 +2447,20 @@ float integrate_func2_importance(function<float(vec2f)> f,
 // auto expected = 3.0 / 4.0;
 // auto nsamples = 10000
 void print_integrate_func2_test(function<float(vec2f)> f, vec2f a, vec2f b,
-                                float expected, int nsamples,
-                                function<float(vec2f)> pdf,
-                                function<vec2f(vec2f)> warp) {
+    float expected, int nsamples, function<float(vec2f)> pdf,
+    function<vec2f(vec2f)> warp) {
     auto rng = rng_state();
     printf("nsamples base base-err stratified-err importance-err\n");
     for (auto ns = 10; ns < nsamples; ns += 10) {
         auto integral_base       = integrate_func2_base(f, a, b, ns, rng);
         auto integral_stratified = integrate_func2_stratified(f, a, b, ns, rng);
-        auto integral_importance =
-            integrate_func2_importance(f, pdf, warp, ns, rng);
+        auto integral_importance = integrate_func2_importance(
+            f, pdf, warp, ns, rng);
         auto error_base       = fabs(integral_base - expected) / expected;
         auto error_stratified = fabs(integral_stratified - expected) / expected;
         auto error_importance = fabs(integral_importance - expected) / expected;
         printf("%d %g %g %g %g\n", ns, integral_base, error_base,
-               error_stratified, error_importance);
+            error_stratified, error_importance);
     }
 }
 

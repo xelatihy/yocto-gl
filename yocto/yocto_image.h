@@ -149,12 +149,12 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
 
 // Splits an image into an array of regions
 void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
-                        int region_size = 32, bool shuffled = false);
+    int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
-void get_image_region(image<T>& clipped, const image<T>& img,
-                      const bbox2i& region);
+void get_image_region(
+    image<T>& clipped, const image<T>& img, const bbox2i& region);
 
 // Conversion from/to floats.
 void byte_to_float(image4f& fl, const image4b& bt);
@@ -171,13 +171,12 @@ void gamma_to_linear(image4f& lin, const image4f& srgb, float gamma);
 void linear_to_gamma(image4f& srgb, const image4f& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-void tonemap_image(image4f& ldr, const image4f& hdr, float exposure,
-                   bool filmic, bool srgb);
-void tonemap_image(image4b& ldr, const image4f& hdr, float exposure,
-                   bool filmic, bool srgb);
+void tonemap_image(
+    image4f& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image(
+    image4b& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
 void tonemap_image_region(image4f& ldr, const bbox2i& region,
-                          const image4f& hdr, float exposure, bool filmic,
-                          bool srgb);
+    const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
 void resize_image(image4f& res, const image4f& img, const vec2i& size);
@@ -193,19 +192,19 @@ namespace yocto {
 // Make example images in linear color space. Takes as input images allocated
 // to the desired size and fill the pixel with expected values.
 void make_grid_image(image4f& img, int tile = 8,
-                     const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-                     const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
+    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
+    const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
 void make_checker_image(image4f& img, int tile = 8,
-                        const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
-                        const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
+    const vec4f& c0 = {0.2f, 0.2f, 0.2f, 1},
+    const vec4f& c1 = {0.5f, 0.5f, 0.5f, 1});
 void make_bumpdimple_image(image4f& img, int tile = 8);
-void make_ramp_image(image4f& img, const vec4f& c0, const vec4f& c1,
-                     float srgb = false);
+void make_ramp_image(
+    image4f& img, const vec4f& c0, const vec4f& c1, float srgb = false);
 void make_gammaramp_image(image4f& img);
 void make_uvramp_image(image4f& img);
 void make_uvgrid_image(image4f& img, int tile = 8, bool colored = true);
 void make_blackbodyramp_image(image4f& img, float start_temperature = 1000,
-                              float end_temperature = 12000);
+    float end_temperature = 12000);
 
 // Comvert a bump map to a normal map. All linear color spaces.
 void bump_to_normal_map(image4f& norm, const image4f& img, float scale = 1);
@@ -216,28 +215,25 @@ void bump_to_normal_map(image4f& norm, const image4f& img, float scale = 1);
 // changing the sun intensity and temperature. Has a convention, a temperature
 // of 0 sets the eath sun defaults (ignoring intensity too).
 void make_sunsky_image(image4f& img, float sun_angle, float turbidity = 3,
-                       bool has_sun = false, float sun_intensity = 1.0f,
-                       float        sun_temperature = 0,
-                       const vec3f& ground_albedo   = {0.2f, 0.2f, 0.2f});
+    bool has_sun = false, float sun_intensity = 1.0f, float sun_temperature = 0,
+    const vec3f& ground_albedo = {0.2f, 0.2f, 0.2f});
 // Make an image of multiple lights.
 void make_lights_image(image4f& img, const vec3f& le = {1, 1, 1},
-                       int nlights = 4, float langle = pif / 4,
-                       float lwidth = pif / 16, float lheight = pif / 16);
+    int nlights = 4, float langle = pif / 4, float lwidth = pif / 16,
+    float lheight = pif / 16);
 
 // Make a noise image. Wrap works only if both resx and resy are powers of two.
 void make_noise_image(image4f& img, float scale = 1, bool wrap = true);
 void make_fbm_image(image4f& img, float scale = 1, float lacunarity = 2,
-                    float gain = 0.5f, int octaves = 6, bool wrap = true);
+    float gain = 0.5f, int octaves = 6, bool wrap = true);
 void make_ridge_image(image4f& img, float scale = 1, float lacunarity = 2,
-                      float gain = 0.5f, float offset = 1.0f, int octaves = 6,
-                      bool wrap = true);
+    float gain = 0.5f, float offset = 1.0f, int octaves = 6, bool wrap = true);
 void make_turbulence_image(image4f& img, float scale = 1, float lacunarity = 2,
-                           float gain = 0.5f, int octaves = 6,
-                           bool wrap = true);
+    float gain = 0.5f, int octaves = 6, bool wrap = true);
 
 // Add a border to an image
 void add_image_border(image4f& img, int border_width = 2,
-                      const vec4f& border_color = {0, 0, 0, 1});
+    const vec4f& border_color = {0, 0, 0, 1});
 
 }  // namespace yocto
 
@@ -257,7 +253,7 @@ struct volume {
     volume(const vec3i& size, const T* value)
         : _size{size}
         , _voxels(value,
-                  value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
+              value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
 
     // size
     bool  empty() const { return _voxels.empty(); }
@@ -332,15 +328,15 @@ inline vec3f gamma_to_linear(const vec3f& srgb, float gamma) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma)};
 }
 inline vec3f linear_to_gamma(const vec3f& lin, float gamma) {
-    return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma),
-            pow(lin.z, 1 / gamma)};
+    return {
+        pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma)};
 }
 inline vec4f gamma_to_linear(const vec4f& srgb, float gamma) {
     return {pow(srgb.x, gamma), pow(srgb.y, gamma), pow(srgb.z, gamma), srgb.w};
 }
 inline vec4f linear_to_gamma(const vec4f& lin, float gamma) {
     return {pow(lin.x, 1 / gamma), pow(lin.y, 1 / gamma), pow(lin.z, 1 / gamma),
-            lin.w};
+        lin.w};
 }
 
 // sRGB non-linear curve
@@ -361,20 +357,20 @@ inline float linear_to_srgb(float lin) {
 
 // Conversion between linear and srgb colors.
 inline vec3f srgb_to_linear(const vec3f& srgb) {
-    return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-            srgb_to_linear(srgb.z)};
+    return {
+        srgb_to_linear(srgb.x), srgb_to_linear(srgb.y), srgb_to_linear(srgb.z)};
 }
 inline vec3f linear_to_srgb(const vec3f& lin) {
-    return {linear_to_srgb(lin.x), linear_to_srgb(lin.y),
-            linear_to_srgb(lin.z)};
+    return {
+        linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z)};
 }
 inline vec4f srgb_to_linear(const vec4f& srgb) {
     return {srgb_to_linear(srgb.x), srgb_to_linear(srgb.y),
-            srgb_to_linear(srgb.z), srgb.w};
+        srgb_to_linear(srgb.z), srgb.w};
 }
 inline vec4f linear_to_srgb(const vec4f& lin) {
     return {linear_to_srgb(lin.x), linear_to_srgb(lin.y), linear_to_srgb(lin.z),
-            lin.w};
+        lin.w};
 }
 
 // Approximate luminance estimate for sRGB primaries (better relative luminance)
@@ -395,13 +391,13 @@ inline float tonemap_filmic(float hdr) {
 // Apply ACES fitted curve.
 inline vec4f tonemap_filmic(const vec4f& hdr) {
     return {tonemap_filmic(hdr.x), tonemap_filmic(hdr.y), tonemap_filmic(hdr.z),
-            hdr.w};
+        hdr.w};
 }
 
 // Tonemap a color value according to an exposure-gamma tone mapper, with
 // an optional filmic curve.
-inline vec4f tonemap_filmic(const vec4f& hdr, float exposure, bool filmic,
-                            bool srgb) {
+inline vec4f tonemap_filmic(
+    const vec4f& hdr, float exposure, bool filmic, bool srgb) {
     auto scale = pow(2.0f, exposure);
     auto ldr   = vec4f{hdr.x * scale, hdr.y * scale, hdr.z * scale, hdr.w};
     if (filmic) ldr = tonemap_filmic(ldr);
@@ -413,7 +409,7 @@ inline vec4f tonemap_filmic(const vec4f& hdr, float exposure, bool filmic,
 inline vec3f xyz_to_xyY(const vec3f& xyz) {
     if (xyz == zero3f) return zero3f;
     return {xyz.x / (xyz.x + xyz.y + xyz.z), xyz.y / (xyz.x + xyz.y + xyz.z),
-            xyz.y};
+        xyz.y};
 }
 // Convert between CIE XYZ and xyY
 inline vec3f xyY_to_xyz(const vec3f& xyY) {
@@ -561,8 +557,8 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
     }
 
     float chroma = r - (g < b ? g : b);
-    return {fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f),
-            r};
+    return {
+        fabsf(K + (g - b) / (6.f * chroma + 1e-20f)), chroma / (r + 1e-20f), r};
 }
 
 }  // namespace yocto
@@ -574,8 +570,8 @@ namespace yocto {
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(image<T>& clipped, const image<T>& img,
-                             const bbox2i& region) {
+inline void get_image_region(
+    image<T>& clipped, const image<T>& img, const bbox2i& region) {
     clipped.resize(region.size());
     for (auto j = 0; j < region.size().y; j++) {
         for (auto i = 0; i < region.size().x; i++) {
@@ -586,13 +582,12 @@ inline void get_image_region(image<T>& clipped, const image<T>& img,
 
 // Splits an image into an array of regions
 inline void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
-                               int region_size, bool shuffled) {
+    int region_size, bool shuffled) {
     regions.clear();
     for (auto y = 0; y < size.y; y += region_size) {
         for (auto x = 0; x < size.x; x += region_size) {
-            regions.push_back(
-                {{x, y},
-                 {min(x + region_size, size.x), min(y + region_size, size.y)}});
+            regions.push_back({{x, y},
+                {min(x + region_size, size.x), min(y + region_size, size.y)}});
         }
     }
     if (shuffled) {

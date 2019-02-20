@@ -71,8 +71,7 @@ void load_image_from_memory(const byte* data, int data_size, image4b& img);
 // Convenience helper that saves an HDR images as wither a linear HDR file or
 // a tonemapped LDR file depending on file name
 void save_tonemapped_image(const string& filename, const image4f& hdr,
-                           float exposure = 0, bool filmic = false,
-                           bool srgb = true);
+    float exposure = 0, bool filmic = false, bool srgb = true);
 
 }  // namespace yocto
 

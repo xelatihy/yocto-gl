@@ -108,8 +108,8 @@ void float_to_byte(image4b& bt, const image4f& fl) {
 }
 
 // Tonemap image
-void tonemap_image(image4f& ldr, const image4f& hdr, float exposure,
-                   bool filmic, bool srgb) {
+void tonemap_image(
+    image4f& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb) {
     if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
@@ -117,8 +117,8 @@ void tonemap_image(image4f& ldr, const image4f& hdr, float exposure,
         }
     }
 }
-void tonemap_image(image4b& ldr, const image4f& hdr, float exposure,
-                   bool filmic, bool srgb) {
+void tonemap_image(
+    image4b& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb) {
     if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
@@ -130,8 +130,7 @@ void tonemap_image(image4b& ldr, const image4f& hdr, float exposure,
 
 // Tonemap image
 void tonemap_image_region(image4f& ldr, const bbox2i& region,
-                          const image4f& hdr, float exposure, bool filmic,
-                          bool srgb) {
+    const image4f& hdr, float exposure, bool filmic, bool srgb) {
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {
             ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
@@ -147,8 +146,8 @@ void tonemap_image_region(image4f& ldr, const bbox2i& region,
 namespace yocto {
 
 // Make a grid image
-void make_grid_image(image4f& img, int tiles, const vec4f& c0,
-                     const vec4f& c1) {
+void make_grid_image(
+    image4f& img, int tiles, const vec4f& c0, const vec4f& c1) {
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -160,8 +159,8 @@ void make_grid_image(image4f& img, int tiles, const vec4f& c0,
 }
 
 // Make a checkerboard image
-void make_checker_image(image4f& img, int tiles, const vec4f& c0,
-                        const vec4f& c1) {
+void make_checker_image(
+    image4f& img, int tiles, const vec4f& c0, const vec4f& c1) {
     auto tile = img.size().x / tiles;
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
@@ -217,7 +216,7 @@ void make_uvramp_image(image4f& img) {
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             img[{i, j}] = {i / (float)(img.size().x - 1),
-                           j / (float)(img.size().y - 1), 0, 1};
+                j / (float)(img.size().y - 1), 0, 1};
         }
     }
 }
@@ -249,8 +248,8 @@ void make_uvgrid_image(image4f& img, int tiles, bool colored) {
 }
 
 // Makes a blackbody ramp
-void make_blackbodyramp_image(image4f& img, float start_temperature,
-                              float end_temperature) {
+void make_blackbodyramp_image(
+    image4f& img, float start_temperature, float end_temperature) {
     for (int j = 0; j < img.size().y; j++) {
         for (int i = 0; i < img.size().x; i++) {
             auto temperature = start_temperature +
@@ -275,11 +274,11 @@ void bump_to_normal_map(image4f& norm, const image4f& img, float scale) {
         for (int i = 0; i < img.size().x; i++) {
             auto i1 = (i + 1) % img.size().x, j1 = (j + 1) % img.size().y;
             auto p00 = img[{i, j}], p10 = img[{i1, j}], p01 = img[{i, j1}];
-            auto g00 = (p00.x + p00.y + p00.z) / 3;
-            auto g01 = (p01.x + p01.y + p01.z) / 3;
-            auto g10 = (p10.x + p10.y + p10.z) / 3;
-            auto normal =
-                vec3f{scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
+            auto g00    = (p00.x + p00.y + p00.z) / 3;
+            auto g01    = (p01.x + p01.y + p01.z) / 3;
+            auto g10    = (p10.x + p10.y + p10.z) / 3;
+            auto normal = vec3f{
+                scale * (g00 - g10) / dx, scale * (g00 - g01) / dy, 1.0f};
             normal.y = -normal.y;  // make green pointing up, even if y axis
                                    // points down
             normal       = normalize(normal) * 0.5f + vec3f{0.5f, 0.5f, 0.5f};
@@ -292,8 +291,8 @@ void bump_to_normal_map(image4f& norm, const image4f& img, float scale) {
 
 // Implementation of sunsky modified heavily from pbrt
 void make_sunsky_image(image4f& img, float theta_sun, float turbidity,
-                       bool has_sun, float sun_intensity, float sun_temperature,
-                       const vec3f& ground_albedo) {
+    bool has_sun, float sun_intensity, float sun_temperature,
+    const vec3f& ground_albedo) {
     // idea adapted from pbrt
 
     // initialize model
@@ -323,18 +322,18 @@ void make_sunsky_image(image4f& img, float theta_sun, float turbidity,
         auto theta = (j + 0.5f) * pif / img.size().y;
         if (theta > pif / 2) continue;
         for (auto i = 0; i < img.size().x; i++) {
-            auto phi = (i + 0.5f) * 2 * pif / img.size().x;
-            auto direction =
-                vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
-            auto gamma =
-                acos(clamp(dot(direction, sun_direction), -1.0f, 1.0f));
+            auto phi       = (i + 0.5f) * 2 * pif / img.size().x;
+            auto direction = vec3f{
+                cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+            auto gamma = acos(
+                clamp(dot(direction, sun_direction), -1.0f, 1.0f));
             for (int c = 0; c < 9; ++c) {
                 auto val =
                     (has_sun)
                         ? arhosekskymodel_solar_radiance(
                               skymodel_state[c], theta, gamma, wavelengths[c])
-                        : arhosekskymodel_radiance(skymodel_state[c], theta,
-                                                   gamma, wavelengths[c]);
+                        : arhosekskymodel_radiance(
+                              skymodel_state[c], theta, gamma, wavelengths[c]);
                 // average channel over wavelengths
                 img[{i, j}][c / 3] += (float)val / 3;
             }
@@ -359,62 +358,58 @@ void make_sunsky_image(image4f& img, float theta_sun, float turbidity,
 
 // Implementation of sunsky modified heavily from pbrt
 image4f make_sunsky_image(int width, int height, float theta_sun,
-                          float turbidity, bool has_sun, float sun_angle_scale,
-                          float sun_emission_scale, const vec3f& ground_albedo,
-                          bool renormalize_sun) {
+    float turbidity, bool has_sun, float sun_angle_scale,
+    float sun_emission_scale, const vec3f& ground_albedo,
+    bool renormalize_sun) {
     auto zenith_xyY = vec3f{
         (+0.00165f * pow(theta_sun, 3.f) - 0.00374f * pow(theta_sun, 2.f) +
-         0.00208f * theta_sun + 0) *
+            0.00208f * theta_sun + 0) *
                 pow(turbidity, 2.f) +
             (-0.02902f * pow(theta_sun, 3.f) + 0.06377f * pow(theta_sun, 2.f) -
-             0.03202f * theta_sun + 0.00394f) *
+                0.03202f * theta_sun + 0.00394f) *
                 turbidity +
             (+0.11693f * pow(theta_sun, 3.f) - 0.21196f * pow(theta_sun, 2.f) +
-             0.06052f * theta_sun + 0.25885f),
+                0.06052f * theta_sun + 0.25885f),
         (+0.00275f * pow(theta_sun, 3.f) - 0.00610f * pow(theta_sun, 2.f) +
-         0.00316f * theta_sun + 0) *
+            0.00316f * theta_sun + 0) *
                 pow(turbidity, 2.f) +
             (-0.04214f * pow(theta_sun, 3.f) + 0.08970f * pow(theta_sun, 2.f) -
-             0.04153f * theta_sun + 0.00515f) *
+                0.04153f * theta_sun + 0.00515f) *
                 turbidity +
             (+0.15346f * pow(theta_sun, 3.f) - 0.26756f * pow(theta_sun, 2.f) +
-             0.06669f * theta_sun + 0.26688f),
+                0.06669f * theta_sun + 0.26688f),
         1000 * (4.0453f * turbidity - 4.9710f) *
                 tan((4.0f / 9.0f - turbidity / 120.0f) *
                     (pif - 2 * theta_sun)) -
             .2155f * turbidity + 2.4192f};
 
     auto perez_A_xyY = vec3f{-0.01925f * turbidity - 0.25922f,
-                             -0.01669f * turbidity - 0.26078f,
-                             +0.17872f * turbidity - 1.46303f};
+        -0.01669f * turbidity - 0.26078f, +0.17872f * turbidity - 1.46303f};
     auto perez_B_xyY = vec3f{-0.06651f * turbidity + 0.00081f,
-                             -0.09495f * turbidity + 0.00921f,
-                             -0.35540f * turbidity + 0.42749f};
+        -0.09495f * turbidity + 0.00921f, -0.35540f * turbidity + 0.42749f};
     auto perez_C_xyY = vec3f{-0.00041f * turbidity + 0.21247f,
-                             -0.00792f * turbidity + 0.21023f,
-                             -0.02266f * turbidity + 5.32505f};
+        -0.00792f * turbidity + 0.21023f, -0.02266f * turbidity + 5.32505f};
     auto perez_D_xyY = vec3f{-0.06409f * turbidity - 0.89887f,
-                             -0.04405f * turbidity - 1.65369f,
-                             +0.12064f * turbidity - 2.57705f};
+        -0.04405f * turbidity - 1.65369f, +0.12064f * turbidity - 2.57705f};
     auto perez_E_xyY = vec3f{-0.00325f * turbidity + 0.04517f,
-                             -0.01092f * turbidity + 0.05291f,
-                             -0.06696f * turbidity + 0.37027f};
+        -0.01092f * turbidity + 0.05291f, -0.06696f * turbidity + 0.37027f};
 
     auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
-                      float gamma, float theta_sun, vec3f zenith) -> vec3f {
-        auto den = ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
-                                        E * cos(theta_sun) * cos(theta_sun)));
+                       float gamma, float theta_sun, vec3f zenith) -> vec3f {
+        auto den =
+            ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
+                                    E * cos(theta_sun) * cos(theta_sun)));
         auto num = ((1 + A * exp(B / cos(theta))) *
                     (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
         return zenith * num / den;
     };
 
     auto sky = [&perez_f, perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
-                perez_E_xyY, zenith_xyY](float theta, float gamma,
-                                         float theta_sun) -> vec3f {
+                   perez_E_xyY, zenith_xyY](
+                   float theta, float gamma, float theta_sun) -> vec3f {
         return xyz_to_rgb(xyY_to_xyz(
                    perez_f(perez_A_xyY, perez_B_xyY, perez_C_xyY, perez_D_xyY,
-                           perez_E_xyY, theta, gamma, theta_sun, zenith_xyY))) /
+                       perez_E_xyY, theta, gamma, theta_sun, zenith_xyY))) /
                10000;
     };
 
@@ -432,8 +427,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
     auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda / 1000, -4.08f));
     auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, -1.3f));
     auto tauO = exp(-sun_m * sun_ko * .35f);
-    auto tauG =
-        exp(-1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
+    auto tauG = exp(
+        -1.41f * sun_kg * sun_m / pow(1 + 118.93f * sun_kg * sun_m, 0.45f));
     auto tauWA  = exp(-0.2385f * sun_kwa * 2.0f * sun_m /
                      pow(1 + 20.07f * sun_kwa * 2.0f * sun_m, 0.45f));
     auto sun_le = sun_sol * tauR * tauA * tauO * tauG * tauWA;
@@ -465,8 +460,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
         theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
         for (int i = 0; i < img.size().x; i++) {
             auto phi = 2 * pif * (float(i + 0.5f) / img.size().x);
-            auto w =
-                vec3f{cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
+            auto w   = vec3f{
+                cos(phi) * sin(theta), cos(theta), sin(phi) * sin(theta)};
             auto gamma   = acos(clamp(dot(w, sun_direction), -1.0f, 1.0f));
             auto sky_col = sky(theta, gamma, theta_sun);
             auto sun_col = sun(theta, gamma);
@@ -510,7 +505,7 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
 
 // Make an image of multiple lights.
 void make_lights_image(image4f& img, const vec3f& le, int nlights, float langle,
-                       float lwidth, float lheight) {
+    float lwidth, float lheight) {
     for (auto j = 0; j < img.size().y / 2; j++) {
         auto theta = pif * ((j + 0.5f) / img.size().y);
         theta      = clamp(theta, 0.0f, pif / 2 - float_epsilon);
@@ -544,7 +539,7 @@ void make_noise_image(image4f& img, float scale, bool wrap) {
 
 // Make a noise image. Wrap works only if size is a power of two.
 void make_fbm_image(image4f& img, float scale, float lacunarity, float gain,
-                    int octaves, bool wrap) {
+    int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
@@ -560,16 +555,16 @@ void make_fbm_image(image4f& img, float scale, float lacunarity, float gain,
 
 // Make a noise image. Wrap works only if size is a power of two.
 void make_ridge_image(image4f& img, float scale, float lacunarity, float gain,
-                      float offset, int octaves, bool wrap) {
+    float offset, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
             auto p =
                 vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
                 scale;
-            auto g = perlin_ridge_noise(p, lacunarity, gain, offset, octaves,
-                                        wrap3i);
-            g      = clamp(g, 0.0f, 1.0f);
+            auto g = perlin_ridge_noise(
+                p, lacunarity, gain, offset, octaves, wrap3i);
+            g           = clamp(g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
         }
     }
@@ -577,15 +572,15 @@ void make_ridge_image(image4f& img, float scale, float lacunarity, float gain,
 
 // Make a noise image. Wrap works only if size is a power of two.
 void make_turbulence_image(image4f& img, float scale, float lacunarity,
-                           float gain, int octaves, bool wrap) {
+    float gain, int octaves, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
             auto p =
                 vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
                 scale;
-            auto g =
-                perlin_turbulence_noise(p, lacunarity, gain, octaves, wrap3i);
+            auto g = perlin_turbulence_noise(
+                p, lacunarity, gain, octaves, wrap3i);
             g           = clamp(g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
         }
@@ -593,8 +588,8 @@ void make_turbulence_image(image4f& img, float scale, float lacunarity,
 }
 
 // Add a border to an image
-void add_image_border(image4f& img, int border_width,
-                      const vec4f& border_color) {
+void add_image_border(
+    image4f& img, int border_width, const vec4f& border_color) {
     for (auto j = 0; j < img.size().y; j++) {
         for (auto b = 0; b < border_width; b++) {
             img[{b, j}]                    = border_color;
@@ -622,10 +617,10 @@ void make_test_volume(volume1f& vol, float scale, float exponent) {
         for (auto j = 0; j < vol.size().y; j++) {
             for (auto i = 0; i < vol.size().x; i++) {
                 auto p = vec3f{i / (float)vol.size().x, j / (float)vol.size().y,
-                               k / (float)vol.size().z};
-                auto value =
-                    pow(max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
-                        exponent);
+                    k / (float)vol.size().z};
+                auto value = pow(
+                    max(max(cos(scale * p.x), cos(scale * p.y)), 0.0f),
+                    exponent);
                 vol[{i, j, k}] = clamp(value, 0.0f, 1.0f);
             }
         }
