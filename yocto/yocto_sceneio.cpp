@@ -110,19 +110,20 @@ inline string_view_stream& operator>>(
 // normalize obj line for simpler parsing
 inline void normalize_obj_line(char* str, char comment_char = '#') {
     auto has_content = false;
-    auto start = str;
-    while(*str) {
-        if(*str == comment_char) {
+    auto start       = str;
+    while (*str) {
+        if (*str == comment_char) {
             *str = 0;
             break;
-        } else if(*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') {
+        } else if (*str == ' ' || *str == '\t' || *str == '\r' ||
+                   *str == '\n') {
             *str = ' ';
         } else {
             has_content = true;
         }
         str++;
     }
-    if(!has_content) *start = 0;
+    if (!has_content) *start = 0;
 }
 
 // Parse values from a string
@@ -145,22 +146,22 @@ inline void parse_value(char*& str, float& value) {
 }
 inline void parse_value(char*& str, string& value, bool ok_if_empty = false) {
     value = "";
-    while(*str == ' ') str++;
-    if(!*str && !ok_if_empty) {
+    while (*str == ' ') str++;
+    if (!*str && !ok_if_empty) {
         throw io_error("cannot parse value");
     }
-    while(*str && *str != ' ') {
+    while (*str && *str != ' ') {
         value += *str;
         str++;
     }
 }
-template<typename T, int N>
+template <typename T, int N>
 inline void parse_value(char*& str, vec<T, N>& value) {
-    for(auto i = 0; i < N; i ++) parse_value(str, value[i]);
+    for (auto i = 0; i < N; i++) parse_value(str, value[i]);
 }
-template<typename T, int N>
+template <typename T, int N>
 inline void parse_value(char*& str, frame<T, N>& value) {
-    for(auto i = 0; i < N+1; i ++) parse_value(str, value[i]);
+    for (auto i = 0; i < N + 1; i++) parse_value(str, value[i]);
 }
 
 }  // namespace yocto
@@ -1638,7 +1639,7 @@ inline void parse_value(char*& str, obj_vertex& value) {
     if (*str == '/') {
         str++;
         if (*str == '/') {
-            str ++;
+            str++;
             parse_value(str, value.normal);
         } else {
             parse_value(str, value.texturecoord);
@@ -1693,7 +1694,7 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
         // line
         auto line = buffer;
         normalize_obj_line(line);
-        if(!*line) continue;
+        if (!*line) continue;
 
         // get command
         auto cmd = ""s;
@@ -1783,7 +1784,7 @@ void load_objx(const string& filename, const obj_callbacks& cb,
         // line
         auto line = buffer;
         normalize_obj_line(line);
-        if(!*line) continue;
+        if (!*line) continue;
 
         // get command
         auto cmd = ""s;
@@ -1841,7 +1842,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
         // line
         auto line = buffer;
         normalize_obj_line(line);
-        if(!*line) continue;
+        if (!*line) continue;
 
         // get command
         auto cmd = ""s;
@@ -1867,7 +1868,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
-            while(*line == ' ') line++;
+            while (*line == ' ') line++;
             while (*line) {
                 auto vert = obj_vertex{};
                 parse_value(line, vert);
@@ -1880,7 +1881,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
                 if (vert.normal < 0)
                     vert.normal = vert_size.normal + vert.normal + 1;
                 verts.push_back(vert);
-                while(*line == ' ') line++;
+                while (*line == ' ') line++;
             }
             if (cmd == "f" && cb.face) cb.face(verts);
             if (cmd == "l" && cb.line) cb.line(verts);
@@ -1923,8 +1924,525 @@ void load_obj(const string& filename, const obj_callbacks& cb,
     }
 }
 
+// Parse obj texture
+void parse_obj_texture(char*& str, int& texture_id, yocto_scene& scene) {
+    auto info = obj_texture_info{};
+    parse_value(str, info);
+    for (texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
+        if (scene.textures[texture_id].filename == info.path) return;
+    }
+    scene.textures.push_back({});
+    auto& texture         = scene.textures.back();
+    texture.name          = info.path;
+    texture.filename      = info.path;
+    texture.clamp_to_edge = info.clamp;
+}
+void parse_obj_voltexture(char*& str, int& texture_id, yocto_scene& scene) {
+    auto info = obj_texture_info{};
+    parse_value(str, info);
+    for (texture_id = 0; texture_id < scene.voltextures.size(); texture_id++) {
+        if (scene.voltextures[texture_id].filename == info.path) return;
+    }
+    scene.voltextures.push_back({});
+    auto& texture         = scene.voltextures.back();
+    texture.name          = info.path;
+    texture.filename      = info.path;
+    texture.clamp_to_edge = info.clamp;
+}
+
+// Get material index
+void set_obj_material(
+    const string& name, int& material_id, const yocto_scene& scene) {
+    for (material_id = 0; material_id < scene.materials.size(); material_id++) {
+        if (scene.materials[material_id].name == name) return;
+    }
+    throw io_error("unknown material " + name);
+}
+
+// Load obj materials
+void load_mtl(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
+    // open file
+    auto fs = input_file(filename);
+    
+    // options
+    auto flip_tr = true;
+
+    // currently parsed material
+    auto material = yocto_material();
+    auto first    = true;
+
+    // read the file line by line
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
+        // line
+        auto line = buffer;
+        normalize_obj_line(line);
+        if (!*line) continue;
+
+        // get command
+        auto cmd = ""s;
+        parse_value(line, cmd);
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "newmtl") {
+            if (!first) scene.materials.push_back(material);
+            first    = false;
+            material = yocto_material{};
+            parse_value(line, material.name);
+        } else if (cmd == "illum") {
+        } else if (cmd == "Ke") {
+            parse_value(line, material.emission);
+        } else if (cmd == "Kd") {
+            parse_value(line, material.diffuse);
+        } else if (cmd == "Ks") {
+            parse_value(line, material.specular);
+        } else if (cmd == "Kt") {
+            parse_value(line, material.transmission);
+        } else if (cmd == "Tf") {
+            parse_value(line, material.transmission);
+            if (flip_tr)
+                material.transmission = 1 - material.transmission;
+        } else if (cmd == "Tr") {
+            parse_value(line, material.opacity);
+            if (flip_tr) material.opacity = 1 - material.opacity;
+        } else if (cmd == "Ns") {
+            parse_value(line, material.roughness);
+            material.roughness = pow(2 / (material.roughness + 2), 1 / 4.0f);
+            if (material.roughness < 0.01f) material.roughness = 0;
+            if (material.roughness > 0.99f) material.roughness = 1;
+        } else if (cmd == "d") {
+            parse_value(line, material.opacity);
+        } else if (cmd == "Pr" || cmd == "rs") {
+            parse_value(line, material.roughness);
+        } else if (cmd == "map_Ke") {
+            parse_obj_texture(line, material.emission_texture, scene);
+        } else if (cmd == "map_Kd") {
+            parse_obj_texture(line, material.diffuse_texture, scene);
+        } else if (cmd == "map_Ks") {
+            parse_obj_texture(line, material.specular_texture, scene);
+        } else if (cmd == "map_Tr") {
+            parse_obj_texture(line, material.transmission_texture, scene);
+        } else if (cmd == "map_d" || cmd == "map_Tr") {
+            parse_obj_texture(line, material.opacity_texture, scene);
+        } else if (cmd == "map_Pr" || cmd == "map_rs") {
+            parse_obj_texture(line, material.roughness_texture, scene);
+        } else if (cmd == "map_occ" || cmd == "occ") {
+            parse_obj_texture(line, material.occlusion_texture, scene);
+        } else if (cmd == "map_bump" || cmd == "bump") {
+            parse_obj_texture(line, material.bump_texture, scene);
+        } else if (cmd == "map_disp" || cmd == "disp") {
+            parse_obj_texture(line, material.displacement_texture, scene);
+        } else if (cmd == "map_norm" || cmd == "norm") {
+            parse_obj_texture(line, material.normal_texture, scene);
+        } else if (cmd == "Ve") {
+            parse_value(line, material.volume_emission);
+        } else if (cmd == "Va") {
+            parse_value(line, material.volume_albedo);
+        } else if (cmd == "Vd") {
+            parse_value(line, material.volume_density);
+        } else if (cmd == "Vg") {
+            parse_value(line, material.volume_phaseg);
+        } else if (cmd == "map_Vd") {
+            parse_obj_texture(line, material.volume_density_texture, scene);
+        }
+    }
+
+    // issue current material
+    if (!first) scene.materials.push_back(material);
+}
+
+// Load obj extensions
+void load_objx(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
+    // open file
+    auto fs = input_file(filename);
+
+    // read the file line by line
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
+        // line
+        auto line = buffer;
+        normalize_obj_line(line);
+        if (!*line) continue;
+
+        // get command
+        auto cmd = ""s;
+        parse_value(line, cmd);
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "c") {
+            auto camera = yocto_camera();
+            parse_value(line, camera.name);
+            parse_value(line, camera.orthographic);
+            parse_value(line, camera.film_width);
+            parse_value(line, camera.film_height);
+            parse_value(line, camera.focal_length);
+            parse_value(line, camera.focus_distance);
+            parse_value(line, camera.lens_aperture);
+            parse_value(line, camera.frame);
+            scene.cameras.push_back(camera);
+        } else if (cmd == "e") {
+            auto environment = yocto_environment();
+            parse_value(line, environment.name);
+            parse_value(line, environment.emission);
+            auto texture_path = ""s;
+            parse_value(line, texture_path);
+            parse_value(line, environment.frame);
+            if (texture_path != "\"\"") {
+                auto str = (char*)texture_path.c_str();
+                parse_obj_texture(str, environment.emission_texture, scene);
+            }
+            scene.environments.push_back(environment);
+        } else if (cmd == "po") {
+            auto name = ""s, type = ""s, material = ""s;
+            auto frame = identity_frame3f;
+            auto size  = 1.0f;
+            auto level = 0;
+            parse_value(line, name);
+            parse_value(line, type);
+            parse_value(line, material);
+            parse_value(line, size);
+            parse_value(line, level);
+            parse_value(line, frame);
+            auto shape = yocto_shape{};
+            shape.name = name;
+            set_obj_material(material, shape.material, scene);
+            if (type == "floor") {
+                make_floor_shape(shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords,
+                    {level < 0 ? 1 : pow2(level), level < 0 ? 20 : pow2(level)},
+                    {size, size}, {size / 2, size / 2});
+            } else {
+                throw io_error("unknown obj procedural " + type);
+            }
+            scene.shapes.push_back(shape);
+            auto instance  = yocto_instance{};
+            instance.name  = name;
+            instance.frame = frame;
+            instance.shape = (int)scene.shapes.size() - 1;
+            scene.instances.push_back(instance);
+        } else {
+            // unused
+        }
+    }
+}
+
+// Load obj scene
+void load_obj(const string& filename, yocto_scene& scene,
+    const load_scene_options& options) {
+    // open file
+    auto fs = input_file(filename);
+
+    // options
+    auto flip_texcoord = true;
+    
+    // splitting policy
+    auto split_material        = options.obj_split_shapes;
+    auto split_group           = options.obj_split_shapes;
+    auto split_smoothing       = false;
+    auto preserve_face_varying = options.obj_preserve_face_varying;
+
+    // current parsing values
+    auto matname   = string();
+    auto oname     = string();
+    auto gname     = string();
+    auto smoothing = true;
+
+    // vertices
+    auto opos      = deque<vec3f>();
+    auto onorm     = deque<vec3f>();
+    auto otexcoord = deque<vec2f>();
+
+    // vertex maps
+    auto vertex_map   = unordered_map<obj_vertex, int, obj_vertex_hash>();
+    auto pos_map      = unordered_map<int, int>();
+    auto norm_map     = unordered_map<int, int>();
+    auto texcoord_map = unordered_map<int, int>();
+
+    // track vertex size
+    auto vert_size = obj_vertex();
+    auto verts     = vector<obj_vertex>();  // buffer to avoid reallocation
+
+    // read the file line by line
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
+        // line
+        auto line = buffer;
+        normalize_obj_line(line);
+        if (!*line) continue;
+
+        // get command
+        auto cmd = ""s;
+        parse_value(line, cmd);
+        if (cmd == "") continue;
+
+        // possible token values
+        if (cmd == "v") {
+            auto vert = zero3f;
+            parse_value(line, vert);
+            opos.push_back(vert);
+            vert_size.position += 1;
+        } else if (cmd == "vn") {
+            auto vert = zero3f;
+            parse_value(line, vert);
+            onorm.push_back(vert);
+            vert_size.normal += 1;
+        } else if (cmd == "vt") {
+            auto vert = zero2f;
+            parse_value(line, vert);
+            if (flip_texcoord) vert.y = 1 - vert.y;
+            otexcoord.push_back(vert);
+            vert_size.texturecoord += 1;
+        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
+            if (empty(scene.instances) ||
+                (cmd == "l" && scene.instances.back().surface >= 0) ||
+                (cmd == "p" && scene.instances.back().surface >= 0)) {
+                auto instance = yocto_instance();
+                instance.name = !empty(oname) ? oname : gname;
+                scene.instances.push_back(instance);
+                vertex_map.clear();
+                pos_map.clear();
+                norm_map.clear();
+                texcoord_map.clear();
+            }
+            if (scene.instances.back().shape < 0 &&
+                scene.instances.back().surface < 0) {
+                if (cmd == "f" &&
+                    (preserve_face_varying ||
+                        scene.instances.back().name.find(
+                            "[yocto::facevarying]") != string::npos)) {
+                    scene.surfaces.push_back({});
+                    scene.surfaces.back().name = scene.instances.back().name;
+                    scene.surfaces.back().materials.push_back(-1);
+                    set_obj_material(matname, scene.surfaces.back().materials.back(), scene);
+                    scene.instances.back().surface = (int)scene.surfaces.size() - 1;
+                } else {
+                    scene.shapes.push_back({});
+                    scene.shapes.back().name     = scene.instances.back().name;
+                    set_obj_material(matname, scene.shapes.back().material, scene);
+                    scene.instances.back().shape = (int)scene.shapes.size() - 1;
+                }
+            }
+            verts.clear();
+            while (*line == ' ') line++;
+            while (*line) {
+                auto vert = obj_vertex{};
+                parse_value(line, vert);
+                if (!vert.position) break;
+                if (vert.position < 0)
+                    vert.position = vert_size.position + vert.position + 1;
+                if (vert.texturecoord < 0)
+                    vert.texturecoord = vert_size.texturecoord +
+                                        vert.texturecoord + 1;
+                if (vert.normal < 0)
+                    vert.normal = vert_size.normal + vert.normal + 1;
+                verts.push_back(vert);
+                while (*line == ' ') line++;
+            }
+            if (scene.instances.back().surface >= 0) {
+                auto& surface = scene.surfaces.back();
+                for (auto& vert : verts) {
+                    if (!vert.position) continue;
+                    auto pos_it = pos_map.find(vert.position);
+                    if (pos_it != pos_map.end()) continue;
+                    auto nverts = (int)surface.positions.size();
+                    pos_map.insert(pos_it, {vert.position, nverts});
+                    surface.positions.push_back(opos.at(vert.position - 1));
+                }
+                for (auto& vert : verts) {
+                    if (!vert.texturecoord) continue;
+                    auto texcoord_it = texcoord_map.find(vert.texturecoord);
+                    if (texcoord_it != texcoord_map.end()) continue;
+                    auto nverts = (int)surface.texturecoords.size();
+                    texcoord_map.insert(
+                        texcoord_it, {vert.texturecoord, nverts});
+                    surface.texturecoords.push_back(
+                        otexcoord.at(vert.texturecoord - 1));
+                }
+                for (auto& vert : verts) {
+                    if (!vert.normal) continue;
+                    auto norm_it = norm_map.find(vert.normal);
+                    if (norm_it != norm_map.end()) continue;
+                    auto nverts = (int)surface.normals.size();
+                    norm_map.insert(norm_it, {vert.normal, nverts});
+                    surface.normals.push_back(onorm.at(vert.normal - 1));
+                }
+            } else {
+                auto& shape = scene.shapes.back();
+                for (auto& vert : verts) {
+                    auto it = vertex_map.find(vert);
+                    if (it != vertex_map.end()) continue;
+                    auto  nverts = (int)shape.positions.size();
+                    vertex_map.insert(it, {vert, nverts});
+                    if (vert.position)
+                        shape.positions.push_back(opos.at(vert.position - 1));
+                    if (vert.texturecoord)
+                        shape.texturecoords.push_back(
+                            otexcoord.at(vert.texturecoord - 1));
+                    if (vert.normal)
+                        shape.normals.push_back(onorm.at(vert.normal - 1));
+                }
+            }
+            if (cmd == "f" && scene.instances.back().surface >= 0) {
+                auto& surface = scene.surfaces.back();
+                if (verts.size() == 4) {
+                    if (verts[0].position) {
+                        surface.quads_positions.push_back(
+                            {pos_map.at(verts[0].position),
+                                pos_map.at(verts[1].position),
+                                pos_map.at(verts[2].position),
+                                pos_map.at(verts[3].position)});
+                    }
+                    if (verts[0].texturecoord) {
+                        surface.quads_texturecoords.push_back(
+                            {texcoord_map.at(verts[0].texturecoord),
+                                texcoord_map.at(verts[1].texturecoord),
+                                texcoord_map.at(verts[2].texturecoord),
+                                texcoord_map.at(verts[3].texturecoord)});
+                    }
+                    if (verts[0].normal) {
+                        surface.quads_normals.push_back(
+                            {norm_map.at(verts[0].normal),
+                                norm_map.at(verts[1].normal),
+                                norm_map.at(verts[2].normal),
+                                norm_map.at(verts[3].normal)});
+                    }
+                } else {
+                    if (verts[0].position) {
+                        for (auto i = 2; i < verts.size(); i++)
+                            surface.quads_positions.push_back(
+                                {pos_map.at(verts[0].position),
+                                    pos_map.at(verts[i - 1].position),
+                                    pos_map.at(verts[i].position),
+                                    pos_map.at(verts[i].position)});
+                    }
+                    if (verts[0].texturecoord) {
+                        for (auto i = 2; i < verts.size(); i++)
+                            surface.quads_texturecoords.push_back(
+                                {texcoord_map.at(verts[0].texturecoord),
+                                    texcoord_map.at(verts[i - 1].texturecoord),
+                                    texcoord_map.at(verts[i].texturecoord),
+                                    texcoord_map.at(verts[i].texturecoord)});
+                    }
+                    if (verts[0].normal) {
+                        for (auto i = 2; i < verts.size(); i++)
+                            surface.quads_normals.push_back(
+                                {norm_map.at(verts[0].normal),
+                                    norm_map.at(verts[i - 1].normal),
+                                    norm_map.at(verts[i].normal),
+                                    norm_map.at(verts[i].normal)});
+                    }
+                }
+            } else if (cmd == "f" && scene.instances.back().surface < 0) {
+                auto& shape = scene.shapes.back();
+                if (verts.size() == 4) {
+                    shape.quads.push_back(
+                        {vertex_map.at(verts[0]), vertex_map.at(verts[1]),
+                            vertex_map.at(verts[2]), vertex_map.at(verts[3])});
+                } else {
+                    for (auto i = 2; i < verts.size(); i++)
+                        shape.triangles.push_back({vertex_map.at(verts[0]),
+                            vertex_map.at(verts[i - 1]),
+                            vertex_map.at(verts[i])});
+                }
+            } else if (cmd == "l") {
+                auto& shape = scene.shapes.back();
+                for (auto i = 1; i < verts.size(); i++)
+                    shape.lines.push_back(
+                        {vertex_map.at(verts[i - 1]), vertex_map.at(verts[i])});
+            } else if (cmd == "p") {
+                auto& shape = scene.shapes.back();
+                for (auto i = 0; i < verts.size(); i++)
+                    shape.points.push_back(vertex_map.at(verts[i]));
+            }
+        } else if (cmd == "o") {
+            oname     = "";
+            gname     = "";
+            matname   = "";
+            smoothing = true;
+            parse_value(line, oname, true);
+            auto instance = yocto_instance();
+            instance.name = !empty(oname) ? oname : gname;
+            scene.instances.push_back(instance);
+            vertex_map.clear();
+            pos_map.clear();
+            norm_map.clear();
+            texcoord_map.clear();
+        } else if (cmd == "g") {
+            parse_value(line, gname, true);
+            if (split_group) {
+                auto instance = yocto_instance();
+                instance.name = !empty(oname) ? oname : gname;
+                scene.instances.push_back(instance);
+                vertex_map.clear();
+                pos_map.clear();
+                norm_map.clear();
+                texcoord_map.clear();
+            }
+        } else if (cmd == "usemtl") {
+            parse_value(line, matname, true);
+            if (split_material) {
+                auto instance = yocto_instance();
+                instance.name = !empty(oname) ? oname : gname;
+                scene.instances.push_back(instance);
+                vertex_map.clear();
+                pos_map.clear();
+                norm_map.clear();
+                texcoord_map.clear();
+            }
+        } else if (cmd == "s") {
+            auto name = ""s;
+            parse_value(line, name, true);
+            smoothing = (name == "on");
+            if (split_smoothing) {
+                auto instance = yocto_instance();
+                instance.name = !empty(oname) ? oname : gname;
+                scene.instances.push_back(instance);
+                vertex_map.clear();
+                pos_map.clear();
+                norm_map.clear();
+                texcoord_map.clear();
+            }
+        } else if (cmd == "mtllib") {
+            auto mtlname = ""s;
+            parse_value(line, mtlname);
+            auto mtlpath = get_dirname(filename) + mtlname;
+            load_mtl(mtlpath, scene, options);
+        } else {
+            // unused
+        }
+    }
+
+    // parse extensions if presents
+    auto extname    = replace_extension(filename, "objx");
+    auto ext_exists = exists_file(extname);
+    if (ext_exists) {
+        load_objx(extname, scene, options);
+    }
+
+    // cleanup empty
+    for (auto idx = 0; idx < scene.instances.size(); idx++) {
+        auto& instance = scene.instances[idx];
+        auto is_empty = true;
+        if (instance.shape >= 0) is_empty = empty(scene.shapes[instance.shape].positions);
+        if (instance.surface >= 0) is_empty = empty(scene.surfaces[instance.surface].positions);
+        if (!is_empty) continue;
+        scene.instances.erase(scene.instances.begin() + idx);
+        idx--;
+    }
+
+    // merging quads and triangles
+    for (auto& shape : scene.shapes) {
+        if (empty(shape.triangles) || empty(shape.quads)) continue;
+        merge_triangles_and_quads(shape.triangles, shape.quads, false);
+    }
+}
+
 // Loads an OBJ
-void load_obj_scene(const string& filename, yocto_scene& scene,
+void load_obj_scene_(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = {};
@@ -2324,6 +2842,29 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
     update_transforms(scene);
 }
 
+void load_obj_scene(const string& filename, yocto_scene& scene,
+                    const load_scene_options& options) {
+    auto scope = log_trace_scoped("loading scene {}", filename);
+    scene      = {};
+    try {
+        // Parse obj
+        load_obj(filename, scene, options);
+        
+        // load textures
+        auto dirname = get_dirname(filename);
+        load_scene_textures(scene, dirname, options);
+    } catch(const std::exception& e) {
+        throw io_error("cannot load scene " + filename + "\n" + e.what());
+    }
+
+    // fix scene
+    scene.name = get_filename(filename);
+    add_missing_cameras(scene);
+    add_missing_materials(scene);
+    add_missing_names(scene);
+    update_transforms(scene);
+}
+    
 void save_mtl(
     const string& filename, const yocto_scene& scene, bool flip_tr = true) {
     // open file
@@ -5512,16 +6053,16 @@ namespace yocto {
 // normalize obj line for simpler parsing
 inline void normalize_ply_line(char* str, char comment_char = '#') {
     auto has_content = false;
-    auto start = str;
-    while(*str) {
-        if(*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') {
+    auto start       = str;
+    while (*str) {
+        if (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') {
             *str = ' ';
         } else {
             has_content = true;
         }
         str++;
     }
-    if(!has_content) *start = 0;
+    if (!has_content) *start = 0;
 }
 
 // Load ply mesh
@@ -5538,8 +6079,8 @@ void load_ply(const string& filename, ply_data& ply) {
     while (read_line(fs, buffer, sizeof(buffer))) {
         auto line = buffer;
         normalize_ply_line(line);
-        if(!*line) continue;
-        auto cmd  = ""s;
+        if (!*line) continue;
+        auto cmd = ""s;
         parse_value(line, cmd);
         if (cmd == "") continue;
         if (cmd == "ply") {
