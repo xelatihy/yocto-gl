@@ -327,6 +327,10 @@ inline bool read_line(input_file& fs, string& str) {
     str = buffer;
     return true;
 }
+inline bool read_line(input_file& fs, char* buffer, size_t size) {
+    if(fgets(buffer, size, fs.file) == nullptr) return false;
+    return true;
+}
 
 }  // namespace yocto
 

@@ -1019,8 +1019,8 @@ struct frame<T, 3> {
         const vec<T, 3>& o)
         : x{x}, y{y}, z{z}, o{o} {}
 
-    vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+    vec<T, 3>&       operator[](int i) { return (&x)[i]; }
+    const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Typedefs

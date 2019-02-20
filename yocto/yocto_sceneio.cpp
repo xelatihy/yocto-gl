@@ -106,134 +106,61 @@ inline string_view_stream& operator>>(
     }
     return stream;
 }
-inline string_view_stream& operator>>(string_view_stream& stream, int& value) {
-    if (!stream) return stream;
+
+// normalize obj line for simpler parsing
+inline void normalize_obj_line(char* str, char comment_char = '#') {
+    auto has_content = false;
+    auto start = str;
+    while(*str) {
+        if(*str == comment_char) {
+            *str = 0;
+            break;
+        } else if(*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') {
+            *str = ' ';
+        } else {
+            has_content = true;
+        }
+        str++;
+    }
+    if(!has_content) *start = 0;
+}
+
+// Parse values from a string
+inline void parse_value(char*& str, int& value) {
     char* end = nullptr;
-    value     = (int)strtol(data(stream.str), &end, 10);
-    if (data(stream.str) == end) return set_error(stream);
-    stream.str.remove_prefix(end - data(stream.str));
-    // auto n = 0;
-    // if (sscanf(str.str, "%d%n", &value, &n) != 1) return false;
-    // str.str += n;
-    return stream;
+    value     = (int)strtol(str, &end, 10);
+    if (str == end) throw io_error("cannot parse value");
+    str = end;
 }
-inline string_view_stream& operator>>(
-    string_view_stream& stream, float& value) {
-    if (!stream) return stream;
+inline void parse_value(char*& str, bool& value) {
+    auto valuei = 0;
+    parse_value(str, valuei);
+    value = (bool)valuei;
+}
+inline void parse_value(char*& str, float& value) {
     char* end = nullptr;
-    value     = strtof(data(stream.str), &end);
-    if (data(stream.str) == end) return set_error(stream);
-    stream.str.remove_prefix(end - data(stream.str));
-    // auto n = 0;
-    // if (sscanf(str.str, "%f%n", &value, &n) != 1) return false;
-    // str.str += n;
-    return stream;
+    value     = strtof(str, &end);
+    if (str == end) throw io_error("cannot parse value");
+    str = end;
 }
-inline string_view_stream& operator>>(
-    string_view_stream& stream, double& value) {
-    if (!stream) return stream;
-    char* end = nullptr;
-    value     = strtod(data(stream.str), &end);
-    if (data(stream.str) == end) return set_error(stream);
-    stream.str.remove_prefix(end - data(stream.str));
-    // auto n = 0;
-    // if (sscanf(str.str, "%lf%n", &value, &n) != 1) return false;
-    // str.str += n;
-    return stream;
+inline void parse_value(char*& str, string& value, bool ok_if_empty = false) {
+    value = "";
+    while(*str == ' ') str++;
+    if(!*str && !ok_if_empty) {
+        throw io_error("cannot parse value");
+    }
+    while(*str && *str != ' ') {
+        value += *str;
+        str++;
+    }
 }
-inline string_view_stream& operator>>(string_view_stream& stream, bool& value) {
-    if (!stream) return stream;
-    auto ivalue = 0;
-    stream >> ivalue;
-    value = (bool)ivalue;
-    return stream;
+template<typename T, int N>
+inline void parse_value(char*& str, vec<T, N>& value) {
+    for(auto i = 0; i < N; i ++) parse_value(str, value[i]);
 }
-
-// Print compound types
-template <typename T, size_t N>
-inline string_view_stream& operator>>(
-    string_view_stream& str, array<T, N>& value) {
-    for (auto i = 0; i < N; i++) str >> value[i];
-    return str;
-}
-
-// Iostream utilities for basic types
-inline string_view_stream& operator>>(string_view_stream& is, vec1f& value) {
-    return is >> value.x;
-}
-inline string_view_stream& operator>>(string_view_stream& is, vec2f& value) {
-    return is >> value.x >> value.y;
-}
-inline string_view_stream& operator>>(string_view_stream& is, vec3f& value) {
-    return is >> value.x >> value.y >> value.z;
-}
-inline string_view_stream& operator>>(string_view_stream& is, vec4f& value) {
-    return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline string_view_stream& operator>>(string_view_stream& is, vec1i& value) {
-    return is >> value.x;
-}
-inline string_view_stream& operator>>(string_view_stream& is, vec2i& value) {
-    return is >> value.x >> value.y;
-}
-inline string_view_stream& operator>>(string_view_stream& is, vec3i& value) {
-    return is >> value.x >> value.y >> value.z;
-}
-inline string_view_stream& operator>>(string_view_stream& is, vec4i& value) {
-    return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline string_view_stream& operator>>(string_view_stream& is, mat2f& value) {
-    return is >> value.x >> value.y;
-}
-inline string_view_stream& operator>>(string_view_stream& is, mat3f& value) {
-    return is >> value.x >> value.y >> value.z;
-}
-inline string_view_stream& operator>>(string_view_stream& is, mat4f& value) {
-    return is >> value.x >> value.y >> value.z >> value.w;
-}
-inline string_view_stream& operator>>(string_view_stream& is, frame2f& value) {
-    return is >> value.x >> value.y >> value.o;
-}
-inline string_view_stream& operator>>(string_view_stream& is, frame3f& value) {
-    return is >> value.x >> value.y >> value.z >> value.o;
-}
-inline string_view_stream& operator>>(string_view_stream& is, ray2f& value) {
-    return is >> value.o >> value.d >> value.tmin >> value.tmax;
-}
-inline string_view_stream& operator>>(string_view_stream& is, ray3f& value) {
-    return is >> value.o >> value.d >> value.tmin >> value.tmax;
-}
-inline string_view_stream& operator>>(string_view_stream& is, bbox1f& value) {
-    return is >> value.min >> value.max;
-}
-inline string_view_stream& operator>>(string_view_stream& is, bbox2f& value) {
-    return is >> value.min >> value.max;
-}
-inline string_view_stream& operator>>(string_view_stream& is, bbox3f& value) {
-    return is >> value.min >> value.max;
-}
-inline string_view_stream& operator>>(string_view_stream& is, bbox4f& value) {
-    return is >> value.min >> value.max;
-}
-
-// parse a value
-template <typename T>
-inline bool parse_value(string_view_stream& stream, T& value) {
-    stream >> value;
-    return (bool)stream;
-}
-
-// Prints a string.
-inline bool parse_next(string_view_stream& str) { return true; }
-template <typename Arg, typename... Args>
-inline bool parse_next(string_view_stream& str, Arg& arg, Args&... args) {
-    if (!parse_value(str, arg)) return false;
-    return parse_next(str, args...);
-}
-
-// Returns trus if this is white space
-inline bool is_whitespace(string_view_stream& str) {
-    return str.str.find_first_not_of(" \t\r\n") == string_view::npos;
+template<typename T, int N>
+inline void parse_value(char*& str, frame<T, N>& value) {
+    for(auto i = 0; i < N+1; i ++) parse_value(str, value[i]);
 }
 
 }  // namespace yocto
@@ -1773,41 +1700,39 @@ struct obj_vertex_hash {
     }
 };
 
-inline string_view_stream& operator>>(
-    string_view_stream& view, obj_vertex& value) {
+inline void parse_value(char*& str, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
-    if (!(parse_value(view, value.position))) return set_error(view);
-    if (view.str.front() == '/') {
-        view.str.remove_prefix(1);
-        if (view.str.front() == '/') {
-            view.str.remove_prefix(1);
-            if (!(parse_value(view, value.normal))) return set_error(view);
+    parse_value(str, value.position);
+    if (*str == '/') {
+        str++;
+        if (*str == '/') {
+            str ++;
+            parse_value(str, value.normal);
         } else {
-            if (!(parse_value(view, value.texturecoord))) return set_error(view);
-            if (view.str.front() == '/') {
-                view.str.remove_prefix(1);
-                if (!(parse_value(view, value.normal))) return set_error(view);
+            parse_value(str, value.texturecoord);
+            if (*str == '/') {
+                str++;
+                parse_value(str, value.normal);
             }
         }
     }
-    return view;
 }
 
 // Input for OBJ textures
-inline string_view_stream& operator>>(
-    string_view_stream& view, obj_texture_info& info) {
+inline void parse_value(char*& str, obj_texture_info& info) {
     // initialize
     info = obj_texture_info();
 
     // get tokens
     auto tokens = vector<string>();
-    while (true) {
+    while (*str == ' ') str++;
+    while (*str) {
         auto token = ""s;
-        parse_value(view, token);
-        if (token == "") break;
+        parse_value(str, token);
         tokens.push_back(token);
+        while (*str == ' ') str++;
     }
-    if (empty(tokens)) return set_error(view);
+    if (empty(tokens)) throw io_error("cannot parse value");
 
     // texture name
     info.path = normalize_path(tokens.back());
@@ -1818,8 +1743,6 @@ inline string_view_stream& operator>>(
         if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
         if (tokens[i] == "-clamp") info.clamp = true;
     }
-
-    return view;
 }
 
 // Load obj materials
@@ -1833,15 +1756,16 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
     auto first    = true;
 
     // read the file line by line
-    auto line = ""s;
-    while (read_line(fs, line)) {
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = string_view_stream{line};
+        auto line = buffer;
+        normalize_obj_line(line);
+        if(!*line) continue;
 
         // get command
         auto cmd = ""s;
-        parse_value(view, cmd);
+        parse_value(line, cmd);
         if (cmd == "") continue;
 
         // possible token values
@@ -1849,65 +1773,65 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
             if (!first && cb.material) cb.material(material);
             first    = false;
             material = obj_material();
-            parse_value(view, material.name);
+            parse_value(line, material.name);
         } else if (cmd == "illum") {
-            parse_value(view, material.illum);
+            parse_value(line, material.illum);
         } else if (cmd == "Ke") {
-            parse_value(view, material.ke);
+            parse_value(line, material.ke);
         } else if (cmd == "Kd") {
-            parse_value(view, material.kd);
+            parse_value(line, material.kd);
         } else if (cmd == "Ks") {
-            parse_value(view, material.ks);
+            parse_value(line, material.ks);
         } else if (cmd == "Kt") {
-            parse_value(view, material.kt);
+            parse_value(line, material.kt);
         } else if (cmd == "Tf") {
             material.kt = {-1, -1, -1};
-            parse_value(view, material.kt);
+            parse_value(line, material.kt);
             if (material.kt.y < 0)
                 material.kt = {material.kt.x, material.kt.x, material.kt.x};
             if (options.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
-            parse_value(view, material.op);
+            parse_value(line, material.op);
             if (options.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
-            parse_value(view, material.ns);
+            parse_value(line, material.ns);
             material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
             if (material.rs < 0.01f) material.rs = 0;
             if (material.rs > 0.99f) material.rs = 1;
         } else if (cmd == "d") {
-            parse_value(view, material.op);
+            parse_value(line, material.op);
         } else if (cmd == "Pr" || cmd == "rs") {
-            parse_value(view, material.rs);
+            parse_value(line, material.rs);
         } else if (cmd == "map_Ke") {
-            parse_value(view, material.ke_txt);
+            parse_value(line, material.ke_txt);
         } else if (cmd == "map_Kd") {
-            parse_value(view, material.kd_txt);
+            parse_value(line, material.kd_txt);
         } else if (cmd == "map_Ks") {
-            parse_value(view, material.ks_txt);
+            parse_value(line, material.ks_txt);
         } else if (cmd == "map_Tr") {
-            parse_value(view, material.kt_txt);
+            parse_value(line, material.kt_txt);
         } else if (cmd == "map_d" || cmd == "map_Tr") {
-            parse_value(view, material.op_txt);
+            parse_value(line, material.op_txt);
         } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            parse_value(view, material.rs_txt);
+            parse_value(line, material.rs_txt);
         } else if (cmd == "map_occ" || cmd == "occ") {
-            parse_value(view, material.occ_txt);
+            parse_value(line, material.occ_txt);
         } else if (cmd == "map_bump" || cmd == "bump") {
-            parse_value(view, material.bump_txt);
+            parse_value(line, material.bump_txt);
         } else if (cmd == "map_disp" || cmd == "disp") {
-            parse_value(view, material.disp_txt);
+            parse_value(line, material.disp_txt);
         } else if (cmd == "map_norm" || cmd == "norm") {
-            parse_value(view, material.norm_txt);
+            parse_value(line, material.norm_txt);
         } else if (cmd == "Ve") {
-            parse_value(view, material.ve);
+            parse_value(line, material.ve);
         } else if (cmd == "Va") {
-            parse_value(view, material.va);
+            parse_value(line, material.va);
         } else if (cmd == "Vd") {
-            parse_value(view, material.vd);
+            parse_value(line, material.vd);
         } else if (cmd == "Vg") {
-            parse_value(view, material.vg);
+            parse_value(line, material.vg);
         } else if (cmd == "map_Vd") {
-            parse_value(view, material.vd_txt);
+            parse_value(line, material.vd_txt);
         }
     }
 
@@ -1922,45 +1846,46 @@ void load_objx(const string& filename, const obj_callbacks& cb,
     auto fs = input_file(filename);
 
     // read the file line by line
-    auto line = ""s;
-    while (read_line(fs, line)) {
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = string_view_stream{line.c_str()};
+        auto line = buffer;
+        normalize_obj_line(line);
+        if(!*line) continue;
 
         // get command
         auto cmd = ""s;
-        parse_value(view, cmd);
+        parse_value(line, cmd);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "c") {
             auto camera = obj_camera();
-            parse_value(view, camera.name);
-            parse_value(view, camera.ortho);
-            parse_value(view, camera.width);
-            parse_value(view, camera.height);
-            parse_value(view, camera.focal);
-            parse_value(view, camera.focus);
-            parse_value(view, camera.aperture);
-            parse_value(view, camera.frame);
+            parse_value(line, camera.name);
+            parse_value(line, camera.ortho);
+            parse_value(line, camera.width);
+            parse_value(line, camera.height);
+            parse_value(line, camera.focal);
+            parse_value(line, camera.focus);
+            parse_value(line, camera.aperture);
+            parse_value(line, camera.frame);
             if (cb.camera) cb.camera(camera);
         } else if (cmd == "e") {
             auto environment = obj_environment();
-            parse_value(view, environment.name);
-            parse_value(view, environment.ke);
-            parse_value(view, environment.ke_txt.path);
-            parse_value(view, environment.frame);
+            parse_value(line, environment.name);
+            parse_value(line, environment.ke);
+            parse_value(line, environment.ke_txt.path);
+            parse_value(line, environment.frame);
             if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
             if (cb.environmnet) cb.environmnet(environment);
         } else if (cmd == "po") {
             auto procedural = obj_procedural();
-            parse_value(view, procedural.name);
-            parse_value(view, procedural.type);
-            parse_value(view, procedural.material);
-            parse_value(view, procedural.size);
-            parse_value(view, procedural.level);
-            parse_value(view, procedural.frame);
+            parse_value(line, procedural.name);
+            parse_value(line, procedural.type);
+            parse_value(line, procedural.material);
+            parse_value(line, procedural.size);
+            parse_value(line, procedural.level);
+            parse_value(line, procedural.frame);
             if (cb.procedural) cb.procedural(procedural);
         } else {
             // unused
@@ -1979,39 +1904,41 @@ void load_obj(const string& filename, const obj_callbacks& cb,
     auto verts     = vector<obj_vertex>();  // buffer to avoid reallocation
 
     // read the file line by line
-    auto line = ""s;
-    while (read_line(fs, line)) {
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
         // line
-        if (line.find('#') != line.npos) line = line.substr(0, line.find('#'));
-        auto view = string_view_stream{line.c_str()};
+        auto line = buffer;
+        normalize_obj_line(line);
+        if(!*line) continue;
 
         // get command
         auto cmd = ""s;
-        parse_value(view, cmd);
+        parse_value(line, cmd);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "v") {
             auto vert = zero3f;
-            parse_value(view, vert);
+            parse_value(line, vert);
             if (cb.vert) cb.vert(vert);
             vert_size.position += 1;
         } else if (cmd == "vn") {
             auto vert = zero3f;
-            parse_value(view, vert);
+            parse_value(line, vert);
             if (cb.norm) cb.norm(vert);
             vert_size.normal += 1;
         } else if (cmd == "vt") {
             auto vert = zero2f;
-            parse_value(view, vert);
+            parse_value(line, vert);
             if (options.flip_texcoord) vert.y = 1 - vert.y;
             if (cb.texcoord) cb.texcoord(vert);
             vert_size.texturecoord += 1;
         } else if (cmd == "f" || cmd == "l" || cmd == "p") {
             verts.clear();
-            while (true) {
+            while(*line == ' ') line++;
+            while (*line) {
                 auto vert = obj_vertex{};
-                parse_value(view, vert);
+                parse_value(line, vert);
                 if (!vert.position) break;
                 if (vert.position < 0)
                     vert.position = vert_size.position + vert.position + 1;
@@ -2021,30 +1948,31 @@ void load_obj(const string& filename, const obj_callbacks& cb,
                 if (vert.normal < 0)
                     vert.normal = vert_size.normal + vert.normal + 1;
                 verts.push_back(vert);
+                while(*line == ' ') line++;
             }
             if (cmd == "f" && cb.face) cb.face(verts);
             if (cmd == "l" && cb.line) cb.line(verts);
             if (cmd == "p" && cb.point) cb.point(verts);
         } else if (cmd == "o") {
             auto name = ""s;
-            parse_value(view, name);
+            parse_value(line, name, true);
             if (cb.object) cb.object(name);
         } else if (cmd == "usemtl") {
             auto name = ""s;
-            parse_value(view, name);
+            parse_value(line, name, true);
             if (cb.usemtl) cb.usemtl(name);
         } else if (cmd == "g") {
             auto name = ""s;
-            parse_value(view, name);
+            parse_value(line, name, true);
             if (cb.group) cb.group(name);
         } else if (cmd == "s") {
             auto name = ""s;
-            parse_value(view, name);
+            parse_value(line, name, true);
             if (cb.smoothing) cb.smoothing(name);
         } else if (cmd == "mtllib") {
             if (options.geometry_only) continue;
             auto mtlname = ""s;
-            parse_value(view, mtlname);
+            parse_value(line, mtlname);
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + mtlname;
             load_mtl(mtlpath, cb, options);
@@ -5663,30 +5591,44 @@ namespace yocto {}
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// normalize obj line for simpler parsing
+inline void normalize_ply_line(char* str, char comment_char = '#') {
+    auto has_content = false;
+    auto start = str;
+    while(*str) {
+        if(*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') {
+            *str = ' ';
+        } else {
+            has_content = true;
+        }
+        str++;
+    }
+    if(!has_content) *start = 0;
+}
+
 // Load ply mesh
 void load_ply(const string& filename, ply_data& ply) {
     // open file
     ply     = {};
-    auto fs = ifstream(filename, std::ios::binary);
-    if (!fs) {
-        throw io_error("cannot open file " + filename);
-    }
+    auto fs = input_file(filename, true);
 
     // parse header
     ply             = ply_data{};
     auto ascii      = false;
     auto big_endian = false;
-    auto line       = ""s;
-    while (getline(fs, line)) {
-        auto view = string_view_stream{line};
+    char buffer[4096];
+    while (read_line(fs, buffer, sizeof(buffer))) {
+        auto line = buffer;
+        normalize_ply_line(line);
+        if(!*line) continue;
         auto cmd  = ""s;
-        parse_value(view, cmd);
+        parse_value(line, cmd);
         if (cmd == "") continue;
         if (cmd == "ply") {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
             auto fmt = ""s;
-            parse_value(view, fmt);
+            parse_value(line, fmt);
             if (fmt == "ascii") {
                 ascii = true;
             } else if (fmt == "binary_little_endian") {
@@ -5700,18 +5642,18 @@ void load_ply(const string& filename, ply_data& ply) {
             }
         } else if (cmd == "element") {
             auto elem = ply_element();
-            parse_value(view, elem.name);
-            parse_value(view, elem.count);
+            parse_value(line, elem.name);
+            parse_value(line, elem.count);
             ply.elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
             auto type = ""s;
-            parse_value(view, type);
+            parse_value(line, type);
             if (type == "list") {
                 auto count_type = ""s;
-                parse_value(view, count_type);
+                parse_value(line, count_type);
                 auto elem_type = ""s;
-                parse_value(view, elem_type);
+                parse_value(line, elem_type);
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
                 if (elem_type != "int" && elem_type != "uint")
@@ -5726,7 +5668,7 @@ void load_ply(const string& filename, ply_data& ply) {
             } else {
                 throw io_error("unsupported ply format");
             }
-            parse_value(view, prop.name);
+            parse_value(line, prop.name);
             prop.scalars.resize(ply.elements.back().count);
             if (prop.type == ply_type::ply_int_list)
                 prop.lists.resize(ply.elements.back().count);
@@ -5742,33 +5684,34 @@ void load_ply(const string& filename, ply_data& ply) {
     if (ascii) {
         for (auto& elem : ply.elements) {
             for (auto vid = 0; vid < elem.count; vid++) {
-                getline(fs, line);
-                auto view = string_view_stream{line};
+                read_line(fs, buffer, sizeof(buffer));
+                auto line = buffer;
+                normalize_ply_line(line);
                 for (auto pid = 0; pid < elem.properties.size(); pid++) {
                     auto& prop = elem.properties[pid];
                     if (prop.type == ply_type::ply_float) {
                         auto v = 0.0f;
-                        parse_value(view, v);
+                        parse_value(line, v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_int) {
                         auto v = 0;
-                        parse_value(view, v);
+                        parse_value(line, v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_uchar) {
                         auto vc = (unsigned char)0;
                         auto v  = 0;
-                        parse_value(view, v);
+                        parse_value(line, v);
                         vc                = (unsigned char)v;
                         prop.scalars[vid] = vc / 255.0f;
                     } else if (prop.type == ply_type::ply_int_list) {
                         auto vc = (unsigned char)0;
                         auto v  = 0;
-                        parse_value(view, v);
+                        parse_value(line, v);
                         vc                = (unsigned char)v;
                         prop.scalars[vid] = vc;
                         for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
                             auto v = 0;
-                            parse_value(view, v);
+                            parse_value(line, v);
                             prop.lists[vid][i] = v;
                         }
                     } else {
