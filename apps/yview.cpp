@@ -1102,17 +1102,13 @@ void run_ui(app_state& app) {
 // Load INI file. The implementation does not handle escaping.
 unordered_map<string, unordered_map<string, string>> load_ini(
     const string& filename) {
-    auto f = ifstream(filename);
-    if (!f) {
-        log_error("cannot open {}", filename);
-        return {};
-    }
+    auto fs = input_file(filename);
     auto ret       = unordered_map<string, unordered_map<string, string>>();
     auto cur_group = string();
     ret[""]        = {};
 
     auto line = ""s;
-    while (getline(f, line)) {
+    while (read_line(fs, line)) {
         if (empty(line)) continue;
         if (line.front() == ';') continue;
         if (line.front() == '#') continue;

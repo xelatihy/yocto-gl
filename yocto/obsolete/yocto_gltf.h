@@ -994,7 +994,6 @@ struct accessor_view {
 
 }  // namespace ygl
 
-#include <fstream>
 #include <unordered_map>
 
 #include "json.hpp"

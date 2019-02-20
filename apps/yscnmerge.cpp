@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
     log_validation_errors(scene, true);
 
     // print info
-    if (print_info) cout << print_scene_stats(scene) << "\n";
+    if (print_info) printf("%s\n", print_scene_stats(scene).c_str());
 
     // add missing mesh names if necessary
     if (!mesh_directory.empty() && mesh_directory.back() != '/')

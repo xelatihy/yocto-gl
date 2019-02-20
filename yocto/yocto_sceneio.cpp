@@ -4207,8 +4207,6 @@ void pbrt_to_json(const string& filename, json& js) {
         }
         js.push_back(jcmd);
     }
-    // auto fstr = std::fstream(filename + ".json");
-    // fstr << js;
 }
 
 // Compute the fresnel term for dielectrics. Implementation from

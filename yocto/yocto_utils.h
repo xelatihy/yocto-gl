@@ -112,9 +112,9 @@
 #include <chrono>
 #include <cstdio>
 #include <deque>
-#include <fstream>
 #include <iostream>
 #include <istream>
+#include <fstream>
 #include <mutex>
 #include <ostream>
 #include <sstream>
@@ -133,11 +133,9 @@ using std::mutex;
 using std::thread;
 using std::ostream;
 using std::istream;
-using std::stringstream;
-using std::ifstream;
 using std::ofstream;
-using std::fstream;
-using std::cout;
+using std::ifstream;
+using std::stringstream;
 using std::future;
 using std::async;
 using namespace std::chrono_literals;
@@ -788,7 +786,7 @@ inline bool is_log_level_skipped(log_level level) {
 inline void log_message(log_level level, const char* msg) {
     static const char* labels[] = {"FATAL", "ERROR", "WARN ", "INFO ", "TRACE"};
     if (_log_console()) {
-        cout << msg << "\n";
+        printf("%s\n", msg);
         fflush(stdout);
     }
     if (_log_filestream()) {
@@ -1154,7 +1152,7 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
         usage += "options:\n" + parser.help_options + "\n";
     if (!empty(parser.help_arguments))
         usage += "arguments:\n" + parser.help_arguments + "\n";
-    cout << usage;
+    printf("%s\n", usage.c_str());
 }
 
 // Parse a flag. Name should start with either "--" or "-".
@@ -1194,7 +1192,7 @@ inline void check_cmdline_parser(cmdline_parser& parser) {
         if (!found) parser.error += "unmatched arguments remaining\n";
     }
     if (!empty(parser.error)) {
-        cout << "error: " + parser.error + "\n";
+        printf("error: %s\n", parser.error.c_str());
         print_cmdline_usage(parser);
         exit(1);
     }
