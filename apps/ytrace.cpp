@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     init_trace_lights(lights, scene);
 
     // fix renderer type if no lights
-    if ((empty(lights.instances) && empty(lights.environments)) &&
+    if ((lights.instances.empty() && lights.environments.empty()) &&
         is_trace_sampler_lit(trace_options)) {
         printf("no lights presents, switching to eyelight shader\n");
         trace_options.sampler_type = trace_sampler_type::eyelight;
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
     auto [width, height] = get_camera_image_size(
         scene.cameras[trace_options.camera_id], trace_options.image_width,
         trace_options.image_height);
-    auto image = yocto::image{width, height, zero4f};
+    auto image = yocto::image{{width, height}, zero4f};
     auto state = trace_state{};
     init_trace_state(state, width, height, trace_options.random_seed);
 

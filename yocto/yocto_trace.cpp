@@ -1208,7 +1208,7 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces, bool environments_hidden) {
-    if (empty(lights.instances) && empty(lights.environments))
+    if (lights.instances.empty() && lights.environments.empty())
         return {zero3f, false};
 
     // initialize
@@ -1436,7 +1436,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1514,7 +1514,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1582,7 +1582,7 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1671,7 +1671,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1918,19 +1918,17 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 // Trace a block of samples
 void trace_image_region(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const image_region& region, int num_samples,
-    const trace_image_options& options) {
+    const bbox2i& region, int num_samples, const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
     auto  sampler = get_trace_sampler_func(options.sampler_type);
-    for (auto j = region.offsety; j < region.offsety + region.height; j++) {
-        for (auto i = region.offsetx; i < region.offsetx + region.width; i++) {
+    for (auto j = region.min.y; j < region.max.y; j++) {
+        for (auto i = region.min.x; i < region.max.x; i++) {
             auto& pixel = get_trace_pixel(state, i, j);
             for (auto s = 0; s < num_samples; s++) {
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
-                auto ray             = sample_camera_ray(camera, {i, j},
-                    {image.width, image.height}, get_random_vec2f(pixel.rng),
-                    get_random_vec2f(pixel.rng));
+                auto ray = sample_camera_ray(camera, {i, j}, image.size(),
+                    get_random_vec2f(pixel.rng), get_random_vec2f(pixel.rng));
                 auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
                     pixel.rng, options.max_bounces,
                     options.environments_hidden);
@@ -1979,13 +1977,13 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         if (!is_instance_emissive(scene, instance)) continue;
         if (instance.shape >= 0) {
             auto& shape = scene.shapes[instance.shape];
-            if (empty(shape.triangles) && empty(shape.quads)) continue;
+            if (shape.triangles.empty() && shape.quads.empty()) continue;
             lights.instances.push_back(instance_id);
             compute_shape_elements_cdf(
                 shape, lights.shape_elements_cdf[instance.shape]);
         } else if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
-            if (empty(surface.quads_positions)) continue;
+            if (surface.quads_positions.empty()) continue;
             lights.instances.push_back(instance_id);
             compute_surface_elements_cdf(
                 surface, lights.surface_elements_cdf[instance.surface]);
@@ -2012,12 +2010,11 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto [width, height] = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.image_width,
         options.image_height);
-    auto image  = yocto::image{width, height, zero4f};
+    auto image  = yocto::image{{width, height}, zero4f};
     auto pixels = trace_state{};
     init_trace_state(pixels, width, height, options.random_seed);
-    auto regions = vector<image_region>{};
-    make_image_regions(
-        regions, image.width, image.height, options.region_size, true);
+    auto regions = vector<bbox2i>{};
+    make_image_regions(regions, image.size(), options.region_size, true);
 
     if (options.run_serially) {
         for (auto& region : regions) {
@@ -2048,9 +2045,8 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_image_samples(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
-    auto regions = vector<image_region>{};
-    make_image_regions(
-        regions, image.width, image.height, options.region_size, true);
+    auto regions = vector<bbox2i>{};
+    make_image_regions(regions, image.size(), options.region_size, true);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
     if (options.run_serially) {
@@ -2082,16 +2078,15 @@ int trace_image_samples(image4f& image, trace_state& state,
 void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<thread>& threads, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     auto& camera         = scene.cameras.at(options.camera_id);
     auto [width, height] = get_camera_image_size(
         camera, options.image_width, options.image_height);
-    image = {width, height, zero4f};
+    image = {{width, height}, zero4f};
     state = trace_state{};
     init_trace_state(state, width, height, options.random_seed);
-    auto regions = vector<image_region>{};
-    make_image_regions(
-        regions, image.width, image.height, options.region_size, true);
+    auto regions = vector<bbox2i>{};
+    make_image_regions(regions, image.size(), options.region_size, true);
     if (options.cancel_flag) *options.cancel_flag = false;
 
 #if 0
@@ -2129,7 +2124,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
             parallel_foreach(
                 regions,
                 [num_samples, &options, &image, &scene, &lights, &bvh, &state,
-                    &queue](const image_region& region) {
+                    &queue](const bbox2i& region) {
                     trace_image_region(image, state, scene, bvh, lights, region,
                         num_samples, options);
                     queue.push(region);
@@ -2143,7 +2138,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
 
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
-    concurrent_queue<image_region>& queue, const trace_image_options& options) {
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     if (options.cancel_flag) *options.cancel_flag = true;
     for (auto& t : threads) t.join();
     threads.clear();

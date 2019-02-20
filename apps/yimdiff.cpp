@@ -36,9 +36,9 @@
 using namespace yocto;
 
 image4f compute_diff_image(const image4f& a, const image4f& b) {
-    auto diff = image{a.width, a.height, zero4f};
-    for (auto j = 0; j < a.height; j++) {
-        for (auto i = 0; i < a.width; i++) {
+    auto diff = image{a.size(), zero4f};
+    for (auto j = 0; j < a.size().y; j++) {
+        for (auto i = 0; i < a.size().x; i++) {
             diff[{i, j}] = {abs(a[{i, j}].x - b[{i, j}].x),
                 abs(a[{i, j}].y - b[{i, j}].y), abs(a[{i, j}].z - b[{i, j}].z),
                 abs(a[{i, j}].w - b[{i, j}].w)};
@@ -57,9 +57,9 @@ vec4f max_diff_value(const image4f& diff) {
 }
 
 image4f display_diff(const image4f& diff) {
-    auto display = image{diff.width, diff.height, zero4f};
-    for (auto j = 0; j < diff.height; j++) {
-        for (auto i = 0; i < diff.width; i++) {
+    auto display = image{diff.size(), zero4f};
+    for (auto j = 0; j < diff.size().y; j++) {
+        for (auto i = 0; i < diff.size().x; i++) {
             auto diff_value = max(diff[{i, j}]);
             display[{i, j}] = {diff_value, diff_value, diff_value, 1};
         }
@@ -89,11 +89,10 @@ int main(int argc, char* argv[]) {
     } catch (const std::exception& e) {
         exit_error(e.what());
     }
-    if (img1.width != img2.width || img1.height != img2.height)
-        exit_error("image size differs");
+    if (img1.size() != img2.size()) exit_error("image size differs");
     auto diff     = compute_diff_image(img1, img2);
     auto max_diff = max_diff_value(diff);
-    if (!empty(output)) {
+    if (!output.empty()) {
         auto display = display_diff(diff);
         try {
             save_image(output, display);

@@ -95,128 +95,92 @@ namespace yocto {
 // Image container.
 template <typename T>
 struct image {
-    // data
-    int       width  = 0;
-    int       height = 0;
-    vector<T> pixels = {};
-
     // constructors
-    image() : width{0}, height{0}, pixels{} {}
-    image(int width, int height, const T& value = {})
-        : width{width}
-        , height{height}
-        , pixels{(size_t)width * (size_t)height, value} {}
-    image(int width, int height, const T* value)
-        : width{width}
-        , height{height}
-        , pixels{value, value + (size_t)width * (size_t)height} {}
+    image() : _size{0, 0}, _pixels{} {}
     image(const vec2i& size, const T& value = {})
-        : width{size.x}
-        , height{size.y}
-        , pixels{(size_t)size.x * (size_t)size.y, value} {}
+        : _size{size}, _pixels{(size_t)size.x * (size_t)size.y, value} {}
     image(const vec2i& size, const T* value)
-        : width{size.x}
-        , height{size.y}
-        , pixels{value, value + (size_t)size.x * (size_t)size.y} {}
+        : _size{size}
+        , _pixels{value, value + (size_t)size.x * (size_t)size.y} {}
 
     // size
-    void resize(int width, int height);
+    bool  empty() const { return _pixels.empty(); }
+    vec2i size() const { return _size; }
+    void  resize(const vec2i& size) {
+        if (size == _size) return;
+        _size = size;
+        _pixels.resize((size_t)size.x * (size_t)size.y);
+    }
 
     // element access
-    T&       operator[](const vec2i& ij) { return pixels[ij.y * width + ij.x]; }
+    T& operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
     const T& operator[](const vec2i& ij) const {
-        return pixels[ij.y * width + ij.x];
+        return _pixels[ij.y * _size.x + ij.x];
     }
+
+    // data access
+    T*       data() { return _pixels.data(); }
+    const T* data() const { return _pixels.data(); }
+
+    // iteration
+    T*       begin() { return _pixels.data(); }
+    T*       end() { return _pixels.data() + _pixels.size(); }
+    const T* begin() const { return _pixels.data(); }
+    const T* end() const { return _pixels.data() + _pixels.size(); }
+
+    // data
+    vec2i     _size   = zero2i;
+    vector<T> _pixels = {};
 };
 
 // Typedefs
 using image4f = image<vec4f>;
 using image4b = image<vec4b>;
 
-// Functions to query image data
-template <typename T>
-inline vec2i imsize(const image<T>& img) {
-    return {img.width, img.height};
-}
-template <typename T>
-inline bool empty(const image<T>& img) {
-    return empty(img.pixels);
-}
-template <typename T>
-inline size_t size(const image<T>& img) {
-    return img.pixels.size();
-}
-template <typename T>
-inline T* begin(image<T>& img) {
-    return data(img.pixels);
-}
-template <typename T>
-inline T* end(image<T>& img) {
-    return data(img.pixels) + img.pixels.size();
-}
-template <typename T>
-inline const T* begin(const image<T>& img) {
-    return data(img.pixels);
-}
-template <typename T>
-inline const T* end(const image<T>& img) {
-    return data(img.pixels) + img.pixels.size();
-}
-template <typename T>
-inline T* data(image<T>& img) {
-    return data(img.pixels);
-}
-template <typename T>
-inline const T* data(const image<T>& img) {
-    return data(img.pixels);
-}
-
 // equality
 template <typename T>
 inline bool operator==(const image<T>& a, const image<T>& b) {
-    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
+    return a.size() == b.size() && a._pixels == b._pixels;
 }
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b) {
-    return a.width != b.width || a.height != b.height || a.pixels != b.pixels;
+    return a.size() != b.size() || a._pixels != b._pixels;
 }
 
-// Image region
-struct image_region {
-    int offsetx = 0;
-    int offsety = 0;
-    int width   = 0;
-    int height  = 0;
-};
-
 // Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions, int width, int height,
+void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
     int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
-image<T> get_image_region(const image<T>& img, const image_region& region);
+void get_image_region(
+    image<T>& clipped, const image<T>& img, const bbox2i& region);
 
 // Conversion from/to floats.
-image4f byte_to_float(const image4b& bt);
-image4b float_to_byte(const image4f& fl);
+void byte_to_float(image4f& fl, const image4b& bt);
+void float_to_byte(image4b& bt, const image4f& fl);
 
 // Conversion between linear and gamma-encoded images.
-image4f srgb_to_linear(const image4f& srgb);
-image4f linear_to_srgb(const image4f& lin);
+void srgb_to_linear(image4f& lin, const image4f& srgb);
+void linear_to_srgb(image4f& srgb, const image4f& lin);
+void srgb_to_linear(image4f& lin, const image4b& srgb);
+void linear_to_srgb(image4b& srgb, const image4f& lin);
 
 // Conversion between linear and gamma-encoded images.
-image4f gamma_to_linear(const image4f& srgb, float gamma);
-image4f linear_to_gamma(const image4f& lin, float gamma);
+void gamma_to_linear(image4f& lin, const image4f& srgb, float gamma);
+void linear_to_gamma(image4f& srgb, const image4f& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-image4f tonemap_image(
-    const image4f& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image4f& ldr, const image_region& region,
+void tonemap_image(
+    image4f& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image(
+    image4b& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image_region(image4f& ldr, const bbox2i& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image4f resize_image(const image4f& img, int width, int height);
+void resize_image(image4f& res, const image4f& img, const vec2i& size);
+void resize_image(image4f& res, const image4f& img);
 
 }  // namespace yocto
 
@@ -281,79 +245,59 @@ namespace yocto {
 // Volume container.
 template <typename T>
 struct volume {
-    // data
-    int           width  = 0;
-    int           height = 0;
-    int           depth  = 0;
-    vector<float> voxels = {};
-
     // constructors
-    volume() : width{0}, height{0}, depth{0}, voxels{} {}
-    volume(int width, int height, int depth, const T& value)
-        : width{width}
-        , height{height}
-        , depth{depth}
-        , voxels((size_t)width * (size_t)height * (size_t)depth, value) {}
-    volume(int width, int height, int depth, const T* value)
-        : width{width}
-        , height{height}
-        , depth{depth}
-        , voxels(
-              value, value + (size_t)width * (size_t)height * (size_t)depth) {}
-    volume(const vec3i& size, const T& value)
-        : width{size.x}
-        , height{size.y}
-        , depth{size.z}
-        , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+    volume() : _size{0, 0, 0}, _voxels{} {}
+    volume(const vec3i& size, const T& value = {})
+        : _size{size}
+        , _voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
     volume(const vec3i& size, const T* value)
-        : width{size.x}
-        , height{size.y}
-        , depth{size.z}
-        , voxels(value,
+        : _size{size}
+        , _voxels(value,
               value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
 
     // size
-    void resize(int width, int height, int depth);
+    bool  empty() const { return _voxels.empty(); }
+    vec3i size() const { return _size; }
+    void  resize(const vec3i& size) {
+        if (size == _size) return;
+        _size = size;
+        _voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+    }
 
     // element access
     T& operator[](const vec3i& ijk) {
-        return voxels[ijk.z * width * height + ijk.y * width + ijk.x];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
     const T& operator[](const vec3i& ijk) const {
-        return voxels[ijk.z * width * height + ijk.y * width + ijk.x];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
+
+    // data access
+    T*       data() { return _voxels.data(); }
+    const T* data() const { return _voxels.data(); }
+
+    // iteration
+    T*       begin() { return _voxels.data(); }
+    T*       end() { return _voxels.data() + _voxels.size(); }
+    const T* begin() const { return _voxels.data(); }
+    const T* end() const { return _voxels.data() + _voxels.size(); }
+
+    // data
+    vec3i         _size   = zero3i;
+    vector<float> _voxels = {};
 };
 
 // Typedefs
 using volume1f = volume<float>;
 
-// Functions to query volume data
-inline vec3i volsize(const volume1f& vol) {
-    return {vol.width, vol.height, vol.depth};
-}
-inline bool   empty(const volume1f& vol) { return empty(vol.voxels); }
-inline size_t size(const volume1f& vol) { return vol.voxels.size(); }
-inline float* begin(volume1f& vol) { return data(vol.voxels); }
-inline float* end(volume1f& vol) {
-    return data(vol.voxels) + vol.voxels.size();
-}
-inline const float* begin(const volume1f& vol) { return data(vol.voxels); }
-inline const float* end(const volume1f& vol) {
-    return data(vol.voxels) + vol.voxels.size();
-}
-inline float*       data(volume1f& vol) { return data(vol.voxels); }
-inline const float* data(const volume1f& vol) { return data(vol.voxels); }
-
 // equality
 template <typename T>
 inline bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.width == b.width && a.height == b.height && a.depth == b.depth &&
-           a.voxels == b.voxels;
+    return a.size() == b.size() && a._voxels == b._voxels;
 }
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-    return a.width != b.width && a.height != b.height && a.depth != b.depth &&
-           a.voxels != b.voxels;
+    return a.size() != b.size() && a._voxels != b._voxels;
 }
 
 // make a simple example volume
@@ -624,60 +568,31 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Image resize
-template <typename T>
-inline void image<T>::resize(int width, int height) {
-    if (width * height != this->width * this->height) {
-        this->width  = width;
-        this->height = height;
-        this->pixels.resize((size_t)width * (size_t)height);
-    }
-}
-
 // Gets pixels in an image region
 template <typename T>
-inline image<T> get_image_region(
-    const image<T>& img, const image_region& region) {
-    auto clipped = image<T>{region.width, region.height};
-    for (auto j = 0; j < region.height; j++) {
-        for (auto i = 0; i < region.width; i++) {
-            clipped[{i, j}] = img[{i + region.offsetx, j + region.offsety}];
+inline void get_image_region(
+    image<T>& clipped, const image<T>& img, const bbox2i& region) {
+    clipped.resize(region.size());
+    for (auto j = 0; j < region.size().y; j++) {
+        for (auto i = 0; i < region.size().x; i++) {
+            clipped[{i, j}] = img[{i + region.min.x, j + region.min.y}];
         }
     }
-    return clipped;
 }
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<image_region>& regions, int width,
-    int height, int region_size, bool shuffled) {
+inline void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
+    int region_size, bool shuffled) {
     regions.clear();
-    for (auto y = 0; y < height; y += region_size) {
-        for (auto x = 0; x < width; x += region_size) {
-            regions.push_back({x, y, min(region_size, width - x),
-                min(region_size, height - y)});
+    for (auto y = 0; y < size.y; y += region_size) {
+        for (auto x = 0; x < size.x; x += region_size) {
+            regions.push_back({{x, y},
+                {min(x + region_size, size.x), min(y + region_size, size.y)}});
         }
     }
     if (shuffled) {
         auto rng = rng_state{};
         random_shuffle(regions, rng);
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR VOLUME UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// size
-template <typename T>
-inline void volume<T>::resize(int width, int height, int depth) {
-    if (width * height * depth != this->width * this->height * this->depth) {
-        this->width  = width;
-        this->height = height;
-        this->depth  = depth;
-        this->voxels.resize((size_t)width * (size_t)height * (size_t)depth);
     }
 }
 

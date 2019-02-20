@@ -112,10 +112,13 @@ using std::tan;
 
 using std::array;
 using std::atomic;
+using std::exception;
 using std::function;
 using std::get;
 using std::ignore;
+using std::out_of_range;
 using std::pair;
+using std::runtime_error;
 using std::string;
 using std::tie;
 using std::tuple;
@@ -1220,6 +1223,9 @@ struct bbox {
     bbox() : min{type_max<T>()}, max{type_min<T>()} {}
     bbox(const vec<T, N>& min, const vec<T, N>& max) : min{min}, max{max} {}
 
+    vec<T, N> size() const { return max - min; };
+    vec<T, N> center() const { return (max + min) / 2; };
+
     vec<T, N>&       operator[](int i) { return (&min)[i]; }
     const vec<T, N>& operator[](int i) const { return (&min)[i]; }
 };
@@ -1229,12 +1235,20 @@ using bbox1f = bbox<float, 1>;
 using bbox2f = bbox<float, 2>;
 using bbox3f = bbox<float, 3>;
 using bbox4f = bbox<float, 4>;
+using bbox1i = bbox<int, 1>;
+using bbox2i = bbox<int, 2>;
+using bbox3i = bbox<int, 3>;
+using bbox4i = bbox<int, 4>;
 
 // Empty bbox constant.
 const auto invalid_bbox1f = bbox1f{};
 const auto invalid_bbox2f = bbox2f{};
 const auto invalid_bbox3f = bbox3f{};
 const auto invalid_bbox4f = bbox4f{};
+const auto invalid_bbox1i = bbox1i{};
+const auto invalid_bbox2i = bbox2i{};
+const auto invalid_bbox3i = bbox3i{};
+const auto invalid_bbox4i = bbox4i{};
 
 // Bounding box values
 template <typename T>

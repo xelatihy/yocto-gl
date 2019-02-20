@@ -92,6 +92,8 @@ struct trace_lights {
     vector<vector<float>> shape_elements_cdf      = {};
     vector<vector<float>> surface_elements_cdf    = {};
     vector<vector<float>> environment_texture_cdf = {};
+
+    bool empty() const { return instances.empty() && environments.empty(); }
 };
 
 // Initialize lights.
@@ -180,10 +182,10 @@ int trace_image_samples(image4f& image, trace_state& state,
 void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<thread>& threads, atomic<int>& current_sample,
-    concurrent_queue<image_region>& queue, const trace_image_options& options);
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options);
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<thread>& threads,
-    concurrent_queue<image_region>& queue, const trace_image_options& options);
+    concurrent_queue<bbox2i>& queue, const trace_image_options& options);
 
 // Check is a sampler requires lights
 bool is_trace_sampler_lit(const trace_image_options& options);
