@@ -2077,7 +2077,7 @@ int trace_image_samples(image4f& image, trace_state& state,
 // Starts an anyncrhounous renderer.
 void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    vector<thread>& threads, atomic<int>& current_sample,
+    vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     auto& camera         = scene.cameras.at(options.camera_id);
     auto [width, height] = get_camera_image_size(
@@ -2112,8 +2112,8 @@ void trace_image_async_start(image4f& image, trace_state& state,
         }));
     }
 #else
-    threads.clear();
-    threads.emplace_back([options, regions, &current_sample, &image, &scene,
+    futures.clear();
+    futures.emplace_back(async([options, regions, &current_sample, &image, &scene,
                              &lights, &bvh, &state, &queue]() {
         for (auto sample = 0; sample < options.num_samples;
              sample += options.samples_per_batch) {
@@ -2132,16 +2132,16 @@ void trace_image_async_start(image4f& image, trace_state& state,
                 options.cancel_flag, options.run_serially);
         }
         current_sample = options.num_samples;
-    });
+    }));
 #endif
 }
 
 // Stop the asynchronous renderer.
-void trace_image_async_stop(vector<thread>& threads,
+void trace_image_async_stop(vector<future<void>>& futures,
     concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
     if (options.cancel_flag) *options.cancel_flag = true;
-    for (auto& t : threads) t.join();
-    threads.clear();
+    for (auto& f : futures) f.get();
+    futures.clear();
     queue.clear();
 }
 

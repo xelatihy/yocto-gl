@@ -181,10 +181,10 @@ int trace_image_samples(image4f& image, trace_state& state,
 // options.
 void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    vector<thread>& threads, atomic<int>& current_sample,
+    vector<future<void>>& futures, atomic<int>& current_sample,
     concurrent_queue<bbox2i>& queue, const trace_image_options& options);
 // Stop the asynchronous renderer.
-void trace_image_async_stop(vector<thread>& threads,
+void trace_image_async_stop(vector<future<void>>& futures,
     concurrent_queue<bbox2i>& queue, const trace_image_options& options);
 
 // Check is a sampler requires lights
