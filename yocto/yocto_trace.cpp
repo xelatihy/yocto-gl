@@ -2113,8 +2113,8 @@ void trace_image_async_start(image4f& image, trace_state& state,
     }
 #else
     futures.clear();
-    futures.emplace_back(async([options, regions, &current_sample, &image, &scene,
-                             &lights, &bvh, &state, &queue]() {
+    futures.emplace_back(async([options, regions, &current_sample, &image,
+                                   &scene, &lights, &bvh, &state, &queue]() {
         for (auto sample = 0; sample < options.num_samples;
              sample += options.samples_per_batch) {
             if (options.cancel_flag && *options.cancel_flag) return;
