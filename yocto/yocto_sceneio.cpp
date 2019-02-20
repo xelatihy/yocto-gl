@@ -2151,9 +2151,9 @@ void load_obj(const string& filename, yocto_scene& scene,
     auto smoothing = true;
 
     // vertices
-    auto opos      = deque<vec3f>();
-    auto onorm     = deque<vec3f>();
-    auto otexcoord = deque<vec2f>();
+    auto opos      = vector<vec3f>();
+    auto onorm     = vector<vec3f>();
+    auto otexcoord = vector<vec2f>();
 
     // vertex maps
     auto vertex_map   = unordered_map<obj_vertex, int, obj_vertex_hash>();
