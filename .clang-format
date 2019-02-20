@@ -4,7 +4,7 @@ BasedOnStyle: Google
 Standard:        Cpp11
 
 IndentWidth:     4
-ColumnLimit:     80
+ColumnLimit:     160
 
 AlignAfterOpenBracket: DontAlign
 
