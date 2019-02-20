@@ -2024,9 +2024,9 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
-        auto threads  = vector<thread>();
+        auto futures  = vector<future<void>>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([&, tid]() {
+            futures.emplace_back(async([&, tid]() {
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
                     if (options.cancel_flag && *options.cancel_flag) break;
@@ -2036,7 +2036,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
                 }
             }));
         }
-        for (auto& t : threads) t.join();
+        for (auto& f : futures) f.get();
     }
     return image;
 }
@@ -2057,9 +2057,9 @@ int trace_image_samples(image4f& image, trace_state& state,
         }
     } else {
         auto nthreads = thread::hardware_concurrency();
-        auto threads  = vector<thread>();
+        auto futures  = vector<future<void>>();
         for (auto tid = 0; tid < nthreads; tid++) {
-            threads.push_back(thread([&, tid]() {
+            futures.emplace_back(async([&, tid]() {
                 for (auto region_id = tid; region_id < regions.size();
                      region_id += nthreads) {
                     if (options.cancel_flag && *options.cancel_flag) break;
@@ -2069,7 +2069,7 @@ int trace_image_samples(image4f& image, trace_state& state,
                 }
             }));
         }
-        for (auto& t : threads) t.join();
+        for (auto& f : futures) f.get();
     }
     return current_sample + num_samples;
 }

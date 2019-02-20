@@ -921,12 +921,12 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     // synchronization
     atomic<int>    num_processed_prims(0);
     mutex          queue_mutex;
-    vector<thread> threads;
+    vector<future<void>> futures;
     auto           nthreads = thread::hardware_concurrency();
 
     // create nodes until the queue is empty
     for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
-        threads.emplace_back([&nodes, &prims, &options, &num_processed_prims,
+        futures.emplace_back(async([&nodes, &prims, &options, &num_processed_prims,
                                  &queue_mutex, &queue] {
             while (true) {
                 // exit if needed
@@ -988,9 +988,9 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                     num_processed_prims += node.num_primitives;
                 }
             }
-        });
+        }));
     }
-    for (auto& t : threads) t.join();
+    for (auto& f : futures) f.get();
 
     // cleanup
     nodes.shrink_to_fit();
