@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
     init_trace_lights(lights, scene);
 
     // fix renderer type if no lights
-    if ((empty(lights.instances) && empty(lights.environments)) &&
+    if ((lights.instances.empty() && lights.environments.empty()) &&
         is_trace_sampler_lit(trace_options)) {
         printf("no lights presents, switching to eyelight shader\n");
         trace_options.sampler_type = trace_sampler_type::eyelight;

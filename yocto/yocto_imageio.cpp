@@ -70,7 +70,7 @@ namespace yocto {
 // Split a string
 vector<string> split_string(const string& str) {
     auto ret = vector<string>();
-    if (empty(str)) return ret;
+    if (str.empty()) return ret;
     auto lpos = (size_t)0;
     while (lpos != str.npos) {
         auto pos = str.find_first_of(" \t\n\r", lpos);
@@ -120,13 +120,13 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto nrow    = w * nc;
     auto pixels  = vector<float>(nvalues);
     for (auto j = h - 1; j >= 0; j--) {
-        read_values(fs, data(pixels) + j * nrow, nrow);
+        read_values(fs, pixels.data() + j * nrow, nrow);
     }
 
     // endian conversion
     if (s > 0) {
         for (auto i = 0; i < nvalues; ++i) {
-            auto dta = (uint8_t*)(data(pixels) + i);
+            auto dta = (uint8_t*)(pixels.data() + i);
             swap(dta[0], dta[3]);
             swap(dta[1], dta[2]);
         }
@@ -147,8 +147,8 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     }
     auto cpixels = vector<float>(req * npixels);
     for (auto i = 0; i < npixels; i++) {
-        auto vp = data(pixels) + i * nc;
-        auto cp = data(cpixels) + i * req;
+        auto vp = pixels.data() + i * nc;
+        auto cp = cpixels.data() + i * req;
         if (nc == 1) {
             switch (req) {
                 case 1: cp[0] = vp[0]; break;
@@ -224,14 +224,14 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 void load_pfm_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
-    if (empty(pixels)) {
+    if (pixels.empty()) {
         throw io_error("error loading image " + filename);
     }
-    img = image{width, height, (const vec4f*)data(pixels)};
+    img = image{width, height, (const vec4f*)pixels.data()};
 }
 void save_pfm_image(const string& filename, const image4f& img) {
     if (!save_pfm(
-            filename.c_str(), img.width, img.height, 4, (float*)data(img))) {
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -251,7 +251,7 @@ void load_exr_image(const string& filename, image4f& img) {
 }
 void save_exr_image(const string& filename, const image4f& img) {
     if (!SaveEXR(
-            (float*)data(img), img.width, img.height, 4, filename.c_str())) {
+            (float*)img.data(), img.width(), img.height(), 4, filename.c_str())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -278,32 +278,32 @@ void load_stb_image(const string& filename, image4f& img) {
 
 // save an image with stbi
 void save_png_image(const string& filename, const image4b& img) {
-    if (!stbi_write_png(filename.c_str(), img.width, img.height, 4, data(img),
-            img.width * 4)) {
+    if (!stbi_write_png(filename.c_str(), img.width(), img.height(), 4, img.data(),
+            img.width() * 4)) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_jpg_image(const string& filename, const image4b& img) {
     if (!stbi_write_jpg(
-            filename.c_str(), img.width, img.height, 4, data(img), 75)) {
+            filename.c_str(), img.width(), img.height(), 4, img.data(), 75)) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_tga_image(const string& filename, const image4b& img) {
     if (!stbi_write_tga(
-            filename.c_str(), img.width, img.height, 4, data(img))) {
+            filename.c_str(), img.width(), img.height(), 4, img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_bmp_image(const string& filename, const image4b& img) {
     if (!stbi_write_bmp(
-            filename.c_str(), img.width, img.height, 4, data(img))) {
+            filename.c_str(), img.width(), img.height(), 4, img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
 void save_hdr_image(const string& filename, const image4f& img) {
     if (!stbi_write_hdr(
-            filename.c_str(), img.width, img.height, 4, (float*)data(img))) {
+            filename.c_str(), img.width(), img.height(), 4, (float*)img.data())) {
         throw io_error("error saving image " + filename);
     }
 }
@@ -550,14 +550,14 @@ image4f resize_image(const image4f& img, int width, int height) {
         throw std::invalid_argument("bad image size in resize_image");
     }
     if (height == 0) {
-        height = (int)round(width * (float)img.height / (float)img.width);
+        height = (int)round(width * (float)img.height() / (float)img.width());
     } else if (width == 0) {
-        width = (int)round(height * (float)img.width / (float)img.height);
+        width = (int)round(height * (float)img.width() / (float)img.height());
     }
     auto res_img = image{width, height, zero4f};
-    stbir_resize_float_generic((float*)data(img), img.width, img.height,
-        sizeof(vec4f) * img.width, (float*)data(res_img), res_img.width,
-        res_img.height, sizeof(vec4f) * res_img.width, 4, 3, 0,
+    stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
+        sizeof(vec4f) * img.width(), (float*)res_img.data(), res_img.width(),
+        res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3, 0,
         STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR,
         nullptr);
     return img;
@@ -573,20 +573,19 @@ namespace yocto {
 // Loads volume data from binary format.
 void load_volume(const string& filename, volume1f& vol) {
     auto fs = input_file(filename, true);
-    read_value(fs, vol.width);
-    read_value(fs, vol.height);
-    read_value(fs, vol.depth);
-    vol.voxels.resize(vol.width * vol.height * vol.depth);
-    read_values(fs, vol.voxels);
+    auto size = zero3i;
+    read_value(fs, size);
+    vol.resize(size.x, size.y, size.z);
+    read_values(fs, vol._voxels);
 }
 
 // Saves volume data in binary format.
 void save_volume(const string& filename, const volume1f& vol) {
     auto fs = output_file(filename, true);
-    write_value(fs, vol.width);
-    write_value(fs, vol.height);
-    write_value(fs, vol.depth);
-    write_values(fs, vol.voxels);
+    write_value(fs, vol.width());
+    write_value(fs, vol.height());
+    write_value(fs, vol.depth());
+    write_values(fs, vol._voxels);
 }
 
 }  // namespace yocto

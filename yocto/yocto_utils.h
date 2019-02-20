@@ -234,9 +234,17 @@ inline void write_value(const output_file& fs, const T& value) {
 // write values to a file
 template <typename T>
 inline void write_values(const output_file& fs, const vector<T>& values) {
-    if (empty(values)) return;
+    if (values.empty()) return;
     if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
         values.size()) {
+        throw io_error("cannot write to " + fs.filename);
+    }
+}
+template <typename T>
+inline void write_values(const output_file& fs, const T* values, size_t count) {
+    if (!count) return;
+    if (fwrite(values, sizeof(values[0]), count, fs.file) !=
+        count) {
         throw io_error("cannot write to " + fs.filename);
     }
 }
@@ -641,7 +649,7 @@ inline void init_cmdline_parser(cmdline_parser& parser, int argc, char** argv,
     bool add_logging_flags) {
     parser               = {};
     parser.args          = {argv + 1, argv + argc};
-    parser.help_command  = (empty(cmd)) ? argv[0] : cmd;
+    parser.help_command  = (cmd.empty()) ? argv[0] : cmd;
     parser.help_usage    = usage;
     parser.add_help_flag = add_help_flag;
 }
@@ -738,7 +746,7 @@ inline string get_option_usage(const string& name, const string& usage,
     sprintf(buffer, "  %-24s %s %s\n", nametype.c_str(), usage.c_str(),
         def.c_str());
     auto usagelines = string(buffer);
-    if (!empty(choices)) {
+    if (!choices.empty()) {
         usagelines += "        accepted values:";
         for (auto& c : choices) usagelines += " " + c;
         usagelines += "\n";
@@ -751,12 +759,12 @@ inline void print_cmdline_usage(const cmdline_parser& parser) {
     auto usage = ""s;
     usage += parser.help_command + ": " + parser.help_usage + "\n";
     usage += "usage: " + parser.help_command;
-    if (!(empty(parser.help_options))) usage += "[options] ";
-    if (!(empty(parser.help_arguments))) usage += "arguments";
+    if (!(parser.help_options.empty())) usage += "[options] ";
+    if (!(parser.help_arguments.empty())) usage += "arguments";
     usage += "\n\n";
-    if (!empty(parser.help_options))
+    if (!parser.help_options.empty())
         usage += "options:\n" + parser.help_options + "\n";
-    if (!empty(parser.help_arguments))
+    if (!parser.help_arguments.empty())
         usage += "arguments:\n" + parser.help_arguments + "\n";
     printf("%s\n", usage.c_str());
 }
@@ -775,7 +783,7 @@ inline void check_cmdline_parser(cmdline_parser& parser) {
             exit(0);
         }
     }
-    if (!empty(parser.args)) {
+    if (!parser.args.empty()) {
         auto found = false;
         for (auto& name : parser.args) {
             if (is_optional_argument(name)) {
@@ -786,7 +794,7 @@ inline void check_cmdline_parser(cmdline_parser& parser) {
         }
         if (!found) parser.error += "unmatched arguments remaining\n";
     }
-    if (!empty(parser.error)) {
+    if (!parser.error.empty()) {
         printf("error: %s\n", parser.error.c_str());
         print_cmdline_usage(parser);
         exit(1);
@@ -833,7 +841,7 @@ inline bool parse_option_argument(cmdline_parser& parser, const string& name,
     }
     auto vals = *(pos + 1);
     parser.args.erase(pos, pos + 2);
-    if (!empty(choices) &&
+    if (!choices.empty() &&
         std::find(choices.begin(), choices.end(), vals) == choices.end()) {
         parser.error += "bad value for " + name + "\n";
         return false;
@@ -862,7 +870,7 @@ inline bool parse_positional_argument(cmdline_parser& parser,
     }
     auto vals = *pos;
     parser.args.erase(pos);
-    if (!empty(choices) &&
+    if (!choices.empty() &&
         std::find(choices.begin(), choices.end(), vals) == choices.end()) {
         parser.error += "bad value for " + name + "\n";
         return false;
@@ -1149,14 +1157,14 @@ template <typename T>
 inline concurrent_queue<T>::concurrent_queue() {}
 template <typename T>
 inline concurrent_queue<T>::concurrent_queue(const concurrent_queue<T>& other) {
-    if (!empty(other._queue))
+    if (!other._queue.empty())
         throw std::invalid_argument("cannot copy full queue");
     clear();
 }
 template <typename T>
 inline concurrent_queue<T>& concurrent_queue<T>::operator=(
     const concurrent_queue<T>& other) {
-    if (!empty(other._queue))
+    if (!other._queue.empty())
         throw std::invalid_argument("cannot copy full queue");
     clear();
 }

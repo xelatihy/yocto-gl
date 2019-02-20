@@ -387,8 +387,8 @@ void convert_face_varying(vector<vec4i>& split_quads,
         for (auto c = 0; c < 4; c++) {
             auto v = vec3i{
                 (&quads_positions[fid].x)[c],
-                (!empty(quads_normals)) ? (&quads_normals[fid].x)[c] : -1,
-                (!empty(quads_texturecoords)) ?
+                (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
+                (!quads_texturecoords.empty()) ?
                     (&quads_texturecoords[fid].x)[c] :
                     -1,
             };
@@ -405,21 +405,21 @@ void convert_face_varying(vector<vec4i>& split_quads,
 
     // fill vert data
     split_positions.clear();
-    if (!empty(positions)) {
+    if (!positions.empty()) {
         split_positions.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_positions[index] = positions[vert.x];
         }
     }
     split_normals.clear();
-    if (!empty(normals)) {
+    if (!normals.empty()) {
         split_normals.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_normals[index] = normals[vert.y];
         }
     }
     split_texturecoords.clear();
-    if (!empty(texturecoords)) {
+    if (!texturecoords.empty()) {
         split_texturecoords.resize(vert_map.size());
         for (auto& [vert, index] : vert_map) {
             split_texturecoords[index] = texturecoords[vert.z];
@@ -579,7 +579,7 @@ namespace yocto {
 template <typename T>
 void subdivide_lines_impl(vector<vec2i>& lines, vector<T>& vert) {
     // early exit
-    if (empty(lines) || empty(vert)) return;
+    if (lines.empty() || vert.empty()) return;
     // sizes
     auto nverts = (int)vert.size();
     auto nlines = (int)lines.size();
@@ -618,7 +618,7 @@ void subdivide_lines(vector<vec2i>& lines, vector<vec4f>& vert) {
 template <typename T>
 void subdivide_triangles_impl(vector<vec3i>& triangles, vector<T>& vert) {
     // early exit
-    if (empty(triangles) || empty(vert)) return;
+    if (triangles.empty() || vert.empty()) return;
     // get edges
     auto emap = edge_map{};
     insert_edges(emap, triangles);
@@ -670,7 +670,7 @@ void subdivide_triangles(vector<vec3i>& triangles, vector<vec4f>& vert) {
 template <typename T>
 void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert) {
     // early exit
-    if (empty(quads) || empty(vert)) return;
+    if (quads.empty() || vert.empty()) return;
     // get edges
     auto emap = edge_map{};
     insert_edges(emap, quads);
@@ -744,7 +744,7 @@ void subdivide_quads(vector<vec4i>& quads, vector<vec4f>& vert) {
 template <typename T>
 void subdivide_beziers_impl(vector<vec4i>& beziers, vector<T>& vert) {
     // early exit
-    if (empty(beziers) || empty(vert)) return;
+    if (beziers.empty() || vert.empty()) return;
     // get edges
     auto vmap     = unordered_map<int, int>();
     auto tvert    = vector<T>();
@@ -792,7 +792,7 @@ template <typename T>
 void subdivide_catmullclark_impl(
     vector<vec4i>& quads, vector<T>& vert, bool lock_boundary) {
     // early exit
-    if (empty(quads) || empty(vert)) return;
+    if (quads.empty() || vert.empty()) return;
     // get edges
     auto emap = edge_map{};
     insert_edges(emap, quads);
@@ -936,19 +936,19 @@ template <typename T, typename SubdivideFunc>
 void subdivide_elems_impl(vector<T>& elems, vector<vec3f>& positions,
     vector<vec3f>& normals, vector<vec2f>& texturecoords, vector<vec4f>& colors,
     vector<float>& radius, const SubdivideFunc&& subdivied_func) {
-    if (!empty(normals)) {
+    if (!normals.empty()) {
         auto elems_ = elems;
         subdivied_func(elems_, normals);
     }
-    if (!empty(texturecoords)) {
+    if (!texturecoords.empty()) {
         auto elems_ = elems;
         subdivied_func(elems_, texturecoords);
     }
-    if (!empty(colors)) {
+    if (!colors.empty()) {
         auto elems_ = elems;
         subdivied_func(elems_, colors);
     }
-    if (!empty(radius)) {
+    if (!radius.empty()) {
         auto elems_ = elems;
         subdivied_func(elems_, radius);
     }
@@ -1086,14 +1086,14 @@ void sample_triangles_points(vector<vec3f>& sampled_positions,
         auto t                          = triangles[triangle_id];
         sampled_positions[i]            = interpolate_triangle(
             positions[t.x], positions[t.y], positions[t.z], triangle_uv);
-        if (!empty(sampled_normals)) {
+        if (!sampled_normals.empty()) {
             sampled_normals[i] = normalize(interpolate_triangle(
                 normals[t.x], normals[t.y], normals[t.z], triangle_uv));
         } else {
             sampled_normals[i] = triangle_normal(
                 positions[t.x], positions[t.y], positions[t.z]);
         }
-        if (!empty(sampled_texturecoords)) {
+        if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_triangle(texturecoords[t.x],
                 texturecoords[t.y], texturecoords[t.z], triangle_uv);
         } else {
@@ -1123,14 +1123,14 @@ void sample_quads_points(vector<vec3f>& sampled_positions,
         auto q                  = quads[quad_id];
         sampled_positions[i] = interpolate_quad(positions[q.x], positions[q.y],
             positions[q.z], positions[q.w], quad_uv);
-        if (!empty(sampled_normals)) {
+        if (!sampled_normals.empty()) {
             sampled_normals[i] = normalize(interpolate_quad(normals[q.x],
                 normals[q.y], normals[q.z], normals[q.w], quad_uv));
         } else {
             sampled_normals[i] = quad_normal(
                 positions[q.x], positions[q.y], positions[q.z], positions[q.w]);
         }
-        if (!empty(sampled_texturecoords)) {
+        if (!sampled_texturecoords.empty()) {
             sampled_texturecoords[i] = interpolate_quad(texturecoords[q.x],
                 texturecoords[q.y], texturecoords[q.z], texturecoords[q.w],
                 quad_uv);

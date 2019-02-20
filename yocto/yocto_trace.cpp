@@ -1208,7 +1208,7 @@ vec3f evaluate_transmission_div_pdf(const vec3f& vd, float distance, int ch) {
 pair<vec3f, bool> trace_volpath(const yocto_scene& scene, const bvh_scene& bvh,
     const trace_lights& lights, const vec3f& position, const vec3f& direction,
     rng_state& rng, int max_bounces, bool environments_hidden) {
-    if (empty(lights.instances) && empty(lights.environments))
+    if (lights.instances.empty() && lights.environments.empty())
         return {zero3f, false};
 
     // initialize
@@ -1436,7 +1436,7 @@ pair<vec3f, bool> trace_path(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1514,7 +1514,7 @@ pair<vec3f, bool> trace_naive(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1582,7 +1582,7 @@ pair<vec3f, bool> trace_split(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1671,7 +1671,7 @@ pair<vec3f, bool> trace_eyelight(const yocto_scene& scene, const bvh_scene& bvh,
     auto point = trace_ray_with_opacity(
         scene, bvh, position, direction, rng, max_bounces);
     if (!point.hit) {
-        if (environments_hidden || empty(scene.environments))
+        if (environments_hidden || scene.environments.empty())
             return {zero3f, false};
         return {point.emission, true};
     }
@@ -1929,7 +1929,7 @@ void trace_image_region(image4f& image, trace_state& state,
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray             = sample_camera_ray(camera, {i, j},
-                    {image.width, image.height}, get_random_vec2f(pixel.rng),
+                    {image.width(), image.height()}, get_random_vec2f(pixel.rng),
                     get_random_vec2f(pixel.rng));
                 auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
                     pixel.rng, options.max_bounces,
@@ -1979,13 +1979,13 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
         if (!is_instance_emissive(scene, instance)) continue;
         if (instance.shape >= 0) {
             auto& shape = scene.shapes[instance.shape];
-            if (empty(shape.triangles) && empty(shape.quads)) continue;
+            if (shape.triangles.empty() && shape.quads.empty()) continue;
             lights.instances.push_back(instance_id);
             compute_shape_elements_cdf(
                 shape, lights.shape_elements_cdf[instance.shape]);
         } else if (instance.surface >= 0) {
             auto& surface = scene.surfaces[instance.surface];
-            if (empty(surface.quads_positions)) continue;
+            if (surface.quads_positions.empty()) continue;
             lights.instances.push_back(instance_id);
             compute_surface_elements_cdf(
                 surface, lights.surface_elements_cdf[instance.surface]);
@@ -2017,7 +2017,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     init_trace_state(pixels, width, height, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(
-        regions, image.width, image.height, options.region_size, true);
+        regions, image.width(), image.height(), options.region_size, true);
 
     if (options.run_serially) {
         for (auto& region : regions) {
@@ -2050,7 +2050,7 @@ int trace_image_samples(image4f& image, trace_state& state,
     int current_sample, const trace_image_options& options) {
     auto regions = vector<image_region>{};
     make_image_regions(
-        regions, image.width, image.height, options.region_size, true);
+        regions, image.width(), image.height(), options.region_size, true);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
     if (options.run_serially) {
@@ -2091,7 +2091,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
     init_trace_state(state, width, height, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(
-        regions, image.width, image.height, options.region_size, true);
+        regions, image.width(), image.height(), options.region_size, true);
     if (options.cancel_flag) *options.cancel_flag = false;
 
 #if 0

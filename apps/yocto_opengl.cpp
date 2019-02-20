@@ -179,8 +179,8 @@ void update_opengl_texture(
     opengl_texture& texture, const image4f& img, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
-        GL_FLOAT, data(img));
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width(), img.height(), GL_RGBA,
+        GL_FLOAT, img.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -191,7 +191,7 @@ void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     auto clipped = get_image_region(img, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.offsetx, region.offsety,
-        region.width, region.height, GL_RGBA, GL_FLOAT, data(clipped));
+        region.width, region.height, GL_RGBA, GL_FLOAT, clipped.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -200,8 +200,8 @@ void update_opengl_texture(
     opengl_texture& texture, const image4b& img, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width, img.height, GL_RGBA,
-        GL_UNSIGNED_BYTE, data(img));
+    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, img.width(), img.height(), GL_RGBA,
+        GL_UNSIGNED_BYTE, img.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -212,7 +212,7 @@ void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     auto clipped = get_image_region(img, region);
     glTexSubImage2D(GL_TEXTURE_2D, 0, region.offsetx, region.offsety,
-        region.width, region.height, GL_RGBA, GL_UNSIGNED_BYTE, data(clipped));
+        region.width, region.height, GL_RGBA, GL_UNSIGNED_BYTE, clipped.data());
     if (mipmap) glGenerateMipmap(GL_TEXTURE_2D);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -232,7 +232,7 @@ void init_opengl_array_buffer_impl(
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &buffer.buffer_id);
     glBindBuffer(GL_ARRAY_BUFFER, buffer.buffer_id);
-    glBufferData(GL_ARRAY_BUFFER, size(array) * sizeof(T), data(array),
+    glBufferData(GL_ARRAY_BUFFER, size(array) * sizeof(T), array.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
 }
@@ -269,7 +269,7 @@ void init_opengl_elementbuffer_impl(
     assert(glGetError() == GL_NO_ERROR);
     glGenBuffers(1, &buffer.buffer_id);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, buffer.buffer_id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size(array) * sizeof(T), data(array),
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size(array) * sizeof(T), array.data(),
         (dynamic) ? GL_DYNAMIC_DRAW : GL_STATIC_DRAW);
     assert(glGetError() == GL_NO_ERROR);
 }

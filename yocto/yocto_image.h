@@ -95,38 +95,51 @@ namespace yocto {
 // Image container.
 template <typename T>
 struct image {
-    // data
-    int       width  = 0;
-    int       height = 0;
-    vector<T> pixels = {};
-
     // constructors
-    image() : width{0}, height{0}, pixels{} {}
+    image() : _width{0}, _height{0}, _pixels{} {}
     image(int width, int height, const T& value = {})
-        : width{width}
-        , height{height}
-        , pixels{(size_t)width * (size_t)height, value} {}
+        : _width{width}
+        , _height{height}
+        , _pixels{(size_t)width * (size_t)height, value} {}
     image(int width, int height, const T* value)
-        : width{width}
-        , height{height}
-        , pixels{value, value + (size_t)width * (size_t)height} {}
+        : _width{width}
+        , _height{height}
+        , _pixels{value, value + (size_t)width * (size_t)height} {}
     image(const vec2i& size, const T& value = {})
-        : width{size.x}
-        , height{size.y}
-        , pixels{(size_t)size.x * (size_t)size.y, value} {}
+        : _width{size.x}
+        , _height{size.y}
+        , _pixels{(size_t)size.x * (size_t)size.y, value} {}
     image(const vec2i& size, const T* value)
-        : width{size.x}
-        , height{size.y}
-        , pixels{value, value + (size_t)size.x * (size_t)size.y} {}
+        : _width{size.x}
+        , _height{size.y}
+        , _pixels{value, value + (size_t)size.x * (size_t)size.y} {}
 
     // size
+    bool empty() const { return _pixels.empty(); }
+    int width() const { return _width; }
+    int height() const { return _height; }
     void resize(int width, int height);
 
     // element access
-    T&       operator[](const vec2i& ij) { return pixels[ij.y * width + ij.x]; }
+    T&       operator[](const vec2i& ij) { return _pixels[ij.y * _width + ij.x]; }
     const T& operator[](const vec2i& ij) const {
-        return pixels[ij.y * width + ij.x];
+        return _pixels[ij.y * _width + ij.x];
     }
+
+    // data access
+    T* data() { return _pixels.data(); }
+    const T* data() const { return _pixels.data(); }
+
+    // iteration
+    T* begin() { return _pixels.data(); }
+    T* end() { return _pixels.data() + _pixels.size(); }
+    const T* begin() const { return _pixels.data(); }
+    const T* end() const { return _pixels.data() + _pixels.size(); }
+
+    // data
+    int       _width  = 0;
+    int       _height = 0;
+    vector<T> _pixels = {};
 };
 
 // Typedefs
@@ -136,49 +149,21 @@ using image4b = image<vec4b>;
 // Functions to query image data
 template <typename T>
 inline vec2i imsize(const image<T>& img) {
-    return {img.width, img.height};
-}
-template <typename T>
-inline bool empty(const image<T>& img) {
-    return empty(img.pixels);
+    return {img.width(), img.height()};
 }
 template <typename T>
 inline size_t size(const image<T>& img) {
     return img.pixels.size();
 }
-template <typename T>
-inline T* begin(image<T>& img) {
-    return data(img.pixels);
-}
-template <typename T>
-inline T* end(image<T>& img) {
-    return data(img.pixels) + img.pixels.size();
-}
-template <typename T>
-inline const T* begin(const image<T>& img) {
-    return data(img.pixels);
-}
-template <typename T>
-inline const T* end(const image<T>& img) {
-    return data(img.pixels) + img.pixels.size();
-}
-template <typename T>
-inline T* data(image<T>& img) {
-    return data(img.pixels);
-}
-template <typename T>
-inline const T* data(const image<T>& img) {
-    return data(img.pixels);
-}
 
 // equality
 template <typename T>
 inline bool operator==(const image<T>& a, const image<T>& b) {
-    return a.width == b.width && a.height == b.height && a.pixels == b.pixels;
+    return a.width() == b.width() && a.height() == b.height() && a._pixels == b._pixels;
 }
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b) {
-    return a.width != b.width || a.height != b.height || a.pixels != b.pixels;
+    return a.width() != b.width() || a.height() != b.height() || a._pixels != b._pixels;
 }
 
 // Image region
@@ -281,47 +266,61 @@ namespace yocto {
 // Volume container.
 template <typename T>
 struct volume {
-    // data
-    int           width  = 0;
-    int           height = 0;
-    int           depth  = 0;
-    vector<float> voxels = {};
-
     // constructors
-    volume() : width{0}, height{0}, depth{0}, voxels{} {}
-    volume(int width, int height, int depth, const T& value)
-        : width{width}
-        , height{height}
-        , depth{depth}
-        , voxels((size_t)width * (size_t)height * (size_t)depth, value) {}
+    volume() : _width{0}, _height{0}, _depth{0}, _voxels{} {}
+    volume(int width, int height, int depth, const T& value = {})
+        : _width{width}
+        , _height{height}
+        , _depth{depth}
+        , _voxels((size_t)width * (size_t)height * (size_t)depth, value) {}
     volume(int width, int height, int depth, const T* value)
-        : width{width}
-        , height{height}
-        , depth{depth}
-        , voxels(
+        : _width{width}
+        , _height{height}
+        , _depth{depth}
+        , _voxels(
               value, value + (size_t)width * (size_t)height * (size_t)depth) {}
-    volume(const vec3i& size, const T& value)
-        : width{size.x}
-        , height{size.y}
-        , depth{size.z}
-        , voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
+    volume(const vec3i& size, const T& value = {})
+        : _width{size.x}
+        , _height{size.y}
+        , _depth{size.z}
+        , _voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
     volume(const vec3i& size, const T* value)
-        : width{size.x}
-        , height{size.y}
-        , depth{size.z}
-        , voxels(value,
+        : _width{size.x}
+        , _height{size.y}
+        , _depth{size.z}
+        , _voxels(value,
               value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
 
     // size
+    bool empty() const { return _voxels.empty(); }
+    int width() const { return _width; }
+    int height() const { return _height; }
+    int depth() const { return _depth; }
     void resize(int width, int height, int depth);
 
     // element access
     T& operator[](const vec3i& ijk) {
-        return voxels[ijk.z * width * height + ijk.y * width + ijk.x];
+        return _voxels[ijk.z * _width * _height + ijk.y * _width + ijk.x];
     }
     const T& operator[](const vec3i& ijk) const {
-        return voxels[ijk.z * width * height + ijk.y * width + ijk.x];
+        return _voxels[ijk.z * _width * _height + ijk.y * _width + ijk.x];
     }
+
+    // data access
+    T* data() { return _voxels.data(); }
+    const T* data() const { return _voxels.data(); }
+
+    // iteration
+    T* begin() { return _voxels.data(); }
+    T* end() { return _voxels.data() + _voxels.size(); }
+    const T* begin() const { return _voxels.data(); }
+    const T* end() const { return _voxels.data() + _voxels.size(); }
+
+    // data
+    int           _width  = 0;
+    int           _height = 0;
+    int           _depth  = 0;
+    vector<float> _voxels = {};
 };
 
 // Typedefs
@@ -329,31 +328,20 @@ using volume1f = volume<float>;
 
 // Functions to query volume data
 inline vec3i volsize(const volume1f& vol) {
-    return {vol.width, vol.height, vol.depth};
+    return {vol.width(), vol.height(), vol.depth()};
 }
-inline bool   empty(const volume1f& vol) { return empty(vol.voxels); }
-inline size_t size(const volume1f& vol) { return vol.voxels.size(); }
-inline float* begin(volume1f& vol) { return data(vol.voxels); }
-inline float* end(volume1f& vol) {
-    return data(vol.voxels) + vol.voxels.size();
-}
-inline const float* begin(const volume1f& vol) { return data(vol.voxels); }
-inline const float* end(const volume1f& vol) {
-    return data(vol.voxels) + vol.voxels.size();
-}
-inline float*       data(volume1f& vol) { return data(vol.voxels); }
-inline const float* data(const volume1f& vol) { return data(vol.voxels); }
+inline size_t size(const volume1f& vol) { return vol._voxels.size(); }
 
 // equality
 template <typename T>
 inline bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.width == b.width && a.height == b.height && a.depth == b.depth &&
-           a.voxels == b.voxels;
+    return a.width() == b.width() && a.height() == b.height() && a.depth() == b.depth() &&
+           a._voxels == b._voxels;
 }
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-    return a.width != b.width && a.height != b.height && a.depth != b.depth &&
-           a.voxels != b.voxels;
+    return a.width() != b.width() && a.height() != b.height() && a.depth() != b.depth() &&
+           a._voxels != b._voxels;
 }
 
 // make a simple example volume
@@ -627,10 +615,10 @@ namespace yocto {
 // Image resize
 template <typename T>
 inline void image<T>::resize(int width, int height) {
-    if (width * height != this->width * this->height) {
-        this->width  = width;
-        this->height = height;
-        this->pixels.resize((size_t)width * (size_t)height);
+    if (width != _width || height != _height) {
+        _width  = width;
+        _height = height;
+        _pixels.resize((size_t)width * (size_t)height);
     }
 }
 
@@ -673,11 +661,11 @@ namespace yocto {
 // size
 template <typename T>
 inline void volume<T>::resize(int width, int height, int depth) {
-    if (width * height * depth != this->width * this->height * this->depth) {
-        this->width  = width;
-        this->height = height;
-        this->depth  = depth;
-        this->voxels.resize((size_t)width * (size_t)height * (size_t)depth);
+    if (width != _width || height != _height || depth != _depth) {
+        _width  = width;
+        _height = height;
+        _depth  = depth;
+        _voxels.resize((size_t)width * (size_t)height * (size_t)depth);
     }
 }
 
