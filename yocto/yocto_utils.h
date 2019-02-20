@@ -335,6 +335,59 @@ inline bool read_line(input_file& fs, char* buffer, size_t size) {
     return true;
 }
 
+// Printing values
+inline void print_value(output_file& fs, int value) {
+    if(fprintf(fs.file, "%d", value) < 0) throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(output_file& fs, bool value) {
+    if(fprintf(fs.file, "%d", (int)value) < 0) throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(output_file& fs, float value) {
+    if(fprintf(fs.file, "%g", value) < 0) throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(output_file& fs, char value) {
+    if(fprintf(fs.file, "%c", value) < 0) throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(output_file& fs, const char* value) {
+    if(fprintf(fs.file, "%s", value) < 0) throw io_error("cannot write to file " + fs.filename);
+}
+inline void print_value(output_file& fs, const string& value) {
+    if(fprintf(fs.file, "%s", value.c_str()) < 0) throw io_error("cannot write to file " + fs.filename);
+}
+template<typename T, int N>
+inline void print_value(output_file& fs, const vec<T, N>& value) {
+    for(auto i = 0; i < N; i ++) {
+        if(i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
+}
+template<typename T, int N, int M>
+inline void print_value(output_file& fs, const mat<T, N, M>& value) {
+    for(auto i = 0; i < M; i ++) {
+        if(i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
+}
+template<typename T, int N>
+inline void print_value(output_file& fs, const frame<T, N>& value) {
+    for(auto i = 0; i < N+1; i ++) {
+        if(i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
+}
+
+// print values to file
+template<typename Arg, typename ... Args>
+inline void println_values(output_file& fs, const Arg& value, const Args& ... values) {
+    print_value(fs, value);
+    if constexpr(sizeof ...(values) > 0) {
+        print_value(fs, ' ');
+        println_values(fs, values...);
+    } else {
+        print_value(fs, '\n');
+    }
+}
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
