@@ -1776,17 +1776,17 @@ struct obj_vertex_hash {
 inline string_view_stream& operator>>(
     string_view_stream& view, obj_vertex& value) {
     value = obj_vertex{0, 0, 0};
-    if (!(view >> value.position)) return set_error(view);
+    if (!(parse_value(view, value.position))) return set_error(view);
     if (view.str.front() == '/') {
         view.str.remove_prefix(1);
         if (view.str.front() == '/') {
             view.str.remove_prefix(1);
-            if (!(view >> value.normal)) return set_error(view);
+            if (!(parse_value(view, value.normal))) return set_error(view);
         } else {
-            if (!(view >> value.texturecoord)) return set_error(view);
+            if (!(parse_value(view, value.texturecoord))) return set_error(view);
             if (view.str.front() == '/') {
                 view.str.remove_prefix(1);
-                if (!(view >> value.normal)) return set_error(view);
+                if (!(parse_value(view, value.normal))) return set_error(view);
             }
         }
     }
@@ -1803,7 +1803,7 @@ inline string_view_stream& operator>>(
     auto tokens = vector<string>();
     while (true) {
         auto token = ""s;
-        view >> token;
+        parse_value(view, token);
         if (token == "") break;
         tokens.push_back(token);
     }
@@ -1841,7 +1841,7 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
 
         // get command
         auto cmd = ""s;
-        view >> cmd;
+        parse_value(view, cmd);
         if (cmd == "") continue;
 
         // possible token values
@@ -1849,65 +1849,65 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
             if (!first && cb.material) cb.material(material);
             first    = false;
             material = obj_material();
-            view >> material.name;
+            parse_value(view, material.name);
         } else if (cmd == "illum") {
-            view >> material.illum;
+            parse_value(view, material.illum);
         } else if (cmd == "Ke") {
-            view >> material.ke;
+            parse_value(view, material.ke);
         } else if (cmd == "Kd") {
-            view >> material.kd;
+            parse_value(view, material.kd);
         } else if (cmd == "Ks") {
-            view >> material.ks;
+            parse_value(view, material.ks);
         } else if (cmd == "Kt") {
-            view >> material.kt;
+            parse_value(view, material.kt);
         } else if (cmd == "Tf") {
             material.kt = {-1, -1, -1};
-            view >> material.kt;
+            parse_value(view, material.kt);
             if (material.kt.y < 0)
                 material.kt = {material.kt.x, material.kt.x, material.kt.x};
             if (options.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
         } else if (cmd == "Tr") {
-            view >> material.op;
+            parse_value(view, material.op);
             if (options.flip_tr) material.op = 1 - material.op;
         } else if (cmd == "Ns") {
-            view >> material.ns;
+            parse_value(view, material.ns);
             material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
             if (material.rs < 0.01f) material.rs = 0;
             if (material.rs > 0.99f) material.rs = 1;
         } else if (cmd == "d") {
-            view >> material.op;
+            parse_value(view, material.op);
         } else if (cmd == "Pr" || cmd == "rs") {
-            view >> material.rs;
+            parse_value(view, material.rs);
         } else if (cmd == "map_Ke") {
-            view >> material.ke_txt;
+            parse_value(view, material.ke_txt);
         } else if (cmd == "map_Kd") {
-            view >> material.kd_txt;
+            parse_value(view, material.kd_txt);
         } else if (cmd == "map_Ks") {
-            view >> material.ks_txt;
+            parse_value(view, material.ks_txt);
         } else if (cmd == "map_Tr") {
-            view >> material.kt_txt;
+            parse_value(view, material.kt_txt);
         } else if (cmd == "map_d" || cmd == "map_Tr") {
-            view >> material.op_txt;
+            parse_value(view, material.op_txt);
         } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            view >> material.rs_txt;
+            parse_value(view, material.rs_txt);
         } else if (cmd == "map_occ" || cmd == "occ") {
-            view >> material.occ_txt;
+            parse_value(view, material.occ_txt);
         } else if (cmd == "map_bump" || cmd == "bump") {
-            view >> material.bump_txt;
+            parse_value(view, material.bump_txt);
         } else if (cmd == "map_disp" || cmd == "disp") {
-            view >> material.disp_txt;
+            parse_value(view, material.disp_txt);
         } else if (cmd == "map_norm" || cmd == "norm") {
-            view >> material.norm_txt;
+            parse_value(view, material.norm_txt);
         } else if (cmd == "Ve") {
-            view >> material.ve;
+            parse_value(view, material.ve);
         } else if (cmd == "Va") {
-            view >> material.va;
+            parse_value(view, material.va);
         } else if (cmd == "Vd") {
-            view >> material.vd;
+            parse_value(view, material.vd);
         } else if (cmd == "Vg") {
-            view >> material.vg;
+            parse_value(view, material.vg);
         } else if (cmd == "map_Vd") {
-            view >> material.vd_txt;
+            parse_value(view, material.vd_txt);
         }
     }
 
@@ -1930,37 +1930,37 @@ void load_objx(const string& filename, const obj_callbacks& cb,
 
         // get command
         auto cmd = ""s;
-        view >> cmd;
+        parse_value(view, cmd);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "c") {
             auto camera = obj_camera();
-            view >> camera.name;
-            view >> camera.ortho;
-            view >> camera.width;
-            view >> camera.height;
-            view >> camera.focal;
-            view >> camera.focus;
-            view >> camera.aperture;
-            view >> camera.frame;
+            parse_value(view, camera.name);
+            parse_value(view, camera.ortho);
+            parse_value(view, camera.width);
+            parse_value(view, camera.height);
+            parse_value(view, camera.focal);
+            parse_value(view, camera.focus);
+            parse_value(view, camera.aperture);
+            parse_value(view, camera.frame);
             if (cb.camera) cb.camera(camera);
         } else if (cmd == "e") {
             auto environment = obj_environment();
-            view >> environment.name;
-            view >> environment.ke;
-            view >> environment.ke_txt.path;
-            view >> environment.frame;
+            parse_value(view, environment.name);
+            parse_value(view, environment.ke);
+            parse_value(view, environment.ke_txt.path);
+            parse_value(view, environment.frame);
             if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
             if (cb.environmnet) cb.environmnet(environment);
         } else if (cmd == "po") {
             auto procedural = obj_procedural();
-            view >> procedural.name;
-            view >> procedural.type;
-            view >> procedural.material;
-            view >> procedural.size;
-            view >> procedural.level;
-            view >> procedural.frame;
+            parse_value(view, procedural.name);
+            parse_value(view, procedural.type);
+            parse_value(view, procedural.material);
+            parse_value(view, procedural.size);
+            parse_value(view, procedural.level);
+            parse_value(view, procedural.frame);
             if (cb.procedural) cb.procedural(procedural);
         } else {
             // unused
@@ -1987,23 +1987,23 @@ void load_obj(const string& filename, const obj_callbacks& cb,
 
         // get command
         auto cmd = ""s;
-        view >> cmd;
+        parse_value(view, cmd);
         if (cmd == "") continue;
 
         // possible token values
         if (cmd == "v") {
             auto vert = zero3f;
-            view >> vert;
+            parse_value(view, vert);
             if (cb.vert) cb.vert(vert);
             vert_size.position += 1;
         } else if (cmd == "vn") {
             auto vert = zero3f;
-            view >> vert;
+            parse_value(view, vert);
             if (cb.norm) cb.norm(vert);
             vert_size.normal += 1;
         } else if (cmd == "vt") {
             auto vert = zero2f;
-            view >> vert;
+            parse_value(view, vert);
             if (options.flip_texcoord) vert.y = 1 - vert.y;
             if (cb.texcoord) cb.texcoord(vert);
             vert_size.texturecoord += 1;
@@ -2011,7 +2011,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
             verts.clear();
             while (true) {
                 auto vert = obj_vertex{};
-                view >> vert;
+                parse_value(view, vert);
                 if (!vert.position) break;
                 if (vert.position < 0)
                     vert.position = vert_size.position + vert.position + 1;
@@ -2027,24 +2027,24 @@ void load_obj(const string& filename, const obj_callbacks& cb,
             if (cmd == "p" && cb.point) cb.point(verts);
         } else if (cmd == "o") {
             auto name = ""s;
-            view >> name;
+            parse_value(view, name);
             if (cb.object) cb.object(name);
         } else if (cmd == "usemtl") {
             auto name = ""s;
-            view >> name;
+            parse_value(view, name);
             if (cb.usemtl) cb.usemtl(name);
         } else if (cmd == "g") {
             auto name = ""s;
-            view >> name;
+            parse_value(view, name);
             if (cb.group) cb.group(name);
         } else if (cmd == "s") {
             auto name = ""s;
-            view >> name;
+            parse_value(view, name);
             if (cb.smoothing) cb.smoothing(name);
         } else if (cmd == "mtllib") {
             if (options.geometry_only) continue;
             auto mtlname = ""s;
-            view >> mtlname;
+            parse_value(view, mtlname);
             if (cb.mtllib) cb.mtllib(mtlname);
             auto mtlpath = get_dirname(filename) + mtlname;
             load_mtl(mtlpath, cb, options);
@@ -5680,13 +5680,13 @@ void load_ply(const string& filename, ply_data& ply) {
     while (getline(fs, line)) {
         auto view = string_view_stream{line};
         auto cmd  = ""s;
-        view >> cmd;
+        parse_value(view, cmd);
         if (cmd == "") continue;
         if (cmd == "ply") {
         } else if (cmd == "comment") {
         } else if (cmd == "format") {
             auto fmt = ""s;
-            view >> fmt;
+            parse_value(view, fmt);
             if (fmt == "ascii") {
                 ascii = true;
             } else if (fmt == "binary_little_endian") {
@@ -5700,18 +5700,18 @@ void load_ply(const string& filename, ply_data& ply) {
             }
         } else if (cmd == "element") {
             auto elem = ply_element();
-            view >> elem.name;
-            view >> elem.count;
+            parse_value(view, elem.name);
+            parse_value(view, elem.count);
             ply.elements.push_back(elem);
         } else if (cmd == "property") {
             auto prop = ply_property();
             auto type = ""s;
-            view >> type;
+            parse_value(view, type);
             if (type == "list") {
                 auto count_type = ""s;
-                view >> count_type;
+                parse_value(view, count_type);
                 auto elem_type = ""s;
-                view >> elem_type;
+                parse_value(view, elem_type);
                 if (count_type != "uchar" && count_type != "uint8")
                     log_error("unsupported ply list type");
                 if (elem_type != "int" && elem_type != "uint")
@@ -5726,7 +5726,7 @@ void load_ply(const string& filename, ply_data& ply) {
             } else {
                 throw io_error("unsupported ply format");
             }
-            view >> prop.name;
+            parse_value(view, prop.name);
             prop.scalars.resize(ply.elements.back().count);
             if (prop.type == ply_type::ply_int_list)
                 prop.lists.resize(ply.elements.back().count);
@@ -5748,27 +5748,27 @@ void load_ply(const string& filename, ply_data& ply) {
                     auto& prop = elem.properties[pid];
                     if (prop.type == ply_type::ply_float) {
                         auto v = 0.0f;
-                        view >> v;
+                        parse_value(view, v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_int) {
                         auto v = 0;
-                        view >> v;
+                        parse_value(view, v);
                         prop.scalars[vid] = v;
                     } else if (prop.type == ply_type::ply_uchar) {
                         auto vc = (unsigned char)0;
                         auto v  = 0;
-                        view >> v;
+                        parse_value(view, v);
                         vc                = (unsigned char)v;
                         prop.scalars[vid] = vc / 255.0f;
                     } else if (prop.type == ply_type::ply_int_list) {
                         auto vc = (unsigned char)0;
                         auto v  = 0;
-                        view >> v;
+                        parse_value(view, v);
                         vc                = (unsigned char)v;
                         prop.scalars[vid] = vc;
                         for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
                             auto v = 0;
-                            view >> v;
+                            parse_value(view, v);
                             prop.lists[vid][i] = v;
                         }
                     } else {
