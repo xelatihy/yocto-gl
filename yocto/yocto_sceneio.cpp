@@ -1388,8 +1388,7 @@ void apply_json_procedural(
         auto up     = get_json_value(js, "up", vec3f{0, 1, 0});
         value.frame = make_lookat_frame(from, to, up, true);
     }
-    if (js.count("translation") || js.count("rotation") ||
-        js.count("scale")) {
+    if (js.count("translation") || js.count("rotation") || js.count("scale")) {
         auto translation = get_json_value(js, "translation", zero3f);
         auto rotation    = get_json_value(js, "rotation", zero4f);
         auto scaling     = get_json_value(js, "scale", vec3f{1, 1, 1});
@@ -2897,8 +2896,7 @@ void gltf_to_scene(
 
     // add a texture
     auto add_texture = [&scene, &gltf](const json& ginfo, bool force_linear) {
-        if (!gltf.count("images") || !gltf.count("textures"))
-            return -1;
+        if (!gltf.count("images") || !gltf.count("textures")) return -1;
         if (ginfo.is_null() || empty(ginfo)) return -1;
         if (ginfo.value("index", -1) < 0) return -1;
         auto& gtxt = gltf.at("textures").at(ginfo.value("index", -1));
@@ -4158,8 +4156,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     mat_map[material.name] = (int)scene.materials.size() - 1;
                 }
                 auto type = "uber"s;
-                if (jcmd.count("type"))
-                    type = jcmd.at("type").get<string>();
+                if (jcmd.count("type")) type = jcmd.at("type").get<string>();
                 if (type == "uber") {
                     if (jcmd.count("Kd"))
                         get_scaled_texture(jcmd.at("Kd"), material.diffuse,
@@ -4408,8 +4405,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 auto& shape = scene.shapes.back();
                 shape.name  = "distant" + std::to_string(lid++);
                 auto from = vec3f{0, 0, 0}, to = vec3f{0, 0, 0};
-                if (jcmd.count("from"))
-                    from = get_vec3f(jcmd.at("from"));
+                if (jcmd.count("from")) from = get_vec3f(jcmd.at("from"));
                 if (jcmd.count("to")) to = get_vec3f(jcmd.at("to"));
                 auto dir  = normalize(from - to);
                 auto size = distant_dist * sin(5 * pif / 180);
@@ -4637,291 +4633,350 @@ namespace yocto {
 // as binary into file serialize_bin(name, file, false): read file as binary and
 // set name
 
-// Serialize type or struct with no allocated resource
-template <typename T>
-void serialize_bin_value(T& value, fstream& fs, bool save) {
-    if (save) {
-        write_value(fs, value);
-    } else {
-        read_value(fs, value);
-    }
-}
-
 // Serialize vector
 template <typename T>
-void serialize_bin_value(vector<T>& vec, fstream& fs, bool save) {
-    if (save) {
-        auto count = (size_t)vec.size();
-        write_value(fs, count);
-        write_values(fs, vec);
-    } else {
-        auto count = (size_t)0;
-        read_value(fs, count);
-        vec = vector<T>(count);
-        read_values(fs, vec);
-    }
+void write_value(output_file& fs, const vector<T>& vec) {
+    auto count = (size_t)vec.size();
+    write_value(fs, count);
+    write_values(fs, vec);
+}
+template <typename T>
+void read_value(input_file& fs, vector<T>& vec) {
+    auto count = (size_t)0;
+    read_value(fs, count);
+    vec = vector<T>(count);
+    read_values(fs, vec);
 }
 
 // Serialize string
-void serialize_bin_value(string& str, fstream& fs, bool save) {
-    if (save) {
-        auto count = (size_t)str.size();
-        write_value(fs, count);
-        auto vec = vector<char>(str.begin(), str.end());
-        write_values(fs, vec);
-    } else {
-        auto count = (size_t)0;
-        read_value(fs, count);
-        auto vec = vector<char>(count);
-        read_values(fs, vec);
-        str = {vec.begin(), vec.end()};
-    }
+void write_value(output_file& fs, const string& str) {
+    auto count = (size_t)str.size();
+    write_value(fs, count);
+    auto vec = vector<char>(str.begin(), str.end());
+    write_values(fs, vec);
+}
+void read_value(input_file& fs, string& str) {
+    auto count = (size_t)0;
+    read_value(fs, count);
+    auto vec = vector<char>(count);
+    read_values(fs, vec);
+    str = {vec.begin(), vec.end()};
 }
 
 // Serialize image
-void serialize_bin_value(image4f& img, fstream& fs, bool save) {
-    if (save) {
-        write_value(fs, img.width);
-        write_value(fs, img.height);
-        write_values(fs, img.pixels);
-    } else {
-        read_value(fs, img.width);
-        read_value(fs, img.height);
-        img.pixels.resize(img.width * img.height);
-        read_values(fs, img.pixels);
-    }
+template <typename T>
+void write_value(output_file& fs, const image<T>& img) {
+    write_value(fs, img.width);
+    write_value(fs, img.height);
+    write_values(fs, img.pixels);
 }
-void serialize_bin_value(image4b& img, fstream& fs, bool save) {
-    if (save) {
-        write_value(fs, img.width);
-        write_value(fs, img.height);
-        write_values(fs, img.pixels);
-    } else {
-        read_value(fs, img.width);
-        read_value(fs, img.height);
-        img.pixels.resize(img.width * img.height);
-        read_values(fs, img.pixels);
-    }
+template <typename T>
+void read_value(input_file& fs, image<T>& img) {
+    read_value(fs, img.width);
+    read_value(fs, img.height);
+    img.pixels.resize(img.width * img.height);
+    read_values(fs, img.pixels);
 }
 
 // Serialize image
-void serialize_bin_value(volume1f& vol, fstream& fs, bool save) {
-    if (save) {
-        write_value(fs, vol.width);
-        write_value(fs, vol.height);
-        write_value(fs, vol.depth);
-        write_values(fs, vol.voxels);
-    } else {
-        read_value(fs, vol.width);
-        read_value(fs, vol.height);
-        read_value(fs, vol.depth);
-        vol.voxels.resize(vol.width * vol.height * vol.depth);
-        read_values(fs, vol.voxels);
-    }
+template <typename T>
+void write_value(output_file& fs, const volume<T>& vol) {
+    write_value(fs, vol.width);
+    write_value(fs, vol.height);
+    write_value(fs, vol.depth);
+    write_values(fs, vol.voxels);
+}
+template <typename T>
+void read_value(input_file& fs, volume<T>& vol) {
+    read_value(fs, vol.width);
+    read_value(fs, vol.height);
+    read_value(fs, vol.depth);
+    vol.voxels.resize(vol.width * vol.height * vol.depth);
+    read_values(fs, vol.voxels);
 }
 
 // Serialize vector of pointers
 template <typename T>
-void serialize_bin_objects(vector<T*>& vec, fstream& fs, bool save) {
-    if (save) {
-        auto count = (size_t)vec.size();
-        serialize_bin_value(count, fs, true);
-        for (auto i = 0; i < vec.size(); ++i) {
-            serialize_bin_object(vec[i], fs, true);
-        }
-    } else {
-        auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
-        vec = vector<T*>(count);
-        for (auto i = 0; i < vec.size(); ++i) {
-            vec[i] = new T();
-            serialize_bin_object(vec[i], fs, false);
-        }
+void write_objects(output_file& fs, const vector<T>& vec) {
+    auto count = (size_t)vec.size();
+    write_value(fs, count);
+    for (auto i = 0; i < vec.size(); ++i) {
+        write_object(fs, vec[i]);
     }
 }
-
-// Serialize vector of pointers
 template <typename T>
-void serialize_bin_objects(vector<T>& vec, fstream& fs, bool save) {
-    if (save) {
-        auto count = (size_t)vec.size();
-        serialize_bin_value(count, fs, true);
-        for (auto i = 0; i < vec.size(); ++i) {
-            serialize_bin_object(vec[i], fs, true);
-        }
-    } else {
-        auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
-        vec = vector<T>(count);
-        for (auto i = 0; i < vec.size(); ++i) {
-            vec[i] = T{};
-            serialize_bin_object(vec[i], fs, false);
-        }
-    }
-}
-
-// Serialize vector of objects
-template <typename T>
-void serialize_bin_objects(
-    vector<T>& vec, const yocto_scene& scene, fstream& fs, bool save) {
-    if (save) {
-        auto count = (size_t)vec.size();
-        serialize_bin_value(count, fs, true);
-        for (auto i = 0; i < vec.size(); ++i) {
-            serialize_bin_object(vec[i], scene, fs, true);
-        }
-    } else {
-        auto count = (size_t)0;
-        serialize_bin_value(count, fs, false);
-        vec = vector<T>(count);
-        for (auto i = 0; i < vec.size(); ++i) {
-            vec[i] = T{};
-            serialize_bin_object(vec[i], scene, fs, false);
-        }
+void read_objects(input_file& fs, vector<T>& vec) {
+    auto count = (size_t)0;
+    read_value(fs, count);
+    vec = vector<T>(count);
+    for (auto i = 0; i < vec.size(); ++i) {
+        vec[i] = T{};
+        read_object(fs, vec[i]);
     }
 }
 
 // Serialize yocto types. This is mostly boiler plate code.
-void serialize_bin_object(yocto_camera& camera, fstream& fs, bool save) {
-    serialize_bin_value(camera.name, fs, save);
-    serialize_bin_value(camera.frame, fs, save);
-    serialize_bin_value(camera.orthographic, fs, save);
-    serialize_bin_value(camera.film_width, fs, save);
-    serialize_bin_value(camera.film_height, fs, save);
-    serialize_bin_value(camera.focal_length, fs, save);
-    serialize_bin_value(camera.focus_distance, fs, save);
-    serialize_bin_value(camera.lens_aperture, fs, save);
+void write_object(output_file& fs, const yocto_camera& camera) {
+    write_value(fs, camera.name);
+    write_value(fs, camera.frame);
+    write_value(fs, camera.orthographic);
+    write_value(fs, camera.film_width);
+    write_value(fs, camera.film_height);
+    write_value(fs, camera.focal_length);
+    write_value(fs, camera.focus_distance);
+    write_value(fs, camera.lens_aperture);
+}
+void read_object(input_file& fs, yocto_camera& camera) {
+    read_value(fs, camera.name);
+    read_value(fs, camera.frame);
+    read_value(fs, camera.orthographic);
+    read_value(fs, camera.film_width);
+    read_value(fs, camera.film_height);
+    read_value(fs, camera.focal_length);
+    read_value(fs, camera.focus_distance);
+    read_value(fs, camera.lens_aperture);
 }
 
-void serialize_bin_object(bvh_shape& bvh, fstream& fs, bool save) {
-    serialize_bin_value(bvh.positions, fs, save);
-    serialize_bin_value(bvh.radius, fs, save);
-    serialize_bin_value(bvh.points, fs, save);
-    serialize_bin_value(bvh.lines, fs, save);
-    serialize_bin_value(bvh.triangles, fs, save);
-    serialize_bin_value(bvh.quads, fs, save);
-    serialize_bin_value(bvh.nodes, fs, save);
-    serialize_bin_value(bvh.nodes, fs, save);
+void write_object(output_file& fs, const bvh_shape& bvh) {
+    write_value(fs, bvh.positions);
+    write_value(fs, bvh.radius);
+    write_value(fs, bvh.points);
+    write_value(fs, bvh.lines);
+    write_value(fs, bvh.triangles);
+    write_value(fs, bvh.quads);
+    write_value(fs, bvh.nodes);
+    write_value(fs, bvh.nodes);
+}
+void read_object(input_file& fs, bvh_shape& bvh) {
+    read_value(fs, bvh.positions);
+    read_value(fs, bvh.radius);
+    read_value(fs, bvh.points);
+    read_value(fs, bvh.lines);
+    read_value(fs, bvh.triangles);
+    read_value(fs, bvh.quads);
+    read_value(fs, bvh.nodes);
+    read_value(fs, bvh.nodes);
 }
 
-void serialize_bin_object(bvh_scene& bvh, fstream& fs, bool save) {
-    serialize_bin_value(bvh.nodes, fs, save);
-    serialize_bin_value(bvh.instances, fs, save);
-    serialize_bin_objects(bvh.shape_bvhs, fs, save);
-    serialize_bin_value(bvh.nodes, fs, save);
+void write_object(output_file& fs, const bvh_scene& bvh) {
+    write_value(fs, bvh.nodes);
+    write_value(fs, bvh.instances);
+    write_objects(fs, bvh.shape_bvhs);
+    write_value(fs, bvh.nodes);
+}
+void read_object(input_file& fs, bvh_scene& bvh) {
+    read_value(fs, bvh.nodes);
+    read_value(fs, bvh.instances);
+    read_objects(fs, bvh.shape_bvhs);
+    read_value(fs, bvh.nodes);
 }
 
-void serialize_bin_object(
-    yocto_shape& shape, const yocto_scene& scene, fstream& fs, bool save) {
-    serialize_bin_value(shape.name, fs, save);
-    serialize_bin_value(shape.filename, fs, save);
-    serialize_bin_value(shape.material, fs, save);
-    serialize_bin_value(shape.subdivision_level, fs, save);
-    serialize_bin_value(shape.catmull_clark, fs, save);
-    serialize_bin_value(shape.compute_vertex_normals, fs, save);
-    serialize_bin_value(shape.points, fs, save);
-    serialize_bin_value(shape.lines, fs, save);
-    serialize_bin_value(shape.triangles, fs, save);
-    serialize_bin_value(shape.quads, fs, save);
-    serialize_bin_value(shape.positions, fs, save);
-    serialize_bin_value(shape.normals, fs, save);
-    serialize_bin_value(shape.texturecoords, fs, save);
-    serialize_bin_value(shape.colors, fs, save);
-    serialize_bin_value(shape.radius, fs, save);
-    serialize_bin_value(shape.tangentspaces, fs, save);
+void write_object(output_file& fs, const yocto_shape& shape) {
+    write_value(fs, shape.name);
+    write_value(fs, shape.filename);
+    write_value(fs, shape.material);
+    write_value(fs, shape.subdivision_level);
+    write_value(fs, shape.catmull_clark);
+    write_value(fs, shape.compute_vertex_normals);
+    write_value(fs, shape.points);
+    write_value(fs, shape.lines);
+    write_value(fs, shape.triangles);
+    write_value(fs, shape.quads);
+    write_value(fs, shape.positions);
+    write_value(fs, shape.normals);
+    write_value(fs, shape.texturecoords);
+    write_value(fs, shape.colors);
+    write_value(fs, shape.radius);
+    write_value(fs, shape.tangentspaces);
+}
+void read_object(input_file& fs, yocto_shape& shape) {
+    read_value(fs, shape.name);
+    read_value(fs, shape.filename);
+    read_value(fs, shape.material);
+    read_value(fs, shape.subdivision_level);
+    read_value(fs, shape.catmull_clark);
+    read_value(fs, shape.compute_vertex_normals);
+    read_value(fs, shape.points);
+    read_value(fs, shape.lines);
+    read_value(fs, shape.triangles);
+    read_value(fs, shape.quads);
+    read_value(fs, shape.positions);
+    read_value(fs, shape.normals);
+    read_value(fs, shape.texturecoords);
+    read_value(fs, shape.colors);
+    read_value(fs, shape.radius);
+    read_value(fs, shape.tangentspaces);
 }
 
-void serialize_bin_object(
-    yocto_surface& surface, const yocto_scene& scene, fstream& fs, bool save) {
-    serialize_bin_value(surface.name, fs, save);
-    serialize_bin_value(surface.filename, fs, save);
-    serialize_bin_value(surface.materials, fs, save);
-    serialize_bin_value(surface.subdivision_level, fs, save);
-    serialize_bin_value(surface.catmull_clark, fs, save);
-    serialize_bin_value(surface.compute_vertex_normals, fs, save);
-    serialize_bin_value(surface.quads_positions, fs, save);
-    serialize_bin_value(surface.quads_normals, fs, save);
-    serialize_bin_value(surface.quads_texturecoords, fs, save);
-    serialize_bin_value(surface.quads_materials, fs, save);
-    serialize_bin_value(surface.positions, fs, save);
-    serialize_bin_value(surface.normals, fs, save);
-    serialize_bin_value(surface.texturecoords, fs, save);
+void write_object(output_file& fs, const yocto_surface& surface) {
+    write_value(fs, surface.name);
+    write_value(fs, surface.filename);
+    write_value(fs, surface.materials);
+    write_value(fs, surface.subdivision_level);
+    write_value(fs, surface.catmull_clark);
+    write_value(fs, surface.compute_vertex_normals);
+    write_value(fs, surface.quads_positions);
+    write_value(fs, surface.quads_normals);
+    write_value(fs, surface.quads_texturecoords);
+    write_value(fs, surface.quads_materials);
+    write_value(fs, surface.positions);
+    write_value(fs, surface.normals);
+    write_value(fs, surface.texturecoords);
+}
+void read_object(input_file& fs, yocto_surface& surface) {
+    read_value(fs, surface.name);
+    read_value(fs, surface.filename);
+    read_value(fs, surface.materials);
+    read_value(fs, surface.subdivision_level);
+    read_value(fs, surface.catmull_clark);
+    read_value(fs, surface.compute_vertex_normals);
+    read_value(fs, surface.quads_positions);
+    read_value(fs, surface.quads_normals);
+    read_value(fs, surface.quads_texturecoords);
+    read_value(fs, surface.quads_materials);
+    read_value(fs, surface.positions);
+    read_value(fs, surface.normals);
+    read_value(fs, surface.texturecoords);
 }
 
-void serialize_bin_object(yocto_texture& texture, fstream& fs, bool save) {
-    serialize_bin_value(texture.name, fs, save);
-    serialize_bin_value(texture.filename, fs, save);
-    serialize_bin_value(texture.hdr_image, fs, save);
-    serialize_bin_value(texture.ldr_image, fs, save);
-    serialize_bin_value(texture.clamp_to_edge, fs, save);
-    serialize_bin_value(texture.height_scale, fs, save);
-    serialize_bin_value(texture.no_interpolation, fs, save);
-    serialize_bin_value(texture.ldr_as_linear, fs, save);
+void write_object(output_file& fs, const yocto_texture& texture) {
+    write_value(fs, texture.name);
+    write_value(fs, texture.filename);
+    write_value(fs, texture.hdr_image);
+    write_value(fs, texture.ldr_image);
+    write_value(fs, texture.clamp_to_edge);
+    write_value(fs, texture.height_scale);
+    write_value(fs, texture.no_interpolation);
+    write_value(fs, texture.ldr_as_linear);
+}
+void read_object(input_file& fs, yocto_texture& texture) {
+    read_value(fs, texture.name);
+    read_value(fs, texture.filename);
+    read_value(fs, texture.hdr_image);
+    read_value(fs, texture.ldr_image);
+    read_value(fs, texture.clamp_to_edge);
+    read_value(fs, texture.height_scale);
+    read_value(fs, texture.no_interpolation);
+    read_value(fs, texture.ldr_as_linear);
 }
 
-void serialize_bin_object(yocto_voltexture& texture, fstream& fs, bool save) {
-    serialize_bin_value(texture.name, fs, save);
-    serialize_bin_value(texture.filename, fs, save);
-    serialize_bin_value(texture.volume_data, fs, save);
-    serialize_bin_value(texture.clamp_to_edge, fs, save);
+void write_object(output_file& fs, const yocto_voltexture& texture) {
+    write_value(fs, texture.name);
+    write_value(fs, texture.filename);
+    write_value(fs, texture.volume_data);
+    write_value(fs, texture.clamp_to_edge);
+}
+void read_object(input_file& fs, yocto_voltexture& texture) {
+    read_value(fs, texture.name);
+    read_value(fs, texture.filename);
+    read_value(fs, texture.volume_data);
+    read_value(fs, texture.clamp_to_edge);
 }
 
-void serialize_bin_object(yocto_environment& environment,
-    const yocto_scene& scene, fstream& fs, bool save) {
-    serialize_bin_value(environment.name, fs, save);
-    serialize_bin_value(environment.frame, fs, save);
-    serialize_bin_value(environment.emission, fs, save);
-    serialize_bin_value(environment.emission_texture, fs, save);
+void write_object(output_file& fs, const yocto_environment& environment) {
+    write_value(fs, environment.name);
+    write_value(fs, environment.frame);
+    write_value(fs, environment.emission);
+    write_value(fs, environment.emission_texture);
+}
+void read_object(input_file& fs, yocto_environment& environment) {
+    read_value(fs, environment.name);
+    read_value(fs, environment.frame);
+    read_value(fs, environment.emission);
+    read_value(fs, environment.emission_texture);
 }
 
-void serialize_bin_object(yocto_material& material, const yocto_scene& scene,
-    fstream& fs, bool save) {
-    serialize_bin_value(material.name, fs, save);
-    serialize_bin_value(material.base_metallic, fs, save);
-    serialize_bin_value(material.gltf_textures, fs, save);
-    serialize_bin_value(material.emission, fs, save);
-    serialize_bin_value(material.diffuse, fs, save);
-    serialize_bin_value(material.specular, fs, save);
-    serialize_bin_value(material.transmission, fs, save);
-    serialize_bin_value(material.roughness, fs, save);
-    serialize_bin_value(material.opacity, fs, save);
-    serialize_bin_value(material.fresnel, fs, save);
-    serialize_bin_value(material.refract, fs, save);
-    serialize_bin_value(material.emission_texture, fs, save);
-    serialize_bin_value(material.diffuse_texture, fs, save);
-    serialize_bin_value(material.specular_texture, fs, save);
-    serialize_bin_value(material.transmission_texture, fs, save);
-    serialize_bin_value(material.roughness_texture, fs, save);
-    serialize_bin_value(material.opacity_texture, fs, save);
-    serialize_bin_value(material.occlusion_texture, fs, save);
-    serialize_bin_value(material.bump_texture, fs, save);
-    serialize_bin_value(material.displacement_texture, fs, save);
-    serialize_bin_value(material.normal_texture, fs, save);
-    serialize_bin_value(material.volume_emission, fs, save);
-    serialize_bin_value(material.volume_albedo, fs, save);
-    serialize_bin_value(material.volume_density, fs, save);
-    serialize_bin_value(material.volume_phaseg, fs, save);
-    serialize_bin_value(material.volume_density_texture, fs, save);
+void write_object(output_file& fs, const yocto_material& material) {
+    write_value(fs, material.name);
+    write_value(fs, material.base_metallic);
+    write_value(fs, material.gltf_textures);
+    write_value(fs, material.emission);
+    write_value(fs, material.diffuse);
+    write_value(fs, material.specular);
+    write_value(fs, material.transmission);
+    write_value(fs, material.roughness);
+    write_value(fs, material.opacity);
+    write_value(fs, material.fresnel);
+    write_value(fs, material.refract);
+    write_value(fs, material.emission_texture);
+    write_value(fs, material.diffuse_texture);
+    write_value(fs, material.specular_texture);
+    write_value(fs, material.transmission_texture);
+    write_value(fs, material.roughness_texture);
+    write_value(fs, material.opacity_texture);
+    write_value(fs, material.occlusion_texture);
+    write_value(fs, material.bump_texture);
+    write_value(fs, material.displacement_texture);
+    write_value(fs, material.normal_texture);
+    write_value(fs, material.volume_emission);
+    write_value(fs, material.volume_albedo);
+    write_value(fs, material.volume_density);
+    write_value(fs, material.volume_phaseg);
+    write_value(fs, material.volume_density_texture);
+};
+void read_object(input_file& fs, yocto_material& material) {
+    read_value(fs, material.name);
+    read_value(fs, material.base_metallic);
+    read_value(fs, material.gltf_textures);
+    read_value(fs, material.emission);
+    read_value(fs, material.diffuse);
+    read_value(fs, material.specular);
+    read_value(fs, material.transmission);
+    read_value(fs, material.roughness);
+    read_value(fs, material.opacity);
+    read_value(fs, material.fresnel);
+    read_value(fs, material.refract);
+    read_value(fs, material.emission_texture);
+    read_value(fs, material.diffuse_texture);
+    read_value(fs, material.specular_texture);
+    read_value(fs, material.transmission_texture);
+    read_value(fs, material.roughness_texture);
+    read_value(fs, material.opacity_texture);
+    read_value(fs, material.occlusion_texture);
+    read_value(fs, material.bump_texture);
+    read_value(fs, material.displacement_texture);
+    read_value(fs, material.normal_texture);
+    read_value(fs, material.volume_emission);
+    read_value(fs, material.volume_albedo);
+    read_value(fs, material.volume_density);
+    read_value(fs, material.volume_phaseg);
+    read_value(fs, material.volume_density_texture);
 };
 
-void serialize_bin_object(yocto_instance& instance, const yocto_scene& scene,
-    fstream& fs, bool save) {
-    serialize_bin_value(instance.name, fs, save);
-    serialize_bin_value(instance.frame, fs, save);
-    serialize_bin_value(instance.shape, fs, save);
-    serialize_bin_value(instance.surface, fs, save);
+void write_object(output_file& fs, const yocto_instance& instance) {
+    write_value(fs, instance.name);
+    write_value(fs, instance.frame);
+    write_value(fs, instance.shape);
+    write_value(fs, instance.surface);
+};
+void read_object(input_file& fs, yocto_instance& instance) {
+    read_value(fs, instance.name);
+    read_value(fs, instance.frame);
+    read_value(fs, instance.shape);
+    read_value(fs, instance.surface);
 };
 
-void serialize_scene(yocto_scene& scene, fstream& fs, bool save) {
-    serialize_bin_value(scene.name, fs, save);
-    serialize_bin_objects(scene.cameras, fs, save);
-    serialize_bin_objects(scene.shapes, scene, fs, save);
-    serialize_bin_objects(scene.surfaces, scene, fs, save);
-    serialize_bin_objects(scene.textures, fs, save);
-    serialize_bin_objects(scene.voltextures, fs, save);
-    serialize_bin_objects(scene.materials, scene, fs, save);
-    serialize_bin_objects(scene.instances, scene, fs, save);
-    serialize_bin_objects(scene.environments, scene, fs, save);
+void write_object(output_file& fs, const yocto_scene& scene) {
+    write_value(fs, scene.name);
+    write_objects(fs, scene.cameras);
+    write_objects(fs, scene.shapes);
+    write_objects(fs, scene.surfaces);
+    write_objects(fs, scene.textures);
+    write_objects(fs, scene.voltextures);
+    write_objects(fs, scene.materials);
+    write_objects(fs, scene.instances);
+    write_objects(fs, scene.environments);
+}
+void read_object(input_file& fs, yocto_scene& scene) {
+    read_value(fs, scene.name);
+    read_objects(fs, scene.cameras);
+    read_objects(fs, scene.shapes);
+    read_objects(fs, scene.surfaces);
+    read_objects(fs, scene.textures);
+    read_objects(fs, scene.voltextures);
+    read_objects(fs, scene.materials);
+    read_objects(fs, scene.instances);
+    read_objects(fs, scene.environments);
 }
 
 // Load/save a binary dump useful for very fast scene IO.
@@ -4930,8 +4985,8 @@ void load_ybin_scene(const string& filename, yocto_scene& scene,
     auto scope = log_trace_scoped("loading scene {}", filename);
     scene      = {};
     try {
-        auto fs = fstream(filename, std::ios::in | std::ios::binary);
-        serialize_scene(scene, fs, false);
+        auto fs = input_file(filename, true);
+        read_object(fs, scene);
     } catch (const std::exception& e) {
         throw io_error("cannot load scene " + filename + "\n" + e.what());
     }
@@ -4941,8 +4996,8 @@ void load_ybin_scene(const string& filename, yocto_scene& scene,
 void save_ybin_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     try {
-        auto fs = fstream(filename, std::ios::out | std::ios::binary);
-        serialize_scene((yocto_scene&)scene, fs, true);
+        auto fs = output_file(filename, true);
+        write_object(fs, scene);
     } catch (const std::exception& e) {
         throw io_error("cannot save scene " + filename + "\n" + e.what());
     }
@@ -5542,67 +5597,62 @@ void load_obj_facevarying_mesh(const string& filename,
             quads_materials.clear();
         }
     } catch (const std::exception& e) {
-            throw io_error("cannot load mesh " + filename + "\n" + e.what());
+        throw io_error("cannot load mesh " + filename + "\n" + e.what());
+    }
+}
+
+// Load ply mesh
+void save_obj_facevarying_mesh(const string& filename,
+    const vector<vec4i>& quads_positions, const vector<vec4i>& quads_normals,
+    const vector<vec4i>& quads_texturecoords, const vector<vec3f>& positions,
+    const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
+    const vector<int>& quads_materials, bool flip_texcoord) {
+    auto fs = ofstream(filename);
+    if (!fs) {
+        throw io_error("cannot open file " + filename);
+    }
+
+    print(fs, "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
+
+    for (auto& p : positions) print(fs, "v {}\n", p);
+    for (auto& n : normals) print(fs, "vn {}\n", n);
+    for (auto& t : texturecoords)
+        print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
+
+    auto fvmask = obj_vertex{
+        1, empty(texturecoords) ? 0 : 1, empty(normals) ? 0 : 1};
+    auto fvvert = [fvmask](int pi, int ti, int ni) {
+        return obj_vertex{(pi + 1) * fvmask.position,
+            (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
+    };
+    auto last_material_id = -1;
+    for (auto i = 0; i < quads_positions.size(); i++) {
+        if (!empty(quads_materials) && quads_materials[i] != last_material_id) {
+            last_material_id = quads_materials[i];
+            print(fs, "usemtl material_{}\n", last_material_id);
+        }
+        auto qp = quads_positions.at(i);
+        auto qt = !empty(quads_texturecoords) ? quads_texturecoords.at(i) :
+                                                vec4i{-1, -1, -1, -1};
+        auto qn = !empty(quads_normals) ? quads_normals.at(i) :
+                                          vec4i{-1, -1, -1, -1};
+        if (qp.z != qp.w) {
+            print(fs, "f {} {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
+                to_string(fvvert(qp.y, qt.y, qn.y)),
+                to_string(fvvert(qp.z, qt.z, qn.z)),
+                to_string(fvvert(qp.w, qt.w, qn.w)));
+        } else {
+            print(fs, "f {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
+                to_string(fvvert(qp.y, qt.y, qn.y)),
+                to_string(fvvert(qp.z, qt.z, qn.z)));
         }
     }
 
-    // Load ply mesh
-    void save_obj_facevarying_mesh(const string& filename,
-        const vector<vec4i>&                     quads_positions,
-        const vector<vec4i>&                     quads_normals,
-        const vector<vec4i>&                     quads_texturecoords,
-        const vector<vec3f>& positions, const vector<vec3f>& normals,
-        const vector<vec2f>& texturecoords, const vector<int>& quads_materials,
-        bool flip_texcoord) {
-        auto fs = ofstream(filename);
-        if (!fs) {
-            throw io_error("cannot open file " + filename);
-        }
-
-        print(fs,
-            "# Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl\n\n");
-
-        for (auto& p : positions) print(fs, "v {}\n", p);
-        for (auto& n : normals) print(fs, "vn {}\n", n);
-        for (auto& t : texturecoords)
-            print(fs, "vt {}\n", vec2f{t.x, (flip_texcoord) ? 1 - t.y : t.y});
-
-        auto fvmask = obj_vertex{
-            1, empty(texturecoords) ? 0 : 1, empty(normals) ? 0 : 1};
-        auto fvvert = [fvmask](int pi, int ti, int ni) {
-            return obj_vertex{(pi + 1) * fvmask.position,
-                (ti + 1) * fvmask.texturecoord, (ni + 1) * fvmask.normal};
-        };
-        auto last_material_id = -1;
-        for (auto i = 0; i < quads_positions.size(); i++) {
-            if (!empty(quads_materials) &&
-                quads_materials[i] != last_material_id) {
-                last_material_id = quads_materials[i];
-                print(fs, "usemtl material_{}\n", last_material_id);
-            }
-            auto qp = quads_positions.at(i);
-            auto qt = !empty(quads_texturecoords) ? quads_texturecoords.at(i) :
-                                                    vec4i{-1, -1, -1, -1};
-            auto qn = !empty(quads_normals) ? quads_normals.at(i) :
-                                              vec4i{-1, -1, -1, -1};
-            if (qp.z != qp.w) {
-                print(fs, "f {} {} {} {}\n",
-                    to_string(fvvert(qp.x, qt.x, qn.x)),
-                    to_string(fvvert(qp.y, qt.y, qn.y)),
-                    to_string(fvvert(qp.z, qt.z, qn.z)),
-                    to_string(fvvert(qp.w, qt.w, qn.w)));
-            } else {
-                print(fs, "f {} {} {}\n", to_string(fvvert(qp.x, qt.x, qn.x)),
-                    to_string(fvvert(qp.y, qt.y, qn.y)),
-                    to_string(fvvert(qp.z, qt.z, qn.z)));
-            }
-        }
-
-        // check for errors
-        if (!fs) {
-            throw io_error("cannot write file " + filename);
-        }
+    // check for errors
+    if (!fs) {
+        throw io_error("cannot write file " + filename);
     }
+}
 
 }  // namespace yocto
 
