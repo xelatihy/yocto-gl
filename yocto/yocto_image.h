@@ -153,7 +153,8 @@ void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
 
 // Gets pixels in an image region
 template <typename T>
-void get_image_region(image<T>& clipped, const image<T>& img, const bbox2i& region);
+void get_image_region(
+    image<T>& clipped, const image<T>& img, const bbox2i& region);
 
 // Conversion from/to floats.
 void byte_to_float(image4f& fl, const image4b& bt);
@@ -170,10 +171,10 @@ void gamma_to_linear(image4f& lin, const image4f& srgb, float gamma);
 void linear_to_gamma(image4f& srgb, const image4f& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-void tonemap_image(image4f& ldr,
-    const image4f& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image(image4b& ldr,
-    const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image(
+    image4f& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image(
+    image4b& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
 void tonemap_image_region(image4f& ldr, const bbox2i& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 
@@ -569,8 +570,8 @@ namespace yocto {
 
 // Gets pixels in an image region
 template <typename T>
-inline void get_image_region(image<T>& clipped,
-    const image<T>& img, const bbox2i& region) {
+inline void get_image_region(
+    image<T>& clipped, const image<T>& img, const bbox2i& region) {
     clipped.resize(region.size());
     for (auto j = 0; j < region.size().y; j++) {
         for (auto i = 0; i < region.size().x; i++) {
@@ -585,8 +586,8 @@ inline void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
     regions.clear();
     for (auto y = 0; y < size.y; y += region_size) {
         for (auto x = 0; x < size.x; x += region_size) {
-            regions.push_back({{x, y}, {min(x + region_size, size.x),
-                min(y + region_size, size.y)}});
+            regions.push_back({{x, y},
+                {min(x + region_size, size.x), min(y + region_size, size.y)}});
         }
     }
     if (shuffled) {

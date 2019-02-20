@@ -1918,8 +1918,7 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 // Trace a block of samples
 void trace_image_region(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const bbox2i& region, int num_samples,
-    const trace_image_options& options) {
+    const bbox2i& region, int num_samples, const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
     auto  sampler = get_trace_sampler_func(options.sampler_type);
     for (auto j = region.min.y; j < region.max.y; j++) {

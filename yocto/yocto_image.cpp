@@ -57,7 +57,7 @@ image4f linear_to_gamma(const image4f& lin, float gamma) {
 
 // Conversion between linear and gamma-encoded images.
 void srgb_to_linear(image4f& lin, const image4f& srgb) {
-    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
+    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
             lin[{i, j}] = srgb_to_linear(srgb[{i, j}]);
@@ -65,7 +65,7 @@ void srgb_to_linear(image4f& lin, const image4f& srgb) {
     }
 }
 void linear_to_srgb(image4f& srgb, const image4f& lin) {
-    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
+    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
             srgb[{i, j}] = linear_to_srgb(lin[{i, j}]);
@@ -73,7 +73,7 @@ void linear_to_srgb(image4f& srgb, const image4f& lin) {
     }
 }
 void srgb_to_linear(image4f& lin, const image4b& srgb) {
-    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
+    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
             lin[{i, j}] = srgb_to_linear(byte_to_float(srgb[{i, j}]));
@@ -81,7 +81,7 @@ void srgb_to_linear(image4f& lin, const image4b& srgb) {
     }
 }
 void linear_to_srgb(image4b& srgb, const image4f& lin) {
-    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
+    if (lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
             srgb[{i, j}] = float_to_byte(linear_to_srgb(lin[{i, j}]));
@@ -91,7 +91,7 @@ void linear_to_srgb(image4b& srgb, const image4f& lin) {
 
 // Conversion from/to floats.
 void byte_to_float(image4f& fl, const image4b& bt) {
-    if(fl.size() != bt.size()) throw out_of_range("different image sizes");
+    if (fl.size() != bt.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < bt.size().y; j++) {
         for (auto i = 0; i < bt.size().x; i++) {
             fl[{i, j}] = byte_to_float(bt[{i, j}]);
@@ -99,7 +99,7 @@ void byte_to_float(image4f& fl, const image4b& bt) {
     }
 }
 void float_to_byte(image4b& bt, const image4f& fl) {
-    if(fl.size() != bt.size()) throw out_of_range("different image sizes");
+    if (fl.size() != bt.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < bt.size().y; j++) {
         for (auto i = 0; i < bt.size().x; i++) {
             bt[{i, j}] = float_to_byte(fl[{i, j}]);
@@ -108,21 +108,22 @@ void float_to_byte(image4b& bt, const image4f& fl) {
 }
 
 // Tonemap image
-void tonemap_image(image4f& ldr,
-    const image4f& hdr, float exposure, bool filmic, bool srgb) {
-    if(ldr.size() != hdr.size()) throw out_of_range("different image sizes");
+void tonemap_image(
+    image4f& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb) {
+    if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
             ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
         }
     }
 }
-void tonemap_image(image4b& ldr,
-    const image4f& hdr, float exposure, bool filmic, bool srgb) {
-    if(ldr.size() != hdr.size()) throw out_of_range("different image sizes");
+void tonemap_image(
+    image4b& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb) {
+    if (ldr.size() != hdr.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
-            ldr[{i, j}] = float_to_byte(tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb));
+            ldr[{i, j}] = float_to_byte(
+                tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb));
         }
     }
 }

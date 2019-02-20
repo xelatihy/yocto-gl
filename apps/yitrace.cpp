@@ -57,14 +57,14 @@ struct app_state {
     bool        add_skyenv = false;
 
     // rendering state
-    trace_lights                   lights  = {};
-    trace_state                    state   = {};
-    image4f                        image   = {};
-    image4f                        display = {};
-    image4f                        preview = {};
-    atomic<bool>                   trace_stop;
-    atomic<int>                    trace_sample;
-    vector<thread>                 trace_threads = {};
+    trace_lights             lights  = {};
+    trace_state              state   = {};
+    image4f                  image   = {};
+    image4f                  display = {};
+    image4f                  preview = {};
+    atomic<bool>             trace_stop;
+    atomic<int>              trace_sample;
+    vector<thread>           trace_threads = {};
     concurrent_queue<bbox2i> trace_queue   = {};
 
     // view image
@@ -110,7 +110,8 @@ void start_rendering_async(app_state& app) {
     preview_options.num_samples = 1;
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = app.preview;
-    tonemap_image(display_preview, app.preview, app.exposure, app.filmic, app.srgb);
+    tonemap_image(
+        display_preview, app.preview, app.exposure, app.filmic, app.srgb);
     auto large_preview = image{{app.image_width, app.image_height}, zero4f};
     for (auto j = 0; j < app.image_height; j++) {
         for (auto i = 0; i < app.image_width; i++) {
