@@ -1185,9 +1185,9 @@ vec3f evaluate_environment_emission(
 // Check texture size
 vec2i evaluate_texture_size(const yocto_texture& texture) {
     if (!texture.hdr_image.empty()) {
-        return {texture.hdr_image.width(), texture.hdr_image.height()};
+        return texture.hdr_image.size();
     } else if (!texture.ldr_image.empty()) {
-        return {texture.ldr_image.width(), texture.ldr_image.height()};
+        return texture.ldr_image.size();
     } else {
         return zero2i;
     }
@@ -1261,9 +1261,9 @@ float evaluate_voltexture(
     if (texture.volume_data.empty()) return 1;
 
     // get image width/height
-    auto width  = texture.volume_data.width();
-    auto height = texture.volume_data.height();
-    auto depth  = texture.volume_data.depth();
+    auto width  = texture.volume_data.size().x;
+    auto height = texture.volume_data.size().y;
+    auto depth  = texture.volume_data.size().z;
 
     // get coordinates normalized for tiling
     auto s = clamp((texcoord.x + 1.0f) * 0.5f, 0.0f, 1.0f) * width;
@@ -1778,15 +1778,15 @@ string print_scene_stats(const yocto_scene& scene) {
                      vert_quads_texcoord * sizeof(vec2f);
 
     for (auto& texture : scene.textures) {
-        texel_hdr += texture.hdr_image.width() * texture.hdr_image.height();
-        texel_ldr += texture.ldr_image.width() * texture.ldr_image.height();
+        texel_hdr += texture.hdr_image.size().x * texture.hdr_image.size().y;
+        texel_ldr += texture.ldr_image.size().x * texture.ldr_image.size().y;
     }
     memory_imgs = texel_hdr * sizeof(vec4f) + texel_ldr * sizeof(vec4b);
 
     for (auto& voltexture : scene.voltextures) {
-        voxel_hdr += voltexture.volume_data.width() *
-                     voltexture.volume_data.height() *
-                     voltexture.volume_data.depth();
+        voxel_hdr += voltexture.volume_data.size().x *
+                     voltexture.volume_data.size().y *
+                     voltexture.volume_data.size().z;
     }
     memory_vols = voxel_hdr * sizeof(float);
 

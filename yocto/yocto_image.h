@@ -106,8 +106,6 @@ struct image {
 
     // size
     bool empty() const { return _pixels.empty(); }
-    int width() const { return _size.x; }
-    int height() const { return _size.y; }
     vec2i size() const { return _size; }
     void resize(const vec2i& size) {
         if (size == _size) return;
@@ -140,24 +138,14 @@ struct image {
 using image4f = image<vec4f>;
 using image4b = image<vec4b>;
 
-// Functions to query image data
-template <typename T>
-inline vec2i imsize(const image<T>& img) {
-    return {img.width(), img.height()};
-}
-template <typename T>
-inline size_t size(const image<T>& img) {
-    return img.pixels.size();
-}
-
 // equality
 template <typename T>
 inline bool operator==(const image<T>& a, const image<T>& b) {
-    return a.width() == b.width() && a.height() == b.height() && a._pixels == b._pixels;
+    return a.size() == b.size() && a._pixels == b._pixels;
 }
 template <typename T>
 inline bool operator!=(const image<T>& a, const image<T>& b) {
-    return a.width() != b.width() || a.height() != b.height() || a._pixels != b._pixels;
+    return a.size() != b.size() || a._pixels != b._pixels;
 }
 
 // Image region
@@ -169,7 +157,7 @@ struct image_region {
 };
 
 // Splits an image into an array of regions
-void make_image_regions(vector<image_region>& regions, int width, int height,
+void make_image_regions(vector<image_region>& regions, const vec2i& size,
     int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
@@ -273,9 +261,6 @@ struct volume {
     // size
     bool empty() const { return _voxels.empty(); }
     vec3i size() const { return _size; }
-    int width() const { return _size.x; }
-    int height() const { return _size.y; }
-    int depth() const { return _size.z; }
     void resize(const vec3i& size) {
         if (size == _size) return;
         _size  = size;
@@ -308,21 +293,15 @@ struct volume {
 // Typedefs
 using volume1f = volume<float>;
 
-// Functions to query volume data
-inline vec3i volsize(const volume1f& vol) {
-    return {vol.width(), vol.height(), vol.depth()};
-}
-inline size_t size(const volume1f& vol) { return vol._voxels.size(); }
-
 // equality
 template <typename T>
 inline bool operator==(const volume<T>& a, const volume<T>& b) {
-    return a.width() == b.width() && a.height() == b.height() && a.depth() == b.depth() &&
+    return a.size() == b.size() &&
            a._voxels == b._voxels;
 }
 template <typename T>
 inline bool operator!=(const volume<T>& a, const volume<T>& b) {
-    return a.width() != b.width() && a.height() != b.height() && a.depth() != b.depth() &&
+    return a.size() != b.size() &&
            a._voxels != b._voxels;
 }
 
@@ -608,13 +587,12 @@ inline image<T> get_image_region(
 }
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<image_region>& regions, int width,
-    int height, int region_size, bool shuffled) {
+inline void make_image_regions(vector<image_region>& regions, const vec2i& size, int region_size, bool shuffled) {
     regions.clear();
-    for (auto y = 0; y < height; y += region_size) {
-        for (auto x = 0; x < width; x += region_size) {
-            regions.push_back({x, y, min(region_size, width - x),
-                min(region_size, height - y)});
+    for (auto y = 0; y < size.y; y += region_size) {
+        for (auto x = 0; x < size.x; x += region_size) {
+            regions.push_back({x, y, min(region_size, size.x - x),
+                min(region_size, size.y - y)});
         }
     }
     if (shuffled) {

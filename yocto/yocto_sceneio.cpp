@@ -138,8 +138,8 @@ namespace yocto {
 template <typename T>
 inline void to_json(json& js, const image<T>& value) {
     js           = json::object();
-    js["width"]  = value.width();
-    js["height"] = value.height();
+    js["width"]  = value.size().x;
+    js["height"] = value.size().y;
     js["pixels"] = value._pixels;
 }
 template <typename T>
@@ -152,9 +152,9 @@ inline void from_json(const json& js, image<T>& value) {
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
     js           = json::object();
-    js["width"]  = value.width();
-    js["height"] = value.height();
-    js["depth"]  = value.depth();
+    js["width"]  = value.size().x;
+    js["height"] = value.size().y;
+    js["depth"]  = value.size().z;
     js["voxels"] = value._voxels;
 }
 template <typename T>
@@ -4898,15 +4898,13 @@ void read_value(input_file& fs, string& str) {
 // Serialize image
 template <typename T>
 void write_value(output_file& fs, const image<T>& img) {
-    write_value(fs, img.width());
-    write_value(fs, img.height());
-    write_values(fs, img.data(), (size_t)img.width() * (size_t)img.height());
+    write_value(fs, img.size());
+    write_values(fs, img.data(), (size_t)img.size().x * (size_t)img.size().y);
 }
 template <typename T>
 void read_value(input_file& fs, image<T>& img) {
     auto size = zero2i;
-    read_value(fs, size.x);
-    read_value(fs, size.y);
+    read_value(fs, size);
     img = {size};
     read_values(fs, img.data(), size.x*size.y);
 }
@@ -4914,10 +4912,8 @@ void read_value(input_file& fs, image<T>& img) {
 // Serialize image
 template <typename T>
 void write_value(output_file& fs, const volume<T>& vol) {
-    write_value(fs, vol.width());
-    write_value(fs, vol.height());
-    write_value(fs, vol.depth());
-    write_values(fs, vol.data(), (size_t)vol.width()*(size_t)vol.height()*(size_t)vol.depth());
+    write_value(fs, vol.size());
+    write_values(fs, vol.data(), (size_t)vol.size().x*(size_t)vol.size().y*(size_t)vol.size().z);
 }
 template <typename T>
 void read_value(input_file& fs, volume<T>& vol) {

@@ -88,13 +88,12 @@ void unbind_opengl_program();
 
 struct opengl_texture {
     uint texture_id = 0;
-    int  width      = 0;
-    int  height     = 0;
+    vec2i  size      = {0, 0};
 
     operator bool() const { return (bool)texture_id; }
 };
 
-void init_opengl_texture(opengl_texture& texture, int width, int height,
+void init_opengl_texture(opengl_texture& texture, const vec2i& size,
     bool as_float, bool as_srgb, bool linear, bool mipmap);
 
 void update_opengl_texture(
@@ -104,8 +103,7 @@ void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
 
 inline void init_opengl_texture(opengl_texture& texture, const image4f& img,
     bool as_float, bool linear, bool mipmap) {
-    init_opengl_texture(
-        texture, img.width(), img.height(), as_float, false, linear, mipmap);
+    init_opengl_texture(texture, img.size(), as_float, false, linear, mipmap);
     update_opengl_texture(texture, img, mipmap);
 }
 
@@ -118,8 +116,7 @@ void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
 
 inline void init_opengl_texture(opengl_texture& texture, const image4b& img,
     bool as_srgb, bool linear, bool mipmap) {
-    init_opengl_texture(
-        texture, img.width(), img.height(), false, as_srgb, linear, mipmap);
+    init_opengl_texture(texture, img.size(), false, as_srgb, linear, mipmap);
     update_opengl_texture(texture, img, mipmap);
 }
 

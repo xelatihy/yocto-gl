@@ -1929,7 +1929,7 @@ void trace_image_region(image4f& image, trace_state& state,
                 if (options.cancel_flag && *options.cancel_flag) return;
                 _trace_npaths += 1;
                 auto ray             = sample_camera_ray(camera, {i, j},
-                    {image.width(), image.height()}, get_random_vec2f(pixel.rng),
+                    image.size(), get_random_vec2f(pixel.rng),
                     get_random_vec2f(pixel.rng));
                 auto [radiance, hit] = sampler(scene, bvh, lights, ray.o, ray.d,
                     pixel.rng, options.max_bounces,
@@ -2017,7 +2017,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     init_trace_state(pixels, width, height, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(
-        regions, image.width(), image.height(), options.region_size, true);
+        regions, image.size(), options.region_size, true);
 
     if (options.run_serially) {
         for (auto& region : regions) {
@@ -2050,7 +2050,7 @@ int trace_image_samples(image4f& image, trace_state& state,
     int current_sample, const trace_image_options& options) {
     auto regions = vector<image_region>{};
     make_image_regions(
-        regions, image.width(), image.height(), options.region_size, true);
+        regions, image.size(), options.region_size, true);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
     if (options.run_serially) {
@@ -2091,7 +2091,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
     init_trace_state(state, width, height, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(
-        regions, image.width(), image.height(), options.region_size, true);
+        regions, image.size(), options.region_size, true);
     if (options.cancel_flag) *options.cancel_flag = false;
 
 #if 0
