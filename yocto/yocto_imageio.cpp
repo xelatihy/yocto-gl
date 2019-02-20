@@ -334,23 +334,23 @@ void load_stbi_image_from_memory(
 }
 
 void apply_json_procedural(const json& js, image4f& img) {
-    auto type   = get_json_value(js, "type", ""s);
-    auto width  = get_json_value(js, "width", 1024);
-    auto height = get_json_value(js, "height", 1024);
+    auto type   = js.value("type", ""s);
+    auto width  = js.value("width", 1024);
+    auto height = js.value("height", 1024);
     if (type == "sky" && width < height * 2) width = height * 2;
     img.resize(width, height);
     if (type == "") {
         img = image{width, height, zero4f};
     } else if (type == "grid") {
-        make_grid_image(img, get_json_value(js, "tile", 8),
-            get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            get_json_value(js, "c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
+        make_grid_image(img, js.value("tile", 8),
+            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "checker") {
-        make_checker_image(img, get_json_value(js, "tile", 8),
-            get_json_value(js, "c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
-            get_json_value(js, "c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
+        make_checker_image(img, js.value("tile", 8),
+            js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
+            js.value("c1", vec4f{0.5f, 0.5f, 0.5f, 1}));
     } else if (type == "bump") {
-        make_bumpdimple_image(img, get_json_value(js, "tile", 8));
+        make_bumpdimple_image(img, js.value("tile", 8));
     } else if (type == "uvramp") {
         make_uvramp_image(img);
     } else if (type == "gammaramp") {
@@ -360,48 +360,48 @@ void apply_json_procedural(const json& js, image4f& img) {
     } else if (type == "uvgrid") {
         make_uvgrid_image(img);
     } else if (type == "sky") {
-        make_sunsky_image(img, get_json_value(js, "sun_angle", pif / 4),
-            get_json_value(js, "turbidity", 3.0f),
-            get_json_value(js, "has_sun", false),
-            get_json_value(js, "sun_intensity", 1.0f),
-            get_json_value(js, "sun_temperature", 0.0f),
-            get_json_value(js, "ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
+        make_sunsky_image(img, js.value("sun_angle", pif / 4),
+            js.value("turbidity", 3.0f),
+            js.value("has_sun", false),
+            js.value("sun_intensity", 1.0f),
+            js.value("sun_temperature", 0.0f),
+            js.value("ground_albedo", vec3f{0.7f, 0.7f, 0.7f}));
     } else if (type == "noise") {
-        make_noise_image(img, get_json_value(js, "scale", 1.0f),
-            get_json_value(js, "wrap", true));
+        make_noise_image(img, js.value("scale", 1.0f),
+            js.value("wrap", true));
     } else if (type == "fbm") {
-        make_fbm_image(img, get_json_value(js, "scale", 1.0f),
-            get_json_value(js, "lacunarity", 2.0f),
-            get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
-            get_json_value(js, "wrap", true));
+        make_fbm_image(img, js.value("scale", 1.0f),
+            js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f), js.value("octaves", 6),
+            js.value("wrap", true));
     } else if (type == "ridge") {
-        make_ridge_image(img, get_json_value(js, "scale", 1.0f),
-            get_json_value(js, "lacunarity", 2.0f),
-            get_json_value(js, "gain", 0.5f),
-            get_json_value(js, "offset", 1.0f),
-            get_json_value(js, "octaves", 6), get_json_value(js, "wrap", true));
+        make_ridge_image(img, js.value("scale", 1.0f),
+            js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f),
+            js.value("offset", 1.0f),
+            js.value("octaves", 6), js.value("wrap", true));
     } else if (type == "turbulence") {
-        make_turbulence_image(img, get_json_value(js, "scale", 1.0f),
-            get_json_value(js, "lacunarity", 2.0f),
-            get_json_value(js, "gain", 0.5f), get_json_value(js, "octaves", 6),
-            get_json_value(js, "wrap", true));
+        make_turbulence_image(img, js.value("scale", 1.0f),
+            js.value("lacunarity", 2.0f),
+            js.value("gain", 0.5f), js.value("octaves", 6),
+            js.value("wrap", true));
     } else {
         throw std::invalid_argument("unknown image type" + type);
     }
-    if (get_json_value(js, "border", false)) {
-        add_image_border(img, get_json_value(js, "border_width", 2),
-            get_json_value(js, "border_color", vec4f{0, 0, 0, 1}));
+    if (js.value("border", false)) {
+        add_image_border(img, js.value("border_width", 2),
+            js.value("border_color", vec4f{0, 0, 0, 1}));
     }
-    if (get_json_value(js, "bump_to_normal", false)) {
+    if (js.value("bump_to_normal", false)) {
         auto buffer = img;
-        bump_to_normal_map(img, buffer, get_json_value(js, "bump_scale", 1.0f));
+        bump_to_normal_map(img, buffer, js.value("bump_scale", 1.0f));
     }
 }
 
 void apply_json_procedural(const json& js, image4b& img) {
     auto imgf = image4f{};
     apply_json_procedural(js, imgf);
-    auto srgb = get_json_value(js, "srgb", true);
+    auto srgb = js.value("srgb", true);
     if (srgb) imgf = linear_to_srgb(imgf);
     img = float_to_byte(imgf);
 }

@@ -73,26 +73,6 @@ inline void save_json(const string& filename, const json& js);
 
 }  // namespace yocto
 
-// -----------------------------------------------------------------------------
-// JSON SERIALIZATION UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Serialize/deserialize basic types
-template<typename T>
-inline void serialize_json_value(json& js, T& value, bool save);
-
-// Serialize/deserialize values as keys in a JSON object
-template <typename T>
-inline void serialize_json_value(
-    json& js, T& value, const char* name, const T& def, bool save);
-
-// Get a value from a JSON key or a default value if the key does not exists
-template <typename T>
-inline T get_json_value(const json& js, const char* key, const T& default_value);
-
-}  // namespace yocto
-
 // ---------------------------------------------------------------------------//
 //                                                                            //
 //                             IMPLEMENTATION                                 //
@@ -158,63 +138,6 @@ inline void to_json(json& js, const bbox<T, N>& val) {
 template<typename T, int N>
 inline void from_json(const json& js, bbox<T, N>& val) {
     nlohmann::to_json(js, (const std::array<T, N*2>&)val);
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR JSON SERIALIZATION
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Dumps a json value
-template<typename T>
-inline void serialize_json_value(json& js, T& value, bool save) {
-    if (save) {
-        js = value;
-    } else {
-        js.get_to<T>(value);
-    }
-}
-
-template <typename T>
-inline void serialize_json_values(json& js, T* values, int num, bool save) {
-    if (save) {
-        js = json::array();
-        for (auto i = 0; i < num; i++) {
-            js.push_back({});
-            serialize_json_value(js.back(), values[i], save);
-        }
-    } else {
-        for (auto i = 0; i < num; i++) {
-            serialize_json_value(js.at(i), values[i], save);
-        }
-    }
-}
-
-// Dumps a json value
-template <typename T>
-inline void serialize_json_value(
-    json& js, T& value, const char* name, const T& def, bool save) {
-    if (save) {
-        if (value == def) return;
-        serialize_json_value(js[name], value, save);
-    } else {
-        if (!js.count(name)) return;
-        value = def;
-        serialize_json_value(js.at(name), value, save);
-    }
-}
-
-// Get a value from a JSON key or a default value if any error occurs
-template <typename T>
-inline T get_json_value(
-    const json& js, const char* key, const T& default_value) {
-    auto& ojs = js.get_ref<const json::object_t&>();
-    if (ojs.count(key) <= 0) return default_value;
-    auto value = default_value;
-    serialize_json_value((json&)ojs.at(key), value, false);
-    return value;
 }
 
 }  // namespace yocto
