@@ -161,7 +161,7 @@ void make_image_regions(vector<image_region>& regions, const vec2i& size,
 
 // Gets pixels in an image region
 template <typename T>
-image<T> get_image_region(const image<T>& img, const image_region& region);
+void get_image_region(image<T>& clipped, const image<T>& img, const image_region& region);
 
 // Conversion from/to floats.
 void byte_to_float(image4f& fl, const image4b& bt);
@@ -577,15 +577,14 @@ namespace yocto {
 
 // Gets pixels in an image region
 template <typename T>
-inline image<T> get_image_region(
+inline void get_image_region(image<T>& clipped,
     const image<T>& img, const image_region& region) {
-    auto clipped = image<T>{{region.width, region.height}};
+    clipped.resize({region.width, region.height});
     for (auto j = 0; j < region.height; j++) {
         for (auto i = 0; i < region.width; i++) {
             clipped[{i, j}] = img[{i + region.offsetx, j + region.offsety}];
         }
     }
-    return clipped;
 }
 
 // Splits an image into an array of regions
