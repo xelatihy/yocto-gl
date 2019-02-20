@@ -132,7 +132,6 @@ using std::mutex;
 using std::thread;
 using std::future;
 using std::async;
-using std::runtime_error;
 using namespace std::chrono_literals;
 
 }  // namespace yocto

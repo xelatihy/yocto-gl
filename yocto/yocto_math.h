@@ -121,6 +121,9 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
+using std::runtime_error;
+using std::out_of_range;
+using std::exception;
 using namespace std::string_literals;
 using std::numeric_limits;
 

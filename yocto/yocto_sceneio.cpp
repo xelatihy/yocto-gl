@@ -467,7 +467,7 @@ int ref_from_json(const json& js, const vector<T>& refs) {
             break;
         }
     }
-    if (value < 0) throw std::runtime_error("invalid object reference");
+    if (value < 0) throw runtime_error("invalid object reference");
     return value;
 }
 template <typename T>
@@ -597,10 +597,11 @@ void from_json_procedural(
         value.ldr_as_linear = true;
     }
     if (!is_hdr) {
+        value.ldr_image = {value.hdr_image.size()};
         if (!value.ldr_as_linear) {
-            value.ldr_image = float_to_byte(linear_to_srgb(value.hdr_image));
+            linear_to_srgb(value.ldr_image ,value.hdr_image);
         } else {
-            value.ldr_image = float_to_byte(value.hdr_image);
+            float_to_byte(value.ldr_image, value.hdr_image);
         }
         value.hdr_image = {};
     }

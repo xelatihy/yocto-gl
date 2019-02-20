@@ -109,8 +109,8 @@ void start_rendering_async(app_state& app) {
     preview_options.image_height /= app.preview_ratio;
     preview_options.num_samples = 1;
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
-    auto display_preview = tonemap_image(
-        app.preview, app.exposure, app.filmic, app.srgb);
+    auto display_preview = app.preview;
+    tonemap_image(display_preview, app.preview, app.exposure, app.filmic, app.srgb);
     auto large_preview = image{{app.image_width, app.image_height}, zero4f};
     for (auto j = 0; j < app.image_height; j++) {
         for (auto i = 0; i < app.image_width; i++) {

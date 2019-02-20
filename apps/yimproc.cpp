@@ -202,7 +202,9 @@ int main(int argc, char* argv[]) {
 
     // resize
     if (resize_width != 0 || resize_height != 0) {
-        img = resize_image(img, resize_width, resize_height);
+        auto res = image4f{};
+        resize_image(res, img, {resize_width, resize_height});
+        img = res;
     }
 
     // bilateral
@@ -211,7 +213,11 @@ int main(int argc, char* argv[]) {
     }
 
     // hdr correction
-    if (tonemap) img = tonemap_image(img, exposure, filmic, srgb);
+    if (tonemap) {
+        auto ldr = img;
+        tonemap_image(img, ldr, exposure, filmic, srgb);
+        img = ldr;
+    }
 
     // save
     try {

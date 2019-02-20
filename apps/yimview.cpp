@@ -137,9 +137,13 @@ void load_image_async(app_image& img) {
 void save_image_async(app_image& img) {
     try {
         if (!is_hdr_filename(img.outname)) {
-            save_image(img.outname, float_to_byte(img.display));
+            auto ldr = image4b{};
+            float_to_byte(ldr, img.display);
+            save_image(img.outname, ldr);
         } else {
-            save_image(img.outname, srgb_to_linear(img.display));
+            auto aux = image4f{};
+            srgb_to_linear(aux, img.display);
+            save_image(img.outname, aux);
         }
     } catch (const std::exception& e) {
         img.error_msg = e.what();

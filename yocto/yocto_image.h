@@ -164,25 +164,30 @@ template <typename T>
 image<T> get_image_region(const image<T>& img, const image_region& region);
 
 // Conversion from/to floats.
-image4f byte_to_float(const image4b& bt);
-image4b float_to_byte(const image4f& fl);
+void byte_to_float(image4f& fl, const image4b& bt);
+void float_to_byte(image4b& bt, const image4f& fl);
 
 // Conversion between linear and gamma-encoded images.
-image4f srgb_to_linear(const image4f& srgb);
-image4f linear_to_srgb(const image4f& lin);
+void srgb_to_linear(image4f& lin, const image4f& srgb);
+void linear_to_srgb(image4f& srgb, const image4f& lin);
+void srgb_to_linear(image4f& lin, const image4b& srgb);
+void linear_to_srgb(image4b& srgb, const image4f& lin);
 
 // Conversion between linear and gamma-encoded images.
-image4f gamma_to_linear(const image4f& srgb, float gamma);
-image4f linear_to_gamma(const image4f& lin, float gamma);
+void gamma_to_linear(image4f& lin, const image4f& srgb, float gamma);
+void linear_to_gamma(image4f& srgb, const image4f& lin, float gamma);
 
 // Apply exposure and filmic tone mapping
-image4f tonemap_image(
+void tonemap_image(image4f& ldr,
+    const image4f& hdr, float exposure, bool filmic, bool srgb);
+void tonemap_image(image4b& ldr,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 void tonemap_image_region(image4f& ldr, const image_region& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
-image4f resize_image(const image4f& img, int width, int height);
+void resize_image(image4f& res, const image4f& img, const vec2i& size);
+void resize_image(image4f& res, const image4f& img);
 
 }  // namespace yocto
 

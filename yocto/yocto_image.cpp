@@ -56,55 +56,75 @@ image4f linear_to_gamma(const image4f& lin, float gamma) {
 }
 
 // Conversion between linear and gamma-encoded images.
-image4f srgb_to_linear(const image4f& srgb) {
-    auto lin = image{srgb.size(), zero4f};
+void srgb_to_linear(image4f& lin, const image4f& srgb) {
+    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
             lin[{i, j}] = srgb_to_linear(srgb[{i, j}]);
         }
     }
-    return lin;
 }
-image4f linear_to_srgb(const image4f& lin) {
-    auto srgb = image{lin.size(), zero4f};
+void linear_to_srgb(image4f& srgb, const image4f& lin) {
+    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < srgb.size().y; j++) {
         for (auto i = 0; i < srgb.size().x; i++) {
             srgb[{i, j}] = linear_to_srgb(lin[{i, j}]);
         }
     }
-    return srgb;
+}
+void srgb_to_linear(image4f& lin, const image4b& srgb) {
+    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
+    for (auto j = 0; j < srgb.size().y; j++) {
+        for (auto i = 0; i < srgb.size().x; i++) {
+            lin[{i, j}] = srgb_to_linear(byte_to_float(srgb[{i, j}]));
+        }
+    }
+}
+void linear_to_srgb(image4b& srgb, const image4f& lin) {
+    if(lin.size() != srgb.size()) throw out_of_range("different image sizes");
+    for (auto j = 0; j < srgb.size().y; j++) {
+        for (auto i = 0; i < srgb.size().x; i++) {
+            srgb[{i, j}] = float_to_byte(linear_to_srgb(lin[{i, j}]));
+        }
+    }
 }
 
 // Conversion from/to floats.
-image4f byte_to_float(const image4b& bt) {
-    auto fl = image{bt.size(), zero4f};
+void byte_to_float(image4f& fl, const image4b& bt) {
+    if(fl.size() != bt.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < bt.size().y; j++) {
         for (auto i = 0; i < bt.size().x; i++) {
             fl[{i, j}] = byte_to_float(bt[{i, j}]);
         }
     }
-    return fl;
 }
-image4b float_to_byte(const image4f& fl) {
-    auto bt = image{fl.size(), zero4b};
+void float_to_byte(image4b& bt, const image4f& fl) {
+    if(fl.size() != bt.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < bt.size().y; j++) {
         for (auto i = 0; i < bt.size().x; i++) {
             bt[{i, j}] = float_to_byte(fl[{i, j}]);
         }
     }
-    return bt;
 }
 
 // Tonemap image
-image4f tonemap_image(
+void tonemap_image(image4f& ldr,
     const image4f& hdr, float exposure, bool filmic, bool srgb) {
-    auto ldr = image{hdr.size(), zero4f};
+    if(ldr.size() != hdr.size()) throw out_of_range("different image sizes");
     for (auto j = 0; j < hdr.size().y; j++) {
         for (auto i = 0; i < hdr.size().x; i++) {
             ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);
         }
     }
-    return ldr;
+}
+void tonemap_image(image4b& ldr,
+    const image4f& hdr, float exposure, bool filmic, bool srgb) {
+    if(ldr.size() != hdr.size()) throw out_of_range("different image sizes");
+    for (auto j = 0; j < hdr.size().y; j++) {
+        for (auto i = 0; i < hdr.size().x; i++) {
+            ldr[{i, j}] = float_to_byte(tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb));
+        }
+    }
 }
 
 // Tonemap image
