@@ -36,7 +36,7 @@
 using namespace yocto;
 
 image4f compute_diff_image(const image4f& a, const image4f& b) {
-    auto diff = image{a.width(), a.height(), zero4f};
+    auto diff = image{a.size(), zero4f};
     for (auto j = 0; j < a.height(); j++) {
         for (auto i = 0; i < a.width(); i++) {
             diff[{i, j}] = {abs(a[{i, j}].x - b[{i, j}].x),
@@ -57,7 +57,7 @@ vec4f max_diff_value(const image4f& diff) {
 }
 
 image4f display_diff(const image4f& diff) {
-    auto display = image{diff.width(), diff.height(), zero4f};
+    auto display = image{diff.size(), zero4f};
     for (auto j = 0; j < diff.height(); j++) {
         for (auto i = 0; i < diff.width(); i++) {
             auto diff_value = max(diff[{i, j}]);

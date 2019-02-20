@@ -227,7 +227,7 @@ void load_pfm_image(const string& filename, image4f& img) {
     if (pixels.empty()) {
         throw io_error("error loading image " + filename);
     }
-    img = image{width, height, (const vec4f*)pixels.data()};
+    img = image{{width, height}, (const vec4f*)pixels.data()};
 }
 void save_pfm_image(const string& filename, const image4f& img) {
     if (!save_pfm(
@@ -246,7 +246,7 @@ void load_exr_image(const string& filename, image4f& img) {
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{width, height, (const vec4f*)pixels};
+    img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
 }
 void save_exr_image(const string& filename, const image4f& img) {
@@ -263,7 +263,7 @@ void load_stb_image(const string& filename, image4b& img) {
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{width, height, (const vec4b*)pixels};
+    img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
 }
 void load_stb_image(const string& filename, image4f& img) {
@@ -272,7 +272,7 @@ void load_stb_image(const string& filename, image4f& img) {
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{width, height, (const vec4f*)pixels};
+    img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
 }
 
@@ -316,7 +316,7 @@ void load_stb_image_from_memory(const byte* data, int data_size, image4b& img) {
     if (!pixels) {
         throw io_error("error loading in-memory image");
     }
-    img = image{width, height, (const vec4b*)pixels};
+    img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
 }
 void load_stbi_image_from_memory(
@@ -327,7 +327,7 @@ void load_stbi_image_from_memory(
     if (!pixels) {
         throw io_error("error loading in-memory image {}");
     }
-    img = image{width, height, (const vec4f*)pixels};
+    img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
 }
 
@@ -336,9 +336,9 @@ void apply_json_procedural(const json& js, image4f& img) {
     auto width  = js.value("width", 1024);
     auto height = js.value("height", 1024);
     if (type == "sky" && width < height * 2) width = height * 2;
-    img.resize(width, height);
+    img.resize({width, height});
     if (type == "") {
-        img = image{width, height, zero4f};
+        img = image{{width, height}, zero4f};
     } else if (type == "grid") {
         make_grid_image(img, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
@@ -554,7 +554,7 @@ image4f resize_image(const image4f& img, int width, int height) {
     } else if (width == 0) {
         width = (int)round(height * (float)img.width() / (float)img.height());
     }
-    auto res_img = image{width, height, zero4f};
+    auto res_img = image{{width, height}, zero4f};
     stbir_resize_float_generic((float*)img.data(), img.width(), img.height(),
         sizeof(vec4f) * img.width(), (float*)res_img.data(), res_img.width(),
         res_img.height(), sizeof(vec4f) * res_img.width(), 4, 3, 0,
@@ -575,16 +575,14 @@ void load_volume(const string& filename, volume1f& vol) {
     auto fs = input_file(filename, true);
     auto size = zero3i;
     read_value(fs, size);
-    vol.resize(size.x, size.y, size.z);
+    vol.resize(size);
     read_values(fs, vol._voxels);
 }
 
 // Saves volume data in binary format.
 void save_volume(const string& filename, const volume1f& vol) {
     auto fs = output_file(filename, true);
-    write_value(fs, vol.width());
-    write_value(fs, vol.height());
-    write_value(fs, vol.depth());
+    write_value(fs, vol.size());
     write_values(fs, vol._voxels);
 }
 

@@ -99,8 +99,8 @@ void start_rendering_async(app_state& app) {
     tie(app.image_width, app.image_height) = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
         app.trace_options.image_width, app.trace_options.image_height);
-    app.image   = {app.image_width, app.image_height, zero4f};
-    app.display = {app.image_width, app.image_height, zero4f};
+    app.image   = {{app.image_width, app.image_height}, zero4f};
+    app.display = {{app.image_width, app.image_height}, zero4f};
     init_trace_state(app.state, app.image_width, app.image_height,
         app.trace_options.random_seed);
 
@@ -111,7 +111,7 @@ void start_rendering_async(app_state& app) {
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = tonemap_image(
         app.preview, app.exposure, app.filmic, app.srgb);
-    auto large_preview = image{app.image_width, app.image_height, zero4f};
+    auto large_preview = image{{app.image_width, app.image_height}, zero4f};
     for (auto j = 0; j < app.image_height; j++) {
         for (auto i = 0; i < app.image_width; i++) {
             auto pi = clamp(

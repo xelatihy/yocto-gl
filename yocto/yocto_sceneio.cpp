@@ -147,7 +147,7 @@ inline void from_json(const json& js, image<T>& value) {
     auto width  = js.at("width").get<int>();
     auto height = js.at("height").get<int>();
     auto pixels = js.at("pixels").get<vector<T>>();
-    value       = image{width, height, (const T*)pixels.data()};
+    value       = image{{width, height}, (const T*)pixels.data()};
 }
 template <typename T>
 inline void to_json(json& js, const volume<T>& value) {
@@ -163,7 +163,7 @@ inline void from_json(const json& js, volume<T>& value) {
     auto height = js.at("height").get<int>();
     auto depth  = js.at("depth").get<int>();
     auto voxels = js.at("voxels").get<vector<T>>();
-    value       = volume{width, height, depth, (const T*)voxels.data()};
+    value       = volume{{width, height, depth}, (const T*)voxels.data()};
 }
 
 }  // namespace yocto
@@ -542,7 +542,7 @@ void from_json_procedural(
     auto width  = js.value("width", 1024);
     auto height = js.value("height", 1024);
     if (type == "sky" && width < height * 2) width = height * 2;
-    value.hdr_image.resize(width, height);
+    value.hdr_image.resize({width, height});
     if (type == "grid") {
         make_grid_image(value.hdr_image, js.value("tile", 8),
             js.value("c0", vec4f{0.2f, 0.2f, 0.2f, 1}),
@@ -651,7 +651,7 @@ void from_json_procedural(
     auto width  = js.value("width", 512);
     auto height = js.value("height", 512);
     auto depth  = js.value("depth", 512);
-    value.volume_data.resize(width, height, depth);
+    value.volume_data.resize({width, height, depth});
     if (type == "test_volume") {
         make_test_volume(value.volume_data, js.value("scale", 10.0f),
             js.value("exponent", 6.0f));

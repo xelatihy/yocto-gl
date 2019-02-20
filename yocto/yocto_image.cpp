@@ -37,7 +37,7 @@ namespace yocto {
 
 // Conversion between linear and gamma-encoded images.
 image4f gamma_to_linear(const image4f& srgb, float gamma) {
-    auto lin = image{srgb.width(), srgb.height(), zero4f};
+    auto lin = image{srgb.size(), zero4f};
     for (auto j = 0; j < srgb.height(); j++) {
         for (auto i = 0; i < srgb.width(); i++) {
             lin[{i, j}] = gamma_to_linear(srgb[{i, j}], gamma);
@@ -46,7 +46,7 @@ image4f gamma_to_linear(const image4f& srgb, float gamma) {
     return lin;
 }
 image4f linear_to_gamma(const image4f& lin, float gamma) {
-    auto srgb = image{lin.width(), lin.height(), zero4f};
+    auto srgb = image{lin.size(), zero4f};
     for (auto j = 0; j < srgb.height(); j++) {
         for (auto i = 0; i < srgb.width(); i++) {
             srgb[{i, j}] = linear_to_gamma(lin[{i, j}], gamma);
@@ -57,7 +57,7 @@ image4f linear_to_gamma(const image4f& lin, float gamma) {
 
 // Conversion between linear and gamma-encoded images.
 image4f srgb_to_linear(const image4f& srgb) {
-    auto lin = image{srgb.width(), srgb.height(), zero4f};
+    auto lin = image{srgb.size(), zero4f};
     for (auto j = 0; j < srgb.height(); j++) {
         for (auto i = 0; i < srgb.width(); i++) {
             lin[{i, j}] = srgb_to_linear(srgb[{i, j}]);
@@ -66,7 +66,7 @@ image4f srgb_to_linear(const image4f& srgb) {
     return lin;
 }
 image4f linear_to_srgb(const image4f& lin) {
-    auto srgb = image{lin.width(), lin.height(), zero4f};
+    auto srgb = image{lin.size(), zero4f};
     for (auto j = 0; j < srgb.height(); j++) {
         for (auto i = 0; i < srgb.width(); i++) {
             srgb[{i, j}] = linear_to_srgb(lin[{i, j}]);
@@ -77,7 +77,7 @@ image4f linear_to_srgb(const image4f& lin) {
 
 // Conversion from/to floats.
 image4f byte_to_float(const image4b& bt) {
-    auto fl = image{bt.width(), bt.height(), zero4f};
+    auto fl = image{bt.size(), zero4f};
     for (auto j = 0; j < bt.height(); j++) {
         for (auto i = 0; i < bt.width(); i++) {
             fl[{i, j}] = byte_to_float(bt[{i, j}]);
@@ -86,7 +86,7 @@ image4f byte_to_float(const image4b& bt) {
     return fl;
 }
 image4b float_to_byte(const image4f& fl) {
-    auto bt = image{fl.width(), fl.height(), zero4b};
+    auto bt = image{fl.size(), zero4b};
     for (auto j = 0; j < bt.height(); j++) {
         for (auto i = 0; i < bt.width(); i++) {
             bt[{i, j}] = float_to_byte(fl[{i, j}]);
@@ -98,7 +98,7 @@ image4b float_to_byte(const image4f& fl) {
 // Tonemap image
 image4f tonemap_image(
     const image4f& hdr, float exposure, bool filmic, bool srgb) {
-    auto ldr = image{hdr.width(), hdr.height(), zero4f};
+    auto ldr = image{hdr.size(), zero4f};
     for (auto j = 0; j < hdr.height(); j++) {
         for (auto i = 0; i < hdr.width(); i++) {
             ldr[{i, j}] = tonemap_filmic(hdr[{i, j}], exposure, filmic, srgb);

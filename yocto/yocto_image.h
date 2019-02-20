@@ -96,34 +96,29 @@ namespace yocto {
 template <typename T>
 struct image {
     // constructors
-    image() : _width{0}, _height{0}, _pixels{} {}
-    image(int width, int height, const T& value = {})
-        : _width{width}
-        , _height{height}
-        , _pixels{(size_t)width * (size_t)height, value} {}
-    image(int width, int height, const T* value)
-        : _width{width}
-        , _height{height}
-        , _pixels{value, value + (size_t)width * (size_t)height} {}
+    image() : _size{0, 0}, _pixels{} {}
     image(const vec2i& size, const T& value = {})
-        : _width{size.x}
-        , _height{size.y}
+        : _size{size}
         , _pixels{(size_t)size.x * (size_t)size.y, value} {}
     image(const vec2i& size, const T* value)
-        : _width{size.x}
-        , _height{size.y}
+        : _size{size}
         , _pixels{value, value + (size_t)size.x * (size_t)size.y} {}
 
     // size
     bool empty() const { return _pixels.empty(); }
-    int width() const { return _width; }
-    int height() const { return _height; }
-    void resize(int width, int height);
+    int width() const { return _size.x; }
+    int height() const { return _size.y; }
+    vec2i size() const { return _size; }
+    void resize(const vec2i& size) {
+        if (size == _size) return;
+        _size  = size;
+        _pixels.resize((size_t)size.x * (size_t)size.y);
+    }
 
     // element access
-    T&       operator[](const vec2i& ij) { return _pixels[ij.y * _width + ij.x]; }
+    T&       operator[](const vec2i& ij) { return _pixels[ij.y * _size.x + ij.x]; }
     const T& operator[](const vec2i& ij) const {
-        return _pixels[ij.y * _width + ij.x];
+        return _pixels[ij.y * _size.x + ij.x];
     }
 
     // data access
@@ -137,8 +132,7 @@ struct image {
     const T* end() const { return _pixels.data() + _pixels.size(); }
 
     // data
-    int       _width  = 0;
-    int       _height = 0;
+    vec2i     _size  = zero2i;
     vector<T> _pixels = {};
 };
 
@@ -267,43 +261,33 @@ namespace yocto {
 template <typename T>
 struct volume {
     // constructors
-    volume() : _width{0}, _height{0}, _depth{0}, _voxels{} {}
-    volume(int width, int height, int depth, const T& value = {})
-        : _width{width}
-        , _height{height}
-        , _depth{depth}
-        , _voxels((size_t)width * (size_t)height * (size_t)depth, value) {}
-    volume(int width, int height, int depth, const T* value)
-        : _width{width}
-        , _height{height}
-        , _depth{depth}
-        , _voxels(
-              value, value + (size_t)width * (size_t)height * (size_t)depth) {}
+    volume() : _size{0,0,0}, _voxels{} {}
     volume(const vec3i& size, const T& value = {})
-        : _width{size.x}
-        , _height{size.y}
-        , _depth{size.z}
+        : _size{size}
         , _voxels((size_t)size.x * (size_t)size.y * (size_t)size.z, value) {}
     volume(const vec3i& size, const T* value)
-        : _width{size.x}
-        , _height{size.y}
-        , _depth{size.z}
+        : _size{size}
         , _voxels(value,
               value + (size_t)size.x * (size_t)size.y * (size_t)size.z) {}
 
     // size
     bool empty() const { return _voxels.empty(); }
-    int width() const { return _width; }
-    int height() const { return _height; }
-    int depth() const { return _depth; }
-    void resize(int width, int height, int depth);
+    vec3i size() const { return _size; }
+    int width() const { return _size.x; }
+    int height() const { return _size.y; }
+    int depth() const { return _size.z; }
+    void resize(const vec3i& size) {
+        if (size == _size) return;
+        _size  = size;
+        _voxels.resize((size_t)size.x * (size_t)size.y * (size_t)size.z);
+    }
 
     // element access
     T& operator[](const vec3i& ijk) {
-        return _voxels[ijk.z * _width * _height + ijk.y * _width + ijk.x];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
     const T& operator[](const vec3i& ijk) const {
-        return _voxels[ijk.z * _width * _height + ijk.y * _width + ijk.x];
+        return _voxels[ijk.z * _size.x * _size.y + ijk.y * _size.x + ijk.x];
     }
 
     // data access
@@ -317,9 +301,7 @@ struct volume {
     const T* end() const { return _voxels.data() + _voxels.size(); }
 
     // data
-    int           _width  = 0;
-    int           _height = 0;
-    int           _depth  = 0;
+    vec3i           _size  = zero3i;
     vector<float> _voxels = {};
 };
 
@@ -612,21 +594,11 @@ inline vec3f rgb_to_hsv(const vec3f& rgb) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Image resize
-template <typename T>
-inline void image<T>::resize(int width, int height) {
-    if (width != _width || height != _height) {
-        _width  = width;
-        _height = height;
-        _pixels.resize((size_t)width * (size_t)height);
-    }
-}
-
 // Gets pixels in an image region
 template <typename T>
 inline image<T> get_image_region(
     const image<T>& img, const image_region& region) {
-    auto clipped = image<T>{region.width, region.height};
+    auto clipped = image<T>{{region.width, region.height}};
     for (auto j = 0; j < region.height; j++) {
         for (auto i = 0; i < region.width; i++) {
             clipped[{i, j}] = img[{i + region.offsetx, j + region.offsety}];
@@ -648,24 +620,6 @@ inline void make_image_regions(vector<image_region>& regions, int width,
     if (shuffled) {
         auto rng = rng_state{};
         random_shuffle(regions, rng);
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION FOR VOLUME UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// size
-template <typename T>
-inline void volume<T>::resize(int width, int height, int depth) {
-    if (width != _width || height != _height || depth != _depth) {
-        _width  = width;
-        _height = height;
-        _depth  = depth;
-        _voxels.resize((size_t)width * (size_t)height * (size_t)depth);
     }
 }
 

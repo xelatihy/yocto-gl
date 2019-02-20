@@ -2012,7 +2012,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto [width, height] = get_camera_image_size(
         scene.cameras.at(options.camera_id), options.image_width,
         options.image_height);
-    auto image  = yocto::image{width, height, zero4f};
+    auto image  = yocto::image{{width, height}, zero4f};
     auto pixels = trace_state{};
     init_trace_state(pixels, width, height, options.random_seed);
     auto regions = vector<image_region>{};
@@ -2086,7 +2086,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
     auto& camera         = scene.cameras.at(options.camera_id);
     auto [width, height] = get_camera_image_size(
         camera, options.image_width, options.image_height);
-    image = {width, height, zero4f};
+    image = {{width, height}, zero4f};
     state = trace_state{};
     init_trace_state(state, width, height, options.random_seed);
     auto regions = vector<image_region>{};
