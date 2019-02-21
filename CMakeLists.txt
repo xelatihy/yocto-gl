@@ -205,7 +205,7 @@ foreach(filename "simple-al.json" "cornellbox-al.json" "simplemat-al.json" "subd
 endforeach()
 if(YOCTO_EMBREE)
 # embree
-foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "hairball-al.json" "models-al.json")
+foreach(filename "simple-al.json" "simple-el.json" "cornellbox-al.json" "simplemat-al.json" "subdiv-al.json" "models-al.json")
     set(tracer "path")
     get_filename_component(name ${filename} NAME_WE)
     add_test(NAME ytrace-embree-${tracer}-${filename}
