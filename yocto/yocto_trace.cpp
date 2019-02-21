@@ -77,12 +77,10 @@ trace_point make_trace_point(const yocto_scene& scene, int instance_id,
     }
     point.texturecoord = evaluate_shape_texturecoord(
         shape, element_id, element_uv);
-    point.color = evaluate_shape_color(
-        shape, element_id, element_uv);
+    point.color    = evaluate_shape_color(shape, element_id, element_uv);
     point.emission = evaluate_material_emission(
         scene, material, point.texturecoord);
-    point.brdf = evaluate_material_brdf(
-        scene, material, point.texturecoord);
+    point.brdf = evaluate_material_brdf(scene, material, point.texturecoord);
     point.brdf.diffuse *= xyz(point.color);
     point.brdf.specular *= xyz(point.color);
     point.brdf.opacity *= point.color.w;
@@ -861,7 +859,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const bvh_scene& bvh,
     const vec3f& position, const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
-    auto& shape = scene.shapes[instance.shape];
+    auto& shape    = scene.shapes[instance.shape];
     auto& material = scene.materials[shape.material];
     if (material.emission == zero3f) return 0;
     auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
@@ -1962,7 +1960,7 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     for (auto instance_id = 0; instance_id < scene.instances.size();
          instance_id++) {
         auto& instance = scene.instances[instance_id];
-        auto& shape = scene.shapes[instance.shape];
+        auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[shape.material];
         if (material.emission == zero3f) continue;
         if (shape.triangles.empty() && shape.quads.empty()) continue;
