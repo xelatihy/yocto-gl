@@ -274,37 +274,35 @@ inline vec<T, 3>& xyz(vec<T, 4>& a) {
 }
 
 // Vector comparison operations.
-template <typename T>
-inline bool operator==(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return a.x == b.x;
+template <typename T, int N>
+inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return a.x == b.x;
+    } else if constexpr(N == 2) {
+        return a.x == b.x && a.y == b.y;
+    } else if constexpr(N == 3) {
+        return a.x == b.x && a.y == b.y && a.z == b.z;
+    } else if constexpr(N == 4) {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+    } else {
+        for(auto i = 0; i < N; i ++) 
+            if(a[i] != b[i]) return false;
+        return true;
+    }
 }
-template <typename T>
-inline bool operator!=(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return a.x != b.x;
-}
-template <typename T>
-inline bool operator==(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a.x == b.x && a.y == b.y;
-}
-template <typename T>
-inline bool operator!=(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a.x != b.x || a.y != b.y;
-}
-template <typename T>
-inline bool operator==(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-template <typename T>
-inline bool operator!=(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return a.x != b.x || a.y != b.y || a.z != b.z;
-}
-template <typename T>
-inline bool operator==(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-template <typename T>
-inline bool operator!=(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+template <typename T, int N>
+inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return a.x != b.x;
+    } else if constexpr(N == 2) {
+        return a.x != b.x || a.y != b.y;
+    } else if constexpr(N == 3) {
+        return a.x != b.x || a.y != b.y || a.z != b.z;
+    } else if constexpr(N == 4) {
+        return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
+    } else {
+        return !(a == b);
+    }
 }
 
 // Vector operations.
