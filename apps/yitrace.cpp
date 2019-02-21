@@ -57,14 +57,14 @@ struct app_state {
     bool        add_skyenv = false;
 
     // rendering state
-    trace_lights             lights  = {};
-    trace_state              state   = {};
-    image4f                  image   = {};
-    image4f                  display = {};
-    image4f                  preview = {};
-    atomic<bool>             trace_stop;
-    atomic<int>              trace_sample;
-    vector<future<void>>     trace_futures = {};
+    trace_lights                   lights  = {};
+    trace_state                    state   = {};
+    image4f                        image   = {};
+    image4f                        display = {};
+    image4f                        preview = {};
+    atomic<bool>                   trace_stop;
+    atomic<int>                    trace_sample;
+    vector<future<void>>           trace_futures = {};
     concurrent_queue<image_region> trace_queue   = {};
 
     // view image

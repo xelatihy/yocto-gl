@@ -61,7 +61,7 @@ struct app_image {
     thread       load_thread, display_thread, stats_thread, save_thread;
     atomic<bool> display_stop;
     concurrent_queue<image_region> display_queue;
-    string                   error_msg = "";
+    string                         error_msg = "";
 
     // viewing properties
     vec2f image_center = zero2f;
