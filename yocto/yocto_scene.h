@@ -179,8 +179,8 @@ struct yocto_shape {
     // subdision properties
     int  subdivision_level      = 0;
     bool catmull_clark          = false;
-    bool compute_vertex_normals = false;
-    bool preserve_face_varying  = false;
+    bool compute_normals        = false;
+    bool preserve_facevarying   = false;
 
     // primitives
     vector<int>   points    = {};

@@ -115,7 +115,7 @@ void subdivide_shape(yocto_shape& shape) {
         throw runtime_error("unknown element type");
     }
 
-    if (shape.compute_vertex_normals) {
+    if (shape.compute_normals) {
         if (!shape.quads_positions.empty()) {
             shape.quads_normals = shape.quads_positions;
         }
@@ -140,7 +140,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
                                     mean(xyz(evaluate_texture(displacement,
                                         shape.texturecoords[vid])));
         }
-        if (shape.compute_vertex_normals || !shape.normals.empty()) {
+        if (shape.compute_normals || !shape.normals.empty()) {
             compute_shape_normals(shape, shape.normals);
         }
     } else {
@@ -162,7 +162,7 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
         for (auto vid = 0; vid < shape.positions.size(); vid++) {
             shape.positions[vid] += normals[vid] * offset[vid] / count[vid];
         }
-        if (shape.compute_vertex_normals || !shape.normals.empty()) {
+        if (shape.compute_normals || !shape.normals.empty()) {
             shape.quads_normals = shape.quads_positions;
             compute_shape_normals(shape, shape.normals);
         }
@@ -418,8 +418,10 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
             init_shape_bvh(shape_bvh, shape.triangles, shape.positions);
         } else if (!shape.quads.empty()) {
             init_shape_bvh(shape_bvh, shape.quads, shape.positions);
+        } else if (!shape.quads_positions.empty()) {
+            init_shape_bvh(shape_bvh, shape.quads_positions, shape.positions);
         } else {
-            shape_bvh = {};
+            throw runtime_error("unknown element type");
         }
         shape_bvhs.push_back(shape_bvh);
     }

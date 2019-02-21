@@ -940,8 +940,10 @@ void to_json(json& js, const yocto_shape& value, const yocto_scene& scene) {
         js["subdivision_level"] = value.subdivision_level;
     if (value.catmull_clark != def.catmull_clark)
         js["catmull_clark"] = value.catmull_clark;
-    if (value.compute_vertex_normals != def.compute_vertex_normals)
-        js["compute_vertex_normals"] = value.compute_vertex_normals;
+    if (value.compute_normals != def.compute_normals)
+        js["compute_normals"] = value.compute_normals;
+    if (value.preserve_facevarying != def.preserve_facevarying)
+        js["preserve_facevarying"] = value.preserve_facevarying;
     if (value.filename == "") {
         if (value.points != def.points) js["points"] = value.points;
         if (value.lines != def.lines) js["lines"] = value.lines;
@@ -970,8 +972,10 @@ void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
     value.subdivision_level = js.value(
         "subdivision_level", def.subdivision_level);
     value.catmull_clark          = js.value("catmull_clark", def.catmull_clark);
-    value.compute_vertex_normals = js.value(
-        "compute_vertex_normals", def.compute_vertex_normals);
+    value.compute_normals = js.value(
+        "compute_normals", def.compute_normals);
+    value.preserve_facevarying = js.value(
+        "preserve_facevarying", def.preserve_facevarying);
     value.points          = js.value("points", def.points);
     value.lines           = js.value("lines", def.lines);
     value.triangles       = js.value("triangles", def.triangles);
@@ -1735,7 +1739,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         auto shape                  = yocto_shape();
         shape.name                  = oname + gname;
         shape.material              = mmap.at(mname);
-        shape.preserve_face_varying = options.obj_preserve_face_varying ||
+        shape.preserve_facevarying = options.obj_preserve_face_varying ||
                                       shape.name.find("[yocto::facevarying]") !=
                                           string::npos;
         scene.shapes.push_back(shape);
@@ -1839,7 +1843,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             add_shape();
         }
         auto& shape = scene.shapes.back();
-        if (!shape.preserve_face_varying) {
+        if (!shape.preserve_facevarying) {
             add_verts(verts, shape);
             if (verts.size() == 4) {
                 shape.quads.push_back(
@@ -1908,6 +1912,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             add_shape();
         }
         auto& shape = scene.shapes.back();
+        shape.preserve_facevarying = false;
         add_verts(verts, shape);
         for (auto i = 1; i < verts.size(); i++)
             shape.lines.push_back(
@@ -1920,6 +1925,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             add_shape();
         }
         auto& shape = scene.shapes.back();
+        shape.preserve_facevarying = false;
         add_verts(verts, shape);
         for (auto i = 0; i < verts.size(); i++)
             shape.points.push_back(vertex_map.at(verts[i]));
@@ -4219,7 +4225,8 @@ void write_object(output_file& fs, const yocto_shape& shape) {
     write_value(fs, shape.material);
     write_value(fs, shape.subdivision_level);
     write_value(fs, shape.catmull_clark);
-    write_value(fs, shape.compute_vertex_normals);
+    write_value(fs, shape.compute_normals);
+    write_value(fs, shape.preserve_facevarying);
     write_value(fs, shape.points);
     write_value(fs, shape.lines);
     write_value(fs, shape.triangles);
@@ -4240,7 +4247,8 @@ void read_object(input_file& fs, yocto_shape& shape) {
     read_value(fs, shape.material);
     read_value(fs, shape.subdivision_level);
     read_value(fs, shape.catmull_clark);
-    read_value(fs, shape.compute_vertex_normals);
+    read_value(fs, shape.compute_normals);
+    read_value(fs, shape.preserve_facevarying);
     read_value(fs, shape.points);
     read_value(fs, shape.lines);
     read_value(fs, shape.triangles);
