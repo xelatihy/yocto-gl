@@ -1282,9 +1282,17 @@ void load_json_meshes(yocto_scene& scene, const string& dirname,
         [&dirname](yocto_shape& shape) {
             if (shape.filename == "" || !shape.positions.empty()) return;
             auto filename = normalize_path(dirname + shape.filename);
-            load_mesh(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius, false);
+            if(!shape.preserve_facevarying) {
+                load_mesh(filename, shape.points, shape.lines, shape.triangles,
+                    shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius, false);
+            } else {
+                auto quads_materials = vector<int>{};
+                load_facevarying_mesh(filename, shape.quads_positions, 
+                    shape.quads_normals, shape.quads_texturecoords,
+                    shape.positions, shape.normals, shape.texturecoords,
+                    quads_materials);
+            }
         },
         options.cancel_flag, options.run_serially);
 }
@@ -1331,9 +1339,14 @@ void save_json_meshes(const yocto_scene& scene, const string& dirname,
         [&dirname](const yocto_shape& shape) {
             if (shape.filename == "") return;
             auto filename = normalize_path(dirname + shape.filename);
-            save_mesh(filename, shape.points, shape.lines, shape.triangles,
-                shape.quads, shape.positions, shape.normals,
-                shape.texturecoords, shape.colors, shape.radius);
+            if(!shape.preserve_facevarying) {
+                save_mesh(filename, shape.points, shape.lines, shape.triangles,
+                    shape.quads, shape.positions, shape.normals,
+                    shape.texturecoords, shape.colors, shape.radius);
+            } else {
+                save_facevarying_mesh(filename, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals,
+                    shape.texturecoords, {});
+            }
         },
         options.cancel_flag, options.run_serially);
 }
