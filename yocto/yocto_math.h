@@ -126,6 +126,7 @@ using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
 using std::numeric_limits;
+using std::invalid_argument;
 
 }  // namespace yocto
 
@@ -752,7 +753,8 @@ namespace std {
 template <typename T, int N>
 struct hash<yocto::vec<T, N>> {
     static constexpr std::hash<T> hasher = std::hash<T>();
-    size_t                        operator()(const yocto::vec<T, N>& v) const {
+
+    size_t operator()(const yocto::vec<T, N>& v) const {
         auto h = (size_t)0;
         for (auto i = 0; i < N; i++)
             h ^= hasher((&v.x)[i]) + 0x9e3779b9 + (h << 6) + (h >> 2);
@@ -770,6 +772,18 @@ namespace yocto {
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N, int M>
 struct mat;
+
+// Small Fixed-size matrices stored in column major format.
+template <typename T, int N>
+struct mat<T, N, 1> {
+    vec<T, N> x = {};
+
+    mat() : x{} {}
+    mat(const vec<T, N>& x) : x{x} {}
+
+    vec<T, N>&       operator[](int i) { return (&x)[i]; }
+    const vec<T, N>& operator[](int i) const { return (&x)[i]; }
+};
 
 // Small Fixed-size matrices stored in column major format.
 template <typename T, int N>
@@ -824,9 +838,19 @@ using mat4f = mat<float, 4, 4>;
 // Identity matrix
 template <typename T, int N>
 inline mat<T, N, N> make_identity_mat() {
-    auto m = mat<T, N, N>{};
-    for (auto i = 0; i < N; i++) m[i][i] = 1;
-    return m;
+    if constexpr (N == 1) {
+        return {{1}};
+    } else if constexpr (N == 2) {
+        return {{1, 0}, {0, 1}};
+    } else if constexpr (N == 3) {
+        return {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
+    } else if constexpr (N == 4) {
+        return {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
+    } else {
+        auto m = mat<T, N, N>{};
+        for (auto i = 0; i < N; i++) m[i][i] = 1;
+        return m;
+    }
 }
 
 // Identity matrices constants.
@@ -836,95 +860,107 @@ const auto identity_mat4f = mat4f{
     {1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}};
 
 // Matrix comparisons.
-template <typename T, int N>
-inline bool operator==(const mat<T, N, 2>& a, const mat<T, N, 2>& b) {
-    return a.x == b.x && a.y == b.y;
+template <typename T, int N, int M>
+inline bool operator==(const mat<T, N, M>& a, const mat<T, N, M>& b) {
+    if constexpr (M == 1) {
+        return a.x == b.x;
+    } else if constexpr (M == 2) {
+        return a.x == b.x && a.y == b.y;
+    } else if constexpr (M == 3) {
+        return a.x == b.x && a.y == b.y && a.z == b.z;
+    } else if constexpr (M == 4) {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+    } else {
+        for (auto i = 0; i < M; i++)
+            if (a[i] != b[i]) return false;
+        return true;
+    }
 }
-template <typename T, int N>
-inline bool operator!=(const mat<T, N, 2>& a, const mat<T, N, 2>& b) {
-    return !(a == b);
-}
-template <typename T, int N>
-inline bool operator==(const mat<T, N, 3>& a, const mat<T, N, 3>& b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-template <typename T, int N>
-inline bool operator!=(const mat<T, N, 3>& a, const mat<T, N, 3>& b) {
-    return !(a == b);
-}
-template <typename T, int N>
-inline bool operator==(const mat<T, N, 4>& a, const mat<T, N, 4>& b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-template <typename T, int N>
-inline bool operator!=(const mat<T, N, 4>& a, const mat<T, N, 4>& b) {
+template <typename T, int N, int M>
+inline bool operator!=(const mat<T, N, M>& a, const mat<T, N, M>& b) {
     return !(a == b);
 }
 
 // Matrix operations.
-template <typename T, int N>
-inline mat<T, N, 2> operator+(const mat<T, N, 2>& a, const mat<T, N, 2>& b) {
-    return {a.x + b.x, a.y + b.y};
+template <typename T, int N, int M>
+inline mat<T, N, M> operator+(const mat<T, N, M>& a, const mat<T, N, M>& b) {
+    if constexpr (M == 1) {
+        return {a.x + b.x};
+    } else if constexpr (M == 2) {
+        return {a.x + b.x, a.y + b.y};
+    } else if constexpr (M == 3) {
+        return {a.x + b.x, a.y + b.y, a.z + b.z};
+    } else if constexpr (M == 4) {
+        return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+    } else {
+        auto c = mat<T, N, M>{};
+        for (auto i = 0; i < M; i++) c[i] = a[i] + b[i];
+        return c;
+    }
 }
-template <typename T, int N>
-inline mat<T, N, 2> operator*(const mat<T, N, 2>& a, T b) {
-    return {a.x * b, a.y * b};
-}
-template <typename T, int N>
-inline vec<T, N> operator*(const mat<T, N, 2>& a, const vec<T, 2>& b) {
-    return a.x * b.x + a.y * b.y;
-}
-template <typename T, int N>
-inline vec<T, 2> operator*(const vec<T, N>& a, const mat<T, N, 2>& b) {
-    return {dot(a, b.x), dot(a, b.y)};
+template <typename T, int N, int M, typename T1>
+inline mat<T, N, M> operator*(const mat<T, N, M>& a, T1 b) {
+    if constexpr (M == 1) {
+        return {a.x * b};
+    } else if constexpr (M == 2) {
+        return {a.x * b, a.y * b};
+    } else if constexpr (M == 3) {
+        return {a.x * b, a.y * b, a.z * b};
+    } else if constexpr (M == 4) {
+        return {a.x * b, a.y * b, a.z * b, a.w * b};
+    } else {
+        auto c = mat<T, N, M>{};
+        for (auto i = 0; i < M; i++) c[i] = a[i] * b;
+        return c;
+    }
 }
 template <typename T, int N, int M>
-inline mat<T, N, 2> operator*(const mat<T, N, M>& a, const mat<T, M, 2>& b) {
-    return {a * b.x, a * b.y};
-}
-
-// Matrix operations.
-template <typename T, int N>
-inline mat<T, N, 3> operator+(const mat<T, N, 3>& a, const mat<T, N, 3>& b) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z};
-}
-template <typename T, int N>
-inline mat<T, N, 3> operator*(const mat<T, N, 3>& a, T b) {
-    return {a.x * b, a.y * b, a.z * b};
-}
-template <typename T, int N>
-inline vec<T, N> operator*(const mat<T, N, 3>& a, const vec<T, 3>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-template <typename T, int N>
-inline vec<T, 3> operator*(const vec<T, N>& a, const mat<T, N, 3>& b) {
-    return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+inline vec<T, N> operator*(const mat<T, N, M>& a, const vec<T, M>& b) {
+    if constexpr (M == 1) {
+        return a.x * b.x;
+    } else if constexpr (M == 2) {
+        return a.x * b.x + a.y * b.y;
+    } else if constexpr (M == 3) {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    } else if constexpr (M == 4) {
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+    } else {
+        auto c = vec<T, N>{};
+        for (auto i = 0; i < M; i++) c += a[i] + b[i];
+        return c;
+    }
 }
 template <typename T, int N, int M>
-inline mat<T, N, 3> operator*(const mat<T, N, M>& a, const mat<T, M, 3>& b) {
-    return {a * b.x, a * b.y, a * b.z};
+inline vec<T, M> operator*(const vec<T, N>& a, const mat<T, N, M>& b) {
+    if constexpr (M == 1) {
+        return {dot(a, b.x)};
+    } else if constexpr (M == 2) {
+        return {dot(a, b.x), dot(a, b.y)};
+    } else if constexpr (M == 3) {
+        return {dot(a, b.x), dot(a, b.y), dot(a, b.z)};
+    } else if constexpr (M == 4) {
+        return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
+    } else {
+        auto c = vec<T, M>{};
+        for (auto i = 0; i < M; i++) c[i] = dot(a, b[i]);
+        return c;
+    }
 }
-
-// Matrix operations.
-template <typename T, int N>
-inline mat<T, N, 4> operator+(const mat<T, N, 4>& a, const mat<T, N, 4>& b) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-template <typename T, int N>
-inline mat<T, N, 4> operator*(const mat<T, N, 4>& a, T b) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-template <typename T, int N>
-inline vec<T, N> operator*(const mat<T, N, 4>& a, const vec<T, 4>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
-}
-template <typename T, int N>
-inline vec<T, 4> operator*(const vec<T, N>& a, const mat<T, N, 4>& b) {
-    return {dot(a, b.x), dot(a, b.y), dot(a, b.z), dot(a, b.w)};
-}
-template <typename T, int N, int M>
-inline mat<T, N, 4> operator*(const mat<T, N, M>& a, const mat<T, M, 4>& b) {
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
+template <typename T, int N, int M, int K>
+inline mat<T, N, M> operator*(const mat<T, N, K>& a, const mat<T, K, M>& b) {
+    if constexpr (M == 1) {
+        return {dot(a, b.x)};
+    } else if constexpr (M == 2) {
+        return {a * b.x, a * b.y};
+    } else if constexpr (M == 3) {
+        return {a * b.x, a * b.y, a * b.z};
+    } else if constexpr (M == 4) {
+        return {a * b.x, a * b.y, a * b.z, a * b.w};
+    } else {
+        auto c = mat<T, N, M>{};
+        for (auto i = 0; i < M; i++) c[i] = a * b[i];
+        return c;
+    }
 }
 
 // Matrix assignments.
@@ -936,44 +972,36 @@ template <typename T, int N>
 inline mat<T, N, N>& operator*=(mat<T, N, N>& a, const mat<T, N, N>& b) {
     return a = a * b;
 }
-template <typename T, int N, int M>
-inline mat<T, N, M>& operator*=(mat<T, N, M>& a, T b) {
+template <typename T, int N, int M, typename T1>
+inline mat<T, N, M>& operator*=(mat<T, N, M>& a, T1 b) {
     return a = a * b;
 }
 
 // Matrix diagonals and transposes.
-template <typename T>
-inline vec<T, 2> diagonal(const mat<T, 2, 2>& a) {
-    return {a.x.x, a.y.y};
+template <typename T, int N>
+inline vec<T, N> diagonal(const mat<T, N, N>& a) {
+    if constexpr (N == 1) {
+        return {a.x.x};
+    } else if constexpr (N == 2) {
+        return {a.x.x, a.y.y};
+    } else if constexpr (N == 3) {
+        return {a.x.x, a.y.y, a.z.z};
+    } else if constexpr (N == 4) {
+        return {a.x.x, a.y.y, a.z.z, a.w.w};
+    } else {
+        auto c = vec<T, N>{};
+        for (auto i = 0; i < N; i++) c[i] += a[i][i];
+        return c;
+    }
 }
-template <typename T>
-inline vec<T, 3> diagonal(const mat<T, 3, 3>& a) {
-    return {a.x.x, a.y.y, a.z.z};
-}
-template <typename T>
-inline vec<T, 4> diagonal(const mat<T, 4, 4>& a) {
-    return {a.x.x, a.y.y, a.z.z, a.w.w};
-}
-template <typename T>
-inline mat<T, 2, 2> transpose(const mat<T, 2, 2>& a);
-template <typename T>
-inline mat<T, 3, 3> transpose(const mat<T, 3, 3>& a);
-template <typename T>
-inline mat<T, 4, 4> transpose(const mat<T, 4, 4>& a);
+template <typename T, int N, int M>
+inline mat<T, M, N> transpose(const mat<T, N, M>& a);
 
 // Matrix adjugates, determinant and inverses.
-template <typename T>
-inline mat<T, 2, 2> adjugate(const mat<T, 2, 2>& a);
-template <typename T>
-inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a);
-template <typename T>
-inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a);
-template <typename T>
-inline T determinant(const mat<T, 2, 2>& a);
-template <typename T>
-inline T determinant(const mat<T, 3, 3>& a);
-template <typename T>
-inline T determinant(const mat<T, 4, 4>& a);
+template <typename T, int N>
+inline mat<T, N, N> adjugate(const mat<T, N, N>& a);
+template <typename T, int N>
+inline T determinant(const mat<T, N, N>& a);
 template <typename T, int N>
 inline mat<T, N, N> inverse(const mat<T, N, N>& a) {
     return adjugate(a) * (1 / determinant(a));
@@ -1764,138 +1792,146 @@ inline void update_image_view(vec<T, 2>& center, T& scale, const vec2i& imsize,
 namespace yocto {
 
 // Matrix diagonals and transposes.
-template <typename T>
-inline mat<T, 2, 2> transpose(const mat<T, 2, 2>& a) {
-    return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
-}
-template <typename T>
-inline mat<T, 3, 3> transpose(const mat<T, 3, 3>& a) {
-    return {
-        {a.x.x, a.y.x, a.z.x},
-        {a.x.y, a.y.y, a.z.y},
-        {a.x.z, a.y.z, a.z.z},
-    };
-}
-template <typename T>
-inline mat<T, 4, 4> transpose(const mat<T, 4, 4>& a) {
-    return {
-        {a.x.x, a.y.x, a.z.x, a.w.x},
-        {a.x.y, a.y.y, a.z.y, a.w.y},
-        {a.x.z, a.y.z, a.z.z, a.w.z},
-        {a.x.w, a.y.w, a.z.w, a.w.w},
-    };
+template <typename T, int N, int M>
+inline mat<T, M, N> transpose(const mat<T, N, M>& a) {
+    if constexpr (N == 1 && M == 1) {
+        return a;
+    } else if constexpr (N == 2 && M == 2) {
+        return {{a.x.x, a.y.x}, {a.x.y, a.y.y}};
+    } else if constexpr (N == 3 && M == 3) {
+        return {
+            {a.x.x, a.y.x, a.z.x},
+            {a.x.y, a.y.y, a.z.y},
+            {a.x.z, a.y.z, a.z.z},
+        };
+    } else if constexpr (N == 4 && M == 4) {
+        return {
+            {a.x.x, a.y.x, a.z.x, a.w.x},
+            {a.x.y, a.y.y, a.z.y, a.w.y},
+            {a.x.z, a.y.z, a.z.z, a.w.z},
+            {a.x.w, a.y.w, a.z.w, a.w.w},
+        };
+    } else {
+        auto c = mat<T, M, N>{};
+        for (auto i = 0; i < M; i++)
+            for (auto j = 0; j < N; j++) c[j][i] = a[i][j];
+    }
 }
 
 // Matrix adjugates, determinant and inverses.
-template <typename T>
-inline mat<T, 2, 2> adjugate(const mat<T, 2, 2>& a) {
-    return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
+template <typename T, int N>
+inline mat<T, N, N> adjugate(const mat<T, N, N>& a) {
+    if constexpr (N == 1) {
+        return {a.x};
+    } else if constexpr (N == 2) {
+        return {{a.y.y, -a.x.y}, {-a.y.x, a.x.x}};
+    } else if constexpr (N == 3) {
+        return {
+            {
+                a.y.y * a.z.z - a.z.y * a.y.z,
+                a.z.y * a.x.z - a.x.y * a.z.z,
+                a.x.y * a.y.z - a.y.y * a.x.z,
+            },
+            {
+                a.y.z * a.z.x - a.z.z * a.y.x,
+                a.z.z * a.x.x - a.x.z * a.z.x,
+                a.x.z * a.y.x - a.y.z * a.x.x,
+            },
+            {
+                a.y.x * a.z.y - a.z.x * a.y.y,
+                a.z.x * a.x.y - a.x.x * a.z.y,
+                a.x.x * a.y.y - a.y.x * a.x.y,
+            },
+        };
+    } else if constexpr (N == 4) {
+        return {
+            {
+                a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
+                    a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
+                    a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
+                a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
+                    a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
+                    a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
+                a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
+                    a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
+                    a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
+                a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
+                    a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
+                    a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w,
+            },
+            {
+                a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
+                    a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
+                    a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x,
+                a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x +
+                    a.z.z * a.w.w * a.x.x - a.x.z * a.w.w * a.z.x -
+                    a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
+                a.x.z * a.w.w * a.y.x + a.y.z * a.x.w * a.w.x +
+                    a.w.z * a.y.w * a.x.x - a.x.z * a.y.w * a.w.x -
+                    a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
+                a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x +
+                    a.y.z * a.z.w * a.x.x - a.x.z * a.z.w * a.y.x -
+                    a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x,
+            },
+            {
+                a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
+                    a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
+                    a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y,
+                a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y +
+                    a.w.w * a.z.x * a.x.y - a.x.w * a.z.x * a.w.y -
+                    a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
+                a.x.w * a.y.x * a.w.y + a.w.w * a.x.x * a.y.y +
+                    a.y.w * a.w.x * a.x.y - a.x.w * a.w.x * a.y.y -
+                    a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
+                a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y +
+                    a.z.w * a.y.x * a.x.y - a.x.w * a.y.x * a.z.y -
+                    a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y,
+            },
+            {
+                a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
+                    a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
+                    a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z,
+                a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z +
+                    a.z.x * a.w.y * a.x.z - a.x.x * a.w.y * a.z.z -
+                    a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
+                a.x.x * a.w.y * a.y.z + a.y.x * a.x.y * a.w.z +
+                    a.w.x * a.y.y * a.x.z - a.x.x * a.y.y * a.w.z -
+                    a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
+                a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z +
+                    a.y.x * a.z.y * a.x.z - a.x.x * a.z.y * a.y.z -
+                    a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z,
+            },
+        };
+    } else {
+        throw invalid_argument("matrix size not supported");
+    }
 }
-template <typename T>
-inline mat<T, 3, 3> adjugate(const mat<T, 3, 3>& a) {
-    return {
-        {
-            a.y.y * a.z.z - a.z.y * a.y.z,
-            a.z.y * a.x.z - a.x.y * a.z.z,
-            a.x.y * a.y.z - a.y.y * a.x.z,
-        },
-        {
-            a.y.z * a.z.x - a.z.z * a.y.x,
-            a.z.z * a.x.x - a.x.z * a.z.x,
-            a.x.z * a.y.x - a.y.z * a.x.x,
-        },
-        {
-            a.y.x * a.z.y - a.z.x * a.y.y,
-            a.z.x * a.x.y - a.x.x * a.z.y,
-            a.x.x * a.y.y - a.y.x * a.x.y,
-        },
-    };
-}
-template <typename T>
-inline mat<T, 4, 4> adjugate(const mat<T, 4, 4>& a) {
-    return {
-        {
-            a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w,
-            a.x.y * a.w.z * a.z.w + a.z.y * a.x.z * a.w.w +
-                a.w.y * a.z.z * a.x.w - a.w.y * a.x.z * a.z.w -
-                a.z.y * a.w.z * a.x.w - a.x.y * a.z.z * a.w.w,
-            a.x.y * a.y.z * a.w.w + a.w.y * a.x.z * a.y.w +
-                a.y.y * a.w.z * a.x.w - a.x.y * a.w.z * a.y.w -
-                a.y.y * a.x.z * a.w.w - a.w.y * a.y.z * a.x.w,
-            a.x.y * a.z.z * a.y.w + a.y.y * a.x.z * a.z.w +
-                a.z.y * a.y.z * a.x.w - a.x.y * a.y.z * a.z.w -
-                a.z.y * a.x.z * a.y.w - a.y.y * a.z.z * a.x.w,
-        },
-        {
-            a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
-                a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
-                a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x,
-            a.x.z * a.z.w * a.w.x + a.w.z * a.x.w * a.z.x +
-                a.z.z * a.w.w * a.x.x - a.x.z * a.w.w * a.z.x -
-                a.z.z * a.x.w * a.w.x - a.w.z * a.z.w * a.x.x,
-            a.x.z * a.w.w * a.y.x + a.y.z * a.x.w * a.w.x +
-                a.w.z * a.y.w * a.x.x - a.x.z * a.y.w * a.w.x -
-                a.w.z * a.x.w * a.y.x - a.y.z * a.w.w * a.x.x,
-            a.x.z * a.y.w * a.z.x + a.z.z * a.x.w * a.y.x +
-                a.y.z * a.z.w * a.x.x - a.x.z * a.z.w * a.y.x -
-                a.y.z * a.x.w * a.z.x - a.z.z * a.y.w * a.x.x,
-        },
-        {
-            a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
-                a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
-                a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y,
-            a.x.w * a.w.x * a.z.y + a.z.w * a.x.x * a.w.y +
-                a.w.w * a.z.x * a.x.y - a.x.w * a.z.x * a.w.y -
-                a.w.w * a.x.x * a.z.y - a.z.w * a.w.x * a.x.y,
-            a.x.w * a.y.x * a.w.y + a.w.w * a.x.x * a.y.y +
-                a.y.w * a.w.x * a.x.y - a.x.w * a.w.x * a.y.y -
-                a.y.w * a.x.x * a.w.y - a.w.w * a.y.x * a.x.y,
-            a.x.w * a.z.x * a.y.y + a.y.w * a.x.x * a.z.y +
-                a.z.w * a.y.x * a.x.y - a.x.w * a.y.x * a.z.y -
-                a.z.w * a.x.x * a.y.y - a.y.w * a.z.x * a.x.y,
-        },
-        {
-            a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
-                a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
-                a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z,
-            a.x.x * a.z.y * a.w.z + a.w.x * a.x.y * a.z.z +
-                a.z.x * a.w.y * a.x.z - a.x.x * a.w.y * a.z.z -
-                a.z.x * a.x.y * a.w.z - a.w.x * a.z.y * a.x.z,
-            a.x.x * a.w.y * a.y.z + a.y.x * a.x.y * a.w.z +
-                a.w.x * a.y.y * a.x.z - a.x.x * a.y.y * a.w.z -
-                a.w.x * a.x.y * a.y.z - a.y.x * a.w.y * a.x.z,
-            a.x.x * a.y.y * a.z.z + a.z.x * a.x.y * a.y.z +
-                a.y.x * a.z.y * a.x.z - a.x.x * a.z.y * a.y.z -
-                a.y.x * a.x.y * a.z.z - a.z.x * a.y.y * a.x.z,
-        },
-    };
-}
-template <typename T>
-inline T determinant(const mat<T, 2, 2>& a) {
-    return a.x.x * a.y.y - a.x.y * a.y.x;
-}
-template <typename T>
-inline T determinant(const mat<T, 3, 3>& a) {
-    return a.x.x * (a.y.y * a.z.z - a.z.y * a.y.z) +
-           a.x.y * (a.y.z * a.z.x - a.z.z * a.y.x) +
-           a.x.z * (a.y.x * a.z.y - a.z.x * a.y.y);
-}
-template <typename T>
-inline T determinant(const mat<T, 4, 4>& a) {
-    return a.x.x * (a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
-                       a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
-                       a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w) +
-           a.x.y * (a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
-                       a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
-                       a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x) +
-           a.x.z * (a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
-                       a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
-                       a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y) +
-           a.x.w * (a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
-                       a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
-                       a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
+template <typename T, int N>
+inline T determinant(const mat<T, N, N>& a) {
+    if constexpr (N == 1) {
+        return {a.x};
+    } else if constexpr (N == 2) {
+        return a.x.x * a.y.y - a.x.y * a.y.x;
+    } else if constexpr (N == 3) {
+        return a.x.x * (a.y.y * a.z.z - a.z.y * a.y.z) +
+               a.x.y * (a.y.z * a.z.x - a.z.z * a.y.x) +
+               a.x.z * (a.y.x * a.z.y - a.z.x * a.y.y);
+    } else if constexpr (N == 4) {
+        return a.x.x * (a.y.y * a.z.z * a.w.w + a.w.y * a.y.z * a.z.w +
+                           a.z.y * a.w.z * a.y.w - a.y.y * a.w.z * a.z.w -
+                           a.z.y * a.y.z * a.w.w - a.w.y * a.z.z * a.y.w) +
+               a.x.y * (a.y.z * a.w.w * a.z.x + a.z.z * a.y.w * a.w.x +
+                           a.w.z * a.z.w * a.y.x - a.y.z * a.z.w * a.w.x -
+                           a.w.z * a.y.w * a.z.x - a.z.z * a.w.w * a.y.x) +
+               a.x.z * (a.y.w * a.z.x * a.w.y + a.w.w * a.y.x * a.z.y +
+                           a.z.w * a.w.x * a.y.y - a.y.w * a.w.x * a.z.y -
+                           a.z.w * a.y.x * a.w.y - a.w.w * a.z.x * a.y.y) +
+               a.x.w * (a.y.x * a.w.y * a.z.z + a.z.x * a.y.y * a.w.z +
+                           a.w.x * a.z.y * a.y.z - a.y.x * a.z.y * a.w.z -
+                           a.w.x * a.y.y * a.z.z - a.z.x * a.w.y * a.y.z);
+    } else {
+        throw invalid_argument("matrix size not supported");
+    }
 }
 
 }  // namespace yocto
