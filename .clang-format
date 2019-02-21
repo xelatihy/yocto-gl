@@ -7,15 +7,11 @@ IndentWidth:     4
 ColumnLimit:     80
 
 AlignAfterOpenBracket: DontAlign
-
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
 
-AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
-
-BinPackArguments: true
-BinPackParameters: true
+AllowShortCaseLabelsOnASingleLine: true
 
 BreakConstructorInitializersBeforeComma: true
 BreakStringLiterals: false

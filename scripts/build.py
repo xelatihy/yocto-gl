@@ -23,6 +23,10 @@ def clean():
     os.system('rm -rf bin && rm -rf build')
 
 @cli.command()
+def tidy():
+    os.system('/usr/local/opt/LLVM/bin/clang-tidy yocto/*.cpp -- -std=c++17 -I./yocto -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1 -I/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0/include -I/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.14.sdk/usr/include')
+
+@cli.command()
 def tests():
     for ext in ['obj', 'gltf', 'json', 'ybin', 'pbrt']:
         os.system(f'rm -rf tests/{ext}; mkdir tests/{ext}')
