@@ -914,8 +914,8 @@ void from_json_procedural(
     } else if (type == "sphere_facevarying") {
         make_sphere_fvshape(value.quads_positions, value.quads_normals,
             value.quads_texturecoords, value.positions, value.normals,
-            value.texturecoords, js.value("steps", 32),
-            js.value("size", 2), js.value("uvsize", 1));
+            value.texturecoords, js.value("steps", 32), js.value("size", 2),
+            js.value("uvsize", 1));
     } else {
         throw std::invalid_argument("unknown procedural type " + type);
     }
@@ -956,7 +956,8 @@ void to_json(json& js, const yocto_shape& value, const yocto_scene& scene) {
         if (value.quads != def.quads) js["quads"] = value.quads;
         if (value.quads_positions != def.quads_positions)
             js["quads_positions"] = value.quads_positions;
-        if (value.quads_normals != def.quads_normals) js["quads_normals"] = value.quads_normals;
+        if (value.quads_normals != def.quads_normals)
+            js["quads_normals"] = value.quads_normals;
         if (value.quads_texturecoords != def.quads_texturecoords)
             js["quads_texturecoords"] = value.quads_texturecoords;
         if (value.positions != def.positions) js["positions"] = value.positions;
@@ -3097,7 +3098,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             js["bufferViews"].push_back(vjs);
             return (int)js["accessors"].size() - 1;
         };
-        if(shape.quads_positions.empty()) {
+        if (shape.quads_positions.empty()) {
             auto nverts = (int)shape.positions.size();
             if (!shape.positions.empty())
                 pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
@@ -3138,9 +3139,9 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             auto quads         = vector<vec4i>{};
             auto triangles     = vector<vec3i>{};
             convert_facevarying(quads, positions, normals, texturecoords,
-                                shape.quads_positions, shape.quads_normals,
-                                shape.quads_texturecoords, shape.positions, shape.normals,
-                                shape.texturecoords);
+                shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords);
             convert_quads_to_triangles(triangles, quads);
             auto nverts = (int)positions.size();
             if (!positions.empty())
@@ -3150,7 +3151,8 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             if (!texturecoords.empty())
                 pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
             if (!triangles.empty()) {
-                pjs["indices"] = add_accessor((int)triangles.size() * 3, "SCALAR", true);
+                pjs["indices"] = add_accessor(
+                    (int)triangles.size() * 3, "SCALAR", true);
                 pjs["mode"] = 4;
             }
         }

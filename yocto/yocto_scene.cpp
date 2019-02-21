@@ -746,8 +746,7 @@ vec2f evaluate_shape_texturecoord(
 vec4f evaluate_shape_color(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
     if (shape.colors.empty()) return {1, 1, 1, 1};
-    return evaluate_shape_elem(
-        shape, {}, shape.colors, element_id, element_uv);
+    return evaluate_shape_elem(shape, {}, shape.colors, element_id, element_uv);
 }
 float evaluate_shape_radius(
     const yocto_shape& shape, int element_id, const vec2f& element_uv) {
@@ -814,50 +813,49 @@ vec4f evaluate_instance_color(const yocto_scene& scene,
 // Instance element values.
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id) {
-        return transform_direction(
-            instance.frame, evaluate_shape_element_normal(
-                                scene.shapes[instance.shape], element_id));
+    return transform_direction(
+        instance.frame, evaluate_shape_element_normal(
+                            scene.shapes[instance.shape], element_id));
 }
 
 // Material values
 vec3f evaluate_instance_emission(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-        auto& shape = scene.shapes[instance.shape];
-        return evaluate_material_emission(scene,
-            scene.materials[shape.material],
-            evaluate_shape_texturecoord(shape, element_id, element_uv));
+    auto& shape = scene.shapes[instance.shape];
+    return evaluate_material_emission(scene, scene.materials[shape.material],
+        evaluate_shape_texturecoord(shape, element_id, element_uv));
 }
 microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-        auto& shape = scene.shapes[instance.shape];
-        return evaluate_material_brdf(scene, scene.materials[shape.material],
-            evaluate_shape_texturecoord(shape, element_id, element_uv));
+    auto& shape = scene.shapes[instance.shape];
+    return evaluate_material_brdf(scene, scene.materials[shape.material],
+        evaluate_shape_texturecoord(shape, element_id, element_uv));
 }
 bool is_instance_emissive(
     const yocto_scene& scene, const yocto_instance& instance) {
-        auto& shape = scene.shapes[instance.shape];
-        return scene.materials[shape.material].emission != zero3f;
+    auto& shape = scene.shapes[instance.shape];
+    return scene.materials[shape.material].emission != zero3f;
 }
 bool is_instance_normal_perturbed(
     const yocto_scene& scene, const yocto_instance& instance) {
-        auto& shape = scene.shapes[instance.shape];
-        if (shape.triangles.empty() && shape.quads.empty()) return false;
-        return scene.materials[shape.material].normal_texture >= 0;
+    auto& shape = scene.shapes[instance.shape];
+    if (shape.triangles.empty() && shape.quads.empty()) return false;
+    return scene.materials[shape.material].normal_texture >= 0;
 }
 // Check the instance type
 bool is_instance_points(
     const yocto_scene& scene, const yocto_instance& instance) {
-        return !scene.shapes[instance.shape].points.empty();
+    return !scene.shapes[instance.shape].points.empty();
 }
 bool is_instance_lines(
     const yocto_scene& scene, const yocto_instance& instance) {
-        return !scene.shapes[instance.shape].lines.empty();
+    return !scene.shapes[instance.shape].lines.empty();
 }
 bool is_instance_faces(
     const yocto_scene& scene, const yocto_instance& instance) {
-        return !scene.shapes[instance.shape].triangles.empty() ||
-               !scene.shapes[instance.shape].quads.empty() ||
-               !scene.shapes[instance.shape].quads_positions.empty();
+    return !scene.shapes[instance.shape].triangles.empty() ||
+           !scene.shapes[instance.shape].quads.empty() ||
+           !scene.shapes[instance.shape].quads_positions.empty();
 }
 
 // Environment texture coordinates from the direction.
@@ -1407,28 +1405,28 @@ string print_scene_stats(const yocto_scene& scene) {
     auto num_nodes        = (long long)0;
     auto num_animations   = (long long)0;
 
-    auto elem_points    = (long long)0;
-    auto elem_lines     = (long long)0;
-    auto elem_triangles = (long long)0;
-    auto elem_quads     = (long long)0;
+    auto elem_points         = (long long)0;
+    auto elem_lines          = (long long)0;
+    auto elem_triangles      = (long long)0;
+    auto elem_quads          = (long long)0;
     auto elem_quads_pos      = (long long)0;
     auto elem_quads_norm     = (long long)0;
     auto elem_quads_texcoord = (long long)0;
-    auto vert_pos       = (long long)0;
-    auto vert_norm      = (long long)0;
-    auto vert_texcoord  = (long long)0;
-    auto vert_color     = (long long)0;
-    auto vert_radius    = (long long)0;
-    auto vert_tangsp    = (long long)0;
+    auto vert_pos            = (long long)0;
+    auto vert_norm           = (long long)0;
+    auto vert_texcoord       = (long long)0;
+    auto vert_color          = (long long)0;
+    auto vert_radius         = (long long)0;
+    auto vert_tangsp         = (long long)0;
 
     auto texel_hdr = (long long)0;
     auto texel_ldr = (long long)0;
     auto voxel_hdr = (long long)0;
 
-    auto memory_imgs    = (long long)0;
-    auto memory_vols    = (long long)0;
-    auto memory_elems   = (long long)0;
-    auto memory_verts   = (long long)0;
+    auto memory_imgs  = (long long)0;
+    auto memory_vols  = (long long)0;
+    auto memory_elems = (long long)0;
+    auto memory_verts = (long long)0;
 
     auto bbox = compute_scene_bounds(scene);
 
@@ -1461,8 +1459,8 @@ string print_scene_stats(const yocto_scene& scene) {
     memory_elems = elem_points * sizeof(int) + elem_lines * sizeof(vec2i) +
                    elem_triangles * sizeof(vec3i) + elem_quads * sizeof(vec4i) +
                    elem_quads_pos * sizeof(vec4i) +
-                     elem_quads_norm * sizeof(vec4i) +
-                     elem_quads_texcoord * sizeof(vec4i);
+                   elem_quads_norm * sizeof(vec4i) +
+                   elem_quads_texcoord * sizeof(vec4i);
     memory_verts = vert_pos * sizeof(vec3f) + vert_norm * sizeof(vec3f) +
                    vert_texcoord * sizeof(vec2f) + vert_color * sizeof(vec4f) +
                    vert_tangsp * sizeof(vec4f) + vert_radius * sizeof(float);

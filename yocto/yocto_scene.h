@@ -177,10 +177,10 @@ struct yocto_shape {
     int    material = -1;
 
     // subdision properties
-    int  subdivision_level      = 0;
-    bool catmull_clark          = false;
-    bool compute_normals        = false;
-    bool preserve_facevarying   = false;
+    int  subdivision_level    = 0;
+    bool catmull_clark        = false;
+    bool compute_normals      = false;
+    bool preserve_facevarying = false;
 
     // primitives
     vector<int>   points    = {};
@@ -204,9 +204,9 @@ struct yocto_shape {
 
 // Instance of a visible shape in the scene.
 struct yocto_instance {
-    string  name    = "";
-    frame3f frame   = identity_frame3f;
-    int     shape   = -1;
+    string  name  = "";
+    frame3f frame = identity_frame3f;
+    int     shape = -1;
 };
 
 // Environment map.

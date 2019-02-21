@@ -721,19 +721,23 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
                 init_opengl_array_buffer(
                     vbos.positions_buffer, shape.positions, false);
             if (!shape.normals.empty())
-                init_opengl_array_buffer(vbos.normals_buffer, shape.normals, false);
+                init_opengl_array_buffer(
+                    vbos.normals_buffer, shape.normals, false);
             if (!shape.texturecoords.empty())
                 init_opengl_array_buffer(
                     vbos.texturecoords_buffer, shape.texturecoords, false);
             if (!shape.colors.empty())
-                init_opengl_array_buffer(vbos.colors_buffer, shape.colors, false);
+                init_opengl_array_buffer(
+                    vbos.colors_buffer, shape.colors, false);
             if (!shape.tangentspaces.empty())
                 init_opengl_array_buffer(
                     vbos.tangentspaces_buffer, shape.tangentspaces, false);
             if (!shape.points.empty())
-                init_opengl_elementbuffer(vbos.points_buffer, shape.points, false);
+                init_opengl_elementbuffer(
+                    vbos.points_buffer, shape.points, false);
             if (!shape.lines.empty())
-                init_opengl_elementbuffer(vbos.lines_buffer, shape.lines, false);
+                init_opengl_elementbuffer(
+                    vbos.lines_buffer, shape.lines, false);
             if (!shape.triangles.empty())
                 init_opengl_elementbuffer(
                     vbos.triangles_buffer, shape.triangles, false);
@@ -747,10 +751,9 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
             auto positions     = vector<vec3f>{};
             auto normals       = vector<vec3f>{};
             auto texturecoords = vector<vec2f>{};
-            convert_facevarying(quads, positions, normals, texturecoords, 
+            convert_facevarying(quads, positions, normals, texturecoords,
                 shape.quads_positions, shape.quads_normals,
-                shape.quads_texturecoords, 
-                shape.positions, shape.normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
                 shape.texturecoords);
             if (!positions.empty())
                 init_opengl_array_buffer(

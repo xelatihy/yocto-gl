@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
         for (auto& shape : scene.shapes) {
             shape.filename = "";
             if (shape.positions.size() <= 16) continue;
-            if(shape.preserve_facevarying) {
+            if (shape.preserve_facevarying) {
                 shape.filename = mesh_directory + shape.name + ".obj";
             } else {
                 shape.filename = mesh_directory + shape.name + ".ply";

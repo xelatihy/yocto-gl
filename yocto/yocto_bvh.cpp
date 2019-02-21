@@ -495,8 +495,7 @@ void build_scene_embree_instanced_bvh(
          instance_id++) {
         auto& instance = bvh.instances[instance_id];
         if (instance.shape_id < 0) continue;
-        if (bvh.shape_bvhs[instance.shape_id].positions.empty())
-            continue;
+        if (bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
         rtcSetGeometryInstancedScene(embree_geom,
@@ -527,9 +526,9 @@ void build_scene_embree_flattened_bvh(
     for (auto instance_id = 0; instance_id < bvh.instances.size();
          instance_id++) {
         auto& instance = bvh.instances[instance_id];
-        if(bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
-        auto& shape_bvh = bvh.shape_bvhs.at(instance.shape_id);
-        auto transformed_positions = shape_bvh.positions;
+        if (bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
+        auto& shape_bvh             = bvh.shape_bvhs.at(instance.shape_id);
+        auto  transformed_positions = shape_bvh.positions;
         if (instance.frame != identity_frame3f) {
             for (auto& p : transformed_positions)
                 p = transform_point(instance.frame, p);
@@ -1090,9 +1089,9 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 // Build a BVH from the given set of instances.
 void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
     const vector<bvh_shape>& shape_bvhs) {
-    bvh              = {};
-    bvh.instances    = instances;
-    bvh.shape_bvhs   = shape_bvhs;
+    bvh            = {};
+    bvh.instances  = instances;
+    bvh.shape_bvhs = shape_bvhs;
 }
 
 // Recursively recomputes the node bounds for a shape bvh
@@ -1324,8 +1323,8 @@ bvh_scene_intersection intersect_scene_bvh(
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance           = bvh.instances[node.primitive_ids[i]];
                 auto  shape_intersection = intersect_shape_bvh(
-                        bvh.shape_bvhs[instance.shape_id],
-                        transform_ray(instance.frame_inverse, ray), find_any);
+                    bvh.shape_bvhs[instance.shape_id],
+                    transform_ray(instance.frame_inverse, ray), find_any);
                 if (!shape_intersection.hit) continue;
                 intersection = {node.primitive_ids[i],
                     shape_intersection.element_id,
@@ -1414,7 +1413,7 @@ bvh_scene_intersection intersect_instance_bvh(
     auto& instance           = bvh.instances[instance_id];
     auto  tray               = transform_ray_inverse(instance.frame, ray);
     auto  shape_intersection = bvh_shape_intersection{};
-    shape_intersection = intersect_shape_bvh(
+    shape_intersection       = intersect_shape_bvh(
         bvh.shape_bvhs[instance.shape_id], tray, find_any);
     if (!shape_intersection.hit) return {};
     return {instance_id, shape_intersection.element_id,
@@ -1450,9 +1449,9 @@ bvh_scene_intersection overlap_scene_bvh(
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance           = bvh.instances[node.primitive_ids[i]];
                 auto  shape_intersection = overlap_shape_bvh(
-                        bvh.shape_bvhs[instance.shape_id],
-                        transform_point(instance.frame_inverse, pos),
-                        max_distance, find_any);
+                    bvh.shape_bvhs[instance.shape_id],
+                    transform_point(instance.frame_inverse, pos), max_distance,
+                    find_any);
                 if (!shape_intersection.hit) continue;
                 intersection = {node.primitive_ids[i],
                     shape_intersection.element_id,

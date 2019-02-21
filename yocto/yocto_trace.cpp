@@ -845,14 +845,14 @@ vec3f sample_environment_direction(const yocto_scene& scene,
 vec3f sample_instance_direction(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const vec3f& p, float rel,
     const vec2f& ruv) {
-    auto& instance = scene.instances[instance_id];
-    auto& shape        = scene.shapes[instance.shape];
-    auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
+    auto& instance                = scene.instances[instance_id];
+    auto& shape                   = scene.shapes[instance.shape];
+    auto& elements_cdf            = lights.shape_elements_cdf[instance.shape];
     auto [element_id, element_uv] = sample_shape_element(
         shape, elements_cdf, rel, ruv);
-    return normalize(evaluate_instance_position(
-                            scene, instance, element_id, element_uv) -
-                        p);
+    return normalize(
+        evaluate_instance_position(scene, instance, element_id, element_uv) -
+        p);
 }
 
 // Sample pdf for a light point.
