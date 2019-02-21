@@ -3092,38 +3092,62 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
             js["bufferViews"].push_back(vjs);
             return (int)js["accessors"].size() - 1;
         };
-        auto nverts = (int)shape.positions.size();
-        if (!shape.positions.empty())
-            pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
-        if (!shape.normals.empty())
-            pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
-        if (!shape.texturecoords.empty())
-            pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
-        if (!shape.colors.empty())
-            pjs["attributes"]["COLOR_0"] = add_accessor(nverts, "VEC4");
-        if (!shape.radius.empty())
-            pjs["attributes"]["RADIUS"] = add_accessor(nverts, "SCALAR");
-        if (!shape.points.empty()) {
-            pjs["indices"] = add_accessor(
-                (int)shape.points.size(), "SCALAR", true);
-            pjs["mode"] = 1;
-        }
-        if (!shape.lines.empty()) {
-            pjs["indices"] = add_accessor(
-                (int)shape.lines.size() * 2, "SCALAR", true);
-            pjs["mode"] = 1;
-        }
-        if (!shape.triangles.empty()) {
-            pjs["indices"] = add_accessor(
-                (int)shape.triangles.size() * 3, "SCALAR", true);
-            pjs["mode"] = 4;
-        }
-        if (!shape.quads.empty()) {
-            auto triangles = vector<vec3i>{};
-            convert_quads_to_triangles(triangles, shape.quads);
-            pjs["indices"] = add_accessor(
-                (int)triangles.size() * 3, "SCALAR", true);
-            pjs["mode"] = 4;
+        if(shape.quads_positions.empty()) {
+            auto nverts = (int)shape.positions.size();
+            if (!shape.positions.empty())
+                pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
+            if (!shape.normals.empty())
+                pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
+            if (!shape.texturecoords.empty())
+                pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
+            if (!shape.colors.empty())
+                pjs["attributes"]["COLOR_0"] = add_accessor(nverts, "VEC4");
+            if (!shape.radius.empty())
+                pjs["attributes"]["RADIUS"] = add_accessor(nverts, "SCALAR");
+            if (!shape.points.empty()) {
+                pjs["indices"] = add_accessor(
+                    (int)shape.points.size(), "SCALAR", true);
+                pjs["mode"] = 1;
+            }
+            if (!shape.lines.empty()) {
+                pjs["indices"] = add_accessor(
+                    (int)shape.lines.size() * 2, "SCALAR", true);
+                pjs["mode"] = 1;
+            }
+            if (!shape.triangles.empty()) {
+                pjs["indices"] = add_accessor(
+                    (int)shape.triangles.size() * 3, "SCALAR", true);
+                pjs["mode"] = 4;
+            }
+            if (!shape.quads.empty()) {
+                auto triangles = vector<vec3i>{};
+                convert_quads_to_triangles(triangles, shape.quads);
+                pjs["indices"] = add_accessor(
+                    (int)triangles.size() * 3, "SCALAR", true);
+                pjs["mode"] = 4;
+            }
+        } else {
+            auto positions     = vector<vec3f>{};
+            auto normals       = vector<vec3f>{};
+            auto texturecoords = vector<vec2f>{};
+            auto quads         = vector<vec4i>{};
+            auto triangles     = vector<vec3i>{};
+            convert_facevarying(quads, positions, normals, texturecoords,
+                                shape.quads_positions, shape.quads_normals,
+                                shape.quads_texturecoords, shape.positions, shape.normals,
+                                shape.texturecoords);
+            convert_quads_to_triangles(triangles, quads);
+            auto nverts = (int)positions.size();
+            if (!positions.empty())
+                pjs["attributes"]["POSITION"] = add_accessor(nverts, "VEC3");
+            if (!normals.empty())
+                pjs["attributes"]["NORMAL"] = add_accessor(nverts, "VEC3");
+            if (!texturecoords.empty())
+                pjs["attributes"]["TEXCOORD_0"] = add_accessor(nverts, "VEC2");
+            if (!triangles.empty()) {
+                pjs["indices"] = add_accessor((int)triangles.size() * 3, "SCALAR", true);
+                pjs["mode"] = 4;
+            }
         }
         mjs["primitives"].push_back(pjs);
         js["meshes"].push_back(mjs);
