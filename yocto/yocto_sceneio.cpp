@@ -949,10 +949,10 @@ void to_json(json& js, const yocto_shape& value, const yocto_scene& scene) {
         if (value.lines != def.lines) js["lines"] = value.lines;
         if (value.triangles != def.triangles) js["triangles"] = value.triangles;
         if (value.quads != def.quads) js["quads"] = value.quads;
-        if (value.quads != def.quads)
+        if (value.quads_positions != def.quads_positions)
             js["quads_positions"] = value.quads_positions;
-        if (value.quads != def.quads) js["quads_normals"] = value.quads_normals;
-        if (value.quads != def.quads)
+        if (value.quads_normals != def.quads_normals) js["quads_normals"] = value.quads_normals;
+        if (value.quads_texturecoords != def.quads_texturecoords)
             js["quads_texturecoords"] = value.quads_texturecoords;
         if (value.positions != def.positions) js["positions"] = value.positions;
         if (value.normals != def.normals) js["normals"] = value.normals;
@@ -971,9 +971,8 @@ void from_json(const json& js, yocto_shape& value, yocto_scene& scene) {
     value.material = ref_from_json(js.value("material", ""s), scene.materials);
     value.subdivision_level = js.value(
         "subdivision_level", def.subdivision_level);
-    value.catmull_clark          = js.value("catmull_clark", def.catmull_clark);
-    value.compute_normals = js.value(
-        "compute_normals", def.compute_normals);
+    value.catmull_clark   = js.value("catmull_clark", def.catmull_clark);
+    value.compute_normals = js.value("compute_normals", def.compute_normals);
     value.preserve_facevarying = js.value(
         "preserve_facevarying", def.preserve_facevarying);
     value.points          = js.value("points", def.points);
@@ -1282,13 +1281,13 @@ void load_json_meshes(yocto_scene& scene, const string& dirname,
         [&dirname](yocto_shape& shape) {
             if (shape.filename == "" || !shape.positions.empty()) return;
             auto filename = normalize_path(dirname + shape.filename);
-            if(!shape.preserve_facevarying) {
+            if (!shape.preserve_facevarying) {
                 load_mesh(filename, shape.points, shape.lines, shape.triangles,
                     shape.quads, shape.positions, shape.normals,
                     shape.texturecoords, shape.colors, shape.radius, false);
             } else {
                 auto quads_materials = vector<int>{};
-                load_facevarying_mesh(filename, shape.quads_positions, 
+                load_facevarying_mesh(filename, shape.quads_positions,
                     shape.quads_normals, shape.quads_texturecoords,
                     shape.positions, shape.normals, shape.texturecoords,
                     quads_materials);
@@ -1339,13 +1338,14 @@ void save_json_meshes(const yocto_scene& scene, const string& dirname,
         [&dirname](const yocto_shape& shape) {
             if (shape.filename == "") return;
             auto filename = normalize_path(dirname + shape.filename);
-            if(!shape.preserve_facevarying) {
+            if (!shape.preserve_facevarying) {
                 save_mesh(filename, shape.points, shape.lines, shape.triangles,
                     shape.quads, shape.positions, shape.normals,
                     shape.texturecoords, shape.colors, shape.radius);
             } else {
-                save_facevarying_mesh(filename, shape.quads_positions, shape.quads_normals, shape.quads_texturecoords, shape.positions, shape.normals,
-                    shape.texturecoords, {});
+                save_facevarying_mesh(filename, shape.quads_positions,
+                    shape.quads_normals, shape.quads_texturecoords,
+                    shape.positions, shape.normals, shape.texturecoords, {});
             }
         },
         options.cancel_flag, options.run_serially);
@@ -1749,12 +1749,12 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
 
     // add object if needed
     auto add_shape = [&]() {
-        auto shape                  = yocto_shape();
-        shape.name                  = oname + gname;
-        shape.material              = mmap.at(mname);
+        auto shape                 = yocto_shape();
+        shape.name                 = oname + gname;
+        shape.material             = mmap.at(mname);
         shape.preserve_facevarying = options.obj_preserve_face_varying ||
-                                      shape.name.find("[yocto::facevarying]") !=
-                                          string::npos;
+                                     shape.name.find("[yocto::facevarying]") !=
+                                         string::npos;
         scene.shapes.push_back(shape);
         vertex_map.clear();
         pos_map.clear();
@@ -1924,7 +1924,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             scene.shapes.back().lines.empty()) {
             add_shape();
         }
-        auto& shape = scene.shapes.back();
+        auto& shape                = scene.shapes.back();
         shape.preserve_facevarying = false;
         add_verts(verts, shape);
         for (auto i = 1; i < verts.size(); i++)
@@ -1937,7 +1937,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             scene.shapes.back().points.empty()) {
             add_shape();
         }
-        auto& shape = scene.shapes.back();
+        auto& shape                = scene.shapes.back();
         shape.preserve_facevarying = false;
         add_verts(verts, shape);
         for (auto i = 0; i < verts.size(); i++)
@@ -2255,8 +2255,7 @@ void save_obj(const string& filename, const yocto_scene& scene,
                     println_values(fs, "f", vert(qp.x, qt.x), vert(qp.y, qt.y),
                         vert(qp.z, qt.z), vert(qp.w, qt.w));
                 }
-            } else if (!shape.texturecoords.empty() &&
-                       !shape.normals.empty()) {
+            } else if (!shape.texturecoords.empty() && !shape.normals.empty()) {
                 auto vert = [offset](int ip, int it, int in) {
                     return obj_vertex{ip + offset.position + 1,
                         it + offset.texturecoord + 1, in + offset.normal + 1};
@@ -3178,17 +3177,34 @@ void save_gltf_mesh(const string& filename, const yocto_shape& shape) {
     // open file
     auto fs = output_file(filename, std::ios::binary);
 
-    write_values(fs, shape.positions);
-    write_values(fs, shape.normals);
-    write_values(fs, shape.texturecoords);
-    write_values(fs, shape.colors);
-    write_values(fs, shape.radius);
-    write_values(fs, shape.points);
-    write_values(fs, shape.lines);
-    write_values(fs, shape.triangles);
-    auto qtriangles = vector<vec3i>{};
-    convert_quads_to_triangles(qtriangles, shape.quads);
-    write_values(fs, qtriangles);
+    if (shape.quads_positions.empty()) {
+        write_values(fs, shape.positions);
+        write_values(fs, shape.normals);
+        write_values(fs, shape.texturecoords);
+        write_values(fs, shape.colors);
+        write_values(fs, shape.radius);
+        write_values(fs, shape.points);
+        write_values(fs, shape.lines);
+        write_values(fs, shape.triangles);
+        auto qtriangles = vector<vec3i>{};
+        convert_quads_to_triangles(qtriangles, shape.quads);
+        write_values(fs, qtriangles);
+    } else {
+        auto positions     = vector<vec3f>{};
+        auto normals       = vector<vec3f>{};
+        auto texturecoords = vector<vec2f>{};
+        auto quads         = vector<vec4i>{};
+        auto triangles     = vector<vec3i>{};
+        convert_facevarying(quads, positions, normals, texturecoords,
+            shape.quads_positions, shape.quads_normals,
+            shape.quads_texturecoords, shape.positions, shape.normals,
+            shape.texturecoords);
+        convert_quads_to_triangles(triangles, quads);
+        write_values(fs, positions);
+        write_values(fs, normals);
+        write_values(fs, texturecoords);
+        write_values(fs, triangles);
+    }
 }
 
 // Save gltf json

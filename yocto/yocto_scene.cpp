@@ -112,7 +112,7 @@ void subdivide_shape(yocto_shape& shape) {
                 shape.quads_texturecoords, shape.texturecoords, true);
         }
     } else {
-        throw runtime_error("unknown element type");
+        throw runtime_error("empty shape");
     }
 
     if (shape.compute_normals) {
@@ -308,7 +308,7 @@ void compute_shape_elements_cdf(const yocto_shape& shape, vector<float>& cdf) {
     } else if (!shape.quads_positions.empty()) {
         sample_quads_element_cdf(cdf, shape.quads_positions, shape.positions);
     } else {
-        throw runtime_error("unknown element type");
+        throw runtime_error("empty shape");
     }
 }
 
@@ -421,7 +421,7 @@ void build_scene_bvh(const yocto_scene& scene, bvh_scene& bvh,
         } else if (!shape.quads_positions.empty()) {
             init_shape_bvh(shape_bvh, shape.quads_positions, shape.positions);
         } else {
-            throw runtime_error("unknown element type");
+            throw runtime_error("empty shape");
         }
         shape_bvhs.push_back(shape_bvh);
     }
@@ -614,7 +614,7 @@ vec3f evaluate_shape_element_normal(const yocto_shape& shape, int element_id) {
         norm   = quad_normal(shape.positions[q.x], shape.positions[q.y],
             shape.positions[q.z], shape.positions[q.w]);
     } else {
-        throw runtime_error("unknown element type");
+        throw runtime_error("empty shape");
         norm = {0, 0, 1};
     }
     return norm;
