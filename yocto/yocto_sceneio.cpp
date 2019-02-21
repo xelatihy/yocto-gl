@@ -2028,11 +2028,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             throw io_error("unknown obj procedural");
         }
         scene.shapes.push_back(shape);
-        auto instance  = yocto_instance();
-        instance.name  = oproc.name;
-        instance.frame = oproc.frame;
-        instance.shape = (int)scene.shapes.size() - 1;
-        scene.instances.push_back(instance);
     };
 
     try {
