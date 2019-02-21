@@ -846,26 +846,13 @@ vec3f sample_instance_direction(const yocto_scene& scene,
     const trace_lights& lights, int instance_id, const vec3f& p, float rel,
     const vec2f& ruv) {
     auto& instance = scene.instances[instance_id];
-    if (instance.shape >= 0) {
-        auto& shape        = scene.shapes[instance.shape];
-        auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
-        auto [element_id, element_uv] = sample_shape_element(
-            shape, elements_cdf, rel, ruv);
-        return normalize(evaluate_instance_position(
-                             scene, instance, element_id, element_uv) -
-                         p);
-    } else if (instance.surface >= 0) {
-        auto& surface      = scene.surfaces[instance.surface];
-        auto& elements_cdf = lights.surface_elements_cdf[instance.surface];
-        auto [element_id, element_uv] = sample_surface_element(
-            surface, elements_cdf, rel, ruv);
-        return normalize(evaluate_instance_position(
-                             scene, instance, element_id, element_uv) -
-                         p);
-    } else {
-        throw io_error("empty instance");
-        return zero3f;
-    }
+    auto& shape        = scene.shapes[instance.shape];
+    auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
+    auto [element_id, element_uv] = sample_shape_element(
+        shape, elements_cdf, rel, ruv);
+    return normalize(evaluate_instance_position(
+                            scene, instance, element_id, element_uv) -
+                        p);
 }
 
 // Sample pdf for a light point.
@@ -874,9 +861,7 @@ float sample_instance_direction_pdf(const yocto_scene& scene,
     const vec3f& position, const vec3f& direction) {
     auto& instance = scene.instances[instance_id];
     if (!is_instance_emissive(scene, instance)) return 0;
-    auto& elements_cdf = instance.shape >= 0
-                             ? lights.shape_elements_cdf[instance.shape]
-                             : lights.surface_elements_cdf[instance.surface];
+    auto& elements_cdf = lights.shape_elements_cdf[instance.shape];
     // check all intersection
     auto pdf           = 0.0f;
     auto next_position = position;
@@ -1969,28 +1954,17 @@ void init_trace_lights(trace_lights& lights, const yocto_scene& scene) {
     lights = {};
 
     lights.shape_elements_cdf.resize(scene.shapes.size());
-    lights.surface_elements_cdf.resize(scene.surfaces.size());
     lights.environment_texture_cdf.resize(scene.textures.size());
 
     for (auto instance_id = 0; instance_id < scene.instances.size();
          instance_id++) {
         auto& instance = scene.instances[instance_id];
         if (!is_instance_emissive(scene, instance)) continue;
-        if (instance.shape >= 0) {
-            auto& shape = scene.shapes[instance.shape];
-            if (shape.triangles.empty() && shape.quads.empty()) continue;
-            lights.instances.push_back(instance_id);
-            compute_shape_elements_cdf(
-                shape, lights.shape_elements_cdf[instance.shape]);
-        } else if (instance.surface >= 0) {
-            auto& surface = scene.surfaces[instance.surface];
-            if (surface.quads_positions.empty()) continue;
-            lights.instances.push_back(instance_id);
-            compute_surface_elements_cdf(
-                surface, lights.surface_elements_cdf[instance.surface]);
-        } else {
-            continue;
-        }
+        auto& shape = scene.shapes[instance.shape];
+        if (shape.triangles.empty() && shape.quads.empty()) continue;
+        lights.instances.push_back(instance_id);
+        compute_shape_elements_cdf(
+            shape, lights.shape_elements_cdf[instance.shape]);
     }
 
     for (auto environment_id = 0; environment_id < scene.environments.size();

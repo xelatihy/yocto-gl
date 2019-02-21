@@ -48,7 +48,7 @@
 //    to do so update the relevant shape bvhs with `update_shape_bvh()` and
 //    update the bvh data with `update_shape_bvh()` and then call
 //    `refit_shape_bvh()`; you can retrive a shape bvh by index with
-//    `get_shape_bvh()`/`get_surface_bvh()`
+//    `get_shape_bvh()`
 //
 //
 
@@ -142,7 +142,6 @@ struct bvh_instance {
     frame3f frame         = identity_frame3f;
     frame3f frame_inverse = identity_frame3f;
     int     shape_id      = -1;
-    int     surface_id    = -1;
 };
 
 // BVH for scenes made of instances to shapes.
@@ -155,7 +154,6 @@ struct bvh_scene {
     // data for instance BVH
     vector<bvh_instance> instances;
     vector<bvh_shape>    shape_bvhs;
-    vector<bvh_shape>    surface_bvhs;
 
     // bvh internal nodes
     vector<bvh_node> nodes;
@@ -186,7 +184,7 @@ void init_shape_bvh(
 
 // Build a BVH from the given set of instances.
 void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs, const vector<bvh_shape>& surface_bvhs);
+    const vector<bvh_shape>& shape_bvhs);
 
 // Build the bvh acceleration structure.
 void build_shape_bvh(bvh_shape& bvh, const build_bvh_options& options = {});
@@ -198,12 +196,11 @@ void update_shape_bvh(bvh_shape& bvh, const vector<vec3f>& positions,
     const vector<float>& radius);
 void update_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances);
 bvh_shape& get_shape_bvh(bvh_scene& bvh, int shape_id);
-bvh_shape& get_surface_bvh(bvh_scene& bvh, int surface_id);
 
 // Refit bvh data
 void refit_shape_bvh(bvh_shape& bvh);
 void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const vector<int>& updated_surfaces);
+    const vector<int>& updated_shapes);
 
 // Results of intersect_xxx and overlap_xxx functions that include hit flag,
 // instance id, shape element id, shape element uv and intersection distance.
