@@ -147,14 +147,21 @@ inline bool operator!=(const image<T>& a, const image<T>& b) {
     return a.size() != b.size() || a._pixels != b._pixels;
 }
 
+// Image region
+struct image_region {
+    vec2i min = zero2i;
+    vec2i max = zero2i;
+    vec2i size() const { return max - min; }
+};
+
 // Splits an image into an array of regions
-void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
+inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
     int region_size = 32, bool shuffled = false);
 
 // Gets pixels in an image region
 template <typename T>
-void get_image_region(
-    image<T>& clipped, const image<T>& img, const bbox2i& region);
+inline void get_image_region(
+    image<T>& clipped, const image<T>& img, const image_region& region);
 
 // Conversion from/to floats.
 void byte_to_float(image4f& fl, const image4b& bt);
@@ -175,7 +182,7 @@ void tonemap_image(
     image4f& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
 void tonemap_image(
     image4b& ldr, const image4f& hdr, float exposure, bool filmic, bool srgb);
-void tonemap_image_region(image4f& ldr, const bbox2i& region,
+void tonemap_image_region(image4f& ldr, const image_region& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb);
 
 // Resize an image.
@@ -571,7 +578,7 @@ namespace yocto {
 // Gets pixels in an image region
 template <typename T>
 inline void get_image_region(
-    image<T>& clipped, const image<T>& img, const bbox2i& region) {
+    image<T>& clipped, const image<T>& img, const image_region& region) {
     clipped.resize(region.size());
     for (auto j = 0; j < region.size().y; j++) {
         for (auto i = 0; i < region.size().x; i++) {
@@ -581,7 +588,7 @@ inline void get_image_region(
 }
 
 // Splits an image into an array of regions
-inline void make_image_regions(vector<bbox2i>& regions, const vec2i& size,
+inline void make_image_regions(vector<image_region>& regions, const vec2i& size,
     int region_size, bool shuffled) {
     regions.clear();
     for (auto y = 0; y < size.y; y += region_size) {
