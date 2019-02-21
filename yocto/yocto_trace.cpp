@@ -1918,7 +1918,8 @@ trace_pixel& get_trace_pixel(trace_state& state, int i, int j) {
 // Trace a block of samples
 void trace_image_region(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
-    const bbox2i& region, int num_samples, const trace_image_options& options) {
+    const image_region& region, int num_samples,
+    const trace_image_options& options) {
     auto& camera  = scene.cameras.at(options.camera_id);
     auto  sampler = get_trace_sampler_func(options.sampler_type);
     for (auto j = region.min.y; j < region.max.y; j++) {
@@ -2013,7 +2014,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
     auto image  = yocto::image{{width, height}, zero4f};
     auto pixels = trace_state{};
     init_trace_state(pixels, width, height, options.random_seed);
-    auto regions = vector<bbox2i>{};
+    auto regions = vector<image_region>{};
     make_image_regions(regions, image.size(), options.region_size, true);
 
     if (options.run_serially) {
@@ -2045,7 +2046,7 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
 int trace_image_samples(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     int current_sample, const trace_image_options& options) {
-    auto regions = vector<bbox2i>{};
+    auto regions = vector<image_region>{};
     make_image_regions(regions, image.size(), options.region_size, true);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
@@ -2078,40 +2079,17 @@ int trace_image_samples(image4f& image, trace_state& state,
 void trace_image_async_start(image4f& image, trace_state& state,
     const yocto_scene& scene, const bvh_scene& bvh, const trace_lights& lights,
     vector<future<void>>& futures, atomic<int>& current_sample,
-    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
+    concurrent_queue<image_region>& queue, const trace_image_options& options) {
     auto& camera         = scene.cameras.at(options.camera_id);
     auto [width, height] = get_camera_image_size(
         camera, options.image_width, options.image_height);
     image = {{width, height}, zero4f};
     state = trace_state{};
     init_trace_state(state, width, height, options.random_seed);
-    auto regions = vector<bbox2i>{};
+    auto regions = vector<image_region>{};
     make_image_regions(regions, image.size(), options.region_size, true);
     if (options.cancel_flag) *options.cancel_flag = false;
 
-#if 0
-    auto nthreads = thread::hardware_concurrency();
-    threads.clear();
-    for (auto tid = 0; tid < nthreads; tid++) {
-        threads.push_back(thread([options, tid, nthreads, regions, &current_sample, &queue, &lights, &scene, &image, &pixels, &bvh]() {
-            for (auto s = 0; s < options.num_samples;
-                 s += options.samples_per_batch) {
-                if (!tid) current_sample = s;
-                auto num_samples = min(options.samples_per_batch,
-                    options.num_samples - current_sample);
-                for (auto region_id = tid; region_id < regions.size();
-                     region_id += nthreads) {
-                    if (options.cancel_flag && *options.cancel_flag) break;
-                    auto& region = regions[region_id];
-                    trace_image_region(image, pixels, scene, bvh,
-                        lights, region, num_samples, options);
-                    queue.push(region);
-                }
-            }
-            if (!tid) current_sample = options.num_samples;
-        }));
-    }
-#else
     futures.clear();
     futures.emplace_back(async([options, regions, &current_sample, &image,
                                    &scene, &lights, &bvh, &state, &queue]() {
@@ -2124,7 +2102,7 @@ void trace_image_async_start(image4f& image, trace_state& state,
             parallel_foreach(
                 regions,
                 [num_samples, &options, &image, &scene, &lights, &bvh, &state,
-                    &queue](const bbox2i& region) {
+                    &queue](const image_region& region) {
                     trace_image_region(image, state, scene, bvh, lights, region,
                         num_samples, options);
                     queue.push(region);
@@ -2133,12 +2111,11 @@ void trace_image_async_start(image4f& image, trace_state& state,
         }
         current_sample = options.num_samples;
     }));
-#endif
 }
 
 // Stop the asynchronous renderer.
 void trace_image_async_stop(vector<future<void>>& futures,
-    concurrent_queue<bbox2i>& queue, const trace_image_options& options) {
+    concurrent_queue<image_region>& queue, const trace_image_options& options) {
     if (options.cancel_flag) *options.cancel_flag = true;
     for (auto& f : futures) f.get();
     futures.clear();

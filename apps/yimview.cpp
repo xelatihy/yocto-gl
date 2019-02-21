@@ -60,8 +60,8 @@ struct app_image {
     atomic<bool> load_done, display_done, stats_done, texture_done;
     thread       load_thread, display_thread, stats_thread, save_thread;
     atomic<bool> display_stop;
-    concurrent_queue<bbox2i> display_queue;
-    string                   error_msg = "";
+    concurrent_queue<image_region> display_queue;
+    string                         error_msg = "";
 
     // viewing properties
     vec2f image_center = zero2f;
@@ -99,11 +99,11 @@ void update_stats_async(app_image& img) {
 void update_display_async(app_image& img) {
     img.display_done = false;
     img.texture_done = false;
-    auto regions     = vector<bbox2i>{};
+    auto regions     = vector<image_region>{};
     make_image_regions(regions, img.img.size());
     parallel_foreach(
         regions,
-        [&img](const bbox2i& region) {
+        [&img](const image_region& region) {
             tonemap_image_region(img.display, region, img.img, img.exposure,
                 img.filmic, img.srgb);
             img.display_queue.push(region);
@@ -283,7 +283,7 @@ void update(app_state& app) {
             init_opengl_texture(
                 img.gl_txt, img.display.size(), false, false, false, false);
         } else {
-            auto region = bbox2i{};
+            auto region = image_region{};
             while (img.display_queue.try_pop(region)) {
                 update_opengl_texture_region(
                     img.gl_txt, img.display, region, false);

@@ -129,7 +129,7 @@ void tonemap_image(
 }
 
 // Tonemap image
-void tonemap_image_region(image4f& ldr, const bbox2i& region,
+void tonemap_image_region(image4f& ldr, const image_region& region,
     const image4f& hdr, float exposure, bool filmic, bool srgb) {
     for (auto j = region.min.y; j < region.max.y; j++) {
         for (auto i = region.min.x; i < region.max.x; i++) {

@@ -57,15 +57,15 @@ struct app_state {
     bool        add_skyenv = false;
 
     // rendering state
-    trace_lights             lights  = {};
-    trace_state              state   = {};
-    image4f                  image   = {};
-    image4f                  display = {};
-    image4f                  preview = {};
-    atomic<bool>             trace_stop;
-    atomic<int>              trace_sample;
-    vector<future<void>>     trace_futures = {};
-    concurrent_queue<bbox2i> trace_queue   = {};
+    trace_lights                   lights  = {};
+    trace_state                    state   = {};
+    image4f                        image   = {};
+    image4f                        display = {};
+    image4f                        preview = {};
+    atomic<bool>                   trace_stop;
+    atomic<int>                    trace_sample;
+    vector<future<void>>           trace_futures = {};
+    concurrent_queue<image_region> trace_queue   = {};
 
     // view image
     vec2f                         image_center = zero2f;
@@ -312,7 +312,7 @@ void draw(const opengl_window& win) {
                     false);
             }
         } else {
-            auto region = bbox2i{};
+            auto region = image_region{};
             auto size   = 0;
             while (app.trace_queue.try_pop(region)) {
                 if (region.size() == zero2i) {

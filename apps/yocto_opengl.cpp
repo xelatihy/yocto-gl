@@ -185,7 +185,7 @@ void update_opengl_texture(
 }
 
 void update_opengl_texture_region(opengl_texture& texture, const image4f& img,
-    const bbox2i& region, bool mipmap) {
+    const image_region& region, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     auto clipped = image4f{};
@@ -207,7 +207,7 @@ void update_opengl_texture(
 }
 
 void update_opengl_texture_region(opengl_texture& texture, const image4b& img,
-    const bbox2i& region, bool mipmap) {
+    const image_region& region, bool mipmap) {
     assert(glGetError() == GL_NO_ERROR);
     glBindTexture(GL_TEXTURE_2D, texture.texture_id);
     auto clipped = image4b{};

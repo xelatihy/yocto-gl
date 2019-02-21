@@ -1223,9 +1223,6 @@ struct bbox {
     bbox() : min{type_max<T>()}, max{type_min<T>()} {}
     bbox(const vec<T, N>& min, const vec<T, N>& max) : min{min}, max{max} {}
 
-    vec<T, N> size() const { return max - min; };
-    vec<T, N> center() const { return (max + min) / 2; };
-
     vec<T, N>&       operator[](int i) { return (&min)[i]; }
     const vec<T, N>& operator[](int i) const { return (&min)[i]; }
 };
