@@ -343,9 +343,9 @@ inline vec3f sample_hemisphere_direction_cospower(
 }
 inline float sample_hemisphere_direction_cospower_pdf(
     float exponent, const vec3f& direction) {
-    return (direction.z <= 0) ?
-               0 :
-               pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
+    return (direction.z <= 0)
+               ? 0
+               : pow(direction.z, exponent) * (exponent + 1) / (2 * pif);
 }
 
 // Sample a point uniformly on a disk.

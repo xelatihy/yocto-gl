@@ -549,9 +549,9 @@ void build_scene_embree_flattened_bvh(
         if (instance.surface_id >= 0 &&
             empty(bvh.surface_bvhs[instance.surface_id].positions))
             continue;
-        auto& shape_bvh = instance.shape_id >= 0 ?
-                              bvh.shape_bvhs.at(instance.shape_id) :
-                              bvh.surface_bvhs.at(instance.surface_id);
+        auto& shape_bvh = instance.shape_id >= 0
+                              ? bvh.shape_bvhs.at(instance.shape_id)
+                              : bvh.surface_bvhs.at(instance.surface_id);
         auto transformed_positions = shape_bvh.positions;
         if (instance.frame != identity_frame3f) {
             for (auto& p : transformed_positions)
@@ -647,8 +647,8 @@ bvh_scene_intersection intersect_embree_bvh(
     rtcInitIntersectContext(&embree_ctx);
     rtcIntersect1((RTCScene)bvh.embree_bvh, &embree_ctx, &embree_ray);
     if (embree_ray.hit.geomID == RTC_INVALID_GEOMETRY_ID) return {};
-    return {(bvh.embree_flattened) ? (int)embree_ray.hit.geomID :
-                                     (int)embree_ray.hit.instID[0],
+    return {(bvh.embree_flattened) ? (int)embree_ray.hit.geomID
+                                   : (int)embree_ray.hit.instID[0],
         (int)embree_ray.hit.primID, {embree_ray.hit.u, embree_ray.hit.v},
         embree_ray.ray.tfar, true};
 }
@@ -825,9 +825,9 @@ void make_bvh_node(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
     // split into two children
     if (end - start > bvh_max_prims) {
         // get split
-        auto [mid, split_axis] = (high_quality) ?
-                                     split_bvh_node_sah(prims, start, end) :
-                                     split_bvh_node_balanced(prims, start, end);
+        auto [mid, split_axis] =
+            (high_quality) ? split_bvh_node_sah(prims, start, end)
+                           : split_bvh_node_balanced(prims, start, end);
 
         // make an internal node
         node.is_internal      = true;
@@ -879,10 +879,10 @@ void build_bvh_nodes_serial(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
         // split into two children
         if (end - start > bvh_max_prims) {
             // get split
-            auto [mid, split_axis] = (options.high_quality) ?
-                                         split_bvh_node_sah(prims, start, end) :
-                                         split_bvh_node_balanced(
-                                             prims, start, end);
+            auto [mid, split_axis] = (options.high_quality)
+                                         ? split_bvh_node_sah(prims, start, end)
+                                         : split_bvh_node_balanced(
+                                               prims, start, end);
 
             // make an internal node
             node.is_internal      = true;
@@ -961,11 +961,10 @@ void build_bvh_nodes_parallel(vector<bvh_node>& nodes, vector<bvh_prim>& prims,
                 // split into two children
                 if (end - start > bvh_max_prims) {
                     // get split
-                    auto [mid, split_axis] = (options.high_quality) ?
-                                                 split_bvh_node_sah(
-                                                     prims, start, end) :
-                                                 split_bvh_node_balanced(
-                                                     prims, start, end);
+                    auto [mid, split_axis] =
+                        (options.high_quality)
+                            ? split_bvh_node_sah(prims, start, end)
+                            : split_bvh_node_balanced(prims, start, end);
 
                     // make an internal node
                     {

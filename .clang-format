@@ -7,37 +7,14 @@ IndentWidth:     4
 ColumnLimit:     80
 
 AlignAfterOpenBracket: DontAlign
-
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
 
-AllowAllParametersOfDeclarationOnNextLine: false
-
-AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: true
-AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: true
-AllowShortLoopsOnASingleLine: true
+AllowShortCaseLabelsOnASingleLine: true
 
-BinPackArguments: true
-BinPackParameters: true
-
-BreakBeforeBinaryOperators: None
-BreakBeforeTernaryOperators: false
 BreakConstructorInitializersBeforeComma: true
 BreakStringLiterals: false
 
-Cpp11BracedListStyle: true
-
-DerivePointerAlignment: false
-PointerAlignment: Left
-
-IndentWrappedFunctionNames: false
-
-PenaltyBreakAssignment: 100
-PenaltyBreakBeforeFirstCallParameter: 100
-PenaltyBreakComment: 30
-PenaltyBreakFirstLessLess: 30
-PenaltyBreakString: 30
-PenaltyExcessCharacter: 100
-PenaltyReturnTypeOnItsOwnLine: 50
+PenaltyBreakAssignment: 20
+PenaltyBreakBeforeFirstCallParameter: 19

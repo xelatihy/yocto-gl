@@ -3171,9 +3171,9 @@ void gltf_to_scene(
             auto& gimg       = gltf.at("images").at(instance_id);
             auto  texture    = yocto_texture{};
             texture.name     = gimg.value("name", ""s);
-            texture.filename = (startswith(gimg.value("uri", ""s), "data:")) ?
-                                   string("[glTF-inline].png") :
-                                   gimg.value("uri", ""s);
+            texture.filename = (startswith(gimg.value("uri", ""s), "data:"))
+                                   ? string("[glTF-inline].png")
+                                   : gimg.value("uri", ""s);
             scene.textures.push_back(texture);
         }
     }
@@ -3218,10 +3218,9 @@ void gltf_to_scene(
         if (!gltf.count("samplers") || gtxt.value("sampler", -1) < 0)
             return texture_id;
         auto& gsmp = gltf.at("samplers").at(gtxt.value("sampler", -1));
-        scene.textures[texture_id].clamp_to_edge = gsmp.value("wrapS", ""s) ==
-                                                       "ClampToEdge" ||
-                                                   gsmp.value("wrapT", ""s) ==
-                                                       "ClampToEdge";
+        scene.textures[texture_id].clamp_to_edge =
+            gsmp.value("wrapS", ""s) == "ClampToEdge" ||
+            gsmp.value("wrapT", ""s) == "ClampToEdge";
         scene.textures[texture_id].height_scale = gsmp.value("scale", 1.0f) *
                                                   gsmp.value("strength", 1.0f);
         scene.textures[texture_id].ldr_as_linear =
@@ -3494,9 +3493,8 @@ void gltf_to_scene(
                         throw io_error("unknown primitive type");
                     }
                 }
-                shape.material = gprim.count("material") ?
-                                     gprim.value("material", -1) :
-                                     -1;
+                shape.material =
+                    gprim.count("material") ? gprim.value("material", -1) : -1;
                 scene.shapes.push_back(shape);
                 meshes.back().push_back((int)scene.shapes.size() - 1);
             }
@@ -3611,9 +3609,9 @@ void gltf_to_scene(
                     auto& gsampler = ganm.at("samplers")
                                          .at(gchannel.at("sampler").get<int>());
                     auto animation = yocto_animation{};
-                    animation.name = (ganm.count("name") ?
-                                             ganm.value("name", ""s) :
-                                             "anim") +
+                    animation.name = (ganm.count("name")
+                                             ? ganm.value("name", ""s)
+                                             : "anim") +
                                      std::to_string(aid++);
                     animation.animation_group = ganm.value("name", ""s);
                     auto input_view           = accessor_values(
@@ -4473,12 +4471,14 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                             material.specular_texture);
                     material.roughness = 0;
                 } else if (type == "mix") {
-                    auto matname1 = (jcmd.count("namedmaterial1")) ?
-                                        jcmd.at("namedmaterial1").get<string>() :
-                                        ""s;
-                    auto matname2 = (jcmd.count("namedmaterial2")) ?
-                                        jcmd.at("namedmaterial2").get<string>() :
-                                        ""s;
+                    auto matname1 =
+                        (jcmd.count("namedmaterial1"))
+                            ? jcmd.at("namedmaterial1").get<string>()
+                            : ""s;
+                    auto matname2 =
+                        (jcmd.count("namedmaterial2"))
+                            ? jcmd.at("namedmaterial2").get<string>()
+                            : ""s;
                     // auto amount = get_vec3f(jcmd.at("amount"));
                     auto matname = (!matname1.empty()) ? matname1 : matname2;
                     for (auto& mat : scene.materials) {
@@ -4663,9 +4663,9 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 // environment.frame =
                 // frame3f{{1,0,0},{0,0,-1},{0,-1,0},{0,0,0}}
                 // * stack.back().frame;
-                environment.frame = stack.back().frame *
-                                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0},
-                                        {0, 0, 0}};
+                environment.frame =
+                    stack.back().frame *
+                    frame3f{{1, 0, 0}, {0, 0, 1}, {0, 1, 0}, {0, 0, 0}};
                 environment.emission = {1, 1, 1};
                 if (jcmd.count("scale"))
                     environment.emission *= get_vec3f(jcmd.at("scale"));
@@ -5464,8 +5464,8 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
             if (!positions.empty()) print_value(fs, positions[i]);
             if (!normals.empty()) print_value(fs, normals[i]);
             if (!texturecoords.empty())
-                print_value(fs, (!flip_texcoord) ? texturecoords[i] :
-                                                   vec2f{texturecoords[i].x,
+                print_value(fs, (!flip_texcoord) ? texturecoords[i]
+                                                 : vec2f{texturecoords[i].x,
                                                        1 - texturecoords[i].y});
             if (!colors.empty()) print_value(fs, colors[i]);
             if (!radius.empty()) print_value(fs, radius[i]);
@@ -5487,8 +5487,8 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
             if (!positions.empty()) write_value(fs, positions[i]);
             if (!normals.empty()) write_value(fs, normals[i]);
             if (!texturecoords.empty())
-                write_value(fs, (!flip_texcoord) ? texturecoords[i] :
-                                                   vec2f{texturecoords[i].x,
+                write_value(fs, (!flip_texcoord) ? texturecoords[i]
+                                                 : vec2f{texturecoords[i].x,
                                                        1 - texturecoords[i].y});
             if (!colors.empty()) write_value(fs, colors[i]);
             if (!radius.empty()) write_value(fs, radius[i]);
@@ -5856,10 +5856,10 @@ void save_obj_facevarying_mesh(const string& filename,
             println_values(fs, "usemtl material_{}\n", last_material_id);
         }
         auto qp = quads_positions.at(i);
-        auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i) :
-                                                 vec4i{-1, -1, -1, -1};
-        auto qn = !quads_normals.empty() ? quads_normals.at(i) :
-                                           vec4i{-1, -1, -1, -1};
+        auto qt = !quads_texturecoords.empty() ? quads_texturecoords.at(i)
+                                               : vec4i{-1, -1, -1, -1};
+        auto qn = !quads_normals.empty() ? quads_normals.at(i)
+                                         : vec4i{-1, -1, -1, -1};
         if (qp.z != qp.w) {
             println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
                 fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z),

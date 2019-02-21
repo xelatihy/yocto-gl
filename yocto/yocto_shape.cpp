@@ -116,8 +116,8 @@ void compute_tangent_spaces(vector<vec4f>& tangent_spaces,
     for (auto& tangent : tangent_spaces) tangent = zero4f;
     for (auto i = 0; i < positions.size(); i++) {
         tangu[i] = orthonormalize(tangu[i], normals[i]);
-        auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f :
-                                                                    1.0f;
+        auto s   = (dot(cross(normals[i], tangu[i]), tangv[i]) < 0) ? -1.0f
+                                                                  : 1.0f;
         tangent_spaces[i] = {tangu[i].x, tangu[i].y, tangu[i].z, s};
     }
 }
@@ -388,9 +388,9 @@ void convert_face_varying(vector<vec4i>& split_quads,
             auto v = vec3i{
                 (&quads_positions[fid].x)[c],
                 (!quads_normals.empty()) ? (&quads_normals[fid].x)[c] : -1,
-                (!quads_texturecoords.empty()) ?
-                    (&quads_texturecoords[fid].x)[c] :
-                    -1,
+                (!quads_texturecoords.empty())
+                    ? (&quads_texturecoords[fid].x)[c]
+                    : -1,
             };
             auto it = vert_map.find(v);
             if (it == vert_map.end()) {
@@ -690,9 +690,8 @@ void subdivide_quads_impl(vector<vec4i>& quads, vector<T>& vert) {
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
-                                             vert[q.w]) /
-                                         4;
+            tvert[nverts + nedges + i] =
+                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
         } else {
             tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) /
                                          3;
@@ -816,9 +815,8 @@ void subdivide_catmullclark_impl(
     for (auto i = 0; i < nfaces; i++) {
         auto q = quads[i];
         if (q.z != q.w) {
-            tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.z] +
-                                             vert[q.w]) /
-                                         4;
+            tvert[nverts + nedges + i] =
+                (vert[q.x] + vert[q.y] + vert[q.z] + vert[q.w]) / 4;
         } else {
             tvert[nverts + nedges + i] = (vert[q.x] + vert[q.y] + vert[q.y]) /
                                          3;
@@ -1275,12 +1273,11 @@ void make_edge_solver_fast(geodesic_solver& solver,
     // On each edge, connect the mid vertex with the vertices on th same edge.
     auto edge_offset = (int)positions.size();
     for (auto edge_index = 0; edge_index < size(edges); edge_index++) {
-        auto& edge                    = edges[edge_index];
-        auto  steiner_idx             = edge_offset + edge_index;
-        steiner_per_edge[edge_index]  = steiner_idx;
-        solver.positions[steiner_idx] = (positions[edge.x] +
-                                            positions[edge.y]) *
-                                        0.5f;
+        auto& edge                   = edges[edge_index];
+        auto  steiner_idx            = edge_offset + edge_index;
+        steiner_per_edge[edge_index] = steiner_idx;
+        solver.positions[steiner_idx] =
+            (positions[edge.x] + positions[edge.y]) * 0.5f;
         add_half_edge(solver, {steiner_idx, edge.x});
         add_half_edge(solver, {steiner_idx, edge.y});
     }

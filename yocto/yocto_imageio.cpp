@@ -42,7 +42,7 @@
 #endif
 #endif
 
-#ifndef __clang_analyzer__
+// #ifndef __clang_analyzer__
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "ext/stb_image.h"
@@ -56,7 +56,7 @@
 #define TINYEXR_IMPLEMENTATION
 #include "ext/tinyexr.h"
 
-#endif
+// #endif
 
 #ifndef _WIN32
 #pragma GCC diagnostic pop

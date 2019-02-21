@@ -328,11 +328,12 @@ void make_sunsky_image(image4f& img, float theta_sun, float turbidity,
             auto gamma = acos(
                 clamp(dot(direction, sun_direction), -1.0f, 1.0f));
             for (int c = 0; c < 9; ++c) {
-                auto val = (has_sun) ?
-                               arhosekskymodel_solar_radiance(skymodel_state[c],
-                                   theta, gamma, wavelengths[c]) :
-                               arhosekskymodel_radiance(skymodel_state[c],
-                                   theta, gamma, wavelengths[c]);
+                auto val =
+                    (has_sun)
+                        ? arhosekskymodel_solar_radiance(
+                              skymodel_state[c], theta, gamma, wavelengths[c])
+                        : arhosekskymodel_radiance(
+                              skymodel_state[c], theta, gamma, wavelengths[c]);
                 // average channel over wavelengths
                 img[{i, j}][c / 3] += (float)val / 3;
             }
@@ -395,9 +396,9 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
 
     auto perez_f = [](vec3f A, vec3f B, vec3f C, vec3f D, vec3f E, float theta,
                        float gamma, float theta_sun, vec3f zenith) -> vec3f {
-        auto den = ((1 + A * exp(B)) *
-                    (1 + C * exp(D * theta_sun) +
-                        E * cos(theta_sun) * cos(theta_sun)));
+        auto den =
+            ((1 + A * exp(B)) * (1 + C * exp(D * theta_sun) +
+                                    E * cos(theta_sun) * cos(theta_sun)));
         auto num = ((1 + A * exp(B / cos(theta))) *
                     (1 + C * exp(D * gamma) + E * cos(gamma) * cos(gamma)));
         return zenith * num / den;
@@ -420,8 +421,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
     auto sun_sol    = vec3f{20000.0f, 27000.0f, 30000.0f};
     auto sun_lambda = vec3f{680, 530, 480};
     auto sun_beta   = 0.04608365822050f * turbidity - 0.04586025928522f;
-    auto sun_m      = 1.0f / (cos(theta_sun) +
-                            0.000940f * pow(1.6386f - theta_sun, -1.253f));
+    auto sun_m =
+        1.0f / (cos(theta_sun) + 0.000940f * pow(1.6386f - theta_sun, -1.253f));
 
     auto tauR = exp(-sun_m * 0.008735f * pow(sun_lambda / 1000, -4.08f));
     auto tauA = exp(-sun_m * sun_beta * pow(sun_lambda / 1000, -1.3f));
@@ -447,8 +448,8 @@ image4f make_sunsky_image(int width, int height, float theta_sun,
     auto sun = [has_sun, sun_angular_radius, sun_le](auto theta, auto gamma) {
         // return (has_sun && gamma < sunAngularRadius) ? sun_le / 10000.0f :
         //                                                zero3f;
-        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000 :
-                                                         zero3f;
+        return (has_sun && gamma < sun_angular_radius) ? sun_le / 10000
+                                                       : zero3f;
     };
 
     // Make the sun sky image
@@ -526,9 +527,9 @@ void make_noise_image(image4f& img, float scale, bool wrap) {
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
-                         0.5f} *
-                     scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g      = perlin_noise(p, wrap3i);
             g           = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
@@ -542,9 +543,9 @@ void make_fbm_image(image4f& img, float scale, float lacunarity, float gain,
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
-                         0.5f} *
-                     scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g = perlin_fbm_noise(p, lacunarity, gain, octaves, wrap3i);
             g      = clamp(0.5f + 0.5f * g, 0.0f, 1.0f);
             img[{i, j}] = {g, g, g, 1};
@@ -558,9 +559,9 @@ void make_ridge_image(image4f& img, float scale, float lacunarity, float gain,
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
-                         0.5f} *
-                     scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g = perlin_ridge_noise(
                 p, lacunarity, gain, offset, octaves, wrap3i);
             g           = clamp(g, 0.0f, 1.0f);
@@ -575,9 +576,9 @@ void make_turbulence_image(image4f& img, float scale, float lacunarity,
     auto wrap3i = (wrap) ? vec3i{img.size().x, img.size().y, 2} : zero3i;
     for (auto j = 0; j < img.size().y; j++) {
         for (auto i = 0; i < img.size().x; i++) {
-            auto p = vec3f{i / (float)img.size().x, j / (float)img.size().y,
-                         0.5f} *
-                     scale;
+            auto p =
+                vec3f{i / (float)img.size().x, j / (float)img.size().y, 0.5f} *
+                scale;
             auto g = perlin_turbulence_noise(
                 p, lacunarity, gain, octaves, wrap3i);
             g           = clamp(g, 0.0f, 1.0f);

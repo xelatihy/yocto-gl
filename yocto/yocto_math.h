@@ -575,8 +575,8 @@ inline vec<T, 4> slerp(const vec<T, 4>& a, const vec<T, 4>& b, T1 u) {
 template <typename T>
 inline vec<T, 3> orthogonal(const vec<T, 3>& v) {
     // http://lolengine.net/blog/2013/09/21/picking-orthogonal-vector-combing-coconuts)
-    return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0} :
-                                 vec<T, 3>{0, -v.z, v.y};
+    return abs(v.x) > abs(v.z) ? vec<T, 3>{-v.y, v.x, 0}
+                               : vec<T, 3>{0, -v.z, v.y};
 }
 template <typename T>
 inline vec<T, 3> orthonormalize(const vec<T, 3>& a, const vec<T, 3>& b) {
@@ -1110,14 +1110,14 @@ inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b) {
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T>
 inline frame<T, 2> inverse(const frame<T, 2>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y}) :
-                             inverse(mat<T, 2, 2>{a.x, a.y});
+    auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y})
+                           : inverse(mat<T, 2, 2>{a.x, a.y});
     return {minv.x, minv.y, -(minv * a.o)};
 }
 template <typename T>
 inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 3, 3>{a.x, a.y, a.z}) :
-                             inverse(mat<T, 3, 3>{a.x, a.y, a.z});
+    auto minv = (is_rigid) ? transpose(mat<T, 3, 3>{a.x, a.y, a.z})
+                           : inverse(mat<T, 3, 3>{a.x, a.y, a.z});
     return {minv.x, minv.y, minv.z, -(minv * a.o)};
 }
 
@@ -1202,9 +1202,9 @@ inline quat<T, 4> nlerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
 template <typename T>
 inline quat<T, 4> slerp(const quat<T, 4>& a, const quat<T, 4>& b, T t) {
     auto th = uangle(a, b);
-    return th == 0 ?
-               a :
-               a * (sin(th * (1 - t)) / sin(th)) + b * (sin(th * t) / sin(th));
+    return th == 0 ? a
+                   : a * (sin(th * (1 - t)) / sin(th)) +
+                         b * (sin(th * t) / sin(th));
 }
 
 }  // namespace yocto

@@ -157,9 +157,8 @@ void add_new_image(app_state& app, const string& filename,
     app.imgs.emplace_back();
     auto& img    = app.imgs.back();
     img.filename = filename;
-    img.outname  = (outname == "") ?
-                      replace_extension(filename, ".display.png") :
-                      outname;
+    img.outname  = (outname == "") ? replace_extension(filename, ".display.png")
+                                  : outname;
     img.name         = get_filename(filename);
     img.exposure     = exposure;
     img.filmic       = filmic;

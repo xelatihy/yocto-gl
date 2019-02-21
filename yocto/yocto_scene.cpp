@@ -174,9 +174,9 @@ void displace_shape(yocto_shape& shape, const yocto_texture& displacement) {
     auto normals = shape.normals;
     if (shape.normals.empty()) compute_shape_normals(shape, normals);
     for (auto vid = 0; vid < shape.positions.size(); vid++) {
-        shape.positions[vid] += normals[vid] * displacement.height_scale *
-                                mean(xyz(evaluate_texture(
-                                    displacement, shape.texturecoords[vid])));
+        shape.positions[vid] +=
+            normals[vid] * displacement.height_scale *
+            mean(xyz(evaluate_texture(displacement, shape.texturecoords[vid])));
     }
 
     if (shape.compute_vertex_normals || !shape.normals.empty()) {
@@ -309,10 +309,9 @@ void update_transforms(yocto_scene& scene, yocto_animation& animation,
 // Update node transforms
 void update_transforms(yocto_scene& scene, yocto_scene_node& node,
     const frame3f& parent = identity_frame3f) {
-    auto frame = parent * node.local *
-                 make_translation_frame(node.translation) *
-                 make_rotation_frame(node.rotation) *
-                 make_scaling_frame(node.scale);
+    auto frame =
+        parent * node.local * make_translation_frame(node.translation) *
+        make_rotation_frame(node.rotation) * make_scaling_frame(node.scale);
     if (node.instance >= 0) scene.instances[node.instance].frame = frame;
     if (node.camera >= 0) scene.cameras[node.camera].frame = frame;
     if (node.environment >= 0)
@@ -1354,9 +1353,8 @@ void set_camera_view_from_bbox(yocto_camera& camera, const bbox3f& bbox,
     if (focal != 0) camera.focal_length = focal;
     auto bbox_center = (bbox.max + bbox.min) / 2.0f;
     auto bbox_radius = length(bbox.max - bbox.min) / 2;
-    auto camera_dir  = (view_direction == zero3f) ?
-                          camera.frame.o - bbox_center :
-                          view_direction;
+    auto camera_dir  = (view_direction == zero3f) ? camera.frame.o - bbox_center
+                                                 : view_direction;
     if (camera_dir == zero3f) camera_dir = {0, 0, 1};
     auto camera_fov = min(get_camera_fovx(camera), get_camera_fovy(camera));
     if (camera_fov == 0) camera_fov = 45 * pif / 180;
@@ -1506,13 +1504,15 @@ microfacet_brdf evaluate_basemetallic_material_brdf(const yocto_scene& scene,
     if (!material.gltf_textures) {
         roughness = material.roughness;
         if (material.roughness_texture >= 0) {
-            auto& roughness_texture = scene.textures[material.roughness_texture];
+            auto& roughness_texture =
+                scene.textures[material.roughness_texture];
             roughness *= evaluate_texture(roughness_texture, texturecoord).x;
         }
     } else {
         auto glossiness = 1 - material.roughness;
         if (material.roughness_texture >= 0) {
-            auto& roughness_texture = scene.textures[material.roughness_texture];
+            auto& roughness_texture =
+                scene.textures[material.roughness_texture];
             glossiness *= evaluate_texture(roughness_texture, texturecoord).w;
         }
         roughness = 1 - glossiness;

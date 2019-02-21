@@ -246,8 +246,8 @@ void draw_opengl_widgets(const opengl_window& win) {
                 if (edited) app.update_list.push_back({typeid(app_state), -1});
                 draw_label_opengl_widget(win, "time/sample", "%0.3lf",
                     (app.trace_sample) ? (get_time() - app.trace_start) /
-                                             (1000000000.0 * app.trace_sample) :
-                                         0.0);
+                                             (1000000000.0 * app.trace_sample)
+                                       : 0.0);
                 draw_slider_opengl_widget(win, "exposure", app.exposure, -5, 5);
                 draw_checkbox_opengl_widget(win, "filmic", app.filmic);
                 draw_checkbox_opengl_widget(win, "srgb", app.srgb);

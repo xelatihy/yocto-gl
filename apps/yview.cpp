@@ -537,35 +537,35 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         set_opengl_uniform(
             state.program, "mat_double_sided", (int)options.double_sided);
         set_opengl_uniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
-            material.emission_texture >= 0 ?
-                state.textures.at(material.emission_texture) :
-                opengl_texture{},
+            material.emission_texture >= 0
+                ? state.textures.at(material.emission_texture)
+                : opengl_texture{},
             0);
         set_opengl_uniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
-            material.diffuse_texture >= 0 ?
-                state.textures.at(material.diffuse_texture) :
-                opengl_texture{},
+            material.diffuse_texture >= 0
+                ? state.textures.at(material.diffuse_texture)
+                : opengl_texture{},
             1);
         set_opengl_uniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
-            material.specular_texture >= 0 ?
-                state.textures.at(material.specular_texture) :
-                opengl_texture{},
+            material.specular_texture >= 0
+                ? state.textures.at(material.specular_texture)
+                : opengl_texture{},
             2);
         set_opengl_uniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
-            material.roughness_texture >= 0 ?
-                state.textures.at(material.roughness_texture) :
-                opengl_texture{},
+            material.roughness_texture >= 0
+                ? state.textures.at(material.roughness_texture)
+                : opengl_texture{},
             3);
         set_opengl_uniform_texture(state.program, "mat_op_txt", "mat_op_txt_on",
-            material.opacity_texture >= 0 ?
-                state.textures.at(material.opacity_texture) :
-                opengl_texture{},
+            material.opacity_texture >= 0
+                ? state.textures.at(material.opacity_texture)
+                : opengl_texture{},
             4);
         set_opengl_uniform_texture(state.program, "mat_norm_txt",
             "mat_norm_txt_on",
-            material.normal_texture >= 0 ?
-                state.textures.at(material.normal_texture) :
-                opengl_texture{},
+            material.normal_texture >= 0
+                ? state.textures.at(material.normal_texture)
+                : opengl_texture{},
             5);
 
         set_opengl_uniform(
@@ -646,39 +646,39 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
                 state.program, "mat_double_sided", (int)options.double_sided);
             set_opengl_uniform_texture(state.program, "mat_ke_txt",
                 "mat_ke_txt_on",
-                material.emission_texture >= 0 ?
-                    state.textures.at(material.emission_texture) :
-                    opengl_texture{},
+                material.emission_texture >= 0
+                    ? state.textures.at(material.emission_texture)
+                    : opengl_texture{},
                 0);
             set_opengl_uniform_texture(state.program, "mat_kd_txt",
                 "mat_kd_txt_on",
-                material.diffuse_texture >= 0 ?
-                    state.textures.at(material.diffuse_texture) :
-                    opengl_texture{},
+                material.diffuse_texture >= 0
+                    ? state.textures.at(material.diffuse_texture)
+                    : opengl_texture{},
                 1);
             set_opengl_uniform_texture(state.program, "mat_ks_txt",
                 "mat_ks_txt_on",
-                material.specular_texture >= 0 ?
-                    state.textures.at(material.specular_texture) :
-                    opengl_texture{},
+                material.specular_texture >= 0
+                    ? state.textures.at(material.specular_texture)
+                    : opengl_texture{},
                 2);
             set_opengl_uniform_texture(state.program, "mat_rs_txt",
                 "mat_rs_txt_on",
-                material.roughness_texture >= 0 ?
-                    state.textures.at(material.roughness_texture) :
-                    opengl_texture{},
+                material.roughness_texture >= 0
+                    ? state.textures.at(material.roughness_texture)
+                    : opengl_texture{},
                 3);
             set_opengl_uniform_texture(state.program, "mat_op_txt",
                 "mat_op_txt_on",
-                material.opacity_texture >= 0 ?
-                    state.textures.at(material.opacity_texture) :
-                    opengl_texture{},
+                material.opacity_texture >= 0
+                    ? state.textures.at(material.opacity_texture)
+                    : opengl_texture{},
                 4);
             set_opengl_uniform_texture(state.program, "mat_norm_txt",
                 "mat_norm_txt_on",
-                material.normal_texture >= 0 ?
-                    state.textures.at(material.normal_texture) :
-                    opengl_texture{},
+                material.normal_texture >= 0
+                    ? state.textures.at(material.normal_texture)
+                    : opengl_texture{},
                 5);
 
             set_opengl_uniform(
