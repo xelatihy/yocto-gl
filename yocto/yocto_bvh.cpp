@@ -481,8 +481,6 @@ void build_scene_embree_instanced_bvh(
     // build shape and surface bvhs
     for (auto& shape_bvh : bvh.shape_bvhs)
         build_shape_embree_bvh(shape_bvh, options);
-    for (auto& surface_bvh : bvh.surface_bvhs)
-        build_shape_embree_bvh(surface_bvh, options);
 
     // scene bvh
     auto embree_device = get_embree_device();
@@ -496,24 +494,12 @@ void build_scene_embree_instanced_bvh(
     for (auto instance_id = 0; instance_id < bvh.instances.size();
          instance_id++) {
         auto& instance = bvh.instances[instance_id];
-        if (instance.shape_id < 0 && instance.surface_id < 0) continue;
-        if (instance.shape_id >= 0 &&
-            empty(bvh.shape_bvhs[instance.shape_id].positions))
-            continue;
-        if (instance.surface_id >= 0 &&
-            empty(bvh.surface_bvhs[instance.surface_id].positions))
-            continue;
+        if (instance.shape_id < 0) continue;
+        if (bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
         auto embree_geom = rtcNewGeometry(
             embree_device, RTC_GEOMETRY_TYPE_INSTANCE);
-        if (instance.shape_id >= 0) {
-            rtcSetGeometryInstancedScene(embree_geom,
-                (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
-        } else if (instance.surface_id >= 0) {
-            rtcSetGeometryInstancedScene(embree_geom,
-                (RTCScene)bvh.surface_bvhs[instance.surface_id].embree_bvh);
-        } else {
-            throw runtime_error("empty instance");
-        }
+        rtcSetGeometryInstancedScene(embree_geom,
+            (RTCScene)bvh.shape_bvhs[instance.shape_id].embree_bvh);
         rtcSetGeometryTransform(
             embree_geom, 0, RTC_FORMAT_FLOAT3X4_COLUMN_MAJOR, &instance.frame);
         rtcCommitGeometry(embree_geom);
@@ -527,8 +513,6 @@ void build_scene_embree_flattened_bvh(
     // build shape and surface bvhs
     for (auto& shape_bvh : bvh.shape_bvhs)
         build_shape_embree_bvh(shape_bvh, options);
-    for (auto& surface_bvh : bvh.surface_bvhs)
-        build_shape_embree_bvh(surface_bvh, options);
 
     // scene bvh
     auto embree_device = get_embree_device();
@@ -542,17 +526,9 @@ void build_scene_embree_flattened_bvh(
     for (auto instance_id = 0; instance_id < bvh.instances.size();
          instance_id++) {
         auto& instance = bvh.instances[instance_id];
-        if (instance.shape_id < 0 && instance.surface_id < 0) continue;
-        if (instance.shape_id >= 0 &&
-            empty(bvh.shape_bvhs[instance.shape_id].positions))
-            continue;
-        if (instance.surface_id >= 0 &&
-            empty(bvh.surface_bvhs[instance.surface_id].positions))
-            continue;
-        auto& shape_bvh = instance.shape_id >= 0
-                              ? bvh.shape_bvhs.at(instance.shape_id)
-                              : bvh.surface_bvhs.at(instance.surface_id);
-        auto transformed_positions = shape_bvh.positions;
+        if (bvh.shape_bvhs[instance.shape_id].positions.empty()) continue;
+        auto& shape_bvh             = bvh.shape_bvhs.at(instance.shape_id);
+        auto  transformed_positions = shape_bvh.positions;
         if (instance.frame != identity_frame3f) {
             for (auto& p : transformed_positions)
                 p = transform_point(instance.frame, p);
@@ -1081,32 +1057,17 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
     // build shape and surface bvhs
     for (auto& shape_bvh : bvh.shape_bvhs) build_shape_bvh(shape_bvh, options);
-    for (auto& surface_bvh : bvh.surface_bvhs)
-        build_shape_bvh(surface_bvh, options);
 
     // get the number of primitives and the primitive type
     auto prims = vector<bvh_prim>();
     if (!bvh.instances.empty()) {
         for (auto& instance : bvh.instances) {
-            if (instance.shape_id >= 0) {
-                auto& sbvh = bvh.shape_bvhs[instance.shape_id];
-                if (sbvh.nodes.empty()) {
-                    prims.push_back({invalid_bbox3f});
-                } else {
-                    prims.push_back(
-                        {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
-                }
-            } else if (instance.surface_id >= 0) {
-                auto& sbvh = bvh.surface_bvhs[instance.surface_id];
-                if (sbvh.nodes.empty()) {
-                    prims.push_back({invalid_bbox3f});
-                } else {
-                    prims.push_back(
-                        {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
-                }
-            } else {
-                printf("empty instance");
+            auto& sbvh = bvh.shape_bvhs[instance.shape_id];
+            if (sbvh.nodes.empty()) {
                 prims.push_back({invalid_bbox3f});
+            } else {
+                prims.push_back(
+                    {transform_bbox(instance.frame, sbvh.nodes[0].bbox)});
             }
         }
     }
@@ -1127,12 +1088,10 @@ void build_scene_bvh(bvh_scene& bvh, const build_bvh_options& options) {
 
 // Build a BVH from the given set of instances.
 void init_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances,
-    const vector<bvh_shape>& shape_bvhs,
-    const vector<bvh_shape>& surface_bvhs) {
-    bvh              = {};
-    bvh.instances    = instances;
-    bvh.shape_bvhs   = shape_bvhs;
-    bvh.surface_bvhs = surface_bvhs;
+    const vector<bvh_shape>& shape_bvhs) {
+    bvh            = {};
+    bvh.instances  = instances;
+    bvh.shape_bvhs = shape_bvhs;
 }
 
 // Recursively recomputes the node bounds for a shape bvh
@@ -1198,11 +1157,9 @@ void refit_scene_bvh_rec(bvh_scene& bvh, int nodeid) {
 // Recursively recomputes the node bounds for a shape bvh
 void refit_shape_bvh(bvh_shape& bvh) { refit_shape_bvh_rec(bvh, 0); }
 void refit_scene_bvh(bvh_scene& bvh, const vector<int>& updated_instances,
-    const vector<int>& updated_shapes, const vector<int>& updated_surfaces) {
+    const vector<int>& updated_shapes) {
     for (auto shape_id : updated_shapes)
         refit_shape_bvh(bvh.shape_bvhs[shape_id]);
-    for (auto surface_di : updated_surfaces)
-        refit_shape_bvh(bvh.surface_bvhs[surface_di]);
     if (!updated_instances.empty()) refit_scene_bvh_rec(bvh, 0);
 }
 
@@ -1220,9 +1177,6 @@ void update_scene_bvh(bvh_scene& bvh, const vector<bvh_instance>& instances) {
 }
 bvh_shape& get_shape_bvh(bvh_scene& bvh, int shape_id) {
     return bvh.shape_bvhs[shape_id];
-}
-bvh_shape& get_surface_bvh(bvh_scene& bvh, int shape_id) {
-    return bvh.surface_bvhs[shape_id];
 }
 
 // Intersect ray with a bvh.
@@ -1368,18 +1322,9 @@ bvh_scene_intersection intersect_scene_bvh(
         } else {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance           = bvh.instances[node.primitive_ids[i]];
-                auto  shape_intersection = bvh_shape_intersection{};
-                if (instance.shape_id >= 0) {
-                    shape_intersection = intersect_shape_bvh(
-                        bvh.shape_bvhs[instance.shape_id],
-                        transform_ray(instance.frame_inverse, ray), find_any);
-                } else if (instance.surface_id >= 0) {
-                    shape_intersection = intersect_shape_bvh(
-                        bvh.surface_bvhs[instance.surface_id],
-                        transform_ray(instance.frame_inverse, ray), find_any);
-                } else {
-                    continue;
-                }
+                auto  shape_intersection = intersect_shape_bvh(
+                    bvh.shape_bvhs[instance.shape_id],
+                    transform_ray(instance.frame_inverse, ray), find_any);
                 if (!shape_intersection.hit) continue;
                 intersection = {node.primitive_ids[i],
                     shape_intersection.element_id,
@@ -1468,15 +1413,8 @@ bvh_scene_intersection intersect_instance_bvh(
     auto& instance           = bvh.instances[instance_id];
     auto  tray               = transform_ray_inverse(instance.frame, ray);
     auto  shape_intersection = bvh_shape_intersection{};
-    if (instance.shape_id >= 0) {
-        shape_intersection = intersect_shape_bvh(
-            bvh.shape_bvhs[instance.shape_id], tray, find_any);
-    } else if (instance.surface_id) {
-        shape_intersection = intersect_shape_bvh(
-            bvh.shape_bvhs[instance.surface_id], tray, find_any);
-    } else {
-        return {};
-    }
+    shape_intersection       = intersect_shape_bvh(
+        bvh.shape_bvhs[instance.shape_id], tray, find_any);
     if (!shape_intersection.hit) return {};
     return {instance_id, shape_intersection.element_id,
         shape_intersection.element_uv, shape_intersection.distance, true};
@@ -1510,20 +1448,10 @@ bvh_scene_intersection overlap_scene_bvh(
         } else if (!bvh.instances.empty()) {
             for (auto i = 0; i < node.num_primitives; i++) {
                 auto& instance           = bvh.instances[node.primitive_ids[i]];
-                auto  shape_intersection = bvh_shape_intersection{};
-                if (instance.shape_id >= 0) {
-                    shape_intersection = overlap_shape_bvh(
-                        bvh.shape_bvhs[instance.shape_id],
-                        transform_point(instance.frame_inverse, pos),
-                        max_distance, find_any);
-                } else if (instance.surface_id >= 0) {
-                    shape_intersection = overlap_shape_bvh(
-                        bvh.surface_bvhs[instance.surface_id],
-                        transform_point(instance.frame_inverse, pos),
-                        max_distance, find_any);
-                } else {
-                    continue;
-                }
+                auto  shape_intersection = overlap_shape_bvh(
+                    bvh.shape_bvhs[instance.shape_id],
+                    transform_point(instance.frame_inverse, pos), max_distance,
+                    find_any);
                 if (!shape_intersection.hit) continue;
                 intersection = {node.primitive_ids[i],
                     shape_intersection.element_id,

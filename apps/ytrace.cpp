@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
     printf(" [%s]\n", format_duration(get_time() - start_load).c_str());
 
     // tesselate
-    tesselate_shapes_and_surfaces(scene);
+    tesselate_shapes(scene);
 
     // add components
     print_validation_errors(scene);

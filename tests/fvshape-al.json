@@ -135,7 +135,7 @@
             "filename": "models/obj2.obj",
             "subdivision_level": 2,
             "catmull_clark": true,
-            "compute_vertex_normals": true,
+            "compute_normals": true,
             "material": "obj2",
             "!!proc": {
                 "type": "suzanne"
@@ -145,7 +145,7 @@
             "name": "obj3",
             "filename": "models/obj3.obj",
             "catmull_clark": true,
-            "compute_vertex_normals": true,
+            "compute_normals": true,
             "subdivision_level": 4,
             "material": "obj3",
             "!!proc": {

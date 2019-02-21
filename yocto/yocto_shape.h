@@ -303,9 +303,8 @@ void convert_bezier_to_lines(
     vector<vec2i>& lines, const vector<vec4i>& beziers);
 
 // Convert face-varying data to single primitives. Returns the quads indices
-// and face ids and filled vectors for pos, norm and texcoord. When used
-// with ids, it also plits the faces per id.
-void convert_face_varying(vector<vec4i>& split_quads,
+// and face ids and filled vectors for pos, norm, texcoord and colors.
+void convert_facevarying(vector<vec4i>& split_quads,
     vector<vec3f>& split_positions, vector<vec3f>& split_normals,
     vector<vec2f>& split_texturecoords, const vector<vec4i>& quads_positions,
     const vector<vec4i>& quads_normals,

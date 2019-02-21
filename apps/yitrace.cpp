@@ -145,8 +145,8 @@ bool load_scene_sync(app_state& app) {
     }
 
     // tesselate
-    app.status = "tesselating surfaces";
-    tesselate_shapes_and_surfaces(app.scene);
+    app.status = "tesselating shapes";
+    tesselate_shapes(app.scene);
 
     // add sky
     if (app.add_skyenv) add_sky_environment(app.scene);
@@ -348,18 +348,15 @@ bool update(app_state& app) {
     stop_rendering_async(app);
 
     // update BVH
-    auto updated_instances = vector<int>{}, updated_shapes = vector<int>{},
-         updated_surfaces = vector<int>{};
+    auto updated_instances = vector<int>{}, updated_shapes = vector<int>{};
     for (auto [type, index] : app.update_list) {
         if (type == typeid(yocto_shape)) updated_shapes.push_back(index);
-        if (type == typeid(yocto_instance)) updated_surfaces.push_back(index);
+        if (type == typeid(yocto_instance)) updated_instances.push_back(index);
         if (type == typeid(yocto_scene_node))
             updated_instances.push_back(index);
     }
-    if (!updated_instances.empty() || !updated_shapes.empty() ||
-        !updated_surfaces.empty())
-        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes,
-            updated_surfaces);
+    if (!updated_instances.empty() || !updated_shapes.empty())
+        refit_scene_bvh(app.scene, app.bvh, updated_instances, updated_shapes);
     app.update_list.clear();
 
     // start rendering

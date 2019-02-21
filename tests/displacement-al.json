@@ -140,7 +140,7 @@
             "material": "obj1",
             "subdivision_level": 6,
             "catmull_clark": false,
-            "compute_vertex_normals": true,
+            "compute_normals": true,
             "!!proc": {
                 "type": "cube"
             }
@@ -151,7 +151,7 @@
             "material": "obj2",
             "subdivision_level": 6,
             "catmull_clark": false,
-            "compute_vertex_normals": true,
+            "compute_normals": true,
             "!!proc": {
                 "type": "fvcube"
             }
@@ -162,7 +162,7 @@
             "material": "obj3",
             "subdivision_level": 6,
             "catmull_clark": true,
-            "compute_vertex_normals": true,
+            "compute_normals": true,
             "!!proc": {
                 "type": "fvcube"
             }

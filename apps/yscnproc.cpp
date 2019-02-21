@@ -116,12 +116,11 @@ int main(int argc, char** argv) {
         for (auto& shape : scene.shapes) {
             shape.filename = "";
             if (shape.positions.size() <= 16) continue;
-            shape.filename = mesh_directory + shape.name + ".ply";
-        }
-        for (auto& surface : scene.surfaces) {
-            surface.filename = "";
-            if (surface.positions.size() <= 16) continue;
-            surface.filename = mesh_directory + surface.name + ".obj";
+            if (shape.preserve_facevarying) {
+                shape.filename = mesh_directory + shape.name + ".obj";
+            } else {
+                shape.filename = mesh_directory + shape.name + ".ply";
+            }
         }
     }
     // gltf does not support embedded data

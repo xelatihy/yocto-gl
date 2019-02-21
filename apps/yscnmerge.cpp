@@ -94,7 +94,6 @@ int main(int argc, char** argv) {
             for (auto& val : to_merge.voltextures) val.name += postfix;
             for (auto& val : to_merge.materials) val.name += postfix;
             for (auto& val : to_merge.shapes) val.name += postfix;
-            for (auto& val : to_merge.surfaces) val.name += postfix;
             for (auto& val : to_merge.instances) val.name += postfix;
             for (auto& val : to_merge.environments) val.name += postfix;
             for (auto& val : to_merge.nodes) val.name += postfix;
@@ -119,9 +118,6 @@ int main(int argc, char** argv) {
             } else if (mesh_filenames) {
                 shape.filename = mesh_directory + get_filename(shape.filename);
             }
-        }
-        for (auto& surface : scene.surfaces) {
-            surface.filename = mesh_directory + surface.name + ".obj";
         }
     }
     // gltf does not support embedded data

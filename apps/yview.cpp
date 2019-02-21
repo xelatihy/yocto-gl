@@ -35,22 +35,20 @@
 #include "ysceneui.h"
 
 struct drawgl_shape {
-    opengl_array_buffer          positions_buffer     = {};
-    opengl_array_buffer          normals_buffer       = {};
-    opengl_array_buffer          texturecoords_buffer = {};
-    opengl_array_buffer          colors_buffer        = {};
-    opengl_array_buffer          tangentspaces_buffer = {};
-    opengl_elementbuffer         points_buffer        = {};
-    opengl_elementbuffer         lines_buffer         = {};
-    opengl_elementbuffer         triangles_buffer     = {};
-    opengl_elementbuffer         quads_buffer         = {};
-    vector<opengl_elementbuffer> split_quads_buffer   = {};
+    opengl_array_buffer  positions_buffer     = {};
+    opengl_array_buffer  normals_buffer       = {};
+    opengl_array_buffer  texturecoords_buffer = {};
+    opengl_array_buffer  colors_buffer        = {};
+    opengl_array_buffer  tangentspaces_buffer = {};
+    opengl_elementbuffer points_buffer        = {};
+    opengl_elementbuffer lines_buffer         = {};
+    opengl_elementbuffer triangles_buffer     = {};
+    opengl_elementbuffer quads_buffer         = {};
 };
 
 struct drawgl_state {
     opengl_program         program  = {};
     vector<drawgl_shape>   shapes   = {};
-    vector<drawgl_shape>   surfaces = {};
     vector<opengl_texture> textures = {};
 };
 
@@ -159,7 +157,7 @@ bool load_scene_sync(app_state& app) {
 
     // tesselate
     app.status = "tesselating surfaces";
-    tesselate_shapes_and_surfaces(app.scene);
+    tesselate_shapes(app.scene);
 
     // add components
     add_missing_cameras(app.scene);
@@ -513,91 +511,88 @@ static const char* fragment =
 void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
     const yocto_instance& instance, bool highlighted,
     const drawgl_options& options) {
-    if (instance.shape >= 0) {
-        auto& shape    = scene.shapes[instance.shape];
-        auto& vbos     = state.shapes.at(instance.shape);
-        auto& material = scene.materials[shape.material];
+    auto& shape    = scene.shapes[instance.shape];
+    auto& vbos     = state.shapes.at(instance.shape);
+    auto& material = scene.materials[shape.material];
 
-        auto xform = frame_to_mat(instance.frame);
+    auto xform = frame_to_mat(instance.frame);
 
-        set_opengl_uniform(state.program, "shape_xform", xform);
-        set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
-        set_opengl_uniform(state.program, "highlight",
-            (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
+    set_opengl_uniform(state.program, "shape_xform", xform);
+    set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
+    set_opengl_uniform(
+        state.program, "highlight", (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
 
-        auto mtype = 1;
-        if (material.base_metallic) mtype = 2;
-        if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
-        set_opengl_uniform(state.program, "mat_type", mtype);
-        set_opengl_uniform(state.program, "mat_ke", material.emission);
-        set_opengl_uniform(state.program, "mat_kd", material.diffuse);
-        set_opengl_uniform(state.program, "mat_ks", material.specular);
-        set_opengl_uniform(state.program, "mat_rs", material.roughness);
-        set_opengl_uniform(state.program, "mat_op", material.opacity);
-        set_opengl_uniform(
-            state.program, "mat_double_sided", (int)options.double_sided);
-        set_opengl_uniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
-            material.emission_texture >= 0
-                ? state.textures.at(material.emission_texture)
-                : opengl_texture{},
-            0);
-        set_opengl_uniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
-            material.diffuse_texture >= 0
-                ? state.textures.at(material.diffuse_texture)
-                : opengl_texture{},
-            1);
-        set_opengl_uniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
-            material.specular_texture >= 0
-                ? state.textures.at(material.specular_texture)
-                : opengl_texture{},
-            2);
-        set_opengl_uniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
-            material.roughness_texture >= 0
-                ? state.textures.at(material.roughness_texture)
-                : opengl_texture{},
-            3);
-        set_opengl_uniform_texture(state.program, "mat_op_txt", "mat_op_txt_on",
-            material.opacity_texture >= 0
-                ? state.textures.at(material.opacity_texture)
-                : opengl_texture{},
-            4);
-        set_opengl_uniform_texture(state.program, "mat_norm_txt",
-            "mat_norm_txt_on",
-            material.normal_texture >= 0
-                ? state.textures.at(material.normal_texture)
-                : opengl_texture{},
-            5);
+    auto mtype = 1;
+    if (material.base_metallic) mtype = 2;
+    if (material.gltf_textures) mtype = (material.base_metallic) ? 2 : 3;
+    set_opengl_uniform(state.program, "mat_type", mtype);
+    set_opengl_uniform(state.program, "mat_ke", material.emission);
+    set_opengl_uniform(state.program, "mat_kd", material.diffuse);
+    set_opengl_uniform(state.program, "mat_ks", material.specular);
+    set_opengl_uniform(state.program, "mat_rs", material.roughness);
+    set_opengl_uniform(state.program, "mat_op", material.opacity);
+    set_opengl_uniform(
+        state.program, "mat_double_sided", (int)options.double_sided);
+    set_opengl_uniform_texture(state.program, "mat_ke_txt", "mat_ke_txt_on",
+        material.emission_texture >= 0
+            ? state.textures.at(material.emission_texture)
+            : opengl_texture{},
+        0);
+    set_opengl_uniform_texture(state.program, "mat_kd_txt", "mat_kd_txt_on",
+        material.diffuse_texture >= 0
+            ? state.textures.at(material.diffuse_texture)
+            : opengl_texture{},
+        1);
+    set_opengl_uniform_texture(state.program, "mat_ks_txt", "mat_ks_txt_on",
+        material.specular_texture >= 0
+            ? state.textures.at(material.specular_texture)
+            : opengl_texture{},
+        2);
+    set_opengl_uniform_texture(state.program, "mat_rs_txt", "mat_rs_txt_on",
+        material.roughness_texture >= 0
+            ? state.textures.at(material.roughness_texture)
+            : opengl_texture{},
+        3);
+    set_opengl_uniform_texture(state.program, "mat_op_txt", "mat_op_txt_on",
+        material.opacity_texture >= 0
+            ? state.textures.at(material.opacity_texture)
+            : opengl_texture{},
+        4);
+    set_opengl_uniform_texture(state.program, "mat_norm_txt", "mat_norm_txt_on",
+        material.normal_texture >= 0
+            ? state.textures.at(material.normal_texture)
+            : opengl_texture{},
+        5);
 
-        set_opengl_uniform(
-            state.program, "elem_faceted", (int)shape.normals.empty());
-        set_opengl_vertexattrib(
-            state.program, "vert_pos", vbos.positions_buffer, zero3f);
-        set_opengl_vertexattrib(
-            state.program, "vert_norm", vbos.normals_buffer, zero3f);
-        set_opengl_vertexattrib(
-            state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
-        set_opengl_vertexattrib(
-            state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
-        set_opengl_vertexattrib(state.program, "vert_tangsp",
-            vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
+    set_opengl_uniform(
+        state.program, "elem_faceted", (int)shape.normals.empty());
+    set_opengl_vertexattrib(
+        state.program, "vert_pos", vbos.positions_buffer, zero3f);
+    set_opengl_vertexattrib(
+        state.program, "vert_norm", vbos.normals_buffer, zero3f);
+    set_opengl_vertexattrib(
+        state.program, "vert_texcoord", vbos.texturecoords_buffer, zero2f);
+    set_opengl_vertexattrib(
+        state.program, "vert_color", vbos.colors_buffer, vec4f{1, 1, 1, 1});
+    set_opengl_vertexattrib(state.program, "vert_tangsp",
+        vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
 
-        if (vbos.points_buffer) {
-            set_opengl_uniform(state.program, "elem_type", 1);
-            draw_opengl_points(vbos.points_buffer, vbos.points_buffer.num);
-        }
-        if (vbos.lines_buffer) {
-            set_opengl_uniform(state.program, "elem_type", 2);
-            draw_opengl_lines(vbos.lines_buffer, vbos.lines_buffer.num);
-        }
-        if (vbos.triangles_buffer) {
-            set_opengl_uniform(state.program, "elem_type", 3);
-            draw_opengl_triangles(
-                vbos.triangles_buffer, vbos.triangles_buffer.num);
-        }
-        if (vbos.quads_buffer) {
-            set_opengl_uniform(state.program, "elem_type", 3);
-            draw_opengl_triangles(vbos.quads_buffer, vbos.quads_buffer.num);
-        }
+    if (vbos.points_buffer) {
+        set_opengl_uniform(state.program, "elem_type", 1);
+        draw_opengl_points(vbos.points_buffer, vbos.points_buffer.num);
+    }
+    if (vbos.lines_buffer) {
+        set_opengl_uniform(state.program, "elem_type", 2);
+        draw_opengl_lines(vbos.lines_buffer, vbos.lines_buffer.num);
+    }
+    if (vbos.triangles_buffer) {
+        set_opengl_uniform(state.program, "elem_type", 3);
+        draw_opengl_triangles(vbos.triangles_buffer, vbos.triangles_buffer.num);
+    }
+    if (vbos.quads_buffer) {
+        set_opengl_uniform(state.program, "elem_type", 3);
+        draw_opengl_triangles(vbos.quads_buffer, vbos.quads_buffer.num);
+    }
 
 #if 0
     if ((vbos.gl_edges && edges && !wireframe) || highlighted) {
@@ -614,98 +609,9 @@ void draw_glinstance(drawgl_state& state, const yocto_scene& scene,
         check_opengl_error();
     }
 #endif
-        if (options.edges)
-            throw runtime_error("edges are momentarily disabled");
+    if (options.edges) throw runtime_error("edges are momentarily disabled");
 
-        // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
-    } else if (instance.surface >= 0) {
-        auto& surface = scene.surfaces[instance.surface];
-        auto& vbos    = state.surfaces.at(instance.surface);
-        for (auto group_id = 0; group_id < vbos.split_quads_buffer.size();
-             group_id++) {
-            auto& material = scene.materials[surface.materials.at(group_id)];
-
-            auto xform = frame_to_mat(instance.frame);
-
-            set_opengl_uniform(state.program, "shape_xform", xform);
-            set_opengl_uniform(state.program, "shape_normal_offset", 0.0f);
-            set_opengl_uniform(state.program, "highlight",
-                (highlighted) ? vec4f{1, 1, 0, 1} : zero4f);
-
-            auto mtype = 1;
-            if (material.base_metallic) mtype = 2;
-            if (material.gltf_textures)
-                mtype = (material.base_metallic) ? 2 : 3;
-            set_opengl_uniform(state.program, "mat_type", mtype);
-            set_opengl_uniform(state.program, "mat_ke", material.emission);
-            set_opengl_uniform(state.program, "mat_kd", material.diffuse);
-            set_opengl_uniform(state.program, "mat_ks", material.specular);
-            set_opengl_uniform(state.program, "mat_rs", material.roughness);
-            set_opengl_uniform(state.program, "mat_op", material.opacity);
-            set_opengl_uniform(
-                state.program, "mat_double_sided", (int)options.double_sided);
-            set_opengl_uniform_texture(state.program, "mat_ke_txt",
-                "mat_ke_txt_on",
-                material.emission_texture >= 0
-                    ? state.textures.at(material.emission_texture)
-                    : opengl_texture{},
-                0);
-            set_opengl_uniform_texture(state.program, "mat_kd_txt",
-                "mat_kd_txt_on",
-                material.diffuse_texture >= 0
-                    ? state.textures.at(material.diffuse_texture)
-                    : opengl_texture{},
-                1);
-            set_opengl_uniform_texture(state.program, "mat_ks_txt",
-                "mat_ks_txt_on",
-                material.specular_texture >= 0
-                    ? state.textures.at(material.specular_texture)
-                    : opengl_texture{},
-                2);
-            set_opengl_uniform_texture(state.program, "mat_rs_txt",
-                "mat_rs_txt_on",
-                material.roughness_texture >= 0
-                    ? state.textures.at(material.roughness_texture)
-                    : opengl_texture{},
-                3);
-            set_opengl_uniform_texture(state.program, "mat_op_txt",
-                "mat_op_txt_on",
-                material.opacity_texture >= 0
-                    ? state.textures.at(material.opacity_texture)
-                    : opengl_texture{},
-                4);
-            set_opengl_uniform_texture(state.program, "mat_norm_txt",
-                "mat_norm_txt_on",
-                material.normal_texture >= 0
-                    ? state.textures.at(material.normal_texture)
-                    : opengl_texture{},
-                5);
-
-            set_opengl_uniform(
-                state.program, "elem_faceted", (int)surface.normals.empty());
-            set_opengl_vertexattrib(
-                state.program, "vert_pos", vbos.positions_buffer, zero3f);
-            set_opengl_vertexattrib(
-                state.program, "vert_norm", vbos.normals_buffer, zero3f);
-            set_opengl_vertexattrib(state.program, "vert_texcoord",
-                vbos.texturecoords_buffer, zero2f);
-            set_opengl_vertexattrib(state.program, "vert_color",
-                vbos.colors_buffer, vec4f{1, 1, 1, 1});
-            set_opengl_vertexattrib(state.program, "vert_tangsp",
-                vbos.tangentspaces_buffer, vec4f{0, 0, 1, 1});
-
-            if (vbos.split_quads_buffer[group_id]) {
-                set_opengl_uniform(state.program, "elem_type", 3);
-                draw_opengl_triangles(vbos.split_quads_buffer[group_id],
-                    vbos.split_quads_buffer[group_id].num);
-            }
-        }
-
-        if (options.edges)
-            throw runtime_error("edges are momentarily disabled");
-
-        // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
-    }
+    // for (int i = 0; i < 16; i++) { glDisableVertexAttribArray(i); }
 }
 
 // Display a scene
@@ -810,68 +716,60 @@ void init_drawgl_state(drawgl_state& state, const yocto_scene& scene) {
     for (auto shape_id = 0; shape_id < scene.shapes.size(); shape_id++) {
         auto& shape = scene.shapes[shape_id];
         auto  vbos  = drawgl_shape();
-        if (!shape.positions.empty())
-            init_opengl_array_buffer(
-                vbos.positions_buffer, shape.positions, false);
-        if (!shape.normals.empty())
-            init_opengl_array_buffer(vbos.normals_buffer, shape.normals, false);
-        if (!shape.texturecoords.empty())
-            init_opengl_array_buffer(
-                vbos.texturecoords_buffer, shape.texturecoords, false);
-        if (!shape.colors.empty())
-            init_opengl_array_buffer(vbos.colors_buffer, shape.colors, false);
-        if (!shape.tangentspaces.empty())
-            init_opengl_array_buffer(
-                vbos.tangentspaces_buffer, shape.tangentspaces, false);
-        if (!shape.points.empty())
-            init_opengl_elementbuffer(vbos.points_buffer, shape.points, false);
-        if (!shape.lines.empty())
-            init_opengl_elementbuffer(vbos.lines_buffer, shape.lines, false);
-        if (!shape.triangles.empty())
-            init_opengl_elementbuffer(
-                vbos.triangles_buffer, shape.triangles, false);
-        if (!shape.quads.empty()) {
-            auto triangles = vector<vec3i>{};
-            convert_quads_to_triangles(triangles, shape.quads);
-            init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
+        if (shape.quads_positions.empty()) {
+            if (!shape.positions.empty())
+                init_opengl_array_buffer(
+                    vbos.positions_buffer, shape.positions, false);
+            if (!shape.normals.empty())
+                init_opengl_array_buffer(
+                    vbos.normals_buffer, shape.normals, false);
+            if (!shape.texturecoords.empty())
+                init_opengl_array_buffer(
+                    vbos.texturecoords_buffer, shape.texturecoords, false);
+            if (!shape.colors.empty())
+                init_opengl_array_buffer(
+                    vbos.colors_buffer, shape.colors, false);
+            if (!shape.tangentspaces.empty())
+                init_opengl_array_buffer(
+                    vbos.tangentspaces_buffer, shape.tangentspaces, false);
+            if (!shape.points.empty())
+                init_opengl_elementbuffer(
+                    vbos.points_buffer, shape.points, false);
+            if (!shape.lines.empty())
+                init_opengl_elementbuffer(
+                    vbos.lines_buffer, shape.lines, false);
+            if (!shape.triangles.empty())
+                init_opengl_elementbuffer(
+                    vbos.triangles_buffer, shape.triangles, false);
+            if (!shape.quads.empty()) {
+                auto triangles = vector<vec3i>{};
+                convert_quads_to_triangles(triangles, shape.quads);
+                init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
+            }
+        } else {
+            auto quads         = vector<vec4i>{};
+            auto positions     = vector<vec3f>{};
+            auto normals       = vector<vec3f>{};
+            auto texturecoords = vector<vec2f>{};
+            convert_facevarying(quads, positions, normals, texturecoords,
+                shape.quads_positions, shape.quads_normals,
+                shape.quads_texturecoords, shape.positions, shape.normals,
+                shape.texturecoords);
+            if (!positions.empty())
+                init_opengl_array_buffer(
+                    vbos.positions_buffer, positions, false);
+            if (!normals.empty())
+                init_opengl_array_buffer(vbos.normals_buffer, normals, false);
+            if (!texturecoords.empty())
+                init_opengl_array_buffer(
+                    vbos.texturecoords_buffer, texturecoords, false);
+            if (!quads.empty()) {
+                auto triangles = vector<vec3i>{};
+                convert_quads_to_triangles(triangles, quads);
+                init_opengl_elementbuffer(vbos.quads_buffer, triangles, false);
+            }
         }
         state.shapes[shape_id] = vbos;
-    }
-    state.surfaces.resize(scene.surfaces.size());
-    for (auto surface_id = 0; surface_id < scene.surfaces.size();
-         surface_id++) {
-        auto& surface       = scene.surfaces[surface_id];
-        auto  vbos          = drawgl_shape();
-        auto  quads         = vector<vec4i>{};
-        auto  positions     = vector<vec3f>{};
-        auto  normals       = vector<vec3f>{};
-        auto  texturecoords = vector<vec2f>{};
-        convert_face_varying(quads, positions, normals, texturecoords,
-            surface.quads_positions, surface.quads_normals,
-            surface.quads_texturecoords, surface.positions, surface.normals,
-            surface.texturecoords);
-        auto split_quads = vector<vector<vec4i>>();
-        if (surface.materials.size() > 1 && !surface.quads_materials.empty()) {
-            ungroup_quads(split_quads, quads, surface.quads_materials);
-        } else {
-            split_quads.push_back(quads);
-        }
-        if (!positions.empty())
-            init_opengl_array_buffer(vbos.positions_buffer, positions, false);
-        if (!normals.empty())
-            init_opengl_array_buffer(vbos.normals_buffer, normals, false);
-        if (!texturecoords.empty())
-            init_opengl_array_buffer(
-                vbos.texturecoords_buffer, texturecoords, false);
-        vbos.split_quads_buffer = {};
-        for (auto& quads : split_quads) {
-            if (!quads.empty()) vbos.split_quads_buffer.push_back({});
-            auto triangles = vector<vec3i>{};
-            convert_quads_to_triangles(triangles, quads);
-            init_opengl_elementbuffer(
-                vbos.split_quads_buffer.back(), triangles, false);
-        }
-        state.surfaces[surface_id] = vbos;
     }
 }
 
@@ -885,8 +783,6 @@ void delete_drawgl_shape(drawgl_shape& glshape) {
     delete_opengl_elementbuffer(glshape.lines_buffer);
     delete_opengl_elementbuffer(glshape.triangles_buffer);
     delete_opengl_elementbuffer(glshape.quads_buffer);
-    for (auto& quads_buffer : glshape.split_quads_buffer)
-        delete_opengl_elementbuffer(quads_buffer);
 }
 
 // delete state
@@ -895,10 +791,8 @@ void delete_drawgl_state(drawgl_state& state) {
     delete_opengl_program(state.program);
     for (auto& texture : state.textures) delete_opengl_texture(texture);
     for (auto& shape : state.shapes) delete_drawgl_shape(shape);
-    for (auto& surface : state.surfaces) delete_drawgl_shape(surface);
     state.textures.clear();
     state.shapes.clear();
-    state.surfaces.clear();
 }
 
 // draw with shading
@@ -1008,10 +902,6 @@ void update(app_state& app) {
         if (type == typeid(yocto_texture)) {
             // TODO: update texture
             throw runtime_error("texture update not supported\n");
-        }
-        if (type == typeid(yocto_surface)) {
-            // TODO: update subdiv
-            throw runtime_error("subdiv update not supported\n");
         }
         if (type == typeid(yocto_shape)) {
             // TODO: update shape

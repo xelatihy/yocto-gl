@@ -30,6 +30,14 @@
                 "type": "grid",
                 "border": true
             }
+        },
+        {
+            "name": "uvgrid",
+            "filename": "textures/uvgrid.png",
+            "gamma": 2.2,
+            "!!proc": {
+                "type": "uvgrid"
+            }
         }
     ],
     "materials": [
@@ -82,7 +90,8 @@
                 0.04,
                 0.04
             ],
-            "roughness": 0.1
+            "roughness": 0.1,
+            "diffuse_texture": "uvgrid"
         },
         {
             "name": "light1",
@@ -116,7 +125,7 @@
             "material": "obj1",
             "subdivision_level": 4,
             "catmull_clark": true,
-            "compute_vertex_normals": true,
+            "compute_normals": true,
             "!!proc": {
                 "type": "cube_posonly"
             }
@@ -127,20 +136,21 @@
             "material": "obj2",
             "subdivision_level": 2,
             "catmull_clark": true,
-            "compute_vertex_normals": true,
+            "compute_normals": true,
             "!!proc": {
                 "type": "suzanne"
             }
         },
         {
             "name": "obj3",
-            "filename": "models/obj3.ply",
+            "filename": "models/obj3.obj",
             "material": "obj3",
-            "subdivision_level": 2,
-            "catmull_clark": false,
-            "compute_vertex_normals": true,
+            "subdivision_level": 4,
+            "catmull_clark": true,
+            "compute_normals": true,
+            "preserve_facevarying": true,
             "!!proc": {
-                "type": "sphere_geodesic"
+                "type": "cube_facevarying"
             }
         },
         {
