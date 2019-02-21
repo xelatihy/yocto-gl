@@ -2053,6 +2053,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
             auto instance  = yocto_instance{};
             instance.name  = scene.shapes[idx].name;
             instance.shape = idx;
+            scene.instances.push_back(instance);
         }
 
         // load textures
