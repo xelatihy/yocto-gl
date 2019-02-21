@@ -800,62 +800,12 @@ vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
         evaluate_shape_perturbed_normal(
             scene, scene.shapes[instance.shape], element_id, element_uv));
 }
-vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    return evaluate_shape_texturecoord(
-        scene.shapes[instance.shape], element_id, element_uv);
-}
-vec4f evaluate_instance_color(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    return evaluate_shape_color(
-        scene.shapes[instance.shape], element_id, element_uv);
-}
 // Instance element values.
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id) {
     return transform_direction(
         instance.frame, evaluate_shape_element_normal(
                             scene.shapes[instance.shape], element_id));
-}
-
-// Material values
-vec3f evaluate_instance_emission(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    auto& shape = scene.shapes[instance.shape];
-    return evaluate_material_emission(scene, scene.materials[shape.material],
-        evaluate_shape_texturecoord(shape, element_id, element_uv));
-}
-microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv) {
-    auto& shape = scene.shapes[instance.shape];
-    return evaluate_material_brdf(scene, scene.materials[shape.material],
-        evaluate_shape_texturecoord(shape, element_id, element_uv));
-}
-bool is_instance_emissive(
-    const yocto_scene& scene, const yocto_instance& instance) {
-    auto& shape = scene.shapes[instance.shape];
-    return scene.materials[shape.material].emission != zero3f;
-}
-bool is_instance_normal_perturbed(
-    const yocto_scene& scene, const yocto_instance& instance) {
-    auto& shape = scene.shapes[instance.shape];
-    if (shape.triangles.empty() && shape.quads.empty()) return false;
-    return scene.materials[shape.material].normal_texture >= 0;
-}
-// Check the instance type
-bool is_instance_points(
-    const yocto_scene& scene, const yocto_instance& instance) {
-    return !scene.shapes[instance.shape].points.empty();
-}
-bool is_instance_lines(
-    const yocto_scene& scene, const yocto_instance& instance) {
-    return !scene.shapes[instance.shape].lines.empty();
-}
-bool is_instance_faces(
-    const yocto_scene& scene, const yocto_instance& instance) {
-    return !scene.shapes[instance.shape].triangles.empty() ||
-           !scene.shapes[instance.shape].quads.empty() ||
-           !scene.shapes[instance.shape].quads_positions.empty();
 }
 
 // Environment texture coordinates from the direction.

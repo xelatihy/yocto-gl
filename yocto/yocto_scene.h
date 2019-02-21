@@ -400,8 +400,6 @@ vec3f evaluate_material_emission(const yocto_scene& scene,
 //     const yocto_material& material, const vec2f& texturecoord);
 vec3f evaluate_material_normalmap(const yocto_scene& scene,
     const yocto_material& material, const vec2f& texturecoord);
-// Query material properties
-bool is_material_emissive(const yocto_material& material);
 
 // Material values packed into a convenience structure.
 struct microfacet_brdf {
@@ -428,34 +426,11 @@ vec3f evaluate_instance_position(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec2f evaluate_instance_texturecoord(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec4f evaluate_instance_color(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
 vec3f evaluate_instance_perturbed_normal(const yocto_scene& scene,
     const yocto_instance& instance, int element_id, const vec2f& element_uv);
 // Instance element values.
 vec3f evaluate_instance_element_normal(
     const yocto_scene& scene, const yocto_instance& instance, int element_id);
-// Check the instance type
-bool is_instance_points(
-    const yocto_scene& scene, const yocto_instance& instance);
-bool is_instance_lines(
-    const yocto_scene& scene, const yocto_instance& instance);
-bool is_instance_faces(
-    const yocto_scene& scene, const yocto_instance& instance);
-
-// Material values
-int             get_instance_material_id(const yocto_scene& scene,
-                const yocto_instance& instance, int element_id, const vec2f& element_uv);
-vec3f           evaluate_instance_emission(const yocto_scene& scene,
-              const yocto_instance& instance, int element_id, const vec2f& element_uv);
-microfacet_brdf evaluate_instance_brdf(const yocto_scene& scene,
-    const yocto_instance& instance, int element_id, const vec2f& element_uv);
-bool            is_instance_emissive(
-               const yocto_scene& scene, const yocto_instance& instance);
-bool is_instance_normal_perturbed(
-    const yocto_scene& scene, const yocto_instance& instance);
 
 // Environment texture coordinates from the incoming direction.
 vec2f evaluate_environment_texturecoord(
