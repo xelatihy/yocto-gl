@@ -911,6 +911,11 @@ void from_json_procedural(
             value.texturecoords, js.value("steps", vec3i{1, 1, 1}),
             js.value("size", vec3f{2, 2, 2}),
             js.value("uvsize", vec3f{1, 1, 1}));
+    } else if (type == "sphere_facevarying") {
+        make_sphere_fvshape(value.quads_positions, value.quads_normals,
+            value.quads_texturecoords, value.positions, value.normals,
+            value.texturecoords, js.value("steps", 32),
+            js.value("size", 2), js.value("uvsize", 1));
     } else {
         throw std::invalid_argument("unknown procedural type " + type);
     }
