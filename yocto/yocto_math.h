@@ -278,15 +278,15 @@ template <typename T, int N>
 inline bool operator==(const vec<T, N>& a, const vec<T, N>& b) {
     if constexpr (N == 1) {
         return a.x == b.x;
-    } else if constexpr(N == 2) {
+    } else if constexpr (N == 2) {
         return a.x == b.x && a.y == b.y;
-    } else if constexpr(N == 3) {
+    } else if constexpr (N == 3) {
         return a.x == b.x && a.y == b.y && a.z == b.z;
-    } else if constexpr(N == 4) {
+    } else if constexpr (N == 4) {
         return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
     } else {
-        for(auto i = 0; i < N; i ++) 
-            if(a[i] != b[i]) return false;
+        for (auto i = 0; i < N; i++)
+            if (a[i] != b[i]) return false;
         return true;
     }
 }
@@ -294,11 +294,11 @@ template <typename T, int N>
 inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
     if constexpr (N == 1) {
         return a.x != b.x;
-    } else if constexpr(N == 2) {
+    } else if constexpr (N == 2) {
         return a.x != b.x || a.y != b.y;
-    } else if constexpr(N == 3) {
+    } else if constexpr (N == 3) {
         return a.x != b.x || a.y != b.y || a.z != b.z;
-    } else if constexpr(N == 4) {
+    } else if constexpr (N == 4) {
         return a.x != b.x || a.y != b.y || a.z != b.z || a.w != b.w;
     } else {
         return !(a == b);
@@ -306,169 +306,178 @@ inline bool operator!=(const vec<T, N>& a, const vec<T, N>& b) {
 }
 
 // Vector operations.
-template <typename T>
-inline vec<T, 2> operator-(const vec<T, 2>& a) {
-    return {-a.x, -a.y};
-}
-template <typename T>
-inline vec<T, 2> operator+(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return {a.x + b.x, a.y + b.y};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator+(const vec<T, 2>& a, T1 b) {
-    return {a.x + b, a.y + b};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator+(T1 a, const vec<T, 2>& b) {
-    return {a + b.x, a + b.y};
-}
-template <typename T>
-inline vec<T, 2> operator-(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return {a.x - b.x, a.y - b.y};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator-(const vec<T, 2>& a, T1 b) {
-    return {a.x - b, a.y - b};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator-(T1 a, const vec<T, 2>& b) {
-    return {a - b.x, a - b.y};
-}
-template <typename T>
-inline vec<T, 2> operator*(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return {a.x * b.x, a.y * b.y};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator*(const vec<T, 2>& a, T1 b) {
-    return {a.x * b, a.y * b};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator*(T1 a, const vec<T, 2>& b) {
-    return {a * b.x, a * b.y};
-}
-template <typename T>
-inline vec<T, 2> operator/(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return {a.x / b.x, a.y / b.y};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator/(const vec<T, 2>& a, T1 b) {
-    return {a.x / b, a.y / b};
-}
-template <typename T, typename T1>
-inline vec<T, 2> operator/(T1 a, const vec<T, 2>& b) {
-    return {a / b.x, a / b.y};
-}
-
-// Vector operations.
-template <typename T>
-inline vec<T, 3> operator+(const vec<T, 3>& a) {
+template <typename T, int N>
+inline vec<T, N> operator+(const vec<T, N>& a) {
     return a;
 }
-template <typename T>
-inline vec<T, 3> operator-(const vec<T, 3>& a) {
-    return {-a.x, -a.y, -a.z};
+template <typename T, int N>
+inline vec<T, N> operator-(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return {-a.x};
+    } else if constexpr (N == 2) {
+        return {-a.x, -a.y};
+    } else if constexpr (N == 3) {
+        return {-a.x, -a.y, -a.z};
+    } else if constexpr (N == 4) {
+        return {-a.x, -a.y, -a.z, -a.w};
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 3> operator+(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z};
+template <typename T, int N>
+inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a.x + b.x};
+    } else if constexpr (N == 2) {
+        return {a.x + b.x, a.y + b.y};
+    } else if constexpr (N == 3) {
+        return {a.x + b.x, a.y + b.y, a.z + b.z};
+    } else if constexpr (N == 4) {
+        return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator+(const vec<T, 3>& a, T1 b) {
-    return {a.x + b, a.y + b, a.z + b};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator+(const vec<T, N>& a, T1 b) {
+    if constexpr (N == 1) {
+        return {a.x + b};
+    } else if constexpr (N == 2) {
+        return {a.x + b, a.y + b};
+    } else if constexpr (N == 3) {
+        return {a.x + b, a.y + b, a.z + b};
+    } else if constexpr (N == 4) {
+        return {a.x + b, a.y + b, a.z + b, a.w + b};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator+(T1 a, const vec<T, 3>& b) {
-    return {a + b.x, a + b.y, a + b.z};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator+(T1 a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a + b.x};
+    } else if constexpr (N == 2) {
+        return {a + b.x, a + b.y};
+    } else if constexpr (N == 3) {
+        return {a + b.x, a + b.y, a + b.z};
+    } else if constexpr (N == 4) {
+        return {a + b.x, a + b.y, a + b.z, a + b.w};
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 3> operator-(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return {a.x - b.x, a.y - b.y, a.z - b.z};
+template <typename T, int N>
+inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a.x - b.x};
+    } else if constexpr (N == 2) {
+        return {a.x - b.x, a.y - b.y};
+    } else if constexpr (N == 3) {
+        return {a.x - b.x, a.y - b.y, a.z - b.z};
+    } else if constexpr (N == 4) {
+        return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator-(const vec<T, 3>& a, T1 b) {
-    return {a.x - b, a.y - b, a.z - b};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator-(const vec<T, N>& a, T1 b) {
+    if constexpr (N == 1) {
+        return {a.x - b};
+    } else if constexpr (N == 2) {
+        return {a.x - b, a.y - b};
+    } else if constexpr (N == 3) {
+        return {a.x - b, a.y - b, a.z - b};
+    } else if constexpr (N == 4) {
+        return {a.x - b, a.y - b, a.z - b, a.w - b};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator-(T1 a, const vec<T, 3>& b) {
-    return {a - b.x, a - b.y, a - b.z};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator-(T1 a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a - b.x};
+    } else if constexpr (N == 2) {
+        return {a - b.x, a - b.y};
+    } else if constexpr (N == 3) {
+        return {a - b.x, a - b.y, a - b.z};
+    } else if constexpr (N == 4) {
+        return {a - b.x, a - b.y, a - b.z, a - b.w};
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 3> operator*(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return {a.x * b.x, a.y * b.y, a.z * b.z};
+template <typename T, int N>
+inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a.x * b.x};
+    } else if constexpr (N == 2) {
+        return {a.x * b.x, a.y * b.y};
+    } else if constexpr (N == 3) {
+        return {a.x * b.x, a.y * b.y, a.z * b.z};
+    } else if constexpr (N == 4) {
+        return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator*(const vec<T, 3>& a, T1 b) {
-    return {a.x * b, a.y * b, a.z * b};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
+    if constexpr (N == 1) {
+        return {a.x * b};
+    } else if constexpr (N == 2) {
+        return {a.x * b, a.y * b};
+    } else if constexpr (N == 3) {
+        return {a.x * b, a.y * b, a.z * b};
+    } else if constexpr (N == 4) {
+        return {a.x * b, a.y * b, a.z * b, a.w * b};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator*(T1 a, const vec<T, 3>& b) {
-    return {a * b.x, a * b.y, a * b.z};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a * b.x};
+    } else if constexpr (N == 2) {
+        return {a * b.x, a * b.y};
+    } else if constexpr (N == 3) {
+        return {a * b.x, a * b.y, a * b.z};
+    } else if constexpr (N == 4) {
+        return {a * b.x, a * b.y, a * b.z, a * b.w};
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 3> operator/(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return {a.x / b.x, a.y / b.y, a.z / b.z};
+template <typename T, int N>
+inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a.x / b.x};
+    } else if constexpr (N == 2) {
+        return {a.x / b.x, a.y / b.y};
+    } else if constexpr (N == 3) {
+        return {a.x / b.x, a.y / b.y, a.z / b.z};
+    } else if constexpr (N == 4) {
+        return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator/(const vec<T, 3>& a, T1 b) {
-    return {a.x / b, a.y / b, a.z / b};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
+    if constexpr (N == 1) {
+        return {a.x / b};
+    } else if constexpr (N == 2) {
+        return {a.x / b, a.y / b};
+    } else if constexpr (N == 3) {
+        return {a.x / b, a.y / b, a.z / b};
+    } else if constexpr (N == 4) {
+        return {a.x / b, a.y / b, a.z / b, a.w / b};
+    } else {
+    }
 }
-template <typename T, typename T1>
-inline vec<T, 3> operator/(T1 a, const vec<T, 3>& b) {
-    return {a / b.x, a / b.y, a / b.z};
-}
-
-// Vector operations.
-template <typename T>
-inline vec<T, 4> operator-(const vec<T, 4>& a) {
-    return {-a.x, -a.y, -a.z, -a.w};
-}
-template <typename T>
-inline vec<T, 4> operator+(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator+(const vec<T, 4>& a, T1 b) {
-    return {a.x + b, a.y + b, a.z + b, a.w + b};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator+(T1 a, const vec<T, 4>& b) {
-    return {a + b.x, a + b.y, a + b.z, a + b.w};
-}
-template <typename T>
-inline vec<T, 4> operator-(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator-(const vec<T, 4>& a, T1 b) {
-    return {a.x - b, a.y - b, a.z - b, a.w - b};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator-(T1 a, const vec<T, 4>& b) {
-    return {a - b.x, a - b.y, a - b.z, a - b.w};
-}
-template <typename T>
-inline vec<T, 4> operator*(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator*(const vec<T, 4>& a, T1 b) {
-    return {a.x * b, a.y * b, a.z * b, a.w * b};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator*(T1 a, const vec<T, 4>& b) {
-    return {a * b.x, a * b.y, a * b.z, a * b.w};
-}
-template <typename T>
-inline vec<T, 4> operator/(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator/(const vec<T, 4>& a, T1 b) {
-    return {a.x / b, a.y / b, a.z / b, a.w / b};
-}
-template <typename T, typename T1>
-inline vec<T, 4> operator/(T1 a, const vec<T, 4>& b) {
-    return {a / b.x, a / b.y, a / b.z, a / b.w};
+template <typename T, int N, typename T1>
+inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {a / b.x};
+    } else if constexpr (N == 2) {
+        return {a / b.x, a / b.y};
+    } else if constexpr (N == 3) {
+        return {a / b.x, a / b.y, a / b.z};
+    } else if constexpr (N == 4) {
+        return {a / b.x, a / b.y, a / b.z, a / b.w};
+    } else {
+    }
 }
 
 // Vector assignments
