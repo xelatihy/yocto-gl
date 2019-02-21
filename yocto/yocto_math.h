@@ -515,30 +515,27 @@ inline vec<T, N>& operator/=(vec<T, N>& a, T1 b) {
 }
 
 // Vector products and lengths.
-template <typename T>
-inline T dot(const vec<T, 1>& a, const vec<T, 1>& b) {
-    return a.x * b.x;
-}
-template <typename T>
-inline T dot(const vec<T, 2>& a, const vec<T, 2>& b) {
-    return a.x * b.x + a.y * b.y;
+template <typename T, int N>
+inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return a.x * b.x;
+    } else if constexpr (N == 2) {
+        return a.x * b.x + a.y * b.y;
+    } else if constexpr (N == 3) {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    } else if constexpr (N == 4) {
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
+    } else {
+    }
 }
 template <typename T>
 inline T cross(const vec<T, 2>& a, const vec<T, 2>& b) {
     return a.x * b.y - a.y * b.x;
 }
 template <typename T>
-inline T dot(const vec<T, 3>& a, const vec<T, 3>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-template <typename T>
 inline vec<T, 3> cross(const vec<T, 3>& a, const vec<T, 3>& b) {
     return {
         a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
-}
-template <typename T>
-inline T dot(const vec<T, 4>& a, const vec<T, 4>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
 }
 
 template <typename T, int N>
@@ -604,97 +601,101 @@ inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
 }
 
 // Max element and clamp.
-template <typename T, typename T1, typename T2>
-inline vec<T, 1> clamp(const vec<T, 1>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max)};
+template <typename T, int N, typename T1, typename T2>
+inline vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max) {
+    if constexpr (N == 1) {
+        return {clamp(x.x, min, max)};
+    } else if constexpr (N == 2) {
+        return {clamp(x.x, min, max), clamp(x.y, min, max)};
+    } else if constexpr (N == 3) {
+        return {
+            clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
+    } else if constexpr (N == 4) {
+        return {clamp(x.x, min, max), clamp(x.y, min, max),
+            clamp(x.z, min, max), clamp(x.w, min, max)};
+    } else {
+    }
 }
-template <typename T, typename T1, typename T2>
-inline vec<T, 2> clamp(const vec<T, 2>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max)};
+template <typename T, int N>
+inline vec<T, N> clamp01(const vec<T, N>& x) {
+    if constexpr (N == 1) {
+        return {clamp01(x.x)};
+    } else if constexpr (N == 2) {
+        return {clamp01(x.x), clamp01(x.y)};
+    } else if constexpr (N == 3) {
+        return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
+    } else if constexpr (N == 4) {
+        return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
+    } else {
+    }
 }
-template <typename T, typename T1, typename T2>
-inline vec<T, 3> clamp(const vec<T, 3>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max)};
+template <typename T, int N>
+inline T max(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return a.x;
+    } else if constexpr (N == 2) {
+        return max(a.x, a.y);
+    } else if constexpr (N == 3) {
+        return max(max(a.x, a.y), a.z);
+    } else if constexpr (N == 4) {
+        return max(max(max(a.x, a.y), a.z), a.w);
+    } else {
+    }
 }
-template <typename T, typename T1, typename T2>
-inline vec<T, 4> clamp(const vec<T, 4>& x, T1 min, T2 max) {
-    return {clamp(x.x, min, max), clamp(x.y, min, max), clamp(x.z, min, max),
-        clamp(x.w, min, max)};
+template <typename T, int N>
+inline T min(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return a.x;
+    } else if constexpr (N == 2) {
+        return min(a.x, a.y);
+    } else if constexpr (N == 3) {
+        return min(min(a.x, a.y), a.z);
+    } else if constexpr (N == 4) {
+        return min(min(min(a.x, a.y), a.z), a.w);
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 2> clamp01(const vec<T, 2>& x) {
-    return {clamp01(x.x), clamp01(x.y)};
-}
-template <typename T>
-inline vec<T, 3> clamp01(const vec<T, 3>& x) {
-    return {clamp01(x.x), clamp01(x.y), clamp01(x.z)};
-}
-template <typename T>
-inline vec<T, 4> clamp01(const vec<T, 4>& x) {
-    return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
-}
-template <typename T>
-inline T max(const vec<T, 2>& a) {
-    return max(a.x, a.y);
-}
-template <typename T>
-inline T max(const vec<T, 3>& a) {
-    return max(max(a.x, a.y), a.z);
-}
-template <typename T>
-inline T max(const vec<T, 4>& a) {
-    return max(max(max(a.x, a.y), a.z), a.w);
-}
-template <typename T>
-inline T min(const vec<T, 2>& a) {
-    return min(a.x, a.y);
-}
-template <typename T>
-inline T min(const vec<T, 3>& a) {
-    return min(min(a.x, a.y), a.z);
-}
-template <typename T>
-inline T min(const vec<T, 4>& a) {
-    return min(min(min(a.x, a.y), a.z), a.w);
-}
-template <typename T>
-inline T mean(const vec<T, 2>& a) {
-    return (a.x + a.y) / 2;
-}
-template <typename T>
-inline T mean(const vec<T, 3>& a) {
-    return (a.x + a.y + a.z) / 3;
-}
-template <typename T>
-inline T mean(const vec<T, 4>& a) {
-    return (a.x + a.y + a.z + a.w) / 4;
+template <typename T, int N>
+inline T mean(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return a.x;
+    } else if constexpr (N == 2) {
+        return (a.x + a.y) / 2;
+    } else if constexpr (N == 3) {
+        return (a.x + a.y + a.z) / 3;
+    } else if constexpr (N == 4) {
+        return (a.x + a.y + a.z + a.w) / 4;
+    } else {
+    }
 }
 
 // Apply a unary function to all vector elements
-template <typename T>
-inline vec<T, 2> apply(T (*func)(T), const vec<T, 2>& a) {
-    return {func(a.x), func(a.y)};
-}
-template <typename T>
-inline vec<T, 3> apply(T (*func)(T), const vec<T, 3>& a) {
-    return {func(a.x), func(a.y), func(a.z)};
-}
-template <typename T>
-inline vec<T, 4> apply(T (*func)(T), const vec<T, 4>& a) {
-    return {func(a.x), func(a.y), func(a.z), func(a.w)};
+template <typename T, int N>
+inline vec<T, N> apply(T (*func)(T), const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return {func(a.x)};
+    } else if constexpr (N == 2) {
+        return {func(a.x), func(a.y)};
+    } else if constexpr (N == 3) {
+        return {func(a.x), func(a.y), func(a.z)};
+    } else if constexpr (N == 4) {
+        return {func(a.x), func(a.y), func(a.z), func(a.w)};
+    } else {
+    }
 }
 // Apply a binary function to all vector elements
-template <typename T>
-inline vec<T, 2> apply(T (*func)(T, T), const vec<T, 2>& a, T b) {
-    return {func(a.x, b), func(a.y, b)};
-}
-template <typename T>
-inline vec<T, 3> apply(T (*func)(T, T), const vec<T, 3>& a, T b) {
-    return {func(a.x, b), func(a.y, b), func(a.z, b)};
-}
-template <typename T>
-inline vec<T, 4> apply(T (*func)(T, T), const vec<T, 4>& a, T b) {
-    return {func(a.x, b), func(a.y, b), func(a.z, b), func(a.w, b)};
+template <typename T, int N>
+inline vec<T, N> apply(T (*func)(T, T), const vec<T, N>& a, T b) {
+    if constexpr (N == 1) {
+        return {func(a.x, b)};
+    } else if constexpr (N == 2) {
+        return {func(a.x, b), func(a.y, b)};
+    } else if constexpr (N == 3) {
+        return {func(a.x, b), func(a.y, b), func(a.z, b)};
+    } else if constexpr (N == 4) {
+        return {func(a.x, b), func(a.y, b), func(a.z, b), func(a.w, b)};
+    } else {
+    }
 }
 
 // Functions applied to vector elements
@@ -707,17 +708,18 @@ inline vec<T, 2> pow(const vec<T, 2>& a, T1 b) {
     return apply(pow, a, b);
 };
 
-template <typename T>
-inline bool isfinite(const vec<T, 2>& a) {
-    return isfinite(a.x) && isfinite(a.x);
-};
-template <typename T>
-inline bool isfinite(const vec<T, 3>& a) {
-    return isfinite(a.x) && isfinite(a.x) && isfinite(a.z);
-};
-template <typename T>
-inline bool isfinite(const vec<T, 4>& a) {
-    return isfinite(a.x) && isfinite(a.x) && isfinite(a.z) && isfinite(a.w);
+template <typename T, int N>
+inline bool isfinite(const vec<T, N>& a) {
+    if constexpr (N == 1) {
+        return isfinite(a.x);
+    } else if constexpr (N == 2) {
+        return isfinite(a.x) && isfinite(a.y);
+    } else if constexpr (N == 3) {
+        return isfinite(a.x) && isfinite(a.y) && isfinite(a.z);
+    } else if constexpr (N == 4) {
+        return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
+    } else {
+    }
 };
 
 // Quaternion operatons represented as xi + yj + zk + w
