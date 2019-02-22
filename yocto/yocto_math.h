@@ -322,6 +322,9 @@ inline vec<T, N> operator-(const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return {-a.x, -a.y, -a.z, -a.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = -a[i];
+        return c;
     }
 }
 template <typename T, int N>
@@ -335,6 +338,9 @@ inline vec<T, N> operator+(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x + b.x, a.y + b.y, a.z + b.z, a.w + b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] + b[i];
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -348,6 +354,9 @@ inline vec<T, N> operator+(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x + b, a.y + b, a.z + b, a.w + b};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] + b;
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -361,6 +370,9 @@ inline vec<T, N> operator+(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a + b.x, a + b.y, a + b.z, a + b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a + b[i];
+        return c;
     }
 }
 template <typename T, int N>
@@ -374,6 +386,9 @@ inline vec<T, N> operator-(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] - b[i];
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -387,6 +402,9 @@ inline vec<T, N> operator-(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x - b, a.y - b, a.z - b, a.w - b};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] - b;
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -400,6 +418,9 @@ inline vec<T, N> operator-(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a - b.x, a - b.y, a - b.z, a - b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a - b[i];
+        return c;
     }
 }
 template <typename T, int N>
@@ -413,6 +434,9 @@ inline vec<T, N> operator*(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x * b.x, a.y * b.y, a.z * b.z, a.w * b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] * b[i];
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -426,6 +450,9 @@ inline vec<T, N> operator*(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x * b, a.y * b, a.z * b, a.w * b};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] * b;
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -439,6 +466,9 @@ inline vec<T, N> operator*(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a * b.x, a * b.y, a * b.z, a * b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a * b[i];
+        return c;
     }
 }
 template <typename T, int N>
@@ -452,6 +482,9 @@ inline vec<T, N> operator/(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a.x / b.x, a.y / b.y, a.z / b.z, a.w / b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] / b[i];
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -465,6 +498,9 @@ inline vec<T, N> operator/(const vec<T, N>& a, T1 b) {
     } else if constexpr (N == 4) {
         return {a.x / b, a.y / b, a.z / b, a.w / b};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a[i] / b;
+        return c;
     }
 }
 template <typename T, int N, typename T1>
@@ -478,6 +514,9 @@ inline vec<T, N> operator/(T1 a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {a / b.x, a / b.y, a / b.z, a / b.w};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = a / b[i];
+        return c;
     }
 }
 
@@ -527,6 +566,9 @@ inline T dot(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w;
     } else {
+        auto c = T{0};
+        for(auto i = 0; i < N; i ++) c += a[i] * b[i];
+        return c;
     }
 }
 template <typename T>
@@ -613,6 +655,9 @@ inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = max(a[i], b[i]);
+        return c;
     }
 }
 template <typename T, int N>
@@ -626,6 +671,9 @@ inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
     } else if constexpr (N == 4) {
         return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = min(a[i], b[i]);
+        return c;
     }
 }
 template <typename T, int N, typename T1, typename T2>
@@ -641,6 +689,9 @@ inline vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max) {
         return {clamp(x.x, min, max), clamp(x.y, min, max),
             clamp(x.z, min, max), clamp(x.w, min, max)};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = clamp(x[i], min, max);
+        return c;
     }
 }
 template <typename T, int N>
@@ -654,6 +705,9 @@ inline vec<T, N> clamp01(const vec<T, N>& x) {
     } else if constexpr (N == 4) {
         return {clamp01(x.x), clamp01(x.y), clamp01(x.z), clamp01(x.w)};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = clamp01(x[i]);
+        return c;
     }
 }
 template <typename T, int N>
@@ -667,6 +721,9 @@ inline T max(const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return max(max(max(a.x, a.y), a.z), a.w);
     } else {
+        auto m = a[0];
+        for(auto i = 1; i < N; i ++) m = max(a[i], m);
+        return m;
     }
 }
 template <typename T, int N>
@@ -680,6 +737,9 @@ inline T min(const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return min(min(min(a.x, a.y), a.z), a.w);
     } else {
+        auto m = a[0];
+        for(auto i = 1; i < N; i ++) m = min(a[i], m);
+        return m;
     }
 }
 template <typename T, int N>
@@ -693,6 +753,9 @@ inline T mean(const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return (a.x + a.y + a.z + a.w) / 4;
     } else {
+        auto m = a[0];
+        for(auto i = 1; i < N; i ++) m += a[i];
+        return m / N;
     }
 }
 template <typename T, int N>
@@ -724,6 +787,9 @@ inline vec<T, N> apply(T (*func)(T), const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return {func(a.x), func(a.y), func(a.z), func(a.w)};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = func(a[i]);
+        return c;
     }
 }
 // Apply a binary function to all vector elements
@@ -738,6 +804,9 @@ inline vec<T, N> apply(T (*func)(T, T), const vec<T, N>& a, T b) {
     } else if constexpr (N == 4) {
         return {func(a.x, b), func(a.y, b), func(a.z, b), func(a.w, b)};
     } else {
+        auto c = vec<T, N>{};
+        for(auto i = 0; i < N; i ++) c[i] = func(a[i], b);
+        return c;
     }
 }
 
@@ -762,6 +831,7 @@ inline bool isfinite(const vec<T, N>& a) {
     } else if constexpr (N == 4) {
         return isfinite(a.x) && isfinite(a.y) && isfinite(a.z) && isfinite(a.w);
     } else {
+        throw invalid_argument("not implemented");
     }
 };
 
