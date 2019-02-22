@@ -125,8 +125,8 @@ using std::tuple;
 using std::unordered_map;
 using std::vector;
 using namespace std::string_literals;
-using std::numeric_limits;
 using std::invalid_argument;
+using std::numeric_limits;
 
 }  // namespace yocto
 
@@ -194,7 +194,7 @@ struct vec<T, 1> {
     T x = 0;
 
     vec() : x{0} {}
-    explicit vec(T x) : x{x} {}
+    vec(T x) : x{x} {}
 
     T&       operator[](int i) { return (&x)[i]; }
     const T& operator[](int i) const { return (&x)[i]; }
@@ -602,6 +602,32 @@ inline vec<T, 3> refract(const vec<T, 3>& w, const vec<T, 3>& n, T1 eta) {
 }
 
 // Max element and clamp.
+template <typename T, int N>
+inline vec<T, N> max(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {max(a.x, b.x)};
+    } else if constexpr (N == 2) {
+        return {max(a.x, b.x), max(a.y, b.y)};
+    } else if constexpr (N == 3) {
+        return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z)};
+    } else if constexpr (N == 4) {
+        return {max(a.x, b.x), max(a.y, b.y), max(a.z, b.z), max(a.w, b.w)};
+    } else {
+    }
+}
+template <typename T, int N>
+inline vec<T, N> min(const vec<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {min(a.x, b.x)};
+    } else if constexpr (N == 2) {
+        return {min(a.x, b.x), min(a.y, b.y)};
+    } else if constexpr (N == 3) {
+        return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z)};
+    } else if constexpr (N == 4) {
+        return {min(a.x, b.x), min(a.y, b.y), min(a.z, b.z), min(a.w, b.w)};
+    } else {
+    }
+}
 template <typename T, int N, typename T1, typename T2>
 inline vec<T, N> clamp(const vec<T, N>& x, T1 min, T2 max) {
     if constexpr (N == 1) {
@@ -669,6 +695,22 @@ inline T mean(const vec<T, N>& a) {
     } else {
     }
 }
+template <typename T, int N>
+inline int max_element(const vec<T, N>& a) {
+    auto pos = 0;
+    for (auto i = 1; i < N; i++) {
+        if (a[i] > a[pos]) pos = i;
+    }
+    return pos;
+}
+template <typename T, int N>
+inline int min_element(const vec<T, N>& a) {
+    auto pos = 0;
+    for (auto i = 1; i < N; i++) {
+        if (a[i] < a[pos]) pos = i;
+    }
+    return pos;
+}
 
 // Apply a unary function to all vector elements
 template <typename T, int N>
@@ -705,7 +747,7 @@ inline vec<T, N> exp(const vec<T, N>& a) {
     return apply(exp, a);
 };
 template <typename T, int N, typename T1>
-inline vec<T, 2> pow(const vec<T, 2>& a, T1 b) {
+inline vec<T, N> pow(const vec<T, N>& a, T1 b) {
     return apply(pow, a, b);
 };
 
@@ -1313,62 +1355,21 @@ inline bool operator!=(const bbox<T, N>& a, const bbox<T, N>& b) {
 }
 
 // Bounding box expansions with points and other boxes.
-template <typename T, typename T1>
-inline bbox<T, 1>& operator+=(bbox<T, 1>& a, T1 b) {
-    a.min.x = min(a.min.x, b);
-    a.max.x = max(a.max.x, b);
-    return a;
+template <typename T, int N>
+inline bbox<T, N> operator+(const bbox<T, N>& a, const vec<T, N>& b) {
+    return {min(a.min, b), max(a.max, b)};
 }
-template <typename T>
-inline bbox<T, 1>& operator+=(bbox<T, 1>& a, const bbox<T, 1>& b) {
-    a.min = min(a.min, b.min);
-    a.max = max(a.max, b.max);
-    return a;
+template <typename T, int N>
+inline bbox<T, N> operator+(const bbox<T, N>& a, const bbox<T, N>& b) {
+    return {min(a.min, b.min), max(a.max, b.max)};
 }
-// Bounding box expansions with points and other boxes.
-template <typename T>
-inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const vec<T, 2>& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y)};
-    return a;
+template <typename T, int N>
+inline bbox<T, N>& operator+=(bbox<T, N>& a, const vec<T, N>& b) {
+    return a = a + b;
 }
-template <typename T>
-inline bbox<T, 2>& operator+=(bbox<T, 2>& a, const bbox<T, 2>& b) {
-    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y)};
-    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y)};
-    return a;
-}
-// Bounding box expansions with points and other boxes.
-template <typename T>
-inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const vec<T, 3>& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z)};
-    return a;
-}
-template <typename T>
-inline bbox<T, 3>& operator+=(bbox<T, 3>& a, const bbox<T, 3>& b) {
-    a.min = {
-        min(a.min.x, b.min.x), min(a.min.y, b.min.y), min(a.min.z, b.min.z)};
-    a.max = {
-        max(a.max.x, b.max.x), max(a.max.y, b.max.y), max(a.max.z, b.max.z)};
-    return a;
-}
-// Bounding box expansions with points and other boxes.
-template <typename T>
-inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const vec<T, 4>& b) {
-    a.min = {min(a.min.x, b.x), min(a.min.y, b.y), min(a.min.z, b.z),
-        min(a.min.w, b.w)};
-    a.max = {max(a.max.x, b.x), max(a.max.y, b.y), max(a.max.z, b.z),
-        max(a.max.w, b.w)};
-    return a;
-}
-template <typename T>
-inline bbox<T, 4>& operator+=(bbox<T, 4>& a, const bbox<T, 4>& b) {
-    a.min = {min(a.min.x, b.min.x), min(a.min.y, b.min.y),
-        min(a.min.z, b.min.z), min(a.min.w, b.min.w)};
-    a.max = {max(a.max.x, b.max.x), max(a.max.y, b.max.y),
-        max(a.max.z, b.max.z), max(a.max.w, b.max.w)};
-    return a;
+template <typename T, int N>
+inline bbox<T, N>& operator+=(bbox<T, N>& a, const bbox<T, N>& b) {
+    return a = a + b;
 }
 
 // Create bounding boxes from arrays
@@ -1478,69 +1479,74 @@ inline ray<T, N> make_segment(
 namespace yocto {
 
 // Transforms points, vectors and directions by matrices.
-template <typename T>
-inline vec<T, 2> transform_point(const mat<T, 3, 3>& a, const vec<T, 2>& b) {
-    auto tvb = a * vec<T, 3>{b.x, b.y, 1};
-    return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+template <typename T, int N>
+inline vec<T, N> transform_point(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        throw invalid_argument("not well defined");
+    } else if constexpr (N == 2) {
+        auto tvb = a * vec<T, 3>{b.x, b.y, 1};
+        return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+    } else if constexpr (N == 3) {
+        auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 1};
+        return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 2> transform_vector(const mat<T, 3, 3>& a, const vec<T, 2>& b) {
-    auto tvb = a * vec<T, 3>{b.x, b.y, 0};
-    return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+template <typename T, int N>
+inline vec<T, N> transform_vector(
+    const mat<T, N + 1, N + 1>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        throw invalid_argument("not well defined");
+    } else if constexpr (N == 2) {
+        auto tvb = a * vec<T, 3>{b.x, b.y, 0};
+        return vec<T, 2>{tvb.x, tvb.y} / tvb.z;
+    } else if constexpr (N == 3) {
+        auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 0};
+        return vec<T, 3>{tvb.x, tvb.y, tvb.z};
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 2> transform_direction(
-    const mat<T, 3, 3>& a, const vec<T, 2>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_direction(
+    const mat<T, N+1, N+1>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
-template <typename T>
-inline vec<T, 3> transform_point(const mat<T, 4, 4>& a, const vec<T, 3>& b) {
-    auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 1};
-    return vec<T, 3>{tvb.x, tvb.y, tvb.z} / tvb.w;
-}
-template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 4, 4>& a, const vec<T, 3>& b) {
-    auto tvb = a * vec<T, 4>{b.x, b.y, b.z, 0};
-    return vec<T, 3>{tvb.x, tvb.y, tvb.z};
-}
-template <typename T>
-inline vec<T, 3> transform_direction(
-    const mat<T, 4, 4>& a, const vec<T, 3>& b) {
-    return normalize(transform_vector(a, b));
-}
-template <typename T>
-inline vec<T, 3> transform_vector(const mat<T, 3, 3>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_vector(const mat<T, N, N>& a, const vec<T, N>& b) {
     return a * b;
 }
-template <typename T>
-inline vec<T, 3> transform_direction(
-    const mat<T, 3, 3>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_direction(
+    const mat<T, N, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
 
 // Transforms points, vectors and directions by frames.
-template <typename T>
-inline vec<T, 2> transform_point(const frame<T, 2>& a, const vec<T, 2>& b) {
-    return a.x * b.x + a.y * b.y + a.o;
+template <typename T, int N>
+inline vec<T, N> transform_point(const frame<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return a.x * b.x + a.o;
+    } else if constexpr (N == 2) {
+        return a.x * b.x + a.y * b.y + a.o;
+    } else if constexpr (N == 3) {
+        return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 2> transform_vector(const frame<T, 2>& a, const vec<T, 2>& b) {
-    return a.x * b.x + a.y * b.y;
+template <typename T, int N>
+inline vec<T, N> transform_vector(const frame<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return a.x * b.x;
+    } else if constexpr (N == 2) {
+        return a.x * b.x + a.y * b.y;
+    } else if constexpr (N == 3) {
+        return a.x * b.x + a.y * b.y + a.z * b.z;
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 2> transform_direction(const frame<T, 2>& a, const vec<T, 2>& b) {
-    return normalize(transform_vector(a, b));
-}
-template <typename T>
-inline vec<T, 3> transform_point(const frame<T, 3>& a, const vec<T, 3>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z + a.o;
-}
-template <typename T>
-inline vec<T, 3> transform_vector(const frame<T, 3>& a, const vec<T, 3>& b) {
-    return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-template <typename T>
-inline vec<T, 3> transform_direction(const frame<T, 3>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_direction(const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector(a, b));
 }
 
@@ -1550,7 +1556,8 @@ inline ray<T, N> transform_ray(const frame<T, N>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T, int N>
-inline ray<T, 3> transform_ray(const mat<T, 4, 4>& a, const ray<T, 3>& b) {
+inline ray<T, N> transform_ray(
+    const mat<T, N + 1, N + 1>& a, const ray<T, N>& b) {
     return {transform_point(a, b.o), transform_vector(a, b.d), b.tmin, b.tmax};
 }
 template <typename T>
@@ -1583,34 +1590,33 @@ inline bbox<T, 3> transform_bbox(const mat<T, 4, 4>& a, const bbox<T, 3>& b) {
 }
 
 // Inverse transforms by frames, assuming they are rigid transforms.
-template <typename T>
-inline vec<T, 2> transform_point_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
-    return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
+template <typename T, int N>
+inline vec<T, N> transform_point_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {dot(b - a.o, a.x)};
+    } else if constexpr (N == 2) {
+        return {dot(b - a.o, a.x), dot(b - a.o, a.y)};
+    } else if constexpr (N == 3) {
+        return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 2> transform_vector_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
-    return {dot(b, a.x), dot(b, a.y)};
+template <typename T, int N>
+inline vec<T, N> transform_vector_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
+    if constexpr (N == 1) {
+        return {dot(b, a.x)};
+    } else if constexpr (N == 2) {
+        return {dot(b, a.x), dot(b, a.y)};
+    } else if constexpr (N == 3) {
+        return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
+    } else {
+    }
 }
-template <typename T>
-inline vec<T, 2> transform_direction_inverse(
-    const frame<T, 2>& a, const vec<T, 2>& b) {
-    return normalize(transform_vector_inverse(a, b));
-}
-template <typename T>
-inline vec<T, 3> transform_point_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
-    return {dot(b - a.o, a.x), dot(b - a.o, a.y), dot(b - a.o, a.z)};
-}
-template <typename T>
-inline vec<T, 3> transform_vector_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
-    return {dot(b, a.x), dot(b, a.y), dot(b, a.z)};
-}
-template <typename T>
-inline vec<T, 3> transform_direction_inverse(
-    const frame<T, 3>& a, const vec<T, 3>& b) {
+template <typename T, int N>
+inline vec<T, N> transform_direction_inverse(
+    const frame<T, N>& a, const vec<T, N>& b) {
     return normalize(transform_vector_inverse(a, b));
 }
 template <typename T, int N>
