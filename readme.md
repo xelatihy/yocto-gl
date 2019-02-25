@@ -96,8 +96,8 @@ You can build the example applications using CMake with
 
 ## Compilation
 
-This library requires a C++14 compiler and is know to compiled on 
-OsX (Xcode >= 8), Windows (MSVC 2017) and Linux (gcc >= 6, clang >= 4).
+This library requires a C++17 compiler and is know to compiled on 
+OsX (Xcode >= 10), Windows (MSVC 2017) and Linux (gcc >= 7, clang >= 4).
 
 For image loading and saving, Yocto/GL depends on `stb_image.h`,
 `stb_image_write.h`, `stb_image_resize.h` and `tinyexr.h`.
