@@ -1150,12 +1150,12 @@ struct frame<T, 2> {
     vec<T, 2> y = {0, 1};
     vec<T, 2> o = {0, 0};
 
-    frame() : x{}, y{}, o{} {}
-    frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
+    constexpr frame() : x{}, y{}, o{} {}
+    constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
         : x{x}, y{y}, o{o} {}
 
-    vec<T, 2>&       operator[](int i) { return (&x)[i]; }
-    const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Rigid frames stored as a column-major affine transform matrix.
@@ -1166,13 +1166,13 @@ struct frame<T, 3> {
     vec<T, 3> z = {0, 0, 1};
     vec<T, 3> o = {0, 0, 0};
 
-    frame() : x{}, y{}, z{}, o{} {}
-    frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
+    constexpr frame() : x{}, y{}, z{}, o{} {}
+    constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
         const vec<T, 3>& o)
         : x{x}, y{y}, z{z}, o{o} {}
 
-    vec<T, 3>&       operator[](int i) { return (&x)[i]; }
-    const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
+    constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
+    constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
 };
 
 // Typedefs
@@ -1180,13 +1180,13 @@ using frame2f = frame<float, 2>;
 using frame3f = frame<float, 3>;
 
 // Indentity frames.
-const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
-const auto identity_frame3f = frame3f{
+constexpr const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
+constexpr const auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
 
 // Frame construction from axis.
 template <typename T>
-inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
+constexpr inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
     // https://graphics.pixar.com/library/OrthonormalB/paper.pdf
     auto z    = normalize(v);
     auto sign = copysignf(1.0f, z.z);
@@ -1197,7 +1197,7 @@ inline frame<T, 3> make_frame_fromz(const vec<T, 3>& o, const vec<T, 3>& v) {
     return {x, y, z, o};
 }
 template <typename T>
-inline frame<T, 3> make_frame_fromzx(
+constexpr inline frame<T, 3> make_frame_fromzx(
     const vec<T, 3>& o, const vec<T, 3>& z_, const vec<T, 3>& x_) {
     auto z = normalize(z_);
     auto x = orthonormalize(x_, z);
@@ -1207,7 +1207,7 @@ inline frame<T, 3> make_frame_fromzx(
 
 // Frame to matrix conversion.
 template <typename T>
-inline mat<T, 4, 4> frame_to_mat(const frame<T, 3>& a) {
+constexpr inline mat<T, 4, 4> frame_to_mat(const frame<T, 3>& a) {
     return {
         {a.x.x, a.x.y, a.x.z, 0},
         {a.y.x, a.y.y, a.y.z, 0},
@@ -1216,7 +1216,7 @@ inline mat<T, 4, 4> frame_to_mat(const frame<T, 3>& a) {
     };
 }
 template <typename T>
-inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
+constexpr inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
     return {
         {a.x.x, a.x.y, a.x.z},
         {a.y.x, a.y.y, a.y.z},
@@ -1226,48 +1226,51 @@ inline frame<T, 3> mat_to_frame(const mat<T, 4, 4>& a) {
 }
 
 // Frame comparisons.
-template <typename T>
-inline bool operator==(const frame<T, 2>& a, const frame<T, 2>& b) {
-    return a.x == b.x && a.y == b.y && a.o == b.o;
+template <typename T, int N>
+constexpr inline bool operator==(const frame<T, N>& a, const frame<T, N>& b) {
+    if constexpr(N == 2) {
+        return a.x == b.x && a.y == b.y && a.o == b.o;
+    } else if constexpr(N == 3) {
+        return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
+    } else {
+        for(auto i = 0; i < N; i ++) if(a[i] != b[i]) return false;
+        return a[N] == b[N];
+    }
 }
-template <typename T>
-inline bool operator!=(const frame<T, 2>& a, const frame<T, 2>& b) {
-    return !(a == b);
-}
-template <typename T>
-inline bool operator==(const frame<T, 3>& a, const frame<T, 3>& b) {
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.o == b.o;
-}
-template <typename T>
-inline bool operator!=(const frame<T, 3>& a, const frame<T, 3>& b) {
+template <typename T, int N>
+constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
     return !(a == b);
 }
 
 // Frame composition, equivalent to affine matrix product.
-template <typename T>
-inline frame<T, 2> operator*(const frame<T, 2>& a, const frame<T, 2>& b) {
-    auto rot = mat<T, 2, 2>{a.x, a.y} * mat<T, 2, 2>{b.x, b.y};
-    auto pos = mat<T, 2, 2>{a.x, a.y} * b.o + a.o;
-    return {rot.x, rot.y, pos};
-}
-template <typename T>
-inline frame<T, 3> operator*(const frame<T, 3>& a, const frame<T, 3>& b) {
-    auto rot = mat<T, 3, 3>{a.x, a.y, a.z} * mat<T, 3, 3>{b.x, b.y, b.z};
-    auto pos = mat<T, 3, 3>{a.x, a.y, a.z} * b.o + a.o;
-    return {rot.x, rot.y, rot.z, pos};
+template <typename T, int N>
+constexpr inline frame<T, N> operator*(const frame<T, N>& a, const frame<T, N>& b) {
+    if constexpr(N == 2) {
+        auto rot = mat<T, 2, 2>{a.x, a.y} * mat<T, 2, 2>{b.x, b.y};
+        auto pos = mat<T, 2, 2>{a.x, a.y} * b.o + a.o;
+        return {rot.x, rot.y, pos};
+    } else if constexpr (N == 3) {
+        auto rot = mat<T, 3, 3>{a.x, a.y, a.z} * mat<T, 3, 3>{b.x, b.y, b.z};
+        auto pos = mat<T, 3, 3>{a.x, a.y, a.z} * b.o + a.o;
+        return {rot.x, rot.y, rot.z, pos};
+    } else {
+        throw invalid_argument("not implemented");
+    }
 }
 // Frame inverse, equivalent to rigid affine inverse.
-template <typename T>
-inline frame<T, 2> inverse(const frame<T, 2>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y})
-                           : inverse(mat<T, 2, 2>{a.x, a.y});
-    return {minv.x, minv.y, -(minv * a.o)};
-}
-template <typename T>
-inline frame<T, 3> inverse(const frame<T, 3>& a, bool is_rigid = true) {
-    auto minv = (is_rigid) ? transpose(mat<T, 3, 3>{a.x, a.y, a.z})
-                           : inverse(mat<T, 3, 3>{a.x, a.y, a.z});
-    return {minv.x, minv.y, minv.z, -(minv * a.o)};
+template <typename T, int N>
+constexpr inline frame<T, N> inverse(const frame<T, N>& a, bool is_rigid = true) {
+    if constexpr(N == 2) {
+        auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y})
+                            : inverse(mat<T, 2, 2>{a.x, a.y});
+        return {minv.x, minv.y, -(minv * a.o)};
+    } else if constexpr(N == 3) {
+        auto minv = (is_rigid) ? transpose(mat<T, 3, 3>{a.x, a.y, a.z})
+                            : inverse(mat<T, 3, 3>{a.x, a.y, a.z});
+        return {minv.x, minv.y, minv.z, -(minv * a.o)};
+    } else {
+        throw invalid_argument("not implemented");
+    }
 }
 
 }  // namespace yocto
