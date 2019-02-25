@@ -109,8 +109,8 @@ struct rng_state {
     uint64_t state = 0x853c49e6748fea9bULL;
     uint64_t inc   = 0xda3e39cb94b95bdbULL;
 
-    rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} { }
-    rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} { }
+    rng_state() : state{0x853c49e6748fea9bULL}, inc{0xda3e39cb94b95bdbULL} {}
+    rng_state(uint64_t state, uint64_t inc) : state{state}, inc{inc} {}
 };
 
 // Next random number.
