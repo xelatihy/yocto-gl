@@ -256,7 +256,7 @@ using vec4b = vec<byte, 4>;
 // Zero vector constants.
 constexpr const auto zero1f = vec1f{0};
 constexpr const auto zero2f = vec2f{0, 0};
-const auto           zero3f = vec3f{0, 0, 0};
+constexpr const auto zero3f = vec3f{0, 0, 0};
 constexpr const auto zero4f = vec4f{0, 0, 0, 0};
 constexpr const auto zero1i = vec1i{0};
 constexpr const auto zero2i = vec2i{0, 0};
