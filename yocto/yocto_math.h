@@ -1161,6 +1161,8 @@ struct frame<T, 2> {
     constexpr frame() : x{}, y{}, o{} {}
     constexpr frame(const vec<T, 2>& x, const vec<T, 2>& y, const vec<T, 2>& o)
         : x{x}, y{y}, o{o} {}
+    constexpr frame(const mat<T, 2, 2>& m, const vec<T, 2>& t)
+        : x{m.x}, y{m.y}, o{t} {}
 
     constexpr vec<T, 2>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 2>& operator[](int i) const { return (&x)[i]; }
@@ -1178,6 +1180,8 @@ struct frame<T, 3> {
     constexpr frame(const vec<T, 3>& x, const vec<T, 3>& y, const vec<T, 3>& z,
         const vec<T, 3>& o)
         : x{x}, y{y}, z{z}, o{o} {}
+    constexpr frame(const mat<T, 3, 3>& m, const vec<T, 3>& t)
+        : x{m.x}, y{m.y}, z{m.z}, o{t} {}
 
     constexpr vec<T, 3>&       operator[](int i) { return (&x)[i]; }
     constexpr const vec<T, 3>& operator[](int i) const { return (&x)[i]; }
@@ -1191,6 +1195,24 @@ using frame3f = frame<float, 3>;
 constexpr const auto identity_frame2f = frame2f{{1, 0}, {0, 1}, {0, 0}};
 constexpr const auto identity_frame3f = frame3f{
     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {0, 0, 0}};
+
+// Access rotation and translation.
+template <typename T, int N>
+constexpr inline mat<T, N, N>& frame_rotation(frame<T, N>& f) {
+    return (mat<T, N, N>&)f;
+}
+template <typename T, int N>
+constexpr inline const mat<T, N, N>& frame_rotation(const frame<T, N>& f) {
+    return (mat<T, N, N>&)f;
+}
+template <typename T, int N>
+constexpr inline vec<T, N>& frame_translation(frame<T, N>& f) {
+    return f.o;
+}
+template <typename T, int N>
+constexpr inline const vec<T, N>& frame_translation(const frame<T, N>& f) {
+    return f.o;
+}
 
 // Frame construction from axis.
 template <typename T>
@@ -1256,33 +1278,16 @@ constexpr inline bool operator!=(const frame<T, N>& a, const frame<T, N>& b) {
 template <typename T, int N>
 constexpr inline frame<T, N> operator*(
     const frame<T, N>& a, const frame<T, N>& b) {
-    if constexpr (N == 2) {
-        auto rot = mat<T, 2, 2>{a.x, a.y} * mat<T, 2, 2>{b.x, b.y};
-        auto pos = mat<T, 2, 2>{a.x, a.y} * b.o + a.o;
-        return {rot.x, rot.y, pos};
-    } else if constexpr (N == 3) {
-        auto rot = mat<T, 3, 3>{a.x, a.y, a.z} * mat<T, 3, 3>{b.x, b.y, b.z};
-        auto pos = mat<T, 3, 3>{a.x, a.y, a.z} * b.o + a.o;
-        return {rot.x, rot.y, rot.z, pos};
-    } else {
-        throw invalid_argument("not implemented");
-    }
+    return {
+        frame_rotation(a) * frame_rotation(b), frame_rotation(a) * b.o + a.o};
 }
 // Frame inverse, equivalent to rigid affine inverse.
 template <typename T, int N>
 constexpr inline frame<T, N> inverse(
     const frame<T, N>& a, bool is_rigid = true) {
-    if constexpr (N == 2) {
-        auto minv = (is_rigid) ? transpose(mat<T, 2, 2>{a.x, a.y})
-                               : inverse(mat<T, 2, 2>{a.x, a.y});
-        return {minv.x, minv.y, -(minv * a.o)};
-    } else if constexpr (N == 3) {
-        auto minv = (is_rigid) ? transpose(mat<T, 3, 3>{a.x, a.y, a.z})
-                               : inverse(mat<T, 3, 3>{a.x, a.y, a.z});
-        return {minv.x, minv.y, minv.z, -(minv * a.o)};
-    } else {
-        throw invalid_argument("not implemented");
-    }
+    auto minv = (is_rigid) ? transpose(frame_rotation(a))
+                           : inverse(frame_rotation(a));
+    return {minv, -(minv * a.o)};
 }
 
 }  // namespace yocto
