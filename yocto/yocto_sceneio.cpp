@@ -61,6 +61,8 @@
 #include "yocto_shape.h"
 #include "yocto_utils.h"
 
+#include "ext/happly.h"
+
 #include <array>
 #include <climits>
 #include <cstdlib>
@@ -4561,10 +4563,16 @@ void load_ply_mesh(const string& filename, vector<int>& points,
 
     try {
         // load ply
-        auto ply = ply_data{};
-        load_ply(filename, ply);
+        happly::PLYData ply(filename);
 
         // copy vertex data
+        if(ply.hasElement("vertex")) {
+            auto& vertex = ply.getElement("vertex");
+            if(vertex)
+        }
+        if(ply.hasElement("faces")) {
+
+        }
         for (auto& elem : ply.elements) {
             if (elem.name != "vertex") continue;
             auto count = elem.count;
