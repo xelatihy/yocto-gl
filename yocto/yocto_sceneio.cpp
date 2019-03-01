@@ -61,6 +61,8 @@
 #include "yocto_shape.h"
 #include "yocto_utils.h"
 
+#include "ext/happly.h"
+
 #include <array>
 #include <climits>
 #include <cstdlib>
@@ -4553,49 +4555,75 @@ void save_mesh(const string& filename, const vector<int>& points,
 void load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
+    vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius,
     bool force_triangles, bool flip_texcoord) {
     // clear
     reset_mesh_data(points, lines, triangles, quads, positions, normals,
-        texturecoords, color, radius);
+        texturecoords, colors, radius);
 
     try {
         // load ply
-        auto ply = ply_data{};
-        load_ply(filename, ply);
+        happly::PLYData ply(filename);
 
         // copy vertex data
-        for (auto& elem : ply.elements) {
-            if (elem.name != "vertex") continue;
-            auto count = elem.count;
-            for (auto& prop : elem.properties) {
-                auto vals        = prop.scalars.data();
-                auto copy_floats = [vals, count](auto& vert, const auto& def,
-                                       int stride, int offset) {
-                    if (vert.size() != count) vert.resize(count, def);
-                    auto dst = (float*)vert.data();
-                    for (auto i = 0; i < count; i++)
-                        dst[i * stride + offset] = vals[i];
-                };
-                if (prop.name == "x") copy_floats(positions, zero3f, 3, 0);
-                if (prop.name == "y") copy_floats(positions, zero3f, 3, 1);
-                if (prop.name == "z") copy_floats(positions, zero3f, 3, 2);
-                if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
-                if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
-                if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
-                if (prop.name == "u" || prop.name == "s")
-                    copy_floats(texturecoords, zero2f, 2, 0);
-                if (prop.name == "v" || prop.name == "t")
-                    copy_floats(texturecoords, zero2f, 2, 1);
-                if (prop.name == "red")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
-                if (prop.name == "green")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);
-                if (prop.name == "blue")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 2);
-                if (prop.name == "alpha")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 3);
-                if (prop.name == "radius") copy_floats(radius, 0.0f, 1, 0);
+        if (ply.hasElement("vertex")) {
+            auto& vertex = ply.getElement("vertex");
+            if (vertex.hasProperty("x") && vertex.hasProperty("y") &&
+                vertex.hasProperty("z")) {
+                auto x = vertex.getProperty<float>("x");
+                auto y = vertex.getProperty<float>("y");
+                auto z = vertex.getProperty<float>("z");
+                positions.resize(x.size());
+                for (auto i = 0; i < positions.size(); i++) {
+                    positions[i] = {x[i], y[i], z[i]};
+                }
+            } else {
+                throw io_error("vertex positions not present");
+            }
+            if (vertex.hasProperty("nx") && vertex.hasProperty("ny") &&
+                vertex.hasProperty("nz")) {
+                auto x = vertex.getProperty<float>("nx");
+                auto y = vertex.getProperty<float>("ny");
+                auto z = vertex.getProperty<float>("nz");
+                normals.resize(x.size());
+                for (auto i = 0; i < normals.size(); i++) {
+                    normals[i] = {x[i], y[i], z[i]};
+                }
+            }
+            if (vertex.hasProperty("u") && vertex.hasProperty("v")) {
+                auto x = vertex.getProperty<float>("u");
+                auto y = vertex.getProperty<float>("v");
+                texturecoords.resize(x.size());
+                for (auto i = 0; i < texturecoords.size(); i++) {
+                    texturecoords[i] = {x[i], y[i]};
+                }
+            }
+            if (vertex.hasProperty("s") && vertex.hasProperty("t")) {
+                auto x = vertex.getProperty<float>("s");
+                auto y = vertex.getProperty<float>("t");
+                texturecoords.resize(x.size());
+                for (auto i = 0; i < texturecoords.size(); i++) {
+                    texturecoords[i] = {x[i], y[i]};
+                }
+            }
+            if (vertex.hasProperty("red") && vertex.hasProperty("green") &&
+                vertex.hasProperty("blue")) {
+                auto x = vertex.getProperty<float>("red");
+                auto y = vertex.getProperty<float>("green");
+                auto z = vertex.getProperty<float>("blue");
+                colors.resize(x.size());
+                for (auto i = 0; i < colors.size(); i++) {
+                    colors[i] = {x[i], y[i], z[i], 1};
+                }
+                if (vertex.hasProperty("alpha")) {
+                    auto w = vertex.getProperty<float>("alpha");
+                    for (auto i = 0; i < colors.size(); i++) {
+                        colors[i].w = w[i];
+                    }
+                }
+            }
+            if (vertex.hasProperty("radius")) {
+                radius = vertex.getProperty<float>("radius");
             }
         }
 
@@ -4605,40 +4633,30 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         }
 
         // copy face data
-        for (auto& elem : ply.elements) {
-            if (elem.name != "face") continue;
-            auto count = elem.count;
-            for (auto& prop : elem.properties) {
-                if (prop.name == "vertex_indices") {
-                    for (auto fid = 0; fid < count; fid++) {
-                        auto& list = prop.lists[fid];
-                        auto  num  = (int)prop.scalars[fid];
-                        if (num == 4) {
-                            quads.push_back(
-                                {list[0], list[1], list[2], list[3]});
-                        } else {
-                            for (auto i = 2; i < num; i++)
-                                triangles.push_back(
-                                    {list[0], list[i - 1], list[i]});
-                        }
-                    }
+        if (ply.hasElement("face")) {
+            auto& elements = ply.getElement("face");
+            if (!elements.hasProperty("vertex_indices"))
+                throw io_error("bad ply faces");
+            auto indices = elements.getListProperty<int>("vertex_indices");
+            for (auto& face : indices) {
+                if (face.size() == 4) {
+                    quads.push_back({face[0], face[1], face[2], face[3]});
+                } else {
+                    for (auto i = 2; i < face.size(); i++)
+                        triangles.push_back({face[0], face[i - 1], face[i]});
                 }
             }
         }
 
         // copy face data
-        for (auto& elem : ply.elements) {
-            if (elem.name != "line") continue;
-            auto count = elem.count;
-            for (auto& prop : elem.properties) {
-                if (prop.name == "vertex_indices") {
-                    for (auto fid = 0; fid < count; fid++) {
-                        auto& list = prop.lists[fid];
-                        auto  num  = (int)prop.scalars[fid];
-                        for (auto i = 1; i < num; i++)
-                            lines.push_back({list[i], list[i - 1]});
-                    }
-                }
+        if (ply.hasElement("line")) {
+            auto& elements = ply.getElement("line");
+            if (!elements.hasProperty("vertex_indices"))
+                throw io_error("bad ply lines");
+            auto indices = elements.getListProperty<int>("vertex_indices");
+            for (auto& line : indices) {
+                for (auto i = 1; i < line.size(); i++)
+                    lines.push_back({line[i], line[i - 1]});
             }
         }
 
@@ -4656,110 +4674,111 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
     const vector<vec3f>& normals, const vector<vec2f>& texturecoords,
     const vector<vec4f>& colors, const vector<float>& radius, bool ascii,
     bool flip_texcoord) {
-    auto fs = output_file(filename, std::ios::binary);
+    // empty data
+    happly::PLYData ply;
 
-    // header
-    println_values(fs, "ply");
-    if (ascii)
-        println_values(fs, "format ascii 1.0");
-    else
-        println_values(fs, "format binary_little_endian 1.0");
-    println_values(
-        fs, "comment Saved by Yocto/GL - https://github.com/xelatihy/yocto-gl");
-    println_values(fs, "element vertex", (int)positions.size());
+    // add elements
+    ply.addElement("vertex", positions.size());
     if (!positions.empty()) {
-        println_values(fs, "property float x");
-        println_values(fs, "property float y");
-        println_values(fs, "property float z");
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        for (auto& p : positions) {
+            x.push_back(p.x);
+            y.push_back(p.y);
+            z.push_back(p.z);
+        }
+        vertex.addProperty("x", x);
+        vertex.addProperty("y", y);
+        vertex.addProperty("z", z);
     }
     if (!normals.empty()) {
-        println_values(fs, "property float nx");
-        println_values(fs, "property float ny");
-        println_values(fs, "property float nz");
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        for (auto& n : normals) {
+            x.push_back(n.x);
+            y.push_back(n.y);
+            z.push_back(n.z);
+        }
+        vertex.addProperty("nx", x);
+        vertex.addProperty("ny", y);
+        vertex.addProperty("nz", z);
     }
     if (!texturecoords.empty()) {
-        println_values(fs, "property float u");
-        println_values(fs, "property float v");
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        for (auto& t : texturecoords) {
+            x.push_back(t.x);
+            y.push_back(flip_texcoord ? 1 - t.y : t.y);
+        }
+        vertex.addProperty("u", x);
+        vertex.addProperty("v", y);
     }
     if (!colors.empty()) {
-        println_values(fs, "property float red");
-        println_values(fs, "property float green");
-        println_values(fs, "property float blue");
-        println_values(fs, "property float alpha");
+        auto& vertex = ply.getElement("vertex");
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        auto  w      = vector<float>{};
+        for (auto& c : colors) {
+            x.push_back(c.x);
+            y.push_back(c.y);
+            z.push_back(c.z);
+            w.push_back(c.w);
+        }
+        vertex.addProperty("red", x);
+        vertex.addProperty("green", y);
+        vertex.addProperty("blue", z);
+        vertex.addProperty("alpha", w);
     }
     if (!radius.empty()) {
-        println_values(fs, "property float radius");
+        auto& vertex = ply.getElement("vertex");
+        vertex.addProperty("radius", radius);
     }
+
+    // face date
     if (!triangles.empty() || !quads.empty()) {
-        println_values(
-            fs, "element face", (int)triangles.size() + (int)quads.size());
-        println_values(fs, "property list uchar int vertex_indices");
-    }
-    if (!lines.empty()) {
-        println_values(fs, "element line", (int)lines.size());
-        println_values(fs, "property list uchar int vertex_indices");
-    }
-    println_values(fs, "end_header");
-
-    // body
-    if (ascii) {
-        // write vertex data
-        for (auto i = 0; i < positions.size(); i++) {
-            if (!positions.empty()) print_value(fs, positions[i]);
-            if (!normals.empty()) print_value(fs, normals[i]);
-            if (!texturecoords.empty())
-                print_value(fs, (!flip_texcoord) ? texturecoords[i]
-                                                 : vec2f{texturecoords[i].x,
-                                                       1 - texturecoords[i].y});
-            if (!colors.empty()) print_value(fs, colors[i]);
-            if (!radius.empty()) print_value(fs, radius[i]);
-            print_value(fs, "\n");
-        }
-
-        // write face data
-        for (auto& t : triangles) println_values(fs, "3", t);
-        for (auto& q : quads) {
-            if (q.z == q.w)
-                println_values(fs, "3", vec3i{q.x, q.y, q.z});
-            else
-                println_values(fs, "4", q);
-        }
-        for (auto& l : lines) println_values(fs, "2", l);
-    } else {
-        // write vertex data
-        for (auto i = 0; i < positions.size(); i++) {
-            if (!positions.empty()) write_value(fs, positions[i]);
-            if (!normals.empty()) write_value(fs, normals[i]);
-            if (!texturecoords.empty())
-                write_value(fs, (!flip_texcoord) ? texturecoords[i]
-                                                 : vec2f{texturecoords[i].x,
-                                                       1 - texturecoords[i].y});
-            if (!colors.empty()) write_value(fs, colors[i]);
-            if (!radius.empty()) write_value(fs, radius[i]);
-        }
-
-        // write face data
+        ply.addElement("face", triangles.size() + quads.size());
+        auto elements = vector<vector<int>>{};
         for (auto& t : triangles) {
-            auto n = (byte)3;
-            write_value(fs, n);
-            write_value(fs, t);
+            elements.push_back({t.x, t.y, t.z});
         }
         for (auto& q : quads) {
             if (q.z == q.w) {
-                auto n = (byte)3;
-                write_value(fs, n);
-                write_value(fs, vec3i{q.x, q.y, q.z});
+                elements.push_back({q.x, q.y, q.z});
             } else {
-                auto n = (byte)4;
-                write_value(fs, n);
-                write_value(fs, q);
+                elements.push_back({q.x, q.y, q.z, q.w});
             }
         }
+        ply.getElement("face").addListProperty("vertex_indices", elements);
+    }
+    if (!lines.empty()) {
+        ply.addElement("line", lines.size());
+        auto elements = vector<vector<int>>{};
         for (auto& l : lines) {
-            auto n = (byte)2;
-            write_value(fs, n);
-            write_value(fs, l);
+            elements.push_back({l.x, l.y});
         }
+        ply.getElement("line").addListProperty("vertex_indices", elements);
+    }
+    if (!points.empty() || !quads.empty()) {
+        ply.addElement("point", points.size());
+        auto elements = vector<vector<int>>{};
+        for (auto& p : points) {
+            elements.push_back({p});
+        }
+        ply.getElement("point").addListProperty("vertex_indices", elements);
+    }
+
+    // Write our data
+    try {
+        ply.write(filename,
+            ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
+    } catch (const std::exception& e) {
+        throw io_error("cannot save mesh " + filename + "\n" + e.what());
     }
 }
 
@@ -5111,193 +5130,6 @@ void save_obj_facevarying_mesh(const string& filename,
         } else {
             println_values(fs, "f", fvvert(qp.x, qt.x, qn.x),
                 fvvert(qp.y, qt.y, qn.y), fvvert(qp.z, qt.z, qn.z));
-        }
-    }
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF OBJ IO
-// -----------------------------------------------------------------------------
-namespace yocto {}
-
-// -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PLY IO
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// normalize obj line for simpler parsing
-inline void normalize_ply_line(char* str, char comment_char = '#') {
-    auto has_content = false;
-    auto start       = str;
-    while (*str) {
-        if (*str == ' ' || *str == '\t' || *str == '\r' || *str == '\n') {
-            *str = ' ';
-        } else {
-            has_content = true;
-        }
-        str++;
-    }
-    if (!has_content) *start = 0;
-}
-
-// Load ply mesh
-void load_ply(const string& filename, ply_data& ply) {
-    // open file
-    ply     = {};
-    auto fs = input_file(filename, true);
-
-    // parse header
-    ply             = ply_data{};
-    auto ascii      = false;
-    auto big_endian = false;
-    char buffer[4096];
-    while (read_line(fs, buffer, sizeof(buffer))) {
-        auto line = buffer;
-        normalize_ply_line(line);
-        if (!*line) continue;
-        auto cmd = ""s;
-        parse_value(line, cmd);
-        if (cmd == "") continue;
-        if (cmd == "ply") {
-        } else if (cmd == "comment") {
-        } else if (cmd == "format") {
-            auto fmt = ""s;
-            parse_value(line, fmt);
-            if (fmt == "ascii") {
-                ascii = true;
-            } else if (fmt == "binary_little_endian") {
-                ascii      = false;
-                big_endian = false;
-            } else if (fmt == "binary_big_endian") {
-                ascii      = false;
-                big_endian = true;
-            } else {
-                throw io_error("bad ply header");
-            }
-        } else if (cmd == "element") {
-            auto elem = ply_element();
-            parse_value(line, elem.name);
-            parse_value(line, elem.count);
-            ply.elements.push_back(elem);
-        } else if (cmd == "property") {
-            auto prop = ply_property();
-            auto type = ""s;
-            parse_value(line, type);
-            if (type == "list") {
-                auto count_type = ""s;
-                parse_value(line, count_type);
-                auto elem_type = ""s;
-                parse_value(line, elem_type);
-                if (count_type != "uchar" && count_type != "uint8")
-                    throw io_error("unsupported ply list type");
-                if (elem_type != "int" && elem_type != "uint")
-                    throw io_error("unsupported ply list type");
-                prop.type = ply_type::ply_int_list;
-            } else if (type == "float") {
-                prop.type = ply_type::ply_float;
-            } else if (type == "uchar" || type == "uint8") {
-                prop.type = ply_type::ply_uchar;
-            } else if (type == "int") {
-                prop.type = ply_type::ply_int;
-            } else {
-                throw io_error("unsupported ply format");
-            }
-            parse_value(line, prop.name);
-            prop.scalars.resize(ply.elements.back().count);
-            if (prop.type == ply_type::ply_int_list)
-                prop.lists.resize(ply.elements.back().count);
-            ply.elements.back().properties.push_back(prop);
-        } else if (cmd == "end_header") {
-            break;
-        } else {
-            throw io_error("unsupported ply format");
-        }
-    }
-
-    // parse content
-    if (ascii) {
-        for (auto& elem : ply.elements) {
-            for (auto vid = 0; vid < elem.count; vid++) {
-                read_line(fs, buffer, sizeof(buffer));
-                auto line = buffer;
-                normalize_ply_line(line);
-                for (auto pid = 0; pid < elem.properties.size(); pid++) {
-                    auto& prop = elem.properties[pid];
-                    if (prop.type == ply_type::ply_float) {
-                        auto v = 0.0f;
-                        parse_value(line, v);
-                        prop.scalars[vid] = v;
-                    } else if (prop.type == ply_type::ply_int) {
-                        auto v = 0;
-                        parse_value(line, v);
-                        prop.scalars[vid] = v;
-                    } else if (prop.type == ply_type::ply_uchar) {
-                        auto vc = (unsigned char)0;
-                        auto v  = 0;
-                        parse_value(line, v);
-                        vc                = (unsigned char)v;
-                        prop.scalars[vid] = vc / 255.0f;
-                    } else if (prop.type == ply_type::ply_int_list) {
-                        auto vc = (unsigned char)0;
-                        auto v  = 0;
-                        parse_value(line, v);
-                        vc                = (unsigned char)v;
-                        prop.scalars[vid] = vc;
-                        for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
-                            auto v = 0;
-                            parse_value(line, v);
-                            prop.lists[vid][i] = v;
-                        }
-                    } else {
-                        throw io_error("unsupported ply format");
-                    }
-                }
-            }
-        }
-    } else {
-        auto byte_swap = [](auto val) {
-            // https://stackoverflow.com/questions/2782725/converting-float-values-from-big-endian-to-little-endian
-            auto retVal = val;
-            auto pVal = (char*)&val, pRetVal = (char*)&retVal;
-            auto size = (int)sizeof(val);
-            for (auto i = 0; i < size; i++) pRetVal[size - 1 - i] = pVal[i];
-            return retVal;
-        };
-        for (auto& elem : ply.elements) {
-            for (auto vid = 0; vid < elem.count; vid++) {
-                for (auto pid = 0; pid < elem.properties.size(); pid++) {
-                    auto& prop = elem.properties[pid];
-                    if (prop.type == ply_type::ply_float) {
-                        auto v = 0.0f;
-                        read_value(fs, v);
-                        if (big_endian) v = byte_swap(v);
-                        prop.scalars[vid] = v;
-                    } else if (prop.type == ply_type::ply_int) {
-                        auto v = 0;
-                        read_value(fs, v);
-                        if (big_endian) v = byte_swap(v);
-                        prop.scalars[vid] = v;
-                    } else if (prop.type == ply_type::ply_uchar) {
-                        auto vc = (unsigned char)0;
-                        read_value(fs, vc);
-                        prop.scalars[vid] = vc / 255.0f;
-                    } else if (prop.type == ply_type::ply_int_list) {
-                        auto vc = (unsigned char)0;
-                        read_value(fs, vc);
-                        prop.scalars[vid] = vc;
-                        for (auto i = 0; i < (int)prop.scalars[vid]; i++) {
-                            auto v = 0;
-                            read_value(fs, v);
-                            if (big_endian) v = byte_swap(v);
-                            prop.lists[vid][i] = v;
-                        }
-                    } else {
-                        throw io_error("unsupported ply format");
-                    }
-                }
-            }
         }
     }
 }
