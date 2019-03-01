@@ -82,6 +82,7 @@
 #include <limits>
 #include <string>
 #include <tuple>
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -116,6 +117,7 @@ using std::exception;
 using std::function;
 using std::get;
 using std::ignore;
+using std::map;
 using std::out_of_range;
 using std::pair;
 using std::runtime_error;
