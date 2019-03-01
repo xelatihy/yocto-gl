@@ -31,6 +31,8 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
+#include "ext/CLI11.hpp"
+
 #if 0
 template <typename Image>
 Image make_image_grid(const vector<Image>& imgs, int tilex) {
@@ -129,34 +131,47 @@ image4f filter_bilateral(
 }
 
 int main(int argc, char* argv[]) {
+    // command line parameters
+    auto tonemap             = false;
+    auto exposure            = 0.0f;
+    auto srgb                = true;
+    auto filmic              = false;
+    auto resize_width        = 0;
+    auto resize_height       = 0;
+    auto spatial_sigma       = 0.0f;
+    auto range_sigma         = 0.0f;
+    auto alpha_filename      = ""s;
+    auto coloralpha_filename = ""s;
+    auto output              = "out.png"s;
+    auto filename            = "img.hdr"s;
+
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "Process images", "yimproc");
-    auto tonemap = parse_cmdline_argument(
-        parser, "--tonemap/--no-tonemap,-t", false, "Tonemap image");
-    auto exposure = parse_cmdline_argument(
-        parser, "--exposure,-e", 0.0f, "Tonemap exposure");
-    auto srgb = parse_cmdline_argument(
-        parser, "--srgb", true, "Tonemap to sRGB.");
-    auto filmic = parse_cmdline_argument(
-        parser, "--filmic/--no-filmic,-f", false, "Tonemap uses filmic curve");
-    auto resize_width = parse_cmdline_argument(
-        parser, "--resize-width", 0, "resize size (0 to maintain aspect)");
-    auto resize_height = parse_cmdline_argument(
-        parser, "--resize-height", 0, "resize size (0 to maintain aspect)");
-    auto spatial_sigma = parse_cmdline_argument(
-        parser, "--spatial-sigma", 0.0f, "blur spatial sigma");
-    auto range_sigma = parse_cmdline_argument(
-        parser, "--range-sigma", 0.0f, "bilateral blur range sigma");
-    auto alpha_filename = parse_cmdline_argument(
-        parser, "--set-alpha", ""s, "set alpha as this image alpha");
-    auto coloralpha_filename = parse_cmdline_argument(
-        parser, "--set-color-as-alpha", ""s, "set alpha as this image color");
-    auto output = parse_cmdline_argument(
-        parser, "--output,-o", "out.png"s, "output image filename", true);
-    auto filename = parse_cmdline_argument(
-        parser, "filename", "img.hdr"s, "input image filename", true);
-    check_cmdline_parser(parser);
+    auto parser = CLI::App{"Transform images"};
+    parser.add_flag("--tonemap,!--no-tonemap,-t", tonemap, "Tonemap image");
+    parser.add_option("--exposure,-e", exposure, "Tonemap exposure");
+    parser.add_flag("--srgb,!--no-srgb", srgb, "Tonemap to sRGB.");
+    parser.add_flag(
+        "--filmic,!--no-filmic,-f", filmic, "Tonemap uses filmic curve");
+    parser.add_option(
+        "--resize-width", resize_width, "resize size (0 to maintain aspect)");
+    parser.add_option(
+        "--resize-height", resize_height, "resize size (0 to maintain aspect)");
+    parser.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
+    parser.add_option(
+        "--range-sigma", range_sigma, "bilateral blur range sigma");
+    parser.add_option(
+        "--set-alpha", alpha_filename, "set alpha as this image alpha");
+    parser.add_option("--set-color-as-alpha", coloralpha_filename,
+        "set alpha as this image color");
+    parser.add_option("--output,-o", output, "output image filename")
+        ->required(true);
+    parser.add_option("filename", filename, "input image filename")
+        ->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        return parser.exit(e);
+    }
 
     // load
     auto img = image4f();

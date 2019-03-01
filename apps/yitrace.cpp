@@ -34,6 +34,8 @@
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 
+#include "ext/CLI11.hpp"
+
 // Application state
 struct app_state {
     // loading options
@@ -450,46 +452,56 @@ int main(int argc, char* argv[]) {
     // application
     app_state app{};
     app.trace_options.samples_per_batch = 1;
+    auto no_parallel                    = false;
+
+    // names for enums
+    auto trace_sampler_type_namemap = map<string, trace_sampler_type>{};
+    for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
+        trace_sampler_type_namemap[trace_sampler_type_names[type]] =
+            (trace_sampler_type)type;
+    }
 
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(
-        parser, argc, argv, "progressive path tracing", "yitrace");
-    app.trace_options.camera_id = parse_cmdline_argument(
-        parser, "--camera", 0, "Camera index.");
-    app.trace_options.image_width = parse_cmdline_argument(
-        parser, "--hres,-R", 1280, "Image horizontal resolution.");
-    app.trace_options.image_height = parse_cmdline_argument(
-        parser, "--vres,-r", 720, "Image vertical resolution.");
-    app.trace_options.num_samples = parse_cmdline_argument(
-        parser, "--nsamples,-s", 4096, "Number of samples.");
-    app.trace_options.sampler_type = parse_cmdline_argument(parser,
-        "--tracer,-t", trace_sampler_type::path, "Tracer type.",
-        trace_sampler_type_names);
-    app.trace_options.max_bounces  = parse_cmdline_argument(
-        parser, "--nbounces", 8, "Maximum number of bounces.");
-    app.trace_options.pixel_clamp = parse_cmdline_argument(
-        parser, "--pixel-clamp", 10.0f, "Final pixel clamping.");
-    app.trace_options.random_seed = parse_cmdline_argument(
-        parser, "--seed", 7, "Seed for the random number generators.");
-    app.trace_options.environments_hidden = parse_cmdline_argument(parser,
-        "--env-hidden/--no-env-hidden", false,
+    auto parser = CLI::App{"progressive path tracing"};
+    parser.add_option("--camera", app.trace_options.camera_id, "Camera index.");
+    parser.add_option("--hres,-R", app.trace_options.image_width,
+        "Image horizontal resolution.");
+    parser.add_option("--vres,-r", app.trace_options.image_height,
+        "Image vertical resolution.");
+    parser.add_option(
+        "--nsamples,-s", app.trace_options.num_samples, "Number of samples.");
+    parser
+        .add_option(
+            "--tracer,-t", app.trace_options.sampler_type, "Tracer type.")
+        ->transform(CLI::IsMember(trace_sampler_type_namemap));
+    parser.add_option("--nbounces", app.trace_options.max_bounces,
+        "Maximum number of bounces.");
+    parser.add_option("--pixel-clamp", app.trace_options.pixel_clamp,
+        "Final pixel clamping.");
+    parser.add_option("--seed", app.trace_options.random_seed,
+        "Seed for the random number generators.");
+    parser.add_flag("--env-hidden,!--no-env-hidden",
+        app.trace_options.environments_hidden,
         "Environments are hidden in renderer");
-    auto no_parallel                      = parse_cmdline_argument(parser,
-        "--parallel/--no-parallel", false, "Disable parallel execution.");
-    app.bvh_options.use_embree            = parse_cmdline_argument(
-        parser, "--embree/--no-embree", false, "Use Embree ratracer");
-    app.bvh_options.flatten_embree = parse_cmdline_argument(parser,
-        "--flatten-embree/--no-flatten-embree", true, "Flatten embree scene");
-    app.trace_options.double_sided = parse_cmdline_argument(parser,
-        "--double-sided/--no-double-sided", false, "Double-sided rendering.");
-    app.add_skyenv                 = parse_cmdline_argument(
-        parser, "--add-skyenv/--no-add-skyenv", false, "Add sky envmap");
-    app.imfilename = parse_cmdline_argument(
-        parser, "--output-image,-o", "out.hdr"s, "Image filename");
-    app.filename = parse_cmdline_argument(
-        parser, "scene", "scene.json"s, "Scene filename", true);
-    check_cmdline_parser(parser);
+    parser.add_flag("--parallel,!--no-parallel", no_parallel,
+        "Disable parallel execution.");
+#if YOCTO_EMBREE
+    parser.add_flag("--embree,!--no-embree", app.bvh_options.use_embree,
+        "Use Embree ratracer");
+    parser.add_flag("--flatten-embree,!--no-flatten-embree",
+        app.bvh_options.flatten_embree, "Flatten embree scene");
+#endif
+    parser.add_flag("--double-sided,!--no-double-sided",
+        app.trace_options.double_sided, "Double-sided rendering.");
+    parser.add_flag(
+        "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
+    parser.add_option("--output-image,-o", app.imfilename, "Image filename");
+    parser.add_option("scene", app.filename, "Scene filename")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        return parser.exit(e);
+    }
 
     // fix parallel code
     if (no_parallel) {

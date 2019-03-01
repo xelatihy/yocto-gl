@@ -33,18 +33,25 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
+#include "ext/CLI11.hpp"
+
 int main(int argc, char** argv) {
+    // command line parameters
+    auto geodesic_source = -1;
+    auto output          = "out.ply"s;
+    auto filename        = "mesh.ply"s;
+
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv,
-        "Applies operations on a triangle mesh", "ymshproc");
-    auto geodesic_source = parse_cmdline_argument(
-        parser, "--geodesic-source,-g", -1, "Geodesic source");
-    auto output = parse_cmdline_argument(
-        parser, "--output,-o", "out.ply"s, "output mesh", true);
-    auto filename = parse_cmdline_argument(
-        parser, "mesh", "mesh.ply"s, "input mesh", true);
-    check_cmdline_parser(parser);
+    auto parser = CLI::App{"Applies operations on a triangle mesh"};
+    parser.add_option(
+        "--geodesic-source,-g", geodesic_source, "Geodesic source");
+    parser.add_option("--output,-o", output, "output mesh")->required(true);
+    parser.add_option("mesh", filename, "input mesh")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        return parser.exit(e);
+    }
 
     // load mesh
     auto shape = yocto_shape{};

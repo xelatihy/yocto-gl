@@ -34,6 +34,8 @@
 #include "yocto_opengl.h"
 #include "ysceneui.h"
 
+#include "ext/CLI11.hpp"
+
 struct drawgl_shape {
     opengl_array_buffer  positions_buffer     = {};
     opengl_array_buffer  normals_buffer       = {};
@@ -1024,31 +1026,28 @@ unordered_map<string, unordered_map<string, string>> load_ini(
 int main(int argc, char* argv[]) {
     // initialize app
     app_state app{};
+    auto      no_parallel = false;
 
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(
-        parser, argc, argv, "views scenes inteactively", "yview");
-    app.draw_options.camera_id = parse_cmdline_argument(
-        parser, "--camera", 0, "Camera index.");
-    app.draw_options.image_width = parse_cmdline_argument(
-        parser, "--hres,-R", 1280, "Image horizontal resolution.");
-    app.draw_options.image_height = parse_cmdline_argument(
-        parser, "--vres,-r", 720, "Image vertical resolution.");
-    app.draw_options.eyelight = parse_cmdline_argument(
-        parser, "--eyelight/--no-eyelight,-c", false, "Eyelight rendering.");
-    app.double_sided        = parse_cmdline_argument(parser,
-        "--double-sided/--no-double-sided,-D", false,
+    auto parser = CLI::App{"views scenes inteactively"};
+    parser.add_option("--camera", app.draw_options.camera_id, "Camera index.");
+    parser.add_option("--hres,-R", app.draw_options.image_width,
+        "Image horizontal resolution.");
+    parser.add_option("--vres,-r", app.draw_options.image_height,
+        "Image vertical resolution.");
+    parser.add_flag("--eyelight,!--no-eyelight,-c", app.draw_options.eyelight,
+        "Eyelight rendering.");
+    parser.add_flag("--double-sided,!--no-double-sided,-D", app.double_sided,
         "Double-sided rendering.");
-    auto highlight_filename = parse_cmdline_argument(
-        parser, "--highlights", ""s, "Highlight filename");
-    auto no_parallel = parse_cmdline_argument(parser,
-        "--parallel/--no-parallel", false, "Disable parallel execution.");
-    app.imfilename   = parse_cmdline_argument(
-        parser, "--output-image,-o", "out.png"s, "Image filename");
-    app.filename = parse_cmdline_argument(
-        parser, "scene", "scene.json"s, "Scene filename", true);
-    check_cmdline_parser(parser);
+    parser.add_flag("--parallel,!--no-parallel", no_parallel,
+        "Disable parallel execution.");
+    parser.add_option("--output-image,-o", app.imfilename, "Image filename");
+    parser.add_option("scene", app.filename, "Scene filename")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        return parser.exit(e);
+    }
 
     // fix parallel code
     if (no_parallel) {

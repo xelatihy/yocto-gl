@@ -32,6 +32,8 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
+#include "ext/CLI11.hpp"
+
 bool mkdir(const string& dir) {
     if (dir == "" || dir == "." || dir == ".." || dir == "./" || dir == "../")
         return true;
@@ -45,27 +47,36 @@ bool mkdir(const string& dir) {
 }
 
 int main(int argc, char** argv) {
+    // command line parameters
+    auto skip_textures  = false;
+    auto skip_meshes    = false;
+    auto mesh_filenames = true;
+    auto mesh_directory = "models/"s;
+    auto uniform_txt    = false;
+    auto print_info     = false;
+    auto output         = "out.json"s;
+    auto filename       = "scene.json"s;
+
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "Process scene", "yscnproc");
-    auto skip_textures = parse_cmdline_argument(parser,
-        "--skip-textures/--no-skip-textures", false, "Disable textures.");
-    auto skip_meshes   = parse_cmdline_argument(
-        parser, "--skip-meshes/--no-skip-meshes", false, "Disable meshes.");
-    auto mesh_filenames = parse_cmdline_argument(parser,
-        "--mesh-filenames/--no-mesh-filenames", true, "Add mesh filenames.");
-    auto mesh_directory = parse_cmdline_argument(parser, "--mesh-directory",
-        "models/"s, "Mesh directory when adding names.");
-    auto uniform_txt    = parse_cmdline_argument(parser,
-        "--uniform-texture/--no-uniform-textures", false,
+    auto parser = CLI::App{"Process scene"};
+    parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures,
+        "Disable textures.");
+    parser.add_flag(
+        "--skip-meshes,!--no-skip-meshes", skip_meshes, "Disable meshes.");
+    parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
+        "Add mesh filenames.");
+    parser.add_option("--mesh-directory", mesh_directory,
+        "Mesh directory when adding names.");
+    parser.add_flag("--uniform-texture,!--no-uniform-textures", uniform_txt,
         "uniform texture formats");
-    auto print_info     = parse_cmdline_argument(
-        parser, "--print-info,-i", false, "print scene info");
-    auto output = parse_cmdline_argument(
-        parser, "--output,-o", "out.json"s, "output scene", true);
-    auto filename = parse_cmdline_argument(
-        parser, "scene", "scene.json"s, "input scene", true);
-    check_cmdline_parser(parser);
+    parser.add_flag("--print-info,-i", print_info, "print scene info");
+    parser.add_option("--output,-o", output, "output scene")->required(true);
+    parser.add_option("scene", filename, "input scene")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        return parser.exit(e);
+    }
 
     // fix options
     auto load_options          = load_scene_options();

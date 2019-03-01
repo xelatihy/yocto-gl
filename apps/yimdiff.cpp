@@ -35,6 +35,8 @@
 #include "../yocto/yocto_utils.h"
 using namespace yocto;
 
+#include "ext/CLI11.hpp"
+
 image4f compute_diff_image(const image4f& a, const image4f& b) {
     auto diff = image{a.size(), zero4f};
     for (auto j = 0; j < a.size().y; j++) {
@@ -68,18 +70,25 @@ image4f display_diff(const image4f& diff) {
 }
 
 int main(int argc, char* argv[]) {
+    // Application values
+    auto threshold = 0.1f;
+    auto output    = ""s;
+    auto filename1 = ""s;
+    auto filename2 = ""s;
+
     // parse command line
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "Compares two images", "yimdiff");
-    auto threshold = parse_cmdline_argument(
-        parser, "--threshold,-t", 0.1f, "Thhhreshold");
-    auto output = parse_cmdline_argument(
-        parser, "--output,-o", ""s, "output image filename", false);
-    auto filename1 = parse_cmdline_argument(
-        parser, "filename1", "in1.png"s, "input image filename", true);
-    auto filename2 = parse_cmdline_argument(
-        parser, "filename2", "in2.png"s, "input image filename", true);
-    check_cmdline_parser(parser);
+    auto parser = CLI::App{"Compare two images"};
+    parser.add_option("--threshold,-t", threshold, "Threshold");
+    parser.add_option("--output,-o", output, "output image filename");
+    parser.add_option("filename1", filename1, "input image filename")
+        ->required(true);
+    parser.add_option("filename2", filename2, "input image filename")
+        ->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        return parser.exit(e);
+    }
 
     // check image type
     auto img1 = image4f{}, img2 = image4f{};

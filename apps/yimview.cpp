@@ -32,6 +32,8 @@
 #include "yocto_opengl.h"
 using namespace yocto;
 
+#include "ext/CLI11.hpp"
+
 struct image_stats {
     bbox4f pxl_bounds = {zero4f, zero4f};
     bbox1f lum_bounds = {zero1f, zero1f};
@@ -340,24 +342,27 @@ void run_ui(app_state& app) {
 
 int main(int argc, char* argv[]) {
     // prepare application
-    auto app = app_state();
+    auto app         = app_state();
+    auto exposure    = 0.0f;
+    auto filmic      = false;
+    auto srgb        = true;
+    auto outfilename = ""s;
+    auto filenames   = vector<string>{};
 
     // command line options
-    auto parser = cmdline_parser{};
-    init_cmdline_parser(parser, argc, argv, "view images", "yimview");
-    auto exposure = parse_cmdline_argument(
-        parser, "--exposure,-e", 0.0f, "display exposure");
-    auto filmic = parse_cmdline_argument(
-        parser, "--filmic/--no-filmic", false, "display filmic");
-    auto srgb = parse_cmdline_argument(
-        parser, "--srgb/--no-srgb", true, "display as sRGB");
+    auto parser = CLI::App{"view images"};
+    parser.add_option("--exposure,-e", exposure, "display exposure");
+    parser.add_flag("--filmic,!--no-filmic", filmic, "display filmic");
+    parser.add_flag("--srgb,!--no-srgb", srgb, "display as sRGB");
     // auto quiet = parse_flag(
     //     parser, "--quiet,-q", false, "Print only errors messages");
-    auto outfilename = parse_cmdline_argument(
-        parser, "--out,-o", ""s, "image out filename");
-    auto filenames = parse_cmdline_arguments(
-        parser, "images", vector<string>{}, "image filenames", true);
-    check_cmdline_parser(parser);
+    parser.add_option("--out,-o", outfilename, "image out filename");
+    parser.add_option("images", filenames, "image filenames")->required(true);
+    try {
+        parser.parse(argc, argv);
+    } catch (const CLI::ParseError& e) {
+        return parser.exit(e);
+    }
 
     // loading images
     for (auto filename : filenames)

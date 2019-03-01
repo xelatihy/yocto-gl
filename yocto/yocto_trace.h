@@ -160,7 +160,7 @@ struct trace_image_options {
     float              pixel_clamp         = 10;
     bool               environments_hidden = false;
     bool               double_sided        = false;
-    uint64_t           random_seed         = 7;
+    uint64_t           random_seed         = trace_default_seed;
     std::atomic<bool>* cancel_flag         = nullptr;
     bool               run_serially        = false;
 };
