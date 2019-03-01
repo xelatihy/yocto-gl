@@ -72,19 +72,21 @@ image4f display_diff(const image4f& diff) {
 int main(int argc, char* argv[]) {
     // Application values
     auto threshold = 0.1f;
-    auto output = ""s;
+    auto output    = ""s;
     auto filename1 = ""s;
     auto filename2 = ""s;
 
     // parse command line
-    auto parser =  CLI::App{"Compare two images"};
+    auto parser = CLI::App{"Compare two images"};
     parser.add_option("--threshold,-t", threshold, "Threshold");
     parser.add_option("--output,-o", output, "output image filename");
-    parser.add_option("filename1", filename1, "input image filename")->required(true);
-    parser.add_option("filename2", filename2, "input image filename")->required(true);
+    parser.add_option("filename1", filename1, "input image filename")
+        ->required(true);
+    parser.add_option("filename2", filename2, "input image filename")
+        ->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 

@@ -342,12 +342,12 @@ void run_ui(app_state& app) {
 
 int main(int argc, char* argv[]) {
     // prepare application
-    auto app = app_state();
-    auto exposure = 0.0f;
-    auto filmic = false;
-    auto srgb = true;
+    auto app         = app_state();
+    auto exposure    = 0.0f;
+    auto filmic      = false;
+    auto srgb        = true;
     auto outfilename = ""s;
-    auto filenames = vector<string>{};
+    auto filenames   = vector<string>{};
 
     // command line options
     auto parser = CLI::App{"view images"};
@@ -360,7 +360,7 @@ int main(int argc, char* argv[]) {
     parser.add_option("images", filenames, "image filenames")->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 

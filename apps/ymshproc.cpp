@@ -38,17 +38,18 @@ using namespace yocto;
 int main(int argc, char** argv) {
     // command line parameters
     auto geodesic_source = -1;
-    auto output = "out.ply"s;
-    auto filename = "mesh.ply"s;
+    auto output          = "out.ply"s;
+    auto filename        = "mesh.ply"s;
 
     // parse command line
     auto parser = CLI::App{"Applies operations on a triangle mesh"};
-    parser.add_option("--geodesic-source,-g", geodesic_source, "Geodesic source");
+    parser.add_option(
+        "--geodesic-source,-g", geodesic_source, "Geodesic source");
     parser.add_option("--output,-o", output, "output mesh")->required(true);
     parser.add_option("mesh", filename, "input mesh")->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 

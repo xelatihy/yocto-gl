@@ -1026,21 +1026,26 @@ unordered_map<string, unordered_map<string, string>> load_ini(
 int main(int argc, char* argv[]) {
     // initialize app
     app_state app{};
-    auto no_parallel = false;
+    auto      no_parallel = false;
 
     // parse command line
     auto parser = CLI::App{"views scenes inteactively"};
     parser.add_option("--camera", app.draw_options.camera_id, "Camera index.");
-    parser.add_option("--hres,-R", app.draw_options.image_width, "Image horizontal resolution.");
-    parser.add_option("--vres,-r", app.draw_options.image_height, "Image vertical resolution.");
-    parser.add_flag("--eyelight,!--no-eyelight,-c", app.draw_options.eyelight, "Eyelight rendering.");
-    parser.add_flag("--double-sided,!--no-double-sided,-D", app.double_sided, "Double-sided rendering.");
-    parser.add_flag("--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");
+    parser.add_option("--hres,-R", app.draw_options.image_width,
+        "Image horizontal resolution.");
+    parser.add_option("--vres,-r", app.draw_options.image_height,
+        "Image vertical resolution.");
+    parser.add_flag("--eyelight,!--no-eyelight,-c", app.draw_options.eyelight,
+        "Eyelight rendering.");
+    parser.add_flag("--double-sided,!--no-double-sided,-D", app.double_sided,
+        "Double-sided rendering.");
+    parser.add_flag("--parallel,!--no-parallel", no_parallel,
+        "Disable parallel execution.");
     parser.add_option("--output-image,-o", app.imfilename, "Image filename");
     parser.add_option("scene", app.filename, "Scene filename")->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 

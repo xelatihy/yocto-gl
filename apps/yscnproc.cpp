@@ -48,28 +48,33 @@ bool mkdir(const string& dir) {
 
 int main(int argc, char** argv) {
     // command line parameters
-    auto skip_textures = false;
-    auto skip_meshes   = false;
+    auto skip_textures  = false;
+    auto skip_meshes    = false;
     auto mesh_filenames = true;
     auto mesh_directory = "models/"s;
     auto uniform_txt    = false;
     auto print_info     = false;
-    auto output = "out.json"s;
-    auto filename = "scene.json"s;
+    auto output         = "out.json"s;
+    auto filename       = "scene.json"s;
 
     // parse command line
     auto parser = CLI::App{"Process scene"};
-    parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures, "Disable textures.");
-    parser.add_flag("--skip-meshes,!--no-skip-meshes", skip_meshes, "Disable meshes.");
-    parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames, "Add mesh filenames.");
-    parser.add_option("--mesh-directory", mesh_directory, "Mesh directory when adding names.");
-    parser.add_flag("--uniform-texture,!--no-uniform-textures", uniform_txt, "uniform texture formats");
+    parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures,
+        "Disable textures.");
+    parser.add_flag(
+        "--skip-meshes,!--no-skip-meshes", skip_meshes, "Disable meshes.");
+    parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
+        "Add mesh filenames.");
+    parser.add_option("--mesh-directory", mesh_directory,
+        "Mesh directory when adding names.");
+    parser.add_flag("--uniform-texture,!--no-uniform-textures", uniform_txt,
+        "uniform texture formats");
     parser.add_flag("--print-info,-i", print_info, "print scene info");
     parser.add_option("--output,-o", output, "output scene")->required(true);
     parser.add_option("scene", filename, "input scene")->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 

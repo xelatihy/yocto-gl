@@ -60,18 +60,24 @@ int main(int argc, char** argv) {
 
     // parse command line
     auto parser = CLI::App{"Merge scenes"};
-    parser.add_flag("--scene-postfix,!--no-scene-postfix", scene_postfix, "Append unique scene postfix to each name");
-    parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures, "Disable textures.");
-    parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames, "Add mesh filenames.");
-    parser.add_option("--mesh-directory", mesh_directory, "Mesh directory when adding names.");
-    parser.add_flag("--texture-filenames,!--no-texture-filenames", texture_filenames, "Add texture filenames.");
-    parser.add_option("--texture-directory", texture_directory, "Texture directory when adding names.");
+    parser.add_flag("--scene-postfix,!--no-scene-postfix", scene_postfix,
+        "Append unique scene postfix to each name");
+    parser.add_flag("--skip-textures,!--no-skip-textures", skip_textures,
+        "Disable textures.");
+    parser.add_flag("--mesh-filenames,!--no-mesh-filenames", mesh_filenames,
+        "Add mesh filenames.");
+    parser.add_option("--mesh-directory", mesh_directory,
+        "Mesh directory when adding names.");
+    parser.add_flag("--texture-filenames,!--no-texture-filenames",
+        texture_filenames, "Add texture filenames.");
+    parser.add_option("--texture-directory", texture_directory,
+        "Texture directory when adding names.");
     parser.add_option("--print-info,-i", print_info, "print scene info");
     parser.add_option("--output,-o", output, "output scene")->required(true);
     parser.add_option("scenes", filenames, "scene filenames")->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 

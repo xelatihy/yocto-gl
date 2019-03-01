@@ -132,36 +132,44 @@ image4f filter_bilateral(
 
 int main(int argc, char* argv[]) {
     // command line parameters
-    auto tonemap = false;
-    auto exposure = 0.0f;
-    auto srgb = true;
-    auto filmic = false;
-    auto resize_width = 0;
-    auto resize_height = 0;
-    auto spatial_sigma = 0.0f;
-    auto range_sigma = 0.0f;
-    auto alpha_filename = ""s;
+    auto tonemap             = false;
+    auto exposure            = 0.0f;
+    auto srgb                = true;
+    auto filmic              = false;
+    auto resize_width        = 0;
+    auto resize_height       = 0;
+    auto spatial_sigma       = 0.0f;
+    auto range_sigma         = 0.0f;
+    auto alpha_filename      = ""s;
     auto coloralpha_filename = ""s;
-    auto output = "out.png"s;
-    auto filename = "img.hdr"s;
+    auto output              = "out.png"s;
+    auto filename            = "img.hdr"s;
 
     // parse command line
-    auto parser =  CLI::App{"Transform images"};
+    auto parser = CLI::App{"Transform images"};
     parser.add_flag("--tonemap,!--no-tonemap,-t", tonemap, "Tonemap image");
     parser.add_option("--exposure,-e", exposure, "Tonemap exposure");
     parser.add_flag("--srgb,!--no-srgb", srgb, "Tonemap to sRGB.");
-    parser.add_flag("--filmic,!--no-filmic,-f", filmic, "Tonemap uses filmic curve");
-    parser.add_option("--resize-width", resize_width, "resize size (0 to maintain aspect)");
-    parser.add_option("--resize-height", resize_height, "resize size (0 to maintain aspect)");
+    parser.add_flag(
+        "--filmic,!--no-filmic,-f", filmic, "Tonemap uses filmic curve");
+    parser.add_option(
+        "--resize-width", resize_width, "resize size (0 to maintain aspect)");
+    parser.add_option(
+        "--resize-height", resize_height, "resize size (0 to maintain aspect)");
     parser.add_option("--spatial-sigma", spatial_sigma, "blur spatial sigma");
-    parser.add_option("--range-sigma", range_sigma, "bilateral blur range sigma");
-    parser.add_option("--set-alpha", alpha_filename, "set alpha as this image alpha");
-    parser.add_option("--set-color-as-alpha", coloralpha_filename, "set alpha as this image color");
-    parser.add_option("--output,-o", output, "output image filename")->required(true);
-    parser.add_option("filename", filename, "input image filename")->required(true);
+    parser.add_option(
+        "--range-sigma", range_sigma, "bilateral blur range sigma");
+    parser.add_option(
+        "--set-alpha", alpha_filename, "set alpha as this image alpha");
+    parser.add_option("--set-color-as-alpha", coloralpha_filename,
+        "set alpha as this image color");
+    parser.add_option("--output,-o", output, "output image filename")
+        ->required(true);
+    parser.add_option("filename", filename, "input image filename")
+        ->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 

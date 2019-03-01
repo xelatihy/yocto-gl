@@ -452,37 +452,54 @@ int main(int argc, char* argv[]) {
     // application
     app_state app{};
     app.trace_options.samples_per_batch = 1;
-    auto no_parallel = false;
+    auto no_parallel                    = false;
 
     // names for enums
     auto trace_sampler_type_namemap = map<string, trace_sampler_type>{};
-    for(auto type  = 0; type < trace_sampler_type_names.size(); type++) {
-        trace_sampler_type_namemap[trace_sampler_type_names[type]] = (trace_sampler_type)type;
+    for (auto type = 0; type < trace_sampler_type_names.size(); type++) {
+        trace_sampler_type_namemap[trace_sampler_type_names[type]] =
+            (trace_sampler_type)type;
     }
 
     // parse command line
     auto parser = CLI::App{"progressive path tracing"};
     parser.add_option("--camera", app.trace_options.camera_id, "Camera index.");
-    parser.add_option("--hres,-R", app.trace_options.image_width, "Image horizontal resolution.");
-    parser.add_option("--vres,-r", app.trace_options.image_height, "Image vertical resolution.");
-    parser.add_option("--nsamples,-s", app.trace_options.num_samples, "Number of samples.");
-    parser.add_option("--tracer,-t", app.trace_options.sampler_type, "Tracer type.")->transform(CLI::IsMember(trace_sampler_type_namemap));
-    parser.add_option("--nbounces", app.trace_options.max_bounces, "Maximum number of bounces.");
-    parser.add_option("--pixel-clamp", app.trace_options.pixel_clamp, "Final pixel clamping.");
-    parser.add_option("--seed", app.trace_options.random_seed, "Seed for the random number generators.");
-    parser.add_flag("--env-hidden,!--no-env-hidden", app.trace_options.environments_hidden,"Environments are hidden in renderer");
-    parser.add_flag("--parallel,!--no-parallel", no_parallel, "Disable parallel execution.");
+    parser.add_option("--hres,-R", app.trace_options.image_width,
+        "Image horizontal resolution.");
+    parser.add_option("--vres,-r", app.trace_options.image_height,
+        "Image vertical resolution.");
+    parser.add_option(
+        "--nsamples,-s", app.trace_options.num_samples, "Number of samples.");
+    parser
+        .add_option(
+            "--tracer,-t", app.trace_options.sampler_type, "Tracer type.")
+        ->transform(CLI::IsMember(trace_sampler_type_namemap));
+    parser.add_option("--nbounces", app.trace_options.max_bounces,
+        "Maximum number of bounces.");
+    parser.add_option("--pixel-clamp", app.trace_options.pixel_clamp,
+        "Final pixel clamping.");
+    parser.add_option("--seed", app.trace_options.random_seed,
+        "Seed for the random number generators.");
+    parser.add_flag("--env-hidden,!--no-env-hidden",
+        app.trace_options.environments_hidden,
+        "Environments are hidden in renderer");
+    parser.add_flag("--parallel,!--no-parallel", no_parallel,
+        "Disable parallel execution.");
 #if YOCTO_EMBREE
-    parser.add_flag("--embree,!--no-embree", app.bvh_options.use_embree, "Use Embree ratracer");
-    parser.add_flag("--flatten-embree,!--no-flatten-embree", app.bvh_options.flatten_embree, "Flatten embree scene");
+    parser.add_flag("--embree,!--no-embree", app.bvh_options.use_embree,
+        "Use Embree ratracer");
+    parser.add_flag("--flatten-embree,!--no-flatten-embree",
+        app.bvh_options.flatten_embree, "Flatten embree scene");
 #endif
-    parser.add_flag("--double-sided,!--no-double-sided", app.trace_options.double_sided, "Double-sided rendering.");
-    parser.add_flag("--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
+    parser.add_flag("--double-sided,!--no-double-sided",
+        app.trace_options.double_sided, "Double-sided rendering.");
+    parser.add_flag(
+        "--add-skyenv,!--no-add-skyenv", app.add_skyenv, "Add sky envmap");
     parser.add_option("--output-image,-o", app.imfilename, "Image filename");
     parser.add_option("scene", app.filename, "Scene filename")->required(true);
     try {
         parser.parse(argc, argv);
-    } catch (const CLI::ParseError &e) {
+    } catch (const CLI::ParseError& e) {
         return parser.exit(e);
     }
 
