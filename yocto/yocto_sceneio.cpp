@@ -2405,7 +2405,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     if (result != cgltf_result_success) {
         throw io_error("could not load gltf " + filename);
     }
-    auto gltf = std::unique_ptr<cgltf_data>{data};
+    auto gltf = std::unique_ptr<cgltf_data, void(*)(cgltf_data*)>{data, cgltf_free};
     if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
         throw io_error("could not load gltf buffers " + filename);
@@ -2894,9 +2894,7 @@ void load_gltf_scene(const string& filename, yocto_scene& scene,
     scene = {};
 
     try {
-        // convert json
-        // auto js = json();
-        // load_json(filename, js);
+        // load gltf
         gltf_to_scene(filename, scene);
 
         // load textures
