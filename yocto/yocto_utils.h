@@ -4,7 +4,7 @@
 //
 // Yocto/Utils is a collection of utilities used in writing other Yocto/GL
 // libraries and example applications. We support printing builtin and
-// Yocto/Math values, simple path manipulation, file lading/saving and basic 
+// Yocto/Math values, simple path manipulation, file lading/saving and basic
 // concurrency utilities. These utilities are likely to change often and are to
 // be considered internal to Yocto.
 //
@@ -107,11 +107,11 @@
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+using std::atomic;
 using std::deque;
+using std::future;
 using std::lock_guard;
 using std::mutex;
-using std::future;
-using std::atomic;
 using std::thread;
 using namespace std::chrono_literals;
 
@@ -423,7 +423,7 @@ inline vector<T> operator+(const vector<T>& a, const T& b) {
     return c += b;
 }
 
-}
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // PATH UTILITIES

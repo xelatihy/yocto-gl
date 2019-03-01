@@ -4566,60 +4566,63 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         happly::PLYData ply(filename);
 
         // copy vertex data
-        if(ply.hasElement("vertex")) {
+        if (ply.hasElement("vertex")) {
             auto& vertex = ply.getElement("vertex");
-            if(vertex.hasProperty("x") && vertex.hasProperty("y") && vertex.hasProperty("z")) {
+            if (vertex.hasProperty("x") && vertex.hasProperty("y") &&
+                vertex.hasProperty("z")) {
                 auto x = vertex.getProperty<float>("x");
                 auto y = vertex.getProperty<float>("y");
                 auto z = vertex.getProperty<float>("z");
                 positions.resize(x.size());
-                for(auto i = 0; i < positions.size(); i ++) {
+                for (auto i = 0; i < positions.size(); i++) {
                     positions[i] = {x[i], y[i], z[i]};
                 }
             } else {
                 throw io_error("vertex positions not present");
             }
-            if(vertex.hasProperty("nx") && vertex.hasProperty("ny") && vertex.hasProperty("nz")) {
+            if (vertex.hasProperty("nx") && vertex.hasProperty("ny") &&
+                vertex.hasProperty("nz")) {
                 auto x = vertex.getProperty<float>("nx");
                 auto y = vertex.getProperty<float>("ny");
                 auto z = vertex.getProperty<float>("nz");
                 normals.resize(x.size());
-                for(auto i = 0; i < normals.size(); i ++) {
+                for (auto i = 0; i < normals.size(); i++) {
                     normals[i] = {x[i], y[i], z[i]};
                 }
             }
-            if(vertex.hasProperty("u") && vertex.hasProperty("v")) {
+            if (vertex.hasProperty("u") && vertex.hasProperty("v")) {
                 auto x = vertex.getProperty<float>("u");
                 auto y = vertex.getProperty<float>("v");
                 texturecoords.resize(x.size());
-                for(auto i = 0; i < texturecoords.size(); i ++) {
+                for (auto i = 0; i < texturecoords.size(); i++) {
                     texturecoords[i] = {x[i], y[i]};
                 }
             }
-            if(vertex.hasProperty("s") && vertex.hasProperty("t")) {
+            if (vertex.hasProperty("s") && vertex.hasProperty("t")) {
                 auto x = vertex.getProperty<float>("s");
                 auto y = vertex.getProperty<float>("t");
                 texturecoords.resize(x.size());
-                for(auto i = 0; i < texturecoords.size(); i ++) {
+                for (auto i = 0; i < texturecoords.size(); i++) {
                     texturecoords[i] = {x[i], y[i]};
                 }
             }
-            if(vertex.hasProperty("red") && vertex.hasProperty("green") && vertex.hasProperty("blue")) {
+            if (vertex.hasProperty("red") && vertex.hasProperty("green") &&
+                vertex.hasProperty("blue")) {
                 auto x = vertex.getProperty<float>("red");
                 auto y = vertex.getProperty<float>("green");
                 auto z = vertex.getProperty<float>("blue");
                 colors.resize(x.size());
-                for(auto i = 0; i < colors.size(); i ++) {
+                for (auto i = 0; i < colors.size(); i++) {
                     colors[i] = {x[i], y[i], z[i], 1};
                 }
-                if(vertex.hasProperty("alpha")) {
+                if (vertex.hasProperty("alpha")) {
                     auto w = vertex.getProperty<float>("alpha");
-                    for(auto i = 0; i < colors.size(); i ++) {
+                    for (auto i = 0; i < colors.size(); i++) {
                         colors[i].w = w[i];
                     }
                 }
             }
-            if(vertex.hasProperty("radius")) {
+            if (vertex.hasProperty("radius")) {
                 radius = vertex.getProperty<float>("radius");
             }
         }
@@ -4630,12 +4633,13 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         }
 
         // copy face data
-        if(ply.hasElement("face")) {
+        if (ply.hasElement("face")) {
             auto& elements = ply.getElement("face");
-            if(!elements.hasProperty("vertex_indices")) throw io_error("bad ply faces");
+            if (!elements.hasProperty("vertex_indices"))
+                throw io_error("bad ply faces");
             auto indices = elements.getListProperty<int>("vertex_indices");
-            for(auto& face : indices) {
-                if(face.size() == 4) {
+            for (auto& face : indices) {
+                if (face.size() == 4) {
                     quads.push_back({face[0], face[1], face[2], face[3]});
                 } else {
                     for (auto i = 2; i < face.size(); i++)
@@ -4645,11 +4649,12 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         }
 
         // copy face data
-        if(ply.hasElement("line")) {
+        if (ply.hasElement("line")) {
             auto& elements = ply.getElement("line");
-            if(!elements.hasProperty("vertex_indices")) throw io_error("bad ply lines");
+            if (!elements.hasProperty("vertex_indices"))
+                throw io_error("bad ply lines");
             auto indices = elements.getListProperty<int>("vertex_indices");
-            for(auto& line : indices) {
+            for (auto& line : indices) {
                 for (auto i = 1; i < line.size(); i++)
                     lines.push_back({line[i], line[i - 1]});
             }
@@ -4674,12 +4679,12 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
 
     // add elements
     ply.addElement("vertex", positions.size());
-    if(!positions.empty()) {
+    if (!positions.empty()) {
         auto& vertex = ply.getElement("vertex");
-        auto x = vector<float>{};
-        auto y = vector<float>{};
-        auto z = vector<float>{};
-        for(auto& p : positions) {
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        for (auto& p : positions) {
             x.push_back(p.x);
             y.push_back(p.y);
             z.push_back(p.z);
@@ -4688,12 +4693,12 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
         vertex.addProperty("y", y);
         vertex.addProperty("z", z);
     }
-    if(!normals.empty()) {
+    if (!normals.empty()) {
         auto& vertex = ply.getElement("vertex");
-        auto x = vector<float>{};
-        auto y = vector<float>{};
-        auto z = vector<float>{};
-        for(auto& n : normals) {
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        for (auto& n : normals) {
             x.push_back(n.x);
             y.push_back(n.y);
             z.push_back(n.z);
@@ -4702,24 +4707,24 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
         vertex.addProperty("ny", y);
         vertex.addProperty("nz", z);
     }
-    if(!texturecoords.empty()) {
+    if (!texturecoords.empty()) {
         auto& vertex = ply.getElement("vertex");
-        auto x = vector<float>{};
-        auto y = vector<float>{};
-        for(auto& t : texturecoords) {
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        for (auto& t : texturecoords) {
             x.push_back(t.x);
             y.push_back(flip_texcoord ? 1 - t.y : t.y);
         }
         vertex.addProperty("u", x);
         vertex.addProperty("v", y);
     }
-    if(!colors.empty()) {
+    if (!colors.empty()) {
         auto& vertex = ply.getElement("vertex");
-        auto x = vector<float>{};
-        auto y = vector<float>{};
-        auto z = vector<float>{};
-        auto w = vector<float>{};
-        for(auto& c : colors) {
+        auto  x      = vector<float>{};
+        auto  y      = vector<float>{};
+        auto  z      = vector<float>{};
+        auto  w      = vector<float>{};
+        for (auto& c : colors) {
             x.push_back(c.x);
             y.push_back(c.y);
             z.push_back(c.z);
@@ -4730,7 +4735,7 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
         vertex.addProperty("blue", z);
         vertex.addProperty("alpha", w);
     }
-    if(!radius.empty()) {
+    if (!radius.empty()) {
         auto& vertex = ply.getElement("vertex");
         vertex.addProperty("radius", radius);
     }
@@ -4739,11 +4744,11 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
     if (!triangles.empty() || !quads.empty()) {
         ply.addElement("face", triangles.size() + quads.size());
         auto elements = vector<vector<int>>{};
-        for(auto& t : triangles) {
+        for (auto& t : triangles) {
             elements.push_back({t.x, t.y, t.z});
         }
-        for(auto& q : quads) {
-            if(q.z == q.w) {
+        for (auto& q : quads) {
+            if (q.z == q.w) {
                 elements.push_back({q.x, q.y, q.z});
             } else {
                 elements.push_back({q.x, q.y, q.z, q.w});
@@ -4754,7 +4759,7 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
     if (!lines.empty()) {
         ply.addElement("line", lines.size());
         auto elements = vector<vector<int>>{};
-        for(auto& l : lines) {
+        for (auto& l : lines) {
             elements.push_back({l.x, l.y});
         }
         ply.getElement("line").addListProperty("vertex_indices", elements);
@@ -4762,7 +4767,7 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
     if (!points.empty() || !quads.empty()) {
         ply.addElement("point", points.size());
         auto elements = vector<vector<int>>{};
-        for(auto& p : points) {
+        for (auto& p : points) {
             elements.push_back({p});
         }
         ply.getElement("point").addListProperty("vertex_indices", elements);
@@ -4770,8 +4775,9 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
 
     // Write our data
     try {
-        ply.write(filename, ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
-    } catch(const std::exception& e) {
+        ply.write(filename,
+            ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
+    } catch (const std::exception& e) {
         throw io_error("cannot save mesh " + filename + "\n" + e.what());
     }
 }
