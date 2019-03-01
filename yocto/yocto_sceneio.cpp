@@ -4555,11 +4555,11 @@ void save_mesh(const string& filename, const vector<int>& points,
 void load_ply_mesh(const string& filename, vector<int>& points,
     vector<vec2i>& lines, vector<vec3i>& triangles, vector<vec4i>& quads,
     vector<vec3f>& positions, vector<vec3f>& normals,
-    vector<vec2f>& texturecoords, vector<vec4f>& color, vector<float>& radius,
+    vector<vec2f>& texturecoords, vector<vec4f>& colors, vector<float>& radius,
     bool force_triangles, bool flip_texcoord) {
     // clear
     reset_mesh_data(points, lines, triangles, quads, positions, normals,
-        texturecoords, color, radius);
+        texturecoords, colors, radius);
 
     try {
         // load ply
@@ -4568,42 +4568,59 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         // copy vertex data
         if(ply.hasElement("vertex")) {
             auto& vertex = ply.getElement("vertex");
-            if(vertex)
-        }
-        if(ply.hasElement("faces")) {
-
-        }
-        for (auto& elem : ply.elements) {
-            if (elem.name != "vertex") continue;
-            auto count = elem.count;
-            for (auto& prop : elem.properties) {
-                auto vals        = prop.scalars.data();
-                auto copy_floats = [vals, count](auto& vert, const auto& def,
-                                       int stride, int offset) {
-                    if (vert.size() != count) vert.resize(count, def);
-                    auto dst = (float*)vert.data();
-                    for (auto i = 0; i < count; i++)
-                        dst[i * stride + offset] = vals[i];
-                };
-                if (prop.name == "x") copy_floats(positions, zero3f, 3, 0);
-                if (prop.name == "y") copy_floats(positions, zero3f, 3, 1);
-                if (prop.name == "z") copy_floats(positions, zero3f, 3, 2);
-                if (prop.name == "nx") copy_floats(normals, zero3f, 3, 0);
-                if (prop.name == "ny") copy_floats(normals, zero3f, 3, 1);
-                if (prop.name == "nz") copy_floats(normals, zero3f, 3, 2);
-                if (prop.name == "u" || prop.name == "s")
-                    copy_floats(texturecoords, zero2f, 2, 0);
-                if (prop.name == "v" || prop.name == "t")
-                    copy_floats(texturecoords, zero2f, 2, 1);
-                if (prop.name == "red")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 0);
-                if (prop.name == "green")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 1);
-                if (prop.name == "blue")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 2);
-                if (prop.name == "alpha")
-                    copy_floats(color, vec4f{0, 0, 0, 1}, 4, 3);
-                if (prop.name == "radius") copy_floats(radius, 0.0f, 1, 0);
+            if(vertex.hasProperty("x") && vertex.hasProperty("y") && vertex.hasProperty("z")) {
+                auto x = vertex.getProperty<float>("x");
+                auto y = vertex.getProperty<float>("y");
+                auto z = vertex.getProperty<float>("z");
+                positions.resize(x.size());
+                for(auto i = 0; i < positions.size(); i ++) {
+                    positions[i] = {x[i], y[i], z[i]};
+                }
+            } else {
+                throw io_error("vertex positions not present");
+            }
+            if(vertex.hasProperty("nx") && vertex.hasProperty("ny") && vertex.hasProperty("nz")) {
+                auto x = vertex.getProperty<float>("nx");
+                auto y = vertex.getProperty<float>("ny");
+                auto z = vertex.getProperty<float>("nz");
+                normals.resize(x.size());
+                for(auto i = 0; i < normals.size(); i ++) {
+                    normals[i] = {x[i], y[i], z[i]};
+                }
+            }
+            if(vertex.hasProperty("u") && vertex.hasProperty("v")) {
+                auto x = vertex.getProperty<float>("u");
+                auto y = vertex.getProperty<float>("v");
+                texturecoords.resize(x.size());
+                for(auto i = 0; i < texturecoords.size(); i ++) {
+                    texturecoords[i] = {x[i], y[i]};
+                }
+            }
+            if(vertex.hasProperty("s") && vertex.hasProperty("t")) {
+                auto x = vertex.getProperty<float>("s");
+                auto y = vertex.getProperty<float>("t");
+                texturecoords.resize(x.size());
+                for(auto i = 0; i < texturecoords.size(); i ++) {
+                    texturecoords[i] = {x[i], y[i]};
+                }
+            }
+            if(vertex.hasProperty("red") && vertex.hasProperty("green") && vertex.hasProperty("blue")) {
+                auto x = vertex.getProperty<float>("red");
+                auto y = vertex.getProperty<float>("green");
+                auto z = vertex.getProperty<float>("blue");
+                colors.resize(x.size());
+                for(auto i = 0; i < colors.size(); i ++) {
+                    colors[i] = {x[i], y[i], z[i], 1};
+                }
+                if(vertex.hasProperty("alpha")) {
+                    auto w = vertex.getProperty<float>("alpha");
+                    for(auto i = 0; i < colors.size(); i ++) {
+                        colors[i].w = w[i];
+                    }
+                }
+            }
+            if(vertex.hasProperty("radius")) {
+                radius = vertex.getProperty<float>("radius");
             }
         }
 
@@ -4613,40 +4630,28 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         }
 
         // copy face data
-        for (auto& elem : ply.elements) {
-            if (elem.name != "face") continue;
-            auto count = elem.count;
-            for (auto& prop : elem.properties) {
-                if (prop.name == "vertex_indices") {
-                    for (auto fid = 0; fid < count; fid++) {
-                        auto& list = prop.lists[fid];
-                        auto  num  = (int)prop.scalars[fid];
-                        if (num == 4) {
-                            quads.push_back(
-                                {list[0], list[1], list[2], list[3]});
-                        } else {
-                            for (auto i = 2; i < num; i++)
-                                triangles.push_back(
-                                    {list[0], list[i - 1], list[i]});
-                        }
-                    }
+        if(ply.hasElement("face")) {
+            auto& elements = ply.getElement("face");
+            if(!elements.hasProperty("vertex_indices")) throw io_error("bad ply faces");
+            auto indices = elements.getListProperty<int>("vertex_indices");
+            for(auto& face : indices) {
+                if(face.size() == 4) {
+                    quads.push_back({face[0], face[1], face[2], face[3]});
+                } else {
+                    for (auto i = 2; i < face.size(); i++)
+                        triangles.push_back({face[0], face[i - 1], face[i]});
                 }
             }
         }
 
         // copy face data
-        for (auto& elem : ply.elements) {
-            if (elem.name != "line") continue;
-            auto count = elem.count;
-            for (auto& prop : elem.properties) {
-                if (prop.name == "vertex_indices") {
-                    for (auto fid = 0; fid < count; fid++) {
-                        auto& list = prop.lists[fid];
-                        auto  num  = (int)prop.scalars[fid];
-                        for (auto i = 1; i < num; i++)
-                            lines.push_back({list[i], list[i - 1]});
-                    }
-                }
+        if(ply.hasElement("line")) {
+            auto& elements = ply.getElement("line");
+            if(!elements.hasProperty("vertex_indices")) throw io_error("bad ply lines");
+            auto indices = elements.getListProperty<int>("vertex_indices");
+            for(auto& line : indices) {
+                for (auto i = 1; i < line.size(); i++)
+                    lines.push_back({line[i], line[i - 1]});
             }
         }
 
