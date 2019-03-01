@@ -62,10 +62,13 @@
 #include "yocto_utils.h"
 
 #include "ext/happly.h"
+#define CGLTF_IMPLEMENTATION
+#include "ext/cgltf.h"
 
 #include <array>
 #include <climits>
 #include <cstdlib>
+#include <memory>
 #include <regex>
 
 // -----------------------------------------------------------------------------
@@ -2392,6 +2395,8 @@ static bool startswith(const string& str, const string& substr) {
     return true;
 }
 
+#if 0
+
 // convert gltf to scene
 void gltf_to_scene(
     yocto_scene& scene, const json& gltf, const string& dirname) {
@@ -2935,6 +2940,499 @@ void gltf_to_scene(
     }
 }
 
+#else
+
+// convert gltf to scene
+void gltf_to_scene(const string& filename, yocto_scene& scene) {
+    // load gltf
+    auto options = cgltf_options{};
+    memset(&options, 0, sizeof(options));
+    auto data   = (cgltf_data*)nullptr;
+    auto result = cgltf_parse_file(&options, filename.c_str(), &data);
+    if (result != cgltf_result_success) {
+        throw io_error("could not load gltf " + filename);
+    }
+    auto gltf = std::unique_ptr<cgltf_data>{data};
+    if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
+        cgltf_result_success) {
+        throw io_error("could not load gltf buffers " + filename);
+    }
+
+    // convert textures
+    auto imap = unordered_map<cgltf_image*, int>{};
+    for (auto tid = 0; tid < gltf->images_count; tid++) {
+        auto gimg        = &gltf->images[tid];
+        auto texture     = yocto_texture{};
+        texture.name     = gimg->name ? gimg->name : "";
+        texture.filename = (startswith(gimg->uri, "data:"))
+                               ? string("[glTF-inline].png")
+                               : gimg->uri;
+        scene.textures.push_back(texture);
+        imap[gimg] = tid;
+    }
+
+    // add a texture
+    auto add_texture = [&scene, &imap](
+                           const cgltf_texture_view& ginfo, bool force_linear) {
+        if (!ginfo.texture || !ginfo.texture->image) return -1;
+        auto gtxt       = ginfo.texture;
+        auto texture_id = imap.at(gtxt->image);
+        if (!gtxt->sampler) return texture_id;
+        auto gsmp = gtxt->sampler;
+        scene.textures[texture_id].clamp_to_edge =
+            gsmp->wrap_s == 33071 || gsmp->wrap_t == 33071;  // clamp to edge
+        scene.textures[texture_id].height_scale = ginfo.scale;
+        scene.textures[texture_id].ldr_as_linear =
+            force_linear ||
+            is_hdr_filename(scene.textures[texture_id].filename);
+        return texture_id;
+    };
+
+    // convert materials
+    auto mmap = unordered_map<cgltf_material*, int>{{nullptr, -1}};
+    for (auto mid = 0; mid < gltf->materials_count; mid++) {
+        auto gmat         = &gltf->materials[mid];
+        auto material     = yocto_material();
+        material.name     = gmat->name ? gmat->name : "";
+        material.emission = {gmat->emissive_factor[0], gmat->emissive_factor[1],
+            gmat->emissive_factor[2]};
+        material.emission_texture = add_texture(gmat->emissive_texture, false);
+        if (gmat->has_pbr_specular_glossiness) {
+            material.base_metallic = false;
+            material.gltf_textures = true;
+            auto gsg               = &gmat->pbr_specular_glossiness;
+            auto kb = vec4f{gsg->diffuse_factor[0], gsg->diffuse_factor[1],
+                gsg->diffuse_factor[2], gsg->diffuse_factor[3]};
+            material.diffuse         = {kb.x, kb.y, kb.z};
+            material.opacity         = kb.w;
+            material.specular        = {gsg->specular_factor[0],
+                gsg->specular_factor[1], gsg->specular_factor[2]};
+            material.roughness       = 1 - gsg->glossiness_factor;
+            material.diffuse_texture = add_texture(gsg->diffuse_texture, false);
+            material.specular_texture = add_texture(
+                gsg->specular_glossiness_texture, false);
+            material.roughness_texture = material.specular_texture;
+        } else if (gmat->has_pbr_metallic_roughness) {
+            material.base_metallic   = true;
+            material.gltf_textures   = true;
+            auto gmr                 = &gmat->pbr_metallic_roughness;
+            auto kb                  = vec4f{gmr->base_color_factor[0],
+                gmr->base_color_factor[1], gmr->base_color_factor[2],
+                gmr->base_color_factor[3]};
+            material.diffuse         = {kb.x, kb.y, kb.z};
+            material.opacity         = kb.w;
+            auto km                  = gmr->metallic_factor;
+            material.specular        = {km, km, km};
+            material.roughness       = gmr->roughness_factor;
+            material.diffuse_texture = add_texture(
+                gmr->base_color_texture, false);
+            material.specular_texture = add_texture(
+                gmr->metallic_roughness_texture, true);
+            material.roughness_texture = material.specular_texture;
+        }
+        material.occlusion_texture = add_texture(gmat->occlusion_texture, true);
+        material.normal_texture    = add_texture(gmat->normal_texture, true);
+        scene.materials.push_back(material);
+        mmap[gmat] = (int)scene.materials.size() - 1;
+    }
+
+    // get values from accessors
+    auto accessor_values =
+        [](const cgltf_accessor* gacc,
+            bool normalize = false) -> vector<std::array<double, 4>> {
+        auto gview       = gacc->buffer_view;
+        auto data        = (byte*)gview->buffer->data;
+        auto offset      = gacc->offset + gview->offset;
+        auto stride      = gview->stride;
+        auto compTypeNum = gacc->component_type;
+        auto count       = gacc->count;
+        auto type        = gacc->type;
+        auto ncomp       = 0;
+        if (type == cgltf_type_scalar) ncomp = 1;
+        if (type == cgltf_type_vec2) ncomp = 2;
+        if (type == cgltf_type_vec3) ncomp = 3;
+        if (type == cgltf_type_vec4) ncomp = 4;
+        auto compSize = 1;
+        if (compTypeNum == cgltf_component_type_r_16 ||
+            compTypeNum == cgltf_component_type_r_16u) {
+            compSize = 2;
+        }
+        if (compTypeNum == cgltf_component_type_r_32u ||
+            compTypeNum == cgltf_component_type_r_32f) {
+            compSize = 4;
+        }
+        if (!stride) stride = compSize * ncomp;
+        auto vals = vector<std::array<double, 4>>(
+            count, {{0.0, 0.0, 0.0, 1.0}});
+        for (auto i = 0; i < count; i++) {
+            auto d = data + offset + i * stride;
+            for (auto c = 0; c < ncomp; c++) {
+                if (compTypeNum == cgltf_component_type_r_8) {  // char
+                    vals[i][c] = (double)(*(char*)d);
+                    if (normalize) vals[i][c] /= SCHAR_MAX;
+                } else if (compTypeNum == cgltf_component_type_r_8u) {  // byte
+                    vals[i][c] = (double)(*(byte*)d);
+                    if (normalize) vals[i][c] /= UCHAR_MAX;
+                } else if (compTypeNum == cgltf_component_type_r_16) {  // short
+                    vals[i][c] = (double)(*(short*)d);
+                    if (normalize) vals[i][c] /= SHRT_MAX;
+                } else if (compTypeNum ==
+                           cgltf_component_type_r_16u) {  // unsigned short
+                    vals[i][c] = (double)(*(unsigned short*)d);
+                    if (normalize) vals[i][c] /= USHRT_MAX;
+                } else if (compTypeNum ==
+                           cgltf_component_type_r_32u) {  // unsigned int
+                    vals[i][c] = (double)(*(unsigned int*)d);
+                    if (normalize) vals[i][c] /= UINT_MAX;
+                } else if (compTypeNum ==
+                           cgltf_component_type_r_32f) {  // float
+                    vals[i][c] = (*(float*)d);
+                }
+                d += compSize;
+            }
+        }
+        return vals;
+    };
+
+    // convert meshes
+    auto meshes = unordered_map<cgltf_mesh*, vector<int>>{{nullptr, {}}};
+    for (auto mid = 0; mid < gltf->meshes_count; mid++) {
+        auto gmesh    = &gltf->meshes[mid];
+        meshes[gmesh] = {};
+        for (auto sid = 0; sid < gmesh->primitives_count; sid++) {
+            auto gprim = &gmesh->primitives[sid];
+            if (!gprim->attributes_count) continue;
+            auto shape = yocto_shape();
+            shape.name = (gmesh->name ? gmesh->name : "") + ((sid) ? std::to_string(sid) : string());
+            for (auto aid = 0; aid < gprim->attributes_count; aid++) {
+                auto gattr    = &gprim->attributes[aid];
+                auto semantic = string(gattr->name ? gattr->name : "");
+                auto gacc     = gattr->data;
+                auto vals     = accessor_values(gacc);
+                if (semantic == "POSITION") {
+                    shape.positions.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shape.positions.push_back({(float)vals[i][0],
+                            (float)vals[i][1], (float)vals[i][2]});
+                } else if (semantic == "NORMAL") {
+                    shape.normals.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shape.normals.push_back({(float)vals[i][0],
+                            (float)vals[i][1], (float)vals[i][2]});
+                } else if (semantic == "TEXCOORD" || semantic == "TEXCOORD_0") {
+                    shape.texturecoords.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shape.texturecoords.push_back(
+                            {(float)vals[i][0], (float)vals[i][1]});
+                } else if (semantic == "COLOR" || semantic == "COLOR_0") {
+                    shape.colors.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shape.colors.push_back(
+                            {(float)vals[i][0], (float)vals[i][1],
+                                (float)vals[i][2], (float)vals[i][3]});
+                } else if (semantic == "TANGENT") {
+                    shape.tangentspaces.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shape.tangentspaces.push_back(
+                            {(float)vals[i][0], (float)vals[i][1],
+                                (float)vals[i][2], (float)vals[i][3]});
+                    for (auto& t : shape.tangentspaces) t.w = -t.w;
+                } else if (semantic == "RADIUS") {
+                    shape.radius.reserve(vals.size());
+                    for (auto i = 0; i < vals.size(); i++)
+                        shape.radius.push_back((float)vals[i][0]);
+                } else {
+                    // ignore
+                }
+            }
+            // indices
+            if (!gprim->indices) {
+                if (gprim->type == cgltf_primitive_type_triangles) {
+                    shape.triangles.reserve(shape.positions.size() / 3);
+                    for (auto i = 0; i < shape.positions.size() / 3; i++)
+                        shape.triangles.push_back(
+                            {i * 3 + 0, i * 3 + 1, i * 3 + 2});
+                } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
+                    shape.triangles.reserve(shape.positions.size() - 2);
+                    for (auto i = 2; i < shape.positions.size(); i++)
+                        shape.triangles.push_back({0, i - 1, i});
+                } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
+                    shape.triangles.reserve(shape.positions.size() - 2);
+                    for (auto i = 2; i < shape.positions.size(); i++)
+                        shape.triangles.push_back({i - 2, i - 1, i});
+                } else if (gprim->type == cgltf_primitive_type_lines) {
+                    shape.lines.reserve(shape.positions.size() / 2);
+                    for (auto i = 0; i < shape.positions.size() / 2; i++)
+                        shape.lines.push_back({i * 2 + 0, i * 2 + 1});
+                } else if (gprim->type == cgltf_primitive_type_line_loop) {
+                    shape.lines.reserve(shape.positions.size());
+                    for (auto i = 1; i < shape.positions.size(); i++)
+                        shape.lines.push_back({i - 1, i});
+                    shape.lines.back() = {(int)shape.positions.size() - 1, 0};
+                } else if (gprim->type == cgltf_primitive_type_line_strip) {
+                    shape.lines.reserve(shape.positions.size() - 1);
+                    for (auto i = 1; i < shape.positions.size(); i++)
+                        shape.lines.push_back({i - 1, i});
+                } else if (gprim->type == cgltf_primitive_type_points) {
+                    // points
+                    throw io_error("points not supported");
+                } else {
+                    throw io_error("unknown primitive type");
+                }
+            } else {
+                auto indices = accessor_values(gprim->indices);
+                if (gprim->type == cgltf_primitive_type_triangles) {
+                    shape.triangles.reserve(indices.size() / 3);
+                    for (auto i = 0; i < indices.size() / 3; i++)
+                        shape.triangles.push_back({(int)indices[i * 3 + 0][0],
+                            (int)indices[i * 3 + 1][0],
+                            (int)indices[i * 3 + 2][0]});
+                } else if (gprim->type == cgltf_primitive_type_triangle_fan) {
+                    shape.triangles.reserve(indices.size() - 2);
+                    for (auto i = 2; i < indices.size(); i++)
+                        shape.triangles.push_back({(int)indices[0][0],
+                            (int)indices[i - 1][0], (int)indices[i][0]});
+                } else if (gprim->type == cgltf_primitive_type_triangle_strip) {
+                    shape.triangles.reserve(indices.size() - 2);
+                    for (auto i = 2; i < indices.size(); i++)
+                        shape.triangles.push_back({(int)indices[i - 2][0],
+                            (int)indices[i - 1][0], (int)indices[i][0]});
+                } else if (gprim->type == cgltf_primitive_type_lines) {
+                    shape.lines.reserve(indices.size() / 2);
+                    for (auto i = 0; i < indices.size() / 2; i++)
+                        shape.lines.push_back({(int)indices[i * 2 + 0][0],
+                            (int)indices[i * 2 + 1][0]});
+                } else if (gprim->type == cgltf_primitive_type_line_loop) {
+                    shape.lines.reserve(indices.size());
+                    for (auto i = 1; i < indices.size(); i++)
+                        shape.lines.push_back(
+                            {(int)indices[i - 1][0], (int)indices[i][0]});
+                    shape.lines.back() = {(int)indices[indices.size() - 1][0],
+                        (int)indices[0][0]};
+                } else if (gprim->type == cgltf_primitive_type_line_strip) {
+                    shape.lines.reserve(indices.size() - 1);
+                    for (auto i = 1; i < indices.size(); i++)
+                        shape.lines.push_back(
+                            {(int)indices[i - 1][0], (int)indices[i][0]});
+                } else if (gprim->type == cgltf_primitive_type_points) {
+                    throw io_error("points not supported");
+                } else {
+                    throw io_error("unknown primitive type");
+                }
+            }
+            shape.material = mmap.at(gprim->material);
+            scene.shapes.push_back(shape);
+            meshes[gmesh].push_back((int)scene.shapes.size() - 1);
+        }
+    }
+
+    // convert cameras
+    auto cmap = unordered_map<cgltf_camera*, int>{{nullptr, -1}};
+    for (auto cid = 0; cid < gltf->cameras_count; cid++) {
+        auto gcam           = &gltf->cameras[cid];
+        auto camera         = yocto_camera{};
+        camera.name         = gcam->name ? gcam->name : "";
+        camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
+        if (camera.orthographic) {
+            throw io_error("orthographic not supported well");
+            auto ortho           = &gcam->orthographic;
+            camera.lens_aperture = 0;
+            set_camera_perspective(
+                camera, ortho->ymag, ortho->xmag / ortho->ymag, float_max);
+        } else {
+            auto persp           = &gcam->perspective;
+            camera.lens_aperture = 0;
+            set_camera_perspective(
+                camera, persp->yfov, persp->aspect_ratio, float_max);
+        }
+        scene.cameras.push_back(camera);
+        cmap[gcam] = (int)scene.cameras.size() - 1;
+    }
+
+    // convert nodes
+    auto nmap = unordered_map<cgltf_node*, int>{{nullptr, -1}};
+    for (auto nid = 0; nid < gltf->nodes_count; nid++) {
+        auto gnde = &gltf->nodes[nid];
+        auto node = yocto_scene_node{};
+        node.name = gnde->name ? gnde->name : "";
+        if (gnde->camera) node.camera = cmap.at(gnde->camera);
+        if (gnde->has_translation) {
+            node.translation = {gnde->translation[0], gnde->translation[1],
+                gnde->translation[2]};
+        }
+        if (gnde->has_rotation) {
+            node.rotation = {gnde->rotation[0], gnde->rotation[1],
+                gnde->rotation[2], gnde->rotation[3]};
+        }
+        if (gnde->has_scale) {
+            node.scale = {gnde->scale[0], gnde->scale[1], gnde->scale[2]};
+        }
+        if (gnde->has_matrix) {
+            auto m     = gnde->matrix;
+            node.local = mat_to_frame(
+                mat4f{{m[0], m[1], m[2], m[3]}, {m[4], m[5], m[6], m[7]},
+                    {m[8], m[9], m[10], m[11]}, {m[12], m[13], m[14], m[15]}});
+        }
+        scene.nodes.push_back(node);
+        nmap[gnde] = (int)scene.nodes.size();
+    }
+
+    // set up parent pointers
+    for (auto nid = 0; nid < gltf->nodes_count; nid++) {
+        auto gnde = &gltf->nodes[nid];
+        if (!gnde->children_count) continue;
+        for (auto cid = 0; cid < gnde->children_count; cid++) {
+            scene.nodes[nmap.at(gnde->children[cid])].parent = nid;
+        }
+    }
+
+    // set up instances
+    for (auto nid = 0; nid < gltf->nodes_count; nid++) {
+        auto gnde = &gltf->nodes[nid];
+        if (!gnde->mesh) continue;
+        auto& node = scene.nodes[nid];
+        auto& shps = meshes.at(gnde->mesh);
+        if (shps.empty()) continue;
+        if (shps.size() == 1) {
+            auto instance  = yocto_instance();
+            instance.name  = node.name;
+            instance.shape = shps[0];
+            scene.instances.push_back(instance);
+            node.instance = (int)scene.instances.size() - 1;
+        } else {
+            for (auto shp : shps) {
+                auto& shape    = scene.shapes[shp];
+                auto  instance = yocto_instance();
+                instance.name  = node.name + "_" + shape.name;
+                instance.shape = shp;
+                scene.instances.push_back(instance);
+                auto child     = yocto_scene_node{};
+                child.name     = node.name + "_" + shape.name;
+                child.parent   = nid;
+                child.instance = (int)scene.instances.size() - 1;
+                scene.nodes.push_back(child);
+            }
+        }
+    }
+    
+    // hasher for later
+    struct sampler_map_hash {
+        size_t operator()(const pair<cgltf_animation_sampler*, cgltf_animation_path_type>& value) const {
+            auto hasher1 = std::hash<cgltf_animation_sampler*>();
+            auto hasher2 = std::hash<int>();
+            auto h = (size_t)0;
+            h ^= hasher1(value.first) + 0x9e3779b9 + (h << 6) + (h >> 2);
+            h ^= hasher2(value.second) + 0x9e3779b9 + (h << 6) + (h >> 2);
+            return h;            
+        }
+    };
+
+    // convert animations
+    for (auto gid = 0; gid < gltf->animations_count; gid++) {
+        auto ganm        = &gltf->animations[gid];
+        auto aid         = 0;
+        auto sampler_map = unordered_map<
+            pair<cgltf_animation_sampler*, cgltf_animation_path_type>, int, sampler_map_hash>();
+        for (auto cid = 0; cid < ganm->channels_count; cid++) {
+            auto gchannel = &ganm->channels[cid];
+            auto path     = gchannel->target_path;
+            if (sampler_map.find({gchannel->sampler, path}) ==
+                sampler_map.end()) {
+                auto gsampler  = gchannel->sampler;
+                auto animation = yocto_animation{};
+                animation.name = (ganm->name ? ganm->name : "anim") +
+                                 std::to_string(aid++);
+                animation.animation_group = ganm->name ? ganm->name : "";
+                auto input_view           = accessor_values(gsampler->input);
+                animation.keyframes_times.resize(input_view.size());
+                for (auto i = 0; i < input_view.size(); i++)
+                    animation.keyframes_times[i] = input_view[i][0];
+                switch (gsampler->interpolation) {
+                    case cgltf_interpolation_type_linear:
+                        animation.interpolation_type =
+                            yocto_interpolation_type::linear;
+                        break;
+                    case cgltf_interpolation_type_step:
+                        animation.interpolation_type =
+                            yocto_interpolation_type::step;
+                        break;
+                    case cgltf_interpolation_type_cubic_spline:
+                        animation.interpolation_type =
+                            yocto_interpolation_type::bezier;
+                        break;
+                }
+                auto output_view = accessor_values(gsampler->output);
+                switch (path) {
+                    case cgltf_animation_path_type_translation: {
+                        animation.translation_keyframes.reserve(
+                            output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            animation.translation_keyframes.push_back(
+                                {(float)output_view[i][0],
+                                    (float)output_view[i][1],
+                                    (float)output_view[i][2]});
+                    } break;
+                    case cgltf_animation_path_type_rotation: {
+                        animation.rotation_keyframes.reserve(
+                            output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            animation.rotation_keyframes.push_back(
+                                {(float)output_view[i][0],
+                                    (float)output_view[i][1],
+                                    (float)output_view[i][2],
+                                    (float)output_view[i][3]});
+                    } break;
+                    case cgltf_animation_path_type_scale: {
+                        animation.scale_keyframes.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            animation.scale_keyframes.push_back(
+                                {(float)output_view[i][0],
+                                    (float)output_view[i][1],
+                                    (float)output_view[i][2]});
+                    } break;
+                    case cgltf_animation_path_type_weights: {
+                        throw io_error("weights not supported for now");
+#if 0
+                    // get a node that it refers to
+                    auto ncomp = 0;
+                    auto gnode = gltf->get(gchannel->target->node);
+                    auto gmesh = gltf->get(gnode->mesh);
+                    if (gmesh) {
+                        for (auto gshp : gmesh->primitives) {
+                            ncomp = max((int)gshp->targets.size(), ncomp);
+                        }
+                    }
+                    if (ncomp) {
+                        auto values = vector<float>();
+                        values.reserve(output_view.size());
+                        for (auto i = 0; i < output_view.size(); i++)
+                            values.push_back(output_view.get(i));
+                        animation.weights.resize(values.size() / ncomp);
+                        for (auto i = 0; i < animation.weights.size(); i++) {
+                            animation.weights[i].resize(ncomp);
+                            for (auto j = 0; j < ncomp; j++)
+                                animation.weights[i][j] = values[i * ncomp + j];
+                        }
+                    }
+#endif
+                    } break;
+                    default: {
+                        throw io_error("bad gltf animation");
+                    }
+                }
+                sampler_map[{gchannel->sampler, path}] =
+                    (int)scene.animations.size();
+                scene.animations.push_back(animation);
+            }
+            scene
+                .animations[sampler_map.at({gchannel->sampler, path})]
+                .node_targets.push_back(nmap.at(gchannel->target_node));
+        }
+    }
+}
+
+#endif
+
 // Load a scene
 void load_gltf_scene(const string& filename, yocto_scene& scene,
     const load_scene_options& options) {
@@ -2943,9 +3441,9 @@ void load_gltf_scene(const string& filename, yocto_scene& scene,
 
     try {
         // convert json
-        auto js = json();
-        load_json(filename, js);
-        gltf_to_scene(scene, js, get_dirname(filename));
+        // auto js = json();
+        // load_json(filename, js);
+        gltf_to_scene(filename, scene);
 
         // load textures
         auto dirname = get_dirname(filename);
