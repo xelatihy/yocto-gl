@@ -218,7 +218,7 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw obj_error("cannot load mtl " + filename);
-    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
     // currently parsed material
@@ -315,7 +315,7 @@ void load_objx(const string& filename, const obj_callbacks& cb,
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw obj_error("cannot load objx " + filename);
-    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
     // read the file line by line
@@ -372,7 +372,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
     // open file
     auto fs = fopen(filename.c_str(), "rt");
     if (!fs) throw obj_error("cannot load obj " + filename);
-    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+    auto fs_guard = unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
     // track vertex size

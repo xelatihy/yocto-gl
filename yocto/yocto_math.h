@@ -85,6 +85,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <vector>
+#include <memory>
 
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
@@ -126,9 +127,10 @@ using std::tie;
 using std::tuple;
 using std::unordered_map;
 using std::vector;
-using namespace std::string_literals;
+using std::unique_ptr;
 using std::invalid_argument;
 using std::numeric_limits;
+using namespace std::string_literals;
 
 }  // namespace yocto
 

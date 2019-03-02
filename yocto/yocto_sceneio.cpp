@@ -2086,7 +2086,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     if (result != cgltf_result_success) {
         throw sceneio_error("could not load gltf " + filename);
     }
-    auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
+    auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
         data, cgltf_free};
     if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
