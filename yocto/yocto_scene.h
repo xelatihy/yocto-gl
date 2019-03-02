@@ -148,7 +148,6 @@ struct yocto_material {
     int specular_texture     = -1;
     int transmission_texture = -1;
     int roughness_texture    = -1;
-    int opacity_texture      = -1;
     int occlusion_texture    = -1;
     int bump_texture         = -1;
     int displacement_texture = -1;

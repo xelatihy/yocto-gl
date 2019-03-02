@@ -288,8 +288,6 @@ inline bool draw_opengl_widgets_scene_inspector(
         win, "specular_texture", value.specular_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(win, "transmission_texture",
         value.transmission_texture, scene.textures, true);
-    edited += draw_combobox_opengl_widget(
-        win, "opacity_texture", value.opacity_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(win, "roughness_texture",
         value.roughness_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(
