@@ -992,37 +992,6 @@ void run_ui(app_state& app) {
     delete_opengl_window(win);
 }
 
-// Load INI file. The implementation does not handle escaping.
-unordered_map<string, unordered_map<string, string>> load_ini(
-    const string& filename) {
-    auto fs        = input_file(filename);
-    auto ret       = unordered_map<string, unordered_map<string, string>>();
-    auto cur_group = string();
-    ret[""]        = {};
-
-    auto line = ""s;
-    while (read_line(fs, line)) {
-        if (line.empty()) continue;
-        if (line.front() == ';') continue;
-        if (line.front() == '#') continue;
-        if (line.front() == '[') {
-            if (line.back() != ']') {
-                throw io_error("bad INI format");
-            }
-            cur_group      = line.substr(1, line.length() - 2);
-            ret[cur_group] = {};
-        } else if (line.find('=') != line.npos) {
-            auto name            = line.substr(0, line.find('='));
-            auto value           = line.substr(line.find('=') + 1);
-            ret[cur_group][name] = value;
-        } else {
-            throw io_error("bad INI format");
-        }
-    }
-
-    return ret;
-}
-
 int main(int argc, char* argv[]) {
     // initialize app
     app_state app{};

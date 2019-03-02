@@ -32,6 +32,7 @@
 
 #include <climits>
 #include <cstdlib>
+#include <memory>
 
 #ifndef _WIN32
 #pragma GCC diagnostic push
@@ -86,15 +87,17 @@ vector<string> split_string(const string& str) {
 }
 
 // Pfm load
-vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
-    auto fs = input_file(filename, true);
+float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
+    auto fs = fopen(filename, "rb");
+    if(!fs) return nullptr;
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{fs, [](FILE* f){fclose(f);}};
 
     // buffer
-    auto buffer = ""s;
+    char buffer[4096];
     auto toks   = vector<string>();
 
     // read magic
-    if (!read_line(fs, buffer)) return {};
+    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
     toks = split_string(buffer);
     if (toks[0] == "Pf")
         nc = 1;
@@ -104,13 +107,13 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
         return {};
 
     // read w, h
-    if (!read_line(fs, buffer)) return {};
+    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
     toks = split_string(buffer);
     w    = atoi(toks[0].c_str());
     h    = atoi(toks[1].c_str());
 
     // read scale
-    if (!read_line(fs, buffer)) return {};
+    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
     toks   = split_string(buffer);
     auto s = atof(toks[0].c_str());
 
@@ -118,15 +121,16 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto npixels = w * h;
     auto nvalues = w * h * nc;
     auto nrow    = w * nc;
-    auto pixels  = vector<float>(nvalues);
+    auto pixels  = std::unique_ptr<float[]>(new float[nvalues]);
     for (auto j = h - 1; j >= 0; j--) {
-        read_values(fs, pixels.data() + j * nrow, nrow);
+        if(fread(pixels.get() + j * nrow, sizeof(float), nrow, fs) != nrow)
+            return nullptr;
     }
 
     // endian conversion
     if (s > 0) {
         for (auto i = 0; i < nvalues; ++i) {
-            auto dta = (uint8_t*)(pixels.data() + i);
+            auto dta = (uint8_t*)(pixels.get() + i);
             swap(dta[0], dta[3]);
             swap(dta[1], dta[2]);
         }
@@ -139,16 +143,16 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     }
 
     // proper number of channels
-    if (!req || nc == req) return pixels;
+    if (!req || nc == req) return pixels.release();
 
     // pack into channels
     if (req < 0 || req > 4) {
         return {};
     }
-    auto cpixels = vector<float>(req * npixels);
+    auto cpixels = std::unique_ptr<float[]>(new float[req * npixels]);
     for (auto i = 0; i < npixels; i++) {
-        auto vp = pixels.data() + i * nc;
-        auto cp = cpixels.data() + i * req;
+        auto vp = pixels.get() + i * nc;
+        auto cp = cpixels.get() + i * req;
         if (nc == 1) {
             switch (req) {
                 case 1: cp[0] = vp[0]; break;
@@ -189,7 +193,7 @@ vector<float> load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
             }
         }
     }
-    return cpixels;
+    return cpixels.release();
 }
 
 // save pfm
@@ -224,10 +228,11 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 void load_pfm_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
-    if (pixels.empty()) {
+    if (!pixels) {
         throw io_error("error loading image " + filename);
     }
-    img = image{{width, height}, (const vec4f*)pixels.data()};
+    img = image{{width, height}, (const vec4f*)pixels};
+    delete[] pixels;
 }
 void save_pfm_image(const string& filename, const image4f& img) {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
