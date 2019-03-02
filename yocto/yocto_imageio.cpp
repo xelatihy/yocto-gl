@@ -87,7 +87,7 @@ vector<string> split_string(const string& str) {
 }
 
 // Pfm load
-float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
+float* load_pfm(const char* filename, int* w, int* h, int* nc, int req) {
     auto fs = fopen(filename, "rb");
     if (!fs) return nullptr;
     auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
@@ -101,17 +101,17 @@ float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
     toks = split_string(buffer);
     if (toks[0] == "Pf")
-        nc = 1;
+        *nc = 1;
     else if (toks[0] == "PF")
-        nc = 3;
+        *nc = 3;
     else
-        return {};
+        return nullptr;
 
     // read w, h
     if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
     toks = split_string(buffer);
-    w    = atoi(toks[0].c_str());
-    h    = atoi(toks[1].c_str());
+    *w   = atoi(toks[0].c_str());
+    *h   = atoi(toks[1].c_str());
 
     // read scale
     if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
@@ -119,11 +119,11 @@ float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto s = atof(toks[0].c_str());
 
     // read the data (flip y)
-    auto npixels = w * h;
-    auto nvalues = w * h * nc;
-    auto nrow    = w * nc;
+    auto npixels = (size_t)(*w) * (size_t)(*h);
+    auto nvalues = npixels * (size_t)(*nc);
+    auto nrow    = (size_t)(*w) * (size_t)(*nc);
     auto pixels  = std::unique_ptr<float[]>(new float[nvalues]);
-    for (auto j = h - 1; j >= 0; j--) {
+    for (auto j = *h - 1; j >= 0; j--) {
         if (fread(pixels.get() + j * nrow, sizeof(float), nrow, fs) != nrow)
             return nullptr;
     }
@@ -144,17 +144,17 @@ float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     }
 
     // proper number of channels
-    if (!req || nc == req) return pixels.release();
+    if (!req || *nc == req) return pixels.release();
 
     // pack into channels
     if (req < 0 || req > 4) {
-        return {};
+        return nullptr;
     }
     auto cpixels = std::unique_ptr<float[]>(new float[req * npixels]);
-    for (auto i = 0; i < npixels; i++) {
-        auto vp = pixels.get() + i * nc;
+    for (auto i = 0ull; i < npixels; i++) {
+        auto vp = pixels.get() + i * (*nc);
         auto cp = cpixels.get() + i * req;
-        if (nc == 1) {
+        if (*nc == 1) {
             switch (req) {
                 case 1: cp[0] = vp[0]; break;
                 case 2:
@@ -201,26 +201,28 @@ float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
 bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
     auto fs = fopen(filename, "wb");
     if (!fs) return false;
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
 
-    fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF");
-    fprintf(fs, "%d %d\n", w, h);
-    fprintf(fs, "-1\n");
+    if (fprintf(fs, "%s\n", (nc == 1) ? "Pf" : "PF") < 0) return false;
+    if (fprintf(fs, "%d %d\n", w, h) < 0) return false;
+    if (fprintf(fs, "-1\n") < 0) return false;
     if (nc == 1 || nc == 3) {
-        fwrite(pixels, sizeof(float), w * h * nc, fs);
+        if (fwrite(pixels, sizeof(float), w * h * nc, fs) != w * h * nc)
+            return false;
     } else {
         for (auto i = 0; i < w * h; i++) {
             auto vz = 0.0f;
             auto v  = pixels + i * nc;
-            fwrite(v + 0, sizeof(float), 1, fs);
-            fwrite(v + 1, sizeof(float), 1, fs);
-            if (nc == 2)
-                fwrite(&vz, sizeof(float), 1, fs);
-            else
-                fwrite(v + 2, sizeof(float), 1, fs);
+            if (fwrite(v + 0, sizeof(float), 1, fs) != 1) return false;
+            if (fwrite(v + 1, sizeof(float), 1, fs) != 1) return false;
+            if (nc == 2) {
+                if (fwrite(&vz, sizeof(float), 1, fs) != 1) return false;
+            } else {
+                if (fwrite(v + 2, sizeof(float), 1, fs) != 1) return false;
+            }
         }
     }
-
-    fclose(fs);
 
     return true;
 }
@@ -228,7 +230,7 @@ bool save_pfm(const char* filename, int w, int h, int nc, const float* pixels) {
 // load pfm image
 void load_pfm_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
-    auto pixels = load_pfm(filename.c_str(), width, height, ncomp, 4);
+    auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
         throw io_error("error loading image " + filename);
     }
@@ -607,20 +609,161 @@ void resize_image(image4f& res_img, const image4f& img, const vec2i& size_) {
 // -----------------------------------------------------------------------------
 namespace yocto {
 
+// Volume load
+float* load_yvol(
+    const char* filename, int* w, int* h, int* d, int* nc, int req) {
+    auto fs = fopen(filename, "rb");
+    if (!fs) return nullptr;
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
+
+    // buffer
+    char buffer[4096];
+    auto toks = vector<string>();
+
+    // read magic
+    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
+    toks = split_string(buffer);
+    if (toks[0] != "YVOL") return nullptr;
+
+    // read w, h
+    if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
+    toks = split_string(buffer);
+    *w   = atoi(toks[0].c_str());
+    *h   = atoi(toks[1].c_str());
+    *d   = atoi(toks[2].c_str());
+    *nc  = atoi(toks[3].c_str());
+
+    // read data
+    auto nvoxels = (size_t)(*w) * (size_t)(*h) * (size_t)(*d);
+    auto nvalues = nvoxels * (size_t)(*nc);
+    auto voxels  = std::unique_ptr<float[]>(new float[nvalues]);
+    if (fread(voxels.get(), sizeof(float), nvalues, fs) != nvalues)
+        return nullptr;
+
+    // proper number of channels
+    if (!req || *nc == req) return voxels.release();
+
+    // pack into channels
+    if (req < 0 || req > 4) {
+        return nullptr;
+    }
+    auto cvoxels = std::unique_ptr<float[]>(new float[req * nvoxels]);
+    for (auto i = 0; i < nvoxels; i++) {
+        auto vp = voxels.get() + i * (*nc);
+        auto cp = cvoxels.get() + i * req;
+        if (*nc == 1) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[0];
+                    cp[2] = vp[0];
+                    cp[3] = 1;
+                    break;
+            }
+        } else if (*nc == 2) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+            }
+        } else if (*nc == 3) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    cp[3] = 1;
+                    break;
+            }
+        } else if (*nc == 4) {
+            switch (req) {
+                case 1: cp[0] = vp[0]; break;
+                case 2:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    break;
+                case 3:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    break;
+                case 4:
+                    cp[0] = vp[0];
+                    cp[1] = vp[1];
+                    cp[2] = vp[2];
+                    cp[3] = vp[3];
+                    break;
+            }
+        }
+    }
+    return cvoxels.release();
+}
+
+// save pfm
+bool save_yvol(
+    const char* filename, int w, int h, int d, int nc, const float* voxels) {
+    auto fs = fopen(filename, "wb");
+    if (!fs) return false;
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
+
+    if (fprintf(fs, "YVOL\n") < 0) return false;
+    if (fprintf(fs, "%d %d %d %d\n", w, h, d, nc) < 0) return false;
+    auto nvalues = (size_t)w * (size_t)h * (size_t)d * (size_t)nc;
+    if (fwrite(voxels, sizeof(float), nvalues, fs) != nvalues) return false;
+
+    return true;
+}
+
 // Loads volume data from binary format.
 void load_volume(const string& filename, volume1f& vol) {
-    auto fs   = input_file(filename, true);
-    auto size = zero3i;
-    read_value(fs, size);
-    vol.resize(size);
-    read_values(fs, vol._voxels);
+    auto width = 0, height = 0, depth = 0, ncomp = 0;
+    auto voxels = load_yvol(
+        filename.c_str(), &width, &height, &depth, &ncomp, 1);
+    if (!voxels) {
+        throw io_error("error loading volume " + filename);
+    }
+    vol = volume{{width, height, depth}, (const float*)voxels};
+    delete[] voxels;
 }
 
 // Saves volume data in binary format.
 void save_volume(const string& filename, const volume1f& vol) {
-    auto fs = output_file(filename, true);
-    write_value(fs, vol.size());
-    write_values(fs, vol._voxels);
+    if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z,
+            1, vol.data())) {
+        throw io_error("error saving volume " + filename);
+    }
 }
 
 }  // namespace yocto
