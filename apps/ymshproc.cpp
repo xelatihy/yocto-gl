@@ -35,6 +35,11 @@ using namespace yocto;
 
 #include "ext/CLI11.hpp"
 
+void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 int main(int argc, char** argv) {
     // command line parameters
     auto geodesic_source = -1;

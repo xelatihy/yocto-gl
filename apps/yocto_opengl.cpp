@@ -625,7 +625,7 @@ void init_opengl_window(opengl_window& win, const vec2i& size,
     win.refresh_cb = refresh_cb;
 
     // init gl extensions
-    if (!gladLoadGL()) exit_error("cannot initialize OpenGL extensions");
+    if (!gladLoadGL()) throw gl_error("cannot initialize OpenGL extensions");
 }
 
 void delete_opengl_window(opengl_window& win) {

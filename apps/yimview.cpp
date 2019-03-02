@@ -340,6 +340,11 @@ void run_ui(app_state& app) {
     delete_opengl_window(win);
 }
 
+void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 int main(int argc, char* argv[]) {
     // prepare application
     auto app         = app_state();

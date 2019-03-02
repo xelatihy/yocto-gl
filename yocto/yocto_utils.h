@@ -120,16 +120,6 @@ using namespace std::chrono_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Log info/error/fatal/trace message
-inline void exit_error(const char* msg) {
-    printf("%s\n", msg);
-    exit(1);
-}
-inline void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
 // Format a large integer number in human readable form
