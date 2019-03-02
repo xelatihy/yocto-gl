@@ -287,10 +287,10 @@ inline auto async(Function&& function, Args&&... args) {
 // Simple parallel for used since our target platforms do not yet support
 // parallel algorithms. `Func` takes the integer index.
 template <typename Func>
-inline void parallel_for(int begin, int end, const Func& func,
+inline void parallel_for(size_t begin, size_t end, const Func& func,
     atomic<bool>* cancel = nullptr, bool serial = false);
 template <typename Func>
-inline void parallel_for(int num, const Func& func,
+inline void parallel_for(size_t num, const Func& func,
     atomic<bool>* cancel = nullptr, bool serial = false) {
     parallel_for(0, num, func, cancel, serial);
 }
@@ -519,7 +519,7 @@ inline bool concurrent_queue<T>::try_pop(T& value) {
 // parallel algorithms.
 template <typename Func>
 inline void parallel_for(
-    int begin, int end, const Func& func, atomic<bool>* cancel, bool serial) {
+    size_t begin, size_t end, const Func& func, atomic<bool>* cancel, bool serial) {
     if (serial) {
         for (auto idx = begin; idx < end; idx++) {
             if (cancel && *cancel) break;
@@ -528,7 +528,7 @@ inline void parallel_for(
     } else {
         auto        futures  = vector<future<void>>{};
         auto        nthreads = thread::hardware_concurrency();
-        atomic<int> next_idx(begin);
+        atomic<size_t> next_idx(begin);
         for (auto thread_id = 0; thread_id < nthreads; thread_id++) {
             futures.emplace_back(async([&func, &next_idx, cancel, end]() {
                 while (true) {
