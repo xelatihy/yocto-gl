@@ -3434,7 +3434,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                         material        = scene.materials[mat_map.at(mat1)];
                         material.name   = saved_name;
                     } else {
-                        throw sceneio_error("mix material missing front material");
+                        throw sceneio_error(
+                            "mix material missing front material");
                     }
                 } else {
                     material.diffuse = {1, 0, 0};
@@ -3446,7 +3447,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     if (jcmd.count("uroughness"))
                         material.roughness = jcmd.at("uroughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
-                    if (remap) throw sceneio_error("remap roughness not supported");
+                    if (remap)
+                        throw sceneio_error("remap roughness not supported");
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -3454,7 +3456,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     if (jcmd.count("roughness"))
                         material.roughness = jcmd.at("roughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
-                    if (remap) throw sceneio_error("remap roughness not supported");
+                    if (remap)
+                        throw sceneio_error("remap roughness not supported");
                 }
                 if (stack.back().light_mat.emission != zero3f) {
                     material.emission = stack.back().light_mat.emission;

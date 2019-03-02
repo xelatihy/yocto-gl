@@ -37,7 +37,7 @@
 #include "ext/CLI11.hpp"
 
 namespace yocto {
-    void print_obj_camera(const yocto_camera& camera);
+void print_obj_camera(const yocto_camera& camera);
 };
 
 // Application state

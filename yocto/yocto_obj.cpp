@@ -318,7 +318,6 @@ void load_objx(const string& filename, const obj_callbacks& cb,
     auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
         fs, [](FILE* f) { fclose(f); }};
 
-
     // read the file line by line
     char buffer[4096];
     while (fgets(buffer, sizeof(buffer), fs)) {

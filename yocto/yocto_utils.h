@@ -435,7 +435,7 @@ namespace yocto {
 inline bool load_text(const string& filename, string& str) {
     // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
     auto fs = fopen(filename.c_str(), "rt");
-    if(!fs) return false;
+    if (!fs) return false;
     fseek(fs, 0, SEEK_END);
     auto length = ftell(fs);
     fseek(fs, 0, SEEK_SET);
@@ -448,7 +448,7 @@ inline bool load_text(const string& filename, string& str) {
 // Save a text file
 inline bool save_text(const string& filename, const string& str) {
     auto fs = fopen(filename.c_str(), "wt");
-    if(!fs) return false;
+    if (!fs) return false;
     auto ok = fprintf(fs, "%s", str.c_str()) > 0;
     fclose(fs);
     return ok;
@@ -458,7 +458,7 @@ inline bool save_text(const string& filename, const string& str) {
 inline bool load_binary(const string& filename, vector<byte>& data) {
     // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
     auto fs = fopen(filename.c_str(), "rb");
-    if(!fs) return false;
+    if (!fs) return false;
     fseek(fs, 0, SEEK_END);
     auto length = ftell(fs);
     fseek(fs, 0, SEEK_SET);
@@ -471,7 +471,7 @@ inline bool load_binary(const string& filename, vector<byte>& data) {
 // Save a binary file
 inline bool save_binary(const string& filename, const vector<byte>& data) {
     auto fs = fopen(filename.c_str(), "wb");
-    if(!fs) return false;
+    if (!fs) return false;
     auto ok = fwrite(data.data(), 1, data.size(), fs) == data.size();
     fclose(fs);
     return ok;

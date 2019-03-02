@@ -129,7 +129,6 @@ struct sceneio_error : runtime_error {
     explicit sceneio_error(const std::string& msg) : runtime_error{msg} {}
 };
 
-
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
