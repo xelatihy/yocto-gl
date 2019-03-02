@@ -4,11 +4,7 @@
 // Yocto/ImageIO provides loading and saving functionality for images.
 // We support PNG, JPG, TGA, HDR, EXR formats.
 //
-// We do not use exception as the API for returning errors, although they might
-// be used internally in the implementastion of the methods. In load functions,
-// as error is signaled by returning an empty object or a null pointer. In
-// save functions, errors are returned with the supplied boolean. In the future,
-// we will also provide return types with error codes.
+// Error reporting is done through exceptions using the `io_error` exception.
 //
 // ## Image Loading and Saving
 //
