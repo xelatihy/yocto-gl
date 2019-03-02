@@ -46,8 +46,6 @@
 //
 // 1. load and save text files with `load_text()` and `save_text()`
 // 2. load and save binary files with `load_binary()` and `save_binary()`
-// 3. use `input_file` and `output_file` as RIIA FILE* wrappers
-// 4. use `read_XXX()` and `write_XXX()` to read/write to this files
 //
 //
 // ## Concurrency utilities
