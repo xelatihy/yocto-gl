@@ -29,9 +29,9 @@
 #include "yocto_sceneio.h"
 #include "yocto_imageio.h"
 #include "yocto_json.h"
+#include "yocto_obj.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
-#include "yocto_obj.h"
 #include "yocto_utils.h"
 
 #include "ext/happly.h"
@@ -1952,7 +1952,8 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     if (result != cgltf_result_success) {
         throw io_error("could not load gltf " + filename);
     }
-    auto gltf = std::unique_ptr<cgltf_data, void(*)(cgltf_data*)>{data, cgltf_free};
+    auto gltf = std::unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
+        data, cgltf_free};
     if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
         throw io_error("could not load gltf buffers " + filename);

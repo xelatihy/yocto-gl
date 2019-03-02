@@ -89,12 +89,13 @@ vector<string> split_string(const string& str) {
 // Pfm load
 float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto fs = fopen(filename, "rb");
-    if(!fs) return nullptr;
-    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{fs, [](FILE* f){fclose(f);}};
+    if (!fs) return nullptr;
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
 
     // buffer
     char buffer[4096];
-    auto toks   = vector<string>();
+    auto toks = vector<string>();
 
     // read magic
     if (!fgets(buffer, sizeof(buffer), fs)) return nullptr;
@@ -123,7 +124,7 @@ float* load_pfm(const char* filename, int& w, int& h, int& nc, int req) {
     auto nrow    = w * nc;
     auto pixels  = std::unique_ptr<float[]>(new float[nvalues]);
     for (auto j = h - 1; j >= 0; j--) {
-        if(fread(pixels.get() + j * nrow, sizeof(float), nrow, fs) != nrow)
+        if (fread(pixels.get() + j * nrow, sizeof(float), nrow, fs) != nrow)
             return nullptr;
     }
 
