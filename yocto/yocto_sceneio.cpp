@@ -697,9 +697,6 @@ void to_json(json& js, const yocto_material& value, const yocto_scene& scene) {
     if (value.roughness_texture != def.roughness_texture)
         js["roughness_texture"] = ref_to_json(
             value.roughness_texture, scene.textures);
-    if (value.occlusion_texture != def.occlusion_texture)
-        js["occlusion_texture"] = ref_to_json(
-            value.occlusion_texture, scene.textures);
     if (value.bump_texture != def.bump_texture)
         js["bump_texture"] = ref_to_json(value.bump_texture, scene.textures);
     if (value.displacement_texture != def.displacement_texture)
@@ -735,8 +732,6 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
         js.value("transmission_texture", ""s), scene.textures);
     value.roughness_texture = ref_from_json(
         js.value("roughness_texture", ""s), scene.textures);
-    value.occlusion_texture = ref_from_json(
-        js.value("occlusion_texture", ""s), scene.textures);
     value.bump_texture = ref_from_json(
         js.value("bump_texture", ""s), scene.textures);
     value.displacement_texture = ref_from_json(
@@ -1624,7 +1619,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         material.specular_texture       = add_texture(omat.ks_txt, false);
         material.transmission_texture   = add_texture(omat.kt_txt, false);
         material.roughness_texture      = add_texture(omat.rs_txt, true);
-        material.occlusion_texture      = add_texture(omat.occ_txt, true);
         material.bump_texture           = add_texture(omat.bump_txt, true);
         material.displacement_texture   = add_texture(omat.disp_txt, true);
         material.normal_texture         = add_texture(omat.norm_txt, true);
@@ -1752,9 +1746,6 @@ void save_mtl(
         if (material.roughness_texture >= 0)
             println_values(fs, "  map_Pr",
                 scene.textures[material.roughness_texture].filename);
-        if (material.occlusion_texture >= 0)
-            println_values(fs, "  map_occ",
-                scene.textures[material.occlusion_texture].filename);
         if (material.bump_texture >= 0)
             println_values(fs, "  map_bump",
                 scene.textures[material.bump_texture].filename);
@@ -2127,7 +2118,6 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                 gmr->metallic_roughness_texture, true);
             material.roughness_texture = material.specular_texture;
         }
-        material.occlusion_texture = add_texture(gmat->occlusion_texture, true);
         material.normal_texture    = add_texture(gmat->normal_texture, true);
         scene.materials.push_back(material);
         mmap[gmat] = (int)scene.materials.size() - 1;
@@ -2653,8 +2643,6 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
         }
         if (material.normal_texture >= 0)
             mjs["normalTexture"]["index"] = material.normal_texture;
-        if (material.occlusion_texture >= 0)
-            mjs["occlusionTexture"]["index"] = material.occlusion_texture;
         js["materials"].push_back(mjs);
     }
 
@@ -3982,7 +3970,6 @@ void write_object(output_file& fs, const yocto_material& material) {
     write_value(fs, material.specular_texture);
     write_value(fs, material.transmission_texture);
     write_value(fs, material.roughness_texture);
-    write_value(fs, material.occlusion_texture);
     write_value(fs, material.bump_texture);
     write_value(fs, material.displacement_texture);
     write_value(fs, material.normal_texture);
@@ -4009,7 +3996,6 @@ void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.specular_texture);
     read_value(fs, material.transmission_texture);
     read_value(fs, material.roughness_texture);
-    read_value(fs, material.occlusion_texture);
     read_value(fs, material.bump_texture);
     read_value(fs, material.displacement_texture);
     read_value(fs, material.normal_texture);

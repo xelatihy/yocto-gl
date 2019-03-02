@@ -1298,8 +1298,6 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
             material.transmission_texture += offset_textures;
         if (material.roughness_texture >= 0)
             material.roughness_texture += offset_textures;
-        if (material.occlusion_texture >= 0)
-            material.occlusion_texture += offset_textures;
         if (material.normal_texture >= 0)
             material.normal_texture += offset_textures;
         if (material.bump_texture >= 0)
