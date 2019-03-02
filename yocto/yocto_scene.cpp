@@ -488,7 +488,7 @@ void add_missing_tangent_space(yocto_scene& scene) {
         auto& material = scene.materials[shape.material];
         if (!shape.tangentspaces.empty() || shape.texturecoords.empty())
             continue;
-        if (material.normal_texture < 0 && material.bump_texture < 0) continue;
+        if (material.normal_texture < 0) continue;
         if (!shape.triangles.empty()) {
             if (shape.normals.empty()) {
                 shape.normals.resize(shape.positions.size());
@@ -1300,8 +1300,6 @@ void merge_scene_into(yocto_scene& scene, const yocto_scene& merge) {
             material.roughness_texture += offset_textures;
         if (material.normal_texture >= 0)
             material.normal_texture += offset_textures;
-        if (material.bump_texture >= 0)
-            material.bump_texture += offset_textures;
         if (material.displacement_texture >= 0)
             material.displacement_texture += offset_textures;
         if (material.volume_density_texture >= 0)

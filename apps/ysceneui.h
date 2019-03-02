@@ -76,8 +76,6 @@ inline void draw_scene_tree_opengl_widgets_rec(const opengl_window& win,
         win, "diffuse", scene, value.diffuse_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
         win, "specular", scene, value.specular_texture, scene.textures, sel);
-    draw_opengl_widgets_scene_tree(
-        win, "bump", scene, value.bump_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(win, "displament", scene,
         value.displacement_texture, scene.textures, sel);
     draw_opengl_widgets_scene_tree(
@@ -290,8 +288,6 @@ inline bool draw_opengl_widgets_scene_inspector(
         value.transmission_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(win, "roughness_texture",
         value.roughness_texture, scene.textures, true);
-    edited += draw_combobox_opengl_widget(
-        win, "bump_texture", value.bump_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(win, "displacement_texture",
         value.displacement_texture, scene.textures, true);
     edited += draw_combobox_opengl_widget(

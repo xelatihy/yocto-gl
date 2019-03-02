@@ -697,8 +697,6 @@ void to_json(json& js, const yocto_material& value, const yocto_scene& scene) {
     if (value.roughness_texture != def.roughness_texture)
         js["roughness_texture"] = ref_to_json(
             value.roughness_texture, scene.textures);
-    if (value.bump_texture != def.bump_texture)
-        js["bump_texture"] = ref_to_json(value.bump_texture, scene.textures);
     if (value.displacement_texture != def.displacement_texture)
         js["displacement_texture"] = ref_to_json(
             value.displacement_texture, scene.textures);
@@ -732,8 +730,6 @@ void from_json(const json& js, yocto_material& value, yocto_scene& scene) {
         js.value("transmission_texture", ""s), scene.textures);
     value.roughness_texture = ref_from_json(
         js.value("roughness_texture", ""s), scene.textures);
-    value.bump_texture = ref_from_json(
-        js.value("bump_texture", ""s), scene.textures);
     value.displacement_texture = ref_from_json(
         js.value("displacement_texture", ""s), scene.textures);
     value.normal_texture = ref_from_json(
@@ -1619,7 +1615,6 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         material.specular_texture       = add_texture(omat.ks_txt, false);
         material.transmission_texture   = add_texture(omat.kt_txt, false);
         material.roughness_texture      = add_texture(omat.rs_txt, true);
-        material.bump_texture           = add_texture(omat.bump_txt, true);
         material.displacement_texture   = add_texture(omat.disp_txt, true);
         material.normal_texture         = add_texture(omat.norm_txt, true);
         material.volume_emission        = omat.ve;
@@ -1746,9 +1741,6 @@ void save_mtl(
         if (material.roughness_texture >= 0)
             println_values(fs, "  map_Pr",
                 scene.textures[material.roughness_texture].filename);
-        if (material.bump_texture >= 0)
-            println_values(fs, "  map_bump",
-                scene.textures[material.bump_texture].filename);
         if (material.displacement_texture >= 0)
             println_values(fs, "  map_disp",
                 scene.textures[material.displacement_texture].filename);
@@ -3970,7 +3962,6 @@ void write_object(output_file& fs, const yocto_material& material) {
     write_value(fs, material.specular_texture);
     write_value(fs, material.transmission_texture);
     write_value(fs, material.roughness_texture);
-    write_value(fs, material.bump_texture);
     write_value(fs, material.displacement_texture);
     write_value(fs, material.normal_texture);
     write_value(fs, material.volume_emission);
@@ -3996,7 +3987,6 @@ void read_object(input_file& fs, yocto_material& material) {
     read_value(fs, material.specular_texture);
     read_value(fs, material.transmission_texture);
     read_value(fs, material.roughness_texture);
-    read_value(fs, material.bump_texture);
     read_value(fs, material.displacement_texture);
     read_value(fs, material.normal_texture);
     read_value(fs, material.volume_emission);
