@@ -36,6 +36,15 @@
 
 #include "ext/CLI11.hpp"
 
+namespace yocto {
+void print_obj_camera(const yocto_camera& camera);
+};
+
+void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 // Application state
 struct app_state {
     // loading options
@@ -139,9 +148,6 @@ bool load_scene_sync(app_state& app) {
     try {
         load_scene(app.filename, app.scene, app.load_options);
     } catch (const std::exception& e) {
-        exit_error(e.what());
-        return false;
-    } catch (const io_error& e) {
         exit_error(e.what());
         return false;
     }
@@ -262,11 +268,7 @@ void draw_opengl_widgets(const opengl_window& win) {
                 continue_opengl_widget_line(win);
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
-                        println_values(stdout, "c", camera.name,
-                            (int)camera.orthographic, camera.film_width,
-                            camera.film_height, camera.focal_length,
-                            camera.focus_distance, camera.lens_aperture,
-                            camera.frame);
+                        print_obj_camera(camera);
                     }
                 }
                 auto mouse_pos = get_opengl_mouse_pos(win);

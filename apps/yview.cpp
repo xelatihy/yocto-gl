@@ -36,6 +36,15 @@
 
 #include "ext/CLI11.hpp"
 
+namespace yocto {
+void print_obj_camera(const yocto_camera& camera);
+};
+
+void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 struct drawgl_shape {
     opengl_array_buffer  positions_buffer     = {};
     opengl_array_buffer  normals_buffer       = {};
@@ -852,11 +861,7 @@ void draw_widgets(const opengl_window& win) {
                 draw_checkbox_opengl_widget(win, "fps", app.navigation_fps);
                 if (draw_button_opengl_widget(win, "print cams")) {
                     for (auto& camera : app.scene.cameras) {
-                        println_values(stdout, "c", camera.name,
-                            (int)camera.orthographic, camera.film_width,
-                            camera.film_height, camera.focal_length,
-                            camera.focus_distance, camera.lens_aperture,
-                            camera.frame);
+                        print_obj_camera(camera);
                     }
                 }
                 end_tabitem_opengl_widget(win);
@@ -990,37 +995,6 @@ void run_ui(app_state& app) {
 
     // clear
     delete_opengl_window(win);
-}
-
-// Load INI file. The implementation does not handle escaping.
-unordered_map<string, unordered_map<string, string>> load_ini(
-    const string& filename) {
-    auto fs        = input_file(filename);
-    auto ret       = unordered_map<string, unordered_map<string, string>>();
-    auto cur_group = string();
-    ret[""]        = {};
-
-    auto line = ""s;
-    while (read_line(fs, line)) {
-        if (line.empty()) continue;
-        if (line.front() == ';') continue;
-        if (line.front() == '#') continue;
-        if (line.front() == '[') {
-            if (line.back() != ']') {
-                throw io_error("bad INI format");
-            }
-            cur_group      = line.substr(1, line.length() - 2);
-            ret[cur_group] = {};
-        } else if (line.find('=') != line.npos) {
-            auto name            = line.substr(0, line.find('='));
-            auto value           = line.substr(line.find('=') + 1);
-            ret[cur_group][name] = value;
-        } else {
-            throw io_error("bad INI format");
-        }
-    }
-
-    return ret;
 }
 
 int main(int argc, char* argv[]) {

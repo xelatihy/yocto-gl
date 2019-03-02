@@ -46,6 +46,11 @@ bool mkdir(const string& dir) {
 #endif
 }
 
+void exit_error(const string& msg) {
+    printf("%s\n", msg.c_str());
+    exit(1);
+}
+
 int main(int argc, char** argv) {
     // command line parameters
     auto scene_postfix     = false;

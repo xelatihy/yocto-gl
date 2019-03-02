@@ -125,7 +125,7 @@ void init_opengl_program(
     glGetProgramiv(program.program_id, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
-        throw io_error("program not linked with error\n"s + errbuf);
+        throw gl_error("program not linked with error\n"s + errbuf);
     }
     glGetProgramiv(program.program_id, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {
@@ -625,7 +625,7 @@ void init_opengl_window(opengl_window& win, const vec2i& size,
     win.refresh_cb = refresh_cb;
 
     // init gl extensions
-    if (!gladLoadGL()) exit_error("cannot initialize OpenGL extensions");
+    if (!gladLoadGL()) throw gl_error("cannot initialize OpenGL extensions");
 }
 
 void delete_opengl_window(opengl_window& win) {

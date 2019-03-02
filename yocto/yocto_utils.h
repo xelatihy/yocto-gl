@@ -46,8 +46,6 @@
 //
 // 1. load and save text files with `load_text()` and `save_text()`
 // 2. load and save binary files with `load_binary()` and `save_binary()`
-// 3. use `input_file` and `output_file` as RIIA FILE* wrappers
-// 4. use `read_XXX()` and `write_XXX()` to read/write to this files
 //
 //
 // ## Concurrency utilities
@@ -122,16 +120,6 @@ using namespace std::chrono_literals;
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// Log info/error/fatal/trace message
-inline void exit_error(const char* msg) {
-    printf("%s\n", msg);
-    exit(1);
-}
-inline void exit_error(const string& msg) {
-    printf("%s\n", msg.c_str());
-    exit(1);
-}
-
 // Format duration string from nanoseconds
 inline string format_duration(int64_t duration);
 // Format a large integer number in human readable form
@@ -140,204 +128,6 @@ inline string format_num(uint64_t num);
 // get time in nanoseconds - useful only to compute difference of times
 inline int64_t get_time() {
     return std::chrono::high_resolution_clock::now().time_since_epoch().count();
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// FILE UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// io error
-struct io_error : runtime_error {
-    explicit io_error(const char* msg) : runtime_error{msg} {}
-    explicit io_error(const std::string& msg) : runtime_error{msg} {}
-};
-
-// file inout stream
-struct input_file {
-    input_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "rb" : "rt");
-        if (!file) throw io_error("could not open " + filename);
-    }
-    input_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
-
-    input_file(const input_file&) = delete;
-    input_file& operator=(const input_file&) = delete;
-
-    ~input_file() {
-        if (file && owned) fclose(file);
-    }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
-};
-
-// file writer
-struct output_file {
-    output_file(const string& filename, bool binary = false) {
-        this->filename = filename;
-        file           = fopen(filename.c_str(), binary ? "wb" : "wt");
-        if (!file) throw io_error("could not open " + filename);
-    }
-    output_file(FILE* fs) {
-        file  = fs;
-        owned = false;
-    }
-
-    output_file(const output_file&) = delete;
-    output_file& operator=(const output_file&) = delete;
-
-    ~output_file() {
-        if (file && owned) fclose(file);
-    }
-
-    string filename = "";
-    FILE*  file     = nullptr;
-    bool   owned    = true;
-};
-
-// write a value to a file
-template <typename T>
-inline void write_value(const output_file& fs, const T& value) {
-    if (fwrite(&value, sizeof(value), 1, fs.file) != 1) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
-// write values to a file
-template <typename T>
-inline void write_values(const output_file& fs, const vector<T>& values) {
-    if (values.empty()) return;
-    if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-template <typename T>
-inline void write_values(const output_file& fs, const T* values, size_t count) {
-    if (!count) return;
-    if (fwrite(values, sizeof(values[0]), count, fs.file) != count) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
-// write text to a file
-inline void write_text(const output_file& fs, const std::string& str) {
-    if (fprintf(fs.file, "%s", str.c_str()) < 0) {
-        throw io_error("cannot write to " + fs.filename);
-    }
-}
-
-// read a value from a file
-template <typename T>
-inline void read_value(const input_file& fs, T& value) {
-    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-
-// read values from a file
-template <typename T>
-inline void read_values(const input_file& fs, T* values, size_t count) {
-    if (!count) return;
-    if (fread(values, sizeof(values[0]), count, fs.file) != count) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-template <typename T>
-inline void read_values(const input_file& fs, vector<T>& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-// read characters from a file
-inline void read_values(const input_file& fs, string& values) {
-    if (values.empty()) return;
-    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
-        values.size()) {
-        throw io_error("cannot read from " + fs.filename);
-    }
-}
-
-// read a line of text
-inline bool read_line(const input_file& fs, string& str) {
-    char buffer[4096];
-    if (fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
-    str = buffer;
-    return true;
-}
-inline bool read_line(const input_file& fs, char* buffer, size_t size) {
-    if (fgets(buffer, size, fs.file) == nullptr) return false;
-    return true;
-}
-
-// Printing values
-inline void print_value(const output_file& fs, int value) {
-    if (fprintf(fs.file, "%d", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, bool value) {
-    if (fprintf(fs.file, "%d", (int)value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, float value) {
-    if (fprintf(fs.file, "%g", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, char value) {
-    if (fprintf(fs.file, "%c", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, const char* value) {
-    if (fprintf(fs.file, "%s", value) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-inline void print_value(const output_file& fs, const string& value) {
-    if (fprintf(fs.file, "%s", value.c_str()) < 0)
-        throw io_error("cannot write to file " + fs.filename);
-}
-template <typename T, int N>
-inline void print_value(const output_file& fs, const vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
-}
-template <typename T, int N, int M>
-inline void print_value(const output_file& fs, const mat<T, N, M>& value) {
-    for (auto i = 0; i < M; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
-}
-template <typename T, int N>
-inline void print_value(const output_file& fs, const frame<T, N>& value) {
-    for (auto i = 0; i < N + 1; i++) {
-        if (i) print_value(fs, ' ');
-        print_value(fs, value[i]);
-    }
-}
-
-// print values to file
-template <typename Arg, typename... Args>
-inline void println_values(
-    const output_file& fs, const Arg& value, const Args&... values) {
-    print_value(fs, value);
-    if constexpr (sizeof...(values) > 0) {
-        print_value(fs, ' ');
-        println_values(fs, values...);
-    } else {
-        print_value(fs, '\n');
-    }
 }
 
 }  // namespace yocto
@@ -452,12 +242,12 @@ inline bool exists_file(const string& filename);
 namespace yocto {
 
 // Load/save a text file
-inline void load_text(const string& filename, string& str);
-inline void save_text(const string& filename, const string& str);
+inline bool load_text(const string& filename, string& str);
+inline bool save_text(const string& filename, const string& str);
 
 // Load/save a binary file
-inline void load_binary(const string& filename, vector<byte>& data);
-inline void save_binary(const string& filename, const vector<byte>& data);
+inline bool load_binary(const string& filename, vector<byte>& data);
+inline bool save_binary(const string& filename, const vector<byte>& data);
 
 }  // namespace yocto
 
@@ -632,37 +422,49 @@ bool exists_file(const string& filename) {
 namespace yocto {
 
 // Load a text file
-inline void load_text(const string& filename, string& str) {
+inline bool load_text(const string& filename, string& str) {
     // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-    auto fs = input_file(filename);
-    fseek(fs.file, 0, SEEK_END);
-    auto length = ftell(fs.file);
-    fseek(fs.file, 0, SEEK_SET);
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) return false;
+    fseek(fs, 0, SEEK_END);
+    auto length = ftell(fs);
+    fseek(fs, 0, SEEK_SET);
     str.resize(length);
-    read_values(fs, str);
+    auto ok = fread(str.data(), 1, length, fs) == length;
+    fclose(fs);
+    return ok;
 }
 
 // Save a text file
-inline void save_text(const string& filename, const string& str) {
-    auto fs = output_file(filename);
-    write_text(fs, str);
+inline bool save_text(const string& filename, const string& str) {
+    auto fs = fopen(filename.c_str(), "wt");
+    if (!fs) return false;
+    auto ok = fprintf(fs, "%s", str.c_str()) > 0;
+    fclose(fs);
+    return ok;
 }
 
 // Load a binary file
-inline void load_binary(const string& filename, vector<byte>& data) {
+inline bool load_binary(const string& filename, vector<byte>& data) {
     // https://stackoverflow.com/questions/174531/how-to-read-the-content-of-a-file-to-a-string-in-c
-    auto fs = input_file(filename, true);
-    fseek(fs.file, 0, SEEK_END);
-    auto length = ftell(fs.file);
-    fseek(fs.file, 0, SEEK_SET);
+    auto fs = fopen(filename.c_str(), "rb");
+    if (!fs) return false;
+    fseek(fs, 0, SEEK_END);
+    auto length = ftell(fs);
+    fseek(fs, 0, SEEK_SET);
     data.resize(length);
-    read_values(fs, data);
+    auto ok = fread(data.data(), 1, length, fs) == length;
+    fclose(fs);
+    return ok;
 }
 
 // Save a binary file
-inline void save_binary(const string& filename, const vector<byte>& data) {
-    auto fs = output_file(filename, true);
-    write_values(fs, data);
+inline bool save_binary(const string& filename, const vector<byte>& data) {
+    auto fs = fopen(filename.c_str(), "wb");
+    if (!fs) return false;
+    auto ok = fwrite(data.data(), 1, data.size(), fs) == data.size();
+    fclose(fs);
+    return ok;
 }
 
 }  // namespace yocto

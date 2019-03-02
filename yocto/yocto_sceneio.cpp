@@ -26,37 +26,10 @@
 // SOFTWARE.
 //
 
-//
-//
-// LICENSE OF INCLUDED CODE FOR BASE64 (base64.h, base64.cpp)
-//
-// Copyright (C) 2004-2008 René Nyffenegger
-//
-// This source code is provided 'as-is', without any express or implied
-// warranty. In no event will the author be held liable for any damages
-// arising from the use of this software.
-//
-// Permission is granted to anyone to use this software for any purpose,
-// including commercial applications, and to alter it and redistribute it
-// freely, subject to the following restrictions:
-//
-// 1. The origin of this source code must not be misrepresented; you must not
-// claim that you wrote the original source code. If you use this source code
-// in a product, an acknowledgment in the product documentation would be
-// appreciated but is not required.
-//
-// 2. Altered source versions must be plainly marked as such, and must not be
-// misrepresented as being the original source code.
-//
-// 3. This notice may not be removed or altered from any source distribution.
-//
-// René Nyffenegger rene.nyffenegger@adp-gmbh.ch
-//
-//
-
 #include "yocto_sceneio.h"
 #include "yocto_imageio.h"
 #include "yocto_json.h"
+#include "yocto_obj.h"
 #include "yocto_random.h"
 #include "yocto_shape.h"
 #include "yocto_utils.h"
@@ -72,65 +45,193 @@
 #include <regex>
 
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF FAST PARSING
+// FILE UTILITIES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-// normalize obj line for simpler parsing
-inline void normalize_obj_line(char* str, char comment_char = '#') {
-    auto has_content = false;
-    auto start       = str;
-    while (*str) {
-        if (*str == comment_char) {
-            *str = 0;
-            break;
-        } else if (*str == ' ' || *str == '\t' || *str == '\r' ||
-                   *str == '\n') {
-            *str = ' ';
-        } else {
-            has_content = true;
-        }
-        str++;
+// file inout stream
+struct input_file {
+    input_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file           = fopen(filename.c_str(), binary ? "rb" : "rt");
+        if (!file) throw sceneio_error("could not open " + filename);
     }
-    if (!has_content) *start = 0;
+    input_file(FILE* fs) {
+        file  = fs;
+        owned = false;
+    }
+
+    input_file(const input_file&) = delete;
+    input_file& operator=(const input_file&) = delete;
+
+    ~input_file() {
+        if (file && owned) fclose(file);
+    }
+
+    string filename = "";
+    FILE*  file     = nullptr;
+    bool   owned    = true;
+};
+
+// file writer
+struct output_file {
+    output_file(const string& filename, bool binary = false) {
+        this->filename = filename;
+        file           = fopen(filename.c_str(), binary ? "wb" : "wt");
+        if (!file) throw sceneio_error("could not open " + filename);
+    }
+    output_file(FILE* fs) {
+        file  = fs;
+        owned = false;
+    }
+
+    output_file(const output_file&) = delete;
+    output_file& operator=(const output_file&) = delete;
+
+    ~output_file() {
+        if (file && owned) fclose(file);
+    }
+
+    string filename = "";
+    FILE*  file     = nullptr;
+    bool   owned    = true;
+};
+
+// write a value to a file
+template <typename T>
+inline void write_value(const output_file& fs, const T& value) {
+    if (fwrite(&value, sizeof(value), 1, fs.file) != 1) {
+        throw sceneio_error("cannot write to " + fs.filename);
+    }
 }
 
-// Parse values from a string
-inline void parse_value(char*& str, int& value) {
-    char* end = nullptr;
-    value     = (int)strtol(str, &end, 10);
-    if (str == end) throw io_error("cannot parse value");
-    str = end;
-}
-inline void parse_value(char*& str, bool& value) {
-    auto valuei = 0;
-    parse_value(str, valuei);
-    value = (bool)valuei;
-}
-inline void parse_value(char*& str, float& value) {
-    char* end = nullptr;
-    value     = strtof(str, &end);
-    if (str == end) throw io_error("cannot parse value");
-    str = end;
-}
-inline void parse_value(char*& str, string& value, bool ok_if_empty = false) {
-    value = "";
-    while (*str == ' ') str++;
-    if (!*str && !ok_if_empty) {
-        throw io_error("cannot parse value");
+// write values to a file
+template <typename T>
+inline void write_values(const output_file& fs, const vector<T>& values) {
+    if (values.empty()) return;
+    if (fwrite(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw sceneio_error("cannot write to " + fs.filename);
     }
-    while (*str && *str != ' ') {
-        value += *str;
-        str++;
+}
+template <typename T>
+inline void write_values(const output_file& fs, const T* values, size_t count) {
+    if (!count) return;
+    if (fwrite(values, sizeof(values[0]), count, fs.file) != count) {
+        throw sceneio_error("cannot write to " + fs.filename);
+    }
+}
+
+// write text to a file
+inline void write_text(const output_file& fs, const std::string& str) {
+    if (fprintf(fs.file, "%s", str.c_str()) < 0) {
+        throw sceneio_error("cannot write to " + fs.filename);
+    }
+}
+
+// read a value from a file
+template <typename T>
+inline void read_value(const input_file& fs, T& value) {
+    if (fread(&value, sizeof(value), 1, fs.file) != 1) {
+        throw sceneio_error("cannot read from " + fs.filename);
+    }
+}
+
+// read values from a file
+template <typename T>
+inline void read_values(const input_file& fs, T* values, size_t count) {
+    if (!count) return;
+    if (fread(values, sizeof(values[0]), count, fs.file) != count) {
+        throw sceneio_error("cannot read from " + fs.filename);
+    }
+}
+template <typename T>
+inline void read_values(const input_file& fs, vector<T>& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw sceneio_error("cannot read from " + fs.filename);
+    }
+}
+// read characters from a file
+inline void read_values(const input_file& fs, string& values) {
+    if (values.empty()) return;
+    if (fread(values.data(), sizeof(values[0]), values.size(), fs.file) !=
+        values.size()) {
+        throw sceneio_error("cannot read from " + fs.filename);
+    }
+}
+
+// read a line of text
+inline bool read_line(const input_file& fs, string& str) {
+    char buffer[4096];
+    if (fgets(buffer, sizeof(buffer), fs.file) == nullptr) return false;
+    str = buffer;
+    return true;
+}
+inline bool read_line(const input_file& fs, char* buffer, size_t size) {
+    if (fgets(buffer, size, fs.file) == nullptr) return false;
+    return true;
+}
+
+// Printing values
+inline void print_value(const output_file& fs, int value) {
+    if (fprintf(fs.file, "%d", value) < 0)
+        throw sceneio_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, bool value) {
+    if (fprintf(fs.file, "%d", (int)value) < 0)
+        throw sceneio_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, float value) {
+    if (fprintf(fs.file, "%g", value) < 0)
+        throw sceneio_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, char value) {
+    if (fprintf(fs.file, "%c", value) < 0)
+        throw sceneio_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, const char* value) {
+    if (fprintf(fs.file, "%s", value) < 0)
+        throw sceneio_error("cannot write to file " + fs.filename);
+}
+inline void print_value(const output_file& fs, const string& value) {
+    if (fprintf(fs.file, "%s", value.c_str()) < 0)
+        throw sceneio_error("cannot write to file " + fs.filename);
+}
+template <typename T, int N>
+inline void print_value(const output_file& fs, const vec<T, N>& value) {
+    for (auto i = 0; i < N; i++) {
+        if (i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
+}
+template <typename T, int N, int M>
+inline void print_value(const output_file& fs, const mat<T, N, M>& value) {
+    for (auto i = 0; i < M; i++) {
+        if (i) print_value(fs, ' ');
+        print_value(fs, value[i]);
     }
 }
 template <typename T, int N>
-inline void parse_value(char*& str, vec<T, N>& value) {
-    for (auto i = 0; i < N; i++) parse_value(str, value[i]);
+inline void print_value(const output_file& fs, const frame<T, N>& value) {
+    for (auto i = 0; i < N + 1; i++) {
+        if (i) print_value(fs, ' ');
+        print_value(fs, value[i]);
+    }
 }
-template <typename T, int N>
-inline void parse_value(char*& str, frame<T, N>& value) {
-    for (auto i = 0; i < N + 1; i++) parse_value(str, value[i]);
+
+// print values to file
+template <typename Arg, typename... Args>
+inline void println_values(
+    const output_file& fs, const Arg& value, const Args&... values) {
+    print_value(fs, value);
+    if constexpr (sizeof...(values) > 0) {
+        print_value(fs, ' ');
+        println_values(fs, values...);
+    } else {
+        print_value(fs, '\n');
+    }
 }
 
 }  // namespace yocto
@@ -196,7 +297,7 @@ void load_scene(const string& filename, yocto_scene& scene,
         load_ply_scene(filename, scene, options);
     } else {
         scene = {};
-        throw io_error("unsupported scene format " + ext);
+        throw sceneio_error("unsupported scene format " + ext);
     }
 }
 
@@ -215,7 +316,7 @@ void save_scene(const string& filename, const yocto_scene& scene,
     } else if (ext == "ybin" || ext == "YBIN") {
         save_ybin_scene(filename, scene, options);
     } else {
-        throw io_error("unsupported scene format " + ext);
+        throw sceneio_error("unsupported scene format " + ext);
     }
 }
 
@@ -338,115 +439,6 @@ bool is_face_varying(const vector<vec4i>& quads_positions,
             if (quads_positions[i] != quads_texcoords[i]) return true;
     }
     return false;
-}
-
-}  // namespace yocto
-
-// -----------------------------------------------------------------------------
-// IO UTILITIES
-// -----------------------------------------------------------------------------
-namespace yocto {
-
-// Encode in base64
-string base64_encode(
-    unsigned char const* bytes_to_encode, unsigned int in_len) {
-    static const string base64_chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
-    string        ret;
-    int           i = 0;
-    int           j = 0;
-    unsigned char char_array_3[3];
-    unsigned char char_array_4[4];
-
-    while (in_len--) {
-        char_array_3[i++] = *(bytes_to_encode++);
-        if (i == 3) {
-            char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-            char_array_4[1] = ((char_array_3[0] & 0x03) << 4) +
-                              ((char_array_3[1] & 0xf0) >> 4);
-            char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) +
-                              ((char_array_3[2] & 0xc0) >> 6);
-            char_array_4[3] = char_array_3[2] & 0x3f;
-
-            for (i = 0; (i < 4); i++) ret += base64_chars[char_array_4[i]];
-            i = 0;
-        }
-    }
-
-    if (i) {
-        for (j = i; j < 3; j++) char_array_3[j] = '\0';
-
-        char_array_4[0] = (char_array_3[0] & 0xfc) >> 2;
-        char_array_4[1] = ((char_array_3[0] & 0x03) << 4) +
-                          ((char_array_3[1] & 0xf0) >> 4);
-        char_array_4[2] = ((char_array_3[1] & 0x0f) << 2) +
-                          ((char_array_3[2] & 0xc0) >> 6);
-        char_array_4[3] = char_array_3[2] & 0x3f;
-
-        for (j = 0; (j < i + 1); j++) ret += base64_chars[char_array_4[j]];
-
-        while ((i++ < 3)) ret += '=';
-    }
-
-    return ret;
-}
-
-// Decode from base64
-string base64_decode(string const& encoded_string) {
-    static const string base64_chars =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789+/";
-
-    auto is_base64 = [](unsigned char c) -> bool {
-        return (isalnum(c) || (c == '+') || (c == '/'));
-    };
-
-    int           in_len = (int)encoded_string.size();
-    int           i      = 0;
-    int           j      = 0;
-    int           in_    = 0;
-    unsigned char char_array_4[4], char_array_3[3];
-    string        ret;
-
-    while (in_len-- && (encoded_string[in_] != '=') &&
-           is_base64(encoded_string[in_])) {
-        char_array_4[i++] = encoded_string[in_];
-        in_++;
-        if (i == 4) {
-            for (i = 0; i < 4; i++)
-                char_array_4[i] = base64_chars.find(char_array_4[i]);
-
-            char_array_3[0] = (char_array_4[0] << 2) +
-                              ((char_array_4[1] & 0x30) >> 4);
-            char_array_3[1] = ((char_array_4[1] & 0xf) << 4) +
-                              ((char_array_4[2] & 0x3c) >> 2);
-            char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-            for (i = 0; (i < 3); i++) ret += char_array_3[i];
-            i = 0;
-        }
-    }
-
-    if (i) {
-        for (j = i; j < 4; j++) char_array_4[j] = 0;
-
-        for (j = 0; j < 4; j++)
-            char_array_4[j] = base64_chars.find(char_array_4[j]);
-
-        char_array_3[0] = (char_array_4[0] << 2) +
-                          ((char_array_4[1] & 0x30) >> 4);
-        char_array_3[1] = ((char_array_4[1] & 0xf) << 4) +
-                          ((char_array_4[2] & 0x3c) >> 2);
-        char_array_3[2] = ((char_array_4[2] & 0x3) << 6) + char_array_4[3];
-
-        for (j = 0; (j < i - 1); j++) ret += char_array_3[j];
-    }
-
-    return ret;
 }
 
 }  // namespace yocto
@@ -1327,7 +1319,7 @@ void load_json_scene(const string& filename, yocto_scene& scene,
         load_json_meshes(scene, dirname, options);
         load_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -1380,7 +1372,7 @@ void save_json_scene(const string& filename, const yocto_scene& scene,
         save_json_meshes(scene, dirname, options);
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
     }
 }
 
@@ -1406,330 +1398,13 @@ struct obj_vertex_hash {
     }
 };
 
-inline void parse_value(char*& str, obj_vertex& value) {
-    value = obj_vertex{0, 0, 0};
-    parse_value(str, value.position);
-    if (*str == '/') {
-        str++;
-        if (*str == '/') {
-            str++;
-            parse_value(str, value.normal);
-        } else {
-            parse_value(str, value.texturecoord);
-            if (*str == '/') {
-                str++;
-                parse_value(str, value.normal);
-            }
-        }
-    }
-}
-
-// Input for OBJ textures
-inline void parse_value(char*& str, obj_texture_info& info) {
-    // initialize
-    info = obj_texture_info();
-
-    // get tokens
-    auto tokens = vector<string>();
-    while (*str == ' ') str++;
-    while (*str) {
-        auto token = ""s;
-        parse_value(str, token);
-        tokens.push_back(token);
-        while (*str == ' ') str++;
-    }
-    if (tokens.empty()) throw io_error("cannot parse value");
-
-    // texture name
-    info.path = normalize_path(tokens.back());
-
-    // texture options
-    auto last = string();
-    for (auto i = 0; i < tokens.size() - 1; i++) {
-        if (tokens[i] == "-bm") info.scale = atof(tokens[i + 1].c_str());
-        if (tokens[i] == "-clamp") info.clamp = true;
-    }
-}
-
-// Load obj materials
-void load_mtl(const string& filename, const obj_callbacks& cb,
-    const load_obj_options& options) {
-    // open file
-    auto fs = input_file(filename);
-
-    // currently parsed material
-    auto material = obj_material();
-    auto first    = true;
-
-    // read the file line by line
-    char buffer[4096];
-    while (read_line(fs, buffer, sizeof(buffer))) {
-        // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
-
-        // get command
-        auto cmd = ""s;
-        parse_value(line, cmd);
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "newmtl") {
-            if (!first && cb.material) cb.material(material);
-            first    = false;
-            material = obj_material();
-            parse_value(line, material.name);
-        } else if (cmd == "illum") {
-            parse_value(line, material.illum);
-        } else if (cmd == "Ke") {
-            parse_value(line, material.ke);
-        } else if (cmd == "Kd") {
-            parse_value(line, material.kd);
-        } else if (cmd == "Ks") {
-            parse_value(line, material.ks);
-        } else if (cmd == "Kt") {
-            parse_value(line, material.kt);
-        } else if (cmd == "Tf") {
-            material.kt = {-1, -1, -1};
-            parse_value(line, material.kt);
-            if (material.kt.y < 0)
-                material.kt = {material.kt.x, material.kt.x, material.kt.x};
-            if (options.flip_tr) material.kt = vec3f{1, 1, 1} - material.kt;
-        } else if (cmd == "Tr") {
-            parse_value(line, material.op);
-            if (options.flip_tr) material.op = 1 - material.op;
-        } else if (cmd == "Ns") {
-            parse_value(line, material.ns);
-            material.rs = pow(2 / (material.ns + 2), 1 / 4.0f);
-            if (material.rs < 0.01f) material.rs = 0;
-            if (material.rs > 0.99f) material.rs = 1;
-        } else if (cmd == "d") {
-            parse_value(line, material.op);
-        } else if (cmd == "Pr" || cmd == "rs") {
-            parse_value(line, material.rs);
-        } else if (cmd == "map_Ke") {
-            parse_value(line, material.ke_txt);
-        } else if (cmd == "map_Kd") {
-            parse_value(line, material.kd_txt);
-        } else if (cmd == "map_Ks") {
-            parse_value(line, material.ks_txt);
-        } else if (cmd == "map_Tr") {
-            parse_value(line, material.kt_txt);
-        } else if (cmd == "map_d" || cmd == "map_Tr") {
-            parse_value(line, material.op_txt);
-        } else if (cmd == "map_Pr" || cmd == "map_rs") {
-            parse_value(line, material.rs_txt);
-        } else if (cmd == "map_occ" || cmd == "occ") {
-            parse_value(line, material.occ_txt);
-        } else if (cmd == "map_bump" || cmd == "bump") {
-            parse_value(line, material.bump_txt);
-        } else if (cmd == "map_disp" || cmd == "disp") {
-            parse_value(line, material.disp_txt);
-        } else if (cmd == "map_norm" || cmd == "norm") {
-            parse_value(line, material.norm_txt);
-        } else if (cmd == "Ve") {
-            parse_value(line, material.ve);
-        } else if (cmd == "Va") {
-            parse_value(line, material.va);
-        } else if (cmd == "Vd") {
-            parse_value(line, material.vd);
-        } else if (cmd == "Vg") {
-            parse_value(line, material.vg);
-        } else if (cmd == "map_Vd") {
-            parse_value(line, material.vd_txt);
-        }
-    }
-
-    // issue current material
-    if (!first && cb.material) cb.material(material);
-}
-
-// Load obj extensions
-void load_objx(const string& filename, const obj_callbacks& cb,
-    const load_obj_options& options) {
-    // open file
-    auto fs = input_file(filename);
-
-    // read the file line by line
-    char buffer[4096];
-    while (read_line(fs, buffer, sizeof(buffer))) {
-        // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
-
-        // get command
-        auto cmd = ""s;
-        parse_value(line, cmd);
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "c") {
-            auto camera = obj_camera();
-            parse_value(line, camera.name);
-            parse_value(line, camera.ortho);
-            parse_value(line, camera.width);
-            parse_value(line, camera.height);
-            parse_value(line, camera.focal);
-            parse_value(line, camera.focus);
-            parse_value(line, camera.aperture);
-            parse_value(line, camera.frame);
-            if (cb.camera) cb.camera(camera);
-        } else if (cmd == "e") {
-            auto environment = obj_environment();
-            parse_value(line, environment.name);
-            parse_value(line, environment.ke);
-            parse_value(line, environment.ke_txt.path);
-            parse_value(line, environment.frame);
-            if (environment.ke_txt.path == "\"\"") environment.ke_txt.path = "";
-            if (cb.environmnet) cb.environmnet(environment);
-        } else if (cmd == "po") {
-            auto procedural = obj_procedural();
-            parse_value(line, procedural.name);
-            parse_value(line, procedural.type);
-            parse_value(line, procedural.material);
-            parse_value(line, procedural.size);
-            parse_value(line, procedural.level);
-            parse_value(line, procedural.frame);
-            if (cb.procedural) cb.procedural(procedural);
-        } else {
-            // unused
-        }
-    }
-}
-
-// Load obj scene
-void load_obj(const string& filename, const obj_callbacks& cb,
-    const load_obj_options& options) {
-    // open file
-    auto fs = input_file(filename);
-
-    // track vertex size
-    auto vert_size = obj_vertex();
-    auto verts     = vector<obj_vertex>();  // buffer to avoid reallocation
-
-    // read the file line by line
-    char buffer[4096];
-    while (read_line(fs, buffer, sizeof(buffer))) {
-        // line
-        auto line = buffer;
-        normalize_obj_line(line);
-        if (!*line) continue;
-
-        // get command
-        auto cmd = ""s;
-        parse_value(line, cmd);
-        if (cmd == "") continue;
-
-        // possible token values
-        if (cmd == "v") {
-            auto vert = zero3f;
-            parse_value(line, vert);
-            if (cb.vert) cb.vert(vert);
-            vert_size.position += 1;
-        } else if (cmd == "vn") {
-            auto vert = zero3f;
-            parse_value(line, vert);
-            if (cb.norm) cb.norm(vert);
-            vert_size.normal += 1;
-        } else if (cmd == "vt") {
-            auto vert = zero2f;
-            parse_value(line, vert);
-            if (options.flip_texcoord) vert.y = 1 - vert.y;
-            if (cb.texcoord) cb.texcoord(vert);
-            vert_size.texturecoord += 1;
-        } else if (cmd == "f" || cmd == "l" || cmd == "p") {
-            verts.clear();
-            while (*line == ' ') line++;
-            while (*line) {
-                auto vert = obj_vertex{};
-                parse_value(line, vert);
-                if (!vert.position) break;
-                if (vert.position < 0)
-                    vert.position = vert_size.position + vert.position + 1;
-                if (vert.texturecoord < 0)
-                    vert.texturecoord = vert_size.texturecoord +
-                                        vert.texturecoord + 1;
-                if (vert.normal < 0)
-                    vert.normal = vert_size.normal + vert.normal + 1;
-                verts.push_back(vert);
-                while (*line == ' ') line++;
-            }
-            if (cmd == "f" && cb.face) cb.face(verts);
-            if (cmd == "l" && cb.line) cb.line(verts);
-            if (cmd == "p" && cb.point) cb.point(verts);
-        } else if (cmd == "o") {
-            auto name = ""s;
-            parse_value(line, name, true);
-            if (cb.object) cb.object(name);
-        } else if (cmd == "usemtl") {
-            auto name = ""s;
-            parse_value(line, name, true);
-            if (cb.usemtl) cb.usemtl(name);
-        } else if (cmd == "g") {
-            auto name = ""s;
-            parse_value(line, name, true);
-            if (cb.group) cb.group(name);
-        } else if (cmd == "s") {
-            auto name = ""s;
-            parse_value(line, name, true);
-            if (cb.smoothing) cb.smoothing(name);
-        } else if (cmd == "mtllib") {
-            if (options.geometry_only) continue;
-            auto mtlname = ""s;
-            parse_value(line, mtlname);
-            if (cb.mtllib) cb.mtllib(mtlname);
-            auto mtlpath = get_dirname(filename) + mtlname;
-            load_mtl(mtlpath, cb, options);
-        } else {
-            // unused
-        }
-    }
-
-    // parse extensions if presents
-    if (!options.geometry_only) {
-        auto extname    = replace_extension(filename, "objx");
-        auto ext_exists = exists_file(extname);
-        if (ext_exists) {
-            load_objx(extname, cb, options);
-        }
-    }
-}
-
-// Parse obj texture
-void parse_obj_texture(char*& str, int& texture_id, yocto_scene& scene) {
-    auto info = obj_texture_info{};
-    parse_value(str, info);
-    for (texture_id = 0; texture_id < scene.textures.size(); texture_id++) {
-        if (scene.textures[texture_id].filename == info.path) return;
-    }
-    scene.textures.push_back({});
-    auto& texture         = scene.textures.back();
-    texture.name          = info.path;
-    texture.filename      = info.path;
-    texture.clamp_to_edge = info.clamp;
-}
-void parse_obj_voltexture(char*& str, int& texture_id, yocto_scene& scene) {
-    auto info = obj_texture_info{};
-    parse_value(str, info);
-    for (texture_id = 0; texture_id < scene.voltextures.size(); texture_id++) {
-        if (scene.voltextures[texture_id].filename == info.path) return;
-    }
-    scene.voltextures.push_back({});
-    auto& texture         = scene.voltextures.back();
-    texture.name          = info.path;
-    texture.filename      = info.path;
-    texture.clamp_to_edge = info.clamp;
-}
-
 // Get material index
 void set_obj_material(
     const string& name, int& material_id, const yocto_scene& scene) {
     for (material_id = 0; material_id < scene.materials.size(); material_id++) {
         if (scene.materials[material_id].name == name) return;
     }
-    throw io_error("unknown material " + name);
+    throw sceneio_error("unknown material " + name);
 }
 
 // Loads an OBJ
@@ -2019,7 +1694,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         auto shape = yocto_shape();
         shape.name = oproc.name;
         if (mmap.find(oproc.material) == mmap.end()) {
-            throw io_error("missing material " + oproc.material);
+            throw sceneio_error("missing material " + oproc.material);
         } else {
             shape.material = mmap.find(oproc.material)->second;
         }
@@ -2030,7 +1705,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
                     oproc.level < 0 ? 20 : pow2(oproc.level)},
                 {oproc.size, oproc.size}, {oproc.size / 2, oproc.size / 2});
         } else {
-            throw io_error("unknown obj procedural");
+            throw sceneio_error("unknown obj procedural");
         }
         scene.shapes.push_back(shape);
     };
@@ -2066,7 +1741,7 @@ void load_obj_scene(const string& filename, yocto_scene& scene,
         auto dirname = get_dirname(filename);
         load_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -2325,8 +2000,14 @@ void save_obj_scene(const string& filename, const yocto_scene& scene,
         auto dirname = get_dirname(filename);
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw io_error("cannot save scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
     }
+}
+
+void print_obj_camera(const yocto_camera& camera) {
+    println_values(stdout, "c", camera.name, (int)camera.orthographic,
+        camera.film_width, camera.film_height, camera.focal_length,
+        camera.focus_distance, camera.lens_aperture, camera.frame);
 }
 
 }  // namespace yocto
@@ -2355,7 +2036,7 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
         scene.instances.push_back(instance);
 
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -2369,7 +2050,7 @@ void load_ply_scene(const string& filename, yocto_scene& scene,
 void save_ply_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options) {
     if (scene.shapes.empty()) {
-        throw io_error("cannot save empty scene " + filename);
+        throw sceneio_error("cannot save empty scene " + filename);
     }
     try {
         auto& shape = scene.shapes.front();
@@ -2377,7 +2058,7 @@ void save_ply_scene(const string& filename, const yocto_scene& scene,
             shape.quads, shape.positions, shape.normals, shape.texturecoords,
             shape.colors, shape.radius);
     } catch (const std::exception& e) {
-        throw io_error("cannot save scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -2403,12 +2084,13 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
     auto data   = (cgltf_data*)nullptr;
     auto result = cgltf_parse_file(&options, filename.c_str(), &data);
     if (result != cgltf_result_success) {
-        throw io_error("could not load gltf " + filename);
+        throw sceneio_error("could not load gltf " + filename);
     }
-    auto gltf = std::unique_ptr<cgltf_data, void(*)(cgltf_data*)>{data, cgltf_free};
+    auto gltf = unique_ptr<cgltf_data, void (*)(cgltf_data*)>{
+        data, cgltf_free};
     if (cgltf_load_buffers(&options, data, get_dirname(filename).c_str()) !=
         cgltf_result_success) {
-        throw io_error("could not load gltf buffers " + filename);
+        throw sceneio_error("could not load gltf buffers " + filename);
     }
 
     // convert textures
@@ -2629,9 +2311,9 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                         shape.lines.push_back({i - 1, i});
                 } else if (gprim->type == cgltf_primitive_type_points) {
                     // points
-                    throw io_error("points not supported");
+                    throw sceneio_error("points not supported");
                 } else {
-                    throw io_error("unknown primitive type");
+                    throw sceneio_error("unknown primitive type");
                 }
             } else {
                 auto indices = accessor_values(gprim->indices);
@@ -2669,9 +2351,9 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                         shape.lines.push_back(
                             {(int)indices[i - 1][0], (int)indices[i][0]});
                 } else if (gprim->type == cgltf_primitive_type_points) {
-                    throw io_error("points not supported");
+                    throw sceneio_error("points not supported");
                 } else {
-                    throw io_error("unknown primitive type");
+                    throw sceneio_error("unknown primitive type");
                 }
             }
             shape.material = mmap.at(gprim->material);
@@ -2688,7 +2370,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
         camera.name         = gcam->name ? gcam->name : "";
         camera.orthographic = gcam->type == cgltf_camera_type_orthographic;
         if (camera.orthographic) {
-            throw io_error("orthographic not supported well");
+            throw sceneio_error("orthographic not supported well");
             auto ortho           = &gcam->orthographic;
             camera.lens_aperture = 0;
             set_camera_perspective(
@@ -2848,7 +2530,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
                                     (float)output_view[i][2]});
                     } break;
                     case cgltf_animation_path_type_weights: {
-                        throw io_error("weights not supported for now");
+                        throw sceneio_error("weights not supported for now");
 #if 0
                     // get a node that it refers to
                     auto ncomp = 0;
@@ -2874,7 +2556,7 @@ void gltf_to_scene(const string& filename, yocto_scene& scene) {
 #endif
                     } break;
                     default: {
-                        throw io_error("bad gltf animation");
+                        throw sceneio_error("bad gltf animation");
                     }
                 }
                 sampler_map[{gchannel->sampler, path}] =
@@ -2902,7 +2584,7 @@ void load_gltf_scene(const string& filename, yocto_scene& scene,
         load_scene_textures(scene, dirname, options);
 
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     // fix scene
@@ -3128,7 +2810,7 @@ void scene_to_gltf(const yocto_scene& scene, json& js) {
 
     // animations not supported yet
     if (!scene.animations.empty())
-        throw io_error("animation not supported yet");
+        throw sceneio_error("animation not supported yet");
 
     // nodes from instances
     if (scene.nodes.empty()) {
@@ -3210,7 +2892,7 @@ void save_gltf_scene(const string& filename, const yocto_scene& scene,
         // save textures
         save_scene_textures(scene, dirname, options);
     } catch (const std::exception& e) {
-        throw io_error("cannot save scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -3253,7 +2935,7 @@ void pbrt_to_json(const string& filename, json& js) {
     };
     auto parse_string = [](const vector<string>& tokens, int& i) -> string {
         if (tokens[i][0] != '"') {
-            throw io_error("string expected");
+            throw sceneio_error("string expected");
             return "";
         }
         auto tok = tokens[i++];
@@ -3281,7 +2963,7 @@ void pbrt_to_json(const string& filename, json& js) {
                 if (!list) break;
             } else {
                 if (!first && !list) {
-                    throw io_error("bad options");
+                    throw sceneio_error("bad options");
                     break;
                 }
                 js.push_back(atof(tokens[i].c_str()));
@@ -3333,7 +3015,7 @@ void pbrt_to_json(const string& filename, json& js) {
     auto i      = 0;
     while (i < tokens.size()) {
         if (!is_cmd(tokens, i)) {
-            throw io_error("command expected");
+            throw sceneio_error("command expected");
             break;
         }
         auto& tok   = tokens[i++];
@@ -3367,7 +3049,7 @@ void pbrt_to_json(const string& filename, json& js) {
                    tok == "AttributeEnd" || tok == "TransformEnd" ||
                    tok == "ObjectEnd" || tok == "ReverseOrientation") {
         } else {
-            throw io_error("unsupported command " + tok);
+            throw sceneio_error("unsupported command " + tok);
         }
         js.push_back(jcmd);
     }
@@ -3437,7 +3119,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
     try {
         pbrt_to_json(filename, js);
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
     }
 
     auto dirname_ = get_dirname(filename);
@@ -3467,7 +3149,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         if (js.is_array() && js.size() == 3)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>()};
-        throw io_error("cannot handle vec3f");
+        throw sceneio_error("cannot handle vec3f");
         return zero3f;
     };
 
@@ -3485,13 +3167,13 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
         if (js.is_array() && js.size() == 4)
             return {js.at(0).get<float>(), js.at(1).get<float>(),
                 js.at(2).get<float>(), js.at(3).get<float>()};
-        throw io_error("cannot handle vec4f");
+        throw sceneio_error("cannot handle vec4f");
         return zero4f;
     };
 
     auto get_mat4f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 16) {
-            throw io_error("cannot handle vec4f");
+            throw sceneio_error("cannot handle vec4f");
             return identity_frame3f;
         }
         float m[16] = {0};
@@ -3502,7 +3184,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_mat3f = [](const json& js) -> frame3f {
         if (!js.is_array() || js.size() != 9) {
-            throw io_error("cannot handle mat3f");
+            throw sceneio_error("cannot handle mat3f");
             return identity_frame3f;
         }
         auto m = identity_frame3f;
@@ -3512,7 +3194,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_vector_vec3i = [](const json& js) -> vector<vec3i> {
         if (!js.is_array() || js.size() % 3) {
-            throw io_error("cannot handle vector<vec3f");
+            throw sceneio_error("cannot handle vector<vec3f");
             return {};
         }
         auto vals = vector<vec3i>(js.size() / 3);
@@ -3526,7 +3208,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_vector_vec3f = [](const json& js) -> vector<vec3f> {
         if (!js.is_array() || js.size() % 3) {
-            throw io_error("cannot handle vector<vec3f>");
+            throw sceneio_error("cannot handle vector<vec3f>");
             return {};
         }
         auto vals = vector<vec3f>(js.size() / 3);
@@ -3540,7 +3222,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
 
     auto get_vector_vec2f = [](const json& js) -> vector<vec2f> {
         if (!js.is_array() || js.size() % 2) {
-            throw io_error("cannot handle vector<vec3f>");
+            throw sceneio_error("cannot handle vector<vec3f>");
             return {};
         }
         auto vals = vector<vec2f>(js.size() / 2);
@@ -3607,7 +3289,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 fovy = jcmd.at("fov").get<float>() * pif / 180;
                 if (aspect < 1) fovy = atan(tan(fovy) / aspect);
             } else {
-                throw io_error("camera not supported " + type);
+                throw sceneio_error("camera not supported " + type);
             }
             set_camera_perspective(camera, fovy, aspect, focus);
             scene.cameras.push_back(camera);
@@ -3633,7 +3315,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                             ".hd"
                             "r");
                 } else {
-                    throw io_error("texture not supported " + type);
+                    throw sceneio_error("texture not supported " + type);
                 }
             }
         } else if (cmd == "MakeNamedMaterial" || cmd == "Material") {
@@ -3752,11 +3434,12 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                         material        = scene.materials[mat_map.at(mat1)];
                         material.name   = saved_name;
                     } else {
-                        throw io_error("mix material missing front material");
+                        throw sceneio_error(
+                            "mix material missing front material");
                     }
                 } else {
                     material.diffuse = {1, 0, 0};
-                    throw io_error("material not supported " + type);
+                    throw sceneio_error("material not supported " + type);
                 }
                 if (jcmd.count("uroughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -3764,7 +3447,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     if (jcmd.count("uroughness"))
                         material.roughness = jcmd.at("uroughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
-                    if (remap) throw io_error("remap roughness not supported");
+                    if (remap)
+                        throw sceneio_error("remap roughness not supported");
                 }
                 if (jcmd.count("roughness")) {
                     auto remap = js.count("remaproughness") &&
@@ -3772,7 +3456,8 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                     if (jcmd.count("roughness"))
                         material.roughness = jcmd.at("roughness").get<float>();
                     // if (!remap) material.rs = material.rs * material.rs;
-                    if (remap) throw io_error("remap roughness not supported");
+                    if (remap)
+                        throw sceneio_error("remap roughness not supported");
                 }
                 if (stack.back().light_mat.emission != zero3f) {
                     material.emission = stack.back().light_mat.emission;
@@ -3835,7 +3520,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 make_uvdisk_shape(shape.quads, shape.positions, shape.normals,
                     shape.texturecoords, {32, 16}, 2 * radius, {1, 1});
             } else {
-                throw io_error("shape not supported " + type);
+                throw sceneio_error("shape not supported " + type);
             }
             auto frame = stack.back().frame;
             auto scl = vec3f{length(frame.x), length(frame.y), length(frame.z)};
@@ -3876,7 +3561,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                 ligth_mat.emission     = get_emission_vec3f(jcmd.at("L"));
                 stack.back().light_mat = ligth_mat;
             } else {
-                throw io_error("area light not supported " + type);
+                throw sceneio_error("area light not supported " + type);
             }
         } else if (cmd == "LightSource") {
             auto type = jcmd.at("type").get<string>();
@@ -3932,7 +3617,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                                      {0, 1, 0}, true);
                 scene.instances.push_back(instance);
             } else {
-                throw io_error("light not supported " + type);
+                throw sceneio_error("light not supported " + type);
             }
         } else if (cmd == "WorldBegin") {
             stack.push_back(stack_item());
@@ -3950,7 +3635,7 @@ void load_pbrt_scene(const string& filename, yocto_scene& scene,
                    cmd == "TransformEnd") {
             stack.pop_back();
         } else {
-            throw io_error("command not supported " + cmd);
+            throw sceneio_error("command not supported " + cmd);
         }
     }
 
@@ -4061,7 +3746,7 @@ void save_pbrt_scene(const string& filename, const yocto_scene& scene,
         save_scene_textures(scene, dirname, options);
 
     } catch (const std::exception& e) {
-        throw io_error("cannot save scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -4416,7 +4101,7 @@ void load_ybin_scene(const string& filename, yocto_scene& scene,
         auto fs = input_file(filename, true);
         read_object(fs, scene);
     } catch (const std::exception& e) {
-        throw io_error("cannot load scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load scene " + filename + "\n" + e.what());
     }
 }
 
@@ -4427,7 +4112,7 @@ void save_ybin_scene(const string& filename, const yocto_scene& scene,
         auto fs = output_file(filename, true);
         write_object(fs, scene);
     } catch (const std::exception& e) {
-        throw io_error("cannot save scene " + filename + "\n" + e.what());
+        throw sceneio_error("cannot save scene " + filename + "\n" + e.what());
     }
 }
 
@@ -4480,7 +4165,7 @@ void load_mesh(const string& filename, vector<int>& points,
     } else {
         reset_mesh_data(points, lines, triangles, quads, positions, normals,
             texturecoords, colors, radius);
-        throw io_error("unsupported mesh type " + ext);
+        throw sceneio_error("unsupported mesh type " + ext);
     }
 }
 
@@ -4498,7 +4183,7 @@ void save_mesh(const string& filename, const vector<int>& points,
         return save_obj_mesh(filename, points, lines, triangles, quads,
             positions, normals, texturecoords);
     } else {
-        throw io_error("unsupported mesh type " + ext);
+        throw sceneio_error("unsupported mesh type " + ext);
     }
 }
 
@@ -4528,7 +4213,7 @@ void load_ply_mesh(const string& filename, vector<int>& points,
                     positions[i] = {x[i], y[i], z[i]};
                 }
             } else {
-                throw io_error("vertex positions not present");
+                throw sceneio_error("vertex positions not present");
             }
             if (vertex.hasProperty("nx") && vertex.hasProperty("ny") &&
                 vertex.hasProperty("nz")) {
@@ -4586,7 +4271,7 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         if (ply.hasElement("face")) {
             auto& elements = ply.getElement("face");
             if (!elements.hasProperty("vertex_indices"))
-                throw io_error("bad ply faces");
+                throw sceneio_error("bad ply faces");
             auto indices = elements.getListProperty<int>("vertex_indices");
             for (auto& face : indices) {
                 if (face.size() == 4) {
@@ -4602,7 +4287,7 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         if (ply.hasElement("line")) {
             auto& elements = ply.getElement("line");
             if (!elements.hasProperty("vertex_indices"))
-                throw io_error("bad ply lines");
+                throw sceneio_error("bad ply lines");
             auto indices = elements.getListProperty<int>("vertex_indices");
             for (auto& line : indices) {
                 for (auto i = 1; i < line.size(); i++)
@@ -4613,7 +4298,7 @@ void load_ply_mesh(const string& filename, vector<int>& points,
         merge_triangles_and_quads(triangles, quads, force_triangles);
 
     } catch (const std::exception& e) {
-        throw io_error("cannot load mesh " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
     }
 }
 
@@ -4728,7 +4413,7 @@ void save_ply_mesh(const string& filename, const vector<int>& points,
         ply.write(filename,
             ascii ? happly::DataFormat::ASCII : happly::DataFormat::Binary);
     } catch (const std::exception& e) {
-        throw io_error("cannot save mesh " + filename + "\n" + e.what());
+        throw sceneio_error("cannot save mesh " + filename + "\n" + e.what());
     }
 }
 
@@ -4804,7 +4489,7 @@ void load_obj_mesh(const string& filename, vector<int>& points,
         merge_triangles_and_quads(triangles, quads, force_triangles);
 
     } catch (const std::exception& e) {
-        throw io_error("cannot load mesh " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
     }
 }
 
@@ -4878,7 +4563,7 @@ void load_facevarying_mesh(const string& filename,
         reset_facevarying_mesh_data(quads_positions, quads_normals,
             quads_texturecoords, positions, normals, texturecoords,
             quads_materials);
-        throw io_error("unsupported mesh type " + ext);
+        throw sceneio_error("unsupported mesh type " + ext);
     }
 }
 
@@ -4894,7 +4579,7 @@ void save_facevarying_mesh(const string& filename,
             quads_normals, quads_texturecoords, positions, normals,
             texturecoords, quads_materials);
     } else {
-        throw io_error("unsupported mesh type " + ext);
+        throw sceneio_error("unsupported mesh type " + ext);
     }
 }
 
@@ -5005,10 +4690,10 @@ void load_obj_facevarying_mesh(const string& filename,
         }
     };
     cb.line = [&](const vector<obj_vertex>& verts) {
-        throw io_error("lines not supported!");
+        throw sceneio_error("lines not supported!");
     };
     cb.point = [&](const vector<obj_vertex>& verts) {
-        throw io_error("points not supported!");
+        throw sceneio_error("points not supported!");
     };
     cb.usemtl = [&](const string& name) {
         auto pos = std::find(
@@ -5035,7 +4720,7 @@ void load_obj_facevarying_mesh(const string& filename,
             quads_materials.clear();
         }
     } catch (const std::exception& e) {
-        throw io_error("cannot load mesh " + filename + "\n" + e.what());
+        throw sceneio_error("cannot load mesh " + filename + "\n" + e.what());
     }
 }
 
@@ -5148,7 +4833,7 @@ void load_cyhair(const string& filename, cyhair_data& hair) {
     read_value(fs, header);
     if (header.magic[0] != 'H' || header.magic[1] != 'A' ||
         header.magic[2] != 'I' || header.magic[3] != 'R')
-        throw io_error("bad cyhair header");
+        throw sceneio_error("bad cyhair header");
 
     // set up data
     hair.default_thickness    = header.default_thickness;
@@ -5169,7 +4854,7 @@ void load_cyhair(const string& filename, cyhair_data& hair) {
     auto total_length = 0;
     for (auto segment : segments) total_length += segment + 1;
     if (total_length != header.num_points) {
-        throw io_error("bad cyhair file");
+        throw sceneio_error("bad cyhair file");
     }
 
     // read positions data
