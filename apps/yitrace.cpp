@@ -141,9 +141,6 @@ bool load_scene_sync(app_state& app) {
     } catch (const std::exception& e) {
         exit_error(e.what());
         return false;
-    } catch (const io_error& e) {
-        exit_error(e.what());
-        return false;
     }
 
     // tesselate

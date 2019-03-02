@@ -106,16 +106,18 @@ int main(int argc, char** argv) {
             auto ext = get_extension(texture.filename);
             if (is_hdr_filename(texture.filename)) {
                 if (ext == "hdr" || ext == "exr") continue;
-                if (ext == "pfm")
+                if (ext == "pfm") {
                     replace_extension(filename, "hdr");
-                else
-                    throw io_error("unknown texture format " + ext);
+                } else {
+                    throw runtime_error("unknown texture format " + ext);
+                }
             } else {
                 if (ext == "png" || ext == "jpg") continue;
-                if (ext == "tga" || ext == "bmp")
+                if (ext == "tga" || ext == "bmp") {
                     replace_extension(filename, "png");
-                else
-                    throw io_error("unknown texture format " + ext);
+                } else {
+                    throw runtime_error("unknown texture format " + ext);
+                }
             }
         }
     }

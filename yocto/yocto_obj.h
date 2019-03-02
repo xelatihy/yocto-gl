@@ -6,7 +6,7 @@
 // low level parsing code. We support a few extensions such as camera and
 // environment map loading.
 //
-// Error reporting is done through exceptions using the `io_error` exception.
+// Error reporting is done through exceptions using the `objio_error` exception.
 //
 // ## Parse an OBJ file
 //
@@ -179,6 +179,12 @@ struct load_obj_options {
 // Load obj scene
 void load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options = {});
+
+// objio error
+struct obj_error : runtime_error {
+    explicit obj_error(const char* msg) : runtime_error{msg} {}
+    explicit obj_error(const std::string& msg) : runtime_error{msg} {}
+};
 
 }  // namespace yocto
 

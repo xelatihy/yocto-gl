@@ -69,6 +69,12 @@ void load_image_from_memory(const byte* data, int data_size, image4b& img);
 void save_tonemapped_image(const string& filename, const image4f& hdr,
     float exposure = 0, bool filmic = false, bool srgb = true);
 
+// imageio error
+struct imageio_error : runtime_error {
+    explicit imageio_error(const char* msg) : runtime_error{msg} {}
+    explicit imageio_error(const std::string& msg) : runtime_error{msg} {}
+};
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------

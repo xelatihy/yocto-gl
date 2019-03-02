@@ -125,7 +125,7 @@ void init_opengl_program(
     glGetProgramiv(program.program_id, GL_LINK_STATUS, &errflags);
     if (!errflags) {
         glGetProgramInfoLog(program.program_id, 10000, 0, errbuf);
-        throw io_error("program not linked with error\n"s + errbuf);
+        throw gl_error("program not linked with error\n"s + errbuf);
     }
     glGetProgramiv(program.program_id, GL_VALIDATE_STATUS, &errflags);
     if (!errflags) {

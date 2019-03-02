@@ -27,7 +27,76 @@
 //
 
 #include "yocto_obj.h"
-#include "yocto_utils.h"
+
+// -----------------------------------------------------------------------------
+// IMPLEMENTATION OF PATH UTILITIES
+// -----------------------------------------------------------------------------
+namespace yocto {
+
+static string normalize_path(const string& filename_) {
+    auto filename = filename_;
+    for (auto& c : filename)
+        if (c == '\\') c = '/';
+    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
+        throw std::invalid_argument("absolute paths are not supported");
+        return filename_;
+    }
+    if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
+        filename[3] == '/') {
+        throw std::invalid_argument("absolute paths are not supported");
+        return filename_;
+    }
+    auto pos = (size_t)0;
+    while ((pos = filename.find("//")) != filename.npos)
+        filename = filename.substr(0, pos) + filename.substr(pos + 1);
+    return filename;
+}
+
+// Get directory name (including '/').
+static string get_dirname(const string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos      = filename.rfind('/');
+    if (pos == string::npos) return "";
+    return filename.substr(0, pos + 1);
+}
+
+#if 0
+// Get extension (not including '.').
+static string get_extension(const string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos      = filename.rfind('.');
+    if (pos == string::npos) return "";
+    return filename.substr(pos + 1);
+}
+
+// Get filename without directory.
+static string get_filename(const string& filename_) {
+    auto filename = normalize_path(filename_);
+    auto pos      = filename.rfind('/');
+    if (pos == string::npos) return "";
+    return filename.substr(pos + 1);
+}
+#endif
+
+// Replace extension.
+static string replace_extension(const string& filename_, const string& ext_) {
+    auto filename = normalize_path(filename_);
+    auto ext      = normalize_path(ext_);
+    if (ext.at(0) == '.') ext = ext.substr(1);
+    auto pos = filename.rfind('.');
+    if (pos == string::npos) return filename;
+    return filename.substr(0, pos) + "." + ext;
+}
+
+// Check if a file can be opened for reading.
+static bool exists_file(const string& filename) {
+    auto f = fopen(filename.c_str(), "r");
+    if (!f) return false;
+    fclose(f);
+    return true;
+}
+
+}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF FAST PARSING
@@ -57,7 +126,7 @@ inline void normalize_obj_line(char* str, char comment_char = '#') {
 inline void parse_value(char*& str, int& value) {
     char* end = nullptr;
     value     = (int)strtol(str, &end, 10);
-    if (str == end) throw io_error("cannot parse value");
+    if (str == end) throw obj_error("cannot parse value");
     str = end;
 }
 inline void parse_value(char*& str, bool& value) {
@@ -68,14 +137,14 @@ inline void parse_value(char*& str, bool& value) {
 inline void parse_value(char*& str, float& value) {
     char* end = nullptr;
     value     = strtof(str, &end);
-    if (str == end) throw io_error("cannot parse value");
+    if (str == end) throw obj_error("cannot parse value");
     str = end;
 }
 inline void parse_value(char*& str, string& value, bool ok_if_empty = false) {
     value = "";
     while (*str == ' ') str++;
     if (!*str && !ok_if_empty) {
-        throw io_error("cannot parse value");
+        throw obj_error("cannot parse value");
     }
     while (*str && *str != ' ') {
         value += *str;
@@ -130,7 +199,7 @@ inline void parse_value(char*& str, obj_texture_info& info) {
         tokens.push_back(token);
         while (*str == ' ') str++;
     }
-    if (tokens.empty()) throw io_error("cannot parse value");
+    if (tokens.empty()) throw obj_error("cannot parse value");
 
     // texture name
     info.path = normalize_path(tokens.back());
@@ -147,7 +216,10 @@ inline void parse_value(char*& str, obj_texture_info& info) {
 void load_mtl(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) throw obj_error("cannot load mtl " + filename);
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
 
     // currently parsed material
     auto material = obj_material();
@@ -155,7 +227,7 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     char buffer[4096];
-    while (read_line(fs, buffer, sizeof(buffer))) {
+    while (fgets(buffer, sizeof(buffer), fs)) {
         // line
         auto line = buffer;
         normalize_obj_line(line);
@@ -241,11 +313,15 @@ void load_mtl(const string& filename, const obj_callbacks& cb,
 void load_objx(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) throw obj_error("cannot load objx " + filename);
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
+
 
     // read the file line by line
     char buffer[4096];
-    while (read_line(fs, buffer, sizeof(buffer))) {
+    while (fgets(buffer, sizeof(buffer), fs)) {
         // line
         auto line = buffer;
         normalize_obj_line(line);
@@ -295,7 +371,10 @@ void load_objx(const string& filename, const obj_callbacks& cb,
 void load_obj(const string& filename, const obj_callbacks& cb,
     const load_obj_options& options) {
     // open file
-    auto fs = input_file(filename);
+    auto fs = fopen(filename.c_str(), "rt");
+    if (!fs) throw obj_error("cannot load obj " + filename);
+    auto fs_guard = std::unique_ptr<FILE, void (*)(FILE*)>{
+        fs, [](FILE* f) { fclose(f); }};
 
     // track vertex size
     auto vert_size = obj_vertex();
@@ -303,7 +382,7 @@ void load_obj(const string& filename, const obj_callbacks& cb,
 
     // read the file line by line
     char buffer[4096];
-    while (read_line(fs, buffer, sizeof(buffer))) {
+    while (fgets(buffer, sizeof(buffer), fs)) {
         // line
         auto line = buffer;
         normalize_obj_line(line);

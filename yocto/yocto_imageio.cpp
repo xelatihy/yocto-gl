@@ -232,7 +232,7 @@ void load_pfm_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = load_pfm(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
-        throw io_error("error loading image " + filename);
+        throw imageio_error("error loading image " + filename);
     }
     img = image{{width, height}, (const vec4f*)pixels};
     delete[] pixels;
@@ -240,7 +240,7 @@ void load_pfm_image(const string& filename, image4f& img) {
 void save_pfm_image(const string& filename, const image4f& img) {
     if (!save_pfm(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
-        throw io_error("error saving image " + filename);
+        throw imageio_error("error saving image " + filename);
     }
 }
 
@@ -249,10 +249,10 @@ void load_exr_image(const string& filename, image4f& img) {
     auto width = 0, height = 0;
     auto pixels = (float*)nullptr;
     if (LoadEXR(&pixels, &width, &height, filename.c_str(), nullptr) < 0) {
-        throw io_error("error loading image " + filename);
+        throw imageio_error("error loading image " + filename);
     }
     if (!pixels) {
-        throw io_error("error loading image " + filename);
+        throw imageio_error("error loading image " + filename);
     }
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
@@ -260,7 +260,7 @@ void load_exr_image(const string& filename, image4f& img) {
 void save_exr_image(const string& filename, const image4f& img) {
     if (!SaveEXR((float*)img.data(), img.size().x, img.size().y, 4,
             filename.c_str())) {
-        throw io_error("error saving image " + filename);
+        throw imageio_error("error saving image " + filename);
     }
 }
 
@@ -269,7 +269,7 @@ void load_stb_image(const string& filename, image4b& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_load(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
-        throw io_error("error loading image " + filename);
+        throw imageio_error("error loading image " + filename);
     }
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
@@ -278,7 +278,7 @@ void load_stb_image(const string& filename, image4f& img) {
     auto width = 0, height = 0, ncomp = 0;
     auto pixels = stbi_loadf(filename.c_str(), &width, &height, &ncomp, 4);
     if (!pixels) {
-        throw io_error("error loading image " + filename);
+        throw imageio_error("error loading image " + filename);
     }
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
@@ -288,31 +288,31 @@ void load_stb_image(const string& filename, image4f& img) {
 void save_png_image(const string& filename, const image4b& img) {
     if (!stbi_write_png(filename.c_str(), img.size().x, img.size().y, 4,
             img.data(), img.size().x * 4)) {
-        throw io_error("error saving image " + filename);
+        throw imageio_error("error saving image " + filename);
     }
 }
 void save_jpg_image(const string& filename, const image4b& img) {
     if (!stbi_write_jpg(
             filename.c_str(), img.size().x, img.size().y, 4, img.data(), 75)) {
-        throw io_error("error saving image " + filename);
+        throw imageio_error("error saving image " + filename);
     }
 }
 void save_tga_image(const string& filename, const image4b& img) {
     if (!stbi_write_tga(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-        throw io_error("error saving image " + filename);
+        throw imageio_error("error saving image " + filename);
     }
 }
 void save_bmp_image(const string& filename, const image4b& img) {
     if (!stbi_write_bmp(
             filename.c_str(), img.size().x, img.size().y, 4, img.data())) {
-        throw io_error("error saving image " + filename);
+        throw imageio_error("error saving image " + filename);
     }
 }
 void save_hdr_image(const string& filename, const image4f& img) {
     if (!stbi_write_hdr(filename.c_str(), img.size().x, img.size().y, 4,
             (float*)img.data())) {
-        throw io_error("error saving image " + filename);
+        throw imageio_error("error saving image " + filename);
     }
 }
 
@@ -322,7 +322,7 @@ void load_stb_image_from_memory(const byte* data, int data_size, image4b& img) {
     auto pixels = stbi_load_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
-        throw io_error("error loading in-memory image");
+        throw imageio_error("error loading in-memory image");
     }
     img = image{{width, height}, (const vec4b*)pixels};
     free(pixels);
@@ -333,7 +333,7 @@ void load_stbi_image_from_memory(
     auto pixels = stbi_loadf_from_memory(
         data, data_size, &width, &height, &ncomp, 4);
     if (!pixels) {
-        throw io_error("error loading in-memory image {}");
+        throw imageio_error("error loading in-memory image {}");
     }
     img = image{{width, height}, (const vec4f*)pixels};
     free(pixels);
@@ -460,7 +460,7 @@ void load_image(const string& filename, image4f& img) {
     } else if (ext == "json" || ext == "JSON") {
         load_json_image(filename, img);
     } else {
-        throw io_error("unsupported image format " + ext);
+        throw imageio_error("unsupported image format " + ext);
     }
 }
 
@@ -492,7 +492,7 @@ void save_image(const string& filename, const image4f& img) {
     } else if (ext == "exr" || ext == "EXR") {
         save_exr_image(filename, img);
     } else {
-        throw io_error("unsupported image format " + ext);
+        throw imageio_error("unsupported image format " + ext);
     }
 }
 
@@ -530,7 +530,7 @@ void load_image(const string& filename, image4b& img) {
     } else if (ext == "json" || ext == "JSON") {
         load_json_image(filename, img);
     } else {
-        throw io_error("unsupported image format " + ext);
+        throw imageio_error("unsupported image format " + ext);
     }
 }
 
@@ -558,7 +558,7 @@ void save_image(const string& filename, const image4b& img) {
         srgb_to_linear(imgf, img);
         save_exr_image(filename, imgf);
     } else {
-        throw io_error("unsupported image format " + ext);
+        throw imageio_error("unsupported image format " + ext);
     }
 }
 
@@ -752,7 +752,7 @@ void load_volume(const string& filename, volume1f& vol) {
     auto voxels = load_yvol(
         filename.c_str(), &width, &height, &depth, &ncomp, 1);
     if (!voxels) {
-        throw io_error("error loading volume " + filename);
+        throw imageio_error("error loading volume " + filename);
     }
     vol = volume{{width, height, depth}, (const float*)voxels};
     delete[] voxels;
@@ -762,7 +762,7 @@ void load_volume(const string& filename, volume1f& vol) {
 void save_volume(const string& filename, const volume1f& vol) {
     if (!save_yvol(filename.c_str(), vol.size().x, vol.size().y, vol.size().z,
             1, vol.data())) {
-        throw io_error("error saving volume " + filename);
+        throw imageio_error("error saving volume " + filename);
     }
 }
 
