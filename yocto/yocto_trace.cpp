@@ -1988,33 +1988,16 @@ image4f trace_image(const yocto_scene& scene, const bvh_scene& bvh,
         scene.cameras.at(options.camera_id), options.image_width,
         options.image_height);
     auto image  = yocto::image{{width, height}, zero4f};
-    auto pixels = trace_state{};
-    init_trace_state(pixels, width, height, options.random_seed);
+    auto state = trace_state{};
+    init_trace_state(state, width, height, options.random_seed);
     auto regions = vector<image_region>{};
     make_image_regions(regions, image.size(), options.region_size, true);
 
-    if (options.run_serially) {
-        for (auto& region : regions) {
-            if (options.cancel_flag && *options.cancel_flag) break;
-            trace_image_region(image, pixels, scene, bvh, lights, region,
-                options.num_samples, options);
-        }
-    } else {
-        auto nthreads = thread::hardware_concurrency();
-        auto futures  = vector<future<void>>();
-        for (auto tid = 0; tid < nthreads; tid++) {
-            futures.emplace_back(async([&, tid]() {
-                for (auto region_id = tid; region_id < regions.size();
-                     region_id += nthreads) {
-                    if (options.cancel_flag && *options.cancel_flag) break;
-                    auto& region = regions[region_id];
-                    trace_image_region(image, pixels, scene, bvh, lights,
-                        region, options.num_samples, options);
-                }
-            }));
-        }
-        for (auto& f : futures) f.get();
-    }
+    parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, &options](const image_region& region) {
+        trace_image_region(image, state, scene, bvh, lights, region,
+            options.num_samples, options);
+    });
+    
     return image;
 }
 
@@ -2026,28 +2009,10 @@ int trace_image_samples(image4f& image, trace_state& state,
     make_image_regions(regions, image.size(), options.region_size, true);
     auto num_samples = min(
         options.samples_per_batch, options.num_samples - current_sample);
-    if (options.run_serially) {
-        for (auto& region : regions) {
-            if (options.cancel_flag && *options.cancel_flag) break;
-            trace_image_region(
-                image, state, scene, bvh, lights, region, num_samples, options);
-        }
-    } else {
-        auto nthreads = thread::hardware_concurrency();
-        auto futures  = vector<future<void>>();
-        for (auto tid = 0; tid < nthreads; tid++) {
-            futures.emplace_back(async([&, tid]() {
-                for (auto region_id = tid; region_id < regions.size();
-                     region_id += nthreads) {
-                    if (options.cancel_flag && *options.cancel_flag) break;
-                    auto& region = regions[region_id];
-                    trace_image_region(image, state, scene, bvh, lights, region,
-                        num_samples, options);
-                }
-            }));
-        }
-        for (auto& f : futures) f.get();
-    }
+    parallel_foreach(regions, [&image, &state, &scene, &bvh, &lights, num_samples, &options](const image_region& region) {
+        trace_image_region(image, state, scene, bvh, lights, region,
+            num_samples, options);
+    });
     return current_sample + num_samples;
 }
 
