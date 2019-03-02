@@ -87,14 +87,14 @@ namespace yocto {
 // Load a JSON object
 inline void load_json(const string& filename, json& js) {
     auto text = ""s;
-    load_text(filename, text);
+    if(!load_text(filename, text)) throw runtime_error("could not load json " + filename);
     js = json::parse(text.begin(), text.end());
 }
 
 // Save a JSON object
 inline void save_json(const string& filename, const json& js) {
     auto str = js.dump(4);
-    save_text(filename, str);
+    if(!save_text(filename, str)) throw runtime_error("could not save json " + filename);
 }
 
 }  // namespace yocto

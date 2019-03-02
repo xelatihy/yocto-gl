@@ -123,6 +123,13 @@ void load_ybin_scene(const string& filename, yocto_scene& scene,
 void save_ybin_scene(const string& filename, const yocto_scene& scene,
     const save_scene_options& options = {});
 
+// sceneio error
+struct sceneio_error : runtime_error {
+    explicit sceneio_error(const char* msg) : runtime_error{msg} {}
+    explicit sceneio_error(const std::string& msg) : runtime_error{msg} {}
+};
+
+
 }  // namespace yocto
 
 // -----------------------------------------------------------------------------
