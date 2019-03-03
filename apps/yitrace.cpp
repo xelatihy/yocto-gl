@@ -59,8 +59,7 @@ struct app_state {
     bool                filmic        = false;
     bool                srgb          = true;
     int                 preview_ratio = 8;
-    int                 image_width   = 0;
-    int                 image_height  = 0;
+    vec2i               image_size  = {0, 0};
 
     // scene
     yocto_scene scene      = {};
@@ -107,25 +106,23 @@ void start_rendering_async(app_state& app) {
     app.trace_stop   = false;
     app.trace_sample = 0;
 
-    tie(app.image_width, app.image_height) = get_camera_image_size(
+    app.image_size = get_camera_image_size(
         app.scene.cameras[app.trace_options.camera_id],
-        app.trace_options.image_width, app.trace_options.image_height);
-    app.image   = {{app.image_width, app.image_height}, zero4f};
-    app.display = {{app.image_width, app.image_height}, zero4f};
-    init_trace_state(app.state, app.image_width, app.image_height,
-        app.trace_options.random_seed);
+        app.trace_options.image_size);
+    app.image   = {app.image_size, zero4f};
+    app.display = {app.image_size, zero4f};
+    init_trace_state(app.state, app.image_size, app.trace_options.random_seed);
 
     auto preview_options = app.trace_options;
-    preview_options.image_width /= app.preview_ratio;
-    preview_options.image_height /= app.preview_ratio;
+    preview_options.image_size /= app.preview_ratio;
     preview_options.num_samples = 1;
     app.preview = trace_image(app.scene, app.bvh, app.lights, preview_options);
     auto display_preview = app.preview;
     tonemap_image(
         display_preview, app.preview, app.exposure, app.filmic, app.srgb);
-    auto large_preview = image{{app.image_width, app.image_height}, zero4f};
-    for (auto j = 0; j < app.image_height; j++) {
-        for (auto i = 0; i < app.image_width; i++) {
+    auto large_preview = image{app.image_size, zero4f};
+    for (auto j = 0; j < app.image_size.y; j++) {
+        for (auto i = 0; i < app.image_size.x; i++) {
             auto pi = clamp(
                      i / app.preview_ratio, 0, display_preview.size().x - 1),
                  pj = clamp(
@@ -235,9 +232,9 @@ void draw_opengl_widgets(const opengl_window& win) {
                         win, "camera", app.trace_options.camera_id, cam_names);
                 }
                 edited += draw_slider_opengl_widget(
-                    win, "width", app.trace_options.image_width, 0, 4096);
+                    win, "width", app.trace_options.image_size.x, 0, 4096);
                 edited += draw_slider_opengl_widget(
-                    win, "height", app.trace_options.image_height, 0, 4096);
+                    win, "height", app.trace_options.image_size.y, 0, 4096);
                 edited += draw_slider_opengl_widget(
                     win, "nsamples", app.trace_options.num_samples, 16, 4096);
                 edited += draw_combobox_opengl_widget(win, "tracer",
@@ -310,9 +307,9 @@ void draw(const opengl_window& win) {
         update_image_view(app.image_center, app.image_scale, app.image.size(),
             win_size, app.zoom_to_fit);
         if (!app.display_texture) {
-            if (app.image_width != 0 || app.image_height != 0) {
+            if (app.image_size != zero2i) {
                 init_opengl_texture(app.display_texture,
-                    {app.image_width, app.image_height}, false, false, false,
+                    app.image_size, false, false, false,
                     false);
             }
         } else {
@@ -466,9 +463,9 @@ int main(int argc, char* argv[]) {
     // parse command line
     auto parser = CLI::App{"progressive path tracing"};
     parser.add_option("--camera", app.trace_options.camera_id, "Camera index.");
-    parser.add_option("--hres,-R", app.trace_options.image_width,
+    parser.add_option("--hres,-R", app.trace_options.image_size.x,
         "Image horizontal resolution.");
-    parser.add_option("--vres,-r", app.trace_options.image_height,
+    parser.add_option("--vres,-r", app.trace_options.image_size.y,
         "Image vertical resolution.");
     parser.add_option(
         "--nsamples,-s", app.trace_options.num_samples, "Number of samples.");

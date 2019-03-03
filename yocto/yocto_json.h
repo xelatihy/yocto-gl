@@ -53,12 +53,15 @@
 
 #include "ext/json.hpp"
 
+#include <memory>
+
 // -----------------------------------------------------------------------------
 // USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
 using nlohmann::json;
+using std::unique_ptr;
 
 }  // namespace yocto
 

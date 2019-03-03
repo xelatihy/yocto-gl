@@ -3601,69 +3601,63 @@ void save_pbrt(const string& filename, const yocto_scene& scene) {
     auto  from           = camera.frame.o;
     auto  to             = camera.frame.o - camera.frame.z;
     auto  up             = camera.frame.y;
-    auto [width, height] = get_camera_image_size(camera, 0, 720);
+    auto image_size = get_camera_image_size(camera, {0, 720});
     println_values(fs, "LookAt", from, to, up);
     println_values(fs, "Camera \"perspective\" \"float fov\"",
         get_camera_fovy(camera) * 180 / pif);
 
     // save renderer
-    println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]\n");
+    println_values(fs, "Sampler \"random\" \"integer pixelsamples\" [64]");
     // fprintf(f, "Sampler \"sobol\" \"interger pixelsamples\" [64]\n");
     println_values(fs, "Integrator \"path\"\n");
     println_values(fs,
-        "Film \"image\" \"string filename\" [\"{}\"] "
-        "\"integer xresolution\" [{}] \"integer yresolution\" [{}]\n",
-        replace_extension(filename, "exr"), width, height);
+        "Film \"image\" \"string filename\" [\"{}\"] ", 
+        replace_extension(filename, "exr"),
+        "\"integer xresolution\" [", image_size.x, "] \"integer yresolution\" [", image_size.y, "]");
 
     // start world
-    println_values(fs, "WorldBegin\n");
+    println_values(fs, "WorldBegin");
 
     // convert textures
     for (auto& texture : scene.textures) {
         println_values(fs,
-            "Texture \"{}\" \"spectrum\" \"imagemap\" "
-            "\"string filename\" [\"{}\"]\n",
-            texture.name, texture.filename);
+            "Texture \"", texture.name, "\" \"spectrum\" \"imagemap\" "
+            "\"string filename\" [\"", texture.filename, "\"]");
     }
 
     // convert materials
     for (auto& material : scene.materials) {
-        println_values(fs, "MakeNamedMaterial \"{}\" ", material.name);
-        println_values(fs, "\"string type\" \"{}\" ", "uber");
+        println_values(fs, "MakeNamedMaterial \"", material.name, "\" ");
+        println_values(fs, "\"string type\" \"uber\" ");
         if (material.diffuse_texture >= 0)
-            println_values(fs, "\"texture Kd\" [\"{}\"] ",
-                scene.textures[material.diffuse_texture].name);
+            println_values(fs, "\"texture Kd\" [\"", scene.textures[material.diffuse_texture].name, "\"] ");
         else
-            println_values(fs, "\"rgb Kd\" [{}] ", material.diffuse);
+            println_values(fs, "\"rgb Kd\" [", material.diffuse, "] ");
         if (material.specular_texture >= 0)
-            println_values(fs, "\"texture Ks\" [\"{}\"] ",
-                scene.textures[material.specular_texture].name);
+            println_values(fs, "\"texture Ks\" [\"", scene.textures[material.specular_texture].name, "\"] ");
         else
-            println_values(fs, "\"rgb Ks\" [{}] ", material.specular);
-        println_values(fs, "\"float roughness\" [{}] ", material.roughness);
-        println_values(fs, "\n");
+            println_values(fs, "\"rgb Ks\" [",material.specular,"] ");
+        println_values(fs, "\"float roughness\" [",material.roughness,"] ");
     }
 
     // convert instances
     for (auto& instance : scene.instances) {
         auto& shape    = scene.shapes[instance.shape];
         auto& material = scene.materials[shape.material];
-        println_values(fs, "AttributeBegin\n");
-        println_values(fs, "TransformBegin\n");
+        println_values(fs, "AttributeBegin");
+        println_values(fs, "TransformBegin");
         println_values(
-            fs, "ConcatTransform [{}]\n", frame_to_mat(instance.frame));
+            fs, "ConcatTransform [",frame_to_mat(instance.frame),"]");
         if (material.emission != zero3f)
-            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ {} ]\n",
-                material.emission);
-        println_values(fs, "NamedMaterial \"{}\"\n", material.name);
-        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"{}\"]\n",
-            shape.filename);
-        println_values(fs, "TransformEnd\n");
-        println_values(fs, "AttributeEnd\n");
+            println_values(fs, "AreaLightSource \"diffuse\" \"rgb L\" [ ", material.emission," ]");
+        println_values(fs, "NamedMaterial \"",material.name,"\"");
+        println_values(fs, "Shape \"plymesh\" \"string filename\" [\"",shape.filename,"\"]");
+        println_values(fs, "TransformEnd");
+        println_values(fs, "AttributeEnd");
     }
 
     // end world
-    println_values(fs, "WorldEnd\n");
+    println_values(fs, "WorldEnd");
 }
 
 // Save a pbrt scene

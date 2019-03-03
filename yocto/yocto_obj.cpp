@@ -28,75 +28,16 @@
 
 #include "yocto_obj.h"
 
+#include <memory>
+
 // -----------------------------------------------------------------------------
-// IMPLEMENTATION OF PATH UTILITIES
+// USING DIRECTIVES
 // -----------------------------------------------------------------------------
 namespace yocto {
 
-static string normalize_path(const string& filename_) {
-    auto filename = filename_;
-    for (auto& c : filename)
-        if (c == '\\') c = '/';
-    if (filename.size() > 1 && filename[0] == '/' && filename[1] == '/') {
-        throw std::invalid_argument("absolute paths are not supported");
-        return filename_;
-    }
-    if (filename.size() > 3 && filename[1] == ':' && filename[2] == '/' &&
-        filename[3] == '/') {
-        throw std::invalid_argument("absolute paths are not supported");
-        return filename_;
-    }
-    auto pos = (size_t)0;
-    while ((pos = filename.find("//")) != filename.npos)
-        filename = filename.substr(0, pos) + filename.substr(pos + 1);
-    return filename;
-}
+using std::unique_ptr;
 
-// Get directory name (including '/').
-static string get_dirname(const string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos      = filename.rfind('/');
-    if (pos == string::npos) return "";
-    return filename.substr(0, pos + 1);
 }
-
-#if 0
-// Get extension (not including '.').
-static string get_extension(const string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos      = filename.rfind('.');
-    if (pos == string::npos) return "";
-    return filename.substr(pos + 1);
-}
-
-// Get filename without directory.
-static string get_filename(const string& filename_) {
-    auto filename = normalize_path(filename_);
-    auto pos      = filename.rfind('/');
-    if (pos == string::npos) return "";
-    return filename.substr(pos + 1);
-}
-#endif
-
-// Replace extension.
-static string replace_extension(const string& filename_, const string& ext_) {
-    auto filename = normalize_path(filename_);
-    auto ext      = normalize_path(ext_);
-    if (ext.at(0) == '.') ext = ext.substr(1);
-    auto pos = filename.rfind('.');
-    if (pos == string::npos) return filename;
-    return filename.substr(0, pos) + "." + ext;
-}
-
-// Check if a file can be opened for reading.
-static bool exists_file(const string& filename) {
-    auto f = fopen(filename.c_str(), "r");
-    if (!f) return false;
-    fclose(f);
-    return true;
-}
-
-}  // namespace yocto
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF FAST PARSING

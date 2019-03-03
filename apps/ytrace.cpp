@@ -65,9 +65,9 @@ int main(int argc, char* argv[]) {
     auto parser = CLI::App{"Offline path tracing"};
     parser.add_option("--camera", trace_options.camera_id, "Camera index.");
     parser.add_option(
-        "--hres,-R", trace_options.image_width, "Image horizontal resolution.");
+        "--hres,-R", trace_options.image_size.x, "Image horizontal resolution.");
     parser.add_option(
-        "--vres,-r", trace_options.image_height, "Image vertical resolution.");
+        "--vres,-r", trace_options.image_size.y, "Image vertical resolution.");
     parser.add_option(
         "--nsamples,-s", trace_options.num_samples, "Number of samples.");
     parser.add_option("--tracer,-t", trace_options.sampler_type, "Trace type.")
@@ -150,12 +150,11 @@ int main(int argc, char* argv[]) {
     }
 
     // allocate buffers
-    auto [width, height] = get_camera_image_size(
-        scene.cameras[trace_options.camera_id], trace_options.image_width,
-        trace_options.image_height);
-    auto image = yocto::image{{width, height}, zero4f};
+    auto image_size = get_camera_image_size(
+        scene.cameras[trace_options.camera_id], trace_options.image_size);
+    auto image = yocto::image{image_size, zero4f};
     auto state = trace_state{};
-    init_trace_state(state, width, height, trace_options.random_seed);
+    init_trace_state(state, image_size, trace_options.random_seed);
 
     // render
     for (auto sample = 0; sample < trace_options.num_samples;

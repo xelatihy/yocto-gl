@@ -98,6 +98,7 @@
 #include <future>
 #include <mutex>
 #include <string>
+#include <vector>
 #include <thread>
 
 // -----------------------------------------------------------------------------
@@ -111,7 +112,10 @@ using std::future;
 using std::lock_guard;
 using std::mutex;
 using std::thread;
+using std::vector;
+using std::string;
 using namespace std::chrono_literals;
+using namespace std::string_literals;
 
 }  // namespace yocto
 

@@ -32,6 +32,14 @@
 #include "yocto_utils.h"
 
 #include <cassert>
+#include <unordered_map>
+
+// -----------------------------------------------------------------------------
+// USING DIRECTIVES
+// -----------------------------------------------------------------------------
+namespace yocto {
+    using std::unordered_map;
+}
 
 // -----------------------------------------------------------------------------
 // IMPLEMENTATION OF SCENE UTILITIES
@@ -971,26 +979,24 @@ float get_camera_fovy(const yocto_camera& camera) {
 float get_camera_aspect(const yocto_camera& camera) {
     return camera.film_width / camera.film_height;
 }
-pair<int, int> get_camera_image_size(
-    const yocto_camera& camera, int width, int height) {
-    if (width == 0 && height == 0) {
-        width  = 1280;
-        height = 720;
-    }
-    if (width != 0 && height != 0) {
-        if (width * camera.film_height / camera.film_width > height) {
-            width = 0;
+vec2i get_camera_image_size(
+    const yocto_camera& camera, const vec2i& size_) {
+    auto size = size_;
+    if (size == zero2i) size = {1280, 720};
+    if (size.x != 0 && size.y != 0) {
+        if (size.x * camera.film_height / camera.film_width > size.y) {
+            size.x = 0;
         } else {
-            height = 0;
+            size.y = 0;
         }
     }
-    if (width == 0) {
-        width = (int)round(height * camera.film_width / camera.film_height);
+    if (size.x == 0) {
+        size.x = (int)round(size.y * camera.film_width / camera.film_height);
     }
-    if (height == 0) {
-        height = (int)round(width * camera.film_height / camera.film_width);
+    if (size.y == 0) {
+        size.y = (int)round(size.x * camera.film_height / camera.film_width);
     }
-    return {width, height};
+    return size;
 }
 void set_camera_perspective(
     yocto_camera& camera, float fovy, float aspect, float focus, float height) {
